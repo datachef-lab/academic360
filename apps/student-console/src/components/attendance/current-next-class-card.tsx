@@ -8,12 +8,8 @@ type CurrentNextClassCardProps = {
   currentOrNextClass: UpcomingClass;
 };
 
-export default function CurrentNextClassCard({
-  currentOrNextClass,
-}: CurrentNextClassCardProps) {
-  const getClassStatus = (
-    timeRange: string
-  ): "Ongoing" | "Upcoming" | "Past" => {
+export default function CurrentNextClassCard({ currentOrNextClass }: CurrentNextClassCardProps) {
+  const getClassStatus = (timeRange: string): "Ongoing" | "Upcoming" | "Past" => {
     const now = new Date();
     const [startTimeStr, endTimeStr] = timeRange.split(" - ");
 
@@ -72,16 +68,14 @@ export default function CurrentNextClassCard({
     currentOrNextClassStatus === "Ongoing"
       ? "bg-green-100 text-green-800"
       : currentOrNextClassStatus === "Upcoming"
-      ? "bg-blue-100 text-blue-800"
-      : "bg-gray-100 text-gray-800";
+        ? "bg-blue-100 text-blue-800"
+        : "bg-gray-100 text-gray-800";
 
   return (
     <div className="bg-white/90 border border-indigo-100 rounded-xl shadow-lg p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-bold text-lg text-indigo-800">
-            {currentOrNextClass.name}
-          </span>
+          <span className="font-bold text-lg text-indigo-800">{currentOrNextClass.name}</span>
           <Badge
             variant="outline"
             className="ml-2 text-xs bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm"
@@ -94,17 +88,13 @@ export default function CurrentNextClassCard({
             </Badge>
           )}
         </div>
-        <div className="text-gray-600 text-sm mb-1">
-          {currentOrNextClass.instructor}
-        </div>
+        <div className="text-gray-600 text-sm mb-1">{currentOrNextClass.instructor}</div>
         <div className="text-gray-500 text-sm flex items-center gap-2">
           <Clock className="w-4 h-4 text-indigo-500" />
           {currentOrNextClass.schedule}
           <MapPin className="w-4 h-4 ml-4 text-indigo-500" />
-          <span className="font-medium text-gray-600">
-            {currentOrNextClass.room}
-          </span>
-          , <span className="text-gray-600">{currentOrNextClass.floor}</span>
+          <span className="font-medium text-gray-600">{currentOrNextClass.room}</span>,{" "}
+          <span className="text-gray-600">{currentOrNextClass.floor}</span>
         </div>
       </div>
       <Button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-base font-semibold w-full md:w-auto mt-4 md:mt-0">

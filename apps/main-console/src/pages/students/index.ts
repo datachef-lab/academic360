@@ -11,15 +11,15 @@ import StudentPage from "./StudentPage";
 import StudentViewPage from "./StudentViewPage";
 
 export {
-    DashboardStats,
-    AddStudentPage,
-    GetReportsPage,
-    ManageMarksheetPage,
-    MarksheetPage,
-    SearchStudent,
-    SearchStudentPage,
-    StudentMarksheetsPage,
-    StudentMaster,
-    StudentPage,
-    StudentViewPage,
-}
+  DashboardStats,
+  AddStudentPage,
+  GetReportsPage,
+  ManageMarksheetPage,
+  MarksheetPage,
+  SearchStudent,
+  SearchStudentPage,
+  StudentMarksheetsPage,
+  StudentMaster,
+  StudentPage,
+  StudentViewPage,
+};

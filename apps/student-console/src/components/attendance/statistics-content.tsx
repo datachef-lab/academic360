@@ -9,21 +9,13 @@ type StatisticsContentProps = {
   selectedSemester: string;
 };
 
-export default function StatisticsContent({
-  mockData,
-  selectedSemester,
-}: StatisticsContentProps) {
+export default function StatisticsContent({ mockData, selectedSemester }: StatisticsContentProps) {
   const currentSubjects =
-    mockData.subjects[
-      selectedSemester as unknown as keyof typeof mockData.subjects
-    ] || [];
+    mockData.subjects[selectedSemester as unknown as keyof typeof mockData.subjects] || [];
 
   return (
     <div className="space-y-6">
-      <AttendanceStats
-        mockData={mockData}
-        selectedSemester={selectedSemester}
-      />
+      <AttendanceStats mockData={mockData} selectedSemester={selectedSemester} />
 
       <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-indigo-100 shadow-md">
         <h2 className="text-xl font-bold text-indigo-800 mb-6 flex items-center">

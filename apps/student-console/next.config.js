@@ -20,6 +20,7 @@ const baseConfig =
 
 const nextConfig = {
   ...baseConfig,
+  output: "standalone",
 
   transpilePackages: ["@repo/db", "@repo/utils", "@repo/ui"],
 
@@ -90,7 +91,11 @@ const nextConfig = {
 
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3008", "czz2p47w-3008.inc1.devtunnels.ms", "*.inc1.devtunnels.ms"],
+      allowedOrigins: [
+        "localhost:3008",
+        "czz2p47w-3008.inc1.devtunnels.ms",
+        "*.inc1.devtunnels.ms",
+      ],
       bodySizeLimit: "50mb",
     },
   },

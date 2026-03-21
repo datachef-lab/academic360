@@ -4,7 +4,6 @@
 // import { SignJWT } from "jose";
 // import { getUserByEmail, getUserByUid, verifyRefreshToken } from "@/lib/services/auth.service";
 
-
 // export async function GET() {
 //     try {
 //         // Get the refresh token from cookies
@@ -78,4 +77,4 @@
 //             { status: 500 }
 //         );
 //     }
-// } 
+// }

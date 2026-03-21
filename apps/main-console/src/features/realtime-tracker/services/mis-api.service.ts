@@ -51,7 +51,9 @@ export class MisApiService {
     }
 
     const completionPercentage =
-      totalRow.admitted > 0 ? Math.round((totalRow.subjectSelectionDone / totalRow.admitted) * 100) : 0;
+      totalRow.admitted > 0
+        ? Math.round((totalRow.subjectSelectionDone / totalRow.admitted) * 100)
+        : 0;
 
     return {
       totalAdmitted: totalRow.admitted,

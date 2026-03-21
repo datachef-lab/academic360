@@ -20,7 +20,10 @@ export default function ApiConfigurationPage() {
   const { settings } = useSettings();
 
   // Filter API config settings from context (no need to fetch again)
-  const apiConfigSettings = useMemo(() => settings.filter((ele: Settings) => ele.variant === "API_CONFIG"), [settings]);
+  const apiConfigSettings = useMemo(
+    () => settings.filter((ele: Settings) => ele.variant === "API_CONFIG"),
+    [settings],
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -85,7 +88,12 @@ export default function ApiConfigurationPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-end pt-3 sm:pt-4">
-              <Button type="button" variant="outline" onClick={handleReset} className="w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleReset}
+                className="w-full sm:w-auto"
+              >
                 Reset
               </Button>
               <Button type="submit" className="w-full sm:w-auto">

@@ -13,9 +13,10 @@ import ExamWidget from "./ExamWidget";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
 import type { StudentDto } from "@repo/db/dtos/user";
-import { ExamDto } from "@/dtos";
+import { ExamDto, ExamGroupDto } from "@/dtos";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { toast } from "sonner";
+import { fetchExamGroupsByStudentId } from "@/services/exam-group.service";
 
 export default function HomeContent() {
   const { student, loading, batches, error, refetch } = useStudent();
@@ -23,6 +24,66 @@ export default function HomeContent() {
   const [exams, setExams] = useState<ExamDto[]>([]);
   const [examsLoading, setExamsLoading] = useState(false);
   const socketRef = useRef<any | null>(null);
+  const [examGroups, setExamGroups] = useState<ExamGroupDto[]>([]);
+
+  useEffect(() => {
+    if (!student || !student?.id) return;
+
+    fetchExamGroupsByStudentId(student.id)
+      .then((data) => {
+        const nowTime = new Date().getTime();
+        setExamGroups(data.payload.content || []);
+        const filteredExams = (data.payload.content.flatMap((eg) => eg.exams) || []).filter(
+          (exam) => {
+            // 1. If no admit card start date, don't show
+            if (!exam.admitCardStartDownloadDate) {
+              return false;
+            }
+
+            // 2. Check if admit card start date is greater than current time
+            const startDate = new Date(exam.admitCardStartDownloadDate);
+            const startTime = startDate.getTime();
+
+            if (startTime > nowTime) {
+              return false; // Admit card download hasn't started yet
+            }
+
+            // 3. Check if admit card end date exists and is less than current time
+            if (exam.admitCardLastDownloadDate) {
+              const endDate = new Date(exam.admitCardLastDownloadDate);
+              const endTime = endDate.getTime();
+
+              if (endTime < nowTime) {
+                return false; // Admit card download period has ended
+              }
+            }
+
+            // Check if exam has subjects
+            if (!exam.examSubjects || exam.examSubjects.length === 0) {
+              return false;
+            }
+
+            // Check if all papers are completed by finding the latest end time
+            const lastPaper = exam.examSubjects.reduce((latest, current) => {
+              const currentEnd = new Date(current.endTime);
+              const latestEnd = new Date(latest.endTime);
+              return currentEnd > latestEnd ? current : latest;
+            });
+            const lastEndTime = new Date(lastPaper.endTime).getTime();
+
+            // Don't show in widget if all papers have been completed
+            if (lastEndTime <= nowTime) {
+              return false; // All papers completed
+            }
+
+            // Show if there are still upcoming or ongoing papers
+            return true;
+          },
+        );
+        setExams(filteredExams);
+      })
+      .catch((err) => console.log(err));
+  }, [student?.id]);
 
   console.log("🏠 HomeContent render:", {
     loading,
@@ -123,7 +184,9 @@ export default function HomeContent() {
         // @ts-ignore - socket.io-client will be available after pnpm install
         const socketModule = await import("socket.io-client");
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:3000";
 
         // Wrap URL parsing in try-catch for better error handling
         let parsed: URL;
@@ -212,9 +275,14 @@ export default function HomeContent() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Welcome, {(user.name as string) || "Student"}!</h2>
+          <h2 className="text-xl font-semibold mb-2">
+            Welcome, {(user.name as string) || "Student"}!
+          </h2>
           <p className="text-gray-600 mb-4">Your student profile is being set up.</p>
-          <button onClick={refetch} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <button
+            onClick={refetch}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
             Refresh
           </button>
         </div>
@@ -229,7 +297,7 @@ export default function HomeContent() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BasicInfo student={student} />
         <SubjectSelectionCard />
-        {exams.length > 0 && <ExamWidget exams={exams} />}
+        {exams.length > 0 && <ExamWidget exams={exams} examGroups={examGroups} />}
       </div>
     </div>
   );

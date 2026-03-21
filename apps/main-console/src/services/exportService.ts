@@ -22,7 +22,9 @@ export class ExportService {
    * @param subjectSelectionMetaId - The subject selection meta ID to export
    * @returns Promise with export response
    */
-  static async exportStudentSubjectSelections(subjectSelectionMetaId: number): Promise<ExportResponse> {
+  static async exportStudentSubjectSelections(
+    subjectSelectionMetaId: number,
+  ): Promise<ExportResponse> {
     try {
       // Backend mounts this router at /api/subject-selection/student-subject-selection
       // and the route path is GET /export/:subjectSelectionMetaId
@@ -113,11 +115,14 @@ export class ExportService {
 
   static async exportStudentSubjectsInventory(academicYearId: number): Promise<ExportResponse> {
     try {
-      const response = await axiosInstance.get(`/api/subject-selection/student-subject-selection/exports/subjects`, {
-        params: { academicYearId },
-        responseType: "blob",
-        timeout: 0,
-      });
+      const response = await axiosInstance.get(
+        `/api/subject-selection/student-subject-selection/exports/subjects`,
+        {
+          params: { academicYearId },
+          responseType: "blob",
+          timeout: 0,
+        },
+      );
 
       const contentDisposition = response.headers["content-disposition"];
       let fileName = `student_subjects_${academicYearId}_${new Date().toISOString().split("T")[0]}.xlsx`;
@@ -209,7 +214,9 @@ export class ExportService {
    * Check if any of the provided UIDs already exist in the backend
    * Backend: POST /api/students/uids/check-existing
    */
-  static async checkExistingStudentUids(uids: string[]): Promise<ExcelUploadResponse<{ existingUids: string[] }>> {
+  static async checkExistingStudentUids(
+    uids: string[],
+  ): Promise<ExcelUploadResponse<{ existingUids: string[] }>> {
     try {
       const response = await axiosInstance.post(`/api/students/uids/check-existing`, {
         uids,
@@ -241,12 +248,15 @@ export class ExportService {
     try {
       // Backend mounts this router at /api/admissions/cu-registration-correction-requests
       // and the route path is GET /export
-      const response = await axiosInstance.get(`/api/admissions/cu-registration-correction-requests/export`, {
-        params: {
-          academicYearId,
+      const response = await axiosInstance.get(
+        `/api/admissions/cu-registration-correction-requests/export`,
+        {
+          params: {
+            academicYearId,
+          },
+          responseType: "blob", // Important for file downloads
         },
-        responseType: "blob", // Important for file downloads
-      });
+      );
 
       // Extract filename from response headers
       const contentDisposition = response.headers["content-disposition"];
@@ -358,9 +368,13 @@ export class ExportService {
     }
   }
 
-  static async downloadExamAdmitCardsbyExamId(examId?: number, uploadSessionId?: string): Promise<ExportResponse> {
+  static async downloadExamAdmitCardsbyExamGroupId(
+    examGroupId?: number,
+    uploadSessionId?: string,
+    preferredFileName?: string,
+  ): Promise<ExportResponse> {
     try {
-      const endpoint = `/api/exams/schedule/download-admit-cards?examId=${examId}`;
+      const endpoint = `/api/exams/schedule/download-admit-cards?examGroupId=${examGroupId}`;
 
       // Add session ID as query parameter for socket progress tracking
       const url = uploadSessionId ? `${endpoint}&uploadSessionId=${uploadSessionId}` : endpoint;
@@ -397,14 +411,14 @@ export class ExportService {
         }
       }
 
-      // Extract filename from response headers
+      // Extract filename from response headers (requires CORS exposedHeaders: ["Content-Disposition"])
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = `exam-${examId}-admit-cards.zip`;
+      let fileName = preferredFileName || `exam-${examGroupId}-admit-cards.zip`;
 
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
         if (fileNameMatch) {
-          fileName = fileNameMatch[1];
+          fileName = fileNameMatch[1].replace(/%22/g, '"');
         }
       }
 
@@ -478,12 +492,13 @@ export class ExportService {
     }
   }
 
-  static async downloadExamAttendanceSheetsbyExamId(
-    examId?: number,
+  static async downloadExamAttendanceSheetsbyExamGroupId(
+    examGroupId?: number,
     uploadSessionId?: string,
+    preferredFileName?: string,
   ): Promise<ExportResponse> {
     try {
-      const endpoint = `/api/exams/schedule/download-attendance-sheets?examId=${examId}`;
+      const endpoint = `/api/exams/schedule/download-attendance-sheets?examGroupId=${examGroupId}`;
 
       // Add session ID as query parameter for socket progress tracking
       const url = uploadSessionId ? `${endpoint}&uploadSessionId=${uploadSessionId}` : endpoint;
@@ -503,8 +518,10 @@ export class ExportService {
           const errorMessage = errorData.message || "Failed to download attendance sheets";
           const isNoSheetsError =
             errorMessage.toLowerCase().includes("no attendance") ||
-            (errorMessage.toLowerCase().includes("attendance") && errorMessage.toLowerCase().includes("not found")) ||
-            (errorMessage.toLowerCase().includes("attendance") && errorMessage.toLowerCase().includes("found"));
+            (errorMessage.toLowerCase().includes("attendance") &&
+              errorMessage.toLowerCase().includes("not found")) ||
+            (errorMessage.toLowerCase().includes("attendance") &&
+              errorMessage.toLowerCase().includes("found"));
 
           return {
             success: false,
@@ -525,14 +542,14 @@ export class ExportService {
         }
       }
 
-      // Extract filename from response headers
+      // Extract filename from response headers (requires CORS exposedHeaders: ["Content-Disposition"])
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = `exam-${examId}-attendance-sheets.zip`;
+      let fileName = preferredFileName || `exam-${examGroupId}-attendance-sheets.zip`;
 
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
         if (fileNameMatch) {
-          fileName = fileNameMatch[1];
+          fileName = fileNameMatch[1].replace(/%22/g, '"');
         }
       }
 
@@ -669,7 +686,9 @@ export class ExportService {
   /**
    * Export student academic subjects report
    */
-  static async exportStudentAcademicSubjectsReport(academicYearId?: number): Promise<ExportResponse> {
+  static async exportStudentAcademicSubjectsReport(
+    academicYearId?: number,
+  ): Promise<ExportResponse> {
     try {
       const params = new URLSearchParams();
       if (academicYearId) {

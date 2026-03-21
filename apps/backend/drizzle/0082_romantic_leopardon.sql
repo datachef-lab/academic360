@@ -1,2 +1,9 @@
-ALTER TABLE "user_status_mapping" ADD COLUMN "session_id_fk" integer NOT NULL;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_session_id_fk_sessions_id_fk" FOREIGN KEY ("session_id_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD COLUMN "session_id_fk" integer NOT NULL;
+EXCEPTION
+    WHEN duplicate_column THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_session_id_fk_sessions_id_fk" FOREIGN KEY ("session_id_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;

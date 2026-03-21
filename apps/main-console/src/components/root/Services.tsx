@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  FaRegAddressCard,
-  FaChalkboardTeacher,
-  FaCalendarAlt,
-} from "react-icons/fa";
+import { FaRegAddressCard, FaChalkboardTeacher, FaCalendarAlt } from "react-icons/fa";
 
 interface Service {
   title: string;
@@ -67,10 +63,9 @@ export const Services: React.FC = () => {
           Comprehensive Solution for Student Management
         </h2>
         <p className="text-base text-gray-700 md:text-lg">
-          Our Academic 360° services offer powerful tools to simplify student
-          management, improve engagement, and streamline academic processes.
-          From enrollment to graduation, we cover all aspects of academic
-          management.
+          Our Academic 360° services offer powerful tools to simplify student management, improve
+          engagement, and streamline academic processes. From enrollment to graduation, we cover all
+          aspects of academic management.
         </p>
       </div>
 
@@ -84,9 +79,7 @@ export const Services: React.FC = () => {
             </div>
             <div>
               <h6 className="mb-2 font-semibold leading-5">{service.title}:</h6>
-              <p className="mb-3 text-sm text-gray-900">
-                {service.description}
-              </p>
+              <p className="mb-3 text-sm text-gray-900">{service.description}</p>
               <ul className="mb-4 -ml-1 space-y-2">
                 {service.features.map((feature, idx) => (
                   <li key={idx} className="flex items-start">

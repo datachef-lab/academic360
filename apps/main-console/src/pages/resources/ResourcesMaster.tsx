@@ -1,6 +1,5 @@
 import MasterLayout from "@/components/layouts/MasterLayout";
 import {
-
   SchoolIcon,
   TagIcon,
   GraduationCapIcon,

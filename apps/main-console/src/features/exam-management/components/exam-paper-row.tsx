@@ -34,7 +34,8 @@ export default function ExamPaperRow({
 
     // ✅ Check if all subjects have SAME start AND SAME end
     const allSameTime = times.every(
-      (t) => t.start.getTime() === minStart.getTime() && t.end.getTime() === times[0]!.end.getTime(),
+      (t) =>
+        t.start.getTime() === minStart.getTime() && t.end.getTime() === times[0]!.end.getTime(),
     );
 
     if (allSameTime) {
@@ -87,12 +88,19 @@ export default function ExamPaperRow({
 
   return (
     <div className="flex border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
-      <div className="flex-shrink-0 p-3 border-r flex items-center justify-center" style={{ width: "12.5%" }}>
+      <div
+        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+        style={{ width: "12.5%" }}
+      >
         <p>
-          <Badge variant="outline" className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50">
+          <Badge
+            variant="outline"
+            className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
+          >
             {
-              exam.examSubjectTypes.find((ele) => ele.subjectType.id === examPapersWithStat.paper.subjectTypeId)
-                ?.subjectType.code
+              exam.examSubjectTypes.find(
+                (ele) => ele.subjectType.id === examPapersWithStat.paper.subjectTypeId,
+              )?.subjectType.code
             }
           </Badge>
         </p>
@@ -101,11 +109,40 @@ export default function ExamPaperRow({
         <div className="mt-1 flex flex-col gap-1">
           <p className="text-xs">
             {examPapersWithStat.paper.name}
+            {(() => {
+              const examSubject = exam.examSubjects.find(
+                (es) => es.id === examPapersWithStat.examSubjectId,
+              );
+              const matchingComp =
+                examSubject?.paperComponentId != null
+                  ? examPapersWithStat.paper.components?.find(
+                      (c) => c.id === examSubject.paperComponentId,
+                    )
+                  : null;
+              const componentLabel = matchingComp
+                ? matchingComp.examComponent?.shortName ||
+                  matchingComp.examComponent?.name ||
+                  matchingComp.examComponent?.code ||
+                  ""
+                : examPapersWithStat.paper.components
+                    ?.map((comp) => comp.examComponent?.name || comp.examComponent?.code || "")
+                    .filter(Boolean)
+                    .join(", ");
+              return componentLabel ? (
+                <span className="text-gray-600"> - {componentLabel}</span>
+              ) : null;
+            })()}
             {!examPapersWithStat.paper.isOptional && <span className="text-red-500">*</span>}
           </p>
           <p>
-            <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">
-              {exam.examSubjects.find((ele) => ele.id === examPapersWithStat.examSubjectId)?.subject.name}
+            <Badge
+              variant="outline"
+              className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+            >
+              {
+                exam.examSubjects.find((ele) => ele.id === examPapersWithStat.examSubjectId)
+                  ?.subject.name
+              }
             </Badge>
           </p>
         </div>
@@ -120,7 +157,9 @@ export default function ExamPaperRow({
       <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "12.5%" }}>
         <div className="mt-1 flex flex-col gap-1">
           <p className="text-xs">
-            {formatExamDateRange([exam.examSubjects.find((ele) => ele.id === examPapersWithStat.examSubjectId)!])}
+            {formatExamDateRange([
+              exam.examSubjects.find((ele) => ele.id === examPapersWithStat.examSubjectId)!,
+            ])}
           </p>
         </div>
       </div>
@@ -128,7 +167,9 @@ export default function ExamPaperRow({
       <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "12.5%" }}>
         <div className="mt-1 flex flex-col gap-1">
           <p className="text-xs">
-            {formatExamTimeRange([exam.examSubjects.find((ele) => ele.id === examPapersWithStat.examSubjectId)!])}
+            {formatExamTimeRange([
+              exam.examSubjects.find((ele) => ele.id === examPapersWithStat.examSubjectId)!,
+            ])}
           </p>
         </div>
       </div>
@@ -150,7 +191,9 @@ export default function ExamPaperRow({
           <Button
             variant="outline"
             onClick={() => {
-              const examSubject = exam.examSubjects.find((es) => es.id === examPapersWithStat.examSubjectId);
+              const examSubject = exam.examSubjects.find(
+                (es) => es.id === examPapersWithStat.examSubjectId,
+              );
               if (examSubject) onEdit(examSubject);
             }}
             //   className="h-5 w-5 p-0"

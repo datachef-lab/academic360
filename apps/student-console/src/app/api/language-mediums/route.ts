@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
     if (id) {
       const result = await getLanguageMediumById(parseInt(id));
       if (!result) {
-        return NextResponse.json({ success: false, error: "Language medium not found" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, error: "Language medium not found" },
+          { status: 404 },
+        );
       }
       return NextResponse.json({ success: true, data: result });
     }

@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
       const { mobileNumber, password } = await req.json();
 
       if (!mobileNumber || !password) {
-        return NextResponse.json({ message: "Mobile number and password are required" }, { status: 400 });
+        return NextResponse.json(
+          { message: "Mobile number and password are required" },
+          { status: 400 },
+        );
       }
 
       const result = await findByLoginIdAndPassword(mobileNumber, password);
@@ -37,10 +40,15 @@ export async function POST(req: NextRequest) {
 
     // Handle create action
     const body = await req.json();
-    const result = await createGeneralInfo(body as Omit<AdmissionGeneralInfo, "id" | "createdAt" | "updatedAt">);
+    const result = await createGeneralInfo(
+      body as Omit<AdmissionGeneralInfo, "id" | "createdAt" | "updatedAt">,
+    );
 
     if (result.message === "General info already exists for this student.") {
-      return NextResponse.json({ message: result.message, generalInfo: result.generalInfo }, { status: 409 });
+      return NextResponse.json(
+        { message: result.message, generalInfo: result.generalInfo },
+        { status: 409 },
+      );
     }
 
     return NextResponse.json(result, { status: 201 });
@@ -59,7 +67,9 @@ export async function GET(req: NextRequest) {
     const mobileNumber = searchParams.get("mobileNumber");
 
     if (admissionId && mobileNumber) {
-      const entry = await checkExistingEntry(Number(admissionId), { mobileNumber: String(mobileNumber) });
+      const entry = await checkExistingEntry(Number(admissionId), {
+        mobileNumber: String(mobileNumber),
+      });
       if (entry) {
         return NextResponse.json(entry, { status: 200 });
       } else {

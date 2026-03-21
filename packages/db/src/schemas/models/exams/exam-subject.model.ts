@@ -2,7 +2,7 @@ import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { examModel } from "./exam.model";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
-import { paperModel, subjectModel } from "../course-design";
+import { paperComponentModel, paperModel, subjectModel } from "../course-design";
 
 export const examSubjectModel = pgTable("exam_subjects", {
     id: serial().primaryKey(),
@@ -14,6 +14,8 @@ export const examSubjectModel = pgTable("exam_subjects", {
         .notNull(),
     paperId: integer("paper_id_fk")
         .references(() => paperModel.id),
+    paperComponentId: integer("paper_component_id_fk")
+        .references(() => paperComponentModel.id),
     startTime: timestamp("start_time", { withTimezone: true }).notNull(),
     endTime: timestamp("end_time", { withTimezone: true }).notNull(),
 
@@ -29,4 +31,4 @@ export const createExamSubjectSchema = createInsertSchema(examSubjectModel);
 
 export type ExamSubject = z.infer<typeof createExamSubjectSchema>;
 
-export type ExamSubjectT = typeof createExamSubjectSchema._type;
+export type ExamSubjectT = z.infer<typeof createExamSubjectSchema>;

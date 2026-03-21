@@ -1,40 +1,51 @@
 import { db } from "@/db/index.js";
-import { paymentModel, Payment } from "../models/payment.model.js";
+import { paymentModel } from "@repo/db/schemas/models/payments";
+import { feeStudentMappingModel } from "@repo/db/schemas";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { eq } from "drizzle-orm";
 
-// CREATE
-export async function createPayment(payment: Payment) {
-  // const orderId = await generateOrderId();
+// CREATE (admission application fee)
+export async function createPayment(payment: {
+  applicationFormId: number;
+  paymentFor: "ADMISSION_APPLICATION_FEE" | "FEE" | "OTHER";
+  orderId: string;
+  amount: string;
+  gatewayName?: string;
+}) {
+  const [newPayment] = await db
+    .insert(paymentModel)
+    .values({
+      applicationFormId: payment.applicationFormId,
+      paymentFor: payment.paymentFor,
+      orderId: payment.orderId,
+      amount: payment.amount,
+      gatewayName: payment.gatewayName ?? "PAYTM",
+    })
+    .returning();
 
-  // const [newPayment] = await db
-  //     .insert(paymentModel)
-  //     .values({
-  //         ...payment,
+  return newPayment;
+}
 
-  //         applicationFormId: Number(payment.applicationFormId),
-  //         amount: Number(payment.amount),
-  //         transactionId: String(payment.transactionId),
-  //         orderId: String(orderId),
-  //         bankTxnId: String(payment.bankTxnId),
-  //         gatewayName: String(payment.gatewayName),
-  //         txnDate: payment.txnDate,
-  //         remarks: String(payment.remarks),
-  //         createdAt: new Date(),
-  //         updatedAt: new Date(),
-  //         id: Number(payment.id),
-  //     })
-  //     .returning();
+// CREATE (student fee)
+export async function createFeePayment(payment: {
+  feeStudentMappingId: number;
+  orderId: string;
+  amount: string;
+  gatewayName?: string;
+}) {
+  const [newPayment] = await db
+    .insert(paymentModel)
+    .values({
+      applicationFormId: null,
+      feeStudentMappingId: payment.feeStudentMappingId,
+      paymentFor: "FEE",
+      orderId: payment.orderId,
+      amount: payment.amount,
+      gatewayName: payment.gatewayName ?? "PAYTM",
+    })
+    .returning();
 
-  // await db
-  //     .update(applicationFormModel)
-  //     .set({ formStatus: "PAYMENT_SUCCESS" })
-  //     .where(eq(applicationFormModel.id, newPayment.applicationFormId));
-
-  return {
-    payment: null,
-    message: "New Payment Created!",
-  };
+  return newPayment;
 }
 
 // READ by ID
@@ -43,6 +54,16 @@ export async function findPaymentById(id: number) {
     .select()
     .from(paymentModel)
     .where(eq(paymentModel.id, id));
+
+  return payment || null;
+}
+
+// READ by Order ID
+export async function findPaymentByOrderId(orderId: string) {
+  const [payment] = await db
+    .select()
+    .from(paymentModel)
+    .where(eq(paymentModel.orderId, orderId));
 
   return payment || null;
 }
@@ -69,17 +90,98 @@ export async function findPaymentsByApplicationFormId(
     .where(eq(paymentModel.applicationFormId, applicationFormId));
 }
 
-// UPDATE
-export async function updatePayment(payment: Payment) {
-  if (!payment.id) throw new Error("Payment ID is required for update.");
+// UPDATE payment on success/failure
+export async function updatePaymentByOrderId(
+  orderId: string,
+  updates: {
+    status: "SUCCESS" | "FAILED";
+    transactionId?: string;
+    bankTxnId?: string;
+    txnDate?: Date;
+    gatewayResponse?: object;
+  },
+) {
+  // First, fetch the existing payment to check for duplicate callbacks
+  const [existingPayment] = await db
+    .select()
+    .from(paymentModel)
+    .where(eq(paymentModel.orderId, orderId));
 
-  // const [updatedPayment] = await db
-  //     .update(paymentModel)
-  //     .set(payment)
-  //     .where(eq(paymentModel.id, payment.id))
-  //     .returning();
+  if (!existingPayment) {
+    throw new Error(`Payment not found for orderId: ${orderId}`);
+  }
 
-  return null;
+  // If this is a duplicate callback (same transactionId), skip the update
+  if (
+    existingPayment.transactionId &&
+    existingPayment.transactionId === updates.transactionId
+  ) {
+    console.log(
+      `Duplicate payment callback detected for orderId: ${orderId}, skipping update`,
+    );
+    return existingPayment;
+  }
+
+  const dbStatus = updates.status === "SUCCESS" ? "COMPLETED" : "FAILED";
+  const [updated] = await db
+    .update(paymentModel)
+    .set({
+      status: updates.status,
+      paymentStatus: dbStatus,
+      transactionId:
+        updates.transactionId ?? existingPayment.transactionId ?? null,
+      bankTxnId: updates.bankTxnId ?? existingPayment.bankTxnId ?? null,
+      txnDate: updates.txnDate ?? existingPayment.txnDate ?? null,
+      gatewayResponse:
+        updates.gatewayResponse ?? existingPayment.gatewayResponse ?? null,
+    })
+    .where(eq(paymentModel.orderId, orderId))
+    .returning();
+
+  if (updated?.applicationFormId && updates.status === "SUCCESS") {
+    await db
+      .update(applicationFormModel)
+      .set({ formStatus: "PAYMENT_SUCCESS" })
+      .where(eq(applicationFormModel.id, updated.applicationFormId));
+  }
+
+  // For FEE payments: update fee_student_mapping on success
+  const mappingId = updated?.feeStudentMappingId;
+  if (
+    updated?.paymentFor === "FEE" &&
+    mappingId &&
+    updates.status === "SUCCESS"
+  ) {
+    try {
+      const [mapping] = await db
+        .select()
+        .from(feeStudentMappingModel)
+        .where(eq(feeStudentMappingModel.id, mappingId));
+      if (mapping) {
+        const amountPaid = Number(updated.amount);
+        const existingPaid = mapping.amountPaid ?? 0;
+        const newTotalPaid = existingPaid + amountPaid;
+        const totalPayable = mapping.totalPayable ?? 0;
+        const paymentStatus =
+          newTotalPaid >= totalPayable ? "COMPLETED" : "PENDING";
+
+        await db
+          .update(feeStudentMappingModel)
+          .set({
+            amountPaid: newTotalPaid,
+            paymentStatus,
+            paymentMode: "ONLINE",
+            transactionRef: updated.transactionId ?? updated.bankTxnId,
+            transactionDate: updated.txnDate ?? new Date(),
+          })
+          .where(eq(feeStudentMappingModel.id, mappingId));
+      }
+    } catch {
+      // Ignore update errors
+    }
+  }
+
+  return updated ?? null;
 }
 
 // DELETE
@@ -96,5 +198,5 @@ export async function deletePayment(id: number) {
 export async function generateOrderId() {
   const timestamp = Date.now().toString(36);
   const randomPart = Math.random().toString(36).substring(2, 10);
-  return `ORD-${timestamp}-${randomPart}`;
+  return `ORD${timestamp}${randomPart}`;
 }

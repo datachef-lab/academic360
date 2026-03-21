@@ -6,15 +6,30 @@ interface Notice {
 }
 
 const notices: Notice[] = [
-  { id: 1, title: "Exam Schedule Released", date: "Feb 10, 2025", description: "Check the updated exam timetable." },
-  { id: 2, title: "Holiday Notice", date: "Feb 15, 2025", description: "College will remain closed on Feb 20." },
+  {
+    id: 1,
+    title: "Exam Schedule Released",
+    date: "Feb 10, 2025",
+    description: "Check the updated exam timetable.",
+  },
+  {
+    id: 2,
+    title: "Holiday Notice",
+    date: "Feb 15, 2025",
+    description: "College will remain closed on Feb 20.",
+  },
   {
     id: 3,
     title: "Fee Payment Reminder",
     date: "Feb 18, 2025",
     description: "Last date for fee submission is Feb 25.",
   },
-  { id: 4, title: "Sports Meet", date: "Mar 05, 2025", description: "Annual sports meet will be held on Mar 10." },
+  {
+    id: 4,
+    title: "Sports Meet",
+    date: "Mar 05, 2025",
+    description: "Annual sports meet will be held on Mar 10.",
+  },
 ];
 
 export default function NoticeTable() {

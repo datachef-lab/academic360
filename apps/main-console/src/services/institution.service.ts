@@ -11,12 +11,12 @@ import {
 
 /**
  * Institution Service
- * 
+ *
  * This service handles all CRUD operations for the Institution module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/institutions';
+const BASE_URL = "/api/institutions";
 
 // ============================================================================
 // GET OPERATIONS
@@ -31,7 +31,7 @@ export async function getAllInstitutions(): Promise<Institution[]> {
     const response = await axiosInstance.get(BASE_URL);
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching institutions:', error);
+    console.error("Error fetching institutions:", error);
     throw error;
   }
 }
@@ -44,7 +44,7 @@ export async function getAllInstitutions(): Promise<Institution[]> {
 export async function getInstitutionById(id: number): Promise<Institution> {
   try {
     if (!id) {
-      throw new Error('Institution ID is required');
+      throw new Error("Institution ID is required");
     }
 
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
@@ -64,7 +64,7 @@ export async function getActiveInstitutions(): Promise<Institution[]> {
     const response = await axiosInstance.get(`${BASE_URL}?disabled=false`);
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching active institutions:', error);
+    console.error("Error fetching active institutions:", error);
     throw error;
   }
 }
@@ -81,13 +81,13 @@ export async function getActiveInstitutions(): Promise<Institution[]> {
 export async function createInstitution(payload: CreateInstitutionPayload): Promise<Institution> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('Institution name is required');
+      throw new Error("Institution name is required");
     }
 
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data.payload;
   } catch (error) {
-    console.error('Error creating institution:', error);
+    console.error("Error creating institution:", error);
     throw error;
   }
 }
@@ -102,14 +102,17 @@ export async function createInstitution(payload: CreateInstitutionPayload): Prom
  * @param payload - Institution update data
  * @returns Promise<Institution> - Updated institution data
  */
-export async function updateInstitution(id: number, payload: UpdateInstitutionPayload): Promise<Institution> {
+export async function updateInstitution(
+  id: number,
+  payload: UpdateInstitutionPayload,
+): Promise<Institution> {
   try {
     if (!id) {
-      throw new Error('Institution ID is required');
+      throw new Error("Institution ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('Institution name cannot be empty');
+      throw new Error("Institution name cannot be empty");
     }
 
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
@@ -132,7 +135,7 @@ export async function updateInstitution(id: number, payload: UpdateInstitutionPa
 export async function deleteInstitution(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Institution ID is required');
+      throw new Error("Institution ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -158,11 +161,11 @@ export async function searchInstitutions(searchTerm: string): Promise<Institutio
     }
 
     const response = await axiosInstance.get(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.payload;
   } catch (error) {
-    console.error('Error searching institutions:', error);
+    console.error("Error searching institutions:", error);
     throw error;
   }
 }
@@ -182,12 +185,10 @@ export async function checkInstitutionExists(name: string): Promise<boolean> {
       return false;
     }
 
-    const response = await axiosInstance.get(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
-    );
+    const response = await axiosInstance.get(`${BASE_URL}?name=${encodeURIComponent(name.trim())}`);
     return response.data.payload.length > 0;
   } catch (error) {
-    console.error('Error checking institution existence:', error);
+    console.error("Error checking institution existence:", error);
     return false;
   }
 }
@@ -201,19 +202,19 @@ export const institutionService = {
   getAllInstitutions,
   getInstitutionById,
   getActiveInstitutions,
-  
+
   // Create operations
   createInstitution,
-  
+
   // Update operations
   updateInstitution,
-  
+
   // Delete operations
   deleteInstitution,
-  
+
   // Search and filter operations
   searchInstitutions,
-  
+
   // Utility functions
   checkInstitutionExists,
-}; 
+};

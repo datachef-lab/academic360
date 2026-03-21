@@ -84,7 +84,7 @@
 // //     },
 // //     cell: ({ row }) => {
 // //       const name = row.original.name;
-      
+
 // //       // Function to generate a unique color from name
 // //       const stringToColor = (str: string) => {
 // //         let hash = 0;
@@ -94,9 +94,9 @@
 // //         const color = `hsl(${hash % 360}, 70%, 60%)`;
 // //         return color;
 // //       };
-    
+
 // //       const bgColor = stringToColor(name);
-    
+
 // //       return (
 // //         <div className="flex items-center">
 // //           <Avatar className="h-8 w-8">
@@ -110,7 +110,7 @@
 // //         </div>
 // //       );
 // //     },
-    
+
 // //   },
 // //   {
 // //     accessorKey: "gender",
@@ -144,7 +144,7 @@
 // //     cell: ({ row }) => {
 // //       const student = row.original;
 // //       const category = student.category?.name?.toUpperCase();
-  
+
 // //       const getBadgeStyle = (category: string) => {
 // //         switch (category) {
 // //           case "GENERAL":
@@ -159,7 +159,7 @@
 // //             return "bg-pink-100 text-pink-800";
 // //         }
 // //       };
-  
+
 // //       return category ? (
 // //         <span
 // //           className={`px-3 py-2 rounded-full border text-xs font-semibold ${getBadgeStyle(
@@ -173,8 +173,6 @@
 // //       );
 // //     },
 // //   },
-  
- 
 
 // //   {
 // //     accessorKey: "stream",
@@ -237,7 +235,6 @@
 // //   },
 // // ];
 
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { Button } from "@/components/ui/button";
@@ -246,14 +243,8 @@ import { Gender, StudentStatus } from "@/types/enums";
 import { Specialization } from "@/types/resources/specialization";
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { Hash, BookUser, Church, Layers, Eye } from 'lucide-react';
-import { 
-  FaVenus, 
-  FaMars, 
-  FaTransgender, 
-  FaGenderless,
-  FaQuestion
-} from "react-icons/fa";
+import { Hash, BookUser, Church, Layers, Eye } from "lucide-react";
+import { FaVenus, FaMars, FaTransgender, FaGenderless, FaQuestion } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Nationality } from "@/types/resources/nationality.types";
@@ -275,7 +266,7 @@ export interface StudentSearchType {
   active: boolean;
   alumni: boolean;
   leavingDate: Date | null;
-avatar?:string;
+  avatar?: string;
 }
 
 export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
@@ -288,9 +279,9 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
       </div>
     ),
     cell: ({ row }) => {
-      const { name,avatar } = row.original;
+      const { name, avatar } = row.original;
       // const avatarUrl = `${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${academicIdentifier?.uid}.jpg`;
-    
+
       const stringToColor = (str: string) => {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -298,28 +289,23 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
         }
         return `hsl(${hash % 360}, 70%, 60%)`;
       };
-    
+
       const bgColor = stringToColor(name);
-    
+
       return (
         <div className="flex items-center justify-start whitespace-nowrap">
           <Avatar className="h-9 w-9">
             {avatar ? (
-              <AvatarImage
-                className="object-cover drop-shadow-lg"
-                src={avatar}
-                alt={name}
-                
-              />
+              <AvatarImage className="object-cover drop-shadow-lg" src={avatar} alt={name} />
             ) : (
-              <AvatarFallback 
+              <AvatarFallback
                 className="text-white font-medium"
                 style={{ backgroundColor: bgColor }}
               >
                 {name.charAt(0).toUpperCase()}
               </AvatarFallback>
             )}
-            <AvatarFallback style={{ backgroundColor: bgColor }} >
+            <AvatarFallback style={{ backgroundColor: bgColor }}>
               <Skeleton className="h-9 w-9  drop-shadow-md rounded-full" />
             </AvatarFallback>
           </Avatar>
@@ -340,7 +326,11 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     ),
     cell: ({ row }) => {
       const student = row.original;
-      return student.rollNumber ? <p className="whitespace-nowrap">{student.rollNumber}</p> : <p>-</p>;
+      return student.rollNumber ? (
+        <p className="whitespace-nowrap">{student.rollNumber}</p>
+      ) : (
+        <p>-</p>
+      );
     },
   },
   {
@@ -356,7 +346,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
       return student.registrationNumber ? <p>{student.registrationNumber}</p> : <p>-</p>;
     },
   },
- 
+
   {
     accessorKey: "gender",
     header: () => (
@@ -367,7 +357,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     ),
     cell: ({ row }) => {
       const gender = row.getValue("gender") as string;
-      
+
       const genderBadges = {
         FEMALE: {
           icon: <FaVenus className="h-3.5 w-3.5" />,
@@ -379,7 +369,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
           className: "bg-blue-100/50 text-blue-800 hover:bg-blue-100",
           label: "Male",
         },
-        'Non-binary': {
+        "Non-binary": {
           icon: <FaTransgender className="h-3.5 w-3.5" />,
           className: "bg-purple-100/50 text-purple-800 hover:bg-purple-100",
           label: "Non-binary",
@@ -388,22 +378,22 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
           icon: <FaGenderless className="h-3.5 w-3.5" />,
           className: "bg-gray-100/50 text-gray-800 hover:bg-gray-100",
           label: "Other",
-        }
+        },
       };
-  
+
       const config = genderBadges[gender as keyof typeof genderBadges] || {
         icon: <FaQuestion className="h-3.5 w-3.5" />,
         className: "bg-gray-100/50 text-gray-800 hover:bg-gray-100",
-        label: 'Not specified'
+        label: "Not specified",
       };
-  
+
       return (
         <Badge className={`gap-1.5 px-2.5 py-1 text-xs font-medium ${config.className}`}>
           {config.icon}
           {gender || config.label}
         </Badge>
       );
-    }
+    },
   },
   {
     accessorKey: "religion",
@@ -416,7 +406,10 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     cell: ({ row }) => {
       const student = row.original;
       return student.religion ? (
-        <Badge variant="outline" className="text-xs py-1 px-2 bg-amber-50 text-amber-700 border-amber-200">
+        <Badge
+          variant="outline"
+          className="text-xs py-1 px-2 bg-amber-50 text-amber-700 border-amber-200"
+        >
           {student.religion.name}
         </Badge>
       ) : (
@@ -472,7 +465,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     ),
     cell: () => {
       // const student = row.original;
-      return <p>{"student.stream.name"}</p>
+      return <p>{"student.stream.name"}</p>;
     },
   },
   {
@@ -521,23 +514,22 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
   //   ),
   // },
   {
-      accessorKey: "actions",
-      header: () => (
-        <div className="flex items-center justify-start gap-1 text-slate-800 font-semibold">
-          <Eye className="h-5 w-5 text-purple-600" />
-          <span>Actions</span>
-        </div>
-      ),
-      cell: ({ row }) => {
-        const student = row.original;
-        return (
-          <Link to={`${student.id}`} className="p-0 m-0 flex">
-            <Button variant="secondary"  className="drop-shadow-md bg-gray-200 border" size="sm">
-              View
-            </Button>
-          </Link>
-        );
-      },
+    accessorKey: "actions",
+    header: () => (
+      <div className="flex items-center justify-start gap-1 text-slate-800 font-semibold">
+        <Eye className="h-5 w-5 text-purple-600" />
+        <span>Actions</span>
+      </div>
+    ),
+    cell: ({ row }) => {
+      const student = row.original;
+      return (
+        <Link to={`${student.id}`} className="p-0 m-0 flex">
+          <Button variant="secondary" className="drop-shadow-md bg-gray-200 border" size="sm">
+            View
+          </Button>
+        </Link>
+      );
     },
+  },
 ];
-

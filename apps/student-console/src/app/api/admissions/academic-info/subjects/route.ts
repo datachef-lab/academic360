@@ -18,7 +18,10 @@ export async function POST(req: NextRequest) {
     const result = await createSubject(body as StudentAcademicSubject);
 
     if (result.message === "Subject already exists for this academic info.") {
-      return NextResponse.json({ message: result.message, subject: result.subject }, { status: 409 });
+      return NextResponse.json(
+        { message: result.message, subject: result.subject },
+        { status: 409 },
+      );
     }
 
     return NextResponse.json(result, { status: 201 });
@@ -47,7 +50,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(subjects);
     }
 
-    return NextResponse.json({ message: "Either id or academicInfoId is required" }, { status: 400 });
+    return NextResponse.json(
+      { message: "Either id or academicInfoId is required" },
+      { status: 400 },
+    );
   } catch (error) {
     console.error("Error fetching student subjects:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

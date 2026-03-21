@@ -20,7 +20,10 @@ import { useShifts } from "@/hooks/useShifts";
 
 interface FeeStructureFormProps {
   onClose: () => void;
-  onSubmit: (givenFeesStructure: FeesStructureDto | CreateFeesStructureDto, formType: "ADD" | "EDIT") => Promise<void>;
+  onSubmit: (
+    givenFeesStructure: FeesStructureDto | CreateFeesStructureDto,
+    formType: "ADD" | "EDIT",
+  ) => Promise<void>;
   fieldsDisabled?: boolean;
   disabledSteps?: number[];
   selectedAcademicYear?: AcademicYear | null;
@@ -231,7 +234,9 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           setError("Please add at least one fee component.");
           return false;
         }
-        if (formFeesStructureAdd.components.some((c) => !c.feesHeadId || c.baseAmount === undefined)) {
+        if (
+          formFeesStructureAdd.components.some((c) => !c.feesHeadId || c.baseAmount === undefined)
+        ) {
           setError("All fee components must have a fee head and amount.");
           return false;
         }
@@ -252,7 +257,9 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           setError("Please add at least one fee component.");
           return false;
         }
-        if (formFeesStructureEdit.components.some((c) => !c.feesHeadId || c.baseAmount === undefined)) {
+        if (
+          formFeesStructureEdit.components.some((c) => !c.feesHeadId || c.baseAmount === undefined)
+        ) {
           setError("All fee components must have a fee head and amount.");
           return false;
         }
@@ -322,8 +329,16 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
         return totalBaseAmount !== totalInstalmentAmount;
       })());
 
-  if (academicYearsLoading || slabsLoading || headsLoading || receiptTypesLoading || shiftsLoading) {
-    return <div className="flex items-center justify-center h-64 text-lg">Loading form data...</div>;
+  if (
+    academicYearsLoading ||
+    slabsLoading ||
+    headsLoading ||
+    receiptTypesLoading ||
+    shiftsLoading
+  ) {
+    return (
+      <div className="flex items-center justify-center h-64 text-lg">Loading form data...</div>
+    );
   }
 
   return (
@@ -344,7 +359,9 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
             <div key={step.number} className="z-10 flex flex-col items-center">
               <div
                 className={`flex items-center justify-center w-8 h-8 rounded-full font-bold transition-all duration-300 ${
-                  currentStep >= step.number ? "bg-purple-600 text-white" : "bg-gray-300 text-gray-900"
+                  currentStep >= step.number
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-300 text-gray-900"
                 }`}
               >
                 {step.number}
@@ -360,7 +377,11 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           ))}
         </div>
         <div className="flex-grow flex items-center justify-center min-h-0">
-          <img src={currentStepData.image} alt="Step Illustration" className="max-h-full max-w-full object-contain" />
+          <img
+            src={currentStepData.image}
+            alt="Step Illustration"
+            className="max-h-full max-w-full object-contain"
+          />
         </div>
       </div>
       {/* Form Content Panel */}
@@ -466,7 +487,9 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           <div className="flex justify-between">
             <button
               onClick={handlePrevious}
-              disabled={currentStep === 1 || !!(formFeesStructureAdd.id && formFeesStructureAdd.id > 0)}
+              disabled={
+                currentStep === 1 || !!(formFeesStructureAdd.id && formFeesStructureAdd.id > 0)
+              }
               className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                 currentStep === 1
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"

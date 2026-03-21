@@ -62,19 +62,14 @@ export default function MaterialItemForm({
               {getSubjectType(currentMaterialLink.subject_id_fk)}
             </Badge>
             <span className="text-xs text-muted-foreground">•</span>
-            <span className="text-xs">
-              {getSubjectPaper(currentMaterialLink.subject_id_fk)}
-            </span>
+            <span className="text-xs">{getSubjectPaper(currentMaterialLink.subject_id_fk)}</span>
           </div>
         </div>
 
         {/* Form fields */}
         <div className="space-y-5">
           <div className="bg-muted/10 p-3 rounded-lg">
-            <Label
-              htmlFor="materialType"
-              className="mb-2 block text-sm font-medium"
-            >
+            <Label htmlFor="materialType" className="mb-2 block text-sm font-medium">
               Material Type <span className="text-red-500">*</span>
             </Label>
             <div className="flex space-x-4">
@@ -93,10 +88,7 @@ export default function MaterialItemForm({
                     })
                   }
                 />
-                <Label
-                  htmlFor="typeLink"
-                  className="cursor-pointer flex items-center gap-1.5"
-                >
+                <Label htmlFor="typeLink" className="cursor-pointer flex items-center gap-1.5">
                   <ExternalLink size={14} />
                   Link
                 </Label>
@@ -116,10 +108,7 @@ export default function MaterialItemForm({
                     })
                   }
                 />
-                <Label
-                  htmlFor="typeFile"
-                  className="cursor-pointer flex items-center gap-1.5"
-                >
+                <Label htmlFor="typeFile" className="cursor-pointer flex items-center gap-1.5">
                   <FileText size={14} />
                   File Upload
                 </Label>
@@ -165,10 +154,7 @@ export default function MaterialItemForm({
             </div>
           ) : (
             <div>
-              <Label
-                htmlFor="fileUpload"
-                className="mb-1.5 block text-sm font-medium"
-              >
+              <Label htmlFor="fileUpload" className="mb-1.5 block text-sm font-medium">
                 File Upload <span className="text-red-500">*</span>
               </Label>
               <div className="mt-1">
@@ -194,8 +180,7 @@ export default function MaterialItemForm({
                         setCurrentMaterialLink({
                           ...currentMaterialLink,
                           file_path: URL.createObjectURL(e.target.files[0]),
-                          title:
-                            e.target.files[0].name || currentMaterialLink.title,
+                          title: e.target.files[0].name || currentMaterialLink.title,
                         });
                       }
                     }}
@@ -211,9 +196,7 @@ export default function MaterialItemForm({
                     <p className="font-medium text-foreground truncate">
                       {currentMaterialLink.title}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Ready to upload
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Ready to upload</p>
                   </div>
                   <Button
                     variant="ghost"

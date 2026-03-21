@@ -3,13 +3,36 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Trash2, Loader2, Upload, DoorOpen, Download, ArrowLeft, AlertTriangle, Copy } from "lucide-react";
+import { UserAvatar } from "@/hooks/UserAvatar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Users,
+  Trash2,
+  Loader2,
+  Upload,
+  DoorOpen,
+  Download,
+  AlertTriangle,
+  Copy,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllRooms } from "@/services/room.service";
@@ -20,7 +43,7 @@ import {
   countStudentsForExam,
   countStudentsBreakdownForExam,
 } from "@/services/exam-schedule.service";
-import { fetchExams, fetchExamById } from "@/services/exam.service";
+import { fetchExamGroups, fetchExamById } from "@/services/exam.service";
 import { allotExamRoomsAndStudents, type AllotExamParams } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
 import * as XLSX from "xlsx";
@@ -57,12 +80,17 @@ export default function AllotExamPage() {
   const queryClient = useQueryClient();
 
   // Exam selection
-  const [selectedExamId, setSelectedExamId] = useState<number | null>(examIdParam ? Number(examIdParam) : null);
+  const [selectedExamGroupId, setSelectedExamGroupId] = useState<number | null>(null);
+  const [selectedExamId, setSelectedExamId] = useState<number | null>(
+    examIdParam ? Number(examIdParam) : null,
+  );
   const [selectedExam, setSelectedExam] = useState<ExamDto | null>(null);
 
   // Room and student selection state
   const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
-  const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
+  const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">(
+    "UID",
+  );
   const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   const [enableFoilNumber, setEnableFoilNumber] = useState(false);
   const [enableRoomSelection, setEnableRoomSelection] = useState(true);
@@ -94,17 +122,17 @@ export default function AllotExamPage() {
     return true;
   }, [admitCardStartDate, admitCardEndDate]);
 
-  // Fetch all exams for selection
-  const { data: examsData, isLoading: loadingExams } = useQuery(
-    ["exams", "for-allotment"],
+  // Fetch exam groups for selection (each group contains exams)
+  const { data: examGroupsData, isLoading: loadingExamGroups } = useQuery(
+    ["examGroups", "for-allotment"],
     async () => {
-      const data = await fetchExams(1, 1000); // Fetch many exams
+      const data = await fetchExamGroups(1, 1000); // Fetch many exam groups
       return data.content;
     },
     {
       onError: (error) => {
-        console.error("Error fetching exams:", error);
-        toast.error("Failed to load exams");
+        console.error("Error fetching exam groups:", error);
+        toast.error("Failed to load exam groups");
       },
     },
   );
@@ -160,25 +188,50 @@ export default function AllotExamPage() {
     if (fetchedExam) {
       console.log("[ALLOT-EXAM] Exam fetched successfully:", fetchedExam.id);
       setSelectedExam(fetchedExam);
-      // Set admit card dates if they exist
-      if (fetchedExam.admitCardStartDownloadDate) {
-        setAdmitCardStartDate(toDatetimeLocal(fetchedExam.admitCardStartDownloadDate));
+      // Set exam group from exam when loaded (e.g. from URL param)
+      if (fetchedExam.examGroupId) {
+        setSelectedExamGroupId(fetchedExam.examGroupId);
       }
-      if (fetchedExam.admitCardLastDownloadDate) {
-        setAdmitCardEndDate(toDatetimeLocal(fetchedExam.admitCardLastDownloadDate));
+      // Set admit card dates: first from selected exam, else from any exam in the same group
+      let startDate = fetchedExam.admitCardStartDownloadDate
+        ? toDatetimeLocal(fetchedExam.admitCardStartDownloadDate)
+        : "";
+      let endDate = fetchedExam.admitCardLastDownloadDate
+        ? toDatetimeLocal(fetchedExam.admitCardLastDownloadDate)
+        : "";
+      if ((!startDate || !endDate) && examGroupsData) {
+        const groupId = fetchedExam.examGroupId ?? selectedExamGroupId;
+        const group = groupId ? examGroupsData.find((g) => g.id === groupId) : null;
+        const examsInGroup = group?.exams ?? [];
+        const examWithDates = examsInGroup.find(
+          (e) => e.admitCardStartDownloadDate && e.admitCardLastDownloadDate,
+        );
+        if (examWithDates) {
+          if (!startDate) startDate = toDatetimeLocal(examWithDates.admitCardStartDownloadDate);
+          if (!endDate) endDate = toDatetimeLocal(examWithDates.admitCardLastDownloadDate);
+        }
       }
+      setAdmitCardStartDate(startDate);
+      setAdmitCardEndDate(endDate);
     } else if (selectedExamId === null) {
       // Clear exam state when no exam is selected
       setSelectedExam(null);
       setAdmitCardStartDate("");
       setAdmitCardEndDate("");
     }
-  }, [fetchedExam, selectedExamId]);
+  }, [fetchedExam, selectedExamId, selectedExamGroupId, examGroupsData]);
 
   // Debug: Log loading states
   useEffect(() => {
     if (selectedExamId) {
-      console.log("[ALLOT-EXAM] Selected exam ID:", selectedExamId, "Loading:", loadingExam, "Error:", examError);
+      console.log(
+        "[ALLOT-EXAM] Selected exam ID:",
+        selectedExamId,
+        "Loading:",
+        loadingExam,
+        "Error:",
+        examError,
+      );
     }
   }, [selectedExamId, loadingExam, examError]);
 
@@ -242,7 +295,9 @@ export default function AllotExamPage() {
       // Fetch eligible rooms
       const res = await getEligibleRooms({ examSubjects });
       if (res.httpStatus === "SUCCESS" && res.payload) {
-        return res.payload.rooms.sort((a, b) => (a.name || "").localeCompare(b.name || "")) as RoomDto[];
+        return res.payload.rooms.sort((a, b) =>
+          (a.name || "").localeCompare(b.name || ""),
+        ) as RoomDto[];
       }
       return [];
     },
@@ -278,7 +333,9 @@ export default function AllotExamPage() {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
-        const matrix = sheet ? (XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][]) : [];
+        const matrix = sheet
+          ? (XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][])
+          : [];
 
         if (!matrix || matrix.length < 2) {
           toast.error("Excel file has no data rows.");
@@ -290,7 +347,14 @@ export default function AllotExamPage() {
         const headers = headerRow.map(normalizeHeaderKey);
 
         const uidCandidates = ["uid"];
-        const foilCandidates = ["foil number", "foil no", "foil no.", "foil_number", "foilnumber", "foil"];
+        const foilCandidates = [
+          "foil number",
+          "foil no",
+          "foil no.",
+          "foil_number",
+          "foilnumber",
+          "foil",
+        ];
 
         const uidIdx = headers.findIndex((h: string) => uidCandidates.includes(h));
         const foilIdx = headers.findIndex((h: string) => foilCandidates.includes(h));
@@ -497,7 +561,8 @@ export default function AllotExamPage() {
             const shift = selectedExam.examShifts.find((es) => es.shift.id === item.shiftId);
             return {
               programCourseId: item.programCourseId,
-              programCourseName: programCourse?.programCourse.name || `Program Course ${item.programCourseId}`,
+              programCourseName:
+                programCourse?.programCourse.name || `Program Course ${item.programCourseId}`,
               shiftId: item.shiftId,
               shiftName: shift?.shift.name || `Shift ${item.shiftId}`,
               count: item.count,
@@ -552,7 +617,8 @@ export default function AllotExamPage() {
       const roomAssignments = enableRoomSelection
         ? selectedRooms.map((room) => {
             const floor = floors.find((f) => f.id === room.floor.id);
-            const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+            const maxStudentsPerBench =
+              room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
             const numberOfBenches = room.numberOfBenches || 0;
             const capacity = room.capacity || numberOfBenches * maxStudentsPerBench;
             return {
@@ -637,8 +703,20 @@ export default function AllotExamPage() {
     }
   };
 
+  // Helper to format exam commencement date (dd/mm/yyyy)
+  const formatExamCommencementDate = (date: Date | string | null | undefined): string => {
+    if (!date) return "";
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return "";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   // Reset form function
   const resetForm = () => {
+    setSelectedExamGroupId(null);
     setSelectedExamId(null);
     setSelectedExam(null);
     setGender("ALL");
@@ -684,9 +762,13 @@ export default function AllotExamPage() {
         orderType: assignBy,
         gender: gender === "ALL" ? null : gender,
         admitCardStartDownloadDate:
-          admitCardStartDate && admitCardStartDate.trim() !== "" ? new Date(admitCardStartDate).toISOString() : null,
+          admitCardStartDate && admitCardStartDate.trim() !== ""
+            ? new Date(admitCardStartDate).toISOString()
+            : null,
         admitCardLastDownloadDate:
-          admitCardEndDate && admitCardEndDate.trim() !== "" ? new Date(admitCardEndDate).toISOString() : null,
+          admitCardEndDate && admitCardEndDate.trim() !== ""
+            ? new Date(admitCardEndDate).toISOString()
+            : null,
       };
 
       const response = await allotExamRoomsAndStudents(selectedExamId, params, excelFile);
@@ -701,7 +783,7 @@ export default function AllotExamPage() {
       // Reset form after successful allotment
       resetForm();
       // Navigate back to exams list or exam details
-      navigate(`/dashboard/exam-management/exams/${selectedExamId}`);
+      navigate(`/dashboard/exam-management/exams/${selectedExam?.examGroupId}`);
     },
     onError: (error) => {
       console.log("In allot exam api, error:", error);
@@ -775,25 +857,38 @@ export default function AllotExamPage() {
     allotExamMutation.mutate();
   };
 
-  // Filter exams that are available for allotment
-  // Show exams that:
-  // 1. Have NO rooms/locations assigned (never allotted with rooms), AND
-  // 2. Have NO candidates (never allotted without rooms)
-  const examsWithoutRooms =
-    examsData?.filter((exam) => {
-      // Skip exams that already have rooms assigned
-      if (exam.locations && exam.locations.length > 0) {
-        return false;
-      }
+  // Helper: exam is available for allotment if no rooms and no candidates
+  const isExamAvailableForAllotment = (exam: ExamDto) => {
+    if (exam.locations && exam.locations.length > 0) return false;
+    if (exam.candidateCount && exam.candidateCount > 0) return false;
+    return true;
+  };
 
-      // Skip exams that already have candidates allotted (allotted without rooms)
-      if (exam.candidateCount && exam.candidateCount > 0) {
-        return false;
-      }
+  // Exam groups that have at least one exam available for allotment
+  // Also include the selected exam's group (e.g. when opened via URL) so dropdown displays correctly
+  const examGroupsWithAllotableExams = (() => {
+    const withAllotable =
+      examGroupsData?.filter((group) => {
+        const allotableExams = (group.exams || []).filter(isExamAvailableForAllotment);
+        return allotableExams.length > 0;
+      }) || [];
+    if (
+      selectedExamGroupId &&
+      !withAllotable.some((g) => g.id === selectedExamGroupId) &&
+      examGroupsData
+    ) {
+      const selectedGroup = examGroupsData.find((g) => g.id === selectedExamGroupId);
+      if (selectedGroup) return [...withAllotable, selectedGroup];
+    }
+    return withAllotable;
+  })();
 
-      // Include only newly scheduled exams with no allotment yet
-      return true;
-    }) || [];
+  // Exams available for allotment, filtered by selected exam group
+  const examsForSelectedGroup = selectedExamGroupId
+    ? (examGroupsData?.find((g) => g.id === selectedExamGroupId)?.exams || []).filter(
+        isExamAvailableForAllotment,
+      )
+    : [];
 
   return (
     <div className="min-h-screen w-full p-7 py-4">
@@ -805,7 +900,7 @@ export default function AllotExamPage() {
             <p className="text-gray-600 mt-1">Assign rooms and students to scheduled exams</p>
           </div>
           {/* Header with back button */}
-          <div className="mb-6 flex items-center gap-4">
+          {/* <div className="mb-6 flex items-center gap-4">
             <Button
               variant="ghost"
               onClick={() => navigate("/dashboard/exam-management/exams")}
@@ -814,12 +909,63 @@ export default function AllotExamPage() {
               <ArrowLeft className="w-4 h-4" />
               Back to Exams
             </Button>
-          </div>
+          </div> */}
 
-          {/* Controls Row - Select Exam, Gender, Order By */}
+          {/* Controls Row - Exam Group, Exam, Gender, Order By */}
           <Card className="border-0 shadow-none mb-4">
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-wrap items-end gap-4">
+                <div className="flex-1 min-w-[280px]">
+                  <Label className="font-medium text-gray-700 mb-2 block">Exam Group</Label>
+                  <Select
+                    value={selectedExamGroupId?.toString() || ""}
+                    onValueChange={(val) => {
+                      const id = val ? Number(val) : null;
+                      setSelectedExamGroupId(id);
+                      setSelectedExamId(null);
+                      setSelectedExam(null);
+                      setSelectedRooms([]);
+                      setEnableFoilNumber(false);
+                      setEnableRoomSelection(true);
+                      setExcelFile(null);
+                      setAdmitCardStartDate("");
+                      setAdmitCardEndDate("");
+                    }}
+                    disabled={loadingExamGroups}
+                  >
+                    <SelectTrigger className="h-12 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-left [&>span]:min-w-0 [&>span]:truncate [&>span]:block">
+                      <SelectValue
+                        placeholder={
+                          loadingExamGroups ? "Loading exam groups..." : "Select exam group"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="text-left">
+                      {examGroupsWithAllotableExams.length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-gray-500 text-left">
+                          No exam groups available for allotment
+                        </div>
+                      ) : (
+                        examGroupsWithAllotableExams
+                          .filter((g) => g.id != null)
+                          .map((group) => (
+                            <SelectItem
+                              key={group.id!}
+                              value={group.id!.toString()}
+                              className="text-left"
+                            >
+                              <div className="flex flex-col py-0.5 text-left">
+                                <span className="font-medium">{group.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatExamCommencementDate(group.examCommencementDate)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex-1 min-w-[300px]">
                   <Label className="font-medium text-gray-700 mb-2 block">Select Exam</Label>
                   <Select
@@ -835,47 +981,81 @@ export default function AllotExamPage() {
                       setAdmitCardStartDate("");
                       setAdmitCardEndDate("");
                     }}
-                    disabled={loadingExams || (loadingExam && !!selectedExamId)}
+                    disabled={
+                      loadingExamGroups || !selectedExamGroupId || (loadingExam && !!selectedExamId)
+                    }
                   >
-                    <SelectTrigger className="h-10 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <SelectTrigger className="h-12 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-left [&>span]:min-w-0 [&>span]:truncate [&>span]:block">
                       <SelectValue
                         placeholder={
-                          loadingExams
-                            ? "Loading exams..."
+                          !selectedExamGroupId
+                            ? "Select exam group first"
                             : loadingExam && selectedExamId
                               ? "Loading exam details..."
                               : "Select an exam"
                         }
                       />
-                      {loadingExam && selectedExamId && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
+                      {loadingExam && selectedExamId && (
+                        <Loader2 className="w-4 h-4 animate-spin ml-2 shrink-0" />
+                      )}
                     </SelectTrigger>
-                    <SelectContent>
-                      {examsWithoutRooms.length === 0 ? (
-                        <div className="px-2 py-1.5 text-sm text-gray-500">No exams available for allotment</div>
+                    <SelectContent className="text-left">
+                      {examsForSelectedGroup.length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-gray-500 text-left">
+                          {selectedExamGroupId
+                            ? "No exams available for allotment"
+                            : "Select exam group first"}
+                        </div>
                       ) : (
-                        examsWithoutRooms
+                        examsForSelectedGroup
                           .filter((exam) => exam.id !== null && exam.id !== undefined)
-                          .map((exam) => (
-                            <SelectItem key={exam.id} value={exam.id!.toString()}>
-                              {exam.examType.name} - {exam.class.name} - {exam.academicYear.year}
-                            </SelectItem>
-                          ))
+                          .map((exam) => {
+                            const examName =
+                              `${exam.examType?.name || ""} - ${exam.class?.name || ""} - ${exam.academicYear?.year || ""}`.trim();
+                            const subjectTypesStr =
+                              exam.examSubjectTypes
+                                ?.map((est) => est.subjectType?.code || est.subjectType?.name || "")
+                                .filter(Boolean)
+                                .join(", ") || "";
+                            return (
+                              <SelectItem
+                                key={exam.id}
+                                value={exam.id!.toString()}
+                                className="text-left"
+                              >
+                                <div className="flex flex-col py-0.5 text-left">
+                                  <span className="font-medium">{examName}</span>
+                                  {subjectTypesStr && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {subjectTypesStr}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })
                       )}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex-1 sm:flex-initial min-w-[180px]">
-                  <Label htmlFor="gender-select" className="text-sm font-medium text-gray-700 mb-2 block">
+                  <Label
+                    htmlFor="gender-select"
+                    className="text-sm font-medium text-gray-700 mb-2 block"
+                  >
                     Gender
                   </Label>
-                  <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
+                  <Select
+                    value={gender || ""}
+                    onValueChange={(value) => setGender(value as typeof gender)}
+                  >
                     <SelectTrigger
                       id="gender-select"
-                      className="h-10 w-full sm:w-48 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                      className="h-12 w-full sm:w-48 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-left"
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="text-left">
                       <SelectItem value="ALL">All Students</SelectItem>
                       <SelectItem value="MALE">Male Only</SelectItem>
                       <SelectItem value="FEMALE">Female Only</SelectItem>
@@ -884,17 +1064,23 @@ export default function AllotExamPage() {
                   </Select>
                 </div>
                 <div className="flex-1 sm:flex-initial min-w-[180px]">
-                  <Label htmlFor="order-by-select" className="text-sm font-medium text-gray-700 mb-2 block">
+                  <Label
+                    htmlFor="order-by-select"
+                    className="text-sm font-medium text-gray-700 mb-2 block"
+                  >
                     Order By
                   </Label>
-                  <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
+                  <Select
+                    value={assignBy}
+                    onValueChange={(value) => setAssignBy(value as typeof assignBy)}
+                  >
                     <SelectTrigger
                       id="order-by-select"
-                      className="h-10 w-full sm:w-52 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                      className="h-12 w-full sm:w-52 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-left"
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="text-left">
                       <SelectItem value="UID">UID</SelectItem>
                       <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
                       <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
@@ -908,12 +1094,16 @@ export default function AllotExamPage() {
           {/* View Rooms and View Students Buttons Row */}
           {selectedExam && (
             <Card className="border-0 shadow-none mb-4 min-h-[122px] flex flex-col justify-center">
-              <CardContent className="pt-2 pb-4">
+              <CardContent className="">
                 <div className="flex flex-wrap items-center gap-4">
                   <Button
                     onClick={() => setRoomsModalOpen(true)}
                     variant="outline"
-                    disabled={!selectedExam || selectedExam.examSubjects.length === 0 || !enableRoomSelection}
+                    disabled={
+                      !selectedExam ||
+                      selectedExam.examSubjects.length === 0 ||
+                      !enableRoomSelection
+                    }
                     className="h-10 border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <DoorOpen className="w-4 h-4 mr-2" />
@@ -922,12 +1112,72 @@ export default function AllotExamPage() {
                   <Button
                     onClick={() => setStudentsModalOpen(true)}
                     variant="outline"
-                    className="h-10 border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50"
+                    className="h-10 border-purple-300 min-w-[203px] hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50"
                     disabled={studentsWithSeats.length === 0}
                   >
                     <Users className="w-4 h-4 mr-2" />
                     View Students ({studentsWithSeats.length})
                   </Button>
+                  {/* Excel File Upload - Only show if foil number switch is enabled */}
+                  {selectedExam && enableFoilNumber && (
+                    <Card className="border-0 shadow-none ">
+                      <CardContent className="p-0">
+                        <div className="flex flex-col gap-1 items-center ">
+                          {/* <Label className="font-medium text-gray-700">Upload Excel</Label> */}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="h-10 w-full sm:w-auto sm:min-w-[200px] justify-between border-purple-300"
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                {excelFile
+                                  ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
+                                  : "Upload Excel"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-4" align="start">
+                              <div className="space-y-3">
+                                <Input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept=".xlsx,.xls"
+                                  onChange={handleFileUpload}
+                                  className="hidden"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  className="w-full"
+                                >
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Choose Excel File (foil_number, uid)
+                                </Button>
+                                {excelFile && (
+                                  <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
+                                    <span className="text-sm text-green-700">{excelFile.name}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={removeExcelFile}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                                <p className="text-gray-500">
+                                  Upload XLSX with columns: foil_number, uid
+                                </p>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Room Selection and Foil Number Switches */}
                   {selectedExam && (
                     <div className="flex items-center gap-6 ml-auto">
@@ -974,7 +1224,7 @@ export default function AllotExamPage() {
                     </div>
                   )}
 
-                  {/* Excel File Upload - Only show if foil number switch is enabled */}
+                  {/* Excel File Upload - Only show if foil number switch is enabled
                   {selectedExam && enableFoilNumber && (
                     <Card className="border-0 shadow-none mb-6">
                       <CardContent className="pt-6 pb-4">
@@ -1030,7 +1280,7 @@ export default function AllotExamPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  )}
+                  )} */}
                 </div>
               </CardContent>
             </Card>
@@ -1045,7 +1295,10 @@ export default function AllotExamPage() {
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="admit-card-start-date" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="admit-card-start-date"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Start Date & Time <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -1056,16 +1309,24 @@ export default function AllotExamPage() {
                         const value = e.target.value;
                         setAdmitCardStartDate(value);
                         // Validate that start date is before end date if both are set
-                        if (value && admitCardEndDate && new Date(value) > new Date(admitCardEndDate)) {
+                        if (
+                          value &&
+                          admitCardEndDate &&
+                          new Date(value) > new Date(admitCardEndDate)
+                        ) {
                           toast.error("Start date must be before end date");
                         }
                       }}
                       className="h-10"
                       required
+                      disabled={!!admitCardStartDate?.trim() && !!admitCardEndDate?.trim()}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="admit-card-end-date" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="admit-card-end-date"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       End Date & Time <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -1076,19 +1337,29 @@ export default function AllotExamPage() {
                         const value = e.target.value;
                         setAdmitCardEndDate(value);
                         // Validate that end date is after start date if both are set
-                        if (value && admitCardStartDate && new Date(value) < new Date(admitCardStartDate)) {
+                        if (
+                          value &&
+                          admitCardStartDate &&
+                          new Date(value) < new Date(admitCardStartDate)
+                        ) {
                           toast.error("End date must be after start date");
                         }
                       }}
                       className="h-10"
                       required
+                      disabled={!!admitCardStartDate?.trim() && !!admitCardEndDate?.trim()}
                     />
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  <span className="text-red-500">*</span> Required: Set the date range when students can download their
-                  admit cards.
+                  <span className="text-red-500">*</span> Required: Set the date range when students
+                  can download their admit cards.
                 </p>
+                {admitCardStartDate?.trim() && admitCardEndDate?.trim() && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    You can later change this window from the exam details page once allotted.
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
@@ -1111,7 +1382,9 @@ export default function AllotExamPage() {
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-center gap-3 text-red-600 py-8">
                   <AlertTriangle className="w-5 h-5" />
-                  <span className="text-sm font-medium">Failed to load exam details. Please try again.</span>
+                  <span className="text-sm font-medium">
+                    Failed to load exam details. Please try again.
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -1121,7 +1394,9 @@ export default function AllotExamPage() {
           {selectedExam && !loadingExam && (
             <Card className="border-0 shadow-none mb-4">
               <CardContent className="pt-4 pb-4">
-                <Label className="text-sm font-medium text-gray-700 mb-3 block">Exam Summary:</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                  Exam Summary:
+                </Label>
                 <div className="border border-gray-400 rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
@@ -1195,7 +1470,10 @@ export default function AllotExamPage() {
                         </TableCell>
                         <TableCell className="text-center p-2">
                           {selectedExam.class ? (
-                            <Badge variant="outline" className="border-orange-300 text-orange-700 bg-orange-50">
+                            <Badge
+                              variant="outline"
+                              className="border-orange-300 text-orange-700 bg-orange-50"
+                            >
                               {selectedExam.class.name}
                             </Badge>
                           ) : (
@@ -1210,7 +1488,9 @@ export default function AllotExamPage() {
                 {/* Subjects Table */}
                 {!loadingExam && selectedExam.examSubjects.length > 0 && (
                   <div className="mt-4">
-                    <Label className="text-sm font-medium text-gray-700 mb-3 block">Subjects Schedule:</Label>
+                    <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                      Subjects Schedule:
+                    </Label>
                     <div className="border border-gray-400 rounded-lg overflow-hidden">
                       <Table>
                         <TableHeader>
@@ -1241,7 +1521,10 @@ export default function AllotExamPage() {
                         <TableBody>
                           {loadingPapers ? (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              <TableCell
+                                colSpan={7}
+                                className="text-center py-8 text-muted-foreground"
+                              >
                                 Loading papers data...
                               </TableCell>
                             </TableRow>
@@ -1251,7 +1534,12 @@ export default function AllotExamPage() {
                                 <div className="flex flex-col items-center gap-2">
                                   <span className="text-red-600 font-medium">Error 404</span>
                                   <span className="text-muted-foreground">An error occurred.</span>
-                                  <Button variant="outline" size="sm" onClick={() => refetchPapers()} className="mt-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => refetchPapers()}
+                                    className="mt-2"
+                                  >
                                     Retry
                                   </Button>
                                 </div>
@@ -1259,7 +1547,10 @@ export default function AllotExamPage() {
                             </TableRow>
                           ) : papersForExam.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              <TableCell
+                                colSpan={7}
+                                className="text-center py-8 text-muted-foreground"
+                              >
                                 No papers found for this exam configuration.
                               </TableCell>
                             </TableRow>
@@ -1327,7 +1618,9 @@ export default function AllotExamPage() {
                                 const startDateStr = formatDateDDMMYYYY(startDate);
                                 const endDateStr = formatDateDDMMYYYY(endDate);
                                 const dateDisplay =
-                                  startDateStr === endDateStr ? startDateStr : `${startDateStr} - ${endDateStr}`;
+                                  startDateStr === endDateStr
+                                    ? startDateStr
+                                    : `${startDateStr} - ${endDateStr}`;
                                 const timeDisplay = `${formatTime(startDate)} - ${formatTime(endDate)}`;
 
                                 // Collect all unique program courses for this group
@@ -1340,9 +1633,13 @@ export default function AllotExamPage() {
 
                                 const programCoursesForGroup = Array.from(uniqueProgramCourseIds)
                                   .map((pcId) =>
-                                    selectedExam.examProgramCourses.find((epc) => epc.programCourse.id === pcId),
+                                    selectedExam.examProgramCourses.find(
+                                      (epc) => epc.programCourse.id === pcId,
+                                    ),
                                   )
-                                  .filter((epc): epc is NonNullable<typeof epc> => epc !== undefined);
+                                  .filter(
+                                    (epc): epc is NonNullable<typeof epc> => epc !== undefined,
+                                  );
 
                                 // Find subject type for representative paper
                                 const subjectType = selectedExam.examSubjectTypes.find(
@@ -1386,7 +1683,9 @@ export default function AllotExamPage() {
                                             <span className="text-red-500 ml-1">*</span>
                                           )}
                                           {showCount && (
-                                            <span className="text-gray-500 ml-1 text-xs">({paperCount})</span>
+                                            <span className="text-gray-500 ml-1 text-xs">
+                                              ({paperCount})
+                                            </span>
                                           )}
                                         </span>
                                         <Badge
@@ -1400,7 +1699,11 @@ export default function AllotExamPage() {
                                     </TableCell>
                                     <TableCell className="p-2 text-center border-r border-gray-400 text-sm font-mono">
                                       {representativePaper.code || "-"}
-                                      {showCount && <span className="text-gray-500 ml-1 text-xs">({paperCount})</span>}
+                                      {showCount && (
+                                        <span className="text-gray-500 ml-1 text-xs">
+                                          ({paperCount})
+                                        </span>
+                                      )}
                                     </TableCell>
                                     <TableCell className="p-2 text-center border-r border-gray-400">
                                       {subjectType ? (
@@ -1408,7 +1711,8 @@ export default function AllotExamPage() {
                                           variant="outline"
                                           className="text-xs border-green-300 text-green-700 bg-green-50"
                                         >
-                                          {subjectType.subjectType.code || subjectType.subjectType.name}
+                                          {subjectType.subjectType.code ||
+                                            subjectType.subjectType.name}
                                         </Badge>
                                       ) : (
                                         <span className="text-muted-foreground">-</span>
@@ -1417,7 +1721,9 @@ export default function AllotExamPage() {
                                     <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
                                       {dateDisplay}
                                     </TableCell>
-                                    <TableCell className="p-2 text-center text-sm">{timeDisplay}</TableCell>
+                                    <TableCell className="p-2 text-center text-sm">
+                                      {timeDisplay}
+                                    </TableCell>
                                   </TableRow>
                                 );
                               });
@@ -1445,7 +1751,9 @@ export default function AllotExamPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-blue-900">{Number(totalStudentCount) || 0}</span>
+                      <span className="text-2xl font-bold text-blue-900">
+                        {Number(totalStudentCount) || 0}
+                      </span>
                       <span className="text-sm text-blue-700">students</span>
                     </div>
                   )}
@@ -1469,7 +1777,10 @@ export default function AllotExamPage() {
                   // Transform data into table format: rows = program courses, columns = shifts
                   const programCourseMap = new Map<
                     number,
-                    { name: string; shifts: Map<number, { name: string; count: number; allotted: number }> }
+                    {
+                      name: string;
+                      shifts: Map<number, { name: string; count: number; allotted: number }>;
+                    }
                   >();
 
                   // Get all unique shifts
@@ -1511,7 +1822,9 @@ export default function AllotExamPage() {
 
                   return (
                     <div className="mt-3 pt-3 border-t border-blue-200">
-                      <p className="text-xs font-medium text-blue-800 mb-3">Breakdown by Program Course & Shift:</p>
+                      <p className="text-xs font-medium text-blue-800 mb-3">
+                        Breakdown by Program Course & Shift:
+                      </p>
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
                           <thead>
@@ -1566,7 +1879,8 @@ export default function AllotExamPage() {
                                   </td>
                                   {sortedShiftIds.map((shiftId) => {
                                     const shiftData = pcData.shifts.get(shiftId);
-                                    const shiftHasMismatch = shiftData && shiftData.count !== shiftData.allotted;
+                                    const shiftHasMismatch =
+                                      shiftData && shiftData.count !== shiftData.allotted;
                                     return (
                                       <td
                                         key={shiftId}
@@ -1582,7 +1896,9 @@ export default function AllotExamPage() {
                                   })}
                                   <td
                                     className={`border border-blue-200 px-3 py-2 text-sm font-bold text-center ${
-                                      hasMismatch ? "bg-yellow-100 text-orange-800" : "text-blue-900"
+                                      hasMismatch
+                                        ? "bg-yellow-100 text-orange-800"
+                                        : "text-blue-900"
                                     }`}
                                   >
                                     {rowTotal}
@@ -1592,7 +1908,9 @@ export default function AllotExamPage() {
                                   </td>
                                   <td
                                     className={`border border-blue-200 px-3 py-2 text-sm font-bold text-center ${
-                                      insufficientSeats > 0 ? "bg-red-100 text-red-800" : "text-gray-600"
+                                      insufficientSeats > 0
+                                        ? "bg-red-100 text-red-800"
+                                        : "text-gray-600"
                                     }`}
                                   >
                                     {insufficientSeats > 0 ? insufficientSeats : "-"}
@@ -1684,7 +2002,8 @@ export default function AllotExamPage() {
                 <div className="text-xs text-blue-600 font-medium mb-1">Total Capacity</div>
                 <div className="text-lg font-bold text-blue-900">
                   {selectedRooms.reduce((total, room) => {
-                    const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                    const maxStudentsPerBench =
+                      room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
                     const numberOfBenches = room.numberOfBenches || 0;
                     return total + numberOfBenches * maxStudentsPerBench;
                   }, 0)}
@@ -1693,7 +2012,11 @@ export default function AllotExamPage() {
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                 <div className="text-xs text-green-600 font-medium mb-1">Total Students</div>
                 <div className="text-lg font-bold text-green-900">
-                  {loadingTotalStudents ? <Loader2 className="h-4 w-4 animate-spin inline" /> : totalEligibleStudents}
+                  {loadingTotalStudents ? (
+                    <Loader2 className="h-4 w-4 animate-spin inline" />
+                  ) : (
+                    totalEligibleStudents
+                  )}
                 </div>
               </div>
               <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
@@ -1701,7 +2024,8 @@ export default function AllotExamPage() {
                 <div className="text-lg font-bold text-purple-900">
                   {(() => {
                     const totalCapacity = selectedRooms.reduce((total, room) => {
-                      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                      const maxStudentsPerBench =
+                        room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
                       const numberOfBenches = room.numberOfBenches || 0;
                       return total + numberOfBenches * maxStudentsPerBench;
                     }, 0);
@@ -1722,7 +2046,8 @@ export default function AllotExamPage() {
                       return <Loader2 className="h-4 w-4 animate-spin inline" />;
                     }
                     const totalCapacity = selectedRooms.reduce((total, room) => {
-                      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                      const maxStudentsPerBench =
+                        room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
                       const numberOfBenches = room.numberOfBenches || 0;
                       return total + numberOfBenches * maxStudentsPerBench;
                     }, 0);
@@ -1741,7 +2066,8 @@ export default function AllotExamPage() {
             {!loadingTotalStudents &&
               (() => {
                 const totalCapacity = selectedRooms.reduce((total, room) => {
-                  const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                  const maxStudentsPerBench =
+                    room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
                   const numberOfBenches = room.numberOfBenches || 0;
                   return total + numberOfBenches * maxStudentsPerBench;
                 }, 0);
@@ -1766,7 +2092,9 @@ export default function AllotExamPage() {
               <div className="text-center py-12 text-gray-500">
                 <DoorOpen className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                 <p className="font-medium">No eligible rooms available</p>
-                <p className="text-sm mt-1">All rooms may be occupied during the selected exam schedule</p>
+                <p className="text-sm mt-1">
+                  All rooms may be occupied during the selected exam schedule
+                </p>
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
@@ -1831,9 +2159,14 @@ export default function AllotExamPage() {
                           const isSelected = selectedRooms.some((r) => r.id === room.id);
                           const selectedRoom = selectedRooms.find((r) => r.id === room.id);
                           const currentMaxStudentsPerBench =
-                            selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-                          const calculatedCapacity = (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
-                          const floorName = room.floor.id! ? floors.find((f) => f.id === room.floor.id)?.name : "N/A";
+                            selectedRoom?.maxStudentsPerBenchOverride ||
+                            room.maxStudentsPerBench ||
+                            2;
+                          const calculatedCapacity =
+                            (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
+                          const floorName = room.floor.id!
+                            ? floors.find((f) => f.id === room.floor.id)?.name
+                            : "N/A";
 
                           return (
                             <tr
@@ -1843,21 +2176,27 @@ export default function AllotExamPage() {
                               <td className="p-4 align-middle border-r border-border text-center">
                                 <Checkbox
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => handleRoomSelection(room, !!checked)}
+                                  onCheckedChange={(checked) =>
+                                    handleRoomSelection(room, !!checked)
+                                  }
                                   className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                 />
                               </td>
                               <td className="p-4 align-middle border-r border-border text-center text-sm">
                                 {index + 1}
                               </td>
-                              <td className="p-4 align-middle border-r border-border text-sm">{floorName}</td>
+                              <td className="p-4 align-middle border-r border-border text-sm">
+                                {floorName}
+                              </td>
                               <td className="p-4 align-middle border-r border-border text-sm font-medium">
                                 {room.name}
                               </td>
                               <td className="p-4 align-middle border-r border-border text-sm">
                                 {room.numberOfBenches || 0}
                               </td>
-                              <td className="p-4 align-middle border-r border-border text-sm">{calculatedCapacity}</td>
+                              <td className="p-4 align-middle border-r border-border text-sm">
+                                {calculatedCapacity}
+                              </td>
                               <td className="p-4 align-middle border-r border-border text-sm">
                                 {currentMaxStudentsPerBench}
                               </td>
@@ -1910,7 +2249,8 @@ export default function AllotExamPage() {
           <DialogFooter className="p-5 border-t">
             <div className="flex items-center justify-between w-full">
               <p className="text-sm text-gray-600">
-                <span className="font-medium text-gray-700">{selectedRooms.length}</span> room(s) selected
+                <span className="font-medium text-gray-700">{selectedRooms.length}</span> room(s)
+                selected
               </p>
               <Button onClick={() => setRoomsModalOpen(false)} variant="outline">
                 Close
@@ -1930,7 +2270,9 @@ export default function AllotExamPage() {
               </div>
               <div>
                 <DialogTitle className="text-lg font-semibold">Students Assigned</DialogTitle>
-                <DialogDescription>View students with their assigned seats and locations</DialogDescription>
+                <DialogDescription>
+                  View students with their assigned seats and locations
+                </DialogDescription>
               </div>
             </div>
           </DialogHeader>
@@ -1944,7 +2286,9 @@ export default function AllotExamPage() {
               <div className="text-center py-12">
                 <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                 <p className="font-semibold text-gray-600">No Students Assigned</p>
-                <p className="text-gray-400 mt-1 text-sm">Select rooms and generate assignments to see students here</p>
+                <p className="text-gray-400 mt-1 text-sm">
+                  Select rooms and generate assignments to see students here
+                </p>
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
@@ -1959,7 +2303,11 @@ export default function AllotExamPage() {
                           Name
                         </th>
                         <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          {assignBy === "UID" ? "UID" : assignBy === "CU_ROLL_NUMBER" ? "CU Roll No." : "CU Reg. No."}
+                          {assignBy === "UID"
+                            ? "UID"
+                            : assignBy === "CU_ROLL_NUMBER"
+                              ? "CU Roll No."
+                              : "CU Reg. No."}
                         </th>
                         <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-center align-middle font-medium text-sm border-r border-border">
                           Foil Number
@@ -1987,9 +2335,20 @@ export default function AllotExamPage() {
                           key={student.studentId}
                           className={`border-b transition-colors hover:bg-gray-100 ${idx % 2 === 0 ? "bg-gray-50" : ""}`}
                         >
-                          <td className="p-4 align-middle border-r border-border text-center text-sm">{idx + 1}</td>
+                          <td className="p-4 align-middle border-r border-border text-center text-sm">
+                            {idx + 1}
+                          </td>
                           <td className="p-4 align-middle border-r border-border text-sm font-medium">
-                            {student.name}
+                            <div className="flex items-center gap-3">
+                              <UserAvatar
+                                user={{
+                                  name: student.name,
+                                  image: `${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${student.uid}.jpg`,
+                                }}
+                                size="sm"
+                              />
+                              <span>{student.name}</span>
+                            </div>
                           </td>
                           <td className="p-4 align-middle border-r border-border text-sm font-mono">
                             {assignBy === "UID"
@@ -2001,7 +2360,9 @@ export default function AllotExamPage() {
                           <td className="p-4 align-middle border-r border-border text-sm text-center font-mono">
                             {foilNumberMap[student.uid] || "0"}
                           </td>
-                          <td className="p-4 align-middle border-r border-border text-sm">{student.email || "N/A"}</td>
+                          <td className="p-4 align-middle border-r border-border text-sm">
+                            {student.email || "N/A"}
+                          </td>
                           <td className="p-4 align-middle border-r border-border text-sm">
                             {student.whatsappPhone || "N/A"}
                           </td>
@@ -2011,7 +2372,9 @@ export default function AllotExamPage() {
                           <td className="p-4 align-middle border-r border-border text-sm">
                             {student.roomName || "N/A"}
                           </td>
-                          <td className="p-4 align-middle text-sm font-mono">{student.seatNumber}</td>
+                          <td className="p-4 align-middle text-sm font-mono">
+                            {student.seatNumber || "N/A"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -2023,7 +2386,8 @@ export default function AllotExamPage() {
           <DialogFooter className="p-5 border-t">
             <div className="flex items-center justify-between w-full">
               <p className="text-sm text-gray-600">
-                <span className="font-medium text-gray-700">{studentsWithSeats.length}</span> student(s) assigned
+                <span className="font-medium text-gray-700">{studentsWithSeats.length}</span>{" "}
+                student(s) assigned
               </p>
               <div className="flex items-center gap-3">
                 {studentsWithSeats.length > 0 && (
@@ -2035,8 +2399,11 @@ export default function AllotExamPage() {
                         Name: student.name || "N/A",
                         UID: assignBy === "UID" ? student.uid || "N/A" : "N/A",
                         "CU Reg. No.":
-                          assignBy === "CU_REGISTRATION_NUMBER" ? student.registrationNumber || "N/A" : "N/A",
-                        "CU Roll No.": assignBy === "CU_ROLL_NUMBER" ? student.rollNumber || "N/A" : "N/A",
+                          assignBy === "CU_REGISTRATION_NUMBER"
+                            ? student.registrationNumber || "N/A"
+                            : "N/A",
+                        "CU Roll No.":
+                          assignBy === "CU_ROLL_NUMBER" ? student.rollNumber || "N/A" : "N/A",
                         "Foil Number": foilNumberMap[student.uid] || "0",
                         Email: student.email || "N/A",
                         WhatsApp: student.whatsappPhone || "N/A",
@@ -2061,7 +2428,10 @@ export default function AllotExamPage() {
                       }));
 
                       XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
-                      XLSX.writeFile(workbook, `Students_Assignment_${new Date().toISOString().split("T")[0]}.xlsx`);
+                      XLSX.writeFile(
+                        workbook,
+                        `Students_Assignment_${new Date().toISOString().split("T")[0]}.xlsx`,
+                      );
                       toast.success("Students list exported successfully");
                     }}
                     className="flex items-center gap-2"
@@ -2080,7 +2450,10 @@ export default function AllotExamPage() {
       </Dialog>
 
       {/* Insufficient Capacity Confirmation Dialog */}
-      <Dialog open={insufficientCapacityDialogOpen} onOpenChange={setInsufficientCapacityDialogOpen}>
+      <Dialog
+        open={insufficientCapacityDialogOpen}
+        onOpenChange={setInsufficientCapacityDialogOpen}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
@@ -2088,7 +2461,9 @@ export default function AllotExamPage() {
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-semibold text-red-900">Insufficient Capacity</DialogTitle>
+                <DialogTitle className="text-lg font-semibold text-red-900">
+                  Insufficient Capacity
+                </DialogTitle>
                 <DialogDescription className="text-sm text-gray-600 mt-1">
                   Warning: The selected rooms do not have enough capacity for all eligible students.
                 </DialogDescription>
@@ -2099,11 +2474,15 @@ export default function AllotExamPage() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">Total Eligible Students:</span>
-                <span className="text-sm font-bold text-gray-900">{calculateInsufficientCapacity().totalStudents}</span>
+                <span className="text-sm font-bold text-gray-900">
+                  {calculateInsufficientCapacity().totalStudents}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">Total Room Capacity:</span>
-                <span className="text-sm font-bold text-gray-900">{calculateInsufficientCapacity().totalCapacity}</span>
+                <span className="text-sm font-bold text-gray-900">
+                  {calculateInsufficientCapacity().totalCapacity}
+                </span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-red-200">
                 <span className="text-sm font-semibold text-red-700">Shortage:</span>
@@ -2113,12 +2492,16 @@ export default function AllotExamPage() {
               </div>
             </div>
             <p className="text-sm text-gray-600 mt-4">
-              Some students may not be assigned seats if you proceed. Are you sure you want to continue with the
-              allotment?
+              Some students may not be assigned seats if you proceed. Are you sure you want to
+              continue with the allotment?
             </p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setInsufficientCapacityDialogOpen(false)} className="flex-1">
+            <Button
+              variant="outline"
+              onClick={() => setInsufficientCapacityDialogOpen(false)}
+              className="flex-1"
+            >
               Cancel
             </Button>
             <Button
@@ -2141,7 +2524,10 @@ export default function AllotExamPage() {
       </Dialog>
 
       {/* Foil Excel Missing Columns Dialog */}
-      <AlertDialog open={foilExcelValidationDialogOpen} onOpenChange={setFoilExcelValidationDialogOpen}>
+      <AlertDialog
+        open={foilExcelValidationDialogOpen}
+        onOpenChange={setFoilExcelValidationDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-700">
@@ -2187,7 +2573,10 @@ export default function AllotExamPage() {
               <div className="max-h-44 overflow-y-auto rounded border border-red-100 bg-white p-2">
                 <ul className="space-y-1 text-xs text-slate-700">
                   {foilExcelMissingHeaders.map((h) => (
-                    <li key={h} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-slate-50">
+                    <li
+                      key={h}
+                      className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-slate-50"
+                    >
                       <span className="font-mono">{h}</span>
                       <Button
                         type="button"

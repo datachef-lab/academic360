@@ -60,6 +60,8 @@ axiosInstance.interceptors.response.use(
 );
 
 // Axios interceptor setup
+let globalErrorInterceptorId: number | null = null;
+
 export const setupAxiosInterceptors = (
   showError: (arg0: {
     statusCode?: number;
@@ -67,19 +69,31 @@ export const setupAxiosInterceptors = (
     retry?: () => Promise<AxiosResponse<unknown, unknown> | undefined>;
   }) => void,
 ) => {
-  axiosInstance.interceptors.response.use(
+  // In React 18 dev (StrictMode), providers may mount twice; avoid duplicate interceptors.
+  if (globalErrorInterceptorId != null) {
+    axiosInstance.interceptors.response.eject(globalErrorInterceptorId);
+    globalErrorInterceptorId = null;
+  }
+
+  globalErrorInterceptorId = axiosInstance.interceptors.response.use(
     // If the response is successful, just return it
     (response) => response,
 
     // If an error occurs in the API request
     (error) => {
       // Check if error logging should be suppressed
-      const shouldSuppressLog = (error as any)?._suppressLog || (error.config as any)?._silentAuthCheck;
+      const shouldSuppressLog =
+        (error as any)?._suppressLog || (error.config as any)?._silentAuthCheck;
+      const shouldSkipGlobalErrorHandler = Boolean((error.config as any)?._skipGlobalErrorHandler);
       const isAuthError = error.response?.status === 401 || error.response?.status === 403;
 
       // Skip logging for silent auth checks
-      if (!shouldSuppressLog) {
+      if (!shouldSuppressLog && !shouldSkipGlobalErrorHandler) {
         console.log("Triggered Error");
+      }
+
+      if (shouldSkipGlobalErrorHandler) {
+        return Promise.reject(error);
       }
 
       if (error.config && error.response) {

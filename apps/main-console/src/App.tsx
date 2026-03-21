@@ -62,6 +62,7 @@ import Dashboard from "./features/dashboard/pages/dashboard";
 import LoginPage from "./features/auth/pages/login-page";
 import ResetPasswordPage from "./features/auth/pages/reset-password-page";
 import { NotFoundPage, SettingsPage, UserProfilePage } from "./pages";
+import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
@@ -135,7 +136,10 @@ const router = createBrowserRouter(
               path: "course-design",
               element: <courseSubjectModule.CoursesSubjectsMaster />,
               children: [
-                { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+                {
+                  path: "subject-paper-mapping",
+                  element: <courseSubjectModule.SubjectPaperMappingPage />,
+                },
                 { path: "", element: <courseSubjectModule.ProgramCoursesPage /> },
                 { path: "streams", element: <courseSubjectModule.StreamsPage /> },
                 { path: "courses", element: <courseSubjectModule.CoursesPage /> },
@@ -144,12 +148,21 @@ const router = createBrowserRouter(
                 { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
                 { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
                 { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
-                { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
-                { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+                {
+                  path: "subject-categories",
+                  element: <courseSubjectModule.SubjectCategoriesPage />,
+                },
+                {
+                  path: "subject-paper-mapping",
+                  element: <courseSubjectModule.SubjectPaperMappingPage />,
+                },
                 { path: "classes", element: <courseSubjectModule.ClassesPage /> },
                 { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
                 { path: "academic-years", element: <AcademicYearPage /> },
-                { path: "subject-groupings", element: <courseSubjectModule.SubjectGroupingsPage /> },
+                {
+                  path: "subject-groupings",
+                  element: <courseSubjectModule.SubjectGroupingsPage />,
+                },
               ],
             },
             {
@@ -187,7 +200,7 @@ const router = createBrowserRouter(
         },
 
         {
-          path: "exam-management/exams/:examId",
+          path: "exam-management/exams/:examGroupId",
           element: <examManagementModule.ExamLayoutMaster />,
           children: [
             { path: "", element: <examManagementModule.ExamPage /> },
@@ -212,6 +225,10 @@ const router = createBrowserRouter(
 
             { path: "collect", element: <examManagementModule.CollectAnswerscriptsPage /> },
           ],
+        },
+        {
+          path: "admit-card-distributions",
+          element: <AdmitCardDistributions />,
         },
         {
           path: "cu-registration",
@@ -305,10 +322,16 @@ const router = createBrowserRouter(
             },
             { path: "slabs", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
             { path: "heads", element: <admissionFeesModule.feesModule.FeeHeadsPage /> },
-            { path: "fee-slabs", element: <admissionFeesModule.feesModule.FeeConcessionSlabPage /> },
+            {
+              path: "fee-slabs",
+              element: <admissionFeesModule.feesModule.FeeConcessionSlabPage />,
+            },
             { path: "fee-category", element: <admissionFeesModule.feesModule.FeeCategoryPage /> },
             { path: "fee-groups", element: <admissionFeesModule.feesModule.FeeGroupsPage /> },
-            { path: "receipt-types", element: <admissionFeesModule.feesModule.FeesReceiptTypePage /> },
+            {
+              path: "receipt-types",
+              element: <admissionFeesModule.feesModule.FeesReceiptTypePage />,
+            },
             { path: "addon", element: <admissionFeesModule.feesModule.AddonPage /> },
           ],
         },
@@ -317,7 +340,10 @@ const router = createBrowserRouter(
           element: <documentIssuanceModule.DocumentIssuanceMasterLayout />,
           children: [
             { path: "", element: <documentIssuanceModule.DocumentIssuanceHomePage /> },
-            { path: "student/:id", element: <documentIssuanceModule.DocumentIssuanceStudentPage /> },
+            {
+              path: "student/:id",
+              element: <documentIssuanceModule.DocumentIssuanceStudentPage />,
+            },
             { path: "reports", element: <documentIssuanceModule.DocumentIssuanceReportsPage /> },
             { path: "types", element: <documentIssuanceModule.DocumentTypesPage /> },
             { path: "templates", element: <documentIssuanceModule.DocumentTemplatesPage /> },
@@ -339,10 +365,16 @@ const router = createBrowserRouter(
               element: <Outlet />,
               children: [
                 { path: "", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
-                { path: "academic-year", element: <admissionFeesModule.feesModule.AcademicYearPage /> },
+                {
+                  path: "academic-year",
+                  element: <admissionFeesModule.feesModule.AcademicYearPage />,
+                },
                 { path: "slabs", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
                 { path: "heads", element: <admissionFeesModule.feesModule.FeeHeadsPage /> },
-                { path: "receipt-types", element: <admissionFeesModule.feesModule.FeesReceiptTypePage /> },
+                {
+                  path: "receipt-types",
+                  element: <admissionFeesModule.feesModule.FeesReceiptTypePage />,
+                },
                 { path: "addons", element: <admissionFeesModule.feesModule.AddonPage /> },
                 { path: "student-fees", element: <admissionFeesModule.feesModule.StudentFees /> },
               ],
@@ -490,7 +522,9 @@ const router = createBrowserRouter(
             { path: "create", element: <div>TODO: Create User Group</div> },
             { path: "departments", element: <administrationModule.DepartmentPage /> },
             { path: "designations", element: <administrationModule.DesignationPage /> },
+            { path: "user-types", element: <administrationModule.UserTypePage /> },
             { path: "roles", element: <div>TODO: Roles & Permissions Page</div> },
+            { path: "user-statuses", element: <administrationModule.UserStatusPage /> },
             { path: "reports", element: <div>TODO: User Access Reports Page</div> },
           ],
         },

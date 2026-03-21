@@ -2,24 +2,35 @@
 
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExamCandidateDto, ExamDto } from "@/dtos";
+import { ExamCandidateDto, ExamDto, ExamGroupDto } from "@/dtos";
 import { fetchExamCandidates, downloadAdmitCard } from "@/services/exam-api.service";
 import { format } from "date-fns";
 import { Loader2, Download } from "lucide-react";
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { fetchExamCandidatesbyExamGroupIdAndStudentId } from "@/services/exam-group.service";
 
 interface ExamPapersModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   exam: ExamDto | null;
   studentId: number;
+  examGroup: ExamGroupDto;
 }
 
 interface PaperDetails {
   paperCode: string;
+  examComponentName?: string;
+  examSubjectId: number;
   startTime: Date;
   endTime: Date;
   room: string;
@@ -27,7 +38,13 @@ interface PaperDetails {
   seatNumber: string;
 }
 
-export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPapersModalProps) {
+export function ExamPapersModal({
+  open,
+  onOpenChange,
+  exam,
+  studentId,
+  examGroup,
+}: ExamPapersModalProps) {
   const [candidates, setCandidates] = useState<ExamCandidateDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -54,7 +71,8 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
       if (isNaN(studentIdNum) || studentIdNum <= 0) {
         toast({
           title: "Invalid student",
-          description: "Student information is missing or invalid. Please sign in again or contact support.",
+          description:
+            "Student information is missing or invalid. Please sign in again or contact support.",
           variant: "destructive",
         });
         setCandidates([]);
@@ -64,7 +82,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
 
       setLoading(true);
 
-      fetchExamCandidates(examId, studentIdNum)
+      fetchExamCandidatesbyExamGroupIdAndStudentId(examGroup.id!, studentIdNum)
         .then((response) => {
           if (response.payload) {
             setCandidates(Array.isArray(response.payload) ? response.payload : []);
@@ -73,7 +91,8 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
           }
         })
         .catch((err) => {
-          const errorMessage = err?.response?.data?.message || err?.message || "Failed to load exam papers";
+          const errorMessage =
+            err?.response?.data?.message || err?.message || "Failed to load exam papers";
           toast({
             title: "Could not load exam schedule",
             description:
@@ -96,16 +115,18 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
   }, [open, exam, studentId]);
 
   // Transform candidates into paper details by matching with exam data
-  const getPaperDetails = (): PaperDetails[] => {
+  const getPaperDetails = (exam?: ExamDto): PaperDetails[] => {
     if (!exam || candidates.length === 0) return [];
 
-    return candidates
-      .map((candidate) => {
-        const candidateData = (candidate as any).exam_candidates ?? candidate;
+    const details = candidates
+      .map((candidate): PaperDetails | null => {
+        const c = candidate as unknown as Record<string, unknown>;
+        const candidateData = (c.exam_candidates ?? candidate) as Record<string, unknown>;
         const examRoomId = candidateData?.examRoomId;
         const examSubjectId = candidateData?.examSubjectId;
         const seatNumber = candidateData?.seatNumber;
-        const paper = candidate?.paper;
+        const paper = (candidate as { paper?: { code?: string } })?.paper;
+        const examComponentName = c.examComponentName;
 
         if (!paper || !examSubjectId) {
           return null;
@@ -130,15 +151,24 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
 
         return {
           paperCode: paper?.code || "",
+          examComponentName: typeof examComponentName === "string" ? examComponentName : undefined,
+          examSubjectId: Number(examSubjectId),
           startTime: new Date(examSubject.startTime),
           endTime: new Date(examSubject.endTime),
-          room: room,
-          floor: floor,
-          seatNumber: seatNumber || "Not assigned",
+          room,
+          floor,
+          seatNumber: String(seatNumber ?? "Not assigned"),
         };
       })
-      .filter((detail): detail is PaperDetails => detail !== null)
-      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+      .filter((d): d is PaperDetails => d !== null);
+
+    // Match backend admit card order: chronological by start time first, then examSubjectId as tiebreaker
+    return details.sort((a, b) => {
+      const tA = a.startTime.getTime();
+      const tB = b.startTime.getTime();
+      if (tA !== tB) return tA - tB;
+      return Number(a.examSubjectId) - Number(b.examSubjectId);
+    });
   };
 
   // Download admit card handler
@@ -179,16 +209,14 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
       const blob = await downloadAdmitCard(examId, studentIdNum);
 
       // Create a download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `admit-card-${examId}-${studentIdNum}.pdf`;
-      document.body.appendChild(link);
-      link.click();
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const newTab = window.open(url, "_blank");
 
-      // Cleanup
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      if (newTab) {
+        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
+      } else {
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      }
     } catch (err) {
       toast({
         title: "Download failed",
@@ -200,131 +228,158 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
     }
   };
 
-  const paperDetails = getPaperDetails();
+  const paperDetails: PaperDetails[] = [];
+  for (let i = 0; i < examGroup?.exams.length; i++) {
+    const details = getPaperDetails(examGroup.exams[i]);
+    if (details) {
+      paperDetails.push(...details);
+    }
+  }
+  // Match backend admit card order: chronological by start time first, then examSubjectId as tiebreaker
+  paperDetails.sort((a, b) => {
+    const tA = a.startTime.getTime();
+    const tB = b.startTime.getTime();
+    if (tA !== tB) return tA - tB;
+    return Number(a.examSubjectId) - Number(b.examSubjectId);
+  });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 gap-0 sm:max-w-2xl max-h-[85vh] border-none overflow-hidden shadow-elevated rounded-xl">
-        <DialogHeader className="bg-indigo-600 px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <DialogTitle className="text-2xl font-semibold text-white tracking-tight">Exam Schedule</DialogTitle>
-              <p className="text-white/80 text-sm font-medium"></p>
+    examGroup &&
+    examGroup.exams.length > 0 && (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="p-0 gap-0 w-[95vw] max-w-2xl max-h-[90vh] sm:max-h-[85vh] border-none overflow-hidden shadow-elevated rounded-xl">
+          <DialogHeader className="bg-indigo-600 px-4 sm:px-8 py-4 sm:py-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-1 min-w-0">
+                <DialogTitle className="text-lg sm:text-2xl font-semibold text-white tracking-tight">
+                  Exam Schedule
+                </DialogTitle>
+                <p className="text-white/80 text-sm font-medium"></p>
+              </div>
+              {paperDetails.length > 0 &&
+                (() => {
+                  const now = new Date();
+                  const nowTime = now.getTime();
+
+                  // Check if current time is within the admit card download window
+                  const startDate = exam?.admitCardStartDownloadDate
+                    ? new Date(exam.admitCardStartDownloadDate).getTime()
+                    : null;
+                  const endDate = exam?.admitCardLastDownloadDate
+                    ? new Date(exam.admitCardLastDownloadDate).getTime()
+                    : null;
+
+                  // Show button only if within download window
+                  const isWithinWindow =
+                    startDate && nowTime >= startDate && (!endDate || nowTime <= endDate);
+
+                  if (!isWithinWindow) {
+                    return null; // Hide button if outside download window
+                  }
+
+                  return (
+                    <Button
+                      onClick={handleDownloadAdmitCard}
+                      disabled={downloading || loading}
+                      title="Download admit card"
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-medium shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Download admit card"
+                    >
+                      {downloading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-white shrink-0" />
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 text-white shrink-0" />
+                          <span>Admit Card</span>
+                        </>
+                      )}
+                    </Button>
+                  );
+                })()}
             </div>
-            {paperDetails.length > 0 &&
-              (() => {
-                const now = new Date();
-                const nowTime = now.getTime();
+          </DialogHeader>
 
-                // Check if current time is within the admit card download window
-                const startDate = exam?.admitCardStartDownloadDate
-                  ? new Date(exam.admitCardStartDownloadDate).getTime()
-                  : null;
-                const endDate = exam?.admitCardLastDownloadDate
-                  ? new Date(exam.admitCardLastDownloadDate).getTime()
-                  : null;
-
-                // Show button only if within download window
-                const isWithinWindow = startDate && nowTime >= startDate && (!endDate || nowTime <= endDate);
-
-                if (!isWithinWindow) {
-                  return null; // Hide button if outside download window
-                }
-
-                return (
-                  <Button
-                    onClick={handleDownloadAdmitCard}
-                    disabled={downloading || loading}
-                    title="Download admit card (PDF)"
-                    className="h-10 w-10 mr-3 rounded-full flex items-center justify-center bg-indigo-00/40 drop-shadow-sm text-white hover:bg-indigo-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Download admit card"
-                  >
-                    {downloading ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-white" />
-                    ) : (
-                      <Download className="h-5 w-5 text-white" />
-                    )}
-                  </Button>
-                );
-              })()}
-          </div>
-        </DialogHeader>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-            <span className="ml-3 text-gray-600">Loading exam papers...</span>
-          </div>
-        ) : paperDetails.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No exam papers found for this exam.</p>
-          </div>
-        ) : (
-          <div className=" rounded-md after:shadow-md  overflow-hidden flex-1 flex flex-col">
-            <Table>
-              <TableHeader className="bg-gray-200 ">
-                <TableRow className=" bg-gray-200 hover:bg-gray-200">
-                  <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider  py-4 pl-6 pr-4 ">
-                    Date & Time
-                  </TableHead>
-                  <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider  py-3 px-4">
-                    Venue
-                  </TableHead>
-                  <TableHead className="text-gray-800 font-semibold text-xs text-center uppercase tracking-wider py-3 px-2">
-                    Subject / Paper
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-            </Table>
-            <div className="overflow-auto max-h-[400px] thin-scrollbar">
-              <Table>
-                <TableBody>
-                  {paperDetails.map((detail, index) => (
-                    <TableRow key={index} className="border-b border-gray-200 hover:bg-white">
-                      <TableCell className="py-4 pl-6 pr-4 ">
-                        <div className="space-y-0.5">
-                          <div className="font-semibold text-gray-800 text-sm">
-                            {format(detail.startTime, "dd/MM/yyyy")}
-                          </div>
-                          <div className="text-muted-gray-800 text-xs font-mono">
-                            {format(detail.startTime, "hh:mm a")} – {format(detail.endTime, "hh:mm a")}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4 px-4 ">
-                        <div className="space-y-0.5">
-                          <div className="font-semibold text-gray-800 text-sm">
-                            {detail.room === "Not assigned" ? (
-                              <span className="text-gray-500 italic">Room: Not assigned</span>
-                            ) : (
-                              <>Room: {detail.room}</>
-                            )}
-                          </div>
-                          <div className="text-muted-gray-800 text-xs flex items-center font-mono gap-1.5">
-                            {detail.floor ? (
-                              <>
-                                {detail.floor} •
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-600/10 font-mono text-accent-gray-800 text-xs font-medium">
-                                  Seat: {detail.seatNumber}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-gray-500 italic">Seat not assigned</span>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4 px-2 ">
-                        <div className="text-muted-gray-800  text-sm ">{detail.paperCode}</div>
-                      </TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <span className="ml-3 text-gray-600">Loading exam papers...</span>
+            </div>
+          ) : paperDetails.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No exam papers found for this exam.</p>
+            </div>
+          ) : (
+            <div className="rounded-md after:shadow-md overflow-hidden flex-1 flex flex-col -mx-4 sm:mx-0">
+              <div className="overflow-x-auto overflow-y-auto max-h-[50vh] sm:max-h-[400px] thin-scrollbar">
+                <Table>
+                  <TableHeader className="bg-gray-200">
+                    <TableRow className="bg-gray-200 hover:bg-gray-200">
+                      <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider py-3 pl-4 sm:pl-6 pr-2 sm:pr-4 min-w-[100px]">
+                        Date & Time
+                      </TableHead>
+                      <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider py-3 px-2 sm:px-4 min-w-[120px]">
+                        Venue
+                      </TableHead>
+                      <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider py-3 px-2 min-w-[100px]">
+                        Subject / Paper
+                      </TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paperDetails.map((detail, index) => (
+                      <TableRow key={index} className="border-b border-gray-200 hover:bg-white">
+                        <TableCell className="py-3 pl-4 sm:pl-6 pr-2 sm:pr-4">
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-gray-800 text-xs sm:text-sm">
+                              {format(detail.startTime, "dd/MM/yyyy")}
+                            </div>
+                            <div className="text-muted-gray-800 text-[10px] sm:text-xs font-mono">
+                              {format(detail.startTime, "hh:mm a")} –{" "}
+                              {format(detail.endTime, "hh:mm a")}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 px-2 sm:px-4">
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-gray-800 text-xs sm:text-sm">
+                              {detail.room === "Not assigned" ? (
+                                <span className="text-gray-500 italic">Room: Not assigned</span>
+                              ) : (
+                                <>Room: {detail.room}</>
+                              )}
+                            </div>
+                            <div className="text-muted-gray-800 text-[10px] sm:text-xs flex items-center font-mono gap-1.5 flex-wrap">
+                              {detail.floor ? (
+                                <>
+                                  {detail.floor} •
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-600/10 font-mono text-accent-gray-800 text-xs font-medium">
+                                    Seat: {detail.seatNumber}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-gray-500 italic">Seat not assigned</span>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 px-2">
+                          <div className="text-muted-gray-800 text-xs sm:text-sm">
+                            {detail.examComponentName
+                              ? `${detail.paperCode} (${detail.examComponentName})`
+                              : detail.paperCode}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
+    )
   );
 }

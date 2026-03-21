@@ -1,11 +1,24 @@
 import React, { useState } from "react";
 import { Users, Edit, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -40,7 +53,8 @@ const FeeGroupsPage: React.FC = () => {
     validityType: "SEMESTER",
   });
 
-  const { feeGroups, loading, addFeeGroup, updateFeeGroupById, deleteFeeGroupById } = useFeeGroups();
+  const { feeGroups, loading, addFeeGroup, updateFeeGroupById, deleteFeeGroupById } =
+    useFeeGroups();
   const { feeCategories, loading: categoriesLoading } = useFeeCategories();
   const { feesSlabs, loading: slabsLoading } = useFeesSlabs();
 
@@ -50,7 +64,10 @@ const FeeGroupsPage: React.FC = () => {
       return false;
     }
     const duplicate = feeGroups.find(
-      (g) => g.feeCategory?.id === form.feeCategoryId && g.feeSlab?.id === form.feeSlabId && g.id !== editingItem?.id,
+      (g) =>
+        g.feeCategory?.id === form.feeCategoryId &&
+        g.feeSlab?.id === form.feeSlabId &&
+        g.id !== editingItem?.id,
     );
     return !!duplicate;
   }, [form.feeCategoryId, form.feeSlabId, feeGroups, editingItem?.id]);
@@ -60,7 +77,9 @@ const FeeGroupsPage: React.FC = () => {
     if (!form.feeSlabId || !feeGroups || feeGroups.length === 0) {
       return false;
     }
-    const duplicate = feeGroups.find((g) => g.feeSlab?.id === form.feeSlabId && g.id !== editingItem?.id);
+    const duplicate = feeGroups.find(
+      (g) => g.feeSlab?.id === form.feeSlabId && g.id !== editingItem?.id,
+    );
     return !!duplicate;
   }, [form.feeSlabId, feeGroups, editingItem?.id]);
 
@@ -136,10 +155,15 @@ const FeeGroupsPage: React.FC = () => {
     // Check for duplicate feeCategoryId + feeSlabId combination
     if (feeGroups && feeGroups.length > 0) {
       const duplicate = feeGroups.find(
-        (g) => g.feeCategory?.id === form.feeCategoryId && g.feeSlab?.id === form.feeSlabId && g.id !== editingItem?.id,
+        (g) =>
+          g.feeCategory?.id === form.feeCategoryId &&
+          g.feeSlab?.id === form.feeSlabId &&
+          g.id !== editingItem?.id,
       );
       if (duplicate) {
-        toast.warning("A fee group with this fee category and fee slab combination already exists.");
+        toast.warning(
+          "A fee group with this fee category and fee slab combination already exists.",
+        );
         return;
       }
     }
@@ -178,7 +202,9 @@ const FeeGroupsPage: React.FC = () => {
       console.error("Error saving fee group:", error);
       // Check if it's a conflict error (duplicate)
       if (error?.response?.status === 409 || error?.response?.data?.httpStatus === "CONFLICT") {
-        toast.warning("A fee group with this fee category and fee slab combination already exists.");
+        toast.warning(
+          "A fee group with this fee category and fee slab combination already exists.",
+        );
       } else {
         toast.error("Failed to save fee group. Please try again.");
       }
@@ -289,14 +315,17 @@ const FeeGroupsPage: React.FC = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="sm:max-w-[800px]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{editingItem ? "Edit Fee Group" : "Add New Fee Group"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {editingItem ? "Edit Fee Group" : "Add New Fee Group"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <div className="py-4">
                   <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                     <p className="text-sm text-blue-800">
-                      <strong>Note:</strong> A fee group with the same Fee Category and Fee Slab combination cannot be
-                      created. Additionally, each Fee Slab can only be used once across all fee groups (irrespective of
-                      category). Each combination must be unique.
+                      <strong>Note:</strong> A fee group with the same Fee Category and Fee Slab
+                      combination cannot be created. Additionally, each Fee Slab can only be used
+                      once across all fee groups (irrespective of category). Each combination must
+                      be unique.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -324,7 +353,9 @@ const FeeGroupsPage: React.FC = () => {
                             ))
                           ) : (
                             <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                              {categoriesLoading ? "Loading categories..." : "No categories available"}
+                              {categoriesLoading
+                                ? "Loading categories..."
+                                : "No categories available"}
                             </div>
                           )}
                         </SelectContent>
@@ -339,7 +370,9 @@ const FeeGroupsPage: React.FC = () => {
                       <>
                         <Select
                           value={form.feeSlabId?.toString() || ""}
-                          onValueChange={(value) => setForm({ ...form, feeSlabId: parseInt(value) })}
+                          onValueChange={(value) =>
+                            setForm({ ...form, feeSlabId: parseInt(value) })
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select fee slab" />
@@ -362,11 +395,14 @@ const FeeGroupsPage: React.FC = () => {
                             )}
                           </SelectContent>
                         </Select>
-                        {availableSlabs.length === 0 && feesSlabs && feesSlabs.length > 0 && !slabsLoading && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            All available fee slabs are already used in other fee groups.
-                          </p>
-                        )}
+                        {availableSlabs.length === 0 &&
+                          feesSlabs &&
+                          feesSlabs.length > 0 &&
+                          !slabsLoading && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              All available fee slabs are already used in other fee groups.
+                            </p>
+                          )}
                       </>
                     </div>
 
@@ -395,7 +431,10 @@ const FeeGroupsPage: React.FC = () => {
                       <Select
                         value={form.validityType}
                         onValueChange={(value) => {
-                          const validityType = value as "SEMESTER" | "ACADEMIC_YEAR" | "PROGRAM_COURSE";
+                          const validityType = value as
+                            | "SEMESTER"
+                            | "ACADEMIC_YEAR"
+                            | "PROGRAM_COURSE";
                           setForm({
                             ...form,
                             validityType,
@@ -430,7 +469,10 @@ const FeeGroupsPage: React.FC = () => {
                     <Button variant="secondary" onClick={handleClose}>
                       Cancel
                     </Button>
-                    <Button onClick={handleSubmit} disabled={!form.feeCategoryId || !form.feeSlabId || hasDuplicate}>
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!form.feeCategoryId || !form.feeSlabId || hasDuplicate}
+                    >
                       {editingItem ? "Update" : "Save"}
                     </Button>
                   </div>
@@ -448,7 +490,11 @@ const FeeGroupsPage: React.FC = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
@@ -456,7 +502,9 @@ const FeeGroupsPage: React.FC = () => {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto h-full">
               <Table className="border rounded-md" style={{ tableLayout: "fixed", width: "100%" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
+                <TableHeader
+                  style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}
+                >
                   <TableRow>
                     <TableHead style={{ width: "7%", whiteSpace: "nowrap" }}>Sr. No.</TableHead>
                     <TableHead style={{ width: "16%" }}>Fee Category</TableHead>
@@ -479,7 +527,10 @@ const FeeGroupsPage: React.FC = () => {
                         <TableCell style={{ width: "7%" }}>{index + 1}</TableCell>
                         <TableCell style={{ width: "16%" }}>
                           {row.feeCategory?.name ? (
-                            <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-purple-300 text-purple-700 bg-purple-50"
+                            >
                               {row.feeCategory.name}
                             </Badge>
                           ) : (
@@ -488,14 +539,21 @@ const FeeGroupsPage: React.FC = () => {
                         </TableCell>
                         <TableCell style={{ width: "16%" }}>
                           {row.feeSlab?.name ? (
-                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                            >
                               {row.feeSlab.name}
                             </Badge>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell style={{ width: "26%" }} className="truncate" title={row.description || ""}>
+                        <TableCell
+                          style={{ width: "26%" }}
+                          className="truncate"
+                          title={row.description || ""}
+                        >
                           {row.description || <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell style={{ width: "15%" }}>
@@ -513,7 +571,12 @@ const FeeGroupsPage: React.FC = () => {
 
                         <TableCell style={{ width: "8%" }}>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(row)}
+                              className="h-5 w-5 p-0"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
@@ -546,7 +609,9 @@ const FeeGroupsPage: React.FC = () => {
           }
         }}
         title="Delete Fee Group"
-        itemName={deletingItem ? `${deletingItem.feeCategory?.name} - ${deletingItem.feeSlab?.name}` : ""}
+        itemName={
+          deletingItem ? `${deletingItem.feeCategory?.name} - ${deletingItem.feeSlab?.name}` : ""
+        }
         onConfirm={handleDeleteConfirm}
       />
     </div>

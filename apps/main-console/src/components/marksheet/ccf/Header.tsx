@@ -1,5 +1,11 @@
 import { useMarksheetFilterStore } from "@/components/globals/useMarksheetFilterStore";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 // import { getAllStreams } from "@/services/stream";
 import { ProgrammeType } from "@/types/enums";
 // import { useQuery } from "@tanstack/react-query";
@@ -14,13 +20,13 @@ export default function Header({ selectedSemester, hideSemesterDropdown }: Heade
   // const [selectedStream, setSelectedStream] = useState<string>("BCOM");
   const [selectedCourse, setSelectedCourse] = useState<ProgrammeType>("HONOURS");
   const [selectedSemesterState, setSelectedSemester] = useState<number>(1);
-  const {setSemester,setCategory,Category,semester}=useMarksheetFilterStore();
+  const { setSemester, setCategory, Category, semester } = useMarksheetFilterStore();
 
-    const handleCourseTypeChange = (value: string) => {
+  const handleCourseTypeChange = (value: string) => {
     setSelectedCourse(value as ProgrammeType);
     setCategory(value);
   };
-   const handleSemesterChange = (value: string) => {
+  const handleSemesterChange = (value: string) => {
     const numValue = Number(value);
     setSelectedSemester(numValue);
     setSemester(numValue);
@@ -61,10 +67,10 @@ export default function Header({ selectedSemester, hideSemesterDropdown }: Heade
 
         {/* Course Dropdown */}
         <div className="w-full sm:w-56">
-          <Select  
-          value={Category ?? selectedCourse ?? undefined}
+          <Select
+            value={Category ?? selectedCourse ?? undefined}
             onValueChange={handleCourseTypeChange}
-            >
+          >
             <SelectTrigger className="w-full bg-white border-blue-300 hover:border-blue-500 shadow-sm">
               <SelectValue placeholder="Select Course" />
             </SelectTrigger>
@@ -86,7 +92,7 @@ export default function Header({ selectedSemester, hideSemesterDropdown }: Heade
               Semester {selectedSemester}
             </div>
           ) : (
-            <Select 
+            <Select
               value={semester?.toString() || selectedSemesterState.toString()}
               onValueChange={handleSemesterChange}
             >
@@ -95,7 +101,11 @@ export default function Header({ selectedSemester, hideSemesterDropdown }: Heade
               </SelectTrigger>
               <SelectContent className="bg-white border border-blue-100 shadow-lg">
                 {Array.from({ length: 6 }, (_, index) => index + 1).map((semester) => (
-                  <SelectItem key={semester} value={semester.toString()} className="hover:bg-blue-50 focus:bg-blue-50">
+                  <SelectItem
+                    key={semester}
+                    value={semester.toString()}
+                    className="hover:bg-blue-50 focus:bg-blue-50"
+                  >
                     Semester {semester}
                   </SelectItem>
                 ))}

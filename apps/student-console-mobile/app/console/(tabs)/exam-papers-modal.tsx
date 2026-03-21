@@ -5,7 +5,16 @@ import { API_BASE_URL } from "@/lib/api";
 import { fetchExamCandidates } from "@/services/exam-api";
 import { Download } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString("en-IN", {
@@ -76,7 +85,8 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
     return candidates
       .map((candidate) => {
         const data =
-          (candidate as unknown as { exam_candidates?: Record<string, unknown> })?.exam_candidates ?? candidate;
+          (candidate as unknown as { exam_candidates?: Record<string, unknown> })
+            ?.exam_candidates ?? candidate;
         const examRoomId = (data as Record<string, unknown>)?.examRoomId;
         const examSubjectId = (data as Record<string, unknown>)?.examSubjectId;
         const seatNumber = (data as Record<string, unknown>)?.seatNumber as string | undefined;
@@ -110,8 +120,12 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
     if (isNaN(examId) || examId <= 0 || isNaN(sid) || sid <= 0) return;
 
     const now = Date.now();
-    const start = exam.admitCardStartDownloadDate ? new Date(exam.admitCardStartDownloadDate).getTime() : null;
-    const end = exam.admitCardLastDownloadDate ? new Date(exam.admitCardLastDownloadDate).getTime() : null;
+    const start = exam.admitCardStartDownloadDate
+      ? new Date(exam.admitCardStartDownloadDate).getTime()
+      : null;
+    const end = exam.admitCardLastDownloadDate
+      ? new Date(exam.admitCardLastDownloadDate).getTime()
+      : null;
     if (!start || now < start || (end && now > end)) return;
 
     setDownloading(true);
@@ -162,13 +176,23 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
     (() => {
       const now = Date.now();
       const start = new Date(exam.admitCardStartDownloadDate!).getTime();
-      const end = exam.admitCardLastDownloadDate ? new Date(exam.admitCardLastDownloadDate).getTime() : null;
+      const end = exam.admitCardLastDownloadDate
+        ? new Date(exam.admitCardLastDownloadDate).getTime()
+        : null;
       return now >= start && (!end || now <= end);
     })();
 
   return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={() => onOpenChange(false)}>
-      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} onPress={() => onOpenChange(false)}>
+    <Modal
+      visible={open}
+      transparent
+      animationType="slide"
+      onRequestClose={() => onOpenChange(false)}
+    >
+      <Pressable
+        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}
+        onPress={() => onOpenChange(false)}
+      >
         <Pressable
           style={{
             position: "absolute",
@@ -209,7 +233,11 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                     justifyContent: "center",
                   }}
                 >
-                  {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={20} color="#fff" />}
+                  {downloading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Download size={20} color="#fff" />
+                  )}
                 </Pressable>
               )}
               <Pressable onPress={() => onOpenChange(false)} style={{ padding: 8 }}>
@@ -245,11 +273,19 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                     borderColor: cardBorder,
                   }}
                 >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      marginBottom: 8,
+                    }}
+                  >
                     <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600" }}>
                       {formatDate(detail.startTime)}
                     </Text>
-                    <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>{detail.paperCode}</Text>
+                    <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>
+                      {detail.paperCode}
+                    </Text>
                   </View>
                   <Text style={{ color: theme.text, opacity: 0.8, fontSize: 13 }}>
                     {formatTime(detail.startTime)} – {formatTime(detail.endTime)}
@@ -257,7 +293,9 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                   <View style={{ marginTop: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                     <Text style={{ color: theme.text, fontSize: 13 }}>Room: {detail.room}</Text>
                     {detail.floor && (
-                      <Text style={{ color: theme.text, opacity: 0.7, fontSize: 13 }}>• {detail.floor}</Text>
+                      <Text style={{ color: theme.text, opacity: 0.7, fontSize: 13 }}>
+                        • {detail.floor}
+                      </Text>
                     )}
                     {detail.seatNumber && (
                       <Text

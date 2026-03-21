@@ -4,7 +4,14 @@ import * as React from "react";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ComboboxProps = {
@@ -29,7 +36,9 @@ export function Combobox({
 
   // Filter options by label (case-insensitive, robust)
   const filtered = search
-    ? dataArr.filter((item) => (item.label || "").toLowerCase().trim().includes(search.toLowerCase().trim()))
+    ? dataArr.filter((item) =>
+        (item.label || "").toLowerCase().trim().includes(search.toLowerCase().trim()),
+      )
     : dataArr;
 
   const selectedLabel = value ? dataArr.find((item) => item.value === value)?.label : "";
@@ -82,7 +91,12 @@ export function Combobox({
                     setSearch("");
                   }}
                 >
-                  <CheckIcon className={cn("mr-2 h-4 w-4", value === item.value ? "opacity-100" : "opacity-0")} />
+                  <CheckIcon
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === item.value ? "opacity-100" : "opacity-0",
+                    )}
+                  />
                   {item.label}
                 </CommandItem>
               ))}

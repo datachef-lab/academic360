@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -7,30 +7,56 @@ import {
   Trash2,
   Download,
   Upload,
-//   Trophy,
+  //   Trophy,
   Users,
   FileText,
-//   Filter,
+  //   Filter,
   MoreHorizontal,
   CheckCircle,
   XCircle,
   AlertCircle,
   Eye,
   Copy,
-//   Settings,
-//   Target,
+  //   Settings,
+  //   Target,
   Percent,
-//   Award,
-//   TrendingUp,
-} from 'lucide-react';
+  //   Award,
+  //   TrendingUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 // import { Checkbox } from "@/components/ui/checkbox";
@@ -40,7 +66,7 @@ interface MeritCriteria {
   name: string;
   course: string;
   academicYear: string;
-  criteriaType: 'entrance_exam' | 'academic_performance' | 'combined' | 'sports' | 'ncc' | 'other';
+  criteriaType: "entrance_exam" | "academic_performance" | "combined" | "sports" | "ncc" | "other";
   weightage: {
     entranceExam: number;
     academicPerformance: number;
@@ -59,7 +85,7 @@ interface MeritCriteria {
     ews: number;
     general: number;
   };
-  status: 'active' | 'inactive' | 'draft';
+  status: "active" | "inactive" | "draft";
   description: string;
   createdAt: string;
   updatedAt: string;
@@ -81,7 +107,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       interview: 10,
       sports: 0,
       ncc: 0,
-      other: 0
+      other: 0,
     },
     minimumScore: 60,
     cutoffMarks: 85,
@@ -91,7 +117,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       st: 9,
       obc: 32,
       ews: 12,
-      general: 49
+      general: 49,
     },
     status: "active",
     description: "Merit criteria for B.Tech program with 70% weightage to entrance exam",
@@ -99,7 +125,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 450,
-    selectedApplicants: 120
+    selectedApplicants: 120,
   },
   {
     id: "MC002",
@@ -113,7 +139,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       interview: 15,
       sports: 0,
       ncc: 0,
-      other: 0
+      other: 0,
     },
     minimumScore: 50,
     cutoffMarks: 70,
@@ -123,7 +149,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       st: 7,
       obc: 0,
       ews: 0,
-      general: 0
+      general: 0,
     },
     status: "active",
     description: "Relaxed merit criteria for SC/ST category students",
@@ -131,7 +157,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 85,
-    selectedApplicants: 27
+    selectedApplicants: 27,
   },
   {
     id: "MC003",
@@ -145,7 +171,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       interview: 10,
       sports: 0,
       ncc: 0,
-      other: 0
+      other: 0,
     },
     minimumScore: 65,
     cutoffMarks: 90,
@@ -155,7 +181,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       st: 4,
       obc: 16,
       ews: 6,
-      general: 25
+      general: 25,
     },
     status: "active",
     description: "Merit criteria for MBA program with high weightage to entrance exam",
@@ -163,7 +189,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 180,
-    selectedApplicants: 60
+    selectedApplicants: 60,
   },
   {
     id: "MC004",
@@ -177,7 +203,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       interview: 30,
       sports: 0,
       ncc: 0,
-      other: 0
+      other: 0,
     },
     minimumScore: 55,
     cutoffMarks: 75,
@@ -187,7 +213,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       st: 6,
       obc: 21,
       ews: 8,
-      general: 33
+      general: 33,
     },
     status: "active",
     description: "Merit criteria for BBA program based on academic performance",
@@ -195,7 +221,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 220,
-    selectedApplicants: 80
+    selectedApplicants: 80,
   },
   {
     id: "MC005",
@@ -209,7 +235,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       interview: 10,
       sports: 20,
       ncc: 0,
-      other: 0
+      other: 0,
     },
     minimumScore: 50,
     cutoffMarks: 70,
@@ -219,7 +245,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       st: 1,
       obc: 5,
       ews: 2,
-      general: 9
+      general: 9,
     },
     status: "active",
     description: "Merit criteria for BCA program with sports quota",
@@ -227,7 +253,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 45,
-    selectedApplicants: 20
+    selectedApplicants: 20,
   },
   {
     id: "MC006",
@@ -241,7 +267,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       interview: 5,
       sports: 0,
       ncc: 0,
-      other: 0
+      other: 0,
     },
     minimumScore: 70,
     cutoffMarks: 95,
@@ -251,7 +277,7 @@ const dummyMeritCriteria: MeritCriteria[] = [
       st: 3,
       obc: 11,
       ews: 4,
-      general: 16
+      general: 16,
     },
     status: "draft",
     description: "Advanced merit criteria for M.Tech program (Draft)",
@@ -259,14 +285,14 @@ const dummyMeritCriteria: MeritCriteria[] = [
     updatedAt: "2024-07-15T09:00:00",
     createdBy: "Admin User",
     totalApplicants: 120,
-    selectedApplicants: 35
-  }
+    selectedApplicants: 35,
+  },
 ];
 
 const statusConfig = {
   active: { label: "Active", variant: "default" as const, icon: CheckCircle },
   inactive: { label: "Inactive", variant: "secondary" as const, icon: XCircle },
-  draft: { label: "Draft", variant: "outline" as const, icon: AlertCircle }
+  draft: { label: "Draft", variant: "outline" as const, icon: AlertCircle },
 };
 
 const criteriaTypeConfig = {
@@ -275,25 +301,26 @@ const criteriaTypeConfig = {
   combined: { label: "Combined", variant: "outline" as const },
   sports: { label: "Sports", variant: "default" as const },
   ncc: { label: "NCC", variant: "secondary" as const },
-  other: { label: "Other", variant: "outline" as const }
+  other: { label: "Other", variant: "outline" as const },
 };
 
 export default function MeritCriteriaPage() {
   const { year } = useParams<{ year: string }>();
   const [meritCriteria, setMeritCriteria] = useState<MeritCriteria[]>(dummyMeritCriteria);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [courseFilter, setCourseFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [courseFilter, setCourseFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCriteria, setSelectedCriteria] = useState<MeritCriteria | null>(null);
 
-  const filteredCriteria = meritCriteria.filter(criteria => {
-    const matchesSearch = criteria.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         criteria.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCourse = courseFilter === 'all' || criteria.course === courseFilter;
-    const matchesStatus = statusFilter === 'all' || criteria.status === statusFilter;
-    
+  const filteredCriteria = meritCriteria.filter((criteria) => {
+    const matchesSearch =
+      criteria.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      criteria.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCourse = courseFilter === "all" || criteria.course === courseFilter;
+    const matchesStatus = statusFilter === "all" || criteria.status === statusFilter;
+
     return matchesSearch && matchesCourse && matchesStatus;
   });
 
@@ -302,64 +329,76 @@ export default function MeritCriteriaPage() {
       title: "Total Criteria",
       value: meritCriteria.length,
       icon: FileText,
-      color: "text-blue-500"
+      color: "text-blue-500",
     },
     {
       title: "Active Criteria",
-      value: meritCriteria.filter(c => c.status === 'active').length,
+      value: meritCriteria.filter((c) => c.status === "active").length,
       icon: CheckCircle,
-      color: "text-green-500"
+      color: "text-green-500",
     },
     {
       title: "Total Seats",
       value: meritCriteria.reduce((sum, c) => sum + c.totalSeats, 0),
       icon: Users,
-      color: "text-teal-500"
+      color: "text-teal-500",
     },
     {
       title: "Selection Rate",
-      value: meritCriteria.length > 0 
-        ? Math.round((meritCriteria.reduce((sum, c) => sum + c.selectedApplicants, 0) / 
-                      meritCriteria.reduce((sum, c) => sum + c.totalSeats, 0)) * 100)
-        : 0,
+      value:
+        meritCriteria.length > 0
+          ? Math.round(
+              (meritCriteria.reduce((sum, c) => sum + c.selectedApplicants, 0) /
+                meritCriteria.reduce((sum, c) => sum + c.totalSeats, 0)) *
+                100,
+            )
+          : 0,
       icon: Percent,
-      color: "text-purple-500"
-    }
+      color: "text-purple-500",
+    },
   ];
 
-  const courses = Array.from(new Set(meritCriteria.map(c => c.course)));
+  const courses = Array.from(new Set(meritCriteria.map((c) => c.course)));
 
-  const handleAddCriteria = (newCriteria: Omit<MeritCriteria, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
+  const handleAddCriteria = (
+    newCriteria: Omit<MeritCriteria, "id" | "createdAt" | "updatedAt" | "createdBy">,
+  ) => {
     const criteria: MeritCriteria = {
       ...newCriteria,
-      id: `MC${String(meritCriteria.length + 1).padStart(3, '0')}`,
+      id: `MC${String(meritCriteria.length + 1).padStart(3, "0")}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: "Admin User",
       totalApplicants: 0,
-      selectedApplicants: 0
+      selectedApplicants: 0,
     };
-    setMeritCriteria(prev => [...prev, criteria]);
+    setMeritCriteria((prev) => [...prev, criteria]);
     setIsAddDialogOpen(false);
   };
 
   const handleEditCriteria = (updatedCriteria: MeritCriteria) => {
-    setMeritCriteria(prev => prev.map(c => c.id === updatedCriteria.id ? { ...updatedCriteria, updatedAt: new Date().toISOString() } : c));
+    setMeritCriteria((prev) =>
+      prev.map((c) =>
+        c.id === updatedCriteria.id
+          ? { ...updatedCriteria, updatedAt: new Date().toISOString() }
+          : c,
+      ),
+    );
     setIsEditDialogOpen(false);
     setSelectedCriteria(null);
   };
 
   const handleDeleteCriteria = (id: string) => {
-    if (confirm('Are you sure you want to delete this merit criteria?')) {
-      setMeritCriteria(prev => prev.filter(c => c.id !== id));
+    if (confirm("Are you sure you want to delete this merit criteria?")) {
+      setMeritCriteria((prev) => prev.filter((c) => c.id !== id));
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
   };
 
@@ -369,7 +408,9 @@ export default function MeritCriteriaPage() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Merit Criteria - {year}</h1>
-          <p className="text-gray-600">Manage merit-based selection criteria for different courses</p>
+          <p className="text-gray-600">
+            Manage merit-based selection criteria for different courses
+          </p>
         </div>
 
         {/* Stats Cards */}
@@ -416,8 +457,10 @@ export default function MeritCriteriaPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  {courses.map(course => (
-                    <SelectItem key={course} value={course}>{course}</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course} value={course}>
+                      {course}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -447,7 +490,9 @@ export default function MeritCriteriaPage() {
                   <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
                     <DialogHeader className="flex-shrink-0 border-b pb-2">
                       <DialogTitle>Add New Merit Criteria</DialogTitle>
-                      <DialogDescription>Create new merit-based selection criteria for a course.</DialogDescription>
+                      <DialogDescription>
+                        Create new merit-based selection criteria for a course.
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto">
                       <AddEditCriteriaForm onSubmit={handleAddCriteria} />
@@ -498,7 +543,9 @@ export default function MeritCriteriaPage() {
                         <TableCell>
                           <div>
                             <div className="font-medium">{criteria.name}</div>
-                            <div className="text-sm text-gray-500 line-clamp-1">{criteria.description}</div>
+                            <div className="text-sm text-gray-500 line-clamp-1">
+                              {criteria.description}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -535,19 +582,23 @@ export default function MeritCriteriaPage() {
                           <div className="text-sm">
                             <div className="font-medium">{criteria.totalSeats}</div>
                             <div className="text-gray-500">
-                              Gen: {criteria.reservedSeats.general} | 
-                              OBC: {criteria.reservedSeats.obc} | 
-                              SC: {criteria.reservedSeats.sc}
+                              Gen: {criteria.reservedSeats.general} | OBC:{" "}
+                              {criteria.reservedSeats.obc} | SC: {criteria.reservedSeats.sc}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className="font-medium">{criteria.selectedApplicants}/{criteria.totalSeats}</div>
+                            <div className="font-medium">
+                              {criteria.selectedApplicants}/{criteria.totalSeats}
+                            </div>
                             <div className="text-gray-500">
-                              {criteria.totalSeats > 0 
-                                ? Math.round((criteria.selectedApplicants / criteria.totalSeats) * 100)
-                                : 0}% filled
+                              {criteria.totalSeats > 0
+                                ? Math.round(
+                                    (criteria.selectedApplicants / criteria.totalSeats) * 100,
+                                  )
+                                : 0}
+                              % filled
                             </div>
                           </div>
                         </TableCell>
@@ -558,9 +609,7 @@ export default function MeritCriteriaPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            {formatDate(criteria.createdAt)}
-                          </div>
+                          <div className="text-sm">{formatDate(criteria.createdAt)}</div>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -570,10 +619,12 @@ export default function MeritCriteriaPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setSelectedCriteria(criteria);
-                                setIsEditDialogOpen(true);
-                              }}>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedCriteria(criteria);
+                                  setIsEditDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
@@ -610,8 +661,8 @@ export default function MeritCriteriaPage() {
             </DialogHeader>
             <div className="flex-1 overflow-y-auto">
               {selectedCriteria && (
-                <AddEditCriteriaForm 
-                  onSubmit={handleEditCriteria} 
+                <AddEditCriteriaForm
+                  onSubmit={handleEditCriteria}
                   initialData={selectedCriteria}
                   isEdit={true}
                 />
@@ -632,17 +683,17 @@ interface AddEditCriteriaFormProps {
 
 function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditCriteriaFormProps) {
   const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    course: initialData?.course || '',
-    academicYear: initialData?.academicYear || '2024-25',
-    criteriaType: initialData?.criteriaType || 'combined',
+    name: initialData?.name || "",
+    course: initialData?.course || "",
+    academicYear: initialData?.academicYear || "2024-25",
+    criteriaType: initialData?.criteriaType || "combined",
     weightage: initialData?.weightage || {
       entranceExam: 70,
       academicPerformance: 20,
       interview: 10,
       sports: 0,
       ncc: 0,
-      other: 0
+      other: 0,
     },
     minimumScore: initialData?.minimumScore || 60,
     cutoffMarks: initialData?.cutoffMarks || 85,
@@ -652,16 +703,16 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
       st: 7,
       obc: 27,
       ews: 10,
-      general: 41
+      general: 41,
     },
-    status: initialData?.status || 'draft',
-    description: initialData?.description || ''
+    status: initialData?.status || "draft",
+    description: initialData?.description || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const criteriaData: MeritCriteria = {
-      id: initialData?.id || `MC${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+      id: initialData?.id || `MC${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`,
       name: formData.name,
       course: formData.course,
       academicYear: formData.academicYear,
@@ -677,28 +728,28 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
       updatedAt: new Date().toISOString(),
       createdBy: initialData?.createdBy || "Admin User",
       totalApplicants: initialData?.totalApplicants || 0,
-      selectedApplicants: initialData?.selectedApplicants || 0
+      selectedApplicants: initialData?.selectedApplicants || 0,
     };
     onSubmit(criteriaData);
   };
 
   const handleWeightageChange = (field: keyof typeof formData.weightage, value: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       weightage: {
         ...prev.weightage,
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const handleReservedSeatsChange = (field: keyof typeof formData.reservedSeats, value: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       reservedSeats: {
         ...prev.reservedSeats,
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
@@ -711,14 +762,17 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="e.g., B.Tech General Merit"
               required
             />
           </div>
           <div>
             <Label htmlFor="course">Course</Label>
-            <Select value={formData.course} onValueChange={(value) => setFormData(prev => ({ ...prev, course: value }))}>
+            <Select
+              value={formData.course}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, course: value }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select course" />
               </SelectTrigger>
@@ -733,7 +787,15 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
           </div>
           <div>
             <Label htmlFor="criteriaType">Criteria Type</Label>
-            <Select value={formData.criteriaType} onValueChange={(value) => setFormData(prev => ({ ...prev, criteriaType: value as MeritCriteria['criteriaType'] }))}>
+            <Select
+              value={formData.criteriaType}
+              onValueChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  criteriaType: value as MeritCriteria["criteriaType"],
+                }))
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select criteria type" />
               </SelectTrigger>
@@ -749,7 +811,12 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
           </div>
           <div>
             <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as MeritCriteria['status'] }))}>
+            <Select
+              value={formData.status}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, status: value as MeritCriteria["status"] }))
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -766,7 +833,9 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
               id="minimumScore"
               type="number"
               value={formData.minimumScore}
-              onChange={(e) => setFormData(prev => ({ ...prev, minimumScore: Number(e.target.value) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, minimumScore: Number(e.target.value) }))
+              }
               placeholder="60"
               min="0"
               max="100"
@@ -779,7 +848,9 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
               id="cutoffMarks"
               type="number"
               value={formData.cutoffMarks}
-              onChange={(e) => setFormData(prev => ({ ...prev, cutoffMarks: Number(e.target.value) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, cutoffMarks: Number(e.target.value) }))
+              }
               placeholder="85"
               min="0"
               max="100"
@@ -792,7 +863,9 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
               id="totalSeats"
               type="number"
               value={formData.totalSeats}
-              onChange={(e) => setFormData(prev => ({ ...prev, totalSeats: Number(e.target.value) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, totalSeats: Number(e.target.value) }))
+              }
               placeholder="100"
               min="1"
               required
@@ -809,7 +882,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="entranceExam"
                 type="number"
                 value={formData.weightage.entranceExam}
-                onChange={(e) => handleWeightageChange('entranceExam', Number(e.target.value))}
+                onChange={(e) => handleWeightageChange("entranceExam", Number(e.target.value))}
                 placeholder="70"
                 min="0"
                 max="100"
@@ -821,7 +894,9 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="academicPerformance"
                 type="number"
                 value={formData.weightage.academicPerformance}
-                onChange={(e) => handleWeightageChange('academicPerformance', Number(e.target.value))}
+                onChange={(e) =>
+                  handleWeightageChange("academicPerformance", Number(e.target.value))
+                }
                 placeholder="20"
                 min="0"
                 max="100"
@@ -833,7 +908,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="interview"
                 type="number"
                 value={formData.weightage.interview}
-                onChange={(e) => handleWeightageChange('interview', Number(e.target.value))}
+                onChange={(e) => handleWeightageChange("interview", Number(e.target.value))}
                 placeholder="10"
                 min="0"
                 max="100"
@@ -845,7 +920,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="sports"
                 type="number"
                 value={formData.weightage.sports}
-                onChange={(e) => handleWeightageChange('sports', Number(e.target.value))}
+                onChange={(e) => handleWeightageChange("sports", Number(e.target.value))}
                 placeholder="0"
                 min="0"
                 max="100"
@@ -857,7 +932,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="ncc"
                 type="number"
                 value={formData.weightage.ncc}
-                onChange={(e) => handleWeightageChange('ncc', Number(e.target.value))}
+                onChange={(e) => handleWeightageChange("ncc", Number(e.target.value))}
                 placeholder="0"
                 min="0"
                 max="100"
@@ -869,7 +944,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="other"
                 type="number"
                 value={formData.weightage.other}
-                onChange={(e) => handleWeightageChange('other', Number(e.target.value))}
+                onChange={(e) => handleWeightageChange("other", Number(e.target.value))}
                 placeholder="0"
                 min="0"
                 max="100"
@@ -887,7 +962,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="general"
                 type="number"
                 value={formData.reservedSeats.general}
-                onChange={(e) => handleReservedSeatsChange('general', Number(e.target.value))}
+                onChange={(e) => handleReservedSeatsChange("general", Number(e.target.value))}
                 placeholder="41"
                 min="0"
               />
@@ -898,7 +973,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="obc"
                 type="number"
                 value={formData.reservedSeats.obc}
-                onChange={(e) => handleReservedSeatsChange('obc', Number(e.target.value))}
+                onChange={(e) => handleReservedSeatsChange("obc", Number(e.target.value))}
                 placeholder="27"
                 min="0"
               />
@@ -909,7 +984,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="sc"
                 type="number"
                 value={formData.reservedSeats.sc}
-                onChange={(e) => handleReservedSeatsChange('sc', Number(e.target.value))}
+                onChange={(e) => handleReservedSeatsChange("sc", Number(e.target.value))}
                 placeholder="15"
                 min="0"
               />
@@ -920,7 +995,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="st"
                 type="number"
                 value={formData.reservedSeats.st}
-                onChange={(e) => handleReservedSeatsChange('st', Number(e.target.value))}
+                onChange={(e) => handleReservedSeatsChange("st", Number(e.target.value))}
                 placeholder="7"
                 min="0"
               />
@@ -931,7 +1006,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 id="ews"
                 type="number"
                 value={formData.reservedSeats.ews}
-                onChange={(e) => handleReservedSeatsChange('ews', Number(e.target.value))}
+                onChange={(e) => handleReservedSeatsChange("ews", Number(e.target.value))}
                 placeholder="10"
                 min="0"
               />
@@ -944,7 +1019,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
           <Textarea
             id="description"
             value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
             placeholder="Describe the merit criteria..."
             rows={3}
           />
@@ -952,9 +1027,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
       </div>
 
       <DialogFooter className="flex-shrink-0 mt-6">
-        <Button type="submit">
-          {isEdit ? 'Update Criteria' : 'Create Criteria'}
-        </Button>
+        <Button type="submit">{isEdit ? "Update Criteria" : "Create Criteria"}</Button>
       </DialogFooter>
     </form>
   );

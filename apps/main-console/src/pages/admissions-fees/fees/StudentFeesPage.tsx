@@ -1,12 +1,26 @@
 // @ts-nocheck
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Wallet, Edit, Trash2, Search, Eye, CreditCard, Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSearchParams } from "react-router-dom";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +31,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
 import { toast } from "sonner";
 import {
@@ -25,6 +45,7 @@ import {
   updateStudentFeesMapping,
   deleteStudentFeesMapping,
 } from "@/services/fees-api";
+import { usePaytmCheckout } from "@/hooks/usePaytmCheckout";
 import { useError } from "@/hooks/useError";
 import {
   fetchStudentByUid,
@@ -35,9 +56,14 @@ import {
 import { StudentDto } from "@repo/db/dtos/user";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { UserAvatar } from "@/hooks/UserAvatar";
+import { downloadFeeReceipt } from "@/services/fee-student-mapping.service";
 
 const StudentFeesPage: React.FC = () => {
-  const [searchText, setSearchText] = useState("");
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const { accessToken } = useAuth();
+  const [downloading, setDownloading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchText, setSearchText] = useState(searchParams.get("search") || "");
   const [selectedStudent, setSelectedStudent] = useState<StudentDto | null>(null);
   const [mappings, setMappings] = useState<FeeStudentMappingDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,6 +96,22 @@ const StudentFeesPage: React.FC = () => {
   const [sendingNotification, setSendingNotification] = useState(false);
   const { showError } = useError();
   const { user } = useAuth();
+  const { openPaytmCheckout, loading: paytmLoading } = usePaytmCheckout();
+
+  const query = searchParams.get("search") ?? ""; // source of truth
+
+  // Load student data when query params change
+  useEffect(() => {
+    const searchQuery = searchParams.get("search");
+    if (searchQuery && searchQuery.trim()) {
+      setSearchText(searchQuery);
+      handleStudentSearch(searchQuery);
+    } else {
+      setSelectedStudent(null);
+      setMappings([]);
+      setSearchText("");
+    }
+  }, [searchParams]);
 
   // Fetch all fee-student-mappings for a student
   const fetchStudentMappings = useCallback(
@@ -93,77 +135,142 @@ const StudentFeesPage: React.FC = () => {
     [showError],
   );
 
-  // Search for student by UID, roll number, or registration number
-  const handleStudentSearch = useCallback(async () => {
-    if (!searchText.trim()) {
-      setSelectedStudent(null);
-      setMappings([]);
-      return;
-    }
-
-    try {
-      setSearching(true);
-      const searchValue = searchText.trim();
-
-      // Try to find student by UID first (most reliable)
-      try {
-        const student = await fetchStudentByUid(searchValue);
-        if (student && student.id) {
-          setSelectedStudent(student);
-          // Fetch all fee-student-mappings for this student
-          await fetchStudentMappings(student.id);
-          return;
+  // Handle payment callback from redirect URL (Paytm opens in new tab, redirects back)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get("payment");
+    const orderId = params.get("orderId");
+    const studentIdParam = params.get("studentId");
+    if (payment && orderId) {
+      if (payment === "success") {
+        toast.success("Payment recorded successfully");
+      } else if (payment === "failed") {
+        toast.error("Payment failed");
+      }
+      if (studentIdParam) {
+        const sid = parseInt(studentIdParam, 10);
+        if (!isNaN(sid)) {
+          getStudentById(sid)
+            .then((student) => {
+              if (student?.id) {
+                setSelectedStudent(student);
+                fetchStudentMappings(student.id);
+              }
+            })
+            .catch(() => {});
         }
-      } catch (uidError) {
-        // UID search failed, try general search
+      }
+      params.delete("payment");
+      params.delete("orderId");
+      params.delete("studentId");
+      const newSearch = params.toString();
+      const newUrl = newSearch
+        ? `${window.location.pathname}?${newSearch}`
+        : window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [fetchStudentMappings]);
+
+  // Handle payment callback from postMessage (Paytm in popup with opener)
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "PAYTM_PAYMENT_RESULT") {
+        if (e.data.payment === "success") {
+          toast.success("Payment recorded successfully");
+        } else if (e.data.payment === "failed") {
+          toast.error("Payment failed");
+        }
+        const sid = e.data.studentId ? parseInt(e.data.studentId, 10) : selectedStudent?.id;
+        if (sid && !isNaN(sid)) fetchStudentMappings(sid);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [selectedStudent?.id, fetchStudentMappings]);
+
+  // Search for student by UID, roll number, or registration number
+  const handleStudentSearch = useCallback(
+    async (searchValue?: string) => {
+      const valueToSearch = (searchValue ?? searchText).trim();
+
+      if (!valueToSearch) {
+        setSelectedStudent(null);
+        setMappings([]);
+        setSearchParams({});
+        return;
       }
 
-      // Try general student search (searches across multiple fields)
       try {
-        const searchResults = await getSearchedStudents(searchValue, 1, 10);
-        if (searchResults.content && searchResults.content.length > 0) {
-          // Get the first matching student's full details
-          const firstMatch = searchResults.content[0];
-          if (firstMatch && firstMatch.id) {
-            const student = await getStudentById(firstMatch.id);
-            if (student && student.id) {
-              setSelectedStudent(student);
-              // Fetch all fee-student-mappings for this student
-              await fetchStudentMappings(student.id);
-              return;
+        setSearching(true);
+
+        // Try to find student by UID first (most reliable)
+        try {
+          const student = await fetchStudentByUid(valueToSearch);
+          if (student && student.id) {
+            setSelectedStudent(student);
+            setSearchParams({ search: valueToSearch });
+            // Fetch all fee-student-mappings for this student
+            await fetchStudentMappings(student.id);
+            return;
+          }
+        } catch (uidError) {
+          // UID search failed, try general search
+        }
+
+        // Try general student search (searches across multiple fields)
+        try {
+          const searchResults = await getSearchedStudents(valueToSearch, 1, 10);
+          if (searchResults.content && searchResults.content.length > 0) {
+            // Get the first matching student's full details
+            const firstMatch = searchResults.content[0];
+            if (firstMatch && firstMatch.id) {
+              const student = await getStudentById(firstMatch.id);
+              if (student && student.id) {
+                setSelectedStudent(student);
+                setSearchParams({ search: valueToSearch });
+                // Fetch all fee-student-mappings for this student
+                await fetchStudentMappings(student.id);
+                return;
+              }
             }
           }
+        } catch (searchError) {
+          // General search failed, try roll number specific search
         }
-      } catch (searchError) {
-        // General search failed, try roll number specific search
-      }
 
-      // Try to find student by roll number (specific endpoint)
-      try {
-        const student = await getSearchedStudentsByRollNumber(searchValue);
-        if (student && student.id) {
-          setSelectedStudent(student);
-          // Fetch all fee-student-mappings for this student
-          await fetchStudentMappings(student.id);
-          return;
+        // Try to find student by roll number (specific endpoint)
+        try {
+          const student = await getSearchedStudentsByRollNumber(valueToSearch);
+          if (student && student.id) {
+            setSelectedStudent(student);
+            setSearchParams({ search: valueToSearch });
+            // Fetch all fee-student-mappings for this student
+            await fetchStudentMappings(student.id);
+            return;
+          }
+        } catch (rollError) {
+          // Roll number search failed
         }
-      } catch (rollError) {
-        // Roll number search failed
-      }
 
-      // If all searches failed, show error
-      toast.error("Student not found. Please check the UID, Roll Number, or Registration Number.");
-      setSelectedStudent(null);
-      setMappings([]);
-    } catch (error) {
-      console.error("Error searching for student:", error);
-      toast.error("Failed to search for student. Please try again.");
-      setSelectedStudent(null);
-      setMappings([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [searchText, fetchStudentMappings]);
+        // If all searches failed, show error
+        toast.error(
+          "Student not found. Please check the UID, Roll Number, or Registration Number.",
+        );
+        setSelectedStudent(null);
+        setMappings([]);
+        setSearchParams({});
+      } catch (error) {
+        console.error("Error searching for student:", error);
+        toast.error("Failed to search for student. Please try again.");
+        setSelectedStudent(null);
+        setMappings([]);
+        setSearchParams({});
+      } finally {
+        setSearching(false);
+      }
+    },
+    [searchText, fetchStudentMappings, setSearchParams],
+  );
 
   // Handle search on Enter key or when search button is clicked
   const handleSearchSubmit = (e?: React.FormEvent) => {
@@ -209,7 +316,10 @@ const StudentFeesPage: React.FC = () => {
       return;
     }
 
-    if (waivedOffForm.isWaivedOff && (!waivedOffForm.waivedOffAmount || waivedOffForm.waivedOffAmount <= 0)) {
+    if (
+      waivedOffForm.isWaivedOff &&
+      (!waivedOffForm.waivedOffAmount || waivedOffForm.waivedOffAmount <= 0)
+    ) {
       toast.error("Please enter a valid waived off amount");
       return;
     }
@@ -263,13 +373,15 @@ const StudentFeesPage: React.FC = () => {
 
     try {
       setProcessingPayment(true);
+      const existingPaid = paymentItem.amountPaid || 0;
+      const newTotalPaid = existingPaid + paymentForm.amountPaid;
       const updateData: any = {
-        amountPaid: paymentForm.amountPaid,
+        amountPaid: newTotalPaid,
         paymentMode: paymentForm.paymentMode,
         paymentStatus:
-          paymentForm.amountPaid >= (paymentItem.totalPayable || 0)
+          newTotalPaid >= (paymentItem.totalPayable || 0)
             ? "COMPLETED"
-            : paymentForm.amountPaid > 0
+            : newTotalPaid > 0
               ? "PENDING"
               : "PENDING",
       };
@@ -288,6 +400,38 @@ const StudentFeesPage: React.FC = () => {
       toast.error("Failed to record payment. Please try again.");
     } finally {
       setProcessingPayment(false);
+    }
+  };
+
+  const handleDownloadReceipt = async (feeStructureId: number, studentId: number) => {
+    console.log(`feeStructureId: ${feeStructureId}, studentId: ${studentId}`);
+    if (!feeStructureId || !studentId) return;
+    feeStructureId = Number(feeStructureId);
+    studentId = Number(studentId);
+    if (isNaN(feeStructureId) || feeStructureId <= 0 || isNaN(studentId) || studentId <= 0) return;
+
+    setDownloading(true);
+
+    try {
+      const blob = await downloadFeeReceipt(feeStructureId, studentId);
+
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const newTab = window.open(url, "_blank");
+
+      if (newTab) {
+        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
+      } else {
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      }
+    } catch (err) {
+      toast({
+        title: "Download failed",
+        description: "Failed to download admit card. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -319,6 +463,25 @@ const StudentFeesPage: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Download Receipt Loading Overlay */}
+      {downloading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+          {/* Bouncing circles wrapper */}
+          <div className="relative w-[200px] h-[60px]">
+            {/* Circles */}
+            <div className="absolute w-5 h-5 rounded-full bg-white left-[15%] origin-center animate-bounce-circle" />
+            <div className="absolute w-5 h-5 rounded-full bg-white left-[45%] origin-center animate-bounce-circle [animation-delay:0.2s]" />
+            <div className="absolute w-5 h-5 rounded-full bg-white right-[15%] origin-center animate-bounce-circle [animation-delay:0.3s]" />
+            {/* Shadows */}
+            <div className="absolute w-5 h-1 rounded-full bg-white/30 top-[62px] left-[15%] origin-center -z-10 blur-[1px] animate-bounce-shadow" />
+            <div className="absolute w-5 h-1 rounded-full bg-white/30 top-[62px] left-[45%] origin-center -z-10 blur-[1px] animate-bounce-shadow [animation-delay:0.2s]" />
+            <div className="absolute w-5 h-1 rounded-full bg-white/30 top-[62px] right-[15%] origin-center -z-10 blur-[1px] animate-bounce-shadow [animation-delay:0.3s]" />
+          </div>
+          <p className="mt-10 text-white text-sm font-medium tracking-wide">
+            Generating Receipt Please Wait...
+          </p>
+        </div>
+      )}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -356,23 +519,37 @@ const StudentFeesPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">UID</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedStudent.uid || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Roll Number</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {selectedStudent.rollNumber || selectedStudent.currentPromotion?.rollNumber || "-"}
+                      {selectedStudent.uid || "-"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Registration Number</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Roll Number
+                    </p>
                     <p className="text-sm font-medium text-gray-900">
-                      {selectedStudent.registrationNumber || selectedStudent.currentPromotion?.rollNumberSI || "-"}
+                      {selectedStudent.rollNumber ||
+                        selectedStudent.currentPromotion?.rollNumber ||
+                        "-"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Program Course</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedStudent.programCourse?.name || "-"}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Registration Number
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedStudent.registrationNumber ||
+                        selectedStudent.currentPromotion?.rollNumberSI ||
+                        "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Program Course
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedStudent.programCourse?.name || "-"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -404,8 +581,8 @@ const StudentFeesPage: React.FC = () => {
                   {!selectedStudent ? (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-6">
-                        Please search for a student by UID, Roll Number, or Registration Number to view their fee
-                        mappings.
+                        Please search for a student by UID, Roll Number, or Registration Number to
+                        view their fee mappings.
                       </TableCell>
                     </TableRow>
                   ) : mappings.length > 0 ? (
@@ -428,15 +605,23 @@ const StudentFeesPage: React.FC = () => {
                           <TableCell className="text-center">{index + 1}</TableCell>
                           <TableCell className="text-center">
                             <div className="flex flex-col gap-1 items-center">
-                              <Badge className="bg-blue-100 text-blue-800 border-blue-300">{academicYear}</Badge>
-                              <Badge className="bg-green-100 text-green-800 border-green-300">{semester}</Badge>
+                              <Badge className="bg-blue-100 text-blue-800 border-blue-300">
+                                {academicYear}
+                              </Badge>
+                              <Badge className="bg-green-100 text-green-800 border-green-300">
+                                {semester}
+                              </Badge>
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge className="bg-purple-100 text-purple-800 border-purple-300">{receiptType}</Badge>
+                            <Badge className="bg-purple-100 text-purple-800 border-purple-300">
+                              {receiptType}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            <span className="font-semibold text-gray-900">₹{totalPayable.toLocaleString("en-IN")}</span>
+                            <span className="font-semibold text-gray-900">
+                              ₹{totalPayable.toLocaleString("en-IN")}
+                            </span>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-2">
@@ -453,7 +638,9 @@ const StudentFeesPage: React.FC = () => {
                             {isWaivedOff ? (
                               <Badge className="bg-red-100 text-red-800 border-red-300">Yes</Badge>
                             ) : (
-                              <Badge className="bg-gray-100 text-gray-800 border-gray-300">No</Badge>
+                              <Badge className="bg-gray-100 text-gray-800 border-gray-300">
+                                No
+                              </Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-center">
@@ -497,15 +684,32 @@ const StudentFeesPage: React.FC = () => {
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setPaymentItem(mapping);
+                                    const remaining = Math.max(
+                                      0,
+                                      (mapping.totalPayable || 0) - (mapping.amountPaid || 0),
+                                    );
                                     setPaymentForm({
-                                      amountPaid: mapping.amountPaid || 0,
-                                      paymentMode: (mapping.paymentMode as "CASH" | "CHEQUE" | "ONLINE") || "CASH",
+                                      amountPaid: remaining,
+                                      paymentMode:
+                                        (mapping.paymentMode as "CASH" | "CHEQUE" | "ONLINE") ||
+                                        "CASH",
                                     });
                                     setShowPaymentModal(true);
                                   }}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
                                   Record Payment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    handleDownloadReceipt(
+                                      mapping.feeStructure.id,
+                                      mapping.studentId,
+                                    );
+                                  }}
+                                >
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Download Receipt
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
@@ -520,7 +724,10 @@ const StudentFeesPage: React.FC = () => {
                                   <Bell className="h-4 w-4 mr-2" />
                                   Send Notification
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDeleteClick(mapping)} className="text-red-600">
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteClick(mapping)}
+                                  className="text-red-600"
+                                >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete
                                 </DropdownMenuItem>
@@ -545,7 +752,10 @@ const StudentFeesPage: React.FC = () => {
       </Card>
 
       {/* Summary Modal */}
-      <Dialog open={!!selectedSummaryItem} onOpenChange={(open) => !open && setSelectedSummaryItem(null)}>
+      <Dialog
+        open={!!selectedSummaryItem}
+        onOpenChange={(open) => !open && setSelectedSummaryItem(null)}
+      >
         <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh] flex flex-col p-0">
           <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
             <DialogTitle>Student Fee Mapping – Summary</DialogTitle>
@@ -591,12 +801,12 @@ const StudentFeesPage: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
-                        {selectedSummaryItem.feeGroupPromotionMappings?.[0]?.promotion?.class?.name ||
-                        selectedSummaryItem.feeStructure?.class?.name ? (
+                        {selectedSummaryItem.feeGroupPromotionMappings?.[0]?.promotion?.class
+                          ?.name || selectedSummaryItem.feeStructure?.class?.name ? (
                           <div className="flex justify-center">
                             <Badge className="text-sm bg-green-100 text-green-800 border-green-300">
-                              {selectedSummaryItem.feeGroupPromotionMappings?.[0]?.promotion?.class?.name ||
-                                selectedSummaryItem.feeStructure?.class?.name}
+                              {selectedSummaryItem.feeGroupPromotionMappings?.[0]?.promotion?.class
+                                ?.name || selectedSummaryItem.feeStructure?.class?.name}
                             </Badge>
                           </div>
                         ) : (
@@ -655,19 +865,25 @@ const StudentFeesPage: React.FC = () => {
                 </div>
                 <div className="p-4 grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Waived Off Amount</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Waived Off Amount
+                    </p>
                     <p className="text-sm font-semibold text-gray-900">
                       ₹{(selectedSummaryItem.waivedOffAmount || 0).toLocaleString("en-IN")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Waived Off By</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Waived Off By
+                    </p>
                     <p className="text-sm font-semibold text-gray-900">
                       {selectedSummaryItem.waivedOffByUser?.name || "-"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Waived Off Date</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Waived Off Date
+                    </p>
                     <p className="text-sm font-semibold text-gray-900">
                       {selectedSummaryItem.waivedOffDate
                         ? new Date(selectedSummaryItem.waivedOffDate).toLocaleDateString("en-IN", {
@@ -679,7 +895,9 @@ const StudentFeesPage: React.FC = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Updated Date</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Updated Date
+                    </p>
                     <p className="text-sm font-semibold text-gray-900">
                       {selectedSummaryItem.updatedAt
                         ? new Date(selectedSummaryItem.updatedAt).toLocaleDateString("en-IN", {
@@ -691,7 +909,9 @@ const StudentFeesPage: React.FC = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Payment Date & Time</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Payment Date & Time
+                    </p>
                     <p className="text-sm font-semibold text-gray-900">
                       {selectedSummaryItem.transactionDate
                         ? new Date(selectedSummaryItem.transactionDate).toLocaleString("en-IN", {
@@ -705,7 +925,9 @@ const StudentFeesPage: React.FC = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Payment Status</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Payment Status
+                    </p>
                     <Badge
                       className={
                         selectedSummaryItem.paymentStatus === "COMPLETED"
@@ -733,8 +955,11 @@ const StudentFeesPage: React.FC = () => {
                       <p className="text-sm text-gray-600 mt-1">
                         Fee Group:{" "}
                         <span className="font-semibold">
-                          {selectedSummaryItem.feeGroupPromotionMappings[0].feeGroup.feeCategory?.name || "-"} |{" "}
-                          {selectedSummaryItem.feeGroupPromotionMappings[0].feeGroup.feeSlab?.name || "-"}
+                          {selectedSummaryItem.feeGroupPromotionMappings[0].feeGroup.feeCategory
+                            ?.name || "-"}{" "}
+                          |{" "}
+                          {selectedSummaryItem.feeGroupPromotionMappings[0].feeGroup.feeSlab
+                            ?.name || "-"}
                         </span>
                       </p>
                     </div>
@@ -751,16 +976,21 @@ const StudentFeesPage: React.FC = () => {
                             Allocation
                           </TableHead>
                           <TableHead className="w-[200px] p-2 text-center text-base font-semibold whitespace-nowrap bg-orange-50">
-                            {selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab?.name || "N/A"}
+                            {selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab
+                              ?.name || "N/A"}
                             {(() => {
                               // Find the matching concession rate from feeStructureSlabs
                               const connectedSlabId =
-                                selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab?.id;
+                                selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup
+                                  ?.feeSlab?.id;
                               if (!connectedSlabId) return "";
-                              const matchingSlab = selectedSummaryItem.feeStructure?.feeStructureSlabs?.find(
-                                (fs) => fs.feeSlab.id === connectedSlabId,
-                              );
-                              return matchingSlab ? ` (${(matchingSlab.concessionRate || 0).toFixed(2)}%)` : "";
+                              const matchingSlab =
+                                selectedSummaryItem.feeStructure?.feeStructureSlabs?.find(
+                                  (fs) => fs.feeSlab.id === connectedSlabId,
+                                );
+                              return matchingSlab
+                                ? ` (${(matchingSlab.concessionRate || 0).toFixed(2)}%)`
+                                : "";
                             })()}
                           </TableHead>
                         </TableRow>
@@ -769,11 +999,13 @@ const StudentFeesPage: React.FC = () => {
                         {(() => {
                           // Filter components to only show those matching the student's assigned slab
                           const connectedSlabId =
-                            selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab?.id;
+                            selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab
+                              ?.id;
 
-                          const filteredComponents = selectedSummaryItem.feeStructure.components.filter(
-                            (component) => component.feeSlab?.id === connectedSlabId,
-                          );
+                          const filteredComponents =
+                            selectedSummaryItem.feeStructure.components.filter(
+                              (component) => component.feeSlab?.id === connectedSlabId,
+                            );
 
                           if (filteredComponents.length === 0) {
                             return (
@@ -831,11 +1063,16 @@ const StudentFeesPage: React.FC = () => {
                           <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-yellow-50">
                             {(() => {
                               // Sum of Slab F amounts (full fees)
-                              const slabFComponents = selectedSummaryItem.feeStructure.components.filter(
-                                (component) => component.feeSlab?.name?.toUpperCase() === "SLAB F",
-                              );
+                              const slabFComponents =
+                                selectedSummaryItem.feeStructure.components.filter(
+                                  (component) =>
+                                    component.feeSlab?.name?.toUpperCase() === "SLAB F",
+                                );
 
-                              const slabFTotal = slabFComponents.reduce((sum, comp) => sum + (comp.amount || 0), 0);
+                              const slabFTotal = slabFComponents.reduce(
+                                (sum, comp) => sum + (comp.amount || 0),
+                                0,
+                              );
                               return `₹${slabFTotal.toLocaleString()}`;
                             })()}
                           </TableCell>
@@ -843,11 +1080,13 @@ const StudentFeesPage: React.FC = () => {
                             <div className="flex flex-col items-center gap-1">
                               {(() => {
                                 const connectedSlabId =
-                                  selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab?.id;
+                                  selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup
+                                    ?.feeSlab?.id;
 
-                                const filteredComponents = selectedSummaryItem.feeStructure.components.filter(
-                                  (component) => component.feeSlab?.id === connectedSlabId,
-                                );
+                                const filteredComponents =
+                                  selectedSummaryItem.feeStructure.components.filter(
+                                    (component) => component.feeSlab?.id === connectedSlabId,
+                                  );
 
                                 const calculatedTotal = filteredComponents.reduce(
                                   (sum, comp) => sum + (comp.amount || 0),
@@ -868,7 +1107,9 @@ const StudentFeesPage: React.FC = () => {
                                       <span className="line-through text-gray-500 text-sm">
                                         ₹{calculatedTotal.toLocaleString()}
                                       </span>
-                                      <span className="text-gray-900 font-bold">₹{expectedTotal.toLocaleString()}</span>
+                                      <span className="text-gray-900 font-bold">
+                                        ₹{expectedTotal.toLocaleString()}
+                                      </span>
                                     </>
                                   );
                                 }
@@ -888,7 +1129,9 @@ const StudentFeesPage: React.FC = () => {
                                 }
 
                                 return (
-                                  <span className="text-gray-900 font-bold">₹{calculatedTotal.toLocaleString()}</span>
+                                  <span className="text-gray-900 font-bold">
+                                    ₹{calculatedTotal.toLocaleString()}
+                                  </span>
                                 );
                               })()}
                             </div>
@@ -918,7 +1161,10 @@ const StudentFeesPage: React.FC = () => {
                   <div className="flex items-start gap-3">
                     <UserAvatar
                       user={
-                        { name: user?.name || undefined, image: user?.image || undefined } as unknown as {
+                        {
+                          name: user?.name || undefined,
+                          image: user?.image || undefined,
+                        } as unknown as {
                           name?: string;
                           image?: string;
                         }
@@ -927,7 +1173,9 @@ const StudentFeesPage: React.FC = () => {
                       className="rounded-full flex-shrink-0"
                     />
                     <div className="flex-1">
-                      <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Current Logged In User</p>
+                      <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
+                        Current Logged In User
+                      </p>
                       <p className="text-sm font-semibold text-gray-900">{user?.name || "N/A"}</p>
                       <p className="text-xs text-gray-500 mt-1">{user?.email || "N/A"}</p>
                     </div>
@@ -948,17 +1196,23 @@ const StudentFeesPage: React.FC = () => {
                         className="rounded-full flex-shrink-0"
                       />
                       <div className="flex-1">
-                        <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Previously Approved By</p>
+                        <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
+                          Previously Approved By
+                        </p>
                         <p className="text-sm font-semibold text-gray-900">
                           {editingItem.waivedOffByUser.name || "N/A"}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">{editingItem.waivedOffByUser.email || "N/A"}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {editingItem.waivedOffByUser.email || "N/A"}
+                        </p>
                       </div>
                     </div>
                   )}
                   {editingItem.updatedAt && (
                     <div>
-                      <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Last Updated</p>
+                      <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
+                        Last Updated
+                      </p>
                       <p className="text-sm font-semibold text-gray-900">
                         {new Date(editingItem.updatedAt).toLocaleString("en-IN", {
                           year: "numeric",
@@ -1019,7 +1273,9 @@ const StudentFeesPage: React.FC = () => {
                         <Textarea
                           id="waivedOffReason"
                           value={waivedOffForm.waivedOffReason}
-                          onChange={(e) => setWaivedOffForm({ ...waivedOffForm, waivedOffReason: e.target.value })}
+                          onChange={(e) =>
+                            setWaivedOffForm({ ...waivedOffForm, waivedOffReason: e.target.value })
+                          }
                           className="mt-1"
                           placeholder="Enter reason for waiver"
                           rows={3}
@@ -1073,10 +1329,11 @@ const StudentFeesPage: React.FC = () => {
               <div className="border-2 border-gray-300 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-4">Installment Configuration</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  This section is for display purposes only. Installment configuration will be implemented in a future
-                  update.
+                  This section is for display purposes only. Installment configuration will be
+                  implemented in a future update.
                 </p>
-                {editingItem.feeStructure?.installments && editingItem.feeStructure.installments.length > 0 ? (
+                {editingItem.feeStructure?.installments &&
+                editingItem.feeStructure.installments.length > 0 ? (
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>
@@ -1122,11 +1379,14 @@ const StudentFeesPage: React.FC = () => {
                             </TableCell>
                             <TableCell className="text-center">
                               {installment.onlineStartDate
-                                ? new Date(installment.onlineStartDate).toLocaleDateString("en-IN", {
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })
+                                ? new Date(installment.onlineStartDate).toLocaleDateString(
+                                    "en-IN",
+                                    {
+                                      year: "numeric",
+                                      month: "long",
+                                      day: "numeric",
+                                    },
+                                  )
                                 : "-"}
                             </TableCell>
                             <TableCell className="text-center">
@@ -1172,15 +1432,23 @@ const StudentFeesPage: React.FC = () => {
 
       {/* Payment Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[95vh] flex flex-col p-0">
+        <DialogContent
+          className="max-w-2xl w-[95vw] max-h-[95vh] flex flex-col p-0"
+          aria-describedby="record-payment-desc"
+        >
           <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
             <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription id="record-payment-desc" className="sr-only">
+              Record fee payment for the selected student
+            </DialogDescription>
           </DialogHeader>
           {paymentItem && (
             <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4 min-h-0">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Payable</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                    Total Payable
+                  </p>
                   <p className="text-sm font-semibold text-gray-900">
                     ₹{(paymentItem.totalPayable || 0).toLocaleString("en-IN")}
                   </p>
@@ -1192,12 +1460,15 @@ const StudentFeesPage: React.FC = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Remaining Amount</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                    Remaining Amount
+                  </p>
                   <p className="text-sm font-semibold text-gray-900">
                     ₹
-                    {Math.max(0, (paymentItem.totalPayable || 0) - (paymentItem.amountPaid || 0)).toLocaleString(
-                      "en-IN",
-                    )}
+                    {Math.max(
+                      0,
+                      (paymentItem.totalPayable || 0) - (paymentItem.amountPaid || 0),
+                    ).toLocaleString("en-IN")}
                   </p>
                 </div>
               </div>
@@ -1247,32 +1518,57 @@ const StudentFeesPage: React.FC = () => {
               {paymentForm.paymentMode === "ONLINE" && (
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm font-medium text-blue-900 mb-3">Complete payment through payment gateway</p>
+                    <p className="text-sm font-medium text-blue-900 mb-3">
+                      Complete payment through Paytm
+                    </p>
                     <Button
                       type="button"
+                      disabled={paytmLoading}
                       onClick={async () => {
                         if (!paymentItem?.id || !selectedStudent?.id) {
                           toast.error("Missing payment information");
                           return;
                         }
 
-                        // TODO: Replace with actual payment gateway integration
-                        // This should call a backend API to generate payment link
-                        // For now, this is a placeholder
-                        const paymentLink = `/api/v1/fees/payments/initiate?studentId=${selectedStudent.id}&mappingId=${paymentItem.id}&amount=${paymentItem.totalPayable}`;
+                        const amountToPay =
+                          (paymentItem.totalPayable || 0) - (paymentItem.amountPaid || 0);
+                        if (amountToPay <= 0) {
+                          toast.error("No amount due for this fee mapping");
+                          return;
+                        }
 
-                        // Open payment gateway in new window/tab
-                        window.open(paymentLink, "_blank");
-
-                        toast.info("Redirecting to payment gateway...");
+                        openPaytmCheckout({
+                          feeStudentMappingId: paymentItem.id,
+                          amount: amountToPay,
+                          studentId: selectedStudent.id,
+                          studentName: selectedStudent.name ?? undefined,
+                          studentEmail: selectedStudent.personalEmail ?? undefined,
+                          studentMobile: selectedStudent.mobile ?? undefined,
+                          onBeforeInvoke: () => {
+                            setShowPaymentModal(false);
+                            setPaymentItem(null);
+                          },
+                          onSuccess: async () => {
+                            toast.success("Payment recorded successfully");
+                            setShowPaymentModal(false);
+                            setPaymentItem(null);
+                            if (selectedStudent?.id) {
+                              await fetchStudentMappings(selectedStudent.id);
+                            }
+                          },
+                          onFailure: (msg) => {
+                            toast.error(msg || "Payment failed");
+                          },
+                        });
                       }}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Proceed to Payment Gateway
+                      {paytmLoading ? "Opening Paytm..." : "Proceed to Paytm"}
                     </Button>
                     <p className="text-xs text-blue-700 mt-2">
-                      After completing payment, the transaction details will be automatically recorded
+                      After completing payment, the transaction details will be automatically
+                      recorded
                     </p>
                   </div>
                 </div>
@@ -1287,13 +1583,19 @@ const StudentFeesPage: React.FC = () => {
                 setShowPaymentModal(false);
                 setPaymentItem(null);
               }}
-              disabled={processingPayment}
+              disabled={processingPayment || paytmLoading}
             >
               Cancel
             </Button>
-            <Button onClick={handlePaymentSubmit} disabled={processingPayment}>
-              {processingPayment ? "Processing..." : "Record Payment"}
-            </Button>
+            {paymentForm.paymentMode === "ONLINE" ? (
+              <p className="text-sm text-amber-600 self-center">
+                Use &quot;Proceed to Paytm&quot; above to complete payment
+              </p>
+            ) : (
+              <Button onClick={handlePaymentSubmit} disabled={processingPayment}>
+                {processingPayment ? "Processing..." : "Record Payment"}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -1315,7 +1617,8 @@ const StudentFeesPage: React.FC = () => {
                   <span className="font-medium">UID:</span> {selectedStudent.uid || "N/A"}
                 </p>
                 <p className="text-xs text-gray-700">
-                  <span className="font-medium">Email:</span> {selectedStudent.personalEmail || "N/A"}
+                  <span className="font-medium">Email:</span>{" "}
+                  {selectedStudent.personalEmail || "N/A"}
                 </p>
                 <p className="text-xs text-gray-700">
                   <span className="font-medium">Total Payable:</span> ₹
@@ -1354,12 +1657,16 @@ const StudentFeesPage: React.FC = () => {
                 <Textarea
                   id="notificationMessage"
                   value={notificationForm.message}
-                  onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })}
+                  onChange={(e) =>
+                    setNotificationForm({ ...notificationForm, message: e.target.value })
+                  }
                   className="mt-1"
                   placeholder="Enter notification message"
                   rows={6}
                 />
-                <p className="text-xs text-gray-500 mt-1">{notificationForm.message.length} characters</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {notificationForm.message.length} characters
+                </p>
               </div>
             </div>
           )}

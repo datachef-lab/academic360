@@ -1,11 +1,10 @@
-
-// import { 
+// import {
 //   Table as ShadcnTable,
 //   TableBody,
 //   TableCell,
 //   TableHead,
 //   TableHeader,
-//   TableRow 
+//   TableRow
 // } from "@/components/ui/table";
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 // import { Badge } from "@/components/ui/badge";
@@ -95,8 +94,8 @@
 //             </TableHeader>
 //             <TableBody className="space-y-4">
 //               {users.map((user) => (
-//                 <TableRow 
-//                   key={user.id} 
+//                 <TableRow
+//                   key={user.id}
 //                   className=" my-24 shadow-md bg-gray-50   rounded-full hover:bg-gray-50 transition-all duration-300 ease-in-out"
 //                 >
 //                   <TableCell className="py-4 px-6 first:rounded-l-full last:rounded-r-full">
@@ -115,11 +114,11 @@
 //                     </div>
 //                   </TableCell>
 //                   <TableCell className="py-4 px-6 first:rounded-l-full last:rounded-r-full">
-//                     <Badge 
+//                     <Badge
 //                       variant={user.position === 'Teacher' ? 'default' : 'secondary'}
 //                       className={`${
-//                         user.position === 'Teacher' 
-//                           ? 'bg-green-100 text-green-800 hover:bg-green-100' 
+//                         user.position === 'Teacher'
+//                           ? 'bg-green-100 text-green-800 hover:bg-green-100'
 //                           : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
 //                       } rounded-full px-3 py-1 text-xs`}
 //                     >
@@ -158,8 +157,14 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 
@@ -177,7 +182,10 @@ export interface User {
   avatarColor: string;
 }
 
-export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pageIndex" | "pageSize"> {
+export interface DataTableProps<TData, TValue> extends Omit<
+  PaginationState,
+  "pageIndex" | "pageSize"
+> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   pagination: CustomPaginationState;
@@ -189,7 +197,6 @@ export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pa
   refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
 }
 
-
 export function UserDataTable<TData, TValue>({
   columns,
   data,
@@ -199,7 +206,6 @@ export function UserDataTable<TData, TValue>({
   searchText,
   setSearchText,
 
- 
   refetch,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -216,7 +222,8 @@ export function UserDataTable<TData, TValue>({
     pageCount: pagination.totalPages,
     onPaginationChange: (updaterOrValue) => {
       setPagination((prev) => {
-        const newState = typeof updaterOrValue === "function" ? updaterOrValue(prev) : updaterOrValue;
+        const newState =
+          typeof updaterOrValue === "function" ? updaterOrValue(prev) : updaterOrValue;
         return {
           ...prev,
           pageIndex: newState.pageIndex,
@@ -242,17 +249,22 @@ export function UserDataTable<TData, TValue>({
 
   return (
     <div className="space-y-3 p-4  rounded-2xl my-3">
-    <div className="px-6 py-1   rounded-lg ">
-    <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
-    </div>
+      <div className="px-6 py-1   rounded-lg ">
+        <DataTableToolbar
+          table={table}
+          searchText={searchText}
+          setSearchText={setSearchText}
+          refetch={refetch}
+        />
+      </div>
       <div className="  overflow-hidden">
         <Table className="border-separate border-spacing-y-3 w-full">
-          <TableHeader >
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-white  ">
                 {headerGroup.headers.map((header) => (
-                  <TableHead 
-                    key={header.id} 
+                  <TableHead
+                    key={header.id}
                     className="py-3 px-5  text-center font-semibold text-base"
                     style={{ width: header.getSize() }}
                   >
@@ -264,27 +276,29 @@ export function UserDataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              Array(pagination.pageSize).fill(null).map((_, index) => (
-                <TableRow key={index} className="bg-gray-50 rounded-lg">
-                  {columns.map((_, colIndex) => (
-                    <TableCell 
-                      key={colIndex} 
-                      className="py-3 px-5 first:rounded-l-lg last:rounded-r-lg"
-                    >
-                      <Skeleton className="h-4 w-full rounded-full" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              Array(pagination.pageSize)
+                .fill(null)
+                .map((_, index) => (
+                  <TableRow key={index} className="bg-gray-50 rounded-lg">
+                    {columns.map((_, colIndex) => (
+                      <TableCell
+                        key={colIndex}
+                        className="py-3 px-5 first:rounded-l-lg last:rounded-r-lg"
+                      >
+                        <Skeleton className="h-4 w-full rounded-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow 
-                  key={row.id} 
-                   className="  my-24 shadow-md bg-gray-100 hover:scale-95 rounded-full hover:bg-gray-50 transition-all duration-300 ease-in-out"
+                <TableRow
+                  key={row.id}
+                  className="  my-24 shadow-md bg-gray-100 hover:scale-95 rounded-full hover:bg-gray-50 transition-all duration-300 ease-in-out"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell 
-                      key={cell.id} 
+                    <TableCell
+                      key={cell.id}
                       className="py-4 px-5  first:rounded-l-full last:rounded-r-full"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

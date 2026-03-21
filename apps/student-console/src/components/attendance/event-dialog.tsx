@@ -4,7 +4,6 @@ import { Calendar, Clock, MapPin } from "lucide-react";
 import { Button } from "../ui/button";
 import { MockData } from "./data";
 
-
 type EventDialogProps = {
   mockData: MockData;
   showEventDetails: number | null;
@@ -17,19 +16,13 @@ export default function EventDialog({
   setShowEventDetails,
 }: EventDialogProps) {
   return (
-    <Dialog
-      open={showEventDetails !== null}
-      onOpenChange={() => setShowEventDetails(null)}
-    >
+    <Dialog open={showEventDetails !== null} onOpenChange={() => setShowEventDetails(null)}>
       <DialogContent className="max-w-2xl">
         {showEventDetails && (
           <>
             <DialogHeader>
               <DialogTitle>
-                {
-                  mockData.collegeEvents.find((e) => e.id === showEventDetails)
-                    ?.title
-                }
+                {mockData.collegeEvents.find((e) => e.id === showEventDetails)?.title}
               </DialogTitle>
             </DialogHeader>
             <div className="mt-4 space-y-4">
@@ -37,41 +30,27 @@ export default function EventDialog({
                 <div className="flex items-center text-gray-600">
                   <Calendar className="w-4 h-4 mr-2" />
                   {new Date(
-                    mockData.collegeEvents.find(
-                      (e) => e.id === showEventDetails
-                    )?.date || ""
+                    mockData.collegeEvents.find((e) => e.id === showEventDetails)?.date || "",
                   ).toLocaleDateString()}
                 </div>
                 <div className="flex items-center text-gray-600">
                   <Clock className="w-4 h-4 mr-2" />
-                  {
-                    mockData.collegeEvents.find(
-                      (e) => e.id === showEventDetails
-                    )?.time
-                  }
+                  {mockData.collegeEvents.find((e) => e.id === showEventDetails)?.time}
                 </div>
                 <div className="flex items-center text-gray-600">
                   <MapPin className="w-4 h-4 mr-2" />
-                  {
-                    mockData.collegeEvents.find(
-                      (e) => e.id === showEventDetails
-                    )?.location
-                  }
+                  {mockData.collegeEvents.find((e) => e.id === showEventDetails)?.location}
                 </div>
               </div>
               <p className="text-gray-700">
-                {
-                  mockData.collegeEvents.find((e) => e.id === showEventDetails)
-                    ?.description
-                }
+                {mockData.collegeEvents.find((e) => e.id === showEventDetails)?.description}
               </p>
               <div className="pt-4 border-t">
                 <p className="text-sm text-gray-500">
                   Registration Deadline:{" "}
                   {new Date(
-                    mockData.collegeEvents.find(
-                      (e) => e.id === showEventDetails
-                    )?.registrationDeadline || ""
+                    mockData.collegeEvents.find((e) => e.id === showEventDetails)
+                      ?.registrationDeadline || "",
                   ).toLocaleDateString()}
                 </p>
               </div>

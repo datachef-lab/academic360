@@ -1,15 +1,20 @@
-import React from 'react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { DialogFooter } from '@/components/ui/dialog';
-import { Loader2 } from 'lucide-react';
-import { SubjectMetadata, SubjectType } from '@/types/academics/subject-metadata';
-import { Degree } from '@/types/resources/degree.types';
-
+import React from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import { SubjectMetadata, SubjectType } from "@/types/academics/subject-metadata";
+import { Degree } from "@/types/resources/degree.types";
 
 interface SubjectFormProps {
   newSubject: SubjectMetadata;
@@ -153,7 +158,10 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             onValueChange={(value) => handleSelectChange("streamId", value)}
             disabled={!selectedDegreeId || filteredProgrammes.length === 0}
           >
-            <SelectTrigger id="streamId" className="border-purple-300 focus:ring-purple-700 disabled:opacity-50">
+            <SelectTrigger
+              id="streamId"
+              className="border-purple-300 focus:ring-purple-700 disabled:opacity-50"
+            >
               <SelectValue
                 placeholder={
                   !selectedDegreeId
@@ -165,13 +173,11 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
               />
             </SelectTrigger>
             <SelectContent className="bg-white border-purple-300">
-              {
-                ["HONOURS", "GENERAL"].map((programme) => (
-                  <SelectItem key={programme} value={programme}>
-                    {programme}
-                  </SelectItem>
-                ))
-               }
+              {["HONOURS", "GENERAL"].map((programme) => (
+                <SelectItem key={programme} value={programme}>
+                  {programme}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -183,7 +189,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             Semester <span className="text-red-500">*</span>
           </Label>
           <Select
-            value={newSubject.class ? newSubject.class.id!.toString() : ''}
+            value={newSubject.class ? newSubject.class.id!.toString() : ""}
             onValueChange={(value) => handleSelectChange("semester", value)}
           >
             <SelectTrigger id="semester" className="border-purple-300 focus:ring-purple-700">
@@ -216,11 +222,13 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="marksheetCode" className="text-purple-900">Marksheet Code</Label>
+        <Label htmlFor="marksheetCode" className="text-purple-900">
+          Marksheet Code
+        </Label>
         <Input
           id="marksheetCode"
           name="marksheetCode"
-          value={newSubject.marksheetCode ?? ''}
+          value={newSubject.marksheetCode ?? ""}
           onChange={handleInputChange}
           placeholder="Enter marksheet code"
           className="border-purple-300 focus:border-purple-700 focus:ring-purple-700"
@@ -228,35 +236,39 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
       </div>
 
       <div className="flex items-center space-x-2">
-        <Checkbox 
-          id="isOptional" 
-          checked={newSubject.isOptional} 
+        <Checkbox
+          id="isOptional"
+          checked={newSubject.isOptional}
           onCheckedChange={handleCheckboxChange}
           className="border-purple-400 text-purple-700 focus:ring-purple-500"
         />
-        <Label htmlFor="isOptional" className="text-purple-900">Optional Subject</Label>
+        <Label htmlFor="isOptional" className="text-purple-900">
+          Optional Subject
+        </Label>
       </div>
 
       <DialogFooter>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={closeDialog}
           className="border-purple-300 text-purple-800 hover:bg-purple-100 hover:text-purple-900"
         >
           Cancel
         </Button>
-        <Button 
-          onClick={handleAddSubject} 
+        <Button
+          onClick={handleAddSubject}
           className="bg-purple-700 hover:bg-purple-800 text-white"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {isEditMode ? 'Updating...' : 'Adding...'}
+              {isEditMode ? "Updating..." : "Adding..."}
             </>
+          ) : isEditMode ? (
+            "Update Subject"
           ) : (
-            isEditMode ? 'Update Subject' : 'Add Subject'
+            "Add Subject"
           )}
         </Button>
       </DialogFooter>
@@ -264,4 +276,4 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
   );
 };
 
-export default SubjectForm; 
+export default SubjectForm;

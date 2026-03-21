@@ -12,7 +12,9 @@ type ThemeContextType = {
 export const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [colorScheme, setColorScheme] = useState<ColorSchemeName>(Appearance.getColorScheme() ?? "light");
+  const [colorScheme, setColorScheme] = useState<ColorSchemeName>(
+    Appearance.getColorScheme() ?? "light",
+  );
 
   useEffect(() => {
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {

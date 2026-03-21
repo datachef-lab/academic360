@@ -13,9 +13,22 @@ import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 import * as XLSX from "xlsx";
 import { ClassForm } from "./class-form";
@@ -161,7 +174,9 @@ const ClassesPage = () => {
               <Library className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               <span className="truncate">Classes</span>
             </CardTitle>
-            <div className="text-xs sm:text-sm text-muted-foreground mt-1">A list of all the Classes offered.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+              A list of all the Classes offered.
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -206,7 +221,9 @@ const ClassesPage = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-lg">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedClass ? "Edit Class" : "Add New Class"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedClass ? "Edit Class" : "Add New Class"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <ClassForm
                   initialData={selectedClass as Class}
@@ -226,7 +243,11 @@ const ClassesPage = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2 flex-shrink-0" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 flex-shrink-0"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> <span className="hidden sm:inline">Download</span>
             </Button>
           </div>
@@ -236,12 +257,24 @@ const ClassesPage = () => {
               <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
                 <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
-                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>Type</TableHead>
-                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
-                    <TableHead style={{ width: 100, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>
+                      ID
+                    </TableHead>
+                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>
+                      Type
+                    </TableHead>
+                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>
+                      Name
+                    </TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>
+                      Short Name
+                    </TableHead>
+                    <TableHead style={{ width: 100, background: "#f3f4f6", color: "#374151" }}>
+                      Status
+                    </TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -274,7 +307,9 @@ const ClassesPage = () => {
                           {Class.disabled === true ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell style={{ width: 120 }}>

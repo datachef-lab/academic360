@@ -41,7 +41,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { user } = useAuth();
   const { accessControl, student } = useStudent();
-  const { name: collegeName, logoUrl: collegeLogoUrl, isLoading: isLoadingSettings } = useCollegeSettings();
+  const {
+    name: collegeName,
+    logoUrl: collegeLogoUrl,
+    isLoading: isLoadingSettings,
+  } = useCollegeSettings();
   const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
   const socketRef = React.useRef<any | null>(null);
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
@@ -135,7 +139,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         // @ts-ignore - socket.io-client will be available after pnpm install
         const socketModule = await import("socket.io-client");
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:3000";
 
         // Wrap URL parsing in try-catch for better error handling
         let parsed: URL;
@@ -297,12 +303,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     //   icon: IndianRupee,
     //   isActive: pathname === "/dashboard/enrollment-fees",
     // },
-    // {
-    //   title: "Library",
-    //   url: "/dashboard/library",
-    //   icon: Library,
-    //   isActive: pathname === "/dashboard/library",
-    // },
+    {
+      title: "Library",
+      url: "/dashboard/library",
+      icon: Library,
+      isActive: pathname === "/dashboard/library",
+    },
     {
       title: "Profile",
       url: "/dashboard/profile",

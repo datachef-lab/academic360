@@ -4,7 +4,12 @@ import { AlertCircle, Info, Loader2 } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   fetchStudentSubjectSelections,
   StudentSubjectSelectionGroupDto,
@@ -20,7 +25,12 @@ export default function SubjectSelectionForm({
   onVisibleCategoriesChange,
 }: {
   openNotes?: () => void;
-  onVisibleCategoriesChange?: (categories: { minor?: boolean; idc?: boolean; aec?: boolean; cvac?: boolean }) => void;
+  onVisibleCategoriesChange?: (categories: {
+    minor?: boolean;
+    idc?: boolean;
+    aec?: boolean;
+    cvac?: boolean;
+  }) => void;
 }) {
   const { user } = useAuth();
   const { student } = useStudent();
@@ -145,7 +155,14 @@ export default function SubjectSelectionForm({
 
         // Derive groups
         const getLabel = (p: PaperDto) => p?.subject?.name || "";
-        const romanMap: Record<string, string> = { "1": "I", "2": "II", "3": "III", "4": "IV", "5": "V", "6": "VI" };
+        const romanMap: Record<string, string> = {
+          "1": "I",
+          "2": "II",
+          "3": "III",
+          "4": "IV",
+          "5": "V",
+          "6": "VI",
+        };
         const extractSemesterRoman = (name?: string | null): string => {
           if (!name) return "";
           const upper = String(name).toUpperCase();
@@ -164,21 +181,31 @@ export default function SubjectSelectionForm({
           (n ?? "").toUpperCase().includes("INTER DISCIPLINARY") ||
           (c ?? "").toUpperCase() === "IDC";
         const isAEC = (n: string, c?: string | null) =>
-          (n ?? "").toUpperCase().includes("ABILITY ENHANCEMENT") || (c ?? "").toUpperCase() === "AEC";
+          (n ?? "").toUpperCase().includes("ABILITY ENHANCEMENT") ||
+          (c ?? "").toUpperCase() === "AEC";
         const isCVAC = (n: string, c?: string | null) =>
-          (n ?? "").toUpperCase().includes("COMMON VALUE ADDED") || (c ?? "").toUpperCase() === "CVAC";
+          (n ?? "").toUpperCase().includes("COMMON VALUE ADDED") ||
+          (c ?? "").toUpperCase() === "CVAC";
 
-        const minorGroup = groups.find((g) => isMinor(g.subjectType?.name || "", g.subjectType?.code!));
+        const minorGroup = groups.find((g) =>
+          isMinor(g.subjectType?.name || "", g.subjectType?.code!),
+        );
         const idcGroup = groups.find((g) => isIDC(g.subjectType?.name || "", g.subjectType?.code!));
         const aecGroup = groups.find((g) => isAEC(g.subjectType?.name || "", g.subjectType?.code!));
-        const cvacGroup = groups.find((g) => isCVAC(g.subjectType?.name || "", g.subjectType?.code!));
+        const cvacGroup = groups.find((g) =>
+          isCVAC(g.subjectType?.name || "", g.subjectType?.code!),
+        );
 
         const dedupe = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
 
         // Minor I: semesters I & II
-        const minorSem1And2 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "I") || isSem(p, "II"));
+        const minorSem1And2 = (minorGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "I") || isSem(p, "II"),
+        );
         // Minor II: semesters III & IV
-        const minorSem3And4 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+        const minorSem3And4 = (minorGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "III") || isSem(p, "IV"),
+        );
         // Minor III: semester III only (for BCOM programs)
         const minorSem3Only = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
@@ -188,7 +215,9 @@ export default function SubjectSelectionForm({
         const idcSem3Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
         // AEC: semesters III & IV
-        const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+        const aec3Papers = (aecGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "III") || isSem(p, "IV"),
+        );
 
         // CVAC 4: semester II
         const cvac4Papers = (cvacGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
@@ -221,9 +250,18 @@ export default function SubjectSelectionForm({
 
         // Debug: Log detailed semester breakdown for Minor subjects
         console.log("Detailed Minor semester breakdown:", {
-          minorSem1And2: minorSem1And2.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
-          minorSem3And4: minorSem3And4.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
-          minorSem3Only: minorSem3Only.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
+          minorSem1And2: minorSem1And2.map((p) => ({
+            name: p.subject?.name,
+            semester: getSemesterRoman(p),
+          })),
+          minorSem3And4: minorSem3And4.map((p) => ({
+            name: p.subject?.name,
+            semester: getSemesterRoman(p),
+          })),
+          minorSem3Only: minorSem3Only.map((p) => ({
+            name: p.subject?.name,
+            semester: getSemesterRoman(p),
+          })),
         });
 
         // Capture first auto-assign subject per category/semester (if any)
@@ -244,10 +282,14 @@ export default function SubjectSelectionForm({
             .map(getLabel),
         );
         const autoIdc1List = dedupe(
-          (idcGroup?.paperOptions || []).filter((p) => (p as any)?.autoAssign === true && isSem(p, "I")).map(getLabel),
+          (idcGroup?.paperOptions || [])
+            .filter((p) => (p as any)?.autoAssign === true && isSem(p, "I"))
+            .map(getLabel),
         );
         const autoIdc2List = dedupe(
-          (idcGroup?.paperOptions || []).filter((p) => (p as any)?.autoAssign === true && isSem(p, "II")).map(getLabel),
+          (idcGroup?.paperOptions || [])
+            .filter((p) => (p as any)?.autoAssign === true && isSem(p, "II"))
+            .map(getLabel),
         );
         const autoIdc3List = dedupe(
           (idcGroup?.paperOptions || [])
@@ -283,8 +325,10 @@ export default function SubjectSelectionForm({
           hasMinor1: hasActualOptions(admissionMinor1Subjects),
           hasMinor2: hasActualOptions(admissionMinor2Subjects),
           hasMinor3: hasActualOptions(admissionMinor3Subjects),
-          willShowMinor2: hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects),
-          willShowMinor3: !hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects),
+          willShowMinor2:
+            hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects),
+          willShowMinor3:
+            !hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects),
           minor1Subjects: admissionMinor1Subjects,
           minor2Subjects: admissionMinor2Subjects,
           minor3Subjects: admissionMinor3Subjects,
@@ -297,8 +341,14 @@ export default function SubjectSelectionForm({
           String(s || "")
             .trim()
             .toUpperCase();
-        const rgMap: Record<string, { semesters: string[]; cannotCombineWith: Set<string>; categoryCode: string }> = {};
-        const rgById: Record<number, { semesters: string[]; cannotCombineIds: Set<number>; categoryCode: string }> = {};
+        const rgMap: Record<
+          string,
+          { semesters: string[]; cannotCombineWith: Set<string>; categoryCode: string }
+        > = {};
+        const rgById: Record<
+          number,
+          { semesters: string[]; cannotCombineIds: Set<number>; categoryCode: string }
+        > = {};
         const catFlags: Record<string, boolean> = {};
         for (const rg of rgs) {
           const target = rg.subject?.name || "";
@@ -316,7 +366,11 @@ export default function SubjectSelectionForm({
           const targetKey = norm(target);
           // Merge with any existing rule for target
           if (!rgMap[targetKey]) {
-            rgMap[targetKey] = { semesters, cannotCombineWith: new Set<string>(), categoryCode: code };
+            rgMap[targetKey] = {
+              semesters,
+              cannotCombineWith: new Set<string>(),
+              categoryCode: code,
+            };
           }
           for (const c of cannot) rgMap[targetKey].cannotCombineWith.add(c);
 
@@ -472,16 +526,28 @@ export default function SubjectSelectionForm({
     const shouldAskForCvac = hasActualOptions(availableCvacOptions);
 
     // Required field validation - create individual error messages
-    if (hasActualOptions(admissionMinor1Subjects) && !minor1) newErrors.push("Minor I subject is required");
+    if (hasActualOptions(admissionMinor1Subjects) && !minor1)
+      newErrors.push("Minor I subject is required");
     // Minor II is only required when Minor I is available (traditional programs)
-    if (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) && !minor2)
+    if (
+      hasActualOptions(admissionMinor1Subjects) &&
+      hasActualOptions(admissionMinor2Subjects) &&
+      !minor2
+    )
       newErrors.push("Minor II subject is required");
     // Minor III is only required when Minor I is not available (BCOM programs)
-    if (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && !minor3)
+    if (
+      !hasActualOptions(admissionMinor1Subjects) &&
+      hasActualOptions(admissionMinor3Subjects) &&
+      !minor3
+    )
       newErrors.push("Minor subject is required");
-    if (hasActualOptions(availableIdcSem1Subjects) && !idc1) newErrors.push("IDC 1 subject is required");
-    if (hasActualOptions(availableIdcSem2Subjects) && !idc2) newErrors.push("IDC 2 subject is required");
-    if (hasActualOptions(availableIdcSem3Subjects) && !idc3) newErrors.push("IDC 3 subject is required");
+    if (hasActualOptions(availableIdcSem1Subjects) && !idc1)
+      newErrors.push("IDC 1 subject is required");
+    if (hasActualOptions(availableIdcSem2Subjects) && !idc2)
+      newErrors.push("IDC 2 subject is required");
+    if (hasActualOptions(availableIdcSem3Subjects) && !idc3)
+      newErrors.push("IDC 3 subject is required");
     if (shouldAskForAec && !aec3) newErrors.push("AEC 3 subject is required");
     if (shouldAskForCvac && !cvac4) newErrors.push("CVAC 4 subject is required");
 
@@ -527,7 +593,9 @@ export default function SubjectSelectionForm({
 
     // Auto-assigned subject must be present validation
     if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1 && minor3 !== autoMinor1) {
-      newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
+      newErrors.push(
+        `${autoMinor1} is mandatory and must be selected in one of the Minor subjects`,
+      );
     }
     // Minor III auto-assignment is only required when Minor III is displayed
     if (
@@ -558,7 +626,10 @@ export default function SubjectSelectionForm({
     }
 
     // Move auto-assigned subject (Mathematics) to the other Minor when replaced
-    if (autoMinor1 && (fieldType === "minor1" || fieldType === "minor2" || fieldType === "minor3")) {
+    if (
+      autoMinor1 &&
+      (fieldType === "minor1" || fieldType === "minor2" || fieldType === "minor3")
+    ) {
       if (fieldType === "minor1" && minor1 === autoMinor1 && value !== autoMinor1) {
         if (minor2 !== autoMinor1) setMinor2(autoMinor1);
         else if (minor3 !== autoMinor1) setMinor3(autoMinor1);
@@ -721,7 +792,9 @@ export default function SubjectSelectionForm({
 
         // For semester-specific matching, check if the meta applies to the semester
         if (semester && m.forClasses.length > 0) {
-          return m.forClasses.some((c) => extractSemesterRomanFromClass(c.class?.name) === semester);
+          return m.forClasses.some(
+            (c) => extractSemesterRomanFromClass(c.class?.name) === semester,
+          );
         }
 
         return true;
@@ -1111,9 +1184,15 @@ export default function SubjectSelectionForm({
         }
 
         console.log("Selections saved successfully:", result.data);
-        console.log("🔍 Frontend Debug - Updated hasFormSubmissions:", updatedResp.hasFormSubmissions);
+        console.log(
+          "🔍 Frontend Debug - Updated hasFormSubmissions:",
+          updatedResp.hasFormSubmissions,
+        );
       } else {
-        setSaveError("Validation failed: " + (result.errors?.map((e) => e.message).join(", ") || "Unknown error"));
+        setSaveError(
+          "Validation failed: " +
+            (result.errors?.map((e) => e.message).join(", ") || "Unknown error"),
+        );
       }
     } catch (error: any) {
       setSaveError(error.message || "Failed to save selections");
@@ -1128,7 +1207,8 @@ export default function SubjectSelectionForm({
   const getFilteredIdcOptions = (sourceList: string[], currentIdcValue: string) => {
     return sourceList.filter((subject) => {
       // Enforce IDC uniqueness within IDC selections
-      const uniqueWithinIdc = subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3);
+      const uniqueWithinIdc =
+        subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3);
       // Enforce IDC ≠ Minor rule only (not RG). Do not hide because of RG defined for Minor.
       const notSameAsMinor = subject !== minor1 && subject !== minor2;
       return uniqueWithinIdc && notSameAsMinor;
@@ -1206,7 +1286,9 @@ export default function SubjectSelectionForm({
     // When Minor I is selected, auto-assign Minor II if auto-assign subject exists
     if (minor1 && !minor2 && autoMinor1) {
       const programCourseName =
-        student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
+        student?.currentPromotion?.programCourse?.name ||
+        student?.programCourse?.course?.name ||
+        "";
       const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
       const isBcomProgram = normalizedName.includes("bcom");
 
@@ -1245,7 +1327,9 @@ export default function SubjectSelectionForm({
     // If Minor I no longer holds the auto-assigned subject, enforce it in Minor II
     if (minor1 && autoMinor1 && minor1 !== autoMinor1) {
       const programCourseName =
-        student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
+        student?.currentPromotion?.programCourse?.name ||
+        student?.programCourse?.course?.name ||
+        "";
       const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
       const isBcomProgram = normalizedName.includes("bcom");
 
@@ -1308,7 +1392,11 @@ export default function SubjectSelectionForm({
   );
 
   // Helper function to convert subject arrays to combobox format with a reset placeholder
-  const convertToComboboxData = (subjects: string[], excludeValues: string[] = [], selectLabel: string = "Select") => {
+  const convertToComboboxData = (
+    subjects: string[],
+    excludeValues: string[] = [],
+    selectLabel: string = "Select",
+  ) => {
     const options = subjects
       .filter((subject) => !excludeValues.includes(subject))
       .map((subject) => ({ value: subject, label: subject }));
@@ -1391,7 +1479,12 @@ export default function SubjectSelectionForm({
       <div className="space-y-6">
         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-5 h-5 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -1402,7 +1495,8 @@ export default function SubjectSelectionForm({
             <h3 className="text-base font-semibold text-green-800">Your Subject Selections</h3>
           </div>
           <p className="text-base text-green-700">
-            Your subject selections have been successfully saved. Below are your confirmed selections:
+            Your subject selections have been successfully saved. Below are your confirmed
+            selections:
           </p>
         </div>
 
@@ -1410,72 +1504,108 @@ export default function SubjectSelectionForm({
           <table className="w-full border text-base rounded-lg overflow-hidden shadow-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="border p-3 text-left font-semibold text-gray-800 text-base">Subject Category</th>
-                <th className="border p-3 text-left font-semibold text-gray-800 text-base">Your Selection</th>
+                <th className="border p-3 text-left font-semibold text-gray-800 text-base">
+                  Subject Category
+                </th>
+                <th className="border p-3 text-left font-semibold text-gray-800 text-base">
+                  Your Selection
+                </th>
               </tr>
             </thead>
             <tbody>
               {/* Minor I */}
               {savedSelections.minor1 && (
                 <tr className="hover:bg-gray-50 ">
-                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("MN", "I")}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.minor1}</td>
+                  <td className="border p-3 font-medium text-gray-700 text-base">
+                    {getDynamicLabel("MN", "I")}
+                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {savedSelections.minor1}
+                  </td>
                 </tr>
               )}
 
               {/* Minor II - Only show when Minor I is available (traditional programs) */}
               {savedSelections.minor2 && hasActualOptions(admissionMinor1Subjects) && (
                 <tr className="hover:bg-gray-50 ">
-                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("MN", "III")}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.minor2}</td>
+                  <td className="border p-3 font-medium text-gray-700 text-base">
+                    {getDynamicLabel("MN", "III")}
+                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {savedSelections.minor2}
+                  </td>
                 </tr>
               )}
 
               {/* Minor III - Show when Minor I is not available (BCOM programs) */}
               {savedSelections.minor3 && !hasActualOptions(admissionMinor1Subjects) && (
                 <tr className="hover:bg-gray-50 ">
-                  <td className="border p-3 font-medium text-gray-700 text-base">Minor (Semester III to VI)</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.minor3}</td>
+                  <td className="border p-3 font-medium text-gray-700 text-base">
+                    Minor (Semester III to VI)
+                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {savedSelections.minor3}
+                  </td>
                 </tr>
               )}
 
               {/* IDC 1 */}
               {savedSelections.idc1 && (
                 <tr className="hover:bg-gray-50 ">
-                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("IDC", "I")}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.idc1}</td>
+                  <td className="border p-3 font-medium text-gray-700 text-base">
+                    {getDynamicLabel("IDC", "I")}
+                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {savedSelections.idc1}
+                  </td>
                 </tr>
               )}
 
               {/* IDC 2 */}
               {savedSelections.idc2 && (
                 <tr className="hover:bg-gray-50 ">
-                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("IDC", "II")}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.idc2}</td>
+                  <td className="border p-3 font-medium text-gray-700 text-base">
+                    {getDynamicLabel("IDC", "II")}
+                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {savedSelections.idc2}
+                  </td>
                 </tr>
               )}
 
               {/* IDC 3 */}
               {savedSelections.idc3 && (
                 <tr className="hover:bg-gray-50 ">
-                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("IDC", "III")}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.idc3}</td>
+                  <td className="border p-3 font-medium text-gray-700 text-base">
+                    {getDynamicLabel("IDC", "III")}
+                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {savedSelections.idc3}
+                  </td>
                 </tr>
               )}
 
               {/* AEC 3 */}
               {savedSelections.aec3 && (
                 <tr className="hover:bg-gray-50 ">
-                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("AEC")}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.aec3}</td>
+                  <td className="border p-3 font-medium text-gray-700 text-base">
+                    {getDynamicLabel("AEC")}
+                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {savedSelections.aec3}
+                  </td>
                 </tr>
               )}
 
               {/* CVAC 4 */}
               {savedSelections.cvac4 && (
                 <tr className="hover:bg-gray-50 ">
-                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("CVAC")}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.cvac4}</td>
+                  <td className="border p-3 font-medium text-gray-700 text-base">
+                    {getDynamicLabel("CVAC")}
+                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {savedSelections.cvac4}
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -1496,7 +1626,10 @@ export default function SubjectSelectionForm({
     const isBcomProgram = normalizedName.includes("bcom");
 
     if (subjectType === "minor2" && isBcomProgram) {
-      const newLabel = baseLabel.replace("Minor II (Semester III & IV)", "Minor III (Semester III)");
+      const newLabel = baseLabel.replace(
+        "Minor II (Semester III & IV)",
+        "Minor III (Semester III)",
+      );
       return newLabel;
     }
 
@@ -1699,8 +1832,9 @@ export default function SubjectSelectionForm({
                   <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <div className="text-base leading-relaxed">
-                      Before selecting your subjects, please read the following notes carefully to ensure clarity on the
-                      selection process. These notes are provided here for your reference and guidance.
+                      Before selecting your subjects, please read the following notes carefully to
+                      ensure clarity on the selection process. These notes are provided here for
+                      your reference and guidance.
                     </div>
                   </div>
                 </div>
@@ -1756,17 +1890,23 @@ export default function SubjectSelectionForm({
                 className={`grid grid-cols-1 gap-6 ${
                   // Dynamic grid based on available Minor options
                   (hasActualOptions(admissionMinor1Subjects) ? 1 : 0) +
-                    (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) ? 1 : 0) +
-                    (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects)
+                    (hasActualOptions(admissionMinor1Subjects) &&
+                    hasActualOptions(admissionMinor2Subjects)
+                      ? 1
+                      : 0) +
+                    (!hasActualOptions(admissionMinor1Subjects) &&
+                    hasActualOptions(admissionMinor3Subjects)
                       ? 1
                       : 0) ===
                   3
                     ? "lg:grid-cols-3"
                     : (hasActualOptions(admissionMinor1Subjects) ? 1 : 0) +
-                          (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects)
+                          (hasActualOptions(admissionMinor1Subjects) &&
+                          hasActualOptions(admissionMinor2Subjects)
                             ? 1
                             : 0) +
-                          (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects)
+                          (!hasActualOptions(admissionMinor1Subjects) &&
+                          hasActualOptions(admissionMinor3Subjects)
                             ? 1
                             : 0) ===
                         2
@@ -1783,13 +1923,21 @@ export default function SubjectSelectionForm({
                 ) : (
                   <>
                     {hasActualOptions(admissionMinor1Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "I")}</label>
+                      <div
+                        className="space-y-2 min-h-[84px]"
+                        onClick={() => handleFieldFocus("minor")}
+                      >
+                        <label className="text-base font-medium text-gray-700">
+                          {getDynamicLabel("MN", "I")}
+                        </label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
                               admissionMinor1Subjects,
-                              getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                              getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", [
+                                "I",
+                                "II",
+                              ]),
                             ),
                             getGlobalExcludes(minor1),
                           )}
@@ -1802,44 +1950,61 @@ export default function SubjectSelectionForm({
                     )}
 
                     {/* Minor II: Only show when Minor I is available (traditional programs) */}
-                    {hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "III")}</label>
-                        <Combobox
-                          dataArr={convertToComboboxData(
-                            preserveAecIfPresent(
-                              admissionMinor2Subjects,
-                              getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
-                            ),
-                            getGlobalExcludes(minor2),
-                          )}
-                          value={minor2}
-                          onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
-                          placeholder="Select Minor II"
-                          className="w-full"
-                        />
-                      </div>
-                    )}
+                    {hasActualOptions(admissionMinor1Subjects) &&
+                      hasActualOptions(admissionMinor2Subjects) && (
+                        <div
+                          className="space-y-2 min-h-[84px]"
+                          onClick={() => handleFieldFocus("minor")}
+                        >
+                          <label className="text-base font-medium text-gray-700">
+                            {getDynamicLabel("MN", "III")}
+                          </label>
+                          <Combobox
+                            dataArr={convertToComboboxData(
+                              preserveAecIfPresent(
+                                admissionMinor2Subjects,
+                                getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", [
+                                  "III",
+                                  "IV",
+                                ]),
+                              ),
+                              getGlobalExcludes(minor2),
+                            )}
+                            value={minor2}
+                            onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
+                            placeholder="Select Minor II"
+                            className="w-full"
+                          />
+                        </div>
+                      )}
 
                     {/* Minor III: Show when Minor I is not available (BCOM programs) */}
-                    {!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-base font-medium text-gray-700">Minor (Semester III to VI)</label>
-                        <Combobox
-                          dataArr={convertToComboboxData(
-                            preserveAecIfPresent(
-                              admissionMinor3Subjects,
-                              getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", ["III"]),
-                            ),
-                            getGlobalExcludes(minor3),
-                          )}
-                          value={minor3}
-                          onChange={(value) => handleFieldChange(setMinor3, value, "minor3")}
-                          placeholder="Select Minor"
-                          className="w-full"
-                        />
-                      </div>
-                    )}
+                    {!hasActualOptions(admissionMinor1Subjects) &&
+                      hasActualOptions(admissionMinor3Subjects) && (
+                        <div
+                          className="space-y-2 min-h-[84px]"
+                          onClick={() => handleFieldFocus("minor")}
+                        >
+                          <label className="text-base font-medium text-gray-700">
+                            Minor (Semester III to VI)
+                          </label>
+                          <Combobox
+                            dataArr={convertToComboboxData(
+                              preserveAecIfPresent(
+                                admissionMinor3Subjects,
+                                getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", [
+                                  "III",
+                                ]),
+                              ),
+                              getGlobalExcludes(minor3),
+                            )}
+                            value={minor3}
+                            onChange={(value) => handleFieldChange(setMinor3, value, "minor3")}
+                            placeholder="Select Minor"
+                            className="w-full"
+                          />
+                        </div>
+                      )}
                   </>
                 )}
               </div>
@@ -1848,7 +2013,9 @@ export default function SubjectSelectionForm({
                 <LoadingDropdown label={getDynamicLabel("AEC")} />
               ) : hasActualOptions(availableAecSubjects) ? (
                 <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
-                  <label className="text-base font-medium text-gray-700">{getDynamicLabel("AEC")}</label>
+                  <label className="text-base font-medium text-gray-700">
+                    {getDynamicLabel("AEC")}
+                  </label>
                   <Combobox
                     dataArr={convertToComboboxData(availableAecSubjects)}
                     value={aec3}
@@ -1870,8 +2037,13 @@ export default function SubjectSelectionForm({
                 ) : (
                   <>
                     {hasActualOptions(availableIdcSem1Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "I")}</label>
+                      <div
+                        className="space-y-2 min-h-[84px]"
+                        onClick={() => handleFieldFocus("idc")}
+                      >
+                        <label className="text-base font-medium text-gray-700">
+                          {getDynamicLabel("IDC", "I")}
+                        </label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1894,8 +2066,13 @@ export default function SubjectSelectionForm({
                     )}
 
                     {hasActualOptions(availableIdcSem2Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "II")}</label>
+                      <div
+                        className="space-y-2 min-h-[84px]"
+                        onClick={() => handleFieldFocus("idc")}
+                      >
+                        <label className="text-base font-medium text-gray-700">
+                          {getDynamicLabel("IDC", "II")}
+                        </label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1918,8 +2095,13 @@ export default function SubjectSelectionForm({
                     )}
 
                     {hasActualOptions(availableIdcSem3Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "III")}</label>
+                      <div
+                        className="space-y-2 min-h-[84px]"
+                        onClick={() => handleFieldFocus("idc")}
+                      >
+                        <label className="text-base font-medium text-gray-700">
+                          {getDynamicLabel("IDC", "III")}
+                        </label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1950,7 +2132,9 @@ export default function SubjectSelectionForm({
                 <LoadingDropdown label={getDynamicLabel("CVAC")} />
               ) : hasActualOptions(availableCvacOptions) ? (
                 <div className="space-y-2" onClick={() => handleFieldFocus("cvac")}>
-                  <label className="text-base font-medium text-gray-700">{getDynamicLabel("CVAC")}</label>
+                  <label className="text-base font-medium text-gray-700">
+                    {getDynamicLabel("CVAC")}
+                  </label>
                   <Combobox
                     dataArr={convertToComboboxData(availableCvacOptions)}
                     value={cvac4}
@@ -2005,7 +2189,9 @@ export default function SubjectSelectionForm({
                       checked={agree1}
                       onChange={(e) => setAgree1(e.target.checked)}
                     />
-                    <span>I confirm that I have read the semester-wise subject selection guidelines.</span>
+                    <span>
+                      I confirm that I have read the semester-wise subject selection guidelines.
+                    </span>
                   </label>
                   <label className="flex items-start gap-2">
                     <input
@@ -2015,8 +2201,8 @@ export default function SubjectSelectionForm({
                       onChange={(e) => setAgree2(e.target.checked)}
                     />
                     <span>
-                      I understand that once submitted, I will not be allowed to change the selected subjects in the
-                      future.
+                      I understand that once submitted, I will not be allowed to change the selected
+                      subjects in the future.
                     </span>
                   </label>
                   <label className="flex items-start gap-2">
@@ -2027,8 +2213,9 @@ export default function SubjectSelectionForm({
                       onChange={(e) => setAgree3(e.target.checked)}
                     />
                     <span>
-                      In the event of violation of subject selection rules, I will abide by the final decision taken by
-                      the Vice-Principal/Course Coordinator in accordance with Calcutta University norms.
+                      In the event of violation of subject selection rules, I will abide by the
+                      final decision taken by the Vice-Principal/Course Coordinator in accordance
+                      with Calcutta University norms.
                     </span>
                   </label>
                 </div>
@@ -2040,8 +2227,12 @@ export default function SubjectSelectionForm({
                   <table className="w-full border text-base rounded-lg overflow-hidden shadow-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="border p-3 text-left font-semibold text-gray-800 text-base">Subject Category</th>
-                        <th className="border p-3 text-left font-semibold text-gray-800 text-base">Selection</th>
+                        <th className="border p-3 text-left font-semibold text-gray-800 text-base">
+                          Subject Category
+                        </th>
+                        <th className="border p-3 text-left font-semibold text-gray-800 text-base">
+                          Selection
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2051,27 +2242,37 @@ export default function SubjectSelectionForm({
                           <td className="border p-3 font-medium text-gray-700 text-base">
                             {getDynamicLabel("MN", "I")}
                           </td>
-                          <td className="border p-3 text-gray-800 font-medium text-base">{minor1 || "-"}</td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">
+                            {minor1 || "-"}
+                          </td>
                         </tr>
                       )}
 
                       {/* Minor II - Only show when Minor I is available (traditional programs) */}
-                      {hasActualOptions(admissionMinor1Subjects) && admissionMinor2Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50 ">
-                          <td className="border p-3 font-medium text-gray-700 text-base">
-                            {getDynamicLabel("MN", "III")}
-                          </td>
-                          <td className="border p-3 text-gray-800 font-medium text-base">{minor2 || "-"}</td>
-                        </tr>
-                      )}
+                      {hasActualOptions(admissionMinor1Subjects) &&
+                        admissionMinor2Subjects.length > 0 && (
+                          <tr className="hover:bg-gray-50 ">
+                            <td className="border p-3 font-medium text-gray-700 text-base">
+                              {getDynamicLabel("MN", "III")}
+                            </td>
+                            <td className="border p-3 text-gray-800 font-medium text-base">
+                              {minor2 || "-"}
+                            </td>
+                          </tr>
+                        )}
 
                       {/* Minor III - Show when Minor I is not available (BCOM programs) */}
-                      {!hasActualOptions(admissionMinor1Subjects) && admissionMinor3Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50 ">
-                          <td className="border p-3 font-medium text-gray-700 text-base">Minor (Semester III to VI)</td>
-                          <td className="border p-3 text-gray-800 font-medium text-base">{minor3 || "-"}</td>
-                        </tr>
-                      )}
+                      {!hasActualOptions(admissionMinor1Subjects) &&
+                        admissionMinor3Subjects.length > 0 && (
+                          <tr className="hover:bg-gray-50 ">
+                            <td className="border p-3 font-medium text-gray-700 text-base">
+                              Minor (Semester III to VI)
+                            </td>
+                            <td className="border p-3 text-gray-800 font-medium text-base">
+                              {minor3 || "-"}
+                            </td>
+                          </tr>
+                        )}
 
                       {/* IDC 1 - Only show if there are subjects available */}
                       {availableIdcSem1Subjects.length > 0 && (
@@ -2079,7 +2280,9 @@ export default function SubjectSelectionForm({
                           <td className="border p-3 font-medium text-gray-700 text-base">
                             {getDynamicLabel("IDC", "I")}
                           </td>
-                          <td className="border p-3 text-gray-800 font-medium text-base">{idc1 || "-"}</td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">
+                            {idc1 || "-"}
+                          </td>
                         </tr>
                       )}
 
@@ -2089,7 +2292,9 @@ export default function SubjectSelectionForm({
                           <td className="border p-3 font-medium text-gray-700 text-base">
                             {getDynamicLabel("IDC", "II")}
                           </td>
-                          <td className="border p-3 text-gray-800 font-medium text-base">{idc2 || "-"}</td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">
+                            {idc2 || "-"}
+                          </td>
                         </tr>
                       )}
 
@@ -2099,23 +2304,33 @@ export default function SubjectSelectionForm({
                           <td className="border p-3 font-medium text-gray-700 text-base">
                             {getDynamicLabel("IDC", "III")}
                           </td>
-                          <td className="border p-3 text-gray-800 font-medium text-base">{idc3 || "-"}</td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">
+                            {idc3 || "-"}
+                          </td>
                         </tr>
                       )}
 
                       {/* AEC 3 - Only show if there are subjects available */}
                       {availableAecSubjects.length > 0 && (
                         <tr className="hover:bg-gray-50 ">
-                          <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("AEC")}</td>
-                          <td className="border p-3 text-gray-800 font-medium text-base">{aec3 || "-"}</td>
+                          <td className="border p-3 font-medium text-gray-700 text-base">
+                            {getDynamicLabel("AEC")}
+                          </td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">
+                            {aec3 || "-"}
+                          </td>
                         </tr>
                       )}
 
                       {/* CVAC 4 - Only show if there are subjects available */}
                       {availableCvacOptions.length > 0 && (
                         <tr className="hover:bg-gray-50 ">
-                          <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("CVAC")}</td>
-                          <td className="border p-3 text-gray-800 font-medium text-base">{cvac4 || "-"}</td>
+                          <td className="border p-3 font-medium text-gray-700 text-base">
+                            {getDynamicLabel("CVAC")}
+                          </td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">
+                            {cvac4 || "-"}
+                          </td>
                         </tr>
                       )}
                     </tbody>
@@ -2128,9 +2343,16 @@ export default function SubjectSelectionForm({
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
-                    <span className="text-base font-medium">Subject selections saved successfully!</span>
+                    <span className="text-base font-medium">
+                      Subject selections saved successfully!
+                    </span>
                   </div>
                 </div>
               )}
@@ -2139,7 +2361,9 @@ export default function SubjectSelectionForm({
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="text-base font-medium">Error saving selections: {saveError}</span>
+                    <span className="text-base font-medium">
+                      Error saving selections: {saveError}
+                    </span>
                   </div>
                 </div>
               )}
@@ -2148,7 +2372,10 @@ export default function SubjectSelectionForm({
 
           {/* Step 1 inline errors (shown above Next) */}
           {step === 1 && errors.length > 0 && (
-            <div id="form-error" className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+            <div
+              id="form-error"
+              className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg"
+            >
               <ul className="list-disc list-inside space-y-1 text-base">
                 {errors.map((error, index) => (
                   <li key={index}>{error}</li>
@@ -2161,11 +2388,12 @@ export default function SubjectSelectionForm({
           {step === 1 && minorMismatch && (
             <div className="mt-4 p-3 bg-amber-50 border-2 border-amber-400 text-amber-900 rounded-lg shadow-sm">
               <div>
-                Your current Minor I and II subject combination is different from the one you had selected at the time
-                of admission.
+                Your current Minor I and II subject combination is different from the one you had
+                selected at the time of admission.
               </div>
               <div className="mt-1 text-base">
-                Previously saved: <span className="font-semibold">{earlierMinorSelections[0] || "-"}</span> and{" "}
+                Previously saved:{" "}
+                <span className="font-semibold">{earlierMinorSelections[0] || "-"}</span> and{" "}
                 <span className="font-semibold">{earlierMinorSelections[1] || "-"}</span>
               </div>
             </div>

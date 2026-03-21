@@ -89,7 +89,9 @@ export async function getDegreesByLevel(level: string): Promise<Degree[]> {
       throw new Error("Degree level is required");
     }
 
-    const response = await axiosInstance.get<MultipleDegreeResponse>(`${BASE_URL}?level=${encodeURIComponent(level)}`);
+    const response = await axiosInstance.get<MultipleDegreeResponse>(
+      `${BASE_URL}?level=${encodeURIComponent(level)}`,
+    );
     return response.data.payload || [];
   } catch (error) {
     console.error(`Error fetching degrees for level ${level}:`, error);

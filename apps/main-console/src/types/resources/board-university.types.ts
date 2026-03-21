@@ -1,6 +1,6 @@
 /**
  * Board University Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Board University module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Board University interface that mirrors the backend model
  */
 export interface BoardUniversity {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   degreeId?: number | null;
   passingMarks?: number | null;
@@ -82,7 +82,12 @@ export interface UpdateBoardUniversityPayload {
 export interface BoardUniversityApiResponse {
   statusCode: number;
   status: string;
-  data: BoardUniversity | BoardUniversity[] | BoardUniversityWithRelations | BoardUniversityWithRelations[] | null;
+  data:
+    | BoardUniversity
+    | BoardUniversity[]
+    | BoardUniversityWithRelations
+    | BoardUniversityWithRelations[]
+    | null;
   message: string;
 }
 
@@ -155,15 +160,15 @@ export interface BoardUniversityState {
  * Action types for board university state management
  */
 export type BoardUniversityAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_BOARD_UNIVERSITIES'; payload: BoardUniversity[] }
-  | { type: 'SET_CURRENT_BOARD_UNIVERSITY'; payload: BoardUniversity | null }
-  | { type: 'ADD_BOARD_UNIVERSITY'; payload: BoardUniversity }
-  | { type: 'UPDATE_BOARD_UNIVERSITY'; payload: BoardUniversity }
-  | { type: 'DELETE_BOARD_UNIVERSITY'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_BOARD_UNIVERSITIES"; payload: BoardUniversity[] }
+  | { type: "SET_CURRENT_BOARD_UNIVERSITY"; payload: BoardUniversity | null }
+  | { type: "ADD_BOARD_UNIVERSITY"; payload: BoardUniversity }
+  | { type: "UPDATE_BOARD_UNIVERSITY"; payload: BoardUniversity }
+  | { type: "DELETE_BOARD_UNIVERSITY"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -178,7 +183,7 @@ export interface BoardUniversityTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -198,7 +203,7 @@ export interface BoardUniversityFilter {
  */
 export interface BoardUniversitySort {
   field: keyof BoardUniversity;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -253,10 +258,10 @@ export type BoardUniversityDisabled = boolean;
  * Default values for board university
  */
 export const DEFAULT_BOARD_UNIVERSITY: CreateBoardUniversityPayload = {
-  name: '',
+  name: "",
   degreeId: null,
   passingMarks: null,
-  code: '',
+  code: "",
   addressId: null,
   sequence: null,
   disabled: false,
@@ -266,12 +271,12 @@ export const DEFAULT_BOARD_UNIVERSITY: CreateBoardUniversityPayload = {
  * Default form data for board university
  */
 export const DEFAULT_BOARD_UNIVERSITY_FORM: BoardUniversityFormData = {
-  name: '',
-  degreeId: '',
-  passingMarks: '',
-  code: '',
-  addressId: '',
-  sequence: '',
+  name: "",
+  degreeId: "",
+  passingMarks: "",
+  code: "",
+  addressId: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -279,16 +284,16 @@ export const DEFAULT_BOARD_UNIVERSITY_FORM: BoardUniversityFormData = {
  * Table columns configuration for board university
  */
 export const BOARD_UNIVERSITY_TABLE_COLUMNS: BoardUniversityTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Name', sortable: true, filterable: true },
-  { key: 'degreeId', label: 'Degree', sortable: true, filterable: true, width: '100px' },
-  { key: 'passingMarks', label: 'Passing Marks', sortable: true, width: '120px' },
-  { key: 'code', label: 'Code', sortable: true, filterable: true, width: '100px' },
-  { key: 'addressId', label: 'Address', sortable: true, filterable: true, width: '100px' },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Name", sortable: true, filterable: true },
+  { key: "degreeId", label: "Degree", sortable: true, filterable: true, width: "100px" },
+  { key: "passingMarks", label: "Passing Marks", sortable: true, width: "120px" },
+  { key: "code", label: "Code", sortable: true, filterable: true, width: "100px" },
+  { key: "addressId", label: "Address", sortable: true, filterable: true, width: "100px" },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 // ============================================================================
@@ -301,16 +306,20 @@ export const BOARD_UNIVERSITY_TABLE_COLUMNS: BoardUniversityTableColumn[] = [
 export function isBoardUniversity(obj: object): obj is BoardUniversity {
   return (
     obj &&
-    typeof (obj as BoardUniversity).id === 'number' &&
-    typeof (obj as BoardUniversity).name === 'string' &&
-    ((obj as BoardUniversity).degreeId === null || typeof (obj as BoardUniversity).degreeId === 'number') &&
-    ((obj as BoardUniversity).passingMarks === null || typeof (obj as BoardUniversity).passingMarks === 'number') &&
-    ((obj as BoardUniversity).code === null || typeof (obj as BoardUniversity).code === 'string') &&
-    ((obj as BoardUniversity).addressId === null || typeof (obj as BoardUniversity).addressId === 'number') &&
-    ((obj as BoardUniversity).sequence === null || typeof (obj as BoardUniversity).sequence === 'number') &&
-    typeof (obj as BoardUniversity).disabled === 'boolean' &&
-    typeof (obj as BoardUniversity).createdAt === 'string' &&
-    typeof (obj as BoardUniversity).updatedAt === 'string'
+    typeof (obj as BoardUniversity).id === "number" &&
+    typeof (obj as BoardUniversity).name === "string" &&
+    ((obj as BoardUniversity).degreeId === null ||
+      typeof (obj as BoardUniversity).degreeId === "number") &&
+    ((obj as BoardUniversity).passingMarks === null ||
+      typeof (obj as BoardUniversity).passingMarks === "number") &&
+    ((obj as BoardUniversity).code === null || typeof (obj as BoardUniversity).code === "string") &&
+    ((obj as BoardUniversity).addressId === null ||
+      typeof (obj as BoardUniversity).addressId === "number") &&
+    ((obj as BoardUniversity).sequence === null ||
+      typeof (obj as BoardUniversity).sequence === "number") &&
+    typeof (obj as BoardUniversity).disabled === "boolean" &&
+    typeof (obj as BoardUniversity).createdAt === "string" &&
+    typeof (obj as BoardUniversity).updatedAt === "string"
   );
 }
 
@@ -320,13 +329,24 @@ export function isBoardUniversity(obj: object): obj is BoardUniversity {
 export function isCreateBoardUniversityPayload(obj: object): obj is CreateBoardUniversityPayload {
   return (
     obj &&
-    typeof (obj as CreateBoardUniversityPayload).name === 'string' &&
-    ((obj as CreateBoardUniversityPayload).degreeId === undefined || (obj as CreateBoardUniversityPayload).degreeId === null || typeof (obj as CreateBoardUniversityPayload).degreeId === 'number') &&
-    ((obj as CreateBoardUniversityPayload).passingMarks === undefined || (obj as CreateBoardUniversityPayload).passingMarks === null || typeof (obj as CreateBoardUniversityPayload).passingMarks === 'number') &&
-    ((obj as CreateBoardUniversityPayload).code === undefined || (obj as CreateBoardUniversityPayload).code === null || typeof (obj as CreateBoardUniversityPayload).code === 'string') &&
-    ((obj as CreateBoardUniversityPayload).addressId === undefined || (obj as CreateBoardUniversityPayload).addressId === null || typeof (obj as CreateBoardUniversityPayload).addressId === 'number') &&
-    ((obj as CreateBoardUniversityPayload).sequence === undefined || (obj as CreateBoardUniversityPayload).sequence === null || typeof (obj as CreateBoardUniversityPayload).sequence === 'number') &&
-    ((obj as CreateBoardUniversityPayload).disabled === undefined || typeof (obj as CreateBoardUniversityPayload).disabled === 'boolean')
+    typeof (obj as CreateBoardUniversityPayload).name === "string" &&
+    ((obj as CreateBoardUniversityPayload).degreeId === undefined ||
+      (obj as CreateBoardUniversityPayload).degreeId === null ||
+      typeof (obj as CreateBoardUniversityPayload).degreeId === "number") &&
+    ((obj as CreateBoardUniversityPayload).passingMarks === undefined ||
+      (obj as CreateBoardUniversityPayload).passingMarks === null ||
+      typeof (obj as CreateBoardUniversityPayload).passingMarks === "number") &&
+    ((obj as CreateBoardUniversityPayload).code === undefined ||
+      (obj as CreateBoardUniversityPayload).code === null ||
+      typeof (obj as CreateBoardUniversityPayload).code === "string") &&
+    ((obj as CreateBoardUniversityPayload).addressId === undefined ||
+      (obj as CreateBoardUniversityPayload).addressId === null ||
+      typeof (obj as CreateBoardUniversityPayload).addressId === "number") &&
+    ((obj as CreateBoardUniversityPayload).sequence === undefined ||
+      (obj as CreateBoardUniversityPayload).sequence === null ||
+      typeof (obj as CreateBoardUniversityPayload).sequence === "number") &&
+    ((obj as CreateBoardUniversityPayload).disabled === undefined ||
+      typeof (obj as CreateBoardUniversityPayload).disabled === "boolean")
   );
 }
 
@@ -336,13 +356,25 @@ export function isCreateBoardUniversityPayload(obj: object): obj is CreateBoardU
 export function isUpdateBoardUniversityPayload(obj: object): obj is UpdateBoardUniversityPayload {
   return (
     obj &&
-    ((obj as UpdateBoardUniversityPayload).name === undefined || typeof (obj as UpdateBoardUniversityPayload).name === 'string') &&
-    ((obj as UpdateBoardUniversityPayload).degreeId === undefined || (obj as UpdateBoardUniversityPayload).degreeId === null || typeof (obj as UpdateBoardUniversityPayload).degreeId === 'number') &&
-    ((obj as UpdateBoardUniversityPayload).passingMarks === undefined || (obj as UpdateBoardUniversityPayload).passingMarks === null || typeof (obj as UpdateBoardUniversityPayload).passingMarks === 'number') &&
-    ((obj as UpdateBoardUniversityPayload).code === undefined || (obj as UpdateBoardUniversityPayload).code === null || typeof (obj as UpdateBoardUniversityPayload).code === 'string') &&
-    ((obj as UpdateBoardUniversityPayload).addressId === undefined || (obj as UpdateBoardUniversityPayload).addressId === null || typeof (obj as UpdateBoardUniversityPayload).addressId === 'number') &&
-    ((obj as UpdateBoardUniversityPayload).sequence === undefined || (obj as UpdateBoardUniversityPayload).sequence === null || typeof (obj as UpdateBoardUniversityPayload).sequence === 'number') &&
-    ((obj as UpdateBoardUniversityPayload).disabled === undefined || typeof (obj as UpdateBoardUniversityPayload).disabled === 'boolean')
+    ((obj as UpdateBoardUniversityPayload).name === undefined ||
+      typeof (obj as UpdateBoardUniversityPayload).name === "string") &&
+    ((obj as UpdateBoardUniversityPayload).degreeId === undefined ||
+      (obj as UpdateBoardUniversityPayload).degreeId === null ||
+      typeof (obj as UpdateBoardUniversityPayload).degreeId === "number") &&
+    ((obj as UpdateBoardUniversityPayload).passingMarks === undefined ||
+      (obj as UpdateBoardUniversityPayload).passingMarks === null ||
+      typeof (obj as UpdateBoardUniversityPayload).passingMarks === "number") &&
+    ((obj as UpdateBoardUniversityPayload).code === undefined ||
+      (obj as UpdateBoardUniversityPayload).code === null ||
+      typeof (obj as UpdateBoardUniversityPayload).code === "string") &&
+    ((obj as UpdateBoardUniversityPayload).addressId === undefined ||
+      (obj as UpdateBoardUniversityPayload).addressId === null ||
+      typeof (obj as UpdateBoardUniversityPayload).addressId === "number") &&
+    ((obj as UpdateBoardUniversityPayload).sequence === undefined ||
+      (obj as UpdateBoardUniversityPayload).sequence === null ||
+      typeof (obj as UpdateBoardUniversityPayload).sequence === "number") &&
+    ((obj as UpdateBoardUniversityPayload).disabled === undefined ||
+      typeof (obj as UpdateBoardUniversityPayload).disabled === "boolean")
   );
 }
 
@@ -350,10 +382,16 @@ export function isUpdateBoardUniversityPayload(obj: object): obj is UpdateBoardU
  * Type guard to check if an object is a BoardUniversityWithRelations
  */
 export function isBoardUniversityWithRelations(obj: object): obj is BoardUniversityWithRelations {
-  return isBoardUniversity(obj) && (
-    'degree' in obj && ((obj as BoardUniversityWithRelations).degree === undefined || (obj as BoardUniversityWithRelations).degree === null || typeof (obj as BoardUniversityWithRelations).degree === 'object')
-  ) && (
-    'address' in obj && ((obj as BoardUniversityWithRelations).address === undefined || (obj as BoardUniversityWithRelations).address === null || typeof (obj as BoardUniversityWithRelations).address === 'object')
+  return (
+    isBoardUniversity(obj) &&
+    "degree" in obj &&
+    ((obj as BoardUniversityWithRelations).degree === undefined ||
+      (obj as BoardUniversityWithRelations).degree === null ||
+      typeof (obj as BoardUniversityWithRelations).degree === "object") &&
+    "address" in obj &&
+    ((obj as BoardUniversityWithRelations).address === undefined ||
+      (obj as BoardUniversityWithRelations).address === null ||
+      typeof (obj as BoardUniversityWithRelations).address === "object")
   );
 }
 
@@ -382,11 +420,11 @@ export function formDataToPayload(formData: BoardUniversityFormData): CreateBoar
 export function apiDataToFormData(boardUniversity: BoardUniversity): BoardUniversityFormData {
   return {
     name: boardUniversity.name,
-    degreeId: boardUniversity.degreeId?.toString() || '',
-    passingMarks: boardUniversity.passingMarks?.toString() || '',
-    code: boardUniversity.code || '',
-    addressId: boardUniversity.addressId?.toString() || '',
-    sequence: boardUniversity.sequence?.toString() || '',
+    degreeId: boardUniversity.degreeId?.toString() || "",
+    passingMarks: boardUniversity.passingMarks?.toString() || "",
+    code: boardUniversity.code || "",
+    addressId: boardUniversity.addressId?.toString() || "",
+    sequence: boardUniversity.sequence?.toString() || "",
     disabled: boardUniversity.disabled,
   };
 }
@@ -430,26 +468,26 @@ export function formatBoardUniversityCode(code: string): string {
  * Get board university status text
  */
 export function getBoardUniversityStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get board university status color
  */
 export function getBoardUniversityStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
  * Get degree name from board university with relations
  */
 export function getDegreeName(boardUniversity: BoardUniversityWithRelations): string {
-  return boardUniversity.degree?.name || 'N/A';
+  return boardUniversity.degree?.name || "N/A";
 }
 
 /**
  * Get address info from board university with relations
  */
 export function getAddressInfo(boardUniversity: BoardUniversityWithRelations): string {
-  return boardUniversity.address ? 'Address Available' : 'No Address';
-} 
+  return boardUniversity.address ? "Address Available" : "No Address";
+}

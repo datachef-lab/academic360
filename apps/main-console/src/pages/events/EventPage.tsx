@@ -71,7 +71,9 @@ const EventPage: React.FC = () => {
           </motion.div>
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Events</h2>
-            <p className="text-sm text-purple-600 font-medium">Explore upcoming events and important dates</p>
+            <p className="text-sm text-purple-600 font-medium">
+              Explore upcoming events and important dates
+            </p>
           </div>
         </div>
 

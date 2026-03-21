@@ -14,7 +14,11 @@ interface CuRegistrationSearchProps {
   onOpenProcessControls?: () => void;
 }
 
-export function CuRegistrationSearch({ isOpen, onClose, onOpenProcessControls }: CuRegistrationSearchProps) {
+export function CuRegistrationSearch({
+  isOpen,
+  onClose,
+  onOpenProcessControls,
+}: CuRegistrationSearchProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<StudentSearchItem[]>([]);
@@ -81,7 +85,11 @@ export function CuRegistrationSearch({ isOpen, onClose, onOpenProcessControls }:
         break;
       case "Enter":
         e.preventDefault();
-        if (searchQuery.trim() && searchResults.length > 0 && selectedIndex < searchResults.length) {
+        if (
+          searchQuery.trim() &&
+          searchResults.length > 0 &&
+          selectedIndex < searchResults.length
+        ) {
           const student = searchResults[selectedIndex];
           if (student) {
             handleStudentSelect(student);
@@ -207,10 +215,17 @@ export function CuRegistrationSearch({ isOpen, onClose, onOpenProcessControls }:
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-900 truncate">{student.name || "Unknown Student"}</div>
-                        <div className="text-sm text-slate-500">UID: {student.uid || student.id}</div>
+                        <div className="font-medium text-slate-900 truncate">
+                          {student.name || "Unknown Student"}
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          UID: {student.uid || student.id}
+                        </div>
                       </div>
-                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                      >
                         <FileText className="h-3 w-3 mr-1" />
                         View
                       </Badge>
@@ -227,7 +242,9 @@ export function CuRegistrationSearch({ isOpen, onClose, onOpenProcessControls }:
             </div>
           ) : (
             <div className="p-2">
-              <div className="px-4 py-2 text-sm font-medium text-slate-600 border-b">CU Registration Actions</div>
+              <div className="px-4 py-2 text-sm font-medium text-slate-600 border-b">
+                CU Registration Actions
+              </div>
               <div className="space-y-1">
                 {cuRegistrationActions.map((item, index) => (
                   <div
@@ -239,7 +256,9 @@ export function CuRegistrationSearch({ isOpen, onClose, onOpenProcessControls }:
                     }`}
                     onClick={() => handleActionSelect(index)}
                   >
-                    <div className={`w-10 h-10 ${item.iconBgColor} rounded-lg flex items-center justify-center mr-3`}>
+                    <div
+                      className={`w-10 h-10 ${item.iconBgColor} rounded-lg flex items-center justify-center mr-3`}
+                    >
                       <item.icon className={`h-5 w-5 ${item.iconColor}`} />
                     </div>
                     <div className="flex-1">

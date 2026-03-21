@@ -52,7 +52,9 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   // Mark notification as read
   const markAsRead = (notificationId: string) => {
     setNotifications((prev) =>
-      prev.map((notification) => (notification.id === notificationId ? { ...notification, read: true } : notification)),
+      prev.map((notification) =>
+        notification.id === notificationId ? { ...notification, read: true } : notification,
+      ),
     );
   };
 

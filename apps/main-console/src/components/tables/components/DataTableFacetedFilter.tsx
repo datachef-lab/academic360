@@ -42,7 +42,6 @@ export function DataTableFacetedFilter<TData, TValue>({
           <PlusCircledIcon className="mr-2 h-4 w-4" />
           <span className=""> {title}</span>
 
-         
           {selectedValues?.size > 0 && (
             <>
               <Separator orientation="vertical" className="mx-2 h-4" />
@@ -58,7 +57,11 @@ export function DataTableFacetedFilter<TData, TValue>({
                   options
                     .filter((option) => selectedValues.has(option.value))
                     .map((option) => (
-                      <Badge variant="secondary" key={option.value} className="rounded-sm px-1 font-normal">
+                      <Badge
+                        variant="secondary"
+                        key={option.value}
+                        className="rounded-sm px-1 font-normal"
+                      >
                         {option.label}
                       </Badge>
                     ))
@@ -92,7 +95,9 @@ export function DataTableFacetedFilter<TData, TValue>({
                     <div
                       className={cn(
                         "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                        isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible",
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible",
                       )}
                     >
                       <CheckIcon className={cn("h-4 w-4")} />

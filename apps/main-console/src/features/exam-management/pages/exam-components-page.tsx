@@ -1,5 +1,11 @@
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,7 +16,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Download, Edit, Library, PlusCircle, Upload, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -48,7 +61,12 @@ interface ExamComponentFormProps {
   isSubmitting: boolean;
 }
 
-function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmitting }: ExamComponentFormProps) {
+function ExamComponentForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: ExamComponentFormProps) {
   const defaultValues: ExamComponentFormValues = {
     name: initialData?.name || "",
     code: initialData?.code || "",
@@ -129,7 +147,9 @@ function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmitting }: Ex
         <Controller
           name="isActive"
           control={control}
-          render={({ field }) => <Checkbox id="isActive" checked={field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => (
+            <Checkbox id="isActive" checked={field.value} onCheckedChange={field.onChange} />
+          )}
         />
         <Label htmlFor="isActive">Active</Label>
       </div>
@@ -138,7 +158,11 @@ function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmitting }: Ex
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </div>
@@ -152,7 +176,9 @@ export default function ExamComponentsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedExamComponent, setSelectedExamComponent] = React.useState<ExamComponent | null>(null);
+  const [selectedExamComponent, setSelectedExamComponent] = React.useState<ExamComponent | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
@@ -202,7 +228,9 @@ export default function ExamComponentsPage() {
   };
 
   const handleDownloadTemplate = () => {
-    const worksheet = XLSX.utils.json_to_sheet([{ name: "Exam Name", shortName: "Short", type: "Type" }]);
+    const worksheet = XLSX.utils.json_to_sheet([
+      { name: "Exam Name", shortName: "Short", type: "Type" },
+    ]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
     XLSX.writeFile(workbook, "exam_components_template.xlsx");
@@ -234,7 +262,9 @@ export default function ExamComponentsPage() {
       if (result.success) {
         toast.success(result.message || "Exam component deleted successfully");
         const refreshed = await getAllExamComponent();
-        setExamComponents(Array.isArray(refreshed.payload) ? (refreshed.payload as ExamComponent[]) : []);
+        setExamComponents(
+          Array.isArray(refreshed.payload) ? (refreshed.payload as ExamComponent[]) : [],
+        );
       } else {
         const details = (result.records || [])
           .filter((r) => r.count > 0)
@@ -334,7 +364,11 @@ export default function ExamComponentsPage() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
@@ -342,7 +376,9 @@ export default function ExamComponentsPage() {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
               <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
+                <TableHeader
+                  style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}
+                >
                   <TableRow>
                     <TableHead style={{ width: 60 }}>ID</TableHead>
                     <TableHead style={{ width: 320 }}>Name</TableHead>
@@ -382,7 +418,9 @@ export default function ExamComponentsPage() {
                           {!comp.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell style={{ width: 120 }}>

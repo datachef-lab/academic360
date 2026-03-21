@@ -5,7 +5,9 @@ const BASE = "/api/admissions/cu-registration-document-uploads";
 const PDF_BASE = "/api/admissions/cu-registration-pdf";
 
 export async function getCuRegistrationDocuments(correctionRequestId: number) {
-  console.info(`[CU-REG MAIN-CONSOLE] Fetching documents for correction request: ${correctionRequestId}`);
+  console.info(
+    `[CU-REG MAIN-CONSOLE] Fetching documents for correction request: ${correctionRequestId}`,
+  );
   try {
     const res = await axiosInstance.get<{
       httpStatusCode: number;
@@ -116,7 +118,9 @@ export async function getCuRegistrationDocumentSignedUrl(documentId: number): Pr
         extractedUrl: url,
         response: res.data,
       });
-      throw new Error(`No valid URL found in response for document ${documentId}. Payload: ${JSON.stringify(payload)}`);
+      throw new Error(
+        `No valid URL found in response for document ${documentId}. Payload: ${JSON.stringify(payload)}`,
+      );
     }
 
     return url;
@@ -164,7 +168,8 @@ export async function uploadCuRegistrationDocument(args: {
   } catch (error) {
     console.error(
       `[CU-REG MAIN-CONSOLE] Upload failed:`,
-      (error as AxiosError<{ message: string }>)?.response?.data?.message || (error as Error).message,
+      (error as AxiosError<{ message: string }>)?.response?.data?.message ||
+        (error as Error).message,
     );
     throw error;
   }
@@ -174,7 +179,9 @@ export async function uploadCuRegistrationDocument(args: {
  * Get CU Registration PDF URL by correction request ID
  */
 export async function getCuRegistrationPdfUrlByRequestId(correctionRequestId: number) {
-  console.info(`[CU-REG MAIN-CONSOLE] Fetching PDF URL for correction request: ${correctionRequestId}`);
+  console.info(
+    `[CU-REG MAIN-CONSOLE] Fetching PDF URL for correction request: ${correctionRequestId}`,
+  );
   try {
     const res = await axiosInstance.get<{
       httpStatusCode: number;

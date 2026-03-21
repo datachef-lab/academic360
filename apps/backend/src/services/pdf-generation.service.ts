@@ -133,9 +133,13 @@ export interface CuRegistrationFormData {
   photoUrlDebug?: string;
 }
 
+// Cached admit-card template to avoid disk read per PDF
+let cachedAdmitCardTemplate: string | null = null;
+
 export class PdfGenerationService {
   private static instance: PdfGenerationService;
   private browser: Browser | null = null;
+  private browserLaunchPromise: Promise<Browser> | null = null;
 
   private constructor() {}
 
@@ -147,7 +151,10 @@ export class PdfGenerationService {
   }
 
   private async getBrowser(): Promise<Browser> {
-    if (!this.browser) {
+    if (this.browser) return this.browser;
+    if (this.browserLaunchPromise) return this.browserLaunchPromise;
+
+    this.browserLaunchPromise = (async () => {
       const executablePath = await findChromiumExecutable();
 
       const launchOptions: any = {
@@ -163,14 +170,16 @@ export class PdfGenerationService {
         ],
       };
 
-      // Only set executablePath if we found a valid Chromium installation
       if (executablePath) {
         launchOptions.executablePath = executablePath;
       }
 
       this.browser = await puppeteer.launch(launchOptions);
-    }
-    return this.browser;
+      this.browserLaunchPromise = null;
+      return this.browser;
+    })();
+
+    return this.browserLaunchPromise;
   }
 
   public async generateCuRegistrationPdf(
@@ -365,6 +374,7 @@ export class PdfGenerationService {
       seatNo: string;
       subjectName: string;
       subjectCode: string;
+      componentNames?: string;
     }>;
     studentImage?: string;
   }): Promise<Buffer> {
@@ -393,20 +403,29 @@ export class PdfGenerationService {
         );
       }
 
-      // Read the EJS template
-      const templatePath = path.join(__dirname, "../templates/admit-card.ejs");
-      const templateContent = await fs.readFile(templatePath, "utf-8");
+      // Read and cache the EJS template (avoids disk read per PDF)
+      if (!cachedAdmitCardTemplate) {
+        const templatePath = path.join(
+          __dirname,
+          "../templates/admit-card.ejs",
+        );
+        cachedAdmitCardTemplate = await fs.readFile(templatePath, "utf-8");
+      }
 
       // Render the template with data
-      const htmlContent = ejs.render(templateContent, formData);
+      const htmlContent = ejs.render(cachedAdmitCardTemplate, formData);
 
       // Get browser instance
       const browser = await this.getBrowser();
       const page = await browser.newPage();
 
-      // Set content and wait for resources to load
+      // Set content: use "load" instead of "networkidle0" - networkidle0 waits
+      // for 500ms of no network activity, which can hang on slow external images.
+      // "load" fires when DOM + resources (images) are loaded or failed.
+      const CONTENT_TIMEOUT_MS = 30_000;
       await page.setContent(htmlContent, {
-        waitUntil: "networkidle0",
+        waitUntil: "load",
+        timeout: CONTENT_TIMEOUT_MS,
       });
 
       // Generate PDF buffer
@@ -500,6 +519,89 @@ export class PdfGenerationService {
 
       console.info(
         "[PDF GENERATION] Attendance DR PDF generated successfully in memory",
+        {
+          bufferSize: pdfBuffer.length,
+        },
+      );
+
+      return pdfBuffer;
+    } catch (error) {
+      console.error("[PDF GENERATION] PDF generation failed:", error);
+      throw error;
+    }
+  }
+
+  public async generateFeeReceiptPdfBuffer(formData: {
+    session: string;
+    pageTitle: string;
+    name: string;
+    uid: string;
+    dob: string; // dd/mm/yyyy
+    phone: string;
+    semester: string;
+    programCourse: string;
+    shift: string;
+    challanNumber: string;
+    challanDate: string; // dd/mm/yyyy — immutable generation date
+    feeComponents: Array<{
+      name: string;
+      amount: string;
+    }>;
+    totalPayableAmount: string;
+    totalPayableAmountInWords: string;
+  }): Promise<Buffer> {
+    try {
+      console.info(
+        "[PDF GENERATION] Starting Fee Receipt PDF generation in memory",
+        formData.uid,
+      );
+
+      // Read the EJS template
+      const templatePath = path.join(__dirname, "../templates/fee-receipt.ejs");
+      const templateContent = await fs.readFile(templatePath, "utf-8");
+
+      // Render the template with data
+      const htmlContent = ejs.render(templateContent, formData);
+
+      // Get browser instance
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+
+      // Set content and wait for resources to load (CDN script + barcode render)
+      await page.setContent(htmlContent, {
+        waitUntil: "networkidle0",
+        timeout: 30000,
+      });
+      page.setDefaultNavigationTimeout(30000);
+      page.setDefaultTimeout(15000);
+
+      // Wait for JsBarcode to render barcodes before capturing PDF (avoids blank barcodes)
+      await page
+        .waitForSelector(".challan-barcode path", { timeout: 10000 })
+        .catch(() => {
+          // If selector never appears, continue anyway to avoid blocking
+        });
+
+      // Generate PDF buffer
+      const pdfUint8Array = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        landscape: true,
+        margin: {
+          //   top: "0.3in",
+          //   right: "0.3in",
+          //   bottom: "0.3in",
+          //   left: "0.3in",
+        },
+      });
+
+      // Convert Uint8Array to Buffer
+      const pdfBuffer = Buffer.from(pdfUint8Array);
+
+      await page.close();
+
+      console.info(
+        "[PDF GENERATION] Fee Receipt PDF generated successfully in memory",
         {
           bufferSize: pdfBuffer.length,
         },

@@ -126,7 +126,10 @@ if (!global.mysqlPool) {
 export const pool = global.mysqlPool!;
 export const db = global.mysqlDb!;
 
-export const dbPostgres: PostgresJsDatabase<typeof schema> = drizzlePostgres(process.env.DATABASE_URL!, { schema });
+export const dbPostgres: PostgresJsDatabase<typeof schema> = drizzlePostgres(
+  process.env.DATABASE_URL!,
+  { schema },
+);
 
 export async function query<T extends RowDataPacket[]>(
   sql: string,
@@ -162,7 +165,10 @@ export async function query<T extends RowDataPacket[]>(
         error?.errno === -54; // ECONNRESET errno
 
       if (isConnectionError && attempt < retries) {
-        console.warn(`MySQL connection error (attempt ${attempt + 1}/${retries + 1}):`, error?.code || error?.message);
+        console.warn(
+          `MySQL connection error (attempt ${attempt + 1}/${retries + 1}):`,
+          error?.code || error?.message,
+        );
         // Wait before retrying (exponential backoff)
         await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         continue;

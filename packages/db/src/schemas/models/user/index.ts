@@ -13,8 +13,3 @@ export * from "./post-office.model";
 export * from "./staff.model";
 export * from "./student.model";
 export * from "./transportDetails.model";
-export * from "./user-status-mapping.model";
-export * from "./user-status-master-domain.model";
-export * from "./user-status-master-frequency.model";
-export * from "./user-status-master-level.model";
-export * from "./user-status-master.model";

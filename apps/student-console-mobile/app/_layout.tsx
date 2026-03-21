@@ -108,33 +108,52 @@ function CustomDrawerNavigation() {
     }
   }, [statusBarStyle]);
 
-  try {
-    return (
-      <>
-        <StatusBar key={statusBarStyle} style={statusBarStyle} backgroundColor={theme.background} translucent={false} />
-        <GestureHandlerRootView className="flex-1">
-          <Drawer
-            screenOptions={{
-              headerShown: false,
-              drawerStyle: {
-                backgroundColor: theme.background,
-              },
-              drawerActiveTintColor: colorScheme == "dark" ? "white" : "#007aff",
+  return (
+    <>
+      <StatusBar
+        key={statusBarStyle}
+        style={statusBarStyle}
+        backgroundColor={theme.background}
+        translucent={false}
+      />
+      <GestureHandlerRootView className="flex-1">
+        <Drawer
+          screenOptions={{
+            headerShown: false,
+            drawerStyle: {
+              backgroundColor: theme.background,
+            },
+            drawerActiveTintColor: colorScheme == "dark" ? "white" : "#007aff",
+          }}
+          drawerContent={SidebarContent}
+        >
+          <Drawer.Screen
+            name="(root)"
+            options={{
+              drawerLabel: "Onboarding",
+              drawerItemStyle: { display: "none" },
             }}
-            drawerContent={SidebarContent}
-          >
-            {/* Expo Router automatically handles routes - no need to declare them explicitly */}
-          </Drawer>
-        </GestureHandlerRootView>
-      </>
-    );
-  } catch (error) {
-    console.error("[CustomDrawerNavigation] Error rendering:", error);
-    // Fallback: render a simple view to prevent crash
-    return (
-      <GestureHandlerRootView className="flex-1" style={{ backgroundColor: theme.background }}>
-        {/* Error fallback - app will still work */}
+          />
+          <Drawer.Screen
+            name="(auth)"
+            options={{
+              drawerLabel: "Login",
+              drawerItemStyle: {
+                display: "none",
+              },
+            }}
+          />
+          <Drawer.Screen
+            name="/console"
+            options={{
+              drawerLabel: "Home",
+              drawerItemStyle: {
+                display: "none",
+              },
+            }}
+          />
+        </Drawer>
       </GestureHandlerRootView>
-    );
-  }
+    </>
+  );
 }

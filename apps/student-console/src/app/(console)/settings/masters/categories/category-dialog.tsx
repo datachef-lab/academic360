@@ -47,7 +47,9 @@ export function AddCategoryDialog({ initialData, trigger, onSuccess }: AddCatego
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{trigger || <Button>{initialData ? "Edit" : "Add Category"}</Button>}</DialogTrigger>
+      <DialogTrigger asChild>
+        {trigger || <Button>{initialData ? "Edit" : "Add Category"}</Button>}
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit Category" : "Add New Category"}</DialogTitle>
@@ -58,13 +60,25 @@ export function AddCategoryDialog({ initialData, trigger, onSuccess }: AddCatego
               <Label htmlFor="name" className="text-right">
                 Category Name
               </Label>
-              <Input id="name" name="name" defaultValue={initialData?.name} className="col-span-3" required />
+              <Input
+                id="name"
+                name="name"
+                defaultValue={initialData?.name}
+                className="col-span-3"
+                required
+              />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Code
               </Label>
-              <Input id="code" name="code" defaultValue={initialData?.code} className="col-span-3" required />
+              <Input
+                id="code"
+                name="code"
+                defaultValue={initialData?.code}
+                className="col-span-3"
+                required
+              />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="documentRequired" className="text-right">

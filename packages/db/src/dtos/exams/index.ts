@@ -1,4 +1,4 @@
-import { ExamCandidate, ExamProgramCourseT, ExamShift, ExamSubjectT, ExamSubjectType, ExamTypeT, FloorT, RoomT } from "@/schemas/models/exams";
+import { ExamCandidate, ExamGroupT, ExamProgramCourseT, ExamShift, ExamSubjectT, ExamSubjectType, ExamTypeT, FloorT, RoomT } from "@/schemas/models/exams";
 import { ExamRoomT } from "@/schemas/models/exams/exam-room.model";
 import { ExamT } from "@/schemas/models/exams/exam.model";
 import { PaperDto, ProgramCourseDto } from "../course-design";
@@ -38,6 +38,7 @@ export interface ExamSubjectTypeDto extends Omit<ExamSubjectType, "subjectTypeId
 
 export interface ExamSubjectDto extends Omit<ExamSubjectT, "subjectId"> {
     subject: SubjectT;
+    paperComponentId?: number | null;
 }
 
 export interface ExamDto extends Omit<ExamT, "academicYearId" | "examTypeId" | "classId"> {
@@ -52,6 +53,10 @@ export interface ExamDto extends Omit<ExamT, "academicYearId" | "examTypeId" | "
     scheduledByUser?: ExamAuditUserInfo | null;
     lastUpdatedByUser?: ExamAuditUserInfo | null;
     candidateCount?: number; // Number of exam candidates already allotted
+}
+
+export interface ExamGroupDto extends ExamGroupT {
+    exams: ExamDto[];
 }
 
 export interface ExamPapersWithStats {

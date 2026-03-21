@@ -8,7 +8,15 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import * as XLSX from "xlsx";
-import { Calendar, BookOpen, Filter, ChevronDown, GraduationCap, Download, FileCode2 } from "lucide-react";
+import {
+  Calendar,
+  BookOpen,
+  Filter,
+  ChevronDown,
+  GraduationCap,
+  Download,
+  FileCode2,
+} from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query";
 
@@ -154,54 +162,64 @@ const StudentDownloadFilterAndExport: React.FC = () => {
         return;
       }
 
-      const flattenedData: FlattenedStudentData[] = StudentExportData.map((student: StudentDto) => ({
-        "Student ID": student.id,
-        Name: student.personalDetails?.firstName || "",
-        Stream: student.programCourse?.name || "",
-        Framework: null, // Not available in StudentDto
-        Semester: null, // Not available in StudentDto
-        Year: null, // Not available in StudentDto
-        Community: student.community,
-        Handicapped: student.handicapped ? "Yes" : "No",
+      const flattenedData: FlattenedStudentData[] = StudentExportData.map(
+        (student: StudentDto) => ({
+          "Student ID": student.id,
+          Name: student.personalDetails?.firstName || "",
+          Stream: student.programCourse?.name || "",
+          Framework: null, // Not available in StudentDto
+          Semester: null, // Not available in StudentDto
+          Year: null, // Not available in StudentDto
+          Community: student.community,
+          Handicapped: student.handicapped ? "Yes" : "No",
 
-        RFID: student.rfidNumber || "",
-        "CU Form Number": student.cuFormNumber || "",
-        UID: student.uid || "",
-        "Old UID": "", // Not available in StudentDto
-        "Registration Number": student.registrationNumber || "",
-        "Roll Number": student.rollNumber || "",
-        "Class Roll Number": student.classRollNumber || "",
-        "APAAR ID": student.apaarId || "",
+          RFID: student.rfidNumber || "",
+          "CU Form Number": student.cuFormNumber || "",
+          UID: student.uid || "",
+          "Old UID": "", // Not available in StudentDto
+          "Registration Number": student.registrationNumber || "",
+          "Roll Number": student.rollNumber || "",
+          "Class Roll Number": student.classRollNumber || "",
+          "APAAR ID": student.apaarId || "",
 
-        "Aadhaar Number": student.personalDetails?.aadhaarCardNumber || "",
-        "Date of Birth": student.personalDetails?.dateOfBirth
-          ? new Date(student.personalDetails.dateOfBirth).toLocaleDateString()
-          : "",
-        Gender: student.personalDetails?.gender || "",
-        Email: student.personalEmail || "",
-        "Alternative Email": "", // Not available in StudentDto
-        Disability: student.personalDetails?.disability || "None",
-        Category: student.personalDetails?.category?.name || "",
-        "Category Code": student.personalDetails?.category?.code || "",
+          "Aadhaar Number": student.personalDetails?.aadhaarCardNumber || "",
+          "Date of Birth": student.personalDetails?.dateOfBirth
+            ? new Date(student.personalDetails.dateOfBirth).toLocaleDateString()
+            : "",
+          Gender: student.personalDetails?.gender || "",
+          Email: student.personalEmail || "",
+          "Alternative Email": "", // Not available in StudentDto
+          Disability: student.personalDetails?.disability || "None",
+          Category: student.personalDetails?.category?.name || "",
+          "Category Code": student.personalDetails?.category?.code || "",
 
-        "Mailing Address": student.personalDetails?.address?.find((addr) => addr.type === "MAILING")?.addressLine || "",
-        "Mailing Pincode": student.personalDetails?.address?.find((addr) => addr.type === "MAILING")?.pincode || "",
-        "Mailing Locality":
-          student.personalDetails?.address?.find((addr) => addr.type === "MAILING")?.localityType || "",
+          "Mailing Address":
+            student.personalDetails?.address?.find((addr) => addr.type === "MAILING")
+              ?.addressLine || "",
+          "Mailing Pincode":
+            student.personalDetails?.address?.find((addr) => addr.type === "MAILING")?.pincode ||
+            "",
+          "Mailing Locality":
+            student.personalDetails?.address?.find((addr) => addr.type === "MAILING")
+              ?.localityType || "",
 
-        "Residential Address":
-          student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")?.addressLine || "",
-        "Residential Pincode":
-          student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")?.pincode || "",
-        "Residential Locality":
-          student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")?.localityType || "",
+          "Residential Address":
+            student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")
+              ?.addressLine || "",
+          "Residential Pincode":
+            student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")
+              ?.pincode || "",
+          "Residential Locality":
+            student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")
+              ?.localityType || "",
 
-        Nationality: student.personalDetails?.nationality?.name || "",
-        Religion: student.personalDetails?.religion?.name || "",
+          Nationality: student.personalDetails?.nationality?.name || "",
+          Religion: student.personalDetails?.religion?.name || "",
 
-        "Created At": student.createdAt ? new Date(student.createdAt).toLocaleString() : "",
-        "Updated At": student.updatedAt ? new Date(student.updatedAt).toLocaleString() : "",
-      }));
+          "Created At": student.createdAt ? new Date(student.createdAt).toLocaleString() : "",
+          "Updated At": student.updatedAt ? new Date(student.updatedAt).toLocaleString() : "",
+        }),
+      );
 
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet(flattenedData);
@@ -212,7 +230,8 @@ const StudentDownloadFilterAndExport: React.FC = () => {
           const maxLength = Math.max(
             key.length,
             ...flattenedData.map(
-              (row: FlattenedStudentData) => (row[key as keyof FlattenedStudentData] ?? "").toString().length,
+              (row: FlattenedStudentData) =>
+                (row[key as keyof FlattenedStudentData] ?? "").toString().length,
             ),
           );
           return { wch: Math.max(15, maxLength + 2) };

@@ -11,13 +11,7 @@ export function ModeToggle() {
   };
 
   return (
-    <Button
-      variant="outline"
-      size="icon"
-      onClick={toggleTheme}
-      aria-label="Toggle theme"
-      
-    >
+    <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
       {theme === "dark" ? (
         <Moon className="h-[1.2rem] w-[1.2rem] transition-transform rotate-0 scale-100" />
       ) : (

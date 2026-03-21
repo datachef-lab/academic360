@@ -1,5 +1,5 @@
 import rateLimiter from "express-rate-limit";
-import { logEvents } from "./logger.middleware.js";
+import { log } from "./logger.middleware.js";
 import { format } from "date-fns";
 import { ApiError } from "@/utils/ApiError.js";
 
@@ -10,7 +10,7 @@ export const loginLimiter = rateLimiter({
     "Too many login attempts, please try again later after 1 minute pause.",
   handler: (req, res, next, options) => {
     const logFileName = `errLog_${format(new Date(), "dd-MM-yyyy")}.log`;
-    logEvents(
+    log.warn(
       `Too Many Requests: ${options.message.message}\t${req.method}\t${req.url}\t${req.headers.origin} `,
       logFileName,
     );

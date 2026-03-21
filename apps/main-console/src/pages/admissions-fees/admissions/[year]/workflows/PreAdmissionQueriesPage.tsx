@@ -1,12 +1,12 @@
-import  { useState } from 'react';
-import { 
-  Search, 
-  // Filter, 
-  Mail, 
-  Phone, 
-  // Calendar, 
-  // User, 
-  // BookOpen, 
+import { useState } from "react";
+import {
+  Search,
+  // Filter,
+  Mail,
+  Phone,
+  // Calendar,
+  // User,
+  // BookOpen,
   MessageSquare,
   Eye,
   Reply,
@@ -17,16 +17,34 @@ import {
   CheckCircle,
   Clock,
   // AlertCircle
-} from 'lucide-react';
+} from "lucide-react";
 // import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PreAdmissionQuery {
   id: string;
@@ -36,8 +54,8 @@ interface PreAdmissionQuery {
   course: string;
   session: string;
   query: string;
-  status: 'pending' | 'replied' | 'resolved' | 'archived';
-  priority: 'low' | 'medium' | 'high';
+  status: "pending" | "replied" | "resolved" | "archived";
+  priority: "low" | "medium" | "high";
   submittedAt: string;
   repliedAt?: string;
   assignedTo?: string;
@@ -52,11 +70,12 @@ const dummyQueries: PreAdmissionQuery[] = [
     phone: "+91 98765 43210",
     course: "B.Sc (Computer Science)",
     session: "2024-25",
-    query: "What are the eligibility criteria for B.Sc Computer Science? I have completed 12th with PCM.",
+    query:
+      "What are the eligibility criteria for B.Sc Computer Science? I have completed 12th with PCM.",
     status: "pending",
     priority: "high",
     submittedAt: "2024-07-28T10:30:00",
-    tags: ["eligibility", "computer-science"]
+    tags: ["eligibility", "computer-science"],
   },
   {
     id: "Q002",
@@ -71,7 +90,7 @@ const dummyQueries: PreAdmissionQuery[] = [
     submittedAt: "2024-07-27T14:20:00",
     repliedAt: "2024-07-28T09:15:00",
     assignedTo: "Admission Team",
-    tags: ["scholarship", "sc-category"]
+    tags: ["scholarship", "sc-category"],
   },
   {
     id: "Q003",
@@ -86,7 +105,7 @@ const dummyQueries: PreAdmissionQuery[] = [
     submittedAt: "2024-07-26T16:45:00",
     repliedAt: "2024-07-27T11:30:00",
     assignedTo: "Document Team",
-    tags: ["documents", "online-submission"]
+    tags: ["documents", "online-submission"],
   },
   {
     id: "Q004",
@@ -99,7 +118,7 @@ const dummyQueries: PreAdmissionQuery[] = [
     status: "pending",
     priority: "high",
     submittedAt: "2024-07-28T08:15:00",
-    tags: ["hostel", "fee-structure", "outstation"]
+    tags: ["hostel", "fee-structure", "outstation"],
   },
   {
     id: "Q005",
@@ -114,7 +133,7 @@ const dummyQueries: PreAdmissionQuery[] = [
     submittedAt: "2024-07-25T12:30:00",
     repliedAt: "2024-07-26T10:45:00",
     assignedTo: "Admission Team",
-    tags: ["admission-process", "application-form"]
+    tags: ["admission-process", "application-form"],
   },
   {
     id: "Q006",
@@ -127,7 +146,7 @@ const dummyQueries: PreAdmissionQuery[] = [
     status: "pending",
     priority: "medium",
     submittedAt: "2024-07-28T11:45:00",
-    tags: ["gap-year", "eligibility"]
+    tags: ["gap-year", "eligibility"],
   },
   {
     id: "Q007",
@@ -136,13 +155,14 @@ const dummyQueries: PreAdmissionQuery[] = [
     phone: "+91 32109 87654",
     course: "B.Sc (Chemistry)",
     session: "2024-25",
-    query: "What are the career prospects after B.Sc Chemistry? Do you provide placement assistance?",
+    query:
+      "What are the career prospects after B.Sc Chemistry? Do you provide placement assistance?",
     status: "resolved",
     priority: "low",
     submittedAt: "2024-07-24T15:20:00",
     repliedAt: "2024-07-25T13:10:00",
     assignedTo: "Career Team",
-    tags: ["career-prospects", "placement"]
+    tags: ["career-prospects", "placement"],
   },
   {
     id: "Q008",
@@ -157,8 +177,8 @@ const dummyQueries: PreAdmissionQuery[] = [
     submittedAt: "2024-07-27T09:30:00",
     repliedAt: "2024-07-28T08:20:00",
     assignedTo: "Admission Team",
-    tags: ["entrance-exam", "selection-criteria"]
-  }
+    tags: ["entrance-exam", "selection-criteria"],
+  },
 ];
 
 // const statusConfig = {
@@ -171,33 +191,32 @@ const dummyQueries: PreAdmissionQuery[] = [
 const priorityConfig = {
   low: { label: "Low", variant: "secondary" as const },
   medium: { label: "Medium", variant: "default" as const },
-  high: { label: "High", variant: "destructive" as const }
+  high: { label: "High", variant: "destructive" as const },
 };
 
 export default function PreAdmissionQueriesPage() {
   const [queries, setQueries] = useState<PreAdmissionQuery[]>(dummyQueries);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [courseFilter, setCourseFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [courseFilter, setCourseFilter] = useState<string>("all");
   const [selectedQueries, setSelectedQueries] = useState<string[]>([]);
 
-  const filteredQueries = queries.filter(query => {
-    const matchesSearch = query.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         query.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         query.query.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || query.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || query.priority === priorityFilter;
-    const matchesCourse = courseFilter === 'all' || query.course === courseFilter;
-    
+  const filteredQueries = queries.filter((query) => {
+    const matchesSearch =
+      query.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      query.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      query.query.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || query.status === statusFilter;
+    const matchesPriority = priorityFilter === "all" || query.priority === priorityFilter;
+    const matchesCourse = courseFilter === "all" || query.course === courseFilter;
+
     return matchesSearch && matchesStatus && matchesPriority && matchesCourse;
   });
 
   const handleSelectQuery = (queryId: string) => {
-    setSelectedQueries(prev => 
-      prev.includes(queryId) 
-        ? prev.filter(id => id !== queryId)
-        : [...prev, queryId]
+    setSelectedQueries((prev) =>
+      prev.includes(queryId) ? prev.filter((id) => id !== queryId) : [...prev, queryId],
     );
   };
 
@@ -205,25 +224,31 @@ export default function PreAdmissionQueriesPage() {
     if (selectedQueries.length === filteredQueries.length) {
       setSelectedQueries([]);
     } else {
-      setSelectedQueries(filteredQueries.map(q => q.id));
+      setSelectedQueries(filteredQueries.map((q) => q.id));
     }
   };
 
-  const handleStatusChange = (queryId: string, newStatus: PreAdmissionQuery['status']) => {
-    setQueries(prev => prev.map(q => 
-      q.id === queryId 
-        ? { ...q, status: newStatus, repliedAt: newStatus === 'replied' ? new Date().toISOString() : q.repliedAt }
-        : q
-    ));
+  const handleStatusChange = (queryId: string, newStatus: PreAdmissionQuery["status"]) => {
+    setQueries((prev) =>
+      prev.map((q) =>
+        q.id === queryId
+          ? {
+              ...q,
+              status: newStatus,
+              repliedAt: newStatus === "replied" ? new Date().toISOString() : q.repliedAt,
+            }
+          : q,
+      ),
+    );
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -232,26 +257,26 @@ export default function PreAdmissionQueriesPage() {
       title: "Total Queries",
       value: queries.length,
       icon: MessageSquare,
-      color: "text-blue-500"
+      color: "text-blue-500",
     },
     {
       title: "Pending",
-      value: queries.filter(q => q.status === 'pending').length,
+      value: queries.filter((q) => q.status === "pending").length,
       icon: Clock,
-      color: "text-yellow-500"
+      color: "text-yellow-500",
     },
     {
       title: "Replied",
-      value: queries.filter(q => q.status === 'replied').length,
+      value: queries.filter((q) => q.status === "replied").length,
       icon: CheckCircle,
-      color: "text-blue-500"
+      color: "text-blue-500",
     },
     {
       title: "Resolved",
-      value: queries.filter(q => q.status === 'resolved').length,
+      value: queries.filter((q) => q.status === "resolved").length,
       icon: CheckCircle,
-      color: "text-green-500"
-    }
+      color: "text-green-500",
+    },
   ];
 
   return (
@@ -332,8 +357,10 @@ export default function PreAdmissionQueriesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  {Array.from(new Set(queries.map(q => q.course))).map(course => (
-                    <SelectItem key={course} value={course}>{course}</SelectItem>
+                  {Array.from(new Set(queries.map((q) => q.course))).map((course) => (
+                    <SelectItem key={course} value={course}>
+                      {course}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -365,7 +392,10 @@ export default function PreAdmissionQueriesPage() {
                   <TableRow>
                     <TableHead className="w-12">
                       <Checkbox
-                        checked={selectedQueries.length === filteredQueries.length && filteredQueries.length > 0}
+                        checked={
+                          selectedQueries.length === filteredQueries.length &&
+                          filteredQueries.length > 0
+                        }
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
@@ -413,7 +443,7 @@ export default function PreAdmissionQueriesPage() {
                           <div className="max-w-xs">
                             <p className="text-sm line-clamp-2">{query.query}</p>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {query.tags.map(tag => (
+                              {query.tags.map((tag) => (
                                 <Badge key={tag} variant="secondary" className="text-xs">
                                   {tag}
                                 </Badge>
@@ -424,7 +454,9 @@ export default function PreAdmissionQueriesPage() {
                         <TableCell>
                           <Select
                             value={query.status}
-                            onValueChange={(value) => handleStatusChange(query.id, value as PreAdmissionQuery['status'])}
+                            onValueChange={(value) =>
+                              handleStatusChange(query.id, value as PreAdmissionQuery["status"])
+                            }
                           >
                             <SelectTrigger className="w-32">
                               <SelectValue />
@@ -443,9 +475,7 @@ export default function PreAdmissionQueriesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            {formatDate(query.submittedAt)}
-                          </div>
+                          <div className="text-sm">{formatDate(query.submittedAt)}</div>
                           {query.repliedAt && (
                             <div className="text-xs text-gray-500">
                               Replied: {formatDate(query.repliedAt)}
@@ -453,9 +483,7 @@ export default function PreAdmissionQueriesPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            {query.assignedTo || '-'}
-                          </div>
+                          <div className="text-sm">{query.assignedTo || "-"}</div>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -495,9 +523,13 @@ export default function PreAdmissionQueriesPage() {
             Showing {filteredQueries.length} of {queries.length} queries
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">Previous</Button>
+            <Button variant="outline" size="sm">
+              Previous
+            </Button>
             <Button size="sm">1</Button>
-            <Button variant="outline" size="sm">Next</Button>
+            <Button variant="outline" size="sm">
+              Next
+            </Button>
           </div>
         </div>
       </div>

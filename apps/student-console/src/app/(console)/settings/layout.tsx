@@ -1,5 +1,5 @@
 "use client";
-import styles from "./settings.module.css"
+import styles from "./settings.module.css";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -24,11 +24,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-export default function SettingsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -44,12 +40,11 @@ export default function SettingsLayout({
       href: "/settings/access-control",
       icon: ShieldAlert,
     },
-    {name: "Masters", href: "/settings/masters", icon: LayoutList },
+    { name: "Masters", href: "/settings/masters", icon: LayoutList },
   ];
 
   // Get the current active link
-  const currentPage =
-    settingLinks.find((link) => pathname === link.href) || settingLinks[0];
+  const currentPage = settingLinks.find((link) => pathname === link.href) || settingLinks[0];
 
   useEffect(() => {
     // Only redirect if auth is finished loading and user is not an admin
@@ -103,9 +98,9 @@ export default function SettingsLayout({
               className={cn(
                 buttonVariants({ variant: "ghost" }),
                 "w-full justify-start gap-2 px-2 py-1.5 transition-colors",
-                pathname === link.href 
-                  ? "bg-purple-100 text-purple-700 hover:bg-purple-200" 
-                  : "hover:bg-purple-50 hover:text-purple-700"
+                pathname === link.href
+                  ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                  : "hover:bg-purple-50 hover:text-purple-700",
               )}
             >
               <link.icon size={18} />
@@ -120,7 +115,7 @@ export default function SettingsLayout({
             onClick={handleLogout}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              "w-full justify-start gap-2 px-2 py-1.5 text-red-500 hover:text-red-600 hover:bg-red-100/20 transition-colors"
+              "w-full justify-start gap-2 px-2 py-1.5 text-red-500 hover:text-red-600 hover:bg-red-100/20 transition-colors",
             )}
           >
             <LogOut size={18} />
@@ -130,18 +125,27 @@ export default function SettingsLayout({
       </aside>
 
       {/* Main Content */}
-      <div id={styles["settings-content"]} className="flex flex-col w-[10px] h-screen overflow-hidden bg-white/90 flex-grow ">
+      <div
+        id={styles["settings-content"]}
+        className="flex flex-col w-[10px] h-screen overflow-hidden bg-white/90 flex-grow "
+      >
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-6 bg-white/95 shadow-sm w-full">
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
-                <Link href="/dashboard" className="flex items-center text-purple-600 hover:text-purple-700">
+                <Link
+                  href="/dashboard"
+                  className="flex items-center text-purple-600 hover:text-purple-700"
+                >
                   <House size={16} />
                 </Link>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <Link href="/settings" className="flex items-center text-purple-600 hover:text-purple-700">
+                <Link
+                  href="/settings"
+                  className="flex items-center text-purple-600 hover:text-purple-700"
+                >
                   <Settings size={16} />
                   <span className="ml-1">Settings</span>
                 </Link>
@@ -180,7 +184,7 @@ export default function SettingsLayout({
                 "flex items-center gap-1 px-3 py-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors",
                 pathname === link.href
                   ? "bg-purple-100 text-purple-700"
-                  : "text-gray-600 hover:bg-purple-50 hover:text-purple-700"
+                  : "text-gray-600 hover:bg-purple-50 hover:text-purple-700",
               )}
             >
               <link.icon size={14} />
@@ -189,9 +193,7 @@ export default function SettingsLayout({
           ))}
         </div>
 
-        <main className="flex-1 w-full h-full p-6 overflow-auto">
-          {children}
-        </main>
+        <main className="flex-1 w-full h-full p-6 overflow-auto">{children}</main>
       </div>
     </div>
   );

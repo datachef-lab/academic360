@@ -18,7 +18,9 @@ export async function getAllPersonalDetails(): Promise<ApiResponse<PersonalDetai
   }
 }
 
-export async function getPersonalDetailById(id: string): Promise<ApiResponse<PersonalDetailsDto | null>> {
+export async function getPersonalDetailById(
+  id: string,
+): Promise<ApiResponse<PersonalDetailsDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -27,7 +29,9 @@ export async function getPersonalDetailById(id: string): Promise<ApiResponse<Per
   }
 }
 
-export async function getPersonalDetailByStudentId(studentId: string): Promise<ApiResponse<PersonalDetailsDto | null>> {
+export async function getPersonalDetailByStudentId(
+  studentId: string,
+): Promise<ApiResponse<PersonalDetailsDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
@@ -36,7 +40,9 @@ export async function getPersonalDetailByStudentId(studentId: string): Promise<A
   }
 }
 
-export async function createPersonalDetail(payload: PersonalDetailsPayload): Promise<ApiResponse<PersonalDetailsDto>> {
+export async function createPersonalDetail(
+  payload: PersonalDetailsPayload,
+): Promise<ApiResponse<PersonalDetailsDto>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -78,7 +84,9 @@ export async function deletePersonalDetail(id: string): Promise<ApiResponse<null
   }
 }
 
-export async function deletePersonalDetailByStudentId(studentId: string): Promise<ApiResponse<null>> {
+export async function deletePersonalDetailByStudentId(
+  studentId: string,
+): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data;

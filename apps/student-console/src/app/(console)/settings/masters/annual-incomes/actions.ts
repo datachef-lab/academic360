@@ -1,6 +1,6 @@
 "use server";
 
-import  {dbPostgres, db } from "@/db";
+import { dbPostgres, db } from "@/db";
 import { annualIncomes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -34,7 +34,9 @@ export async function addAnnualIncome(formData: FormData): Promise<AddAnnualInco
   }
 }
 
-export async function deleteAnnualIncome(id: number): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function deleteAnnualIncome(
+  id: number,
+): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     await dbPostgres.delete(annualIncomes).where(eq(annualIncomes.id, id));
     console.log("Deleted annual income with ID:", id);
@@ -46,15 +48,21 @@ export async function deleteAnnualIncome(id: number): Promise<{ success: boolean
   }
 }
 
-export async function uploadAnnualIncomesFromFile(formData: FormData): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function uploadAnnualIncomesFromFile(
+  formData: FormData,
+): Promise<{ success: boolean; message?: string; error?: string }> {
   // Placeholder for upload logic
   console.log("Upload Annual Incomes action triggered.", formData);
   revalidatePath("/settings/masters/annual-incomes");
   return { success: true, message: "Upload action placeholder executed." };
 }
 
-export async function downloadAnnualIncomes(): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function downloadAnnualIncomes(): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
   // Placeholder for download logic
   console.log("Download Annual Incomes action triggered.");
   return { success: true, message: "Download action placeholder executed." };
-} 
+}

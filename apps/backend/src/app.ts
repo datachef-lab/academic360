@@ -15,7 +15,7 @@ import { Server } from "socket.io";
 import { corsOptions } from "@/config/corsOptions.js";
 import { socketService } from "./services/socketService.js";
 import settingsRouter from "@/features/apps/routes/settings.route.js";
-import { logger, errorHandler } from "@/middlewares/index.js";
+import { errorHandler, logger } from "@/middlewares/index.js";
 import { districtModel } from "@repo/db/schemas/models/resources/district.model.js";
 import { cityModel } from "@repo/db/schemas/models/resources/city.model.js";
 import { stateModel } from "@repo/db/schemas/models/resources/state.model.js";
@@ -23,71 +23,75 @@ import { policeStationModel } from "@repo/db/schemas/models/user/police-station.
 import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model.js";
 
 import { generateToken } from "./utils/index.js";
+// import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import {
   academicYearRouter,
-  classRouter,
   batchStudentMappingRouter,
-  marksheetPaperMappingRouter,
+  classRouter,
   marksheetPaperComponentMappingRouter,
-  sessionRouter,
+  marksheetPaperMappingRouter,
   promotionRouter,
+  sectionRoutes,
+  sessionRouter,
+  shiftRouter,
 } from "@/features/academics/routes/index.js";
-import { userModel, User } from "@repo/db/schemas/models/user";
+import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
-  documentRouter,
-  marksheetRouter,
-  countryRouter,
-  userRouter,
+  accommodationRouter,
+  addonRouter,
+  addressRouter,
   authRouter,
+  batchRouter,
   bloodGroupRouter,
+  boardUniversityRouter,
   categoryRouter,
   cityRouter,
-  languageMediumRouter,
-  boardUniversityRouter,
-  institutionRouter,
-  qualificationRouter,
-  transportRouter,
-  studentRouter,
-  studentApaarUpdateRouter,
-  nationalityRouter,
-  religionRouter,
-  // academicHistoryRouter,
-  // academicIdentifierRouter,
-  accommodationRouter,
-  stateRouter,
+  countryRouter,
   degreeRouter,
-  occupationRouter,
-  batchRouter,
+  // departmentRouter,
+  // designationRouter,
+  documentRouter,
   emergencyContactRouter,
-  addressRouter,
-  reportRouter,
-  specializationRouter,
-  familyRouter,
-  healthRouter,
-  personalDetailsRouter,
-  //   feesComponentRouter,
-  addonRouter,
-  feeSlabRouter,
-  //   feesHeadRouter,
-  //   feesReceiptTypeRouter,
-  //   feesSlabYearMappingRouter,
-  personRouter,
-  floorRouter,
-  roomRouter,
-  examTypeRouter,
   examScheduleRouter,
-  departmentRouter,
-  designationRouter,
-  subDepartmentRouter,
-  feeHeadRouter,
-  feeStructureComponentRouter,
+  examTypeRouter,
+  familyRouter,
   feeCategoryRouter,
   feeGroupPromotionMappingRouter,
+  feeHeadRouter,
+  feeSlabRouter,
+  feeStructureComponentRouter,
+  floorRouter,
+  healthRouter,
+  institutionRouter,
+  languageMediumRouter,
+  marksheetRouter,
+  nationalityRouter,
+  occupationRouter,
+  personalDetailsRouter,
+  personRouter,
+  qualificationRouter,
+  religionRouter,
+  reportRouter,
+  roomRouter,
+  specializationRouter,
+  stateRouter,
+  studentApaarUpdateRouter,
+  studentRouter,
+  // subDepartmentRouter,
+  transportRouter,
+  designationRouter,
+  sessionStatusRouter,
   userStatusMasterRouter,
-  userStatusMasterLevelRouter,
-  userStatusMasterDomainRouter,
-  userStatusMasterFrequencyRouter,
+  accessGroupApplicationRouter,
+  accessGroupDesignationRouter,
+  accessGroupUserTypeRouter,
+  userTypeRouter,
+  userRouter,
+  // userStatusMasterDomainRouter,
+  // userStatusMasterFrequencyRouter,
+  // userStatusMasterLevelRouter,
+  // userStatusMasterRouter
 } from "@/features/index.js";
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
@@ -96,24 +100,20 @@ import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js"
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
-import { shiftRouter } from "@/features/academics/routes/index.js";
-import feesSlabRouter from "@/features/fees/routes/index.js";
 
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
 // import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
 import feesRouter from "./features/fees/routes/index.js";
+import paymentRouter from "@/features/payments/routes/payment.route.js";
 import {
-  admissionRouter,
-  applicationFormRouter,
-  admissionGeneralInfoRouter,
+  academicSubjectRouter,
   admissionAcademicInfoRouter,
   admissionAdditionalInfoRouter,
-  admissionCourseRouter,
   admissionCourseApplicationRouter,
-  sportsCategoryRouter,
-  sportsInfoRouter,
-  studentAcademicSubjectRouter,
-  academicSubjectRouter,
+  admissionCourseRouter,
+  admissionGeneralInfoRouter,
+  admissionRouter,
+  applicationFormRouter,
   boardRouter,
   boardSubjectNameRouter,
   boardSubjectRouter,
@@ -121,43 +121,45 @@ import {
   cuRegistrationCorrectionRequestRouter,
   cuRegistrationDocumentUploadRouter,
   cuRegistrationPdfRouter,
+  sportsCategoryRouter,
+  sportsInfoRouter,
+  studentAcademicSubjectRouter,
 } from "@/features/admissions/index.js";
-// import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
-import { sectionRoutes } from "@/features/academics/routes/index.js";
 import bulkUploadRouter from "@/features/common/routes/bulkUpload.routes.js";
 import {
-  streamRouter,
-  courseTypeRouter,
-  subjectRouter,
-  paperRouter,
-  topicRouter,
   affiliationRouter,
-  courseLevelRouter,
-  subjectTypeRouter,
-  regulationTypeRouter,
-  programCourseRouter,
-  examComponentRouter,
   cascadingDropdownsRouter,
+  courseLevelRouter,
+  courseTypeRouter,
+  examComponentRouter,
+  paperRouter,
+  programCourseRouter,
+  regulationTypeRouter,
+  streamRouter,
   subjectGroupingMainRouter,
   subjectGroupingProgramCourseRouter,
   subjectGroupingSubRouter,
+  subjectRouter,
+  subjectTypeRouter,
+  topicRouter,
 } from "@/features/course-design/routes/index.js";
 import {
+  dynamicSubjectsRoutes,
   relatedSubjectMainRoutes,
   relatedSubjectSubRoutes,
-  restrictedGroupingMainRoutes,
   restrictedGroupingClassRoutes,
-  restrictedGroupingSubjectRoutes,
+  restrictedGroupingMainRoutes,
   restrictedGroupingProgramCourseRoutes,
-  subjectSpecificPassingRoutes,
-  studentSubjectsRoutes,
-  subjectSelectionMetaRoutes,
-  subjectSelectionMetaClassRoutes,
-  subjectSelectionMetaStreamRoutes,
+  restrictedGroupingSubjectRoutes,
   studentSubjectSelectionRoutes,
-  dynamicSubjectsRoutes,
+  studentSubjectsRoutes,
+  subjectSelectionMetaClassRoutes,
+  subjectSelectionMetaRoutes,
+  subjectSelectionMetaStreamRoutes,
+  subjectSpecificPassingRoutes,
 } from "@/features/subject-selection/routes/index.js";
-import { userStatusMappingRouter } from "./features/user/routes/index.js";
+// import { userStatusMappingRouter } from "./features/user/routes/index.js";
+import { examGroupRouter } from "./features/exams/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -377,16 +379,16 @@ app.use(
 
 app.use("/api/users", userRouter);
 
-app.use("/api/user-statuses", userStatusMappingRouter);
+// app.use("/api/user-statuses", userStatusMappingRouter);
 
 // User status master endpoints
-app.use("/api/user-status-masters", userStatusMasterRouter);
-// User status master level endpoints
-app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
-// User status master domain endpoints
-app.use("/api/user-status-master-domains", userStatusMasterDomainRouter);
-// User status master frequency endpoints
-app.use("/api/user-status-master-frequencies", userStatusMasterFrequencyRouter);
+app.use("/api/administration/user-status-masters", userStatusMasterRouter);
+// // User status master level endpoints
+// app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
+// // User status master domain endpoints
+// app.use("/api/user-status-master-domains", userStatusMasterDomainRouter);
+// // User status master frequency endpoints
+// app.use("/api/user-status-master-frequencies", userStatusMasterFrequencyRouter);
 app.use("/api/sessions", sessionRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);
@@ -439,11 +441,25 @@ app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
 
-app.use("/api/administration/departments", departmentRouter);
+// app.use("/api/administration/departments", departmentRouter);
 
 app.use("/api/administration/designations", designationRouter);
+app.use("/api/administration/session-statuses", sessionStatusRouter);
 
-app.use("/api/administration/sub-departments", subDepartmentRouter);
+// app.use("/api/administration/sub-departments", subDepartmentRouter);
+app.use("/api/administration/user-types", userTypeRouter);
+app.use(
+  "/api/administration/access-group-applications",
+  accessGroupApplicationRouter,
+);
+app.use(
+  "/api/administration/access-group-designations",
+  accessGroupDesignationRouter,
+);
+app.use(
+  "/api/administration/access-group-user-types",
+  accessGroupUserTypeRouter,
+);
 
 app.use("/api/address", addressRouter);
 
@@ -490,6 +506,7 @@ app.use("/api/exams/floors", floorRouter);
 app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
 app.use("/api/exams/schedule", examScheduleRouter);
+app.use("/api/exam-groups", examGroupRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/application-forms", applicationFormRouter);
@@ -526,6 +543,8 @@ app.use(
 app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 // Mount the generic admission router last to avoid conflicts with specific routes
 app.use("/api/admissions", admissionRouter);
+
+app.use("/api/payments", paymentRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 

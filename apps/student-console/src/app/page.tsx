@@ -43,7 +43,11 @@ export default function SignInPage() {
   const { name: collegeName } = useCollegeSettings();
   const [mounted, setMounted] = useState(false);
   const [usermsg, setUsermsg] = useState("");
-  const [userPreview, setUserPreview] = useState<{ name: string; email?: string; isActive?: boolean } | null>(null);
+  const [userPreview, setUserPreview] = useState<{
+    name: string;
+    email?: string;
+    isActive?: boolean;
+  } | null>(null);
   const [lookupPending, setLookupPending] = useState(false);
 
   // Simulation mode state (detected via URL parameter)
@@ -71,7 +75,10 @@ export default function SignInPage() {
         try {
           // Try to get parent URL (may fail due to cross-origin restrictions)
           const parentUrl = window.parent.location.href;
-          if (parentUrl.includes("simulation") || parentUrl.includes("/apps/student-console/simulation")) {
+          if (
+            parentUrl.includes("simulation") ||
+            parentUrl.includes("/apps/student-console/simulation")
+          ) {
             simulation = "true";
             console.log("[SIMULATION] Detected from parent URL (iframe context)");
           } else {
@@ -84,7 +91,9 @@ export default function SignInPage() {
           // Cross-origin restriction - can't access parent URL
           // If we're in an iframe, assume simulation mode (iframe is only used for simulation)
           simulation = "true";
-          console.log("[SIMULATION] Cannot access parent URL (cross-origin) - in iframe, assuming simulation mode");
+          console.log(
+            "[SIMULATION] Cannot access parent URL (cross-origin) - in iframe, assuming simulation mode",
+          );
         }
       }
 
@@ -139,9 +148,17 @@ export default function SignInPage() {
                 calculatedRemainingTime = 300;
               }
 
-              if (calculatedRemainingTime > 0 && Math.abs(calculatedRemainingTime - otpExpiry) > 5) {
+              if (
+                calculatedRemainingTime > 0 &&
+                Math.abs(calculatedRemainingTime - otpExpiry) > 5
+              ) {
                 // Only update if there's a significant difference (more than 5 seconds)
-                console.log("🔄 Periodic sync - Updating timer from", otpExpiry, "to", calculatedRemainingTime);
+                console.log(
+                  "🔄 Periodic sync - Updating timer from",
+                  otpExpiry,
+                  "to",
+                  calculatedRemainingTime,
+                );
                 setOtpExpiry(calculatedRemainingTime);
                 localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
               }
@@ -206,7 +223,10 @@ export default function SignInPage() {
 
             // Cap the remaining time to maximum 300 seconds (5 minutes)
             if (calculatedRemainingTime > 300) {
-              console.warn("⚠️ Calculated time > 300s, capping to 300s. Raw time:", calculatedRemainingTime);
+              console.warn(
+                "⚠️ Calculated time > 300s, capping to 300s. Raw time:",
+                calculatedRemainingTime,
+              );
               calculatedRemainingTime = 300;
             }
 
@@ -242,7 +262,10 @@ export default function SignInPage() {
 
           // Cap the remaining time to maximum 300 seconds (5 minutes)
           if (remainingOtpTime > 300) {
-            console.warn("⚠️ localStorage fallback: Time > 300s, capping to 300s. Raw time:", remainingOtpTime);
+            console.warn(
+              "⚠️ localStorage fallback: Time > 300s, capping to 300s. Raw time:",
+              remainingOtpTime,
+            );
             remainingOtpTime = 300;
           }
 
@@ -396,7 +419,9 @@ export default function SignInPage() {
         console.log("Error during UID lookup:", error);
         console.log("error**", error.response?.data);
         console.log("error status 1**", error.response?.data?.message);
-        setUsermsg(error.response?.data?.message || "Server error. Please try again after some time ");
+        setUsermsg(
+          error.response?.data?.message || "Server error. Please try again after some time ",
+        );
         setUserPreview(null);
       } finally {
         setLookupPending(false);
@@ -446,8 +471,15 @@ export default function SignInPage() {
         const response = await adminBypassOtpLogin(uid, undefined, isInSimulationMode);
 
         if (response.httpStatusCode === 200 && response.payload) {
-          const payload = response.payload as { accessToken: string; refreshToken: string; user: UserDto };
-          const type = (payload.user as any)?.userType || (payload.user as any)?.type || (payload.user as any)?.role;
+          const payload = response.payload as {
+            accessToken: string;
+            refreshToken: string;
+            user: UserDto;
+          };
+          const type =
+            (payload.user as any)?.userType ||
+            (payload.user as any)?.type ||
+            (payload.user as any)?.role;
           const isStudent = typeof type === "string" ? type.toUpperCase() === "STUDENT" : false;
 
           if (!isStudent) {
@@ -464,12 +496,17 @@ export default function SignInPage() {
           return;
         } else {
           // Admin bypass failed (no admin cookie or not authorized), fall through to OTP flow
-          console.log("[SIMULATION] Admin bypass failed, falling back to OTP flow:", response.message);
+          console.log(
+            "[SIMULATION] Admin bypass failed, falling back to OTP flow:",
+            response.message,
+          );
         }
       } catch (error: any) {
         // Admin bypass failed (403/401), fall through to normal OTP flow
         if (error.response?.status === 403 || error.response?.status === 401) {
-          console.log("[SIMULATION] Admin bypass not available (no admin cookie), using normal OTP flow");
+          console.log(
+            "[SIMULATION] Admin bypass not available (no admin cookie), using normal OTP flow",
+          );
         } else {
           // Other error, log it but still fall through to OTP
           console.warn("[SIMULATION] Admin bypass error:", error);
@@ -552,8 +589,15 @@ export default function SignInPage() {
       const response = await verifyOtpAndLogin(email, otp, "student-console");
 
       if (response.httpStatusCode === 200) {
-        const payload = response.payload as { accessToken: string; user: UserDto; redirectTo?: string };
-        const type = (payload.user as any)?.userType || (payload.user as any)?.type || (payload.user as any)?.role;
+        const payload = response.payload as {
+          accessToken: string;
+          user: UserDto;
+          redirectTo?: string;
+        };
+        const type =
+          (payload.user as any)?.userType ||
+          (payload.user as any)?.type ||
+          (payload.user as any)?.role;
         const isStudent = typeof type === "string" ? type.toUpperCase() === "STUDENT" : false;
 
         if (!isStudent) {
@@ -652,7 +696,9 @@ export default function SignInPage() {
         <DialogContent>
           <DialogHeader>
             <h3 className="text-lg font-semibold">Unable to sign in</h3>
-            <p className="text-sm text-gray-600">{invalidMessage || "Something went wrong while signing in."}</p>
+            <p className="text-sm text-gray-600">
+              {invalidMessage || "Something went wrong while signing in."}
+            </p>
           </DialogHeader>
         </DialogContent>
       </Dialog>
@@ -668,7 +714,12 @@ export default function SignInPage() {
         <div className="w-full bg-white p-6 sm:p-8 md:w-1/2 md:p-12 flex flex-col min-h-[600px] md:h-[650px]">
           <div className="mb-8 flex items-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-md bg-indigo-600 text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-7 w-7"
+              >
                 <path d="M11.7 2.805a.75.75 0 01.6 0A60.65 60.65 0 0122.83 8.72a.75.75 0 01-.231 1.337 49.949 49.949 0 00-9.902 3.912l-.003.002-.34.18a.75.75 0 01-.707 0A50.009 50.009 0 007.5 12.174v-.224c0-.131.067-.248.172-.311a54.614 54.614 0 014.653-2.52.75.75 0 00-.65-1.352 56.129 56.129 0 00-4.78 2.589 1.858 1.858 0 00-.859 1.228 49.803 49.803 0 00-4.634-1.527.75.75 0 01-.231-1.337A60.653 60.653 0 0111.7 2.805z" />
                 <path d="M13.06 15.473a48.45 48.45 0 017.666-3.282c.134 1.414.22 2.843.255 4.285a.75.75 0 01-.46.71 47.878 47.878 0 00-8.105 4.342.75.75 0 01-.832 0 47.877 47.877 0 00-8.104-4.342.75.75 0 01-.461-.71c.035-1.442.121-2.87.255-4.286A48.4 48.4 0 016 13.18v1.27a1.5 1.5 0 00-.14 2.508c-.09.38-.222.753-.397 1.11.452.213.901.434 1.346.661a6.729 6.729 0 00.551-1.608 1.5 1.5 0 00.14-2.67v-.645a48.549 48.549 0 013.44 1.668 2.25 2.25 0 002.12 0z" />
                 <path d="M4.462 19.462c.42-.419.753-.89 1-1.394.453.213.902.434 1.347.661a6.743 6.743 0 01-1.286 1.794.75.75 0 11-1.06-1.06z" />
@@ -687,11 +738,16 @@ export default function SignInPage() {
               {otpSent ? "Enter OTP" : "Sign in with UID"}
             </h2>
             <p className="mt-2 w-full max-w-full text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left md:whitespace-nowrap break-words">
-              {otpSent ? `OTP sent to ${uid}@thebges.edu.in` : "Enter your 10-digit UID to receive OTP"}
+              {otpSent
+                ? `OTP sent to ${uid}@thebges.edu.in`
+                : "Enter your 10-digit UID to receive OTP"}
             </p>
           </div>
 
-          <form onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit} className="mt-3 flex flex-col flex-1 min-h-0">
+          <form
+            onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit}
+            className="mt-3 flex flex-col flex-1 min-h-0"
+          >
             {/* Fixed height container for all dynamic content */}
             <div className="flex flex-col flex-1">
               {/* Error message area - fixed height */}
@@ -793,7 +849,9 @@ export default function SignInPage() {
               {/* OTP expiry message area - fixed height */}
               <div className="h-[24px] flex items-center justify-center">
                 {otpSent && otpExpiry > 0 && (
-                  <p className="text-xs text-gray-500 text-center">OTP expires in {formatTime(otpExpiry)}</p>
+                  <p className="text-xs text-gray-500 text-center">
+                    OTP expires in {formatTime(otpExpiry)}
+                  </p>
                 )}
               </div>
 
@@ -819,7 +877,9 @@ export default function SignInPage() {
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           />
                         </svg>
-                        <span className="text-sm font-medium text-blue-700">Looking up user...</span>
+                        <span className="text-sm font-medium text-blue-700">
+                          Looking up user...
+                        </span>
                       </div>
                     ) : userPreview ? (
                       <div className="flex flex-col items-center justify-center leading-none">
@@ -831,7 +891,9 @@ export default function SignInPage() {
                         </p>
                       </div>
                     ) : (
-                      <p className="text-xs sm:text-sm text-red-600  text-center leading-none">{usermsg}</p>
+                      <p className="text-xs sm:text-sm text-red-600  text-center leading-none">
+                        {usermsg}
+                      </p>
                     )
                   ) : (
                     <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">

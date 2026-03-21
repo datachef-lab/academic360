@@ -10,7 +10,14 @@ interface AccordionSectionProps {
   icon?: LucideIcon;
 }
 
-export function AccordionSection({ title, subtitle, isOpen, onToggle, children, icon: Icon }: AccordionSectionProps) {
+export function AccordionSection({
+  title,
+  subtitle,
+  isOpen,
+  onToggle,
+  children,
+  icon: Icon,
+}: AccordionSectionProps) {
   return (
     <Collapsible open={isOpen} onOpenChange={onToggle}>
       <div className="bg-white rounded-xl border border-purple-200 shadow-sm overflow-hidden">

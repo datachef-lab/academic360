@@ -182,13 +182,18 @@ const MarksheetCCF = () => {
                 <div className="border-r border-gray-300 font-semibold">
                   <p>{subject.subjectMetadata.name}</p>
                   {subject.subjectMetadata.subjectType?.name && (
-                    <p className="text-sm text-gray-500">({subject.subjectMetadata.subjectType?.name})</p>
+                    <p className="text-sm text-gray-500">
+                      ({subject.subjectMetadata.subjectType?.name})
+                    </p>
                   )}
                 </div>
 
                 {/* Year Input Fields */}
                 <div className="border-r border-gray-300">
-                  <Input className="rounded w-full text-center border-none border-b" value={subject.year1} />
+                  <Input
+                    className="rounded w-full text-center border-none border-b"
+                    value={subject.year1}
+                  />
                   <Input
                     className="rounded w-full text-center border-t border-l-0 border-r-0 border-b "
                     value={subject.year2 as number}
@@ -202,9 +207,13 @@ const MarksheetCCF = () => {
                     <p className="flex items-center px-2 h-1/3">Theory</p>
 
                     {subject.subjectMetadata.fullMarksPractical && (
-                      <p className="flex items-center px-2 h-1/3 border-t border-b border-gray-300">Practical</p>
+                      <p className="flex items-center px-2 h-1/3 border-t border-b border-gray-300">
+                        Practical
+                      </p>
                     )}
-                    <p className="flex items-center justify-end px-2 h-1/3 font-semibold uppercase text-right">Total</p>
+                    <p className="flex items-center justify-end px-2 h-1/3 font-semibold uppercase text-right">
+                      Total
+                    </p>
                   </div>
                 </div>
 
@@ -241,7 +250,9 @@ const MarksheetCCF = () => {
                     </div>
                   )}
 
-                  <p className="flex items-center justify-center font-semibold px-2 h-1/3 text-right">0</p>
+                  <p className="flex items-center justify-center font-semibold px-2 h-1/3 text-right">
+                    0
+                  </p>
                 </div>
 
                 {/* Credit */}
@@ -252,10 +263,14 @@ const MarksheetCCF = () => {
                 </div>
 
                 {/* Grade */}
-                <div className="border-r border-gray-300 flex justify-center items-center">{subject.letterGrade}</div>
+                <div className="border-r border-gray-300 flex justify-center items-center">
+                  {subject.letterGrade}
+                </div>
 
                 {/* Status */}
-                <div className="border-r border-gray-300 flex justify-center items-center">{subject.status}</div>
+                <div className="border-r border-gray-300 flex justify-center items-center">
+                  {subject.status}
+                </div>
               </div>
             ))}
             <div className="grid grid-cols-8 font-medium uppercase">

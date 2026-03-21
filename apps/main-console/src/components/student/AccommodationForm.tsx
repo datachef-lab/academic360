@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
 import type { AccommodationDto, AddressDto } from "@repo/db/dtos/user";
 import { PlaceOfStay } from "@/types/enums";
-import { getAccommodationById, createAccommodation, updateAccommodation } from "@/services/accommodation.service";
+import {
+  getAccommodationById,
+  createAccommodation,
+  updateAccommodation,
+} from "@/services/accommodation.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { RefreshCw, CheckCircle2 } from "lucide-react";
 import { Country } from "@/types/resources/country.types";
@@ -86,7 +96,11 @@ function normalizeAccommodationData(data: Partial<AccommodationDto>): Partial<Ac
 
   // Handle address normalization
   if (normalized.address) {
-    const address = { ...normalized.address } as AddressDto & { countryId?: number; stateId?: number; cityId?: number };
+    const address = { ...normalized.address } as AddressDto & {
+      countryId?: number;
+      stateId?: number;
+      cityId?: number;
+    };
 
     // Extract IDs from nested objects if they exist
     if (address.country && typeof address.country === "object") {
@@ -105,7 +119,10 @@ function normalizeAccommodationData(data: Partial<AccommodationDto>): Partial<Ac
   return normalized;
 }
 
-export default function AccommodationForm({ accommodationId, initialData = null }: AccommodationFormProps) {
+export default function AccommodationForm({
+  accommodationId,
+  initialData = null,
+}: AccommodationFormProps) {
   const [formData, setFormData] = useState<Partial<AccommodationDto>>({
     placeOfStay: null,
     startDate: undefined,
@@ -127,7 +144,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
           getAllCountries(),
           getAllStates(),
           getAllCities(),
-          accommodationId ? getAccommodationById(accommodationId) : Promise.resolve({ payload: initialData ?? null }),
+          accommodationId
+            ? getAccommodationById(accommodationId)
+            : Promise.resolve({ payload: initialData ?? null }),
         ]);
 
         setCountries(countriesData);
@@ -150,7 +169,10 @@ export default function AccommodationForm({ accommodationId, initialData = null 
     fetchData();
   }, [accommodationId, initialData]);
 
-  const handleChange = (field: keyof AccommodationDto, value: string | number | null | object | undefined) => {
+  const handleChange = (
+    field: keyof AccommodationDto,
+    value: string | number | null | object | undefined,
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -168,7 +190,10 @@ export default function AccommodationForm({ accommodationId, initialData = null 
       console.log("Sending accommodation data:", submissionData);
 
       if (accommodationId) {
-        const result = await updateAccommodation(accommodationId, submissionData as Partial<AccommodationDto>);
+        const result = await updateAccommodation(
+          accommodationId,
+          submissionData as Partial<AccommodationDto>,
+        );
         console.log("Update result:", result);
         toast.success("Accommodation updated!");
       } else {
@@ -176,7 +201,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
         console.log("Create result:", result);
         toast.success("Accommodation created!");
         if (result?.payload) {
-          const normalized = normalizeAccommodationData(result.payload as unknown as AccommodationDto);
+          const normalized = normalizeAccommodationData(
+            result.payload as unknown as AccommodationDto,
+          );
           setFormData(normalized);
         }
       }
@@ -204,9 +231,13 @@ export default function AccommodationForm({ accommodationId, initialData = null 
   const currentCityId = formData.address?.city?.id;
 
   // Filter states and cities based on selection
-  const filteredStates = states.filter((state) => !currentCountryId || state.countryId === currentCountryId);
+  const filteredStates = states.filter(
+    (state) => !currentCountryId || state.countryId === currentCountryId,
+  );
 
-  const filteredCities = cities.filter((city) => !currentStateId || city.stateId === currentStateId);
+  const filteredCities = cities.filter(
+    (city) => !currentStateId || city.stateId === currentStateId,
+  );
 
   // Debug logging
   console.log("Current IDs:", { currentCountryId, currentStateId, currentCityId });
@@ -229,7 +260,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                 <Label htmlFor="placeOfStay">Place of Stay</Label>
                 <Select
                   value={formData.placeOfStay || ""}
-                  onValueChange={(value: string) => handleChange("placeOfStay", value as PlaceOfStay)}
+                  onValueChange={(value: string) =>
+                    handleChange("placeOfStay", value as PlaceOfStay)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select place of stay" />
@@ -249,8 +282,14 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                 <Input
                   id="startDate"
                   type="date"
-                  value={formData.startDate ? new Date(formData.startDate).toISOString().split("T")[0] : ""}
-                  onChange={(e) => handleChange("startDate", e.target.value ? new Date(e.target.value) : undefined)}
+                  value={
+                    formData.startDate
+                      ? new Date(formData.startDate).toISOString().split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) =>
+                    handleChange("startDate", e.target.value ? new Date(e.target.value) : undefined)
+                  }
                 />
               </div>
 
@@ -259,8 +298,12 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                 <Input
                   id="endDate"
                   type="date"
-                  value={formData.endDate ? new Date(formData.endDate).toISOString().split("T")[0] : ""}
-                  onChange={(e) => handleChange("endDate", e.target.value ? new Date(e.target.value) : undefined)}
+                  value={
+                    formData.endDate ? new Date(formData.endDate).toISOString().split("T")[0] : ""
+                  }
+                  onChange={(e) =>
+                    handleChange("endDate", e.target.value ? new Date(e.target.value) : undefined)
+                  }
                 />
               </div>
             </div>
@@ -315,7 +358,11 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                     <SelectTrigger>
                       <SelectValue
                         placeholder={
-                          !currentCountryId ? "Select country first" : isLoadingData ? "Loading..." : "Select state"
+                          !currentCountryId
+                            ? "Select country first"
+                            : isLoadingData
+                              ? "Loading..."
+                              : "Select state"
                         }
                       />
                     </SelectTrigger>
@@ -345,7 +392,11 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                     <SelectTrigger>
                       <SelectValue
                         placeholder={
-                          !currentStateId ? "Select state first" : isLoadingData ? "Loading..." : "Select city"
+                          !currentStateId
+                            ? "Select state first"
+                            : isLoadingData
+                              ? "Loading..."
+                              : "Select city"
                         }
                       />
                     </SelectTrigger>
@@ -364,7 +415,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                   <Label>Address Line</Label>
                   <Input
                     value={formData.address?.addressLine || ""}
-                    onChange={(e) => handleChange("address", { ...formData.address, addressLine: e.target.value })}
+                    onChange={(e) =>
+                      handleChange("address", { ...formData.address, addressLine: e.target.value })
+                    }
                     placeholder="Enter address line"
                   />
                 </div>
@@ -372,7 +425,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                   <Label>Landmark</Label>
                   <Input
                     value={formData.address?.landmark || ""}
-                    onChange={(e) => handleChange("address", { ...formData.address, landmark: e.target.value })}
+                    onChange={(e) =>
+                      handleChange("address", { ...formData.address, landmark: e.target.value })
+                    }
                     placeholder="Enter landmark"
                   />
                 </div>
@@ -380,7 +435,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                   <Label>Locality Type</Label>
                   <Select
                     value={formData.address?.localityType || ""}
-                    onValueChange={(value) => handleChange("address", { ...formData.address, localityType: value })}
+                    onValueChange={(value) =>
+                      handleChange("address", { ...formData.address, localityType: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select locality type" />
@@ -398,7 +455,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                   <Label>Phone</Label>
                   <Input
                     value={formData.address?.phone || ""}
-                    onChange={(e) => handleChange("address", { ...formData.address, phone: e.target.value })}
+                    onChange={(e) =>
+                      handleChange("address", { ...formData.address, phone: e.target.value })
+                    }
                     placeholder="Enter phone"
                   />
                 </div>
@@ -406,7 +465,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
                   <Label>Pincode</Label>
                   <Input
                     value={formData.address?.pincode || ""}
-                    onChange={(e) => handleChange("address", { ...formData.address, pincode: e.target.value })}
+                    onChange={(e) =>
+                      handleChange("address", { ...formData.address, pincode: e.target.value })
+                    }
                     placeholder="Enter pincode"
                   />
                 </div>

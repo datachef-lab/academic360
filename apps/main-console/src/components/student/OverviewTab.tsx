@@ -105,7 +105,8 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
   }>({
     queryKey: ["student-promotions", studentId],
     queryFn: async () => {
-      if (!studentId) return { promotions: [], meta: { totalSemesters: null, completedSemesters: 0 } };
+      if (!studentId)
+        return { promotions: [], meta: { totalSemesters: null, completedSemesters: 0 } };
       const res = await axiosInstance.get(`/api/user-statuses/student/${studentId}/promotions`);
       return {
         promotions: res.data?.payload ?? [],
@@ -132,7 +133,9 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
     if (!mappings) return false;
     const terminalTags = ["alumni", "transfer certificate", "tc", "cancel"];
     return mappings.some(
-      (m) => m.isActive && terminalTags.some((tag) => m.userStatusMaster.tag.toLowerCase().includes(tag)),
+      (m) =>
+        m.isActive &&
+        terminalTags.some((tag) => m.userStatusMaster.tag.toLowerCase().includes(tag)),
     );
   }, [mappings]);
 
@@ -226,43 +229,71 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
                     <TableHead
-                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "60px" }}
+                      style={{
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                        minWidth: "60px",
+                      }}
                       className="text-xs font-semibold text-gray-600"
                     >
                       Sr. No.
                     </TableHead>
                     <TableHead
-                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "100px" }}
+                      style={{
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                        minWidth: "100px",
+                      }}
                       className="text-xs font-semibold text-gray-600"
                     >
                       Status
                     </TableHead>
                     <TableHead
-                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "180px" }}
+                      style={{
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                        minWidth: "180px",
+                      }}
                       className="text-xs font-semibold text-gray-600"
                     >
                       Tag
                     </TableHead>
                     <TableHead
-                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "120px" }}
+                      style={{
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                        minWidth: "120px",
+                      }}
                       className="text-xs font-semibold text-gray-600"
                     >
                       Academic Year
                     </TableHead>
                     <TableHead
-                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "100px" }}
+                      style={{
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                        minWidth: "100px",
+                      }}
                       className="text-xs font-semibold text-gray-600"
                     >
                       Semester
                     </TableHead>
                     <TableHead
-                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "200px" }}
+                      style={{
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                        minWidth: "200px",
+                      }}
                       className="text-xs font-semibold text-gray-600"
                     >
                       Remarks
                     </TableHead>
                     <TableHead
-                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "150px" }}
+                      style={{
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                        minWidth: "150px",
+                      }}
                       className="text-xs font-semibold text-gray-600"
                     >
                       Suspended Till
@@ -290,9 +321,13 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
                       <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                         <div className={!mapping.isActive ? "line-through" : ""}>
                           {mapping.userStatusMaster.status === "ACTIVE" ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">
+                              Active
+                            </Badge>
                           ) : (
-                            <Badge className="bg-red-500 text-white hover:bg-red-600 text-xs">Inactive</Badge>
+                            <Badge className="bg-red-500 text-white hover:bg-red-600 text-xs">
+                              Inactive
+                            </Badge>
                           )}
                         </div>
                       </TableCell>
@@ -324,7 +359,10 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
                       <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                         <div className={!mapping.isActive ? "line-through" : ""}>
                           {mapping.academicYear?.year || mapping.academicYear?.name ? (
-                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                            >
                               {mapping.academicYear.year || mapping.academicYear.name}
                             </Badge>
                           ) : (
@@ -335,7 +373,10 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
                       <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                         <div className={!mapping.isActive ? "line-through" : ""}>
                           {mapping.class?.name ? (
-                            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                            >
                               {mapping.class.name.replace(/SEMESTER\s*/i, "")}
                             </Badge>
                           ) : (
@@ -370,7 +411,9 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
                       <TableCell style={{ padding: "12px 8px" }} className="text-center">
                         <button
                           className={`p-1.5 rounded-md transition-colors ${
-                            !mapping.isActive ? "cursor-not-allowed opacity-40" : "hover:bg-gray-100 cursor-pointer"
+                            !mapping.isActive
+                              ? "cursor-not-allowed opacity-40"
+                              : "hover:bg-gray-100 cursor-pointer"
                           }`}
                           onClick={() => {
                             if (mapping.isActive) {
@@ -463,7 +506,9 @@ function AddStatusDialog({
       setSelectedPromotionId(editingMapping.promotionId ? String(editingMapping.promotionId) : "");
       setRemarks(editingMapping.remarks || "");
       setSuspendedTillDate(
-        editingMapping.suspendedTillDate ? new Date(editingMapping.suspendedTillDate).toISOString().slice(0, 16) : "",
+        editingMapping.suspendedTillDate
+          ? new Date(editingMapping.suspendedTillDate).toISOString().slice(0, 16)
+          : "",
       );
       setIsActive(editingMapping.isActive);
     } else if (!editingMapping && open) {
@@ -520,7 +565,10 @@ function AddStatusDialog({
 
       // Check if this exact status already exists for this semester
       const alreadyExists = existingMappings.some(
-        (m) => m.isActive && m.class?.id === selectedPromotion.class?.id && m.userStatusMaster.id === master.id,
+        (m) =>
+          m.isActive &&
+          m.class?.id === selectedPromotion.class?.id &&
+          m.userStatusMaster.id === master.id,
       );
       if (alreadyExists) return false;
 
@@ -547,7 +595,9 @@ function AddStatusDialog({
 
     // ONLY_ONCE: check if this master already exists for this user (only active)
     if (frequencies.includes("ONLY_ONCE")) {
-      const exists = existingMappings.some((m) => m.isActive && m.userStatusMaster.id === selectedMaster.id);
+      const exists = existingMappings.some(
+        (m) => m.isActive && m.userStatusMaster.id === selectedMaster.id,
+      );
       if (exists) {
         return `"${selectedMaster.tag}" can only be assigned once. It already exists for this student.`;
       }
@@ -569,7 +619,10 @@ function AddStatusDialog({
     // PER_SEMESTER: check if same master + same class (via promotion) already exists (only active)
     if (frequencies.includes("PER_SEMESTER") && selectedPromotion?.class?.id) {
       const exists = existingMappings.some(
-        (m) => m.isActive && m.userStatusMaster.id === selectedMaster.id && m.class?.id === selectedPromotion.class?.id,
+        (m) =>
+          m.isActive &&
+          m.userStatusMaster.id === selectedMaster.id &&
+          m.class?.id === selectedPromotion.class?.id,
       );
       if (exists) {
         return `"${selectedMaster.tag}" already exists for semester ${selectedPromotion.class?.name || ""}.`;
@@ -598,7 +651,9 @@ function AddStatusDialog({
 
     // Check terminal status coexistence (only check active terminal statuses)
     const terminalTags = ["Alumni", "Taken Transfer Certificate (TC)", "Cancelled Admission"];
-    const hasActiveTerminal = existingMappings.some((m) => m.isActive && terminalTags.includes(m.userStatusMaster.tag));
+    const hasActiveTerminal = existingMappings.some(
+      (m) => m.isActive && terminalTags.includes(m.userStatusMaster.tag),
+    );
     if (hasActiveTerminal && terminalTags.includes(selectedMaster.tag)) {
       return "A terminal status (Alumni / TC / Cancelled Admission) already exists. No further terminal statuses can be added.";
     }
@@ -652,7 +707,8 @@ function AddStatusDialog({
         promotionId: selectedPromotion.id,
         byUserId,
         remarks: remarks || null,
-        suspendedTillDate: isSuspended && suspendedTillDate ? new Date(suspendedTillDate).toISOString() : null,
+        suspendedTillDate:
+          isSuspended && suspendedTillDate ? new Date(suspendedTillDate).toISOString() : null,
         suspendedReason: isSuspended ? remarks || null : null,
         isActive,
         userStatusMaster: selectedMaster,
@@ -698,7 +754,9 @@ function AddStatusDialog({
     >
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base">{isEditMode ? "Edit User Status" : "Add User Status"}</DialogTitle>
+          <DialogTitle className="text-base">
+            {isEditMode ? "Edit User Status" : "Add User Status"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -726,10 +784,16 @@ function AddStatusDialog({
             <div className="grid grid-cols-4 items-center gap-3">
               <div />
               <div className="col-span-3 flex gap-2 flex-wrap">
-                <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                <Badge
+                  variant="outline"
+                  className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                >
                   {selectedPromotion.academicYear?.year || "-"}
                 </Badge>
-                <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                <Badge
+                  variant="outline"
+                  className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                >
                   {selectedPromotion.class?.name || "-"}
                 </Badge>
               </div>
@@ -747,14 +811,20 @@ function AddStatusDialog({
               >
                 <SelectTrigger className="h-9 text-xs">
                   <SelectValue
-                    placeholder={!selectedPromotionId && !isEditMode ? "Select batch first" : "Select status tag"}
+                    placeholder={
+                      !selectedPromotionId && !isEditMode
+                        ? "Select batch first"
+                        : "Select status tag"
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
                   {availableMasters.map((m) => (
                     <SelectItem key={m.id} value={String(m.id)}>
                       <span className="flex items-center gap-2">
-                        <span className={`inline-block w-2 h-2 rounded-full ${getMasterDotColor(m.tag)}`} />
+                        <span
+                          className={`inline-block w-2 h-2 rounded-full ${getMasterDotColor(m.tag)}`}
+                        />
                         <span>{m.tag}</span>
                         <span className="text-gray-400 text-[10px]">({m.enrollmentStatus})</span>
                       </span>
@@ -766,7 +836,10 @@ function AddStatusDialog({
           </div>
 
           {/* Description — always reserve space to prevent layout shift */}
-          <div className="grid grid-cols-4 items-start gap-3" style={{ minHeight: selectedMaster ? undefined : 0 }}>
+          <div
+            className="grid grid-cols-4 items-start gap-3"
+            style={{ minHeight: selectedMaster ? undefined : 0 }}
+          >
             <div />
             <div className="col-span-3">
               {selectedMaster ? (
@@ -861,8 +934,10 @@ function AddStatusDialog({
 
 function getTagBadgeStyle(tag: string): string {
   const lower = tag.toLowerCase();
-  if (lower.includes("regular")) return "border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100";
-  if (lower.includes("suspended")) return "border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100";
+  if (lower.includes("regular"))
+    return "border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100";
+  if (lower.includes("suspended"))
+    return "border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100";
   if (lower.includes("dropped")) return "border-red-400 text-red-700 bg-red-50 hover:bg-red-100";
   if (lower.includes("alumni")) return "border-cyan-400 text-cyan-700 bg-cyan-50 hover:bg-cyan-100";
   if (lower.includes("transfer") || lower.includes("tc"))

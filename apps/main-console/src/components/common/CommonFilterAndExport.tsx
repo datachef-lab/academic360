@@ -45,7 +45,7 @@ const FilterAndExportComponent: React.FC = () => {
   });
 
   const { refetch: fetchExportData, isFetching: isFetchingExport } = useQuery({
-    queryKey: ["export",filters],
+    queryKey: ["export", filters],
     queryFn: () =>
       getAllMarksheet({
         stream: filters.stream ?? undefined,
@@ -105,7 +105,8 @@ const FilterAndExportComponent: React.FC = () => {
           const maxLength = Math.max(
             key.length,
             ...exportData.payload.map(
-              (row: MarksheetTableType) => String(row[key as keyof MarksheetTableType] ?? "").length,
+              (row: MarksheetTableType) =>
+                String(row[key as keyof MarksheetTableType] ?? "").length,
             ),
           );
 
@@ -162,15 +163,16 @@ const FilterAndExportComponent: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="max-h-60 overflow-y-auto shadow-lg rounded-xl border border-slate-200 bg-white">
-              {degrees && degrees.map((option) => (
-                <DropdownMenuItem
-                  key={option.id}
-                  onClick={() => handleStreamSelect(option as Degree)}
-                  className="hover:bg-slate-100"
-                >
-                  {option.name}
-                </DropdownMenuItem>
-              ))}
+              {degrees &&
+                degrees.map((option) => (
+                  <DropdownMenuItem
+                    key={option.id}
+                    onClick={() => handleStreamSelect(option as Degree)}
+                    className="hover:bg-slate-100"
+                  >
+                    {option.name}
+                  </DropdownMenuItem>
+                ))}
             </DropdownMenuContent>
           </DropdownMenu>
 

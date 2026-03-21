@@ -46,7 +46,15 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 };
 
 // Animated Pagination Dot Component
-function AnimatedDot({ isActive, accentColor, isDark }: { isActive: boolean; accentColor: string; isDark: boolean }) {
+function AnimatedDot({
+  isActive,
+  accentColor,
+  isDark,
+}: {
+  isActive: boolean;
+  accentColor: string;
+  isDark: boolean;
+}) {
   const width = useSharedValue(isActive ? 24 : 8);
   const opacity = useSharedValue(isActive ? 1 : 0.4);
   const scale = useSharedValue(isActive ? 1.2 : 1);
@@ -69,7 +77,11 @@ function AnimatedDot({ isActive, accentColor, isDark }: { isActive: boolean; acc
         {
           height: 8,
           borderRadius: 4,
-          backgroundColor: isActive ? accentColor : isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.2)",
+          backgroundColor: isActive
+            ? accentColor
+            : isDark
+              ? "rgba(255,255,255,0.3)"
+              : "rgba(0,0,0,0.2)",
         },
         animatedStyle,
       ]}
@@ -228,7 +240,12 @@ export default function OnboardingScreen() {
           {/* Pagination Dots - Single progress indicator */}
           <View className="flex-row gap-2 justify-center mt-4 mb-6">
             {onboardingSlides.map((_slide, idx) => (
-              <AnimatedDot key={idx} isActive={slideIndex === idx} accentColor={accentColor} isDark={isDark} />
+              <AnimatedDot
+                key={idx}
+                isActive={slideIndex === idx}
+                accentColor={accentColor}
+                isDark={isDark}
+              />
             ))}
           </View>
 
@@ -236,7 +253,10 @@ export default function OnboardingScreen() {
           <GestureDetector gesture={swipes}>
             <View className="flex-1">
               {/* Icon/Illustration Section - Fixed height to prevent shifting */}
-              <View className="items-center justify-center px-8" style={{ minHeight: 240, maxHeight: 280 }}>
+              <View
+                className="items-center justify-center px-8"
+                style={{ minHeight: 240, maxHeight: 280 }}
+              >
                 <Animated.View
                   key={`icon-wrapper-${slideIndex}`}
                   entering={
@@ -367,7 +387,10 @@ export default function OnboardingScreen() {
                           borderColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)",
                         }}
                       >
-                        <Text style={{ color: textSecondaryColor }} className="text-center text-lg font-semibold">
+                        <Text
+                          style={{ color: textSecondaryColor }}
+                          className="text-center text-lg font-semibold"
+                        >
                           Skip
                         </Text>
                       </Pressable>

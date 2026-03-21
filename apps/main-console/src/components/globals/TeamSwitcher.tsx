@@ -40,7 +40,11 @@ export function TeamSwitcher({
               <ChevronsUpDown className="ml-auto" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align={isMobile ? "end" : "start"} side={isMobile ? "bottom" : "right"}>
+          <DropdownMenuContent
+            className="w-56"
+            align={isMobile ? "end" : "start"}
+            side={isMobile ? "bottom" : "right"}
+          >
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {teams.map((team) => (

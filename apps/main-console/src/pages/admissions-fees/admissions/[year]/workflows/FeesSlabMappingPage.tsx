@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -8,26 +8,52 @@ import {
   Download,
   Upload,
   IndianRupee,
-//   Users,
+  //   Users,
   Building,
   FileText,
-//   Filter,
+  //   Filter,
   MoreHorizontal,
   CheckCircle,
   XCircle,
   AlertCircle,
   Eye,
   Copy,
-//   Settings,
-} from 'lucide-react';
+  //   Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -42,7 +68,7 @@ interface FeesSlab {
   finalAmount: number;
   maxStudents: number;
   currentEnrolled: number;
-  status: 'active' | 'inactive' | 'draft';
+  status: "active" | "inactive" | "draft";
   description: string;
   createdAt: string;
   updatedAt: string;
@@ -65,7 +91,7 @@ const dummyFeesSlabs: FeesSlab[] = [
     description: "Standard fees for General category students in B.Tech program",
     createdAt: "2024-01-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "FS002",
@@ -82,7 +108,7 @@ const dummyFeesSlabs: FeesSlab[] = [
     description: "Discounted fees for SC/ST category students in B.Tech program",
     createdAt: "2024-01-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "FS003",
@@ -99,7 +125,7 @@ const dummyFeesSlabs: FeesSlab[] = [
     description: "Discounted fees for OBC category students in B.Tech program",
     createdAt: "2024-01-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "FS004",
@@ -116,7 +142,7 @@ const dummyFeesSlabs: FeesSlab[] = [
     description: "Standard fees for General category students in MBA program",
     createdAt: "2024-01-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "FS005",
@@ -133,7 +159,7 @@ const dummyFeesSlabs: FeesSlab[] = [
     description: "Discounted fees for SC/ST category students in MBA program",
     createdAt: "2024-01-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "FS006",
@@ -150,7 +176,7 @@ const dummyFeesSlabs: FeesSlab[] = [
     description: "Standard fees for General category students in BBA program",
     createdAt: "2024-01-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "FS007",
@@ -167,7 +193,7 @@ const dummyFeesSlabs: FeesSlab[] = [
     description: "Discounted fees for OBC category students in BBA program",
     createdAt: "2024-01-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "FS008",
@@ -184,34 +210,35 @@ const dummyFeesSlabs: FeesSlab[] = [
     description: "Standard fees for General category students in BCA program (Draft)",
     createdAt: "2024-07-15T09:00:00",
     updatedAt: "2024-07-15T09:00:00",
-    createdBy: "Admin User"
-  }
+    createdBy: "Admin User",
+  },
 ];
 
 const statusConfig = {
   active: { label: "Active", variant: "default" as const, icon: CheckCircle },
   inactive: { label: "Inactive", variant: "secondary" as const, icon: XCircle },
-  draft: { label: "Draft", variant: "outline" as const, icon: AlertCircle }
+  draft: { label: "Draft", variant: "outline" as const, icon: AlertCircle },
 };
 
 export default function FeesSlabMappingPage() {
   const { year } = useParams<{ year: string }>();
   const [feesSlabs, setFeesSlabs] = useState<FeesSlab[]>(dummyFeesSlabs);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [courseFilter, setCourseFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [courseFilter, setCourseFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSlab, setSelectedSlab] = useState<FeesSlab | null>(null);
 
-  const filteredSlabs = feesSlabs.filter(slab => {
-    const matchesSearch = slab.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         slab.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || slab.category === categoryFilter;
-    const matchesCourse = courseFilter === 'all' || slab.course === courseFilter;
-    const matchesStatus = statusFilter === 'all' || slab.status === statusFilter;
-    
+  const filteredSlabs = feesSlabs.filter((slab) => {
+    const matchesSearch =
+      slab.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      slab.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || slab.category === categoryFilter;
+    const matchesCourse = courseFilter === "all" || slab.course === courseFilter;
+    const matchesStatus = statusFilter === "all" || slab.status === statusFilter;
+
     return matchesSearch && matchesCategory && matchesCourse && matchesStatus;
   });
 
@@ -220,68 +247,79 @@ export default function FeesSlabMappingPage() {
       title: "Total Slabs",
       value: feesSlabs.length,
       icon: FileText,
-      color: "text-blue-500"
+      color: "text-blue-500",
     },
     {
       title: "Active Slabs",
-      value: feesSlabs.filter(s => s.status === 'active').length,
+      value: feesSlabs.filter((s) => s.status === "active").length,
       icon: CheckCircle,
-      color: "text-green-500"
+      color: "text-green-500",
     },
     {
       title: "Total Revenue",
-      value: feesSlabs.reduce((sum, slab) => sum + (slab.finalAmount * slab.currentEnrolled), 0),
+      value: feesSlabs.reduce((sum, slab) => sum + slab.finalAmount * slab.currentEnrolled, 0),
       icon: IndianRupee,
-      color: "text-teal-500"
+      color: "text-teal-500",
     },
     {
       title: "Average Fee",
-      value: feesSlabs.length > 0 ? Math.round(feesSlabs.reduce((sum, slab) => sum + slab.finalAmount, 0) / feesSlabs.length) : 0,
+      value:
+        feesSlabs.length > 0
+          ? Math.round(
+              feesSlabs.reduce((sum, slab) => sum + slab.finalAmount, 0) / feesSlabs.length,
+            )
+          : 0,
       icon: Building,
-      color: "text-purple-500"
-    }
+      color: "text-purple-500",
+    },
   ];
 
-  const categories = Array.from(new Set(feesSlabs.map(s => s.category)));
-  const courses = Array.from(new Set(feesSlabs.map(s => s.course)));
+  const categories = Array.from(new Set(feesSlabs.map((s) => s.category)));
+  const courses = Array.from(new Set(feesSlabs.map((s) => s.course)));
 
-  const handleAddSlab = (newSlab: Omit<FeesSlab, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
+  const handleAddSlab = (
+    newSlab: Omit<FeesSlab, "id" | "createdAt" | "updatedAt" | "createdBy">,
+  ) => {
     const slab: FeesSlab = {
       ...newSlab,
-      id: `FS${String(feesSlabs.length + 1).padStart(3, '0')}`,
+      id: `FS${String(feesSlabs.length + 1).padStart(3, "0")}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      createdBy: "Admin User"
+      createdBy: "Admin User",
     };
-    setFeesSlabs(prev => [...prev, slab]);
+    setFeesSlabs((prev) => [...prev, slab]);
     setIsAddDialogOpen(false);
   };
 
   const handleEditSlab = (updatedSlab: FeesSlab) => {
-    setFeesSlabs(prev => prev.map(s => s.id === updatedSlab.id ? { ...updatedSlab, updatedAt: new Date().toISOString() } : s));
+    setFeesSlabs((prev) =>
+      prev.map((s) =>
+        s.id === updatedSlab.id ? { ...updatedSlab, updatedAt: new Date().toISOString() } : s,
+      ),
+    );
     setIsEditDialogOpen(false);
     setSelectedSlab(null);
   };
 
   const handleDeleteSlab = (id: string) => {
-    if (confirm('Are you sure you want to delete this fees slab?')) {
-      setFeesSlabs(prev => prev.filter(s => s.id !== id));
+    if (confirm("Are you sure you want to delete this fees slab?")) {
+      setFeesSlabs((prev) => prev.filter((s) => s.id !== id));
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
     }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
   };
 
@@ -291,7 +329,9 @@ export default function FeesSlabMappingPage() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Fees Slab Mapping - {year}</h1>
-          <p className="text-gray-600">Manage fee structures for different categories and courses</p>
+          <p className="text-gray-600">
+            Manage fee structures for different categories and courses
+          </p>
         </div>
 
         {/* Stats Cards */}
@@ -304,7 +344,7 @@ export default function FeesSlabMappingPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {stat.title === "Total Revenue" || stat.title === "Average Fee" 
+                  {stat.title === "Total Revenue" || stat.title === "Average Fee"
                     ? formatCurrency(stat.value)
                     : stat.value.toLocaleString()}
                 </div>
@@ -340,8 +380,10 @@ export default function FeesSlabMappingPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -353,8 +395,10 @@ export default function FeesSlabMappingPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  {courses.map(course => (
-                    <SelectItem key={course} value={course}>{course}</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course} value={course}>
+                      {course}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -384,7 +428,9 @@ export default function FeesSlabMappingPage() {
                   <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>Add New Fees Slab</DialogTitle>
-                      <DialogDescription>Create a new fee structure for a category and course combination.</DialogDescription>
+                      <DialogDescription>
+                        Create a new fee structure for a category and course combination.
+                      </DialogDescription>
                     </DialogHeader>
                     <AddEditSlabForm onSubmit={handleAddSlab} />
                   </DialogContent>
@@ -433,7 +479,9 @@ export default function FeesSlabMappingPage() {
                         <TableCell>
                           <div>
                             <div className="font-medium">{slab.name}</div>
-                            <div className="text-sm text-gray-500 line-clamp-1">{slab.description}</div>
+                            <div className="text-sm text-gray-500 line-clamp-1">
+                              {slab.description}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -457,11 +505,15 @@ export default function FeesSlabMappingPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-bold text-green-600">{formatCurrency(slab.finalAmount)}</div>
+                          <div className="font-bold text-green-600">
+                            {formatCurrency(slab.finalAmount)}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className="font-medium">{slab.currentEnrolled}/{slab.maxStudents}</div>
+                            <div className="font-medium">
+                              {slab.currentEnrolled}/{slab.maxStudents}
+                            </div>
                             <div className="text-gray-500">
                               {Math.round((slab.currentEnrolled / slab.maxStudents) * 100)}% filled
                             </div>
@@ -474,9 +526,7 @@ export default function FeesSlabMappingPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            {formatDate(slab.createdAt)}
-                          </div>
+                          <div className="text-sm">{formatDate(slab.createdAt)}</div>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -486,10 +536,12 @@ export default function FeesSlabMappingPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setSelectedSlab(slab);
-                                setIsEditDialogOpen(true);
-                              }}>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedSlab(slab);
+                                  setIsEditDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
@@ -525,11 +577,7 @@ export default function FeesSlabMappingPage() {
               <DialogDescription>Update the fee structure details.</DialogDescription>
             </DialogHeader>
             {selectedSlab && (
-              <AddEditSlabForm 
-                onSubmit={handleEditSlab} 
-                initialData={selectedSlab}
-                isEdit={true}
-              />
+              <AddEditSlabForm onSubmit={handleEditSlab} initialData={selectedSlab} isEdit={true} />
             )}
           </DialogContent>
         </Dialog>
@@ -546,22 +594,22 @@ interface AddEditSlabFormProps {
 
 function AddEditSlabForm({ onSubmit, initialData, isEdit = false }: AddEditSlabFormProps) {
   const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    category: initialData?.category || '',
-    course: initialData?.course || '',
-    academicYear: initialData?.academicYear || '2024-25',
+    name: initialData?.name || "",
+    category: initialData?.category || "",
+    course: initialData?.course || "",
+    academicYear: initialData?.academicYear || "2024-25",
     baseAmount: initialData?.baseAmount || 0,
     discountPercentage: initialData?.discountPercentage || 0,
     maxStudents: initialData?.maxStudents || 100,
-    status: initialData?.status || 'draft',
-    description: initialData?.description || ''
+    status: initialData?.status || "draft",
+    description: initialData?.description || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalAmount = formData.baseAmount * (1 - formData.discountPercentage / 100);
     const slabData: FeesSlab = {
-      id: initialData?.id || `FS${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+      id: initialData?.id || `FS${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`,
       name: formData.name,
       category: formData.category,
       course: formData.course,
@@ -575,7 +623,7 @@ function AddEditSlabForm({ onSubmit, initialData, isEdit = false }: AddEditSlabF
       description: formData.description,
       createdAt: initialData?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      createdBy: initialData?.createdBy || "Admin User"
+      createdBy: initialData?.createdBy || "Admin User",
     };
     onSubmit(slabData);
   };
@@ -588,14 +636,17 @@ function AddEditSlabForm({ onSubmit, initialData, isEdit = false }: AddEditSlabF
           <Input
             id="name"
             value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             placeholder="e.g., General Category - B.Tech"
             required
           />
         </div>
         <div>
           <Label htmlFor="category">Category</Label>
-          <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+          <Select
+            value={formData.category}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
@@ -609,7 +660,10 @@ function AddEditSlabForm({ onSubmit, initialData, isEdit = false }: AddEditSlabF
         </div>
         <div>
           <Label htmlFor="course">Course</Label>
-          <Select value={formData.course} onValueChange={(value) => setFormData(prev => ({ ...prev, course: value }))}>
+          <Select
+            value={formData.course}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, course: value }))}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select course" />
             </SelectTrigger>
@@ -628,7 +682,9 @@ function AddEditSlabForm({ onSubmit, initialData, isEdit = false }: AddEditSlabF
             id="baseAmount"
             type="number"
             value={formData.baseAmount}
-            onChange={(e) => setFormData(prev => ({ ...prev, baseAmount: Number(e.target.value) }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, baseAmount: Number(e.target.value) }))
+            }
             placeholder="50000"
             required
           />
@@ -639,7 +695,9 @@ function AddEditSlabForm({ onSubmit, initialData, isEdit = false }: AddEditSlabF
             id="discountPercentage"
             type="number"
             value={formData.discountPercentage}
-            onChange={(e) => setFormData(prev => ({ ...prev, discountPercentage: Number(e.target.value) }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, discountPercentage: Number(e.target.value) }))
+            }
             placeholder="0"
             min="0"
             max="100"
@@ -651,14 +709,21 @@ function AddEditSlabForm({ onSubmit, initialData, isEdit = false }: AddEditSlabF
             id="maxStudents"
             type="number"
             value={formData.maxStudents}
-            onChange={(e) => setFormData(prev => ({ ...prev, maxStudents: Number(e.target.value) }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, maxStudents: Number(e.target.value) }))
+            }
             placeholder="100"
             required
           />
         </div>
         <div>
           <Label htmlFor="status">Status</Label>
-          <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as 'active' | 'inactive' | 'draft' }))}>
+          <Select
+            value={formData.status}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, status: value as "active" | "inactive" | "draft" }))
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
@@ -675,15 +740,13 @@ function AddEditSlabForm({ onSubmit, initialData, isEdit = false }: AddEditSlabF
         <Textarea
           id="description"
           value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
           placeholder="Describe the fee structure..."
           rows={3}
         />
       </div>
       <DialogFooter>
-        <Button type="submit">
-          {isEdit ? 'Update Slab' : 'Create Slab'}
-        </Button>
+        <Button type="submit">{isEdit ? "Update Slab" : "Create Slab"}</Button>
       </DialogFooter>
     </form>
   );

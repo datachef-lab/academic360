@@ -94,9 +94,10 @@ export const paperModeTypeEnum = pgEnum("paper_mode_type", [
 export const paymentStatusEnum = pgEnum("payment_status", [
     "PENDING",
     "COMPLETED",
+    "SUCCESS",
     "FAILED",
     "REFUNDED",
-    "CANCELLED"
+    "CANCELLED",
 ])
 
 export const paymentModeEnum = pgEnum("payment_mode", [
@@ -344,21 +345,58 @@ export const feeCategoryValidityTypeEnum = pgEnum("fee_category_type", [
     "PROGRAM_COURSE",
 ]);
 
-export const userStatusMasterTypeEnum = pgEnum("user_status_master_type", [
-    "ACTIVE",
-    "IN_ACTIVE",
+export const examSeatAllocationModeEnum = pgEnum("exam_seat_allocation_mode", [
+    "STANDARD",
+    "FOIL_NUMBER_BASED",
 ]);
 
-export const userStatusMasterLevelTypeEnum = pgEnum("user_status_master_level_type", [
-    "SYSTEM",
-    "ACADEMIC",
+export const paymentGatewayEnum = pgEnum("payment_gateway", [
+    "RAZORPAY",
+    "PAYTM",
+    "PAYU",
+    "CCAVENUE",
+    "OTHER",
+    "CASHFREE",
+    "OFFLINE",
 ]);
 
-export const userStatusMasterFrequencyTypeEnum = pgEnum("user_status_master_frequency_type", [
-    "ALWAYS_NEW_ENTRY",
-    "PER_ACADEMIC_YEAR",
-    "PER_SEMESTER",
-    "ONLY_ONCE",
-    "REQUIRED",
-    "OPTIONAL"
+export const paymentForTypeEnum = pgEnum("payment_for_type", [
+    "ADMISSION_APPLICATION_FEE",
+    "FEE",
+    "OTHER",
+]);
+
+export const academic360ApplicationDomainEnum = pgEnum("academic360_application_domain_type", [
+    "MAIN_CONSOLE",
+    "STUDENT_CONSOLE",
+    "STUDENT_CONSOLE_MOBILE",
+    "EXAM_ATTENDANCE_APP",
+    "ID_CARD_GENERATOR",
+    "EVENT_GATEKEEPER",
+]);
+
+export const appModuleIconEnum = pgEnum("app_module_icon_type", [
+    "emoji",
+    "lucide",
+    "svg",
+    "url",
+ ]);
+
+ export const accessGroupModulePermissionEnum = pgEnum("access_group_module_permission_type", [
+    "CREATE",
+    "READ",
+    "UPDATE",
+    "DELETE",
+    "UPLOAD",
+ ]);
+
+ export const accessGroupTypeEnum = pgEnum("access_group_type", [
+    "BASIC",
+    "ADD-ON",
+    "SPECIAL",
+ ]);
+
+export const accessGroupModuleTypeEnum = pgEnum("access_group_module_type", [
+    "STATIC",
+    "CONDITIONAL",
 ]);

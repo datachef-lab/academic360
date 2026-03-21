@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -7,29 +7,55 @@ import {
   Trash2,
   Download,
   Upload,
-//   GraduationCap,
+  //   GraduationCap,
   Users,
   FileText,
-//   Filter,
+  //   Filter,
   MoreHorizontal,
   CheckCircle,
   XCircle,
   AlertCircle,
   Eye,
   Copy,
-//   Settings,
-//   BookOpen,
-//   Target,
+  //   Settings,
+  //   BookOpen,
+  //   Target,
   Percent,
-} from 'lucide-react';
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,7 +76,7 @@ interface EligibilityCriteria {
   entranceExam: boolean;
   examName?: string;
   examScore?: number;
-  status: 'active' | 'inactive' | 'draft';
+  status: "active" | "inactive" | "draft";
   description: string;
   createdAt: string;
   updatedAt: string;
@@ -79,7 +105,7 @@ const dummyEligibilityCriteria: EligibilityCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 250,
-    eligibleApplicants: 180
+    eligibleApplicants: 180,
   },
   {
     id: "EC002",
@@ -100,7 +126,7 @@ const dummyEligibilityCriteria: EligibilityCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 80,
-    eligibleApplicants: 65
+    eligibleApplicants: 65,
   },
   {
     id: "EC003",
@@ -121,7 +147,7 @@ const dummyEligibilityCriteria: EligibilityCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 120,
-    eligibleApplicants: 95
+    eligibleApplicants: 95,
   },
   {
     id: "EC004",
@@ -140,7 +166,7 @@ const dummyEligibilityCriteria: EligibilityCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 180,
-    eligibleApplicants: 150
+    eligibleApplicants: 150,
   },
   {
     id: "EC005",
@@ -159,7 +185,7 @@ const dummyEligibilityCriteria: EligibilityCriteria[] = [
     updatedAt: "2024-07-10T14:20:00",
     createdBy: "Admin User",
     totalApplicants: 95,
-    eligibleApplicants: 78
+    eligibleApplicants: 78,
   },
   {
     id: "EC006",
@@ -180,32 +206,34 @@ const dummyEligibilityCriteria: EligibilityCriteria[] = [
     updatedAt: "2024-07-15T09:00:00",
     createdBy: "Admin User",
     totalApplicants: 45,
-    eligibleApplicants: 32
-  }
+    eligibleApplicants: 32,
+  },
 ];
 
 const statusConfig = {
   active: { label: "Active", variant: "default" as const, icon: CheckCircle },
   inactive: { label: "Inactive", variant: "secondary" as const, icon: XCircle },
-  draft: { label: "Draft", variant: "outline" as const, icon: AlertCircle }
+  draft: { label: "Draft", variant: "outline" as const, icon: AlertCircle },
 };
 
 export default function EligibilityPage() {
   const { year } = useParams<{ year: string }>();
-  const [eligibilityCriteria, setEligibilityCriteria] = useState<EligibilityCriteria[]>(dummyEligibilityCriteria);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [courseFilter, setCourseFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [eligibilityCriteria, setEligibilityCriteria] =
+    useState<EligibilityCriteria[]>(dummyEligibilityCriteria);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [courseFilter, setCourseFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCriteria, setSelectedCriteria] = useState<EligibilityCriteria | null>(null);
 
-  const filteredCriteria = eligibilityCriteria.filter(criteria => {
-    const matchesSearch = criteria.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         criteria.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCourse = courseFilter === 'all' || criteria.course === courseFilter;
-    const matchesStatus = statusFilter === 'all' || criteria.status === statusFilter;
-    
+  const filteredCriteria = eligibilityCriteria.filter((criteria) => {
+    const matchesSearch =
+      criteria.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      criteria.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCourse = courseFilter === "all" || criteria.course === courseFilter;
+    const matchesStatus = statusFilter === "all" || criteria.status === statusFilter;
+
     return matchesSearch && matchesCourse && matchesStatus;
   });
 
@@ -214,64 +242,76 @@ export default function EligibilityPage() {
       title: "Total Criteria",
       value: eligibilityCriteria.length,
       icon: FileText,
-      color: "text-blue-500"
+      color: "text-blue-500",
     },
     {
       title: "Active Criteria",
-      value: eligibilityCriteria.filter(c => c.status === 'active').length,
+      value: eligibilityCriteria.filter((c) => c.status === "active").length,
       icon: CheckCircle,
-      color: "text-green-500"
+      color: "text-green-500",
     },
     {
       title: "Total Applicants",
       value: eligibilityCriteria.reduce((sum, c) => sum + c.totalApplicants, 0),
       icon: Users,
-      color: "text-teal-500"
+      color: "text-teal-500",
     },
     {
       title: "Eligible Rate",
-      value: eligibilityCriteria.length > 0 
-        ? Math.round((eligibilityCriteria.reduce((sum, c) => sum + c.eligibleApplicants, 0) / 
-                      eligibilityCriteria.reduce((sum, c) => sum + c.totalApplicants, 0)) * 100)
-        : 0,
+      value:
+        eligibilityCriteria.length > 0
+          ? Math.round(
+              (eligibilityCriteria.reduce((sum, c) => sum + c.eligibleApplicants, 0) /
+                eligibilityCriteria.reduce((sum, c) => sum + c.totalApplicants, 0)) *
+                100,
+            )
+          : 0,
       icon: Percent,
-      color: "text-purple-500"
-    }
+      color: "text-purple-500",
+    },
   ];
 
-  const courses = Array.from(new Set(eligibilityCriteria.map(c => c.course)));
+  const courses = Array.from(new Set(eligibilityCriteria.map((c) => c.course)));
 
-  const handleAddCriteria = (newCriteria: Omit<EligibilityCriteria, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
+  const handleAddCriteria = (
+    newCriteria: Omit<EligibilityCriteria, "id" | "createdAt" | "updatedAt" | "createdBy">,
+  ) => {
     const criteria: EligibilityCriteria = {
       ...newCriteria,
-      id: `EC${String(eligibilityCriteria.length + 1).padStart(3, '0')}`,
+      id: `EC${String(eligibilityCriteria.length + 1).padStart(3, "0")}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: "Admin User",
       totalApplicants: 0,
-      eligibleApplicants: 0
+      eligibleApplicants: 0,
     };
-    setEligibilityCriteria(prev => [...prev, criteria]);
+    setEligibilityCriteria((prev) => [...prev, criteria]);
     setIsAddDialogOpen(false);
   };
 
   const handleEditCriteria = (updatedCriteria: EligibilityCriteria) => {
-    setEligibilityCriteria(prev => prev.map(c => c.id === updatedCriteria.id ? { ...updatedCriteria, updatedAt: new Date().toISOString() } : c));
+    setEligibilityCriteria((prev) =>
+      prev.map((c) =>
+        c.id === updatedCriteria.id
+          ? { ...updatedCriteria, updatedAt: new Date().toISOString() }
+          : c,
+      ),
+    );
     setIsEditDialogOpen(false);
     setSelectedCriteria(null);
   };
 
   const handleDeleteCriteria = (id: string) => {
-    if (confirm('Are you sure you want to delete this eligibility criteria?')) {
-      setEligibilityCriteria(prev => prev.filter(c => c.id !== id));
+    if (confirm("Are you sure you want to delete this eligibility criteria?")) {
+      setEligibilityCriteria((prev) => prev.filter((c) => c.id !== id));
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
   };
 
@@ -281,7 +321,9 @@ export default function EligibilityPage() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Eligibility Criteria - {year}</h1>
-          <p className="text-gray-600">Manage eligibility requirements for different courses and categories</p>
+          <p className="text-gray-600">
+            Manage eligibility requirements for different courses and categories
+          </p>
         </div>
 
         {/* Stats Cards */}
@@ -328,8 +370,10 @@ export default function EligibilityPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  {courses.map(course => (
-                    <SelectItem key={course} value={course}>{course}</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course} value={course}>
+                      {course}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -359,7 +403,9 @@ export default function EligibilityPage() {
                   <DialogContent className="sm:max-w-2xl max-h-[70vh] flex flex-col">
                     <DialogHeader className="flex-shrink-0 border-b pb-2">
                       <DialogTitle>Add New Eligibility Criteria</DialogTitle>
-                      <DialogDescription>Create new eligibility requirements for a course.</DialogDescription>
+                      <DialogDescription>
+                        Create new eligibility requirements for a course.
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto">
                       <AddEditCriteriaForm onSubmit={handleAddCriteria} />
@@ -410,7 +456,9 @@ export default function EligibilityPage() {
                         <TableCell>
                           <div>
                             <div className="font-medium">{criteria.name}</div>
-                            <div className="text-sm text-gray-500 line-clamp-1">{criteria.description}</div>
+                            <div className="text-sm text-gray-500 line-clamp-1">
+                              {criteria.description}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -438,7 +486,7 @@ export default function EligibilityPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {criteria.categories.map(category => (
+                            {criteria.categories.map((category) => (
                               <Badge key={category} variant="outline" className="text-xs">
                                 {category}
                               </Badge>
@@ -447,11 +495,16 @@ export default function EligibilityPage() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className="font-medium">{criteria.eligibleApplicants}/{criteria.totalApplicants}</div>
+                            <div className="font-medium">
+                              {criteria.eligibleApplicants}/{criteria.totalApplicants}
+                            </div>
                             <div className="text-gray-500">
-                              {criteria.totalApplicants > 0 
-                                ? Math.round((criteria.eligibleApplicants / criteria.totalApplicants) * 100)
-                                : 0}% eligible
+                              {criteria.totalApplicants > 0
+                                ? Math.round(
+                                    (criteria.eligibleApplicants / criteria.totalApplicants) * 100,
+                                  )
+                                : 0}
+                              % eligible
                             </div>
                           </div>
                         </TableCell>
@@ -462,9 +515,7 @@ export default function EligibilityPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            {formatDate(criteria.createdAt)}
-                          </div>
+                          <div className="text-sm">{formatDate(criteria.createdAt)}</div>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -474,10 +525,12 @@ export default function EligibilityPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setSelectedCriteria(criteria);
-                                setIsEditDialogOpen(true);
-                              }}>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedCriteria(criteria);
+                                  setIsEditDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
@@ -514,8 +567,8 @@ export default function EligibilityPage() {
             </DialogHeader>
             <div className="flex-1 overflow-y-auto">
               {selectedCriteria && (
-                <AddEditCriteriaForm 
-                  onSubmit={handleEditCriteria} 
+                <AddEditCriteriaForm
+                  onSubmit={handleEditCriteria}
                   initialData={selectedCriteria}
                   isEdit={true}
                 />
@@ -536,28 +589,37 @@ interface AddEditCriteriaFormProps {
 
 function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditCriteriaFormProps) {
   const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    course: initialData?.course || '',
-    academicYear: initialData?.academicYear || '2024-25',
+    name: initialData?.name || "",
+    course: initialData?.course || "",
+    academicYear: initialData?.academicYear || "2024-25",
     minimumPercentage: initialData?.minimumPercentage || 50,
     requiredSubjects: initialData?.requiredSubjects || [],
     ageLimit: initialData?.ageLimit || { min: 17, max: 25 },
     categorySpecific: initialData?.categorySpecific || false,
     categories: initialData?.categories || [],
     entranceExam: initialData?.entranceExam || false,
-    examName: initialData?.examName || '',
+    examName: initialData?.examName || "",
     examScore: initialData?.examScore || 0,
-    status: initialData?.status || 'draft',
-    description: initialData?.description || ''
+    status: initialData?.status || "draft",
+    description: initialData?.description || "",
   });
 
-  const availableSubjects = ["Physics", "Chemistry", "Mathematics", "Biology", "English", "Computer Science", "Engineering", "Any"];
+  const availableSubjects = [
+    "Physics",
+    "Chemistry",
+    "Mathematics",
+    "Biology",
+    "English",
+    "Computer Science",
+    "Engineering",
+    "Any",
+  ];
   const availableCategories = ["General", "OBC", "SC", "ST", "EWS"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const criteriaData: EligibilityCriteria = {
-      id: initialData?.id || `EC${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+      id: initialData?.id || `EC${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`,
       name: formData.name,
       course: formData.course,
       academicYear: formData.academicYear,
@@ -575,26 +637,26 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
       updatedAt: new Date().toISOString(),
       createdBy: initialData?.createdBy || "Admin User",
       totalApplicants: initialData?.totalApplicants || 0,
-      eligibleApplicants: initialData?.eligibleApplicants || 0
+      eligibleApplicants: initialData?.eligibleApplicants || 0,
     };
     onSubmit(criteriaData);
   };
 
   const handleSubjectToggle = (subject: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       requiredSubjects: prev.requiredSubjects.includes(subject)
-        ? prev.requiredSubjects.filter(s => s !== subject)
-        : [...prev.requiredSubjects, subject]
+        ? prev.requiredSubjects.filter((s) => s !== subject)
+        : [...prev.requiredSubjects, subject],
     }));
   };
 
   const handleCategoryToggle = (category: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       categories: prev.categories.includes(category)
-        ? prev.categories.filter(c => c !== category)
-        : [...prev.categories, category]
+        ? prev.categories.filter((c) => c !== category)
+        : [...prev.categories, category],
     }));
   };
 
@@ -607,14 +669,17 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="e.g., B.Tech General Eligibility"
               required
             />
           </div>
           <div>
             <Label htmlFor="course">Course</Label>
-            <Select value={formData.course} onValueChange={(value) => setFormData(prev => ({ ...prev, course: value }))}>
+            <Select
+              value={formData.course}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, course: value }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select course" />
               </SelectTrigger>
@@ -633,7 +698,9 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
               id="minimumPercentage"
               type="number"
               value={formData.minimumPercentage}
-              onChange={(e) => setFormData(prev => ({ ...prev, minimumPercentage: Number(e.target.value) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, minimumPercentage: Number(e.target.value) }))
+              }
               placeholder="60"
               min="0"
               max="100"
@@ -642,7 +709,12 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
           </div>
           <div>
             <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as EligibilityCriteria['status'] }))}>
+            <Select
+              value={formData.status}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, status: value as EligibilityCriteria["status"] }))
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -659,10 +731,12 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
               id="ageMin"
               type="number"
               value={formData.ageLimit.min}
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                ageLimit: { ...prev.ageLimit, min: Number(e.target.value) }
-              }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  ageLimit: { ...prev.ageLimit, min: Number(e.target.value) },
+                }))
+              }
               placeholder="17"
               min="15"
               max="30"
@@ -675,10 +749,12 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
               id="ageMax"
               type="number"
               value={formData.ageLimit.max}
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                ageLimit: { ...prev.ageLimit, max: Number(e.target.value) }
-              }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  ageLimit: { ...prev.ageLimit, max: Number(e.target.value) },
+                }))
+              }
               placeholder="25"
               min="15"
               max="35"
@@ -690,14 +766,16 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
         <div>
           <Label>Required Subjects</Label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-            {availableSubjects.map(subject => (
+            {availableSubjects.map((subject) => (
               <div key={subject} className="flex items-center space-x-2">
                 <Checkbox
                   id={subject}
                   checked={formData.requiredSubjects.includes(subject)}
                   onCheckedChange={() => handleSubjectToggle(subject)}
                 />
-                <Label htmlFor={subject} className="text-sm">{subject}</Label>
+                <Label htmlFor={subject} className="text-sm">
+                  {subject}
+                </Label>
               </div>
             ))}
           </div>
@@ -706,14 +784,16 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
         <div>
           <Label>Applicable Categories</Label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-            {availableCategories.map(category => (
+            {availableCategories.map((category) => (
               <div key={category} className="flex items-center space-x-2">
                 <Checkbox
                   id={category}
                   checked={formData.categories.includes(category)}
                   onCheckedChange={() => handleCategoryToggle(category)}
                 />
-                <Label htmlFor={category} className="text-sm">{category}</Label>
+                <Label htmlFor={category} className="text-sm">
+                  {category}
+                </Label>
               </div>
             ))}
           </div>
@@ -724,7 +804,9 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
             <Checkbox
               id="entranceExam"
               checked={formData.entranceExam}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, entranceExam: checked as boolean }))}
+              onCheckedChange={(checked) =>
+                setFormData((prev) => ({ ...prev, entranceExam: checked as boolean }))
+              }
             />
             <Label htmlFor="entranceExam">Requires Entrance Exam</Label>
           </div>
@@ -736,7 +818,7 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                 <Input
                   id="examName"
                   value={formData.examName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, examName: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, examName: e.target.value }))}
                   placeholder="e.g., JEE Main"
                 />
               </div>
@@ -746,7 +828,9 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
                   id="examScore"
                   type="number"
                   value={formData.examScore}
-                  onChange={(e) => setFormData(prev => ({ ...prev, examScore: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, examScore: Number(e.target.value) }))
+                  }
                   placeholder="75"
                   min="0"
                   max="100"
@@ -761,16 +845,14 @@ function AddEditCriteriaForm({ onSubmit, initialData, isEdit = false }: AddEditC
           <Textarea
             id="description"
             value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
             placeholder="Describe the eligibility criteria..."
             rows={3}
           />
         </div>
       </div>
       <DialogFooter className="flex-shrink-0 mt-6">
-        <Button type="submit">
-          {isEdit ? 'Update Criteria' : 'Create Criteria'}
-        </Button>
+        <Button type="submit">{isEdit ? "Update Criteria" : "Create Criteria"}</Button>
       </DialogFooter>
     </form>
   );

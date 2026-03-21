@@ -3,7 +3,13 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "@/hooks/useToast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -86,7 +92,11 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
 
       <div className="space-y-2">
         <Label htmlFor="designation-description">Description</Label>
-        <Input id="designation-description" placeholder="Optional description" {...register("description")} />
+        <Input
+          id="designation-description"
+          placeholder="Optional description"
+          {...register("description")}
+        />
       </div>
 
       <div className="flex items-center space-x-2">
@@ -94,7 +104,11 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
           name="isActive"
           control={control}
           render={({ field }) => (
-            <Checkbox id="designation-active" checked={field.value} onCheckedChange={field.onChange} />
+            <Checkbox
+              id="designation-active"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
           )}
         />
         <Label htmlFor="designation-active">Active</Label>
@@ -104,7 +118,11 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </div>
@@ -261,7 +279,9 @@ export default function DesignationPage() {
               </DialogTrigger>
               <DialogContent className="max-w-xl w-[95vw] sm:w-full">
                 <DialogHeader>
-                  <DialogTitle>{selectedDesignation ? "Edit Designation" : "Add Designation"}</DialogTitle>
+                  <DialogTitle>
+                    {selectedDesignation ? "Edit Designation" : "Add Designation"}
+                  </DialogTitle>
                 </DialogHeader>
                 <DesignationForm
                   initialData={selectedDesignation}
@@ -309,7 +329,9 @@ export default function DesignationPage() {
                     <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center w-[14%]">
                       Status
                     </div>
-                    <div className="flex-shrink-0 px-3 py-2 flex items-center justify-center w-[10%]">Actions</div>
+                    <div className="flex-shrink-0 px-3 py-2 flex items-center justify-center w-[10%]">
+                      Actions
+                    </div>
                   </div>
                 </div>
 
@@ -338,20 +360,26 @@ export default function DesignationPage() {
                             {displayIndex}
                           </div>
                           <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center w-[28%] min-w-0">
-                            <span className="font-medium text-slate-800 truncate w-full">{designation.name}</span>
+                            <span className="font-medium text-slate-800 truncate w-full">
+                              {designation.name}
+                            </span>
                           </div>
                           <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center w-[40%] min-w-0">
                             <span
                               className="text-slate-600 truncate w-full"
                               title={designation.description || undefined}
                             >
-                              {designation.description ?? <span className="text-slate-400">No description</span>}
+                              {designation.description ?? (
+                                <span className="text-slate-400">No description</span>
+                              )}
                             </span>
                           </div>
                           <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center w-[14%]">
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                                designation.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                designation.isActive
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
                               }`}
                             >
                               {designation.isActive ? "Active" : "Inactive"}
@@ -397,18 +425,26 @@ export default function DesignationPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs text-muted-foreground font-medium">#{displayIndex}</span>
+                              <span className="text-xs text-muted-foreground font-medium">
+                                #{displayIndex}
+                              </span>
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                  designation.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                  designation.isActive
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
                                 }`}
                               >
                                 {designation.isActive ? "Active" : "Inactive"}
                               </span>
                             </div>
-                            <h3 className="font-semibold text-slate-800 mb-1 truncate">{designation.name}</h3>
+                            <h3 className="font-semibold text-slate-800 mb-1 truncate">
+                              {designation.name}
+                            </h3>
                             <p className="text-sm text-slate-600 line-clamp-2">
-                              {designation.description ?? <span className="text-slate-400">No description</span>}
+                              {designation.description ?? (
+                                <span className="text-slate-400">No description</span>
+                              )}
                             </p>
                           </div>
                           <Button

@@ -22,7 +22,10 @@ import {
 } from "@repo/db/schemas/models/user";
 import { and, inArray, or, ilike, desc, eq } from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
-import { feeStructureModel } from "@repo/db/schemas";
+import {
+  feeStructureModel,
+  feeStructureComponentModel,
+} from "@repo/db/schemas";
 import XLSX from "xlsx";
 import fs from "fs";
 import * as studentService from "@/features/user/services/student.service.js";
@@ -34,7 +37,7 @@ import {
   FeeGroupDto,
   FeeCategoryDto,
 } from "@repo/db/dtos/fees";
-import { PromotionDto } from "@repo/db/dtos/user";
+import { PromotionDto } from "@repo/db/dtos/batches";
 import {
   religionModel,
   categoryModel,
@@ -308,14 +311,14 @@ export const createFeeGroupPromotionMapping = async (
 };
 
 export const getAllFeeGroupPromotionMappings = async (
-  page: number = 10,
+  limit: number = 10000,
 ): Promise<FeeGroupPromotionMappingDto[]> => {
   // Order by id DESC to maintain consistent ordering (updated items stay in place)
   const rows = await db
     .select()
     .from(feeGroupPromotionMappingModel)
     .orderBy(desc(feeGroupPromotionMappingModel.id))
-    .limit(page);
+    .limit(limit);
 
   // Batch fetch fee groups and promotions to reduce queries
   const feeGroupIds = [...new Set(rows.map((r) => r.feeGroupId))];
@@ -371,6 +374,73 @@ export const getAllFeeGroupPromotionMappings = async (
       .map((pd) => [pd.id!, pd]),
   );
 
+  // Batch fetch fee student mappings for payment status and amount to pay
+  const mappingIds = rows
+    .map((r) => r.id)
+    .filter((id): id is number => id != null);
+  const feeStudentMappings =
+    mappingIds.length > 0
+      ? await db
+          .select({
+            feeGroupPromotionMappingId:
+              feeStudentMappingModel.feeGroupPromotionMappingId,
+            totalPayable: feeStudentMappingModel.totalPayable,
+            amountPaid: feeStudentMappingModel.amountPaid,
+            paymentStatus: feeStudentMappingModel.paymentStatus,
+          })
+          .from(feeStudentMappingModel)
+          .where(
+            inArray(
+              feeStudentMappingModel.feeGroupPromotionMappingId,
+              mappingIds,
+            ),
+          )
+      : [];
+
+  const paymentByMappingId = new Map<
+    number,
+    { paymentStatus: "Paid" | "Pending" | "Unpaid"; amountToPay: number }
+  >();
+  for (const mappingId of mappingIds) {
+    const related = feeStudentMappings.filter(
+      (fsm) => fsm.feeGroupPromotionMappingId === mappingId,
+    );
+    const amountToPay = related.reduce(
+      (sum, r) =>
+        sum + Math.max(0, (r.totalPayable || 0) - (r.amountPaid || 0)),
+      0,
+    );
+    let paymentStatus: "Paid" | "Pending" | "Unpaid" = "Pending";
+    if (related.length === 0) {
+      paymentStatus = "Pending";
+    } else if (related.every((r) => r.paymentStatus === "COMPLETED")) {
+      paymentStatus = "Paid";
+    } else if (related.some((r) => r.paymentStatus === "PENDING")) {
+      paymentStatus = "Pending";
+    } else {
+      paymentStatus = "Unpaid";
+    }
+    paymentByMappingId.set(mappingId, { paymentStatus, amountToPay });
+  }
+
+  // Batch fetch updatedBy users for approval details
+  const updatedByUserIds = [
+    ...new Set(
+      rows
+        .map((r) => r.updatedByUserId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const updatedByUsers =
+    updatedByUserIds.length > 0
+      ? await Promise.all(
+          updatedByUserIds.map((id) => userService.findById(id)),
+        )
+      : [];
+  const updatedByUserMap = new Map(
+    updatedByUserIds.map((id, i) => [id, updatedByUsers[i]]),
+  );
+
   // Build DTOs using cached data
   const dtos: FeeGroupPromotionMappingDto[] = [];
   for (const row of rows) {
@@ -384,6 +454,11 @@ export const getAllFeeGroupPromotionMappings = async (
 
     if (!feeCategory || !feeSlab) continue;
 
+    const payment = row.id ? paymentByMappingId.get(row.id) : undefined;
+    const updatedByUser = row.updatedByUserId
+      ? updatedByUserMap.get(row.updatedByUserId)
+      : null;
+
     dtos.push({
       ...row,
       feeGroup: {
@@ -392,6 +467,16 @@ export const getAllFeeGroupPromotionMappings = async (
         feeSlab,
       },
       promotion: promotionDto,
+      paymentStatus: payment?.paymentStatus ?? "Pending",
+      amountToPay: payment?.amountToPay ?? 0,
+      updatedByUser: updatedByUser
+        ? {
+            name: updatedByUser.name || "Unknown",
+            avatarUrl:
+              (updatedByUser as { avatarUrl?: string | null } | null)
+                ?.avatarUrl ?? null,
+          }
+        : null,
     });
   }
 
@@ -453,7 +538,7 @@ export const updateFeeGroupPromotionMapping = async (
     .set({
       ...data,
       updatedAt: new Date(),
-      updatedByUserId: userId,
+      updatedByUserId: data.updatedByUserId ?? userId,
     })
     .where(eq(feeGroupPromotionMappingModel.id, id))
     .returning();
@@ -711,9 +796,17 @@ async function calculateTotalPayable(
 }
 
 export interface BulkUploadRow {
-  UID: string;
-  Semester: string;
-  "Fee Category Name": string;
+  UID?: string;
+  "Student Name"?: string;
+  "Program Course Name"?: string;
+  "Academic Year"?: string;
+  Semester?: string;
+  Shift?: string;
+  "Fee Slab"?: string;
+  "Fee Category"?: string;
+  "Approved By User Email"?: string;
+  "Approved Timestamp"?: string;
+  Remarks?: string;
 }
 
 export interface BulkUploadResult {
@@ -734,319 +827,456 @@ export interface BulkUploadResult {
   }>;
 }
 
+function getRowVal(row: Record<string, unknown>, key: string): string {
+  const entry = Object.entries(row).find(
+    ([k]) => k.trim().toLowerCase() === key.toLowerCase(),
+  );
+  return (entry?.[1] ?? "").toString().trim();
+}
+
 /**
  * Bulk upload fee group promotion mappings from Excel file
- * Excel format: UID, Semester, Fee Category Name
- * TODO: Update to work with fee groups instead of fee categories
+ * Excel format: UID, Student Name, Program Course Name, Academic Year, Semester, Shift,
+ * Fee Slab, Fee Category, Approved By User Email, Approved Timestamp, Remarks (optional)
  */
 export const bulkUploadFeeGroupPromotionMappings = async (
   filePath: string,
   userId: number,
-  uploadSessionId?: string,
+  _uploadSessionId?: string,
 ): Promise<BulkUploadResult> => {
-  const io = socketService.getIO();
+  const progressUserId = userId.toString();
   const result: BulkUploadResult = {
     summary: { total: 0, successful: 0, failed: 0 },
     errors: [],
     success: [],
   };
 
+  const emitProgress = (
+    message: string,
+    progress: number,
+    status: "started" | "in_progress" | "completed" | "error",
+    meta?: Record<string, unknown>,
+  ) => {
+    const update = socketService.createExportProgressUpdate(
+      progressUserId,
+      message,
+      progress,
+      status,
+      undefined,
+      undefined,
+      undefined,
+      {
+        operation: "fee_group_promotion_bulk_upload",
+        ...meta,
+      },
+    );
+    socketService.sendProgressUpdate(progressUserId, update);
+  };
+
   try {
-    // Read Excel file
+    emitProgress("Reading Excel file...", 0, "started");
+
     const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
+    const sheetName = workbook.SheetNames[0] ?? "Sheet1";
     const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json<BulkUploadRow>(worksheet);
+    if (!worksheet) {
+      emitProgress("Failed to read worksheet", 100, "error");
+      throw new Error("Failed to read worksheet from Excel file");
+    }
 
-    result.summary.total = data.length;
+    const rawData =
+      XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+    result.summary.total = rawData.length;
 
-    // Get all fee categories once for lookup
-    const allFeeCategories = await db.select().from(feeCategoryModel);
-    const feeCategoryMap = new Map<string, { id: number }>();
+    if (rawData.length === 0) {
+      emitProgress("Excel file is empty", 100, "error");
+      return result;
+    }
+
+    emitProgress("Loading lookup data...", 5, "in_progress");
+
+    // Pre-load lookup data
+    const [
+      allFeeCategories,
+      allFeeSlabs,
+      allFeeGroups,
+      allProgramCourses,
+      allClasses,
+      allShifts,
+      allAcademicYears,
+    ] = await Promise.all([
+      db.select().from(feeCategoryModel),
+      db.select().from(feeSlabModel),
+      db.select().from(feeGroupModel),
+      db.select().from(programCourseModel),
+      db.select().from(classModel).where(eq(classModel.type, "SEMESTER")),
+      db.select().from(shiftModel),
+      db.select().from(academicYearModel),
+    ]);
+
+    const feeCategoryMap = new Map<string, number>();
     allFeeCategories.forEach((fc) => {
-      if (fc.name) {
-        feeCategoryMap.set(fc.name.toLowerCase().trim(), {
-          id: fc.id!,
-        });
+      if (fc.name) feeCategoryMap.set(fc.name.toLowerCase().trim(), fc.id!);
+    });
+    const feeSlabMap = new Map<string, number>();
+    allFeeSlabs.forEach((fs) => {
+      if (fs.name) feeSlabMap.set(fs.name.toLowerCase().trim(), fs.id!);
+    });
+    const feeGroupMap = new Map<string, number>();
+    allFeeGroups.forEach((fg) => {
+      if (fg.feeCategoryId && fg.feeSlabId && fg.id) {
+        feeGroupMap.set(`${fg.feeCategoryId}:${fg.feeSlabId}`, fg.id);
       }
     });
+    const programCourseMap = new Map<string, number>();
+    allProgramCourses.forEach((pc) => {
+      if (pc.name) programCourseMap.set(pc.name.toLowerCase().trim(), pc.id!);
+    });
+    const classMap = new Map<string, number>();
+    allClasses.forEach((c) => {
+      if (c.name) classMap.set(c.name.toLowerCase().trim(), c.id!);
+    });
+    const shiftMap = new Map<string, number>();
+    allShifts.forEach((s) => {
+      if (s.name) shiftMap.set(s.name.toLowerCase().trim(), s.id!);
+    });
+    const academicYearMap = new Map<string, number>();
+    allAcademicYears.forEach((ay) => {
+      const key = ay.year?.toString().toLowerCase().trim();
+      if (key) academicYearMap.set(key, ay.id!);
+    });
 
-    // Process each row
-    for (let i = 0; i < data.length; i++) {
-      // Emit progress update
-      if (io && uploadSessionId) {
-        io.to(uploadSessionId).emit("bulk-upload-progress", {
-          processed: i,
-          total: data.length,
-          percent: Math.round((i / data.length) * 100),
-        });
+    emitProgress("Validating rows...", 10, "in_progress");
+
+    for (let i = 0; i < rawData.length; i++) {
+      const pct = 10 + Math.round((i / rawData.length) * 85);
+      if (i % 10 === 0 || i === rawData.length - 1) {
+        emitProgress(
+          `Processing row ${i + 1} of ${rawData.length}...`,
+          pct,
+          "in_progress",
+          {
+            processed: i,
+            total: rawData.length,
+          },
+        );
       }
-      const row = data[i];
-      const rowNumber = i + 2; // +2 because Excel is 1-indexed and we skip header
+
+      const row = rawData[i];
+      const rowNumber = i + 2;
+
+      const uid = getRowVal(row, "UID");
+      const programCourseName = getRowVal(row, "Program Course Name");
+      const academicYear = getRowVal(row, "Academic Year");
+      const semester = getRowVal(row, "Semester");
+      const shift = getRowVal(row, "Shift");
+      const feeSlabName = getRowVal(row, "Fee Slab");
+      const feeCategoryName = getRowVal(row, "Fee Category");
+      const approvedByEmail = getRowVal(row, "Approved By User Email");
+
+      const rowData: BulkUploadRow = {
+        UID: uid,
+        "Student Name": getRowVal(row, "Student Name"),
+        "Program Course Name": programCourseName,
+        "Academic Year": academicYear,
+        Semester: semester,
+        Shift: shift,
+        "Fee Slab": feeSlabName,
+        "Fee Category": feeCategoryName,
+        "Approved By User Email": approvedByEmail,
+        "Approved Timestamp": getRowVal(row, "Approved Timestamp"),
+        Remarks: getRowVal(row, "Remarks"),
+      };
+
+      if (
+        !uid ||
+        !programCourseName ||
+        !academicYear ||
+        !semester ||
+        !shift ||
+        !feeSlabName ||
+        !feeCategoryName ||
+        !approvedByEmail
+      ) {
+        const missing = [];
+        if (!uid) missing.push("UID");
+        if (!programCourseName) missing.push("Program Course Name");
+        if (!academicYear) missing.push("Academic Year");
+        if (!semester) missing.push("Semester");
+        if (!shift) missing.push("Shift");
+        if (!feeSlabName) missing.push("Fee Slab");
+        if (!feeCategoryName) missing.push("Fee Category");
+        if (!approvedByEmail) missing.push("Approved By User Email");
+        result.errors.push({
+          row: rowNumber,
+          data: rowData,
+          error: `Missing required fields: ${missing.join(", ")}`,
+        });
+        result.summary.failed++;
+        continue;
+      }
 
       try {
-        // Validate required fields
-        const uid = row.UID?.toString()?.trim();
-        const semester = row.Semester?.toString()?.trim();
-        const feeCategoryName = row["Fee Category Name"]?.toString()?.trim();
-
-        if (!uid || !semester || !feeCategoryName) {
+        // (b) Fee slab and fee category exist
+        const feeSlabId = feeSlabMap.get(feeSlabName.toLowerCase());
+        const feeCategoryId = feeCategoryMap.get(feeCategoryName.toLowerCase());
+        if (!feeSlabId) {
           result.errors.push({
             row: rowNumber,
-            data: row,
-            error:
-              "UID, Semester, and Fee Category Name are required (no blanks allowed)",
+            data: rowData,
+            error: `Fee slab "${feeSlabName}" not found`,
           });
           result.summary.failed++;
           continue;
         }
-
-        // Verify fee category exists
-        const feeCategoryInfo = feeCategoryMap.get(
-          feeCategoryName.toLowerCase(),
-        );
-        if (!feeCategoryInfo) {
+        if (!feeCategoryId) {
           result.errors.push({
             row: rowNumber,
-            data: row,
+            data: rowData,
             error: `Fee category "${feeCategoryName}" not found`,
           });
           result.summary.failed++;
           continue;
         }
-        const feeCategoryId = feeCategoryInfo.id;
 
-        // Get student by UID
+        // (c) Fee slab + fee category combination exists in fee_groups
+        const feeGroupId = feeGroupMap.get(`${feeCategoryId}:${feeSlabId}`);
+        if (!feeGroupId) {
+          result.errors.push({
+            row: rowNumber,
+            data: rowData,
+            error: `No fee group found for fee slab "${feeSlabName}" and fee category "${feeCategoryName}"`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
+        // (e) User exists for approval email
+        const approvedByUser = await userService.findByEmail(approvedByEmail);
+        if (!approvedByUser || !approvedByUser.id) {
+          result.errors.push({
+            row: rowNumber,
+            data: rowData,
+            error: `User with email "${approvedByEmail}" not found`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
+        // (a) Student with uid + program course + semester + shift + academic year exists
+        const programCourseId = programCourseMap.get(
+          programCourseName.toLowerCase(),
+        );
+        const classId = classMap.get(semester.toLowerCase());
+        const shiftId = shiftMap.get(shift.toLowerCase());
+        const academicYearId = academicYearMap.get(academicYear.toLowerCase());
+
+        if (!programCourseId || !classId || !shiftId || !academicYearId) {
+          const missing = [];
+          if (!programCourseId) missing.push("Program Course");
+          if (!classId) missing.push("Semester");
+          if (!shiftId) missing.push("Shift");
+          if (!academicYearId) missing.push("Academic Year");
+          result.errors.push({
+            row: rowNumber,
+            data: rowData,
+            error: `Invalid lookup: ${missing.join(", ")} not found`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
         const student = await studentService.findByUid(uid);
         if (!student || !student.id) {
           result.errors.push({
             row: rowNumber,
-            data: row,
+            data: rowData,
             error: `Student with UID "${uid}" not found`,
           });
           result.summary.failed++;
           continue;
         }
 
-        // Get class by semester name
-        const [foundClass] = await db
-          .select()
-          .from(classModel)
-          .where(
-            and(eq(classModel.name, semester), eq(classModel.type, "SEMESTER")),
-          );
-
-        if (!foundClass || !foundClass.id) {
+        // (a) Promotion: student + program course + semester + shift + academic year
+        const sessionsForYear = await db
+          .select({ id: sessionModel.id })
+          .from(sessionModel)
+          .where(eq(sessionModel.academicYearId, academicYearId));
+        const sessionIds = sessionsForYear.map((s) => s.id);
+        if (sessionIds.length === 0) {
           result.errors.push({
             row: rowNumber,
-            data: row,
-            error: `Class/Semester "${semester}" not found`,
+            data: rowData,
+            error: `No session found for academic year "${academicYear}"`,
           });
           result.summary.failed++;
           continue;
         }
 
-        // Get promotion by studentId and classId
-        const [promotion] = await db
+        const [promotionRecord] = await db
           .select()
           .from(promotionModel)
           .where(
             and(
               eq(promotionModel.studentId, student.id),
-              eq(promotionModel.classId, foundClass.id),
+              eq(promotionModel.programCourseId, programCourseId),
+              eq(promotionModel.classId, classId),
+              eq(promotionModel.shiftId, shiftId),
+              inArray(promotionModel.sessionId, sessionIds),
             ),
           )
           .orderBy(desc(promotionModel.id))
           .limit(1);
 
-        if (!promotion || !promotion.id) {
+        if (!promotionRecord || !promotionRecord.id) {
           result.errors.push({
             row: rowNumber,
-            data: row,
-            error: `No promotion found for student UID "${uid}" in semester "${semester}"`,
+            data: rowData,
+            error: `No promotion found for student UID "${uid}" with program course "${programCourseName}", semester "${semester}", shift "${shift}", academic year "${academicYear}"`,
           });
           result.summary.failed++;
           continue;
         }
 
-        // Check if mapping already exists - if it does, skip creating but still update fee-student-mapping
+        // (d) Fee structure and fee structure component for fee slab exist
+        const [matchingFs] = await db
+          .select({ feeStructureId: feeStructureModel.id })
+          .from(feeStructureModel)
+          .innerJoin(
+            feeStructureComponentModel,
+            and(
+              eq(
+                feeStructureComponentModel.feeStructureId,
+                feeStructureModel.id,
+              ),
+              eq(feeStructureComponentModel.feeSlabId, feeSlabId),
+            ),
+          )
+          .where(
+            and(
+              eq(feeStructureModel.academicYearId, academicYearId),
+              eq(feeStructureModel.programCourseId, programCourseId),
+              eq(feeStructureModel.classId, classId),
+              eq(feeStructureModel.shiftId, shiftId),
+            ),
+          )
+          .limit(1);
+
+        const feeStructureId = matchingFs?.feeStructureId;
+        if (!feeStructureId) {
+          result.errors.push({
+            row: rowNumber,
+            data: rowData,
+            error: `No fee structure with fee slab "${feeSlabName}" found for academic year "${academicYear}", program course "${programCourseName}", semester "${semester}", shift "${shift}"`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
+        // Create or get existing mapping
         const [existingMapping] = await db
           .select()
           .from(feeGroupPromotionMappingModel)
           .where(
             and(
-              eq(feeGroupPromotionMappingModel.promotionId, promotion.id),
-              eq(feeGroupPromotionMappingModel.feeGroupId, feeCategoryId), // TODO: This should be feeGroupId, needs refactoring
+              eq(feeGroupPromotionMappingModel.promotionId, promotionRecord.id),
+              eq(feeGroupPromotionMappingModel.feeGroupId, feeGroupId),
             ),
           );
 
         let createdMappingId: number;
         if (existingMapping) {
-          // Mapping already exists, skip creating but use existing ID for fee-student-mapping update
           createdMappingId = existingMapping.id!;
-          // Don't add to errors, just skip creating
+          await db
+            .update(feeGroupPromotionMappingModel)
+            .set({
+              updatedByUserId: approvedByUser.id,
+              updatedAt: new Date(),
+              remarks: rowData.Remarks || existingMapping.remarks,
+            })
+            .where(eq(feeGroupPromotionMappingModel.id, existingMapping.id));
         } else {
-          // Create fee-group-promotion-mapping
           const [createdMapping] = await db
             .insert(feeGroupPromotionMappingModel)
             .values({
-              feeGroupId: feeCategoryId, // TODO: This is wrong - should find/create feeGroup from feeCategory + feeSlab
-              promotionId: promotion.id,
+              feeGroupId,
+              promotionId: promotionRecord.id,
               createdByUserId: userId,
-              updatedByUserId: userId,
+              updatedByUserId: approvedByUser.id,
+              remarks: rowData.Remarks || null,
             })
             .returning();
 
           if (!createdMapping || !createdMapping.id) {
             result.errors.push({
               row: rowNumber,
-              data: row,
+              data: rowData,
               error: "Failed to create mapping",
             });
             result.summary.failed++;
             continue;
           }
-
           createdMappingId = createdMapping.id;
         }
 
-        // After creating/checking fee-group-promotion-mapping, update fee-student-mapping
-        // Get all fee-group-promotion-mappings for this promotion ID
-        const allMappingsForPromotion = await db
-          .select({
-            id: feeGroupPromotionMappingModel.id,
-            feeGroupId: feeGroupPromotionMappingModel.feeGroupId,
-          })
+        // Update fee-student-mapping
+        const [selectedMappingFull] = await db
+          .select()
           .from(feeGroupPromotionMappingModel)
-          .where(eq(feeGroupPromotionMappingModel.promotionId, promotion.id));
+          .where(eq(feeGroupPromotionMappingModel.id, createdMappingId));
 
-        if (allMappingsForPromotion.length > 0) {
-          // Get fee categories with priorities for these mappings
-          // TODO: Refactor to get feeCategoryIds from feeGroups
-          const feeGroupIds = allMappingsForPromotion.map((m) => m.feeGroupId);
-          // Get fee groups to find fee category IDs
-          const feeGroups = await db
+        if (selectedMappingFull) {
+          const totalPayable = await calculateTotalPayable(
+            feeStructureId,
+            selectedMappingFull,
+          );
+          const [existingFeeStudentMapping] = await db
             .select()
-            .from(feeGroupModel)
-            .where(inArray(feeGroupModel.id, feeGroupIds));
-          const feeCategoryIds = feeGroups.map((fg) => fg.feeCategoryId);
-          // Select the first mapping (since priority field doesn't exist, we'll use the first one)
-          // TODO: Add priority field to feeCategoryModel if priority-based selection is needed
-          const selectedMapping = allMappingsForPromotion[0];
+            .from(feeStudentMappingModel)
+            .where(
+              and(
+                eq(feeStudentMappingModel.studentId, student.id),
+                eq(feeStudentMappingModel.feeStructureId, feeStructureId),
+              ),
+            );
 
-          // Get promotion's session to get academic year for matching fee structures
-          const [promotionSession] = await db
-            .select()
-            .from(sessionModel)
-            .where(eq(sessionModel.id, promotion.sessionId));
-
-          if (
-            promotionSession &&
-            promotionSession.academicYearId !== null &&
-            promotionSession.academicYearId !== undefined
-          ) {
-            // Find fee structures that match this promotion's context
-            const matchingFeeStructures = await db
-              .select()
-              .from(feeStructureModel)
-              .where(
-                and(
-                  eq(
-                    feeStructureModel.academicYearId,
-                    promotionSession.academicYearId!,
-                  ),
-                  eq(feeStructureModel.classId, promotion.classId),
-                  eq(
-                    feeStructureModel.programCourseId,
-                    promotion.programCourseId,
-                  ),
-                  eq(feeStructureModel.shiftId, promotion.shiftId),
+          if (existingFeeStudentMapping) {
+            await db
+              .update(feeStudentMappingModel)
+              .set({
+                feeGroupPromotionMappingId: createdMappingId,
+                totalPayable: Math.max(
+                  0,
+                  totalPayable -
+                    (existingFeeStudentMapping.isWaivedOff
+                      ? existingFeeStudentMapping.waivedOffAmount || 0
+                      : 0),
                 ),
+                updatedAt: new Date(),
+              })
+              .where(
+                eq(feeStudentMappingModel.id, existingFeeStudentMapping.id!),
               );
-
-            // Get the fee group for the selected mapping to calculate totalPayable
-            const [selectedMappingFull] = await db
-              .select()
-              .from(feeGroupPromotionMappingModel)
-              .where(eq(feeGroupPromotionMappingModel.id, selectedMapping.id));
-
-            if (selectedMappingFull) {
-              // Get feeGroup to access feeCategoryId for calculateTotalPayable
-              const [feeGroup] = await db
-                .select()
-                .from(feeGroupModel)
-                .where(eq(feeGroupModel.id, selectedMappingFull.feeGroupId));
-
-              if (feeGroup) {
-                // Update or create fee-student-mapping for each matching fee structure
-                for (const feeStructure of matchingFeeStructures) {
-                  // Calculate total payable based on concession rate
-                  const totalPayable = await calculateTotalPayable(
-                    feeStructure.id!,
-                    selectedMappingFull,
-                  );
-
-                  // Check if fee-student-mapping already exists for this combination
-                  const [existingFeeStudentMapping] = await db
-                    .select()
-                    .from(feeStudentMappingModel)
-                    .where(
-                      and(
-                        eq(feeStudentMappingModel.studentId, student.id),
-                        eq(
-                          feeStudentMappingModel.feeStructureId,
-                          feeStructure.id!,
-                        ),
-                      ),
-                    );
-
-                  if (existingFeeStudentMapping) {
-                    // Update existing mapping. Preserve any student-specific waiver by
-                    // subtracting waivedOffAmount from the newly calculated totalPayable.
-                    await db
-                      .update(feeStudentMappingModel)
-                      .set({
-                        feeGroupPromotionMappingId: selectedMapping.id,
-                        totalPayable: Math.max(
-                          0,
-                          totalPayable -
-                            (existingFeeStudentMapping.isWaivedOff
-                              ? existingFeeStudentMapping.waivedOffAmount || 0
-                              : 0),
-                        ),
-                        updatedAt: new Date(),
-                      })
-                      .where(
-                        eq(
-                          feeStudentMappingModel.id,
-                          existingFeeStudentMapping.id!,
-                        ),
-                      );
-                  } else {
-                    // Create new fee-student-mapping
-                    await db.insert(feeStudentMappingModel).values({
-                      studentId: student.id,
-                      feeStructureId: feeStructure.id!,
-                      feeGroupPromotionMappingId: selectedMapping.id,
-                      totalPayable,
-                    });
-                  }
-                }
-              }
-            }
+          } else {
+            await db.insert(feeStudentMappingModel).values({
+              studentId: student.id,
+              feeStructureId,
+              feeGroupPromotionMappingId: createdMappingId,
+              totalPayable,
+            });
           }
         }
 
         result.success.push({
           row: rowNumber,
-          data: row,
+          data: rowData,
           mappingId: createdMappingId,
         });
         result.summary.successful++;
       } catch (error) {
         result.errors.push({
           row: rowNumber,
-          data: row,
+          data: rowData,
           error:
             error instanceof Error
               ? error.message
@@ -1056,36 +1286,35 @@ export const bulkUploadFeeGroupPromotionMappings = async (
       }
     }
 
-    // Clean up file
     try {
       fs.unlinkSync(filePath);
     } catch (cleanupError) {
       console.error("Failed to delete temporary file:", cleanupError);
     }
 
-    // Emit completion
-    if (io && uploadSessionId) {
-      if (result.summary.failed > 0) {
-        io.to(uploadSessionId).emit("bulk-upload-failed", {
-          errorCount: result.summary.failed,
-          successCount: result.summary.successful,
-        });
-      } else {
-        io.to(uploadSessionId).emit("bulk-upload-done", {
-          successCount: result.summary.successful,
-        });
-      }
-    }
+    const finalStatus = result.summary.failed > 0 ? "completed" : "completed";
+    emitProgress(
+      `Bulk upload completed: ${result.summary.successful} successful, ${result.summary.failed} failed`,
+      100,
+      finalStatus,
+      {
+        successful: result.summary.successful,
+        failed: result.summary.failed,
+      },
+    );
 
     return result;
   } catch (error) {
-    // Clean up file on error
     try {
       fs.unlinkSync(filePath);
     } catch (cleanupError) {
       console.error("Failed to delete temporary file:", cleanupError);
     }
-
+    emitProgress(
+      error instanceof Error ? error.message : "Bulk upload failed",
+      100,
+      "error",
+    );
     throw error;
   }
 };

@@ -47,7 +47,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ year: st
     // Fetch admission for the year
     const admission = await findAdmissionByYear(year);
     if (!admission) {
-      return NextResponse.json({ message: `Admission for year ${year} not found.` }, { status: 404 });
+      return NextResponse.json(
+        { message: `Admission for year ${year} not found.` },
+        { status: 404 },
+      );
     }
 
     // Build filters for applications
@@ -70,7 +73,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ year: st
       searchParams.get("annualIncome") !== "all"
     )
       filters.annualIncome = searchParams.get("annualIncome");
-    if (searchParams.get("gender") && searchParams.get("gender") !== "All" && searchParams.get("gender") !== "all")
+    if (
+      searchParams.get("gender") &&
+      searchParams.get("gender") !== "All" &&
+      searchParams.get("gender") !== "all"
+    )
       filters.gender = searchParams.get("gender");
     if (
       searchParams.get("isGujarati") &&
@@ -84,7 +91,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ year: st
       searchParams.get("formStatus") !== "all"
     )
       filters.formStatus = searchParams.get("formStatus");
-    if (searchParams.get("course") && searchParams.get("course") !== "All" && searchParams.get("course") !== "all")
+    if (
+      searchParams.get("course") &&
+      searchParams.get("course") !== "All" &&
+      searchParams.get("course") !== "all"
+    )
       filters.course = searchParams.get("course");
     if (
       searchParams.get("boardUniversity") &&
@@ -99,7 +110,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ year: st
 
     // Get stats and applications using service functions
     const stats = await getApplicationFormStats(admission.id!);
-    const { applications, totalItems } = await getApplicationFormsByAdmissionId(admission.id!, page, size, filters);
+    const { applications, totalItems } = await getApplicationFormsByAdmissionId(
+      admission.id!,
+      page,
+      size,
+      filters,
+    );
 
     // Add compatibility fields for frontend
     const statsWithCompat = {

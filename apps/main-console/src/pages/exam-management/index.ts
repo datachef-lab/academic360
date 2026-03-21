@@ -4,10 +4,4 @@ import ExamPage from "./ExamPage";
 import MyWorkspacePage from "./MyWorkspace";
 import ReportsPage from "./ReportsPage";
 
-export {
-    CreateExamPage,
-    ExamMaster,
-    MyWorkspacePage,
-    ReportsPage,
-    ExamPage,
-}
+export { CreateExamPage, ExamMaster, MyWorkspacePage, ReportsPage, ExamPage };

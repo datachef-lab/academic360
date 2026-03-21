@@ -1,15 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ExamDto, ExamPapersWithStats, ExamSubjectDto } from "@/dtos";
+import { ExamGroupDto, ExamPapersWithStats, ExamSubjectDto } from "@/dtos";
 import {
   downloadAdmitCardTracking,
-  deleteExamById,
-  fetchExamById,
-  fetchExamCandidatesByExamId,
-  fetchExamPapersStatsByExamId,
-  triggerExamAdmitCardByExamId,
+  // deleteExamById,
+  // fetchExamById,
+  // fetchExamPapersStatsByExamId,
   updateExamSubject,
+  triggerExamAdmitCardByExamGroupId,
+  fetchExamCandidatesByExamIdOrExamGroupId,
 } from "@/services/exam.service";
 
 import { IdCard, Sheet, Trash2, UsersRound, Download, Calendar, AlertTriangle } from "lucide-react";
@@ -44,13 +44,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateExamAdmitCardDates } from "@/services/exam.service";
+import {
+  deleteExamGroupById,
+  fetchExamGroupById,
+  fetchExamGroupPapersStatsByExamId,
+} from "@/services/exam-group.service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ExamPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { examId } = useParams<{ examId: string }>();
-  const [exam, setExam] = useState<ExamDto | null>(null);
-  const [examPapersWithStats, setExamPapersWithStats] = useState<ExamPapersWithStats[]>([]);
+  const { examGroupId } = useParams<{ examGroupId: string }>();
+  const [examGroup, setExamGroup] = useState<ExamGroupDto | null>(null);
+  const [examPapersWithStats, setExamPapersWithStats] = useState<
+    {
+      examId: number;
+      examPapers: ExamPapersWithStats[];
+    }[]
+  >([]);
   const [editSubjectOpen, setEditSubjectOpen] = useState(false);
   const [selectedExamSubject, setSelectedExamSubject] = useState<ExamSubjectDto | null>(null);
   const [admitCardDatesDialogOpen, setAdmitCardDatesDialogOpen] = useState(false);
@@ -60,6 +71,7 @@ export default function ExamPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingExam, setDeletingExam] = useState(false);
   const [sendAdmitCardDialogOpen, setSendAdmitCardDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [exportProgressOpen, setExportProgressOpen] = useState(false);
   const setIsExporting = useState(false)[1];
@@ -68,8 +80,8 @@ export default function ExamPage() {
   const userId = (user?.id ?? "").toString();
 
   const canDeleteExam = (() => {
-    if (!exam?.admitCardStartDownloadDate) return false;
-    const startMs = new Date(exam.admitCardStartDownloadDate).getTime();
+    if (!examGroup?.exams[0]?.admitCardStartDownloadDate) return false;
+    const startMs = new Date(examGroup.exams[0].admitCardStartDownloadDate).getTime();
     if (Number.isNaN(startMs)) return false;
     const cutoffMs = startMs - 24 * 60 * 60 * 1000;
     return Date.now() <= cutoffMs;
@@ -99,22 +111,22 @@ export default function ExamPage() {
 
   // Refetch exam data when it gets updated via socket
   const refetchExamData = useCallback(() => {
-    if (examId) {
-      fetchExamById(Number(examId)).then((data) => {
-        setExam(data);
+    if (examGroupId) {
+      fetchExamGroupById(Number(examGroupId)).then((data) => {
+        setExamGroup(data);
         // Update admit card dates
-        if (data.admitCardStartDownloadDate) {
-          setAdmitCardStartDate(toDatetimeLocal(data.admitCardStartDownloadDate));
+        if (data.exams[0]!.admitCardStartDownloadDate) {
+          setAdmitCardStartDate(toDatetimeLocal(data.exams[0]!.admitCardStartDownloadDate));
         }
-        if (data.admitCardLastDownloadDate) {
-          setAdmitCardEndDate(toDatetimeLocal(data.admitCardLastDownloadDate));
+        if (data.exams[0]!.admitCardLastDownloadDate) {
+          setAdmitCardEndDate(toDatetimeLocal(data.exams[0]!.admitCardLastDownloadDate));
         }
       });
-      fetchExamPapersStatsByExamId(Number(examId)).then((data) => {
+      fetchExamGroupPapersStatsByExamId(Number(examGroupId)).then((data) => {
         setExamPapersWithStats(data);
       });
     }
-  }, [examId]);
+  }, [examGroupId]);
 
   // Listen for exam update events
   useEffect(() => {
@@ -123,7 +135,7 @@ export default function ExamPage() {
     const handleExamUpdated = (data: { examId: number; type: string; message: string }) => {
       console.log("[Exam Page] Exam updated event received:", data);
       // Only refetch if it's this exam
-      if (examId && data.examId === Number(examId)) {
+      if (examGroupId) {
         toast.info("Exam has been updated. Refreshing...", {
           duration: 2000,
         });
@@ -131,10 +143,10 @@ export default function ExamPage() {
       }
     };
 
-    const handleExamDeleted = (data: { examId: number; type: string; message: string }) => {
-      console.log("[Exam Page] Exam deleted event received:", data);
+    const handleExamGroupDeleted = (data: { examId: number; type: string; message: string }) => {
+      console.log("[Exam Page] Exam group deleted event received:", data);
       // If this exam was deleted, navigate back to exams list
-      if (examId && data.examId === Number(examId)) {
+      if (examGroupId) {
         toast.error("This exam has been deleted", {
           duration: 3000,
         });
@@ -143,13 +155,13 @@ export default function ExamPage() {
     };
 
     socket.on("exam_updated", handleExamUpdated);
-    socket.on("exam_deleted", handleExamDeleted);
+    socket.on("exam_group_deleted", handleExamGroupDeleted);
 
     return () => {
       socket.off("exam_updated", handleExamUpdated);
-      socket.off("exam_deleted", handleExamDeleted);
+      socket.off("exam_group_deleted", handleExamGroupDeleted);
     };
-  }, [socket, isConnected, examId, refetchExamData, navigate]);
+  }, [socket, isConnected, examGroupId, refetchExamData, navigate]);
 
   // Helper function to convert Date to datetime-local format
   const toDatetimeLocal = (value: Date | string | null | undefined): string => {
@@ -174,35 +186,49 @@ export default function ExamPage() {
   };
 
   useEffect(() => {
-    if (examId) {
-      fetchExamById(Number(examId)).then((data) => {
-        setExam(data);
-        // Set admit card dates if they exist
-        if (data.admitCardStartDownloadDate) {
-          setAdmitCardStartDate(toDatetimeLocal(data.admitCardStartDownloadDate));
-        }
-        if (data.admitCardLastDownloadDate) {
-          setAdmitCardEndDate(toDatetimeLocal(data.admitCardLastDownloadDate));
-        }
-      });
-      fetchExamPapersStatsByExamId(Number(examId)).then((data) => {
-        console.log("ExamPapersWithStats: ", data);
-        setExamPapersWithStats(data);
-      });
+    if (examGroupId) {
+      setLoading(true);
+      Promise.all([
+        fetchExamGroupById(Number(examGroupId)),
+        fetchExamGroupPapersStatsByExamId(Number(examGroupId)),
+      ])
+        .then(([groupData, statsData]) => {
+          setExamGroup(groupData);
+          // Set admit card dates if they exist
+          if (groupData.exams[0]?.admitCardStartDownloadDate) {
+            setAdmitCardStartDate(toDatetimeLocal(groupData.exams[0]?.admitCardStartDownloadDate));
+          }
+          if (groupData.exams[0]?.admitCardLastDownloadDate) {
+            setAdmitCardEndDate(toDatetimeLocal(groupData.exams[0]?.admitCardLastDownloadDate));
+          }
+          console.log("ExamPapersWithStats: ", statsData);
+          setExamPapersWithStats(statsData);
+        })
+        .catch((error) => {
+          console.error("Error loading exam group:", error);
+          toast.error("Failed to load exam details");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
-  }, [examId]);
+  }, [examGroupId]);
 
   const handleUpdateAdmitCardDates = async () => {
-    if (!examId) return;
+    if (!examGroupId) return;
 
     try {
       setUpdatingDates(true);
-      const updatedExam = await updateExamAdmitCardDates(
-        Number(examId),
-        admitCardStartDate && admitCardStartDate.trim() !== "" ? new Date(admitCardStartDate).toISOString() : null,
-        admitCardEndDate && admitCardEndDate.trim() !== "" ? new Date(admitCardEndDate).toISOString() : null,
+      const updatedExamGroup = await updateExamAdmitCardDates(
+        Number(examGroupId),
+        admitCardStartDate && admitCardStartDate.trim() !== ""
+          ? new Date(admitCardStartDate).toISOString()
+          : null,
+        admitCardEndDate && admitCardEndDate.trim() !== ""
+          ? new Date(admitCardEndDate).toISOString()
+          : null,
       );
-      setExam(updatedExam);
+      setExamGroup(updatedExamGroup);
       setAdmitCardDatesDialogOpen(false);
       toast.success("Admit card dates updated successfully");
     } catch (error) {
@@ -214,60 +240,60 @@ export default function ExamPage() {
   };
 
   const handleDeleteExam = async () => {
-    if (!examId) return;
+    if (!examGroupId) return;
     try {
       setDeletingExam(true);
-      await deleteExamById(Number(examId));
-      toast.success("Exam deleted successfully");
+      await deleteExamGroupById(Number(examGroupId));
+      toast.success("Exam group deleted successfully");
       setDeleteDialogOpen(false);
       navigate("/dashboard/exam-management/exams");
     } catch (error: any) {
-      console.error("Error deleting exam:", error);
-      toast.error(error?.response?.data?.message || "Failed to delete exam");
+      console.error("Error deleting exam group:", error);
+      toast.error(error?.response?.data?.message || "Failed to delete exam group");
     } finally {
       setDeletingExam(false);
     }
   };
 
-  const formatExamDateRange = (examSubjects: ExamSubjectDto[]) => {
-    if (!examSubjects || examSubjects.length === 0) return "-";
+  // const formatExamDateRange = (examSubjects: ExamSubjectDto[]) => {
+  //   if (!examSubjects || examSubjects.length === 0) return "-";
 
-    // Extract and parse dates
-    const dates = examSubjects.map((es) => ({
-      start: new Date(es.startTime),
-      end: new Date(es.endTime),
-    }));
+  //   // Extract and parse dates
+  //   const dates = examSubjects.map((es) => ({
+  //     start: new Date(es.startTime),
+  //     end: new Date(es.endTime),
+  //   }));
 
-    // Find min start and max end
-    const minStart = new Date(Math.min(...dates.map((d) => d.start.getTime())));
-    const maxEnd = new Date(Math.max(...dates.map((d) => d.end.getTime())));
+  //   // Find min start and max end
+  //   const minStart = new Date(Math.min(...dates.map((d) => d.start.getTime())));
+  //   const maxEnd = new Date(Math.max(...dates.map((d) => d.end.getTime())));
 
-    // Format helper: dd/MM/yyyy
-    const formatDate = (date: Date): string => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    };
+  //   // Format helper: dd/MM/yyyy
+  //   const formatDate = (date: Date): string => {
+  //     const day = String(date.getDate()).padStart(2, "0");
+  //     const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+  //     const year = date.getFullYear();
+  //     return `${day}/${month}/${year}`;
+  //   };
 
-    // Check if ALL subjects are on the exact same day (compare date parts only)
-    const allSameDay = dates.every((d) => {
-      return (
-        d.start.getDate() === minStart.getDate() &&
-        d.start.getMonth() === minStart.getMonth() &&
-        d.start.getFullYear() === minStart.getFullYear() &&
-        d.end.getDate() === minStart.getDate() &&
-        d.end.getMonth() === minStart.getMonth() &&
-        d.end.getFullYear() === minStart.getFullYear()
-      );
-    });
+  //   // Check if ALL subjects are on the exact same day (compare date parts only)
+  //   const allSameDay = dates.every((d) => {
+  //     return (
+  //       d.start.getDate() === minStart.getDate() &&
+  //       d.start.getMonth() === minStart.getMonth() &&
+  //       d.start.getFullYear() === minStart.getFullYear() &&
+  //       d.end.getDate() === minStart.getDate() &&
+  //       d.end.getMonth() === minStart.getMonth() &&
+  //       d.end.getFullYear() === minStart.getFullYear()
+  //     );
+  //   });
 
-    if (allSameDay) {
-      return formatDate(minStart); // Show only one date
-    }
+  //   if (allSameDay) {
+  //     return formatDate(minStart); // Show only one date
+  //   }
 
-    return `${formatDate(minStart)} - ${formatDate(maxEnd)}`;
-  };
+  //   return `${formatDate(minStart)} - ${formatDate(maxEnd)}`;
+  // };
 
   const downloadAdmitCard = async () => {
     // // Extract year from academic year string (e.g., "2025-2026" -> 2025)
@@ -288,9 +314,24 @@ export default function ExamPage() {
       createdAt: new Date(),
     });
 
-    const result = await ExportService.downloadExamAdmitCardsbyExamId(
-      Number(examId),
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}.zip`;
+        })()
+      : undefined;
+
+    const result = await ExportService.downloadExamAdmitCardsbyExamGroupId(
+      Number(examGroupId),
       sessionId, // Pass session ID for Socket.IO tracking
+      preferredFileName,
     );
 
     if (result.success && result.data) {
@@ -335,9 +376,24 @@ export default function ExamPage() {
       createdAt: new Date(),
     });
 
-    const result = await ExportService.downloadExamAttendanceSheetsbyExamId(
-      Number(examId),
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}-attendance-dr-sheets.zip`;
+        })()
+      : undefined;
+
+    const result = await ExportService.downloadExamAttendanceSheetsbyExamGroupId(
+      Number(examGroupId),
       sessionId, // Pass session ID for Socket.IO tracking
+      preferredFileName,
     );
 
     if (result.success && result.data) {
@@ -378,8 +434,8 @@ export default function ExamPage() {
       createdAt: new Date(),
     });
 
-    await triggerExamAdmitCardByExamId(
-      Number(examId),
+    await triggerExamAdmitCardByExamGroupId(
+      Number(examGroupId),
       sessionId, // Pass session ID for Socket.IO tracking
     );
 
@@ -420,13 +476,16 @@ export default function ExamPage() {
 
       // Determine if it's a "no admit cards" error
       const isNoAdmitCardsError =
-        errorMessage.toLowerCase().includes("no admit cards") || errorMessage.toLowerCase().includes("not available");
+        errorMessage.toLowerCase().includes("no admit cards") ||
+        errorMessage.toLowerCase().includes("not available");
 
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "export_progress",
-        message: isNoAdmitCardsError ? "No admit cards available for download" : "Download failed due to an error",
+        message: isNoAdmitCardsError
+          ? "No admit cards available for download"
+          : "Download failed due to an error",
         progress: 0,
         status: "error",
         error: errorMessage,
@@ -483,7 +542,9 @@ export default function ExamPage() {
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "export_progress",
-        message: isNoSheetsError ? "No attendance sheets available for download" : "Download failed due to an error",
+        message: isNoSheetsError
+          ? "No attendance sheets available for download"
+          : "Download failed due to an error",
         progress: 0,
         status: "error",
         error: errorMessage,
@@ -535,13 +596,16 @@ export default function ExamPage() {
         rawMessage.includes("not found") ||
         rawMessage.includes("no candidates") ||
         rawMessage.includes("not available");
-      const isEmailError = rawMessage.includes("email") || rawMessage.includes("send") || rawMessage.includes("mail");
+      const isEmailError =
+        rawMessage.includes("email") || rawMessage.includes("send") || rawMessage.includes("mail");
 
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "in_progress",
-        message: isNoAdmitCardsError ? "No admit cards available to send" : "Failed to send admit cards",
+        message: isNoAdmitCardsError
+          ? "No admit cards available to send"
+          : "Failed to send admit cards",
         progress: 0,
         status: "error",
         error: errorMessage,
@@ -573,10 +637,27 @@ export default function ExamPage() {
   };
 
   const handleDownloadAdmitCardTracking = async () => {
-    if (!examId) return;
+    if (!examGroupId) return;
+
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}-admit-card-tracking.xlsx`;
+        })()
+      : undefined;
 
     try {
-      const { downloadUrl, fileName } = await downloadAdmitCardTracking(Number(examId));
+      const { downloadUrl, fileName } = await downloadAdmitCardTracking(
+        Number(examGroupId),
+        preferredFileName,
+      );
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = fileName;
@@ -594,6 +675,7 @@ export default function ExamPage() {
   return (
     <>
       <div className="p-4 pb-24">
+        <p className="pb-2">{loading ? <Skeleton className="h-6 w-64" /> : examGroup?.name}</p>
         {/* Page Header */}
         <div className="border">
           {/* Fixed Header */}
@@ -648,63 +730,37 @@ export default function ExamPage() {
             </div>
           </div>
           {/* {JSON.stringify(exam)} */}
-          {exam && (
-            <div className="border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
-              <div key={exam?.id} className="flex">
-                <div className="flex-shrink-0 p-3 border-r  items-center gap-2 flex flex-col" style={{ width: "15%" }}>
-                  {/* Display exam component names */}
-                  <p>
-                    <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50">
-                      {exam?.examType.name}
-                    </Badge>
-                  </p>
-                  {exam && <p className="text-center">{formatExamDateRange(exam!.examSubjects!)}</p>}
-                </div>
-                <div className="p-3 border-r flex gap-1 flex-col items-center" style={{ width: "45%" }}>
-                  {exam?.examProgramCourses.map((pc, pcIndex) => (
-                    <p>
-                      <Badge
-                        key={`pc-index-${pcIndex}`}
-                        variant="outline"
-                        className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                      >
-                        {pc.programCourse.name}
-                      </Badge>
-                    </p>
-                  ))}
-                </div>
-
+          {loading ? (
+            <div className="border-b" style={{ minWidth: "950px" }}>
+              <div className="flex">
                 <div
-                  className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
+                  className="flex-shrink-0 p-3 border-r flex items-center gap-2 flex-col"
                   style={{ width: "15%" }}
                 >
-                  {exam?.examShifts.map((esh, eshIndex) => (
-                    <p>
-                      <Badge
-                        key={`pc-index-${eshIndex}`}
-                        variant="outline"
-                        className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                      >
-                        {esh.shift.name}
-                      </Badge>
-                    </p>
-                  ))}
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-4 w-20" />
                 </div>
-
-                <div className="flex-shrink-0 p-3 border-r flex flex-col justify-center" style={{ width: "15%" }}>
-                  <div className="text-[11px] leading-4 text-slate-700 space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-semibold text-slate-600 whitespace-nowrap">Start</span>
-                      <span className="text-right whitespace-nowrap">
-                        {formatDate(exam.admitCardStartDownloadDate)} {formatTime(exam.admitCardStartDownloadDate)}
-                      </span>
-                    </div>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-semibold text-slate-600 whitespace-nowrap">End</span>
-                      <span className="text-right whitespace-nowrap">
-                        {formatDate(exam.admitCardLastDownloadDate)} {formatTime(exam.admitCardLastDownloadDate)}
-                      </span>
-                    </div>
+                <div
+                  className="p-3 border-r flex gap-1 flex-col items-center"
+                  style={{ width: "45%" }}
+                >
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+                <div
+                  className="flex-shrink-0 p-3 border-r flex flex-col gap-2 items-center justify-center"
+                  style={{ width: "15%" }}
+                >
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <div
+                  className="flex-shrink-0 p-3 border-r flex flex-col justify-center"
+                  style={{ width: "15%" }}
+                >
+                  <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
                   </div>
                 </div>
                 {/* <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
@@ -732,18 +788,125 @@ export default function ExamPage() {
               ))}
             </div> */}
 
-                <div className="flex-shrink-0 p-3 border-r flex items-center justify-center" style={{ width: "10%" }}>
-                  <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
-                    {exam?.class.name.split(" ")[1]}
-                  </Badge>
+                <div
+                  className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                  style={{ width: "10%" }}
+                >
+                  <Skeleton className="h-4 w-16" />
                 </div>
               </div>
             </div>
+          ) : (
+            examGroup && (
+              <div className="border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
+                <div key={examGroup?.id} className="flex">
+                  <div
+                    className="flex-shrink-0 p-3 border-r  items-center gap-2 flex flex-col"
+                    style={{ width: "15%" }}
+                  >
+                    {/* Display exam component names */}
+                    <p>
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-red-300 text-red-700 bg-red-50"
+                      >
+                        {examGroup?.exams[0]?.examType.name}
+                      </Badge>
+                    </p>
+                    {examGroup && (
+                      <p className="text-center">
+                        {" "}
+                        {new Date(examGroup.examCommencementDate).toLocaleDateString("en")}
+                      </p>
+                    )}
+                  </div>
+                  <div
+                    className="p-3 border-r flex gap-1 flex-col items-center"
+                    style={{ width: "45%" }}
+                  >
+                    {Array.from(
+                      new Map(
+                        examGroup.exams
+                          .flatMap((ep) => ep.examProgramCourses)
+                          .map((pc) => [pc.programCourse.id, pc]),
+                      ).values(),
+                    ).map((pc, index) => (
+                      <p key={`pc-index-${index}`}>
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                        >
+                          {pc.programCourse.name}
+                        </Badge>
+                      </p>
+                    ))}
+                  </div>
+
+                  <div
+                    className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
+                    style={{ width: "15%" }}
+                  >
+                    {Array.from(
+                      new Map(
+                        examGroup.exams
+                          .flatMap((ep) => ep.examShifts)
+                          .map((esh) => [esh.shift.id, esh.shift]),
+                      ).values(),
+                    ).map((shift) => (
+                      <p key={shift.id}>
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                        >
+                          {shift.name}
+                        </Badge>
+                      </p>
+                    ))}
+                  </div>
+
+                  <div
+                    className="flex-shrink-0 p-3 border-r flex flex-col justify-center"
+                    style={{ width: "15%" }}
+                  >
+                    <div className="text-[11px] leading-4 text-slate-700 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-slate-600 whitespace-nowrap">
+                          Start
+                        </span>
+                        <span className="text-right whitespace-nowrap">
+                          {formatDate(examGroup.exams[0]?.admitCardStartDownloadDate)}{" "}
+                          {formatTime(examGroup.exams[0]?.admitCardStartDownloadDate)}
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-slate-600 whitespace-nowrap">End</span>
+                        <span className="text-right whitespace-nowrap">
+                          {formatDate(examGroup.exams[0]?.admitCardLastDownloadDate)}{" "}
+                          {formatTime(examGroup.exams[0]?.admitCardLastDownloadDate)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                    style={{ width: "10%" }}
+                  >
+                    <Badge
+                      variant="outline"
+                      className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                    >
+                      {examGroup.exams?.[0]?.class.name.split(" ")[1]}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            )
           )}
         </div>
 
         {/* Actions Section */}
-        {exam && (
+        {examGroup && (
           <div className="mb-4">
             <div className="flex flex-wrap gap-2 p-3 pl-0">
               <TooltipProvider>
@@ -756,21 +919,29 @@ export default function ExamPage() {
                   <TooltipContent>
                     <div className="space-y-1">
                       <p className="font-semibold">Download Admit Cards</p>
-                      <p className="text-xs text-gray-400">Download all admit cards as a ZIP file</p>
+                      <p className="text-xs text-gray-400">
+                        Download all admit cards as a ZIP file
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={handleDownloadAttendanceSheets} className="p-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadAttendanceSheets}
+                      className="p-2"
+                    >
                       <Sheet className="h-4 w-4" size={21} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     <div className="space-y-1">
                       <p className="font-semibold">Download Attendance Sheets</p>
-                      <p className="text-xs text-gray-400">Download attendance sheets for all exam rooms</p>
+                      <p className="text-xs text-gray-400">
+                        Download attendance sheets for all exam rooms
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -781,10 +952,32 @@ export default function ExamPage() {
                       variant="outline"
                       onClick={async () => {
                         try {
-                          const response = await fetchExamCandidatesByExamId(Number(examId!));
+                          const preferredFileName = examGroup
+                            ? (() => {
+                                const name = (examGroup.name || "exam")
+                                  .replace(/[/\\:*?"<>|]/g, "-")
+                                  .replace(/\s+/g, " ")
+                                  .trim()
+                                  .slice(0, 100);
+                                const date = examGroup.examCommencementDate
+                                  ? new Date(examGroup.examCommencementDate)
+                                      .toISOString()
+                                      .slice(0, 10)
+                                  : "";
+                                return `${name} ${date}-candidates.xlsx`;
+                              })()
+                            : undefined;
+                          const response = await fetchExamCandidatesByExamIdOrExamGroupId(
+                            undefined,
+                            Number(examGroupId!),
+                            preferredFileName,
+                          );
                           ExportService.downloadFile(response.downloadUrl, response.fileName);
                         } catch (error: any) {
-                          toast.error(error?.message || "Failed to download exam candidates. Please try again.");
+                          toast.error(
+                            error?.message ||
+                              "Failed to download exam candidates. Please try again.",
+                          );
                         }
                       }}
                       className="p-2"
@@ -795,7 +988,9 @@ export default function ExamPage() {
                   <TooltipContent>
                     <div className="space-y-1">
                       <p className="font-semibold">Download Students</p>
-                      <p className="text-xs text-gray-400">Export student list for this exam as Excel</p>
+                      <p className="text-xs text-gray-400">
+                        Export student list for this exam as Excel
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -816,7 +1011,11 @@ export default function ExamPage() {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={handleDownloadAdmitCardTracking} className="p-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadAdmitCardTracking}
+                      className="p-2"
+                    >
                       <Download className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -845,7 +1044,9 @@ export default function ExamPage() {
                   <TooltipContent>
                     <div className="space-y-1">
                       <p className="font-semibold">Update Admit Card Dates</p>
-                      <p className="text-xs text-gray-400">Set the date range when students can download admit cards</p>
+                      <p className="text-xs text-gray-400">
+                        Set the date range when students can download admit cards
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -882,11 +1083,14 @@ export default function ExamPage() {
         )}
 
         {/* Content */}
-        {exam && examPapersWithStats && examPapersWithStats.length > 0 ? (
+        {examGroup && examPapersWithStats && examPapersWithStats.length > 0 ? (
           <div className="w-full flex py-4">
             <div className="w-full border">
               {/* Fixed Header */}
-              <div className="sticky top-0 z-50 text-[14px] border-b bg-gray-100" style={{ minWidth: "950px" }}>
+              <div
+                className="sticky top-0 z-50 text-[14px] border-b bg-gray-100"
+                style={{ minWidth: "950px" }}
+              >
                 <div className="flex">
                   <div
                     className="flex-shrink-0 text-gray-500  font-bold p-1 border-r flex items-center justify-center"
@@ -940,20 +1144,25 @@ export default function ExamPage() {
                 </div>
               </div>
 
-              {examPapersWithStats.map((eps, index) => (
-                <ExamPaperRow
-                  key={`eps-${index}`}
-                  exam={exam}
-                  examPapersWithStat={eps}
-                  onEdit={(examSubject) => {
-                    setSelectedExamSubject(examSubject);
-                    setEditSubjectOpen(true);
-                  }}
-                />
-              ))}
+              {/* {JSON.stringify(examPapersWithStats)} */}
+
+              {examPapersWithStats?.map((eps, index) => {
+                const exam = examGroup.exams.find((e) => e.id === eps.examId)!;
+                return eps.examPapers?.map((ep, epIdx) => (
+                  <ExamPaperRow
+                    key={`eps-${index}-ep-${epIdx}`}
+                    exam={exam}
+                    examPapersWithStat={ep}
+                    onEdit={(examSubject) => {
+                      setSelectedExamSubject(examSubject);
+                      setEditSubjectOpen(true);
+                    }}
+                  />
+                ));
+              })}
             </div>
           </div>
-        ) : exam ? (
+        ) : examGroup ? (
           <div className="py-6 text-center text-sm text-slate-600">No paper</div>
         ) : null}
       </div>
@@ -976,15 +1185,17 @@ export default function ExamPage() {
           // 🔥 Save to backend
           const response = await updateExamSubject(updated.id!, updated);
           console.log("updated response from examSubject:", response);
-          // 🔥 Update local state using backend response
-          setExam((prev) => {
-            if (!prev) return prev;
+          const newExams = examGroup?.exams.map((exm) => {
+            if (exm.id !== response.examId) return exm;
 
             return {
-              ...prev,
-              examSubjects: prev.examSubjects.map((es) => (es.id === response.id ? response : es)),
+              ...exm,
+              examSubjects: exm.examSubjects.filter((es) => es.id !== response.id).concat(response),
             };
           });
+
+          // 🔥 Update local state using backend response
+          setExamGroup((prev) => ({ ...prev!, exams: newExams! }));
 
           toast.success("Exam schedule updated");
         }}
@@ -996,7 +1207,8 @@ export default function ExamPage() {
           <DialogHeader>
             <DialogTitle>Update Admit Card Download Dates</DialogTitle>
             <DialogDescription>
-              Set the date range when students can download their admit cards. Leave empty if not applicable.
+              Set the date range when students can download their admit cards. Leave empty if not
+              applicable.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1025,7 +1237,11 @@ export default function ExamPage() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setAdmitCardEndDate(value);
-                  if (value && admitCardStartDate && new Date(value) < new Date(admitCardStartDate)) {
+                  if (
+                    value &&
+                    admitCardStartDate &&
+                    new Date(value) < new Date(admitCardStartDate)
+                  ) {
                     toast.error("End date must be after start date");
                   }
                 }}
@@ -1083,13 +1299,15 @@ export default function ExamPage() {
               </div>
 
               <p className="text-base text-gray-600 mt-4">
-                This process may take several minutes depending on the number of students. You can track the progress in
-                the export dialog.
+                This process may take several minutes depending on the number of students. You can
+                track the progress in the export dialog.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSendAdmitCardDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setSendAdmitCardDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setSendAdmitCardDialogOpen(false);
@@ -1109,8 +1327,11 @@ export default function ExamPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this exam?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the exam and all related data (subjects, rooms, candidates).
-              <span className="block mt-2 text-red-600 font-medium">This action cannot be undone.</span>
+              This will permanently delete the exam and all related data (subjects, rooms,
+              candidates).
+              <span className="block mt-2 text-red-600 font-medium">
+                This action cannot be undone.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

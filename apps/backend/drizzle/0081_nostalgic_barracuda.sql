@@ -36,6 +36,8 @@ CREATE TABLE "user_status_master_level" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
 --> statement-breakpoint
 CREATE TABLE "user_statuses_master" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -55,12 +57,30 @@ CREATE TABLE "user_statuses_master" (
 	CONSTRAINT "user_statuses_master_enrollmentStatus_unique" UNIQUE("enrollment_status")
 );
 --> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_user_status_master_id_fk_user_statuses_master_id_fk" FOREIGN KEY ("user_status_master_id_fk") REFERENCES "public"."user_statuses_master"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_user_id_fk_users_id_fk" FOREIGN KEY ("user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_staff_id_fk_staffs_id_fk" FOREIGN KEY ("staff_id_fk") REFERENCES "public"."staffs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_promotion_id_fk_promotions_id_fk" FOREIGN KEY ("promotion_id_fk") REFERENCES "public"."promotions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_by_user_id_fk_users_id_fk" FOREIGN KEY ("by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_user_status_master_id_fk_user_statuses_master_id_fk" FOREIGN KEY ("user_status_master_id_fk") REFERENCES "public"."user_statuses_master"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_user_id_fk_users_id_fk" FOREIGN KEY ("user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_staff_id_fk_staffs_id_fk" FOREIGN KEY ("staff_id_fk") REFERENCES "public"."staffs"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_promotion_id_fk_promotions_id_fk" FOREIGN KEY ("promotion_id_fk") REFERENCES "public"."promotions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_by_user_id_fk_users_id_fk" FOREIGN KEY ("by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
 ALTER TABLE "user_statuses_master_domain" ADD CONSTRAINT "user_statuses_master_domain_user_status_master_id_fk_user_statuses_master_id_fk" FOREIGN KEY ("user_status_master_id_fk") REFERENCES "public"."user_statuses_master"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_status_master_frequency" ADD CONSTRAINT "user_status_master_frequency_user_status_master_id_fk_user_statuses_master_id_fk" FOREIGN KEY ("user_status_master_id_fk") REFERENCES "public"."user_statuses_master"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_status_master_level" ADD CONSTRAINT "user_status_master_level_user_status_master_id_fk_user_statuses_master_id_fk" FOREIGN KEY ("user_status_master_id_fk") REFERENCES "public"."user_statuses_master"("id") ON DELETE no action ON UPDATE no action;

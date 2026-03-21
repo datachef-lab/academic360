@@ -100,7 +100,12 @@ const CoursesSubjectsMaster = () => {
     <div className="flex flex-col justify-between gap-4 py-3 h-full">
       <ul>
         {nestedHomeLinks.map((link) => (
-          <NavItem key={link.url} href={link.url} icon={<link.icon />} isActive={currentPath === link.url}>
+          <NavItem
+            key={link.url}
+            href={link.url}
+            icon={<link.icon />}
+            isActive={currentPath === link.url}
+          >
             {link.title}
           </NavItem>
         ))}
@@ -109,7 +114,12 @@ const CoursesSubjectsMaster = () => {
         <h3 className="text-lg mx-4 mb-1 font-bold border-b">Masters</h3>
         <ul>
           {masterLinks.map((link) => (
-            <NavItem key={link.url} href={link.url} icon={<link.icon />} isActive={currentPath.startsWith(link.url)}>
+            <NavItem
+              key={link.url}
+              href={link.url}
+              icon={<link.icon />}
+              isActive={currentPath.startsWith(link.url)}
+            >
               {link.title}
             </NavItem>
           ))}

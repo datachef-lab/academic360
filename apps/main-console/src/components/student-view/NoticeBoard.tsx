@@ -41,15 +41,9 @@ const NoticeBoard: React.FC = () => {
           key={index}
           className="bg-white p-4 sm:p-6 rounded-lg shadow-lg border-l-4 border-blue-500 space-y-2"
         >
-          <h3 className="text-lg sm:text-xl font-bold text-blue-700">
-            {notice.title}
-          </h3>
-          <p className="text-sm sm:text-base text-gray-700">
-            {notice.description}
-          </p>
-          <p className="text-xs sm:text-sm text-gray-500 text-right">
-            {notice.date}
-          </p>
+          <h3 className="text-lg sm:text-xl font-bold text-blue-700">{notice.title}</h3>
+          <p className="text-sm sm:text-base text-gray-700">{notice.description}</p>
+          <p className="text-xs sm:text-sm text-gray-500 text-right">{notice.date}</p>
         </div>
       ))}
     </div>

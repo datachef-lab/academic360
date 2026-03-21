@@ -1,16 +1,15 @@
-import { z } from "zod";
-import { integer, pgTable, serial, varchar } from "drizzle-orm/pg-core";
-import { boolean, timestamp } from "drizzle-orm/pg-core";
+import { boolean, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import z from "zod";
 
 export const designationModel = pgTable("designations", {
     id: serial().primaryKey(),
-    legacyDesignationId: integer(),
-    name: varchar({ length: 900 }).notNull().unique(),
-    description: varchar({ length: 2000 }),
-    isActive: boolean().default(true),
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
+    name: varchar({ length: 255 }).notNull().unique(),
+    description: varchar({ length: 500 }),
+    code: varchar({ length: 255 }),
+    isActive: boolean().default(false).notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date())
 });
 
 export const createDesignationSchema = createInsertSchema(designationModel);

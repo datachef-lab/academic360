@@ -80,6 +80,8 @@ export const selectCurrentAcademicYear = (state: { academicYear: AcademicYearSta
 export const selectAvailableAcademicYears = (state: { academicYear: AcademicYearState }) =>
   state.academicYear.availableAcademicYears;
 
-export const selectAcademicYearLoading = (state: { academicYear: AcademicYearState }) => state.academicYear.loading;
+export const selectAcademicYearLoading = (state: { academicYear: AcademicYearState }) =>
+  state.academicYear.loading;
 
-export const selectAcademicYearError = (state: { academicYear: AcademicYearState }) => state.academicYear.error;
+export const selectAcademicYearError = (state: { academicYear: AcademicYearState }) =>
+  state.academicYear.error;

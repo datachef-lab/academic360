@@ -26,7 +26,12 @@ interface AffiliationFormProps {
   isLoading?: boolean;
 }
 
-export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = false }: AffiliationFormProps) {
+export function AffiliationForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+}: AffiliationFormProps) {
   const isEdit = !!initialData;
 
   const form = useForm<AffiliationFormValues>({
@@ -97,7 +102,12 @@ export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = f
             <FormControl>
               <div className="space-y-2">
                 <FormLabel>Short Name</FormLabel>
-                <Input placeholder="Enter short name" {...field} value={field.value ?? ""} disabled={isLoading} />
+                <Input
+                  placeholder="Enter short name"
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={isLoading}
+                />
                 <FormMessage />
               </div>
             </FormControl>
@@ -132,7 +142,12 @@ export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = f
             <FormControl>
               <div className="space-y-2">
                 <FormLabel>Remarks</FormLabel>
-                <Textarea placeholder="Enter remarks" {...field} value={field.value ?? ""} disabled={isLoading} />
+                <Textarea
+                  placeholder="Enter remarks"
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={isLoading}
+                />
                 <FormMessage />
               </div>
             </FormControl>
@@ -149,7 +164,11 @@ export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = f
                   name="isActive"
                   control={form.control}
                   render={({ field }) => (
-                    <Checkbox checked={!!field.value} onCheckedChange={field.onChange} disabled={isLoading} />
+                    <Checkbox
+                      checked={!!field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isLoading}
+                    />
                   )}
                 />
                 <FormLabel className="text-sm font-normal">Active</FormLabel>

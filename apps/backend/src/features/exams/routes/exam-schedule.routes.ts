@@ -59,7 +59,7 @@ router.post(
 
 router.put("/exam-subject", verifyJWT, updateExamSubjectHandler);
 router.put(
-  "/:examId/admit-card-dates",
+  "/:examGroupId/admit-card-dates",
   verifyJWT,
   updateExamAdmitCardDatesController,
 );
@@ -88,6 +88,7 @@ router.get("/", getAllExamsController);
 router.get("/admit-card/download/single", downloadSingleAdmitCardController);
 router.get("/candidates", getExamCandiatesByStudentIdAndExamIdController);
 router.get("/exam-papers/:id", getExamPapersByExamIdController);
+
 /**
  * Get paginated exams for a student
  */

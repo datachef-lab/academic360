@@ -41,7 +41,9 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
   const disablePastDates = (current: dayjs.Dayjs) => current && current < dayjs().startOf("day");
 
   // State for installments toggle
-  const hasInstallments = Boolean(feesStructure.numberOfInstalments && feesStructure.numberOfInstalments === 2);
+  const hasInstallments = Boolean(
+    feesStructure.numberOfInstalments && feesStructure.numberOfInstalments === 2,
+  );
 
   // Handler for installments toggle
   const handleInstallmentsToggle = (checked: boolean) => {
@@ -124,17 +126,29 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
   // };
 
   // Calculate total base amount from fees configuration
-  const totalBaseAmount = (feesStructure.components || []).reduce((sum, c) => sum + (c.baseAmount || 0), 0);
-  const totalInstalmentAmount = (feesStructure.instalments || []).reduce((sum, i) => sum + (i.baseAmount || 0), 0);
+  const totalBaseAmount = (feesStructure.components || []).reduce(
+    (sum, c) => sum + (c.baseAmount || 0),
+    0,
+  );
+  const totalInstalmentAmount = (feesStructure.instalments || []).reduce(
+    (sum, i) => sum + (i.baseAmount || 0),
+    0,
+  );
   const showInstalmentWarning = hasInstallments && totalBaseAmount !== totalInstalmentAmount;
 
   // Smart auto-fill for 2 installments
-  const handleSmartInstalmentAmount = (index: number, value: string | number | null | undefined) => {
-    if (!hasInstallments || !feesStructure.instalments) return handleInstalmentChange(index, "baseAmount", value);
+  const handleSmartInstalmentAmount = (
+    index: number,
+    value: string | number | null | undefined,
+  ) => {
+    if (!hasInstallments || !feesStructure.instalments)
+      return handleInstalmentChange(index, "baseAmount", value);
     // Prevent non-numeric input and leading zeros
-    let numericValue = typeof value === "string" ? value.replace(/[^0-9]/g, "").replace(/^0+(?!$)/, "") : value;
+    let numericValue =
+      typeof value === "string" ? value.replace(/[^0-9]/g, "").replace(/^0+(?!$)/, "") : value;
     // If empty, treat as zero
-    if (numericValue === "" || numericValue === null || numericValue === undefined) numericValue = 0;
+    if (numericValue === "" || numericValue === null || numericValue === undefined)
+      numericValue = 0;
     numericValue = Number(numericValue) || 0;
     // (No clamping here, allow unknown value)
     const newInstalments = [...feesStructure.instalments];
@@ -170,7 +184,9 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Fee Collection Start</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Fee Collection Start
+          </label>
           <DatePicker
             value={feesStructure.startDate ? dayjs(feesStructure.startDate) : null}
             onChange={(date) =>
@@ -241,7 +257,9 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
             )}
           </div>
           <Table
-            dataSource={feesStructure.instalments?.map((inst, idx) => ({ ...inst, key: idx })) || []}
+            dataSource={
+              feesStructure.instalments?.map((inst, idx) => ({ ...inst, key: idx })) || []
+            }
             pagination={false}
             bordered
             size="small"
@@ -279,7 +297,9 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
                           handleSmartInstalmentAmount(idx, v);
                         }}
                         stringMode={false}
-                        parser={(value: string | undefined) => Number(value ? value.replace(/[^0-9]/g, "") : "0")}
+                        parser={(value: string | undefined) =>
+                          Number(value ? value.replace(/[^0-9]/g, "") : "0")
+                        }
                         className="w-full"
                         inputMode="numeric"
                         maxLength={maxLength}
@@ -295,7 +315,9 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
                 render: (val: Date, _row: unknown, idx: number) => (
                   <DatePicker
                     value={val ? dayjs(val) : null}
-                    onChange={(date) => handleInstalmentChange(idx, "startDate", date ? date.toDate() : null)}
+                    onChange={(date) =>
+                      handleInstalmentChange(idx, "startDate", date ? date.toDate() : null)
+                    }
                     disabledDate={disablePastDates}
                   />
                 ),
@@ -307,7 +329,9 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
                 render: (val: Date, _row: unknown, idx: number) => (
                   <DatePicker
                     value={val ? dayjs(val) : null}
-                    onChange={(date) => handleInstalmentChange(idx, "endDate", date ? date.toDate() : null)}
+                    onChange={(date) =>
+                      handleInstalmentChange(idx, "endDate", date ? date.toDate() : null)
+                    }
                     disabledDate={disablePastDates}
                   />
                 ),
@@ -319,7 +343,9 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
                 render: (val: Date, _row: unknown, idx: number) => (
                   <DatePicker
                     value={val ? dayjs(val) : null}
-                    onChange={(date) => handleInstalmentChange(idx, "onlineStartDate", date ? date.toDate() : null)}
+                    onChange={(date) =>
+                      handleInstalmentChange(idx, "onlineStartDate", date ? date.toDate() : null)
+                    }
                     disabledDate={disablePastDates}
                   />
                 ),
@@ -331,7 +357,9 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
                 render: (val: Date, _row: unknown, idx: number) => (
                   <DatePicker
                     value={val ? dayjs(val) : null}
-                    onChange={(date) => handleInstalmentChange(idx, "onlineEndDate", date ? date.toDate() : null)}
+                    onChange={(date) =>
+                      handleInstalmentChange(idx, "onlineEndDate", date ? date.toDate() : null)
+                    }
                     disabledDate={disablePastDates}
                   />
                 ),
@@ -340,7 +368,8 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
           />
           {showInstalmentWarning && (
             <div className="mt-2 text-red-600 font-medium">
-              The sum of all installment base amounts must equal the total base amount set in Fee Configuration (₹
+              The sum of all installment base amounts must equal the total base amount set in Fee
+              Configuration (₹
               {totalBaseAmount}).
             </div>
           )}

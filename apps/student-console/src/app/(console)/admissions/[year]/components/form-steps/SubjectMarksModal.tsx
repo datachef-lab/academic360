@@ -2,14 +2,27 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StudentAcademicSubject, subjectStatus } from "@/db/schema";
 import { useState, useEffect, useRef } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // Work around strict shadcn typings
@@ -103,7 +116,11 @@ export default function SubjectMarksModal({
     } else if (field === "academicSubjectId") {
       (newSubjects[index][field] as any) = parseInt(value); // Store as number
     } else if (field === "resultStatus") {
-      (newSubjects[index][field] as any) = value as "PASS" | "FAIL" | "FAIL IN THEORY" | "FAIL IN PRACTICAL"; // Type assertion
+      (newSubjects[index][field] as any) = value as
+        | "PASS"
+        | "FAIL"
+        | "FAIL IN THEORY"
+        | "FAIL IN PRACTICAL"; // Type assertion
     } else {
       (newSubjects[index][field] as any) = value;
     }
@@ -130,7 +147,8 @@ export default function SubjectMarksModal({
     for (const subject of subjects) {
       if (!subject.academicSubjectId || subject.academicSubjectId === 0) return false;
       if (!subject.fullMarks || subject.fullMarks === "" || subject.fullMarks === "0") return false;
-      if (!subject.totalMarks || subject.totalMarks === "" || subject.totalMarks === "0") return false;
+      if (!subject.totalMarks || subject.totalMarks === "" || subject.totalMarks === "0")
+        return false;
       if (seenSubjects.has(subject.academicSubjectId)) return false;
       seenSubjects.add(subject.academicSubjectId);
     }
@@ -145,23 +163,29 @@ export default function SubjectMarksModal({
           <p className="font-semibold mb-2">Please Note:</p>
           <ol className="list-decimal list-inside space-y-1">
             <li>Please enter all Subjects Marks as per Class XII Board MarkSheet</li>
-            <li>For Example : If you have Five Subjects then Marks of Five Subjects have to be Entered.</li>
             <li>
-              Applicants with theory and practical division of marks, need to add the marks before entering but select
-              the subject result status as per the marksheet only, as applicable.
+              For Example : If you have Five Subjects then Marks of Five Subjects have to be
+              Entered.
             </li>
             <li>
-              Marks entered with "Subject Result Status" as "Fail / Fail in Theory / Fail in Practical" will not be
-              considered for calculation of BO4.
+              Applicants with theory and practical division of marks, need to add the marks before
+              entering but select the subject result status as per the marksheet only, as
+              applicable.
+            </li>
+            <li>
+              Marks entered with "Subject Result Status" as "Fail / Fail in Theory / Fail in
+              Practical" will not be considered for calculation of BO4.
             </li>
             <li>English Marks must be Entered.</li>
             <li>
-              For students, who have studied more than 1 (One) English subject with 100 marks each, they can select
-              "Additional English" in row no. 2 & give their 2nd English subject marks.
+              For students, who have studied more than 1 (One) English subject with 100 marks each,
+              they can select "Additional English" in row no. 2 & give their 2nd English subject
+              marks.
             </li>
             <li>Please do not Enter SUPW / SUPW & Community Services Marks / Grade.</li>
             <li>
-              In case if you cannot find your subject in the dropdown, please mail us your scanned copy of marksheet at{" "}
+              In case if you cannot find your subject in the dropdown, please mail us your scanned
+              copy of marksheet at{" "}
               <a href="mailto:admission@thebges.edu.in" className="underline text-blue-600">
                 admission@thebges.edu.in
               </a>
@@ -240,7 +264,10 @@ export default function SubjectMarksModal({
                                 <CommandGroup>
                                   {(academicSubjects || [])
                                     .filter(
-                                      (sub) => !subjects.some((s, i) => i !== index && s.academicSubjectId === sub.id),
+                                      (sub) =>
+                                        !subjects.some(
+                                          (s, i) => i !== index && s.academicSubjectId === sub.id,
+                                        ),
                                     )
                                     .map((sub) => (
                                       <CommandItem
@@ -253,7 +280,9 @@ export default function SubjectMarksModal({
                                         <Check
                                           className={cn(
                                             "mr-2 h-4 w-4",
-                                            subject.academicSubjectId === sub.id ? "opacity-100" : "opacity-0",
+                                            subject.academicSubjectId === sub.id
+                                              ? "opacity-100"
+                                              : "opacity-0",
                                           )}
                                         />
                                         {sub.name}
@@ -291,7 +320,11 @@ export default function SubjectMarksModal({
                           </SelectTriggerFixed>
                           <SelectContentFixed>
                             {subjectStatus.enumValues.map((value) => (
-                              <SelectItemFixed key={value} value={value} className="text-xs sm:text-sm">
+                              <SelectItemFixed
+                                key={value}
+                                value={value}
+                                className="text-xs sm:text-sm"
+                              >
                                 {value}
                               </SelectItemFixed>
                             ))}

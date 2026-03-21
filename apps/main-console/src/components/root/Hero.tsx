@@ -8,10 +8,9 @@ export const Hero = () => {
             academic360
           </h1>
           <p className="mt-6 text-lg leading-8 text-gray-600">
-            Introducing our innovative StudentGuard Management System, the
-            ultimate solution for managing student data securely. In today's
-            fast-paced educational environment, student information security and
-            seamless data management are more important than ever.
+            Introducing our innovative StudentGuard Management System, the ultimate solution for
+            managing student data securely. In today's fast-paced educational environment, student
+            information security and seamless data management are more important than ever.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <a
@@ -20,10 +19,7 @@ export const Hero = () => {
             >
               Get Started
             </a>
-            <a
-              href="#"
-              className="text-sm font-semibold leading-6 text-gray-900"
-            >
+            <a href="#" className="text-sm font-semibold leading-6 text-gray-900">
               Learn More
               <span>→</span>
             </a>

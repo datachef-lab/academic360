@@ -1,7 +1,7 @@
 import { AcademicYearT, ClassT, FeeCategoryT,  FeeHeadT, FeeStructureComponentT, FeeStructureInstallmentT, FeeStructureT, FeeStudentMappingT, ReceiptTypeT, Shift } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
-import { PromotionDto, UserDto } from "../user";
-
+import { PromotionDto  } from "../batches/index";
+import {UserDto } from "../user/index";
 import { FeeSlabT } from "@/schemas/models/fees/fee-slab.model";
 import { FeeGroupT } from "@/schemas/models/fees/fee-group.model";
 import { FeeGroupPromotionMappingT } from "@/schemas/models/fees/fee-group-promotion-mapping.model";
@@ -50,6 +50,12 @@ export interface FeeGroupDto extends Omit<FeeGroupT, "feeCategoryId" | "feeSlabI
 export interface FeeGroupPromotionMappingDto extends Omit<FeeGroupPromotionMappingT, "feeGroupId" | "promotionId"> {
     feeGroup: FeeGroupDto;
     promotion: PromotionDto;
+    /** Aggregated from related fee_student_mappings. "Paid" | "Pending" | "Unpaid" */
+    paymentStatus?: "Paid" | "Pending" | "Unpaid";
+    /** Sum of (totalPayable - amountPaid) from related fee_student_mappings */
+    amountToPay?: number;
+    /** For approval details in edit dialog */
+    updatedByUser?: { name: string; avatarUrl?: string | null } | null;
 }
 
 export interface FeeStudentMappingDto extends Omit<FeeStudentMappingT, 

@@ -137,7 +137,11 @@ export default function LoginScreen() {
 
         const email = `${stored}@thebges.edu.in`;
         const response = await checkOtpStatus(email);
-        if (response.httpStatusCode === 200 && response.payload?.hasValidOtp && response.payload?.expiresAt) {
+        if (
+          response.httpStatusCode === 200 &&
+          response.payload?.hasValidOtp &&
+          response.payload?.expiresAt
+        ) {
           const now = Date.now();
           const expiryTime = new Date(response.payload.expiresAt).getTime();
           const remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
@@ -409,7 +413,11 @@ export default function LoginScreen() {
   return (
     <>
       <StatusBar style="light" />
-      <SafeAreaView edges={["top", "bottom"]} className="flex-1" style={{ backgroundColor: bgColor }}>
+      <SafeAreaView
+        edges={["top", "bottom"]}
+        className="flex-1"
+        style={{ backgroundColor: bgColor }}
+      >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           className="flex-1"
@@ -463,7 +471,9 @@ export default function LoginScreen() {
                   {otpSent ? "Enter OTP" : "Sign in with UID"}
                 </Text>
                 <Text style={{ color: textSecondaryColor }} className="text-base text-center mt-2">
-                  {otpSent ? `OTP sent to ${digits}@thebges.edu.in` : "Enter your 10-digit UID to receive OTP"}
+                  {otpSent
+                    ? `OTP sent to ${digits}@thebges.edu.in`
+                    : "Enter your 10-digit UID to receive OTP"}
                 </Text>
               </View>
 
@@ -513,7 +523,9 @@ export default function LoginScreen() {
                             ref={otpInputRefs[index]}
                             value={digit}
                             onChangeText={(value) => handleOtpChange(index, value)}
-                            onKeyPress={({ nativeEvent }) => handleOtpKeyPress(index, nativeEvent.key)}
+                            onKeyPress={({ nativeEvent }) =>
+                              handleOtpKeyPress(index, nativeEvent.key)
+                            }
                             placeholder=""
                             placeholderTextColor={textSecondaryColor}
                             keyboardType="number-pad"
@@ -535,7 +547,10 @@ export default function LoginScreen() {
                         ))}
                       </View>
                       {otpExpiry > 0 && (
-                        <Text style={{ color: textSecondaryColor }} className="text-xs text-center mt-2">
+                        <Text
+                          style={{ color: textSecondaryColor }}
+                          className="text-xs text-center mt-2"
+                        >
                           OTP expires in {formatTime(otpExpiry)}
                         </Text>
                       )}
@@ -645,7 +660,10 @@ export default function LoginScreen() {
                       {lookupPending ? (
                         <View className="flex-row items-center justify-center">
                           <ActivityIndicator size="small" color={accentColor} />
-                          <Text style={{ color: textSecondaryColor }} className="text-sm text-center ml-2">
+                          <Text
+                            style={{ color: textSecondaryColor }}
+                            className="text-sm text-center ml-2"
+                          >
                             Looking up user...
                           </Text>
                         </View>
@@ -654,13 +672,18 @@ export default function LoginScreen() {
                           <Text style={{ color: textColor }} className="font-semibold text-center">
                             {userPreview.name.toUpperCase()}
                           </Text>
-                          <Text style={{ color: textSecondaryColor }} className="text-xs text-center mt-1">
+                          <Text
+                            style={{ color: textSecondaryColor }}
+                            className="text-xs text-center mt-1"
+                          >
                             OTP will be sent to {userPreview.email}
                           </Text>
                         </View>
                       ) : (
                         <Text style={{ color: textSecondaryColor }} className="text-sm text-center">
-                          {digits.length === 10 ? "User not found or network error" : "Waiting for you to enter UID"}
+                          {digits.length === 10
+                            ? "User not found or network error"
+                            : "Waiting for you to enter UID"}
                         </Text>
                       )}
                     </View>

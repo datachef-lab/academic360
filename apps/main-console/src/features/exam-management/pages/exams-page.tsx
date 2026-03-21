@@ -1,15 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { FileText, Edit, Filter, X } from "lucide-react";
+import { FileText, Edit, Filter, X, Loader2 } from "lucide-react";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-
 // import { PaperEditModal } from "./paper-edit-modal";
 // import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 // import { toast } from "sonner";
@@ -45,18 +56,14 @@ import type {
   //   ProgramCourse,
   //   Course,
   //   CourseType,
-  ExamDto,
-  ExamProgramCourseDto,
-  ExamShiftDto,
-  ExamSubjectDto,
-  ExamSubjectTypeDto,
+  ExamGroupDto,
 } from "@repo/db/index";
 // import { Class } from "@/types/academics/class";
 // import { AxiosError } from "axios";
 // import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
 // import { useAcademicYear } from "@/hooks/useAcademicYear";
 // import { PaperEditModal } from "@/pages/courses-subjects-design/subject-paper-mapping/paper-edit-modal";
-import { fetchExams, type ExamFilters } from "@/services/exam.service";
+import { fetchExamGroups, type ExamFilters } from "@/services/exam.service";
 import { getAllExamTypes, type ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
 import { getAffiliations, getRegulationTypes } from "@/services/course-design.api";
@@ -147,8 +154,8 @@ const ExamsPage = () => {
   //   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   //   const setIsDownloading = React.useState(false)[1];
   //   const setDownloadProgress = React.useState(0)[1];
-  const [exams, setExams] = useState<ExamDto[]>([]);
-  const [loading] = useState(false);
+  const [examGroups, setExamGroups] = useState<ExamGroupDto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
   //   const [isFormSubmitting, setIsFormSubmitting] = React.useState(false);
 
@@ -375,35 +382,37 @@ const ExamsPage = () => {
 
   // Set default filters after data loads
   React.useEffect(() => {
-    if (!isInitialized && currentAcademicYear && exams.length > 0) {
+    if (!isInitialized && currentAcademicYear && examGroups.length > 0) {
       // Determine smart default status
       const now = new Date();
       let hasRecent = false;
       let hasUpcoming = false;
 
-      exams.forEach((exam) => {
-        if (!exam.examSubjects || exam.examSubjects.length === 0) return;
+      examGroups.forEach((examGroup) => {
+        examGroup.exams.forEach((exam) => {
+          if (!exam.examSubjects || exam.examSubjects.length === 0) return;
 
-        const dates = exam.examSubjects
-          .map((sub) => ({
-            start: new Date(sub.startTime),
-            end: new Date(sub.endTime),
-          }))
-          .sort((a, b) => a.start.getTime() - b.start.getTime());
+          const dates = exam.examSubjects
+            .map((sub) => ({
+              start: new Date(sub.startTime),
+              end: new Date(sub.endTime),
+            }))
+            .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-        const firstStart = dates[0]?.start;
-        const lastEnd = dates[dates.length - 1]?.end;
+          const firstStart = dates[0]?.start;
+          const lastEnd = dates[dates.length - 1]?.end;
 
-        if (firstStart && lastEnd) {
-          // Check if recent (ongoing or ended within 7 days)
-          if (firstStart <= now && lastEnd >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) {
-            hasRecent = true;
+          if (firstStart && lastEnd) {
+            // Check if recent (ongoing or ended within 7 days)
+            if (firstStart <= now && lastEnd >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) {
+              hasRecent = true;
+            }
+            // Check if upcoming
+            if (firstStart > now) {
+              hasUpcoming = true;
+            }
           }
-          // Check if upcoming
-          if (firstStart > now) {
-            hasUpcoming = true;
-          }
-        }
+        });
       });
 
       const defaultStatus = hasRecent ? "recent" : hasUpcoming ? "upcoming" : "previous";
@@ -415,15 +424,23 @@ const ExamsPage = () => {
       }));
       setIsInitialized(true);
     }
-  }, [currentAcademicYear, exams, isInitialized]);
+  }, [currentAcademicYear, examGroups, isInitialized]);
 
   // Memoize fetch function to avoid recreating on every render
   const refetchExams = React.useCallback(() => {
-    fetchExams(currentPage, itemsPerPage, filters).then((data) => {
-      setExams(data.content);
-      setTotalPages(data.totalPages);
-      setTotalItems(data.totalElements);
-    });
+    setLoading(true);
+    fetchExamGroups(currentPage, itemsPerPage, filters)
+      .then((data) => {
+        setExamGroups(data.content);
+        setTotalPages(data.totalPages);
+        setTotalItems(data.totalElements);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch exams:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [currentPage, itemsPerPage, filters]);
 
   // Listen for exam creation/update events
@@ -459,12 +476,20 @@ const ExamsPage = () => {
     // Only fetch data when authentication is ready, and only on initial mount
     if (displayFlag && accessToken && !hasInitialized.current) {
       hasInitialized.current = true;
-      fetchExams(currentPage, itemsPerPage, filters).then((data) => {
-        setExams(data.content);
-        setTotalItems(data.totalElements);
-        setTotalPages(data.totalPages);
-        setCurrentPage(data.page);
-      });
+      setLoading(true);
+      fetchExamGroups(currentPage, itemsPerPage, filters)
+        .then((data) => {
+          setExamGroups(data.content);
+          setTotalItems(data.totalElements);
+          setTotalPages(data.totalPages);
+          setCurrentPage(data.page);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch exams on mount:", err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayFlag, accessToken, currentPage, filters]);
@@ -472,12 +497,20 @@ const ExamsPage = () => {
   // Refetch when filters change (after initialization)
   useEffect(() => {
     if (hasInitialized.current && displayFlag && accessToken) {
-      fetchExams(currentPage, itemsPerPage, filters).then((data) => {
-        setExams(data.content);
-        setTotalItems(data.totalElements);
-        setTotalPages(data.totalPages);
-        setCurrentPage(data.page);
-      });
+      setLoading(true);
+      fetchExamGroups(currentPage, itemsPerPage, filters)
+        .then((data) => {
+          setExamGroups(data.content);
+          setTotalItems(data.totalElements);
+          setTotalPages(data.totalPages);
+          setCurrentPage(data.page);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch exams on filters change:", err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, currentPage]);
@@ -1179,67 +1212,6 @@ const ExamsPage = () => {
     );
   }
 
-  // Helper function to normalize subject names (trim and lowercase)
-  const normalizeSubjectName = (name: string | null | undefined): string => {
-    return (name || "").trim().toLowerCase();
-  };
-
-  // Helper function to get unique subjects (grouped by normalized name)
-  const getUniqueSubjects = (examSubjects: ExamSubjectDto[]): ExamSubjectDto[] => {
-    if (!examSubjects || examSubjects.length === 0) return [];
-
-    const seen = new Map<string, ExamSubjectDto>();
-
-    examSubjects.forEach((es) => {
-      const normalizedName = normalizeSubjectName(es.subject?.name);
-      if (normalizedName && !seen.has(normalizedName)) {
-        seen.set(normalizedName, es);
-      }
-    });
-
-    return Array.from(seen.values());
-  };
-
-  const formatExamDateRange = (examSubjects: ExamSubjectDto[]) => {
-    if (!examSubjects || examSubjects.length === 0) return "-";
-
-    // Extract and parse dates
-    const dates = examSubjects.map((es) => ({
-      start: new Date(es.startTime),
-      end: new Date(es.endTime),
-    }));
-
-    // Find min start and max end
-    const minStart = new Date(Math.min(...dates.map((d) => d.start.getTime())));
-    const maxEnd = new Date(Math.max(...dates.map((d) => d.end.getTime())));
-
-    // Format helper: dd/MM/yyyy
-    const formatDate = (date: Date): string => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    };
-
-    // Check if ALL subjects are on the exact same day (compare date parts only)
-    const allSameDay = dates.every((d) => {
-      return (
-        d.start.getDate() === minStart.getDate() &&
-        d.start.getMonth() === minStart.getMonth() &&
-        d.start.getFullYear() === minStart.getFullYear() &&
-        d.end.getDate() === minStart.getDate() &&
-        d.end.getMonth() === minStart.getMonth() &&
-        d.end.getFullYear() === minStart.getFullYear()
-      );
-    });
-
-    if (allSameDay) {
-      return formatDate(minStart); // Show only one date
-    }
-
-    return `${formatDate(minStart)} - ${formatDate(maxEnd)}`;
-  };
-
   return (
     <div className="p-2 sm:p-4">
       <Card className="border-none">
@@ -1249,7 +1221,9 @@ const ExamsPage = () => {
               <FileText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               <span className="truncate">Exams</span>
             </CardTitle>
-            <div className="text-xs sm:text-sm text-muted-foreground mt-1">List of exams got scheduled.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+              List of exams got scheduled.
+            </div>
           </div>
           {/* <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -1770,7 +1744,8 @@ const ExamsPage = () => {
                   <Button variant="outline" size="sm" className="gap-2">
                     <Filter className="h-4 w-4" />
                     Filters
-                    {Object.values(filters).filter((v) => v !== null && v !== undefined).length > 0 && (
+                    {Object.values(filters).filter((v) => v !== null && v !== undefined).length >
+                      0 && (
                       <Badge
                         variant="secondary"
                         className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
@@ -1793,7 +1768,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.academicYearId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, academicYearId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              academicYearId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="academic-year">
@@ -1816,7 +1794,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.examTypeId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, examTypeId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              examTypeId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="exam-type">
@@ -1839,7 +1820,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.classId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, classId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              classId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="semester">
@@ -1864,7 +1848,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.affiliationId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, affiliationId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              affiliationId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="affiliation">
@@ -1887,7 +1874,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.regulationTypeId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, regulationTypeId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              regulationTypeId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="regulation">
@@ -1910,7 +1900,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.status || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, status: value === "all" ? null : (value as any) })
+                            setFilters({
+                              ...filters,
+                              status: value === "all" ? null : (value as any),
+                            })
                           }
                         >
                           <SelectTrigger id="status">
@@ -1938,7 +1931,9 @@ const ExamsPage = () => {
                             id="date-from"
                             type="date"
                             value={filters.dateFrom || ""}
-                            onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value || null })}
+                            onChange={(e) =>
+                              setFilters({ ...filters, dateFrom: e.target.value || null })
+                            }
                           />
                         </div>
                         <div>
@@ -1949,7 +1944,9 @@ const ExamsPage = () => {
                             id="date-to"
                             type="date"
                             value={filters.dateTo || ""}
-                            onChange={(e) => setFilters({ ...filters, dateTo: e.target.value || null })}
+                            onChange={(e) =>
+                              setFilters({ ...filters, dateTo: e.target.value || null })
+                            }
                           />
                         </div>
                       </div>
@@ -1995,7 +1992,8 @@ const ExamsPage = () => {
                     variant="outline"
                     className="text-xs border-slate-300 text-slate-700 bg-slate-50 flex items-center gap-1"
                   >
-                    {availableAcademicYears.find((y) => y.id === filters.academicYearId)?.year || "Academic Year"}
+                    {availableAcademicYears.find((y) => y.id === filters.academicYearId)?.year ||
+                      "Academic Year"}
                     <button
                       aria-label="Clear academic year filter"
                       className="ml-1 hover:text-slate-900"
@@ -2049,7 +2047,8 @@ const ExamsPage = () => {
                     variant="outline"
                     className="text-xs border-purple-300 text-purple-700 bg-purple-50 flex items-center gap-1"
                   >
-                    {affiliations.find((a) => a.id === filters.affiliationId)?.name || "Affiliation"}
+                    {affiliations.find((a) => a.id === filters.affiliationId)?.name ||
+                      "Affiliation"}
                     <button
                       aria-label="Clear affiliation filter"
                       className="ml-1 hover:text-purple-900"
@@ -2067,7 +2066,8 @@ const ExamsPage = () => {
                     variant="outline"
                     className="text-xs border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1"
                   >
-                    {regulationTypes.find((r) => r.id === filters.regulationTypeId)?.name || "Regulation"}
+                    {regulationTypes.find((r) => r.id === filters.regulationTypeId)?.name ||
+                      "Regulation"}
                     <button
                       aria-label="Clear regulation filter"
                       className="ml-1 hover:text-teal-900"
@@ -2149,191 +2149,206 @@ const ExamsPage = () => {
               )}
             </div> */}
           </div>
-          <div className="relative z-50 bg-white" style={{ height: "600px" }}>
-            <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
-              {/* Fixed Header */}
-              <div className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b" style={{ minWidth: "950px" }}>
-                <div className="flex">
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "6%" }}
-                  >
-                    Sr. No.
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "15%" }}
-                  >
-                    Exam Type
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "14%" }}
-                  >
-                    Program Courses
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "20%" }}
-                  >
-                    Subjects
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "16%" }}
-                  >
-                    Shift(s)
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "12%" }}
-                  >
-                    Subject Category
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "10%" }}
-                  >
-                    Semester
-                  </div>
+          <div className="overflow-x-auto flex-1" style={{ minHeight: "480px" }}>
+            <div className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto min-w-full">
+              <table
+                className="w-full min-w-[900px] border-collapse text-[14px]"
+                style={{ tableLayout: "fixed" }}
+              >
+                <thead className="sticky top-0 z-[50] bg-slate-100 border-b border-slate-300 shadow-sm">
+                  <tr className="text-xs font-semibold uppercase text-slate-700 border-b border-slate-300">
+                    <th className="w-[6%] px-3 py-3 border-r border-slate-300 text-center">#</th>
+                    <th className="w-[20%] px-3 py-3 border-r border-slate-300 text-center">
+                      Exam Group Name
+                    </th>
+                    <th className="w-[18%] px-3 py-3 border-r border-slate-300 text-center">
+                      Program Courses
+                    </th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                      Subjects
+                    </th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                      Shift(s)
+                    </th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                      Subject Category
+                    </th>
+                    <th className="w-[8%] px-3 py-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading exams...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : examGroups.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200"
+                      >
+                        No exams found.
+                      </td>
+                    </tr>
+                  ) : (
+                    examGroups.map((examGroup: ExamGroupDto, groupIdx: number) => {
+                      // Extract all distinct program courses from the group
+                      const distinctPCMap = new Map<
+                        number | undefined,
+                        (typeof examGroup.exams)[0]["examProgramCourses"][0]
+                      >();
+                      examGroup.exams.forEach((exam) => {
+                        exam.examProgramCourses.forEach((pc) => {
+                          if (pc.programCourse.id !== undefined) {
+                            distinctPCMap.set(pc.programCourse.id, pc);
+                          }
+                        });
+                      });
+                      const distinctProgramCourses = Array.from(distinctPCMap.values());
 
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 flex items-center justify-center"
-                    style={{ width: "6%" }}
-                  >
-                    Actions
-                  </div>
-                </div>
-              </div>
+                      // Extract all distinct subjects from the group
+                      const distinctSubjectMap = new Map<
+                        number | undefined,
+                        (typeof examGroup.exams)[0]["examSubjects"][0]
+                      >();
+                      examGroup.exams.forEach((exam) => {
+                        exam.examSubjects.forEach((es) => {
+                          if (es.subject?.id !== undefined) {
+                            distinctSubjectMap.set(es.subject.id, es);
+                          }
+                        });
+                      });
+                      const distinctSubjects = Array.from(distinctSubjectMap.values());
 
-              {/* Table Body */}
-              <div className="bg-white relative">
-                {loading ? (
-                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "950px" }}>
-                    Loading...
-                  </div>
-                ) : (
-                  exams.map((exm: ExamDto, idx: number) => (
-                    <div key={exm.id} className="flex border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                        style={{ width: "6%" }}
-                      >
-                        {idx + 1}
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r  items-center gap-2 flex flex-col"
-                        style={{ width: "15%" }}
-                      >
-                        {/* Display exam component names */}
-                        <p>
-                          <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50">
-                            {exm.examType.name}
-                          </Badge>
-                        </p>
-                        <p className="text-center">{formatExamDateRange(exm.examSubjects)}</p>
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center"
-                        style={{ width: "14%" }}
-                      >
-                        {exm.examProgramCourses.map((pc: ExamProgramCourseDto, pcIndex: number) => (
-                          <p>
-                            <Badge
-                              key={`pc-index-${pcIndex}`}
-                              variant="outline"
-                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                            >
-                              {pc.programCourse.name}
-                            </Badge>
-                          </p>
-                        ))}
-                      </div>
-                      <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
-                        <p>
-                          {/* {sp.name ?? "-"}
-                          {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
-                          {sp.autoAssign && (
-                            <span className="ml-1 inline-flex items-center" title="Auto assigned">
-                              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                              <span className="sr-only">Auto assigned</span>
-                            </span>
-                          )} */}
-                        </p>
-                        <div className="mt-1 flex flex-col gap-1">
-                          {getUniqueSubjects(exm.examSubjects).map((es: ExamSubjectDto, subjectIndex: number) => (
-                            <p key={`subject-${es.subject?.id}-${subjectIndex}`}>
+                      // Extract all distinct shifts from the group
+                      const distinctShiftMap = new Map<
+                        number | undefined,
+                        (typeof examGroup.exams)[0]["examShifts"][0]
+                      >();
+                      examGroup.exams.forEach((exam) => {
+                        exam.examShifts.forEach((esh) => {
+                          if (esh.shift.id !== undefined) {
+                            distinctShiftMap.set(esh.shift.id, esh);
+                          }
+                        });
+                      });
+                      const distinctShifts = Array.from(distinctShiftMap.values());
+
+                      // Extract all distinct subject types from the group
+                      const distinctSTMap = new Map<
+                        number | undefined,
+                        (typeof examGroup.exams)[0]["examSubjectTypes"][0]
+                      >();
+                      examGroup.exams.forEach((exam) => {
+                        exam.examSubjectTypes.forEach((est) => {
+                          if (est.subjectType?.id !== undefined) {
+                            distinctSTMap.set(est.subjectType.id, est);
+                          }
+                        });
+                      });
+                      const distinctSubjectTypes = Array.from(distinctSTMap.values());
+
+                      return (
+                        <tr
+                          key={examGroup.id}
+                          className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
+                        >
+                          <td className="px-3 py-3 border-r border-slate-200 text-center align-top">
+                            {(currentPage - 1) * itemsPerPage + groupIdx + 1}
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1">
                               <Badge
                                 variant="outline"
-                                className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                                className="text-xs border-purple-300 text-purple-700 bg-purple-50 w-fit"
                               >
-                                {es.subject?.name ?? "-"}
+                                {examGroup.name}
                               </Badge>
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
-                        style={{ width: "16%" }}
-                      >
-                        {exm.examShifts.map((esh: ExamShiftDto, eshIndex: number) => (
-                          <p>
-                            <Badge
-                              key={`pc-index-${eshIndex}`}
+                              <span className="text-xs text-muted-foreground text-center">
+                                {examGroup.examCommencementDate
+                                  ? new Date(examGroup.examCommencementDate).toLocaleDateString()
+                                  : "-"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1 items-center">
+                              {distinctProgramCourses.map((pc) => (
+                                <Badge
+                                  key={pc.id}
+                                  variant="outline"
+                                  className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                >
+                                  {pc.programCourse.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1 items-center">
+                              {distinctSubjects.map((es, subjectIndex) => (
+                                <Badge
+                                  key={`subject-${es.subject?.id}-${subjectIndex}`}
+                                  variant="outline"
+                                  className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                                >
+                                  {es.subject?.name ?? "-"}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1 items-center">
+                              {distinctShifts.map((esh) => (
+                                <Badge
+                                  key={esh.id}
+                                  variant="outline"
+                                  className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                >
+                                  {esh.shift.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1 items-center">
+                              {distinctSubjectTypes.map((est) => (
+                                <Badge
+                                  key={est.id}
+                                  variant="outline"
+                                  className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
+                                >
+                                  {est.subjectType?.code ?? "-"}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-center align-top">
+                            <Button
                               variant="outline"
-                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                              size="icon"
+                              className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
+                              asChild
                             >
-                              {esh.shift.name}
-                            </Badge>
-                          </p>
-                        ))}
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center justify-center"
-                        style={{ width: "12%" }}
-                      >
-                        {exm.examSubjectTypes.map((est: ExamSubjectTypeDto) => (
-                          <p>
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
-                            >
-                              {est.subjectType?.code ?? "-"}
-                            </Badge>
-                          </p>
-                        ))}
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                        style={{ width: "10%" }}
-                      >
-                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
-                          {exm.class.name.split(" ")[1]}
-                        </Badge>
-                      </div>
-
-                      <div className="flex-shrink-0 p-3 flex items-center justify-center" style={{ width: "6%" }}>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              //   setIsPaperEditModalOpen(true);
-                              //   setSelectedPaperForEdit(sp);
-                            }}
-                            className="h-5 w-5 p-0"
-                          >
-                            <Link to={`${exm.id}`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                              <Link to={`${examGroup.id}`}>
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </CardContent>
@@ -2344,8 +2359,8 @@ const ExamsPage = () => {
         <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
           <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
             <span className="hidden sm:inline">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-              {totalItems} results
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+              {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} results
             </span>
             <span className="sm:hidden">
               Page {currentPage} of {totalPages} ({totalItems} total)

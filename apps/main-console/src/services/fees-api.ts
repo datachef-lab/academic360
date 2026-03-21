@@ -84,7 +84,9 @@ export async function getAllFeesStructures(
 }
 
 // Get a single fees structure
-export async function getFeesStructure(feesStructureId: number): Promise<ApiResponse<FeeStructureDto>> {
+export async function getFeesStructure(
+  feesStructureId: number,
+): Promise<ApiResponse<FeeStructureDto>> {
   const response = await axiosInstance.get(`${BASE_PATH}/structure/${feesStructureId}`);
   return response.data;
 }
@@ -110,7 +112,10 @@ export async function updateFeeStructureByDto(
   feeStructureId: number,
   updateFeeStructureDto: CreateFeeStructureDto,
 ): Promise<ApiResponse<FeeStructureDto>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/structure/by-dto/${feeStructureId}`, updateFeeStructureDto);
+  const response = await axiosInstance.put(
+    `${BASE_PATH}/structure/by-dto/${feeStructureId}`,
+    updateFeeStructureDto,
+  );
   return response.data;
 }
 
@@ -172,7 +177,10 @@ export async function updateFeesStructure(
   feesStructureId: number,
   feesStructure: Partial<FeeStructureDto>,
 ): Promise<ApiResponse<FeeStructureDto>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/structure/${feesStructureId}`, feesStructure);
+  const response = await axiosInstance.put(
+    `${BASE_PATH}/structure/${feesStructureId}`,
+    feesStructure,
+  );
   return response.data;
 }
 
@@ -344,7 +352,9 @@ export async function getAllFeesReceiptTypes(): Promise<FeesReceiptType[]> {
 }
 
 // Get a single fees receipt type
-export async function getFeesReceiptType(feesReceiptTypeId: number): Promise<ApiResponse<FeesReceiptType>> {
+export async function getFeesReceiptType(
+  feesReceiptTypeId: number,
+): Promise<ApiResponse<FeesReceiptType>> {
   const response = await axiosInstance.get(`${BASE_PATH}/receipt-types/${feesReceiptTypeId}`);
   return response.data;
 }
@@ -362,7 +372,10 @@ export async function updateFeesReceiptType(
   feesReceiptTypeId: number,
   feesReceiptType: Partial<NewFeesReceiptType>,
 ): Promise<ApiResponse<FeesReceiptType>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/receipt-types/${feesReceiptTypeId}`, feesReceiptType);
+  const response = await axiosInstance.put(
+    `${BASE_PATH}/receipt-types/${feesReceiptTypeId}`,
+    feesReceiptType,
+  );
   return response.data;
 }
 
@@ -430,7 +443,10 @@ export async function createAddon(newAddon: NewAddOn): Promise<ApiResponse<AddOn
 }
 
 // Update an addon
-export async function updateAddon(addonId: number, addon: Partial<NewAddOn>): Promise<ApiResponse<AddOn>> {
+export async function updateAddon(
+  addonId: number,
+  addon: Partial<NewAddOn>,
+): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.put(`${BASE_PATH}/addons/${addonId}`, addon);
 
   if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
@@ -513,7 +529,9 @@ export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<
 }
 
 // Create a new fee concession slab (legacy - uses /slabs endpoint)
-export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Promise<ApiResponse<FeeSlabT>> {
+export async function createFeeConcessionSlab(
+  newSlab: NewFeeConcessionSlab,
+): Promise<ApiResponse<FeeSlabT>> {
   // Map defaultConcessionRate to defaultRate for backend compatibility
   const payload: any = {
     name: newSlab.name,
@@ -613,13 +631,17 @@ export async function getAllFeesComponents(): Promise<ApiResponse<FeesComponent[
 }
 
 // Get a single fees component
-export async function getFeesComponent(feesComponentId: number): Promise<ApiResponse<FeesComponent>> {
+export async function getFeesComponent(
+  feesComponentId: number,
+): Promise<ApiResponse<FeesComponent>> {
   const response = await axiosInstance.get(`${BASE_PATH}/components/${feesComponentId}`);
   return response.data;
 }
 
 // Create a new fees component
-export async function createFeesComponent(newFeesComponent: NewFeesComponent): Promise<ApiResponse<FeesComponent>> {
+export async function createFeesComponent(
+  newFeesComponent: NewFeesComponent,
+): Promise<ApiResponse<FeesComponent>> {
   const response = await axiosInstance.post(`${BASE_PATH}/components`, newFeesComponent);
   return response.data;
 }
@@ -629,7 +651,10 @@ export async function updateFeesComponent(
   feesComponentId: number,
   feesComponent: Partial<NewFeesComponent>,
 ): Promise<ApiResponse<FeesComponent>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/components/${feesComponentId}`, feesComponent);
+  const response = await axiosInstance.put(
+    `${BASE_PATH}/components/${feesComponentId}`,
+    feesComponent,
+  );
   return response.data;
 }
 
@@ -664,7 +689,9 @@ export async function getAllStudentFeesMappings(): Promise<ApiResponse<FeeStuden
 }
 
 // Get a single student fees mapping
-export async function getStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResponse<FeeStudentMappingDto>> {
+export async function getStudentFeesMapping(
+  studentFeesMappingId: number,
+): Promise<ApiResponse<FeeStudentMappingDto>> {
   const response = await axiosInstance.get(`${BASE_PATH}/student-mappings/${studentFeesMappingId}`);
   return response.data;
 }
@@ -682,13 +709,20 @@ export async function updateStudentFeesMapping(
   studentFeesMappingId: number,
   studentFeesMapping: Partial<FeeStudentMappingDto>,
 ): Promise<ApiResponse<FeeStudentMappingDto>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/student-mappings/${studentFeesMappingId}`, studentFeesMapping);
+  const response = await axiosInstance.put(
+    `${BASE_PATH}/student-mappings/${studentFeesMappingId}`,
+    studentFeesMapping,
+  );
   return response.data;
 }
 
 // Delete a student fees mapping
-export async function deleteStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResponse<void>> {
-  const response = await axiosInstance.delete(`${BASE_PATH}/student-mappings/${studentFeesMappingId}`);
+export async function deleteStudentFeesMapping(
+  studentFeesMappingId: number,
+): Promise<ApiResponse<void>> {
+  const response = await axiosInstance.delete(
+    `${BASE_PATH}/student-mappings/${studentFeesMappingId}`,
+  );
   return response.data;
 }
 
@@ -717,7 +751,9 @@ export async function getFeeCategory(id: number): Promise<ApiResponse<FeeCategor
   return response.data;
 }
 
-export async function createFeeCategory(newCategory: NewFeeCategory): Promise<ApiResponse<FeeCategoryDto>> {
+export async function createFeeCategory(
+  newCategory: NewFeeCategory,
+): Promise<ApiResponse<FeeCategoryDto>> {
   const response = await axiosInstance.post(`${BASE_PATH}/categories`, newCategory);
   return response.data;
 }
@@ -759,7 +795,10 @@ export async function createFeeGroup(newGroup: NewFeeGroup): Promise<ApiResponse
   return response.data;
 }
 
-export async function updateFeeGroup(id: number, group: Partial<NewFeeGroup>): Promise<ApiResponse<FeeGroupDto>> {
+export async function updateFeeGroup(
+  id: number,
+  group: Partial<NewFeeGroup>,
+): Promise<ApiResponse<FeeGroupDto>> {
   const response = await axiosInstance.put(`${BASE_PATH}/groups/${id}`, group);
   return response.data;
 }
@@ -777,13 +816,17 @@ export async function getAllFeesSlabYears(): Promise<ApiResponse<FeesSlabMapping
 }
 
 // Get a single fees slab year
-export async function getFeesSlabYear(feesSlabYearId: number): Promise<ApiResponse<FeesSlabMapping>> {
+export async function getFeesSlabYear(
+  feesSlabYearId: number,
+): Promise<ApiResponse<FeesSlabMapping>> {
   const response = await axiosInstance.get(`${BASE_PATH}/slab-year-mappings/${feesSlabYearId}`);
   return response.data;
 }
 
 // Create a new fees slab year
-export async function createFeesSlabYear(FeesSlabMapping: FeesSlabMapping): Promise<ApiResponse<FeesSlabMapping>> {
+export async function createFeesSlabYear(
+  FeesSlabMapping: FeesSlabMapping,
+): Promise<ApiResponse<FeesSlabMapping>> {
   const response = await axiosInstance.post(`${BASE_PATH}/slab-year-mappings`, FeesSlabMapping);
   return response.data;
 }
@@ -793,7 +836,10 @@ export async function updateFeesSlabYear(
   feesSlabYearId: number,
   feesSlabYear: Partial<FeesSlabMapping>,
 ): Promise<ApiResponse<FeesSlabMapping>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/slab-year-mappings/${feesSlabYearId}`, feesSlabYear);
+  const response = await axiosInstance.put(
+    `${BASE_PATH}/slab-year-mappings/${feesSlabYearId}`,
+    feesSlabYear,
+  );
   return response.data;
 }
 
@@ -804,7 +850,9 @@ export async function deleteFeesSlabYear(feesSlabYearId: number): Promise<ApiRes
 }
 
 // Update the check-exist endpoint to use the correct path
-export const checkSlabsExistForAcademicYear = async (academicYearId: number): Promise<{ exists: boolean }> => {
+export const checkSlabsExistForAcademicYear = async (
+  academicYearId: number,
+): Promise<{ exists: boolean }> => {
   const response = await axiosInstance.get(`/api/v1/fees/slabs/check-exist/${academicYearId}`);
   return response.data;
 };
@@ -815,6 +863,7 @@ export interface NewFeeGroupPromotionMapping {
   feeCategoryId?: number;
   feeGroupId?: number;
   promotionId: number;
+  updatedByUserId?: number;
 }
 
 export interface FeeGroupPromotionFilterRequest {
@@ -836,13 +885,15 @@ export interface FilteredFeeGroupPromotionMapping {
 }
 
 export async function getAllFeeGroupPromotionMappings(
-  page: number,
+  limit: number = 10000,
 ): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings?page=${page}`);
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings?limit=${limit}`);
   return response.data;
 }
 
-export async function getFeeGroupPromotionMapping(id: number): Promise<ApiResponse<FeeGroupPromotionMappingDto>> {
+export async function getFeeGroupPromotionMapping(
+  id: number,
+): Promise<ApiResponse<FeeGroupPromotionMappingDto>> {
   const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/${id}`);
   return response.data;
 }
@@ -850,14 +901,18 @@ export async function getFeeGroupPromotionMapping(id: number): Promise<ApiRespon
 export async function getFeeGroupPromotionMappingsByFeeGroupId(
   feeGroupId: number,
 ): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/fee-group/${feeGroupId}`);
+  const response = await axiosInstance.get(
+    `${BASE_PATH}/group-promotion-mappings/fee-group/${feeGroupId}`,
+  );
   return response.data;
 }
 
 export async function getFeeGroupPromotionMappingsByPromotionId(
   promotionId: number,
 ): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/promotion/${promotionId}`);
+  const response = await axiosInstance.get(
+    `${BASE_PATH}/group-promotion-mappings/promotion/${promotionId}`,
+  );
   return response.data;
 }
 
@@ -884,8 +939,24 @@ export async function deleteFeeGroupPromotionMapping(id: number): Promise<ApiRes
 export async function getFilteredFeeGroupPromotionMappings(
   filters: FeeGroupPromotionFilterRequest,
 ): Promise<ApiResponse<FilteredFeeGroupPromotionMapping[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/filtered`, { params: filters });
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/filtered`, {
+    params: filters,
+  });
   return response.data;
+}
+
+export interface BulkUploadRow {
+  UID?: string;
+  "Student Name"?: string;
+  "Program Course Name"?: string;
+  "Academic Year"?: string;
+  Semester?: string;
+  Shift?: string;
+  "Fee Slab"?: string;
+  "Fee Category"?: string;
+  "Approved By User Email"?: string;
+  "Approved Timestamp"?: string;
+  Remarks?: string;
 }
 
 export interface BulkUploadResult {
@@ -896,25 +967,19 @@ export interface BulkUploadResult {
   };
   errors: Array<{
     row: number;
-    data: {
-      UID: string;
-      Semester: string;
-      "Fee Category Name": string;
-    };
+    data: BulkUploadRow;
     error: string;
   }>;
   success: Array<{
     row: number;
-    data: {
-      UID: string;
-      Semester: string;
-      "Fee Category Name": string;
-    };
+    data: BulkUploadRow;
     mappingId: number;
   }>;
 }
 
-export async function bulkUploadFeeGroupPromotionMappings(file: File): Promise<ApiResponse<BulkUploadResult>> {
+export async function bulkUploadFeeGroupPromotionMappings(
+  file: File,
+): Promise<ApiResponse<BulkUploadResult>> {
   const formData = new FormData();
   formData.append("file", file);
   const response = await axiosInstance.post<ApiResponse<BulkUploadResult>>(
@@ -940,13 +1005,16 @@ export const getFeesStructures = async (
     shiftId?: number;
   },
 ): Promise<FeeStructureDto[]> => {
-  const response = await axiosInstance.get<ApiResponse<PaginatedResponse<FeeStructureDto>>>(`${BASE_PATH}/structure`, {
-    params: {
-      page,
-      pageSize,
-      ...filters,
+  const response = await axiosInstance.get<ApiResponse<PaginatedResponse<FeeStructureDto>>>(
+    `${BASE_PATH}/structure`,
+    {
+      params: {
+        page,
+        pageSize,
+        ...filters,
+      },
     },
-  });
+  );
   // Handle ApiResponse format with PaginatedResponse
   if (response.data.payload && response.data.payload.content) {
     return response.data.payload.content;
@@ -967,7 +1035,10 @@ export const getCoursesFromFeesStructures = async (academicYearId: number) => {
   return response.data;
 };
 
-export const getFeesStructuresByAcademicYearAndCourse = async (academicYearId: number, courseId: number) => {
+export const getFeesStructuresByAcademicYearAndCourse = async (
+  academicYearId: number,
+  courseId: number,
+) => {
   const response = await axiosInstance.get(
     `${BASE_PATH}/structure/by-academic-year-and-course/${academicYearId}/${courseId}`,
   );
@@ -978,6 +1049,8 @@ export const getFeesDesignAbstractLevel = async (academicYearId?: number, course
   const params = new URLSearchParams();
   if (academicYearId) params.append("academicYearId", academicYearId.toString());
   if (courseId) params.append("courseId", courseId.toString());
-  const response = await axiosInstance.get(`${BASE_PATH}/structure/design-abstract-level?${params.toString()}`);
+  const response = await axiosInstance.get(
+    `${BASE_PATH}/structure/design-abstract-level?${params.toString()}`,
+  );
   return response.data;
 };

@@ -1,11 +1,90 @@
+// import "dotenv/config";
+// import { app, httpServer } from "@/app.js";
+// import { connectToDatabase, connectToMySQL } from "@/db/index.js";
+// import { startLoadDataScheduler } from "./features/user/services/refactor-old-migration.service";
+
+// const PORT = process.env.PORT || 8080;
+
+// // List all required environment variables here
+// const REQUIRED_ENVS = [
+//   "PORT",
+//   "NODE_ENV",
+//   "STUDY_MATERIAL_BASE_PATH",
+//   "DATABASE_URL",
+//   "OLD_DB_HOST",
+//   "OLD_DB_PORT",
+//   "OLD_DB_USER",
+//   "OLD_DB_PASSWORD",
+//   "OLD_DB_NAME",
+//   "CORS_ORIGIN",
+//   "ACCESS_TOKEN_SECRET",
+//   "ACCESS_TOKEN_EXPIRY",
+//   "REFRESH_TOKEN_SECRET",
+//   "REFRESH_TOKEN_EXPIRY",
+//   "ZEPTO_URL",
+//   "ZEPTO_FROM",
+//   "ZEPTO_TOKEN",
+//   "DEVELOPER_EMAIL",
+//   "INTERAKT_API_KEY",
+//   "INTERAKT_BASE_URL",
+//   "DEVELOPER_PHONE",
+//   "GOOGLE_CLIENT_ID",
+//   "GOOGLE_CLIENT_SECRET",
+//   // Add any other required envs here
+// ];
+
+// function checkRequiredEnvs() {
+//   const missing = REQUIRED_ENVS.filter(
+//     (key) => !process.env[key] || process.env[key]?.trim() === "",
+//   );
+//   if (missing.length > 0) {
+//     console.error(
+//       `\n[backend] - Missing required environment variables: - ${missing.join(", ")}`,
+//     );
+//     process.exit(1);
+//   }
+// }
+
+// (async () => {
+//   console.log("\nInitializing academic360...\n");
+//   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
+//   try {
+//     await connectToDatabase();
+//     const shouldConnectMySQL =
+//       process.env.NODE_ENV === "production" ||
+//       process.env.NODE_ENV === "development" ||
+//       process.env.NODE_ENV === "staging";
+//     if (shouldConnectMySQL) {
+//       await connectToMySQL();
+//     }
+//     httpServer.listen(PORT, async () => {
+//       console.log(
+//         `[backend] - academic360 is running on http://localhost:${PORT} 🚀 \n`,
+//       );
+//       console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
+//       console.log("Press Ctrl+C to stop the application.\n");
+//       //   await brainstormOldMigration();
+//       if (
+//         process.env.NODE_ENV === "production" ||
+//         process.env.NODE_ENV === "development" ||
+//         process.env.NODE_ENV === "staging"
+//       ) {
+//         // await startLoadDataScheduler();
+//       }
+//     });
+//   } catch (error) {
+//     console.error("[backend] - Failed to start the application: ⚠️\n", error);
+//   }
+// })();
+
 import "dotenv/config";
-import { app, httpServer } from "@/app.js";
+import { httpServer } from "@/app.js";
 import { connectToDatabase, connectToMySQL } from "@/db/index.js";
-import { startLoadDataScheduler } from "./features/user/services/refactor-old-migration.service";
+import { createLogger } from "@/config/logger.js"; // not createLogger
+const log = createLogger("db");
 
 const PORT = process.env.PORT || 8080;
 
-// List all required environment variables here
 const REQUIRED_ENVS = [
   "PORT",
   "NODE_ENV",
@@ -30,7 +109,6 @@ const REQUIRED_ENVS = [
   "DEVELOPER_PHONE",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
-  // Add any other required envs here
 ];
 
 function checkRequiredEnvs() {
@@ -38,41 +116,35 @@ function checkRequiredEnvs() {
     (key) => !process.env[key] || process.env[key]?.trim() === "",
   );
   if (missing.length > 0) {
-    console.error(
-      `\n[backend] - Missing required environment variables: - ${missing.join(", ")}`,
-    );
+    log.error(`Missing required environment variables: ${missing.join(", ")}`);
     process.exit(1);
   }
 }
 
 (async () => {
-  console.log("\nInitializing academic360...\n");
+  log.info("Initializing academic360...");
   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
+
   try {
     await connectToDatabase();
-    const shouldConnectMySQL =
-      process.env.NODE_ENV === "production" ||
-      process.env.NODE_ENV === "development" ||
-      process.env.NODE_ENV === "staging";
+
+    const shouldConnectMySQL = [
+      "production",
+      "development",
+      "staging",
+    ].includes(process.env.NODE_ENV || "");
+
     if (shouldConnectMySQL) {
       await connectToMySQL();
     }
+
     httpServer.listen(PORT, async () => {
-      console.log(
-        `[backend] - academic360 is running on http://localhost:${PORT} 🚀 \n`,
-      );
-      console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
-      console.log("Press Ctrl+C to stop the application.\n");
-      //   await brainstormOldMigration();
-      if (
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development" ||
-        process.env.NODE_ENV === "staging"
-      ) {
-        // await startLoadDataScheduler();
-      }
+      log.info(`academic360 running on http://localhost:${PORT} 🚀`);
+      log.info(`Profile: ${process.env.NODE_ENV}`);
+      log.debug("Press Ctrl+C to stop the application.");
     });
   } catch (error) {
-    console.error("[backend] - Failed to start the application: ⚠️\n", error);
+    log.error("Failed to start the application ⚠️", { error });
+    process.exit(1);
   }
 })();

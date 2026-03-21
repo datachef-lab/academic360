@@ -7,27 +7,27 @@ import {
   MultipleNationalityResponse,
 } from "@/types/resources/nationality.types";
 
-const BASE_URL = '/api/nationality';
+const BASE_URL = "/api/nationality";
 
 export async function getAllNationalities(): Promise<Nationality[]> {
   try {
     const response = await axiosInstance.get<MultipleNationalityResponse>(BASE_URL);
     const responseData = response.data;
-    
+
     // Check if response has payload property (like personal details API)
-    if ('payload' in responseData && Array.isArray(responseData.payload)) {
+    if ("payload" in responseData && Array.isArray(responseData.payload)) {
       return responseData.payload;
     }
-    
+
     // Fallback to data property (original expected structure)
-    if ('data' in responseData && Array.isArray(responseData.data)) {
+    if ("data" in responseData && Array.isArray(responseData.data)) {
       return responseData.data;
     }
-    
+
     // Return empty array if neither structure matches
     return [];
   } catch (error) {
-    console.error('Error fetching nationalities:', error);
+    console.error("Error fetching nationalities:", error);
     throw error;
   }
 }
@@ -42,7 +42,10 @@ export async function createNationality(payload: CreateNationalityPayload): Prom
   return response.data.data;
 }
 
-export async function updateNationality(id: number, payload: UpdateNationalityPayload): Promise<Nationality> {
+export async function updateNationality(
+  id: number,
+  payload: UpdateNationalityPayload,
+): Promise<Nationality> {
   const response = await axiosInstance.put<SingleNationalityResponse>(`${BASE_URL}/${id}`, payload);
   return response.data.data;
 }
@@ -57,4 +60,4 @@ export const nationalityService = {
   createNationality,
   updateNationality,
   deleteNationality,
-}; 
+};

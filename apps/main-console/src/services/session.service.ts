@@ -7,7 +7,11 @@ export async function findAllSessions(): Promise<ApiResponse<Session[]>> {
   return response.data;
 }
 
-export async function findSessionsByAcademicYear(academicYearId: number): Promise<ApiResponse<Session[]>> {
-  const response = await axiosInstance.get<ApiResponse<Session[]>>(`/api/sessions/academic-year/${academicYearId}`);
+export async function findSessionsByAcademicYear(
+  academicYearId: number,
+): Promise<ApiResponse<Session[]>> {
+  const response = await axiosInstance.get<ApiResponse<Session[]>>(
+    `/api/sessions/academic-year/${academicYearId}`,
+  );
   return response.data;
 }

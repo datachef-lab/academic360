@@ -24,7 +24,12 @@ interface SubjectFormProps {
   isLoading?: boolean;
 }
 
-export function SubjectForm({ initialData, onSubmit, onCancel, isLoading = false }: SubjectFormProps) {
+export function SubjectForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+}: SubjectFormProps) {
   const isEdit = !!initialData;
 
   const {
@@ -99,7 +104,9 @@ export function SubjectForm({ initialData, onSubmit, onCancel, isLoading = false
             {...register("sequence", { valueAsNumber: true })}
             disabled={isLoading}
           />
-          {errors.sequence && <p className="mt-1 text-sm text-red-600">{errors.sequence.message}</p>}
+          {errors.sequence && (
+            <p className="mt-1 text-sm text-red-600">{errors.sequence.message}</p>
+          )}
         </div>
 
         <div className="flex items-center space-x-2">
@@ -107,7 +114,12 @@ export function SubjectForm({ initialData, onSubmit, onCancel, isLoading = false
             name="disabled"
             control={control}
             render={({ field: { value, onChange } }) => (
-              <Checkbox id="disabled" checked={value} onCheckedChange={onChange} disabled={isLoading} />
+              <Checkbox
+                id="disabled"
+                checked={value}
+                onCheckedChange={onChange}
+                disabled={isLoading}
+              />
             )}
           />
           <Label htmlFor="disabled">Disabled</Label>

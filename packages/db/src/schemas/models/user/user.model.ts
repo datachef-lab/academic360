@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, serial, varchar, boolean, timestamp, text } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, boolean, timestamp, text, integer } from "drizzle-orm/pg-core";
 
 import { userTypeEnum } from "@/schemas/enums";
+import { institutionalRoleModel } from "../administration/institutional-role.model";
 // import { personalDetailsModel } from "./personalDetails.model";
 
 export const userModel = pgTable('users', {
@@ -17,6 +18,8 @@ export const userModel = pgTable('users', {
     isSuspended: boolean().default(false),
     suspendedReason: text(),
     suspendedTillDate: timestamp(),
+    institutionalRoleId: integer("institutional_role_id_fk")
+        .references(() => institutionalRoleModel.id),
     isActive: boolean().default(true),
     sendStagingNotifications: boolean().default(false),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),

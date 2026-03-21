@@ -11,7 +11,10 @@ export async function POST(req: NextRequest) {
     const { type, to, code, name } = await req.json();
 
     if (!type || !to || !code) {
-      return NextResponse.json({ message: "Type, recipient, and code are required." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Type, recipient, and code are required." },
+        { status: 400 },
+      );
     }
 
     let result: any;
@@ -42,10 +45,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (result && result.result === false) {
-      return NextResponse.json({ message: result.message || `Failed to send ${type} notification.` }, { status: 500 });
+      return NextResponse.json(
+        { message: result.message || `Failed to send ${type} notification.` },
+        { status: 500 },
+      );
     }
 
-    return NextResponse.json({ message: `${type} notification sent successfully!` }, { status: 200 });
+    return NextResponse.json(
+      { message: `${type} notification sent successfully!` },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("Error sending notification:", error);
     return NextResponse.json({ message: "Internal server error." }, { status: 500 });

@@ -76,5 +76,9 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     [student, batches, loading, authLoading, accessControl, error],
   );
 
-  return <StudentContext.Provider value={value}>{user?.type === "STUDENT" ? children : null}</StudentContext.Provider>;
+  return (
+    <StudentContext.Provider value={value}>
+      {user?.type === "STUDENT" ? children : null}
+    </StudentContext.Provider>
+  );
 };

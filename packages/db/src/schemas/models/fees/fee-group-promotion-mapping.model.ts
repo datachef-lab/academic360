@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, unique } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
 import { promotionModel } from "../batches";
 
 import { createInsertSchema } from "drizzle-zod";
@@ -22,6 +22,7 @@ export const feeGroupPromotionMappingModel = pgTable("fee_group_promotion_mappin
     updatedByUserId: integer("updated_by_user_id_fk")
         .references(() => userModel.id)
         .notNull(),
+    remarks: varchar({ length: 5000 }),
 }, (table) => ({
     uniqueFeeGroupPromotionConstraint: unique()
         .on(table.feeGroupId, table.promotionId),

@@ -25,7 +25,12 @@ interface CourseTypeFormProps {
   isSubmitting: boolean;
 }
 
-export function CourseTypeForm({ initialData, onSubmit, onCancel, isSubmitting }: CourseTypeFormProps) {
+export function CourseTypeForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: CourseTypeFormProps) {
   const defaultValues: CourseTypeFormValues = {
     name: initialData?.name || "",
     shortName: initialData?.shortName || "",
@@ -93,7 +98,9 @@ export function CourseTypeForm({ initialData, onSubmit, onCancel, isSubmitting }
         <Controller
           name="isActive"
           control={control}
-          render={({ field }) => <Checkbox id="disabled" checked={!!field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => (
+            <Checkbox id="disabled" checked={!!field.value} onCheckedChange={field.onChange} />
+          )}
         />
         <Label htmlFor="isActive">Active</Label>
       </div>

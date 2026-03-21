@@ -8,7 +8,17 @@ import { fetchExamById, fetchExamCandidates } from "@/services/exam-api";
 import { Calendar, Clock, Download } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Dimensions, Image, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
 const BANNER_ASPECT = 16 / 9;
 
@@ -107,14 +117,24 @@ export default function ExamDetailsScreen() {
         const details: PaperDetail[] = candidates
           .map((candidate) => {
             const data =
-              (candidate as unknown as { exam_candidates?: Record<string, unknown> })?.exam_candidates ?? candidate;
-            const promotionId = (data as Record<string, unknown>)?.promotionId as number | undefined;
+              (candidate as unknown as { exam_candidates?: Record<string, unknown> })
+                ?.exam_candidates ?? candidate;
+            const promotionId = (data as Record<string, unknown>)?.promotionId as
+              | number
+              | undefined;
             const examRoomId = (data as Record<string, unknown>)?.examRoomId;
-            const examSubjectId = (data as Record<string, unknown>)?.examSubjectId as number | undefined;
+            const examSubjectId = (data as Record<string, unknown>)?.examSubjectId as
+              | number
+              | undefined;
             const seatNumber = (data as Record<string, unknown>)?.seatNumber as string | undefined;
             const paper = candidate?.paper;
             if (!paper || !examRoomId || !examSubjectId) return null;
-            if (currentPromotionId != null && promotionId != null && promotionId !== currentPromotionId) return null;
+            if (
+              currentPromotionId != null &&
+              promotionId != null &&
+              promotionId !== currentPromotionId
+            )
+              return null;
             if (examSubjectId != null && seenSubjects.has(examSubjectId)) return null;
             if (examSubjectId != null) seenSubjects.add(examSubjectId);
             const examRoom = exam.locations?.find((loc) => loc?.id === examRoomId);
@@ -142,8 +162,12 @@ export default function ExamDetailsScreen() {
     const examId = Number(exam.id);
     const sid = Number(student.id);
     const now = Date.now();
-    const start = exam.admitCardStartDownloadDate ? new Date(exam.admitCardStartDownloadDate).getTime() : null;
-    const end = exam.admitCardLastDownloadDate ? new Date(exam.admitCardLastDownloadDate).getTime() : null;
+    const start = exam.admitCardStartDownloadDate
+      ? new Date(exam.admitCardStartDownloadDate).getTime()
+      : null;
+    const end = exam.admitCardLastDownloadDate
+      ? new Date(exam.admitCardLastDownloadDate).getTime()
+      : null;
     if (!start || now < start || (end && now > end)) {
       Alert.alert("Not available", "Admit card download is not available at this time.");
       return;
@@ -193,7 +217,9 @@ export default function ExamDetailsScreen() {
     (() => {
       const now = Date.now();
       const start = new Date(exam.admitCardStartDownloadDate!).getTime();
-      const end = exam.admitCardLastDownloadDate ? new Date(exam.admitCardLastDownloadDate).getTime() : null;
+      const end = exam.admitCardLastDownloadDate
+        ? new Date(exam.admitCardLastDownloadDate).getTime()
+        : null;
       return now >= start && (!end || now <= end);
     })();
 
@@ -208,7 +234,14 @@ export default function ExamDetailsScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: "center", alignItems: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.background,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <ActivityIndicator size="large" color={accent} />
         <Text style={{ color: theme.text, marginTop: 12 }}>Loading exam...</Text>
       </View>
@@ -226,7 +259,9 @@ export default function ExamDetailsScreen() {
           padding: 24,
         }}
       >
-        <Text style={{ color: theme.text, fontSize: 16, textAlign: "center" }}>{error ?? "Exam not found"}</Text>
+        <Text style={{ color: theme.text, fontSize: 16, textAlign: "center" }}>
+          {error ?? "Exam not found"}
+        </Text>
         <Pressable
           onPress={() => router.back()}
           style={{
@@ -250,14 +285,31 @@ export default function ExamDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Banner - YouTube video style */}
-        <View style={{ width: bannerWidth, height: bannerHeight, backgroundColor: isDark ? "#1a1a1a" : "#e5e7eb" }}>
-          <Image source={examDetailsImage} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+        <View
+          style={{
+            width: bannerWidth,
+            height: bannerHeight,
+            backgroundColor: isDark ? "#1a1a1a" : "#e5e7eb",
+          }}
+        >
+          <Image
+            source={examDetailsImage}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
         </View>
 
         {/* Content - YouTube info section style */}
         <View style={{ padding: 16, paddingTop: 20 }}>
           {/* Title row */}
-          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.text, fontSize: 20, fontWeight: "700" }}>
                 {exam.examType?.name ?? "Exam"}
@@ -272,7 +324,9 @@ export default function ExamDetailsScreen() {
                   backgroundColor: isDark ? "rgba(99,102,241,0.25)" : "#eef2ff",
                 }}
               >
-                <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>{exam.class?.name ?? ""}</Text>
+                <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>
+                  {exam.class?.name ?? ""}
+                </Text>
               </View>
             </View>
           </View>
@@ -289,12 +343,18 @@ export default function ExamDetailsScreen() {
                 borderColor: cardBorder,
               }}
             >
-              <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600", marginBottom: 8 }}>Schedule</Text>
+              <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600", marginBottom: 8 }}>
+                Schedule
+              </Text>
               {paperDetails.map((p, idx) => (
                 <View key={idx} style={{ marginBottom: idx < paperDetails.length - 1 ? 8 : 0 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <View
+                    style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}
+                  >
                     <Calendar size={14} color={theme.text} style={{ opacity: 0.8 }} />
-                    <Text style={{ color: theme.text, fontSize: 13 }}>{formatDate(p.startTime)}</Text>
+                    <Text style={{ color: theme.text, fontSize: 13 }}>
+                      {formatDate(p.startTime)}
+                    </Text>
                     <Clock size={14} color={theme.text} style={{ opacity: 0.8 }} />
                     <Text style={{ color: theme.text, fontSize: 13 }}>
                       {formatTime(p.startTime)} – {formatTime(p.endTime)}
@@ -326,7 +386,15 @@ export default function ExamDetailsScreen() {
           </View>
 
           {/* Exam Subjects/Paper section - table with name, time, location */}
-          <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginTop: 24, marginBottom: 12 }}>
+          <Text
+            style={{
+              color: theme.text,
+              fontSize: 16,
+              fontWeight: "600",
+              marginTop: 24,
+              marginBottom: 12,
+            }}
+          >
             Exam Subjects / Papers
           </Text>
           {paperDetails.length === 0 ? (
@@ -340,7 +408,9 @@ export default function ExamDetailsScreen() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: theme.text, opacity: 0.7 }}>No schedule details available.</Text>
+              <Text style={{ color: theme.text, opacity: 0.7 }}>
+                No schedule details available.
+              </Text>
             </View>
           ) : (
             <View
@@ -364,17 +434,38 @@ export default function ExamDetailsScreen() {
                 }}
               >
                 <View style={{ width: colName, marginRight: colGap }}>
-                  <Text style={{ color: theme.text, fontSize: 12, fontWeight: "700", textTransform: "uppercase" }}>
+                  <Text
+                    style={{
+                      color: theme.text,
+                      fontSize: 12,
+                      fontWeight: "700",
+                      textTransform: "uppercase",
+                    }}
+                  >
                     Name
                   </Text>
                 </View>
                 <View style={{ width: colTime, marginRight: colGap }}>
-                  <Text style={{ color: theme.text, fontSize: 12, fontWeight: "700", textTransform: "uppercase" }}>
+                  <Text
+                    style={{
+                      color: theme.text,
+                      fontSize: 12,
+                      fontWeight: "700",
+                      textTransform: "uppercase",
+                    }}
+                  >
                     Time
                   </Text>
                 </View>
                 <View style={{ width: colLocation }}>
-                  <Text style={{ color: theme.text, fontSize: 12, fontWeight: "700", textTransform: "uppercase" }}>
+                  <Text
+                    style={{
+                      color: theme.text,
+                      fontSize: 12,
+                      fontWeight: "700",
+                      textTransform: "uppercase",
+                    }}
+                  >
                     Location
                   </Text>
                 </View>
@@ -388,7 +479,8 @@ export default function ExamDetailsScreen() {
                     alignItems: "flex-start",
                     paddingVertical: 12,
                     paddingHorizontal: 12,
-                    backgroundColor: idx % 2 === 0 ? "transparent" : isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
+                    backgroundColor:
+                      idx % 2 === 0 ? "transparent" : isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
                     borderBottomWidth: idx < paperDetails.length - 1 ? 1 : 0,
                     borderBottomColor: cardBorder,
                   }}
@@ -399,12 +491,18 @@ export default function ExamDetailsScreen() {
                     </Text>
                   </View>
                   <View style={{ width: colTime, marginRight: colGap }}>
-                    <Text style={{ color: theme.text, fontSize: 12, opacity: 0.9 }} numberOfLines={2}>
+                    <Text
+                      style={{ color: theme.text, fontSize: 12, opacity: 0.9 }}
+                      numberOfLines={2}
+                    >
                       {formatTime(p.startTime)} – {formatTime(p.endTime)}
                     </Text>
                   </View>
                   <View style={{ width: colLocation }}>
-                    <Text style={{ color: theme.text, fontSize: 12, opacity: 0.9 }} numberOfLines={2}>
+                    <Text
+                      style={{ color: theme.text, fontSize: 12, opacity: 0.9 }}
+                      numberOfLines={2}
+                    >
                       {p.room}
                       {p.floor ? `, ${p.floor}` : ""}
                       {p.seatNumber ? ` • Seat ${p.seatNumber}` : ""}
@@ -446,8 +544,14 @@ export default function ExamDetailsScreen() {
               backgroundColor: accent,
             }}
           >
-            {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={20} color="#fff" />}
-            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>Download Admit Card</Text>
+            {downloading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Download size={20} color="#fff" />
+            )}
+            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>
+              Download Admit Card
+            </Text>
           </Pressable>
         </View>
       )}

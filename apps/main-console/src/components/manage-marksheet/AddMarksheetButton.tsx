@@ -11,7 +11,12 @@ import {
 import { Plus, CheckCircle, UserPlus, Keyboard } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { getSearchedStudentsByRollNumber } from "@/services/student";
 import { useNavigate } from "react-router-dom";
 import { Student } from "@/types/user/student";
@@ -22,7 +27,9 @@ export default function AddMarksheetButton() {
   const [framework, setFramework] = useState<"CCF" | "CBCS">("CCF");
   const [rollNumber, setRollNumber] = useState("");
   const [debouncedRollNumber, setDebouncedRollNumber] = useState(""); // Store debounced value
-  const [studentData, setStudentData] = useState<{ exists: boolean; student?: Student }>({ exists: false });
+  const [studentData, setStudentData] = useState<{ exists: boolean; student?: Student }>({
+    exists: false,
+  });
   const [isLoading, setIsLoading] = useState(false);
 
   // Debounce effect: Waits 500ms before updating debouncedRollNumber
@@ -97,7 +104,9 @@ export default function AddMarksheetButton() {
         </DialogTrigger>
         <DialogContent className="sm:min-w-[620px] min-h-[350px] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="border-b pb-3 text-2xl font-semibold">Add Marksheet</DialogTitle>
+            <DialogTitle className="border-b pb-3 text-2xl font-semibold">
+              Add Marksheet
+            </DialogTitle>
           </DialogHeader>
           <DialogDescription>
             <form
@@ -175,7 +184,9 @@ export default function AddMarksheetButton() {
                       {rollNumber.length === 0 ? (
                         <span>Please type the roll number...</span>
                       ) : (
-                        <span>{studentData.exists ? studentData.student?.name : "New Student"}</span>
+                        <span>
+                          {studentData.exists ? studentData.student?.name : "New Student"}
+                        </span>
                       )}
                     </>
                   )}

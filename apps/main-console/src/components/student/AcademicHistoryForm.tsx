@@ -14,13 +14,7 @@ import { getAllBoardUniversities } from "@/services/board-university.service";
 import { getAllSpecializations } from "@/services/specialization.service";
 import { getAllBoardResultStatuses } from "@/services/board-result-status.service";
 import { BoardResultStatus } from "@/types/resources/board-result-status.types";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -59,9 +53,7 @@ function stripDates<T>(obj: T): T {
     for (const key in obj) {
       if (key === "createdAt" || key === "updatedAt") continue;
       const value = obj[key];
-      result[key] = (typeof value === "object" && value !== null)
-        ? stripDates(value)
-        : value;
+      result[key] = typeof value === "object" && value !== null ? stripDates(value) : value;
     }
     return result as T;
   }
@@ -190,19 +182,13 @@ export default function AcademicHistoryForm({ studentId }: AcademicHistoryFormPr
           {/* Institution Section */}
           <div className="space-y-4 border rounded-lg p-4">
             <h3 className="text-lg font-semibold">Previous Institution</h3>
-            
+
             <div>
               <Label>Last Institution</Label>
               <Select
-                value={
-                  formData.lastInstitution?.id
-                    ? String(formData.lastInstitution.id)
-                    : ""
-                }
+                value={formData.lastInstitution?.id ? String(formData.lastInstitution.id) : ""}
                 onValueChange={(value) => {
-                  const selected = institutionOptions.find(
-                    (inst) => String(inst.id) === value
-                  );
+                  const selected = institutionOptions.find((inst) => String(inst.id) === value);
                   setFormData((prev) => ({
                     ...prev,
                     lastInstitution: selected ?? null,
@@ -226,14 +212,10 @@ export default function AcademicHistoryForm({ studentId }: AcademicHistoryFormPr
               <Label>Board/University</Label>
               <Select
                 value={
-                  formData.lastBoardUniversity?.id
-                    ? String(formData.lastBoardUniversity.id)
-                    : ""
+                  formData.lastBoardUniversity?.id ? String(formData.lastBoardUniversity.id) : ""
                 }
                 onValueChange={(value) => {
-                  const selected = boardUniversityOptions.find(
-                    (bu) => String(bu.id) === value
-                  );
+                  const selected = boardUniversityOptions.find((bu) => String(bu.id) === value);
                   setFormData((prev) => ({
                     ...prev,
                     lastBoardUniversity: selected ?? null,
@@ -256,15 +238,9 @@ export default function AcademicHistoryForm({ studentId }: AcademicHistoryFormPr
             <div>
               <Label>Specialization</Label>
               <Select
-                value={
-                  formData.specialization?.id
-                    ? String(formData.specialization.id)
-                    : ""
-                }
+                value={formData.specialization?.id ? String(formData.specialization.id) : ""}
                 onValueChange={(value) => {
-                  const selected = specializationOptions.find(
-                    (spec) => String(spec.id) === value
-                  );
+                  const selected = specializationOptions.find((spec) => String(spec.id) === value);
                   setFormData((prev) => ({
                     ...prev,
                     specialization: selected ?? null,
@@ -288,16 +264,14 @@ export default function AcademicHistoryForm({ studentId }: AcademicHistoryFormPr
           {/* Academic Details Section */}
           <div className="space-y-4 border rounded-lg p-4">
             <h3 className="text-lg font-semibold">Academic Details</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Studied Up To Class</Label>
                 <Input
                   type="number"
                   value={formData.studiedUpToClass || ""}
-                  onChange={(e) =>
-                    handleNumberChange("studiedUpToClass", e.target.value)
-                  }
+                  onChange={(e) => handleNumberChange("studiedUpToClass", e.target.value)}
                   placeholder="e.g., 12"
                 />
               </div>
@@ -307,9 +281,7 @@ export default function AcademicHistoryForm({ studentId }: AcademicHistoryFormPr
                 <Input
                   type="number"
                   value={formData.passedYear || ""}
-                  onChange={(e) =>
-                    handleNumberChange("passedYear", e.target.value)
-                  }
+                  onChange={(e) => handleNumberChange("passedYear", e.target.value)}
                   placeholder="e.g., 2023"
                 />
               </div>
@@ -344,19 +316,17 @@ export default function AcademicHistoryForm({ studentId }: AcademicHistoryFormPr
           {/* Remarks Section */}
           <div className="space-y-4 border rounded-lg p-4">
             <h3 className="text-lg font-semibold">Additional Information</h3>
-            
-    <div>
+
+            <div>
               <Label>Remarks</Label>
               <Textarea
                 value={formData.remarks || ""}
-                onChange={(e) =>
-                  handleChange("remarks", e.target.value)
-                }
+                onChange={(e) => handleChange("remarks", e.target.value)}
                 placeholder="Enter any additional remarks or notes..."
                 rows={4}
               />
             </div>
-    </div>
+          </div>
         </CardContent>
 
         <CardFooter className="flex flex-col items-center gap-2">

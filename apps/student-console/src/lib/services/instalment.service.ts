@@ -2,7 +2,7 @@ import { query } from "@/db";
 import { DbInstalment, Instalment } from "@/types/fees/instalment";
 
 export async function findFeesByStudentId(studentId: number) {
-    const sqlQuery = ` 
+  const sqlQuery = ` 
     SELECT
         si.id,
         si.stdid,
@@ -100,119 +100,116 @@ export async function findFeesByStudentId(studentId: number) {
     WHERE si.stdid = ${studentId}
     ;`;
 
-    const result = await query(sqlQuery) as DbInstalment[];
+  const result = (await query(sqlQuery)) as DbInstalment[];
 
-    const instalments: Instalment[] = [];
-    const done: number[] = [];
-    for (let i = 0; i < result.length; i++) {
+  const instalments: Instalment[] = [];
+  const done: number[] = [];
+  for (let i = 0; i < result.length; i++) {
+    if (done.includes(result[i].id)) continue;
+    done.push(result[i].id);
 
-        if (done.includes(result[i].id)) continue;
-        done.push(result[i].id);
+    const {
+      amount,
+      amtwords: amountInWords,
+      feespaydt: paidAt,
+      instalmentNumber,
+      feespaid,
+      cancel: cancelledInst,
+      remarks,
+      fg,
+      structid: feesStructureId,
+      courseName,
+      receiptTypeName,
+      className,
+      sessionName,
+      lastdate: lastDate,
+      closingdate: closingDate,
+      advanceClassName,
+      instdt: instalmentFrom,
+      insttodt: instalmentTo,
+      lastonlinedate: lastOnlineDateFrom,
+      lastonlinedateto: lastOnlineDateTo,
+      shiftName,
+      feesReceiptMainId,
+      feesReceiptMainType,
+      paymentModeName,
+      receiptDate,
+      academicYearName,
+      isAdvPayement,
+      cancelled,
+      cancelremarks: cancelledRemarks,
+      challanno: challanNumber,
+    } = result[i];
 
-        const {
-            amount,
-            amtwords: amountInWords,
-            feespaydt: paidAt,
-            instalmentNumber,
-            feespaid,
-            cancel: cancelledInst,
-            remarks,
-            fg,
-            structid: feesStructureId,
-            courseName,
-            receiptTypeName,
-            className, sessionName,
-            lastdate: lastDate,
-            closingdate: closingDate,
-            advanceClassName,
-            instdt: instalmentFrom,
-            insttodt: instalmentTo,
-            lastonlinedate: lastOnlineDateFrom,
-            lastonlinedateto: lastOnlineDateTo,
-            shiftName,
-            feesReceiptMainId,
-            feesReceiptMainType,
-            paymentModeName,
-            receiptDate,
-            academicYearName,
-            isAdvPayement,
-            cancelled,
-            cancelremarks: cancelledRemarks,
-            challanno: challanNumber,
+    const instl: Instalment = {
+      id: result[i].id,
+      studentId,
+      metadata: {
+        feesStructureId,
+        courseName,
+        receiptTypeName,
+        className,
+        sessionName,
+        lastDate,
+        closingDate,
+        advanceClassName,
+        instalmentFrom,
+        instalmentTo,
+        lastOnlineDateFrom,
+        lastOnlineDateTo,
+        shiftName,
+      },
+      details: {
+        id: feesReceiptMainId!,
+        type: feesReceiptMainType,
+        paymentMode: paymentModeName!,
+        date: receiptDate,
+        academicYear: academicYearName!,
+        isAdvancePayment: !!isAdvPayement,
+        cancelled: !!cancelled,
+        challanNumber,
+        cancelledRemarks,
+        components: [],
+      },
+      amount,
+      amountInWords,
+      paidAt,
+      instalmentNumber,
+      hasPaid: feespaid,
+      cancelled: !!cancelledInst,
+      remarks,
+      fg: !!fg,
+    };
 
+    // Receipt's components
+    const subReceipts = result.filter((ele) => ele.parent_id == result[i].id);
+    const doneReceipts: number[] = [];
+    for (let j = 0; j < subReceipts.length; j++) {
+      if (doneReceipts.includes(subReceipts[j].feesStructureSubId)) continue;
+      doneReceipts.push(subReceipts[j].feesStructureSubId);
 
-        } = result[i];
-
-        const instl: Instalment = {
-            id: result[i].id,
-            studentId,
-            metadata: {
-                feesStructureId,
-                courseName,
-                receiptTypeName,
-                className,
-                sessionName,
-                lastDate,
-                closingDate,
-                advanceClassName,
-                instalmentFrom,
-                instalmentTo,
-                lastOnlineDateFrom,
-                lastOnlineDateTo,
-                shiftName
-            },
-            details: {
-                id: feesReceiptMainId!,
-                type: feesReceiptMainType,
-                paymentMode: paymentModeName!,
-                date: receiptDate,
-                academicYear: academicYearName!,
-                isAdvancePayment: !!isAdvPayement,
-                cancelled: !!cancelled,
-                challanNumber,
-                cancelledRemarks,
-                components: []
-            },
-            amount,
-            amountInWords,
-            paidAt,
-            instalmentNumber,
-            hasPaid: feespaid,
-            cancelled: !!cancelledInst,
-            remarks,
-            fg: !!fg
-        }
-
-        // Receipt's components
-        const subReceipts = result.filter(ele => ele.parent_id == result[i].id);
-        const doneReceipts: number[] = [];
-        for (let j = 0; j < subReceipts.length; j++) {
-            if (doneReceipts.includes(subReceipts[j].feesStructureSubId)) continue;
-            doneReceipts.push(subReceipts[j].feesStructureSubId);
-
-            instl.details.components.push({
-                id: subReceipts[j].feesStructureSubId!,
-                headName: subReceipts[j].feesStructureSubHeadName!,
-                metadata: {
-                    id: subReceipts[j].feesStructureSubId!,
-                    headName: subReceipts[j].feesStructureSubHeadName!,
-                    type: subReceipts[j].feesStructureSubType!,
-                    amount: subReceipts[j].feesStructureSubInstalmentAmount!,
-                    specialTypeName: subReceipts[j].feesStructureSubSpecialTypeName || null,
-                    instalmentTypeName: subReceipts[j].feesStructureSubInstalmentTypeName || null,
-                    lateTypeCalculation: subReceipts[j].feesStructureSubLateTypeCalculation || null,
-                    concession: subReceipts[j].feesStructureSubConcession || null
-                },
-                hasPaid: !!subReceipts[j].feesReceiptSubAmountPay
-            });
-        }
-
-
-        instalments.push(instl);
+      instl.details.components.push({
+        id: subReceipts[j].feesStructureSubId!,
+        headName: subReceipts[j].feesStructureSubHeadName!,
+        metadata: {
+          id: subReceipts[j].feesStructureSubId!,
+          headName: subReceipts[j].feesStructureSubHeadName!,
+          type: subReceipts[j].feesStructureSubType!,
+          amount: subReceipts[j].feesStructureSubInstalmentAmount!,
+          specialTypeName: subReceipts[j].feesStructureSubSpecialTypeName || null,
+          instalmentTypeName: subReceipts[j].feesStructureSubInstalmentTypeName || null,
+          lateTypeCalculation: subReceipts[j].feesStructureSubLateTypeCalculation || null,
+          concession: subReceipts[j].feesStructureSubConcession || null,
+        },
+        hasPaid: !!subReceipts[j].feesReceiptSubAmountPay,
+      });
     }
 
-    // console.log(instalments);
-    // console.log("instalments[0].details.components:", instalments[0].details.components);
+    instalments.push(instl);
+  }
 
-    return instalments;
+  // console.log(instalments);
+  // console.log("instalments[0].details.components:", instalments[0].details.components);
+
+  return instalments;
 }

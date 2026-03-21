@@ -3,13 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { ColumnDef } from "@tanstack/react-table";
 
 export interface User {
-    id: number;
-    name: string;
-    position: string;
-    email: string;
-    contact: string;
-    avatarColor: string;
-  }
+  id: number;
+  name: string;
+  position: string;
+  email: string;
+  contact: string;
+  avatarColor: string;
+}
 export const columns: ColumnDef<User, unknown>[] = [
   {
     accessorKey: "id",
@@ -40,12 +40,12 @@ export const columns: ColumnDef<User, unknown>[] = [
     cell: ({ row }) => {
       const position = row.getValue("position") as string;
       return (
-        <Badge 
-          variant={position === 'Teacher' ? 'default' : 'secondary'}
+        <Badge
+          variant={position === "Teacher" ? "default" : "secondary"}
           className={`${
-            position === 'Teacher' 
-              ? 'bg-green-100 text-green-800 hover:bg-green-100' 
-              : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+            position === "Teacher"
+              ? "bg-green-100 text-green-800 hover:bg-green-100"
+              : "bg-blue-100 text-blue-800 hover:bg-blue-100"
           } rounded-full px-3 py-1 text-xs`}
         >
           {position}
@@ -56,15 +56,11 @@ export const columns: ColumnDef<User, unknown>[] = [
   {
     accessorKey: "email",
     header: "Email",
-    cell: ({ row }) => (
-      <div className="text-sm text-gray-500">{row.getValue("email")}</div>
-    ),
+    cell: ({ row }) => <div className="text-sm text-gray-500">{row.getValue("email")}</div>,
   },
   {
     accessorKey: "contact",
     header: "Mail Contact/Phone",
-    cell: ({ row }) => (
-      <div className="text-sm text-gray-500">{row.getValue("contact")}</div>
-    ),
+    cell: ({ row }) => <div className="text-sm text-gray-500">{row.getValue("contact")}</div>,
   },
 ];

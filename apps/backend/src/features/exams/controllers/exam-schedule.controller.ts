@@ -530,69 +530,6 @@ export const createExamAssignmenthandler = async (
   res: Response,
 ) => {
   try {
-    // console.log("[EXAM-SCHEDULE-CONTROLLER] Received get students request:", {
-    //   classId,
-    //   programCourseIds,
-    //   paperIds,
-    //   academicYearIds,
-    //   shiftIds,
-    //   assignBy,
-    //   roomAssignmentsCount: roomAssignments?.length,
-    // });
-
-    // if (
-    //   !classId ||
-    //   !Array.isArray(programCourseIds) ||
-    //   !Array.isArray(paperIds) ||
-    //   !Array.isArray(academicYearIds) ||
-    //   !assignBy ||
-    //   !Array.isArray(roomAssignments)
-    // ) {
-    //   console.warn("[EXAM-SCHEDULE-CONTROLLER] Missing required fields");
-    //   return res
-    //     .status(400)
-    //     .json(
-    //       new ApiResponse(
-    //         400,
-    //         "ERROR",
-    //         null,
-    //         "Missing required fields: classId, programCourseIds, paperIds, academicYearIds, assignBy, roomAssignments",
-    //       ),
-    //     );
-    // }
-
-    // if (
-    //   programCourseIds.length === 0 ||
-    //   paperIds.length === 0 ||
-    //   academicYearIds.length === 0 ||
-    //   roomAssignments.length === 0
-    // ) {
-    //   console.log(
-    //     "[EXAM-SCHEDULE-CONTROLLER] Empty arrays, returning empty array",
-    //   );
-    //   return res
-    //     .status(200)
-    //     .json(
-    //       new ApiResponse(
-    //         200,
-    //         "SUCCESS",
-    //         { students: [] },
-    //         "No students found",
-    //       ),
-    //     );
-    // }
-
-    // const params = {
-    //   classId: Number(classId),
-    //   programCourseIds: programCourseIds.map((id: unknown) => Number(id)),
-    //   paperIds: paperIds.map((id: unknown) => Number(id)),
-    //   academicYearIds: academicYearIds.map((id: unknown) => Number(id)),
-    //   shiftIds: shiftIds
-    //     ? shiftIds.map((id: unknown) => Number(id))
-    //     : undefined,
-    //   assignBy: assignBy as "UID" | "CU Reg. No.",
-    // };
-
     // Parse Excel file if provided (assuming multer middleware handles file upload and attaches to req.file)
     let excelStudents: { foil_number: string; uid: string }[] = [];
     if (req.file) {
@@ -630,14 +567,38 @@ export const createExamAssignmenthandler = async (
         ? JSON.parse(req.body.dto)
         : req.body.dto;
 
+    let examGroup =
+      typeof req.body.examGroup === "string"
+        ? JSON.parse(req.body.examGroup)
+        : req.body.examGroup;
+
+    const selectedExistingGroupId = req.body.selectedExistingGroupId
+      ? Number(req.body.selectedExistingGroupId)
+      : null;
+
+    // Validate examGroup
+    if (!examGroup || !examGroup.name || !examGroup.examCommencementDate) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "ERROR",
+            null,
+            "examGroup must have name and examCommencementDate",
+          ),
+        );
+    }
+
     const userId = (req as any)?.user?.id as number | undefined;
 
-    const students = await createExamAssignment(dto, excelStudents, userId);
-
-    // console.log(
-    //     "[EXAM-SCHEDULE-CONTROLLER] Service returned students:",
-    //     students.length,
-    // );
+    const students = await createExamAssignment(
+      dto,
+      examGroup,
+      excelStudents,
+      userId,
+      selectedExistingGroupId,
+    );
 
     return res
       .status(200)
@@ -646,12 +607,12 @@ export const createExamAssignmenthandler = async (
           200,
           "SUCCESS",
           { students },
-          "Students fetched successfully",
+          "Exam created successfully",
         ),
       );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("[EXAM-SCHEDULE-CONTROLLER] Error fetching students:", error);
+    console.error("[EXAM-SCHEDULE-CONTROLLER] Error creating exam:", error);
     return res.status(500).json(new ApiResponse(500, "ERROR", null, message));
   }
 };
@@ -665,18 +626,26 @@ export const downloadAdmitCardsController = async (
     path: req.path,
     query: req.query,
   });
-  try {
-    const { examId, uploadSessionId } = req.query;
 
-    if (!examId) {
-      res.status(400).json(new ApiError(400, "examId is required"));
+  // disable default express timeout for long-running downloads
+  req.setTimeout(0);
+  res.setTimeout(0);
+  try {
+    const { examId, uploadSessionId, examGroupId } = req.query;
+
+    if (!examId && !examGroupId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "examId or examGroupId is required"));
       return;
     }
 
     const examIdNum = Number(examId);
 
-    if (isNaN(examIdNum)) {
-      res.status(400).json(new ApiError(400, "Invalid examId"));
+    const examGroupIdNum = Number(examGroupId);
+
+    if (isNaN(examIdNum) && isNaN(examGroupIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId or examGroupId"));
       return;
     }
 
@@ -687,6 +656,7 @@ export const downloadAdmitCardsController = async (
 
     const result = await downloadAdmitCardsAsZip(
       examIdNum,
+      examGroupIdNum,
       (req as any)?.user!.id as number,
       uploadSessionId as string | undefined,
     );
@@ -706,11 +676,23 @@ export const downloadAdmitCardsController = async (
       ? result.zipBuffer
       : Buffer.from(result.zipBuffer);
 
+    // Build filename: exam group name + exam commencement date
+    const examCommencementDate =
+      result.examCommencementDate instanceof Date
+        ? result.examCommencementDate.toISOString().slice(0, 10)
+        : String(result.examCommencementDate || "").slice(0, 10);
+    const sanitizedName = (result.examGroupName || "exam")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const zipFileName = `${sanitizedName} ${examCommencementDate}.zip`;
+
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Length", zipBuffer.length);
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="exam-${examId}-subject-admit-cards.zip"`,
+      `attachment; filename="${zipFileName.replace(/"/g, "%22")}"`,
     );
 
     res.send(zipBuffer);
@@ -726,20 +708,26 @@ export const downloadAttendanceSheetsByExamIdController = async (
   next: NextFunction,
 ): Promise<void> => {
   console.log(req.query);
-  try {
-    const { examId, uploadSessionId } = req.query;
 
-    if (!examId) {
+  // ensure no timeout for potentially slow zip generation
+  req.setTimeout(0);
+  res.setTimeout(0);
+
+  try {
+    const { examId, examGroupId, uploadSessionId } = req.query;
+
+    if (!examId && !examGroupId) {
       res
         .status(400)
-        .json(new ApiError(400, "examId and examSubjectId are required"));
+        .json(new ApiError(400, "examId or examGroupId is required"));
       return;
     }
 
     const examIdNum = Number(examId);
+    const examGroupIdNum = Number(examGroupId);
 
-    if (isNaN(examIdNum)) {
-      res.status(400).json(new ApiError(400, "Invalid examId"));
+    if (isNaN(examIdNum) && isNaN(examGroupIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId or examGroupId"));
       return;
     }
 
@@ -748,8 +736,9 @@ export const downloadAttendanceSheetsByExamIdController = async (
     });
 
     const result = await downloadAttendanceSheetsByExamId(
-      examIdNum,
       (req as any)?.user!.id as number,
+      examIdNum,
+      examGroupIdNum,
       uploadSessionId as string | undefined,
     );
 
@@ -770,11 +759,23 @@ export const downloadAttendanceSheetsByExamIdController = async (
       ? result.zipBuffer
       : Buffer.from(result.zipBuffer);
 
+    const rawDate = result.examCommencementDate;
+    const examCommencementDate =
+      rawDate != null && typeof rawDate === "object" && "toISOString" in rawDate
+        ? (rawDate as Date).toISOString().slice(0, 10)
+        : String(rawDate ?? "").slice(0, 10);
+    const sanitizedName = (result.examGroupName || "exam")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const zipFileName = `${sanitizedName} ${examCommencementDate}-attendance-dr-sheets.zip`;
+
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Length", zipBuffer.length);
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="exam-${examId}-attendance-dr-sheets.zip"`,
+      `attachment; filename="${zipFileName.replace(/"/g, "%22")}"`,
     );
 
     res.send(zipBuffer);
@@ -790,29 +791,48 @@ export const downloadExamCandidatesController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { examId } = req.query;
+    const { examId, examGroupId } = req.query;
 
-    if (!examId) {
-      res.status(400).json(new ApiError(400, "examId is required"));
+    if (!examId && !examGroupId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "examId or examGroupId is required"));
       return;
     }
 
     const examIdNum = Number(examId);
-    if (isNaN(examIdNum)) {
-      res.status(400).json(new ApiError(400, "Invalid examId"));
+    const examGroupIdNum = Number(examGroupId);
+    if (isNaN(examIdNum) && isNaN(examGroupIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId or examGroupId"));
       return;
     }
 
     console.info("[EXAM-CANDIDATE-DOWNLOAD] Starting Excel download", {
       examId: examIdNum,
+      examGroupId: examGroupIdNum,
     });
 
-    const excelBuffer = await downloadExamCandidatesbyExamId(examIdNum);
+    const result = await downloadExamCandidatesbyExamId(
+      examIdNum,
+      examGroupIdNum,
+    );
 
-    // Ensure excelBuffer is a Buffer
-    const buffer = Buffer.isBuffer(excelBuffer)
-      ? excelBuffer
-      : Buffer.from(excelBuffer as ArrayBuffer);
+    // Ensure buffer is a Buffer
+    const buffer = Buffer.isBuffer(result.buffer)
+      ? result.buffer
+      : Buffer.from(result.buffer);
+
+    const rawDate = result.examCommencementDate;
+    const examCommencementDate =
+      rawDate != null && typeof rawDate === "object" && "toISOString" in rawDate
+        ? (rawDate as Date).toISOString().slice(0, 10)
+        : String(rawDate ?? "").slice(0, 10);
+    const sanitizedName = (result.examGroupName || "exam")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const fileName = `${sanitizedName} ${examCommencementDate}-candidates.xlsx`;
 
     // ✅ IMPORTANT HEADERS
     res.setHeader(
@@ -821,7 +841,7 @@ export const downloadExamCandidatesController = async (
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="exam-${examIdNum}-candidates.xlsx"`,
+      `attachment; filename="${fileName.replace(/"/g, "%22")}"`,
     );
 
     // 🚀 Send buffer
@@ -842,18 +862,22 @@ export const updateExamAdmitCardDatesController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { examId } = req.params;
+    const { examId, examGroupId } = req.params;
     const { admitCardStartDownloadDate, admitCardLastDownloadDate } = req.body;
     const userId = (req as any)?.user?.id as number | undefined;
 
-    if (!examId) {
-      res.status(400).json(new ApiError(400, "examId is required"));
+    if (!examId && !examGroupId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "examId or examGroupId is required"));
       return;
     }
 
     const examIdNum = Number(examId);
-    if (isNaN(examIdNum)) {
-      res.status(400).json(new ApiError(400, "Invalid examId"));
+    const examGroupIdNum = Number(examGroupId);
+
+    if (isNaN(examIdNum) && isNaN(examGroupIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId or examGroupId"));
       return;
     }
 
@@ -865,9 +889,10 @@ export const updateExamAdmitCardDatesController = async (
     });
 
     const updatedExam = await updateExamAdmitCardDates(
-      examIdNum,
       admitCardStartDownloadDate || null,
       admitCardLastDownloadDate || null,
+      examIdNum,
+      examGroupIdNum,
       userId,
     );
 
@@ -896,24 +921,47 @@ export const downloadAdmitCardTrackingController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { examId } = req.query;
+    const { examId, examGroupId } = req.query;
 
-    if (!examId) {
-      res.status(400).json(new ApiError(400, "examId is required"));
+    if (!examId && !examGroupId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "examId or examGroupId is required"));
       return;
     }
 
     const examIdNum = Number(examId);
-    if (isNaN(examIdNum)) {
-      res.status(400).json(new ApiError(400, "Invalid examId"));
+    const examGroupIdNum = Number(examGroupId);
+    if (isNaN(examIdNum) && isNaN(examGroupIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId or examGroupId"));
       return;
     }
 
     console.info("[ADMIT-CARD-TRACKING-DOWNLOAD] Starting Excel download", {
       examId: examIdNum,
+      examGroupId: examGroupIdNum,
     });
 
-    const excelBuffer = await downloadAdmitCardTrackingByExamId(examIdNum);
+    const result = await downloadAdmitCardTrackingByExamId(
+      examIdNum,
+      examGroupIdNum,
+    );
+
+    const buffer = Buffer.isBuffer(result.buffer)
+      ? result.buffer
+      : Buffer.from(result.buffer);
+
+    const rawDate = result.examCommencementDate;
+    const examCommencementDate =
+      rawDate != null && typeof rawDate === "object" && "toISOString" in rawDate
+        ? (rawDate as Date).toISOString().slice(0, 10)
+        : String(rawDate ?? "").slice(0, 10);
+    const sanitizedName = (result.examGroupName || "exam")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const fileName = `${sanitizedName} ${examCommencementDate}-admit-card-tracking.xlsx`;
 
     // ✅ IMPORTANT HEADERS
     res.setHeader(
@@ -922,11 +970,11 @@ export const downloadAdmitCardTrackingController = async (
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="exam-${examIdNum}-admit-card-tracking.xlsx"`,
+      `attachment; filename="${fileName.replace(/"/g, "%22")}"`,
     );
 
     // 🚀 Send buffer
-    res.send(Buffer.from(excelBuffer));
+    res.send(buffer);
   } catch (error) {
     console.error("[ADMIT-CARD-TRACKING-DOWNLOAD] Error:", error);
     handleError(error, res, next);
@@ -985,24 +1033,33 @@ export const downloadSingleAdmitCardController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { examId, studentId } = req.query;
+    const { examId, examGroupId, studentId } = req.query;
 
-    if (!examId || !studentId) {
+    if (!examId && !studentId && !examGroupId) {
       res
         .status(400)
-        .json(new ApiError(400, "examId and studentId are required"));
+        .json(
+          new ApiError(400, "examId, examGroupId and studentId are required"),
+        );
       return;
     }
 
     const examIdNum = Number(examId);
     const studentIdNum = Number(studentId);
+    const examGroupIdNum = Number(examGroupId);
 
-    if (isNaN(examIdNum) || isNaN(studentIdNum)) {
-      res.status(400).json(new ApiError(400, "Invalid examId or studentId"));
+    if (isNaN(examIdNum) && isNaN(studentIdNum) && isNaN(examGroupIdNum)) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Invalid examId, examGroupId or studentId"));
       return;
     }
 
-    const pdfBuffer = await downloadSingleAdmitCard(examIdNum, studentIdNum);
+    const pdfBuffer = await downloadSingleAdmitCard(
+      studentIdNum,
+      examIdNum,
+      examGroupIdNum,
+    );
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(

@@ -5,14 +5,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/use-profile";
 import { useStudent } from "@/providers/student-provider";
@@ -119,7 +131,9 @@ export default function CURegistrationPage() {
     // Check for MA (but not Mathematics - MA should be exactly "MA" or start with "MA" followed by non-letter)
     const isMA =
       normalizedName === "MA" ||
-      (normalizedName.startsWith("MA") && normalizedName.length > 2 && !normalizedName.startsWith("MATHEMATICS"));
+      (normalizedName.startsWith("MA") &&
+        normalizedName.length > 2 &&
+        !normalizedName.startsWith("MATHEMATICS"));
 
     // Check for MCOM
     const isMCOM = normalizedName.startsWith("MCOM");
@@ -338,7 +352,8 @@ export default function CURegistrationPage() {
   };
 
   // CU Registration correction request states
-  const [correctionRequest, setCorrectionRequest] = useState<CuRegistrationCorrectionRequestDto | null>(null);
+  const [correctionRequest, setCorrectionRequest] =
+    useState<CuRegistrationCorrectionRequestDto | null>(null);
   const [correctionRequestId, setCorrectionRequestId] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -379,7 +394,9 @@ export default function CURegistrationPage() {
           return;
         }
 
-        const data = await fetchStudentSubjectSelections(Number(student.id)).catch(() => null as any);
+        const data = await fetchStudentSubjectSelections(Number(student.id)).catch(
+          () => null as any,
+        );
         const completed = !!(
           data?.hasFormSubmissions ||
           (Array.isArray(data?.actualStudentSelections) && data.actualStudentSelections.length > 0)
@@ -414,7 +431,9 @@ export default function CURegistrationPage() {
     (async () => {
       try {
         const cityId = cities.find(
-          (c) => c.name.trim().toLowerCase() === (addressData.residential.city || "").trim().toLowerCase(),
+          (c) =>
+            c.name.trim().toLowerCase() ===
+            (addressData.residential.city || "").trim().toLowerCase(),
         )?.id;
         if (cityId) {
           const d = await fetchDistricts({ cityId }).catch(() => []);
@@ -429,7 +448,8 @@ export default function CURegistrationPage() {
     (async () => {
       try {
         const cityId = cities.find(
-          (c) => c.name.trim().toLowerCase() === (addressData.mailing.city || "").trim().toLowerCase(),
+          (c) =>
+            c.name.trim().toLowerCase() === (addressData.mailing.city || "").trim().toLowerCase(),
         )?.id;
         if (cityId) {
           const d = await fetchDistricts({ cityId }).catch(() => []);
@@ -475,7 +495,9 @@ export default function CURegistrationPage() {
           const map: any = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6 };
           const nums: number[] = [];
           forClasses.forEach((c) => {
-            const label = String(c?.name || c?.shortName || c?.class?.name || c?.class?.shortName || "");
+            const label = String(
+              c?.name || c?.shortName || c?.class?.name || c?.class?.shortName || "",
+            );
             const roman = /\b(I|II|III|IV|V|VI)\b/i.exec(label);
             if (roman) {
               nums.push(map[roman[1].toUpperCase()]);
@@ -487,7 +509,9 @@ export default function CURegistrationPage() {
           return Array.from(new Set(nums));
         };
         const getCategoryKey = (label: string): keyof typeof next | undefined => {
-          console.log(`🔍 getCategoryKey called with label: "${label}", isBcomProgram: ${isBcomProgram}`);
+          console.log(
+            `🔍 getCategoryKey called with label: "${label}", isBcomProgram: ${isBcomProgram}`,
+          );
 
           // Map full subject type names to category keys
           if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) {
@@ -557,7 +581,9 @@ export default function CURegistrationPage() {
           console.log(`🔍 Processing selection ${index}:`, r);
           const label = String(r?.metaLabel || r?.subjectSelectionMeta?.label || "");
           const name = r?.subjectName || r?.subject?.name || r?.subject?.code || "";
-          const subjectTypeName = String(r?.subjectTypeName || r?.subjectSelectionMeta?.subjectType?.name || "");
+          const subjectTypeName = String(
+            r?.subjectTypeName || r?.subjectSelectionMeta?.subjectType?.name || "",
+          );
           console.log(
             `🔍 Selection ${index} - label: "${label}", name: "${name}", subjectTypeName: "${subjectTypeName}"`,
           );
@@ -586,8 +612,10 @@ export default function CURegistrationPage() {
             if (semesters.length === 0 && /MDC\s*1/i.test(label)) semesters = [1];
             if (semesters.length === 0 && /MDC\s*2/i.test(label)) semesters = [2];
             if (semesters.length === 0 && /MDC\s*3/i.test(label)) semesters = [3];
-            if (semesters.length === 0 && /Major Discipline Course/i.test(label)) semesters = [1, 2, 3]; // Default for MDC
-            if (semesters.length === 0 && /Multi Disciplinary Course/i.test(label)) semesters = [1, 2, 3]; // Default for MDC
+            if (semesters.length === 0 && /Major Discipline Course/i.test(label))
+              semesters = [1, 2, 3]; // Default for MDC
+            if (semesters.length === 0 && /Multi Disciplinary Course/i.test(label))
+              semesters = [1, 2, 3]; // Default for MDC
           } else {
             // For non-BCOM students, handle IDC subjects
             if (semesters.length === 0 && /IDC\s*1/i.test(label)) semesters = [1];
@@ -596,7 +624,11 @@ export default function CURegistrationPage() {
           }
 
           // For BBA Core Course (CC) mapped to DSCC above, default to Sem I–IV ONLY when span missing
-          if (isBbaProgram && (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label)) && semesters.length === 0) {
+          if (
+            isBbaProgram &&
+            (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label)) &&
+            semesters.length === 0
+          ) {
             semesters = [1, 2, 3, 4];
           }
 
@@ -649,7 +681,10 @@ export default function CURegistrationPage() {
           // If no semester found in class name, infer from subject type
           if (semesters.length === 0) {
             // For BBA "Core Course (CC)" mapped to DSCC, default to Sem I–IV ONLY when span missing
-            if (isBbaProgram && (/Core\s*Course/i.test(subjectTypeName) || /\bCC\b/i.test(subjectTypeName))) {
+            if (
+              isBbaProgram &&
+              (/Core\s*Course/i.test(subjectTypeName) || /\bCC\b/i.test(subjectTypeName))
+            ) {
               semesters = [1, 2, 3, 4];
             }
             if (/Minor\s*1/i.test(subjectTypeName)) semesters = [1, 2];
@@ -689,7 +724,12 @@ export default function CURegistrationPage() {
               if (!currentSubjects.includes(subjectName)) {
                 currentSubjects.push(subjectName);
               }
-              console.log("🔍 Assigned:", { key, semester: `sem${s}`, subjectName, allSubjects: currentSubjects });
+              console.log("🔍 Assigned:", {
+                key,
+                semester: `sem${s}`,
+                subjectName,
+                allSubjects: currentSubjects,
+              });
             }
           });
         });
@@ -747,13 +787,21 @@ export default function CURegistrationPage() {
         const parentName = father?.name || mother?.name || "";
 
         // Debug EWS value - check both possible fields
-        console.log("[EWS DEBUG] personalDetails.ews:", personalDetails, typeof personalDetails.ews);
+        console.log(
+          "[EWS DEBUG] personalDetails.ews:",
+          personalDetails,
+          typeof personalDetails.ews,
+        );
         console.log(
           "[EWS DEBUG] personalDetails.ewsStatus:",
           personalDetails.ewsStatus,
           typeof personalDetails.ewsStatus,
         );
-        console.log("[EWS DEBUG] personalDetails.isEWS:", personalDetails.isEWS, typeof personalDetails.isEWS);
+        console.log(
+          "[EWS DEBUG] personalDetails.isEWS:",
+          personalDetails.isEWS,
+          typeof personalDetails.isEWS,
+        );
 
         // Use ewsStatus if available, otherwise fall back to ews boolean
         const ewsValue = personalDetails.ewsStatus || (personalDetails.ews ? "Yes" : "No");
@@ -766,7 +814,9 @@ export default function CURegistrationPage() {
           gender: personalDetails.gender || prev.gender,
           nationality: personalDetails.nationality?.name || prev.nationality,
           ews: ewsValue,
-          aadhaarNumber: formatAadhaarNumber(personalDetails.aadhaarCardNumber || prev.aadhaarNumber),
+          aadhaarNumber: formatAadhaarNumber(
+            personalDetails.aadhaarCardNumber || prev.aadhaarNumber,
+          ),
           apaarId: formatApaarId(personalDetails.apaarId || prev.apaarId),
         }));
       }
@@ -901,8 +951,15 @@ export default function CURegistrationPage() {
             residential: {
               // Editable when FK is not set AND other field is also empty
               district:
-                !resAddr?.districtId && !resAddr?.otherDistrict && !mailAddr?.districtId && !mailAddr?.otherDistrict,
-              city: !resAddr?.cityId && !resAddr?.otherCity && !mailAddr?.cityId && !mailAddr?.otherCity,
+                !resAddr?.districtId &&
+                !resAddr?.otherDistrict &&
+                !mailAddr?.districtId &&
+                !mailAddr?.otherDistrict,
+              city:
+                !resAddr?.cityId &&
+                !resAddr?.otherCity &&
+                !mailAddr?.cityId &&
+                !mailAddr?.otherCity,
               policeStation:
                 !resAddr?.policeStationId &&
                 !resAddr?.otherPoliceStation &&
@@ -980,8 +1037,15 @@ export default function CURegistrationPage() {
             mailing: {
               // Editable when FK is not set AND other field is also empty
               district:
-                !mailAddr?.districtId && !mailAddr?.otherDistrict && !resAddr?.districtId && !resAddr?.otherDistrict,
-              city: !mailAddr?.cityId && !mailAddr?.otherCity && !resAddr?.cityId && !resAddr?.otherCity,
+                !mailAddr?.districtId &&
+                !mailAddr?.otherDistrict &&
+                !resAddr?.districtId &&
+                !resAddr?.otherDistrict,
+              city:
+                !mailAddr?.cityId &&
+                !mailAddr?.otherCity &&
+                !resAddr?.cityId &&
+                !resAddr?.otherCity,
               policeStation:
                 !mailAddr?.policeStationId &&
                 !mailAddr?.otherPoliceStation &&
@@ -1040,7 +1104,9 @@ export default function CURegistrationPage() {
     if (!correctionRequestId) return;
     (async () => {
       try {
-        console.info(`[CU-REG FRONTEND] Fetching documents for correction request: ${correctionRequestId}`);
+        console.info(
+          `[CU-REG FRONTEND] Fetching documents for correction request: ${correctionRequestId}`,
+        );
         const docs = await getCuRegistrationDocuments(correctionRequestId);
         setUploadedDocuments(docs || []);
       } catch (error) {
@@ -1053,7 +1119,10 @@ export default function CURegistrationPage() {
   useEffect(() => {
     if (uploadedDocuments.length === 0) return;
 
-    console.info("[CU-REG FRONTEND] Syncing uploaded documents with local state:", uploadedDocuments);
+    console.info(
+      "[CU-REG FRONTEND] Syncing uploaded documents with local state:",
+      uploadedDocuments,
+    );
 
     // Create a mapping of document types to uploaded documents
     const documentTypeMapping: Record<string, keyof typeof documents> = {
@@ -1092,9 +1161,12 @@ export default function CURegistrationPage() {
 
   // Force introductory tab if instructions are not confirmed (but allow manual navigation to introductory tab)
   React.useEffect(() => {
-    const instructionsConfirmedState = instructionsConfirmed || correctionRequest?.introductoryDeclaration;
+    const instructionsConfirmedState =
+      instructionsConfirmed || correctionRequest?.introductoryDeclaration;
     if (!instructionsConfirmedState && activeTab !== "introductory") {
-      console.info("[CU-REG FRONTEND] Forcing back to introductory tab - instructions not confirmed");
+      console.info(
+        "[CU-REG FRONTEND] Forcing back to introductory tab - instructions not confirmed",
+      );
       setActiveTab("introductory");
     }
   }, [instructionsConfirmed, correctionRequest?.introductoryDeclaration, activeTab]);
@@ -1109,12 +1181,18 @@ export default function CURegistrationPage() {
     }
     (async () => {
       try {
-        console.info(`[CU-REG FRONTEND] Fetching PDF URL for correction request: ${correctionRequestId}`);
+        console.info(
+          `[CU-REG FRONTEND] Fetching PDF URL for correction request: ${correctionRequestId}`,
+        );
         const response = await getCuRegistrationPdfUrlByRequestId(correctionRequestId);
 
         // Construct absolute URL for iframe - if pdfUrl is relative, prepend API base URL
         let finalPdfUrl = response.pdfUrl || null;
-        if (finalPdfUrl && !finalPdfUrl.startsWith("http://") && !finalPdfUrl.startsWith("https://")) {
+        if (
+          finalPdfUrl &&
+          !finalPdfUrl.startsWith("http://") &&
+          !finalPdfUrl.startsWith("https://")
+        ) {
           // Relative URL - prepend API base URL
           const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "";
           if (apiBaseUrl) {
@@ -1123,7 +1201,9 @@ export default function CURegistrationPage() {
             const path = finalPdfUrl.startsWith("/") ? finalPdfUrl : `/${finalPdfUrl}`;
             finalPdfUrl = `${base}${path}`;
           } else {
-            console.error("[CU-REG FRONTEND] NEXT_PUBLIC_API_URL not configured, cannot construct absolute URL");
+            console.error(
+              "[CU-REG FRONTEND] NEXT_PUBLIC_API_URL not configured, cannot construct absolute URL",
+            );
           }
         }
 
@@ -1180,7 +1260,9 @@ export default function CURegistrationPage() {
     if (!student?.id) return;
     (async () => {
       try {
-        console.info(`[CU-REG FRONTEND] Checking for existing correction request for student: ${student.id}`);
+        console.info(
+          `[CU-REG FRONTEND] Checking for existing correction request for student: ${student.id}`,
+        );
         const list = await getStudentCuCorrectionRequests(Number(student.id));
         const existing = list?.[0] || null;
         if (existing) {
@@ -1189,7 +1271,9 @@ export default function CURegistrationPage() {
           setCorrectionRequestId(existing.id ?? null);
           setCorrectionRequestStatus(existing.status ?? null);
         } else {
-          console.info(`[CU-REG FRONTEND] No existing correction request found, will create one when needed`);
+          console.info(
+            `[CU-REG FRONTEND] No existing correction request found, will create one when needed`,
+          );
           setCorrectionRequest(null);
           setCorrectionRequestId(null);
           setCorrectionRequestStatus(null);
@@ -1261,7 +1345,9 @@ export default function CURegistrationPage() {
     });
 
     if (shouldAutoNavigate && activeTab !== nextTab) {
-      console.info(`[CU-REG FRONTEND] Auto-navigating to: ${nextTab} (user hasn't manually navigated yet)`);
+      console.info(
+        `[CU-REG FRONTEND] Auto-navigating to: ${nextTab} (user hasn't manually navigated yet)`,
+      );
       setActiveTab(nextTab);
     } else if (!shouldAutoNavigate) {
       console.info(`[CU-REG FRONTEND] Auto-navigation disabled - user has manually navigated`);
@@ -1346,11 +1432,16 @@ export default function CURegistrationPage() {
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-yellow-800 mb-2">Subject Selection Required</h2>
+              <h2 className="text-xl font-semibold text-yellow-800 mb-2">
+                Subject Selection Required
+              </h2>
               <p className="text-yellow-700 mb-4">
                 You need to complete your subject selection before proceeding with CU registration.
               </p>
-              <Button onClick={handleSubjectSelectionRedirect} className="bg-yellow-600 hover:bg-yellow-700">
+              <Button
+                onClick={handleSubjectSelectionRedirect}
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
                 Go to Subject Selection
               </Button>
             </div>
@@ -1444,7 +1535,9 @@ export default function CURegistrationPage() {
   const isFormEditable = () => {
     // Allow editing if status is PENDING or if final submission is not done
     return (
-      !correctionRequestStatus || correctionRequestStatus === "PENDING" || !correctionRequest?.onlineRegistrationDone
+      !correctionRequestStatus ||
+      correctionRequestStatus === "PENDING" ||
+      !correctionRequest?.onlineRegistrationDone
     );
   };
 
@@ -1452,7 +1545,9 @@ export default function CURegistrationPage() {
   const isFieldEditable = () => {
     // Allow editing if status is PENDING or if final submission is not done
     return (
-      !correctionRequestStatus || correctionRequestStatus === "PENDING" || !correctionRequest?.onlineRegistrationDone
+      !correctionRequestStatus ||
+      correctionRequestStatus === "PENDING" ||
+      !correctionRequest?.onlineRegistrationDone
     );
   };
 
@@ -1480,7 +1575,9 @@ export default function CURegistrationPage() {
 
   // Helper function to get proper styling for read-only fields
   const getReadOnlyFieldStyle = () => {
-    return isFieldEditable() ? "bg-gray-50 text-gray-600 border-gray-300" : "bg-white text-gray-700 border-gray-300";
+    return isFieldEditable()
+      ? "bg-gray-50 text-gray-600 border-gray-300"
+      : "bg-white text-gray-700 border-gray-300";
   };
 
   // Helper function to get proper styling for read-only div fields
@@ -1505,7 +1602,10 @@ export default function CURegistrationPage() {
     setCorrectionFlags(next);
     if (correctionRequestId) {
       try {
-        console.info("[CU-REG FRONTEND] Persisting flags to backend", { correctionRequestId, flags: next });
+        console.info("[CU-REG FRONTEND] Persisting flags to backend", {
+          correctionRequestId,
+          flags: next,
+        });
         const updated = await updateCuCorrectionRequest(correctionRequestId, { flags: next });
         console.info("[CU-REG FRONTEND] Flags persisted, server response status:", updated?.status);
       } catch (e) {
@@ -1535,7 +1635,15 @@ export default function CURegistrationPage() {
 
   // Ensure APAAR/ABC ID input accepts digits only and max 12 digits (auto formats 3-3-3-3)
   const handleApaarIdKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const allowedControlKeys = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"];
+    const allowedControlKeys = [
+      "Backspace",
+      "Delete",
+      "ArrowLeft",
+      "ArrowRight",
+      "Tab",
+      "Home",
+      "End",
+    ];
     const isCtrlCmd = e.ctrlKey || e.metaKey;
     if (isCtrlCmd) return; // allow copy/cut/paste/select all shortcuts
     if (allowedControlKeys.includes(e.key)) return;
@@ -1592,7 +1700,10 @@ export default function CURegistrationPage() {
   };
 
   const handleDeclarationChange = async (checked: boolean) => {
-    console.info("[CU-REG FRONTEND] Declaration checkbox clicked", { checked, correctionRequestId });
+    console.info("[CU-REG FRONTEND] Declaration checkbox clicked", {
+      checked,
+      correctionRequestId,
+    });
 
     // Prevent toggling if already declared
     if (correctionRequest?.personalInfoDeclaration && !checked) {
@@ -1616,7 +1727,10 @@ export default function CURegistrationPage() {
         // Debug: Check if correctionFlags and personalInfo have values
         console.info("[CU-REG FRONTEND] Debug - correctionFlags:", correctionFlags);
         console.info("[CU-REG FRONTEND] Debug - personalInfo:", personalInfo);
-        console.info("[CU-REG FRONTEND] Debug - correctionFlags keys:", Object.keys(correctionFlags));
+        console.info(
+          "[CU-REG FRONTEND] Debug - correctionFlags keys:",
+          Object.keys(correctionFlags),
+        );
         console.info("[CU-REG FRONTEND] Debug - personalInfo keys:", Object.keys(personalInfo));
 
         // Use updateCuCorrectionRequest to save both data and declaration
@@ -1636,14 +1750,20 @@ export default function CURegistrationPage() {
         console.info("[CU-REG FRONTEND] Sending update data:", updateData);
         console.info("[CU-REG FRONTEND] Debug - updateData.flags:", updateData.flags);
         console.info("[CU-REG FRONTEND] Debug - updateData.payload:", updateData.payload);
-        console.info("[CU-REG FRONTEND] Debug - updateData.payload.personalInfo:", updateData.payload.personalInfo);
+        console.info(
+          "[CU-REG FRONTEND] Debug - updateData.payload.personalInfo:",
+          updateData.payload.personalInfo,
+        );
         console.info("[CU-REG FRONTEND] Debug - APAAR ID details:", {
           original: personalInfo.apaarId,
           cleaned: cleanApaarId(personalInfo.apaarId),
           type: typeof cleanApaarId(personalInfo.apaarId),
         });
         console.info("[CU-REG FRONTEND] Debug - Full personalInfo state:", personalInfo);
-        console.info("[CU-REG FRONTEND] Debug - Form submission timestamp:", new Date().toISOString());
+        console.info(
+          "[CU-REG FRONTEND] Debug - Form submission timestamp:",
+          new Date().toISOString(),
+        );
         console.info("[CU-REG FRONTEND] Debug - APAAR ID in personalInfo:", {
           hasApaarId: "apaarId" in personalInfo,
           apaarIdValue: personalInfo.apaarId,
@@ -1688,7 +1808,9 @@ export default function CURegistrationPage() {
         // Automatically switch to Address tab after a short delay
         setTimeout(() => {
           // Force navigation to address tab after personal declaration
-          console.info("[CU-REG FRONTEND] Auto-navigating to address tab after personal declaration");
+          console.info(
+            "[CU-REG FRONTEND] Auto-navigating to address tab after personal declaration",
+          );
           setActiveTab("address");
         }, 1000);
       } catch (error: any) {
@@ -1744,11 +1866,16 @@ export default function CURegistrationPage() {
   };
 
   const handleIntroductoryDeclarationChange = async (checked: boolean) => {
-    console.info("[CU-REG FRONTEND] Introductory declaration checkbox clicked", { checked, correctionRequestId });
+    console.info("[CU-REG FRONTEND] Introductory declaration checkbox clicked", {
+      checked,
+      correctionRequestId,
+    });
 
     // Prevent toggling if already declared
     if (correctionRequest?.introductoryDeclaration && !checked) {
-      console.info("[CU-REG FRONTEND] Introductory declaration already completed, cannot toggle back to false");
+      console.info(
+        "[CU-REG FRONTEND] Introductory declaration already completed, cannot toggle back to false",
+      );
       return;
     }
 
@@ -1773,21 +1900,28 @@ export default function CURegistrationPage() {
 
         if (response) {
           console.info("[CU-REG FRONTEND] Introductory declaration saved successfully");
-          console.info("[CU-REG FRONTEND] Response introductoryDeclaration:", response.introductoryDeclaration);
+          console.info(
+            "[CU-REG FRONTEND] Response introductoryDeclaration:",
+            response.introductoryDeclaration,
+          );
           toast.success("Instructions confirmation saved successfully!");
 
           // Refresh the correction request to get updated data
           try {
             const updatedRequest = await getCuCorrectionRequestById(correctionRequestId);
             setCorrectionRequest(updatedRequest);
-            console.info("[CU-REG FRONTEND] Refreshed correction request after introductory declaration");
+            console.info(
+              "[CU-REG FRONTEND] Refreshed correction request after introductory declaration",
+            );
           } catch (error) {
             console.error("[CU-REG FRONTEND] Error refreshing correction request:", error);
           }
 
           // Auto-navigate to personal tab after successful declaration
           if (checked) {
-            console.info("[CU-REG FRONTEND] Auto-navigating to personal tab after declaration confirmation");
+            console.info(
+              "[CU-REG FRONTEND] Auto-navigating to personal tab after declaration confirmation",
+            );
             setTimeout(() => {
               setActiveTab("personal");
             }, 1000); // Small delay to show the success message
@@ -1840,10 +1974,14 @@ export default function CURegistrationPage() {
               addressData: {
                 residential: {
                   cityId: cities.find(
-                    (c) => c.name.trim().toLowerCase() === addressData.residential.city.trim().toLowerCase(),
+                    (c) =>
+                      c.name.trim().toLowerCase() ===
+                      addressData.residential.city.trim().toLowerCase(),
                   )?.id,
                   districtId: districts.find(
-                    (d) => d.name.trim().toLowerCase() === addressData.residential.district.trim().toLowerCase(),
+                    (d) =>
+                      d.name.trim().toLowerCase() ===
+                      addressData.residential.district.trim().toLowerCase(),
                   )?.id,
                   postofficeId: null,
                   otherPostoffice: addressData.residential.postOffice,
@@ -1853,16 +1991,21 @@ export default function CURegistrationPage() {
                   pincode: addressData.residential.pinCode,
                   city: addressData.residential.city,
                   district: addressData.residential.district,
-                  otherDistrict: editableFields.residential.district ? addressData.residential.district : undefined,
+                  otherDistrict: editableFields.residential.district
+                    ? addressData.residential.district
+                    : undefined,
                   state: addressData.residential.state,
                   country: addressData.residential.country,
                 },
                 mailing: {
                   cityId: cities.find(
-                    (c) => c.name.trim().toLowerCase() === addressData.mailing.city.trim().toLowerCase(),
+                    (c) =>
+                      c.name.trim().toLowerCase() === addressData.mailing.city.trim().toLowerCase(),
                   )?.id,
                   districtId: mailingDistricts.find(
-                    (d) => d.name.trim().toLowerCase() === addressData.mailing.district.trim().toLowerCase(),
+                    (d) =>
+                      d.name.trim().toLowerCase() ===
+                      addressData.mailing.district.trim().toLowerCase(),
                   )?.id,
                   postofficeId: null,
                   otherPostoffice: addressData.mailing.postOffice,
@@ -1872,7 +2015,9 @@ export default function CURegistrationPage() {
                   pincode: addressData.mailing.pinCode,
                   city: addressData.mailing.city,
                   district: addressData.mailing.district,
-                  otherDistrict: editableFields.mailing.district ? addressData.mailing.district : undefined,
+                  otherDistrict: editableFields.mailing.district
+                    ? addressData.mailing.district
+                    : undefined,
                   state: addressData.mailing.state,
                   country: addressData.mailing.country,
                 },
@@ -1921,11 +2066,16 @@ export default function CURegistrationPage() {
           // Automatically switch to Subjects tab after a short delay
           console.info("[CU-REG FRONTEND] Setting timeout for navigation");
           setTimeout(() => {
-            console.info("[CU-REG FRONTEND] Timeout executed - attempting to navigate to subjects tab");
+            console.info(
+              "[CU-REG FRONTEND] Timeout executed - attempting to navigate to subjects tab",
+            );
             console.info("[CU-REG FRONTEND] Current addressDeclared state:", addressDeclared);
             console.info("[CU-REG FRONTEND] Current addressErrors:", addressErrors);
             console.info("[CU-REG FRONTEND] isAddressTabValid():", isAddressTabValid());
-            console.info("[CU-REG FRONTEND] canNavigateToTab('subjects'):", canNavigateToTab("subjects"));
+            console.info(
+              "[CU-REG FRONTEND] canNavigateToTab('subjects'):",
+              canNavigateToTab("subjects"),
+            );
 
             try {
               // Force navigation even if validation fails (for testing)
@@ -1941,12 +2091,18 @@ export default function CURegistrationPage() {
               setTimeout(() => {
                 console.info("[CU-REG FRONTEND] Checking activeTab after navigation:", activeTab);
                 if (activeTab !== "subjects") {
-                  console.error("[CU-REG FRONTEND] Navigation failed, activeTab is still:", activeTab);
+                  console.error(
+                    "[CU-REG FRONTEND] Navigation failed, activeTab is still:",
+                    activeTab,
+                  );
                   // Try direct state update as fallback
                   console.info("[CU-REG FRONTEND] Attempting direct state update");
                   setActiveTab("subjects");
                 } else {
-                  console.info("[CU-REG FRONTEND] Navigation successful, activeTab is now:", activeTab);
+                  console.info(
+                    "[CU-REG FRONTEND] Navigation successful, activeTab is now:",
+                    activeTab,
+                  );
                 }
               }, 100);
 
@@ -2029,7 +2185,9 @@ export default function CURegistrationPage() {
         // Automatically switch to Documents tab after a short delay
         setTimeout(() => {
           // Force navigation to documents tab after subjects declaration
-          console.info("[CU-REG FRONTEND] Auto-navigating to documents tab after subjects declaration");
+          console.info(
+            "[CU-REG FRONTEND] Auto-navigating to documents tab after subjects declaration",
+          );
           setActiveTab("documents");
         }, 1000);
       } catch (error: any) {
@@ -2054,7 +2212,10 @@ export default function CURegistrationPage() {
       }
     }
 
-    console.info(`[CU-REG FRONTEND] Updating document ${documentType} with file:`, file?.name || "null");
+    console.info(
+      `[CU-REG FRONTEND] Updating document ${documentType} with file:`,
+      file?.name || "null",
+    );
 
     setDocuments((prev) => ({
       ...prev,
@@ -2111,12 +2272,16 @@ export default function CURegistrationPage() {
 
     // Only require parent documents for parents that exist AND have meaningful names AND are not late
     if (father && father.name?.trim() && father.title !== "LATE") {
-      console.log("[CU-REG DOCUMENTS] Father exists with name and is not late - requiring father document");
+      console.log(
+        "[CU-REG DOCUMENTS] Father exists with name and is not late - requiring father document",
+      );
       required.push("fatherPhotoId");
     }
 
     if (mother && mother.name?.trim() && mother.title !== "LATE") {
-      console.log("[CU-REG DOCUMENTS] Mother exists with name and is not late - requiring mother document");
+      console.log(
+        "[CU-REG DOCUMENTS] Mother exists with name and is not late - requiring mother document",
+      );
       required.push("motherPhotoId");
     }
 
@@ -2129,7 +2294,9 @@ export default function CURegistrationPage() {
       personalInfo.aadhaarNumber &&
       personalInfo.aadhaarNumber !== "XXXX XXXX XXXX"
     ) {
-      console.log("[CU-REG DOCUMENTS] Indian nationality with Aadhaar number - requiring Aadhaar card");
+      console.log(
+        "[CU-REG DOCUMENTS] Indian nationality with Aadhaar number - requiring Aadhaar card",
+      );
       required.push("aadhaarCard");
     }
 
@@ -2175,7 +2342,10 @@ export default function CURegistrationPage() {
     if (checked) {
       const missingDocs = getMissingDocuments();
       if (missingDocs.length > 0) {
-        console.info("[CU-REG FRONTEND] Cannot check documents declaration - missing documents:", missingDocs);
+        console.info(
+          "[CU-REG FRONTEND] Cannot check documents declaration - missing documents:",
+          missingDocs,
+        );
         return;
       }
     }
@@ -2271,7 +2441,8 @@ export default function CURegistrationPage() {
     if (!canNavigateToTab(newTab)) {
       console.warn("[CU-REG FRONTEND] Navigation to", newTab, "not allowed");
       console.warn("[CU-REG FRONTEND] Debug navigation state:", {
-        instructionsConfirmedState: instructionsConfirmed || correctionRequest?.introductoryDeclaration,
+        instructionsConfirmedState:
+          instructionsConfirmed || correctionRequest?.introductoryDeclaration,
         personalDeclaredState: personalDeclared || correctionRequest?.personalInfoDeclaration,
         addressDeclaredState: addressDeclared || correctionRequest?.addressInfoDeclaration,
         subjectsDeclaredState: subjectsDeclared || correctionRequest?.subjectsDeclaration,
@@ -2301,7 +2472,8 @@ export default function CURegistrationPage() {
     const documentsValid = isDocumentsTabValid();
 
     // All validations must pass AND documents must be confirmed
-    const canReview = personalValid && addressValid && subjectsValid && documentsValid && documentsConfirmed;
+    const canReview =
+      personalValid && addressValid && subjectsValid && documentsValid && documentsConfirmed;
 
     console.log("🔍 Review & Confirm Validation Status:", {
       personalValid,
@@ -2404,7 +2576,9 @@ export default function CURegistrationPage() {
           },
         },
         willSaveToOtherDistrict: {
-          residential: editableFields.residential.district ? addressData.residential.district : undefined,
+          residential: editableFields.residential.district
+            ? addressData.residential.district
+            : undefined,
           mailing: editableFields.mailing.district ? addressData.mailing.district : undefined,
         },
       });
@@ -2416,13 +2590,17 @@ export default function CURegistrationPage() {
         addressData: {
           residential: {
             district: addressData.residential.district,
-            otherDistrict: editableFields.residential.district ? addressData.residential.district : undefined,
+            otherDistrict: editableFields.residential.district
+              ? addressData.residential.district
+              : undefined,
             editable: editableFields.residential.district,
             districtId: residentialDistrictId,
           },
           mailing: {
             district: addressData.mailing.district,
-            otherDistrict: editableFields.mailing.district ? addressData.mailing.district : undefined,
+            otherDistrict: editableFields.mailing.district
+              ? addressData.mailing.district
+              : undefined,
             editable: editableFields.mailing.district,
             districtId: mailingDistrictId,
           },
@@ -2446,7 +2624,9 @@ export default function CURegistrationPage() {
               pincode: addressData.residential.pinCode,
               city: addressData.residential.city,
               district: addressData.residential.district,
-              otherDistrict: editableFields.residential.district ? addressData.residential.district : undefined,
+              otherDistrict: editableFields.residential.district
+                ? addressData.residential.district
+                : undefined,
               state: addressData.residential.state,
               country: addressData.residential.country,
             },
@@ -2461,7 +2641,9 @@ export default function CURegistrationPage() {
               pincode: addressData.mailing.pinCode,
               city: addressData.mailing.city,
               district: addressData.mailing.district,
-              otherDistrict: editableFields.mailing.district ? addressData.mailing.district : undefined,
+              otherDistrict: editableFields.mailing.district
+                ? addressData.mailing.district
+                : undefined,
               state: addressData.mailing.state,
               country: addressData.mailing.country,
             },
@@ -2491,7 +2673,9 @@ export default function CURegistrationPage() {
               pincode: addressData.residential.pinCode,
               city: addressData.residential.city,
               district: addressData.residential.district,
-              otherDistrict: editableFields.residential.district ? addressData.residential.district : undefined,
+              otherDistrict: editableFields.residential.district
+                ? addressData.residential.district
+                : undefined,
               state: addressData.residential.state,
               country: addressData.residential.country,
             },
@@ -2506,7 +2690,9 @@ export default function CURegistrationPage() {
               pincode: addressData.mailing.pinCode,
               city: addressData.mailing.city,
               district: addressData.mailing.district,
-              otherDistrict: editableFields.mailing.district ? addressData.mailing.district : undefined,
+              otherDistrict: editableFields.mailing.district
+                ? addressData.mailing.district
+                : undefined,
               state: addressData.mailing.state,
               country: addressData.mailing.country,
             },
@@ -2547,9 +2733,14 @@ export default function CURegistrationPage() {
           );
           const docs = await getCuRegistrationDocuments(correctionRequestId);
           setUploadedDocuments(docs || []);
-          console.info(`[CU-REG FRONTEND] Refetched ${docs?.length || 0} documents after final submission`);
+          console.info(
+            `[CU-REG FRONTEND] Refetched ${docs?.length || 0} documents after final submission`,
+          );
         } catch (error) {
-          console.error(`[CU-REG FRONTEND] Error refetching documents after final submission:`, error);
+          console.error(
+            `[CU-REG FRONTEND] Error refetching documents after final submission:`,
+            error,
+          );
         }
       }
 
@@ -2557,9 +2748,14 @@ export default function CURegistrationPage() {
       try {
         console.info(`[CU-REG FRONTEND] Refreshing profile data after final submission`);
         await refetchProfile();
-        console.info(`[CU-REG FRONTEND] Profile data refreshed successfully after final submission`);
+        console.info(
+          `[CU-REG FRONTEND] Profile data refreshed successfully after final submission`,
+        );
       } catch (error) {
-        console.error(`[CU-REG FRONTEND] Error refreshing profile data after final submission:`, error);
+        console.error(
+          `[CU-REG FRONTEND] Error refreshing profile data after final submission:`,
+          error,
+        );
       }
 
       console.info(
@@ -2579,7 +2775,8 @@ export default function CURegistrationPage() {
     }
 
     // Check if instructions are confirmed (either locally or from correction request)
-    const instructionsConfirmedState = instructionsConfirmed || correctionRequest?.introductoryDeclaration;
+    const instructionsConfirmedState =
+      instructionsConfirmed || correctionRequest?.introductoryDeclaration;
 
     // Check if personal info is declared
     const personalDeclaredState = personalDeclared || correctionRequest?.personalInfoDeclaration;
@@ -2741,7 +2938,12 @@ export default function CURegistrationPage() {
                             viewBox="0 0 24 24"
                           >
                             {correctionRequestStatus === "APPROVED" ? (
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
                             ) : correctionRequestStatus === "REJECTED" ? (
                               <path
                                 strokeLinecap="round"
@@ -2827,9 +3029,14 @@ export default function CURegistrationPage() {
                   {pdfUrl && (
                     <div className="border border-gray-200 rounded-lg overflow-hidden max-w-none h-full flex flex-col">
                       <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
-                        <h4 className="text-sm font-medium text-gray-800">CU Registration Form Preview</h4>
+                        <h4 className="text-sm font-medium text-gray-800">
+                          CU Registration Form Preview
+                        </h4>
                       </div>
-                      <div className="flex-1" style={{ height: "calc(100vh - 150px)", minHeight: "600px" }}>
+                      <div
+                        className="flex-1"
+                        style={{ height: "calc(100vh - 150px)", minHeight: "600px" }}
+                      >
                         {/* Check if we're in a nested iframe (simulation mode) */}
                         {(() => {
                           const isNestedIframe = window.self !== window.top;
@@ -2857,8 +3064,9 @@ export default function CURegistrationPage() {
                                     PDF Preview Not Available in Simulation Mode
                                   </h3>
                                   <p className="text-sm text-gray-500 mb-4">
-                                    Due to browser security restrictions, PDF previews cannot be displayed when the
-                                    student console is embedded in an iframe. Please open the PDF in a new window.
+                                    Due to browser security restrictions, PDF previews cannot be
+                                    displayed when the student console is embedded in an iframe.
+                                    Please open the PDF in a new window.
                                   </p>
                                   <Button
                                     onClick={(e) => {
@@ -2886,7 +3094,12 @@ export default function CURegistrationPage() {
                                     }}
                                     className="flex items-center gap-2 mx-auto"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
                                       <path
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
@@ -2899,7 +3112,9 @@ export default function CURegistrationPage() {
                                   {pdfUrl && (
                                     <p className="text-xs text-gray-500 mt-2 text-center">
                                       If blocked, copy this URL:{" "}
-                                      <code className="bg-gray-100 px-1 rounded text-xs break-all">{pdfUrl}</code>
+                                      <code className="bg-gray-100 px-1 rounded text-xs break-all">
+                                        {pdfUrl}
+                                      </code>
                                     </p>
                                   )}
                                 </div>
@@ -3031,8 +3246,8 @@ export default function CURegistrationPage() {
                             Important Instructions — Please Read Before Proceeding
                           </h2>
                           <p className="text-blue-800 mb-4">
-                            To ensure a smooth completion of your Admission & Registration Data Submission, carefully go
-                            through the following points before you begin.
+                            To ensure a smooth completion of your Admission & Registration Data
+                            Submission, carefully go through the following points before you begin.
                           </p>
                         </div>
 
@@ -3046,7 +3261,8 @@ export default function CURegistrationPage() {
                               Document Preparation
                             </h3>
                             <p className="text-gray-700 mb-4">
-                              Before proceeding, keep clear scanned copies of the following documents ready for upload:
+                              Before proceeding, keep clear scanned copies of the following
+                              documents ready for upload:
                             </p>
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
@@ -3071,17 +3287,19 @@ export default function CURegistrationPage() {
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                EWS (Economically Weaker Section) Certificate, issued in your name, by the Government of
-                                West Bengal (only if applying under EWS category)
+                                EWS (Economically Weaker Section) Certificate, issued in your name,
+                                by the Government of West Bengal (only if applying under EWS
+                                category)
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Migration Certificate from your Class XII Board (Applicable only for boards other than
-                                CBSE, ISC, WBCHSE, NIOS)
+                                Migration Certificate from your Class XII Board (Applicable only for
+                                boards other than CBSE, ISC, WBCHSE, NIOS)
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                First and Last Page of your Passport (Applicable only for Foreign Nationals)
+                                First and Last Page of your Passport (Applicable only for Foreign
+                                Nationals)
                               </li>
                             </ul>
                           </div>
@@ -3097,16 +3315,18 @@ export default function CURegistrationPage() {
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                All documents must be uploaded in &nbsp;<strong>.jpg or .jpeg format only</strong>.
+                                All documents must be uploaded in &nbsp;
+                                <strong>.jpg or .jpeg format only</strong>.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                The maximum allowed file size per document is &nbsp;<strong>1MB</strong>.
+                                The maximum allowed file size per document is &nbsp;
+                                <strong>1MB</strong>.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Ensure your scans are clearly readable, including the board name & logo, and you crop
-                                out any extra parts before uploading.
+                                Ensure your scans are clearly readable, including the board name &
+                                logo, and you crop out any extra parts before uploading.
                               </li>
                             </ul>
                           </div>
@@ -3122,11 +3342,13 @@ export default function CURegistrationPage() {
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Review every field carefully in each section before final submission.
+                                Review every field carefully in each section before final
+                                submission.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                After submission, you will not be allowed to make any edits or changes.
+                                After submission, you will not be allowed to make any edits or
+                                changes.
                               </li>
                             </ul>
                           </div>
@@ -3142,8 +3364,8 @@ export default function CURegistrationPage() {
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                For the best experience, use a desktop or laptop with the Microsoft Windows OS and a
-                                stable internet connection.
+                                For the best experience, use a desktop or laptop with the Microsoft
+                                Windows OS and a stable internet connection.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
@@ -3151,13 +3373,14 @@ export default function CURegistrationPage() {
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Do not refresh or close the browser while the documents are being uploaded.
+                                Do not refresh or close the browser while the documents are being
+                                uploaded.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Make sure your registered Mobile number (provided at the time of admission) and
-                                Institutional email ID (provided by the college) are active and accessible, as all
-                                communication will be sent there.
+                                Make sure your registered Mobile number (provided at the time of
+                                admission) and Institutional email ID (provided by the college) are
+                                active and accessible, as all communication will be sent there.
                               </li>
                             </ul>
                           </div>
@@ -3177,8 +3400,9 @@ export default function CURegistrationPage() {
                                   htmlFor="instructions-confirmation"
                                   className="text-sm font-medium text-gray-800 cursor-pointer"
                                 >
-                                  I have read and understood the above instructions and confirm that I am ready to
-                                  proceed with my Admission & Registration Data Submission.
+                                  I have read and understood the above instructions and confirm that
+                                  I am ready to proceed with my Admission & Registration Data
+                                  Submission.
                                 </label>
                               </div>
                             </div>
@@ -3209,31 +3433,33 @@ export default function CURegistrationPage() {
                         <div className="space-y-2 text-sm text-blue-800">
                           <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>
-                              Ensure your name and your father's/mother's full names are spelled exactly as per your
-                              Class XII Board Marksheet.
+                              Ensure your name and your father's/mother's full names are spelled
+                              exactly as per your Class XII Board Marksheet.
                             </li>
                             <li>
-                              Recheck your Gender, Nationality, Aadhaar Number, and APAAR ID. (If APAAR ID is blank, you
-                              must enter it to proceed.)
+                              Recheck your Gender, Nationality, Aadhaar Number, and APAAR ID. (If
+                              APAAR ID is blank, you must enter it to proceed.)
                             </li>
                             <li>
-                              To report any mistake in Gender, Nationality, Aadhaar Number, or APAAR ID, click the
-                              correction slider below the respective field.
+                              To report any mistake in Gender, Nationality, Aadhaar Number, or APAAR
+                              ID, click the correction slider below the respective field.
                             </li>
                             <li>
-                              If you have an EWS (Economically Weaker Section) Certificate issued by the Government of
-                              West Bengal, select "Yes" under Serial No. 1.5.
+                              If you have an EWS (Economically Weaker Section) Certificate issued by
+                              the Government of West Bengal, select "Yes" under Serial No. 1.5.
                             </li>
                             <li>
-                              Any correction must be informed during physical submission of your Admission &
-                              Registration Datasheet and documents at the College.
+                              Any correction must be informed during physical submission of your
+                              Admission & Registration Datasheet and documents at the College.
                             </li>
                           </ul>
                         </div>
                       </div>
 
                       <div>
-                        <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">Student Name</h2>
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
+                          Student Name
+                        </h2>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           {/* Full Name */}
@@ -3252,7 +3478,10 @@ export default function CURegistrationPage() {
 
                           {/* Father/Mother Name */}
                           <div className="space-y-2">
-                            <Label htmlFor="parentName" className="text-sm font-medium text-gray-700">
+                            <Label
+                              htmlFor="parentName"
+                              className="text-sm font-medium text-gray-700"
+                            >
                               1.2 Father / Mother's Name
                             </Label>
                             <Input
@@ -3271,7 +3500,9 @@ export default function CURegistrationPage() {
                               <div className={getReadOnlyDivStyle()}>{personalInfo.gender}</div>
                               {shouldShowCorrectionFlags() && (
                                 <div className="flex items-center space-x-2">
-                                  <span className="text-sm text-gray-600">1.3 Request correction</span>
+                                  <span className="text-sm text-gray-600">
+                                    1.3 Request correction
+                                  </span>
                                   <Switch
                                     checked={correctionFlags.gender}
                                     onCheckedChange={() => handleCorrectionToggle("gender")}
@@ -3285,12 +3516,18 @@ export default function CURegistrationPage() {
 
                           {/* Nationality */}
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">1.4 Nationality</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              1.4 Nationality
+                            </Label>
                             <div className="flex flex-col gap-2">
-                              <div className={getReadOnlyDivStyle()}>{personalInfo.nationality}</div>
+                              <div className={getReadOnlyDivStyle()}>
+                                {personalInfo.nationality}
+                              </div>
                               {shouldShowCorrectionFlags() && (
                                 <div className="flex items-center space-x-2">
-                                  <span className="text-sm text-gray-600">1.4 Request correction</span>
+                                  <span className="text-sm text-gray-600">
+                                    1.4 Request correction
+                                  </span>
                                   <Switch
                                     checked={correctionFlags.nationality}
                                     onCheckedChange={() => handleCorrectionToggle("nationality")}
@@ -3324,14 +3561,18 @@ export default function CURegistrationPage() {
 
                           {/* Aadhaar Number */}
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              1.6 Aadhaar Number
+                            </Label>
                             <div className="flex flex-col gap-2">
                               <div className={getReadOnlyDivStyle()}>
                                 {formatAadhaarNumber(personalInfo.aadhaarNumber)}
                               </div>
                               {shouldShowCorrectionFlags() && (
                                 <div className="flex items-center space-x-2">
-                                  <span className="text-sm text-gray-600">1.6 Request correction</span>
+                                  <span className="text-sm text-gray-600">
+                                    1.6 Request correction
+                                  </span>
                                   <Switch
                                     checked={correctionFlags.aadhaarNumber}
                                     onCheckedChange={() => handleCorrectionToggle("aadhaarNumber")}
@@ -3367,10 +3608,14 @@ export default function CURegistrationPage() {
                                       </div>
                                       {shouldShowCorrectionFlags() && (
                                         <div className="flex items-center space-x-2">
-                                          <span className="text-sm text-gray-600">1.7 Request correction</span>
+                                          <span className="text-sm text-gray-600">
+                                            1.7 Request correction
+                                          </span>
                                           <Switch
                                             checked={correctionFlags.apaarId}
-                                            onCheckedChange={() => handleCorrectionToggle("apaarId")}
+                                            onCheckedChange={() =>
+                                              handleCorrectionToggle("apaarId")
+                                            }
                                             disabled={!isFieldEditable()}
                                             className="data-[state=checked]:bg-blue-600"
                                           />
@@ -3402,7 +3647,9 @@ export default function CURegistrationPage() {
                                       />
 
                                       {isApaarIdInvalid && (
-                                        <p className="text-sm text-yellow-600">⚠️ APAAR ID must be exactly 12 digits</p>
+                                        <p className="text-sm text-yellow-600">
+                                          ⚠️ APAAR ID must be exactly 12 digits
+                                        </p>
                                       )}
                                     </div>
                                   );
@@ -3416,7 +3663,9 @@ export default function CURegistrationPage() {
                             <div className="flex items-start space-x-3">
                               <Checkbox
                                 id="personalDeclaration"
-                                checked={personalDeclared || correctionRequest?.personalInfoDeclaration}
+                                checked={
+                                  personalDeclared || correctionRequest?.personalInfoDeclaration
+                                }
                                 onCheckedChange={handleDeclarationChange}
                                 disabled={
                                   personalInfo.apaarId.trim() === "" ||
@@ -3455,14 +3704,15 @@ export default function CURegistrationPage() {
                                   personalInfo.apaarId.replace(/\D/g, "").length !== 12 ? (
                                     <>
                                       {" "}
-                                      Please fill in your APAAR ID with exactly 12 digits and check the declaration
-                                      above to proceed to the next tab (Address Information).
+                                      Please fill in your APAAR ID with exactly 12 digits and check
+                                      the declaration above to proceed to the next tab (Address
+                                      Information).
                                     </>
                                   ) : (
                                     <>
                                       {" "}
-                                      Please check the declaration above to proceed to the next tab (Address
-                                      Information).
+                                      Please check the declaration above to proceed to the next tab
+                                      (Address Information).
                                     </>
                                   )}
                                 </p>
@@ -3477,17 +3727,20 @@ export default function CURegistrationPage() {
                     <TabsContent value="address" className="space-y-6">
                       {/* Address Details Notes */}
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                        <h3 className="text-lg font-semibold text-green-900 mb-3">Address Details - Important Notes</h3>
+                        <h3 className="text-lg font-semibold text-green-900 mb-3">
+                          Address Details - Important Notes
+                        </h3>
                         <div className="space-y-2 text-sm text-green-800">
                           <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>
-                              If any of the fields like Pincode, Post Office, Police Station, District, City or State
-                              are blank, please fill them in. (Refer to your Aadhaar Card to check the spelling of your
-                              District, Post Office and Police Station.)
+                              If any of the fields like Pincode, Post Office, Police Station,
+                              District, City or State are blank, please fill them in. (Refer to your
+                              Aadhaar Card to check the spelling of your District, Post Office and
+                              Police Station.)
                             </li>
                             <li>
-                              Any correction must be informed during physical submission of your Admission &
-                              Registration Datasheet and documents at the College.
+                              Any correction must be informed during physical submission of your
+                              Admission & Registration Datasheet and documents at the College.
                             </li>
                           </ul>
                         </div>
@@ -3497,11 +3750,16 @@ export default function CURegistrationPage() {
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
                           {/* Residential Address */}
                           <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
-                            <h3 className="text-sm sm:text-base font-medium text-gray-800">Residential Address</h3>
+                            <h3 className="text-sm sm:text-base font-medium text-gray-800">
+                              Residential Address
+                            </h3>
                             <div className="space-y-3">
                               {/* 1. Address Line */}
                               <div className="space-y-2">
-                                <Label htmlFor="residential-address" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="residential-address"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.1 Address Line
                                 </Label>
                                 <div className={getReadOnlyDivStyle()}>
@@ -3511,7 +3769,10 @@ export default function CURegistrationPage() {
 
                               {/* 2. Country */}
                               <div className="space-y-2">
-                                <Label htmlFor="residential-country" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="residential-country"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.2 Country
                                 </Label>
                                 <Input
@@ -3525,7 +3786,10 @@ export default function CURegistrationPage() {
 
                               {/* 3. State */}
                               <div className="space-y-2">
-                                <Label htmlFor="residential-state" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="residential-state"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.3 State
                                 </Label>
                                 <Input
@@ -3539,14 +3803,19 @@ export default function CURegistrationPage() {
 
                               {/* 4. District */}
                               <div className="space-y-2">
-                                <Label htmlFor="residential-district" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="residential-district"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.4 District
                                 </Label>
                                 {editableFields.residential.district ? (
                                   <Input
                                     id="residential-district"
                                     value={addressData.residential.district}
-                                    onChange={(e) => handleDistrictChange("residential", e.target.value)}
+                                    onChange={(e) =>
+                                      handleDistrictChange("residential", e.target.value)
+                                    }
                                     placeholder="Enter district name"
                                     className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                   />
@@ -3559,7 +3828,10 @@ export default function CURegistrationPage() {
 
                               {/* 5. City */}
                               <div className="space-y-2">
-                                <Label htmlFor="residential-city" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="residential-city"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.5 City
                                 </Label>
                                 <div className={getReadOnlyDivStyle()}>
@@ -3569,13 +3841,18 @@ export default function CURegistrationPage() {
 
                               {/* 6. Pin Code */}
                               <div className="space-y-2">
-                                <Label htmlFor="residential-pin" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="residential-pin"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.6 Pin Code
                                 </Label>
                                 <Input
                                   id="residential-pin"
                                   value={addressData.residential.pinCode}
-                                  onChange={(e) => handleAddressChange("residential", "pinCode", e.target.value)}
+                                  onChange={(e) =>
+                                    handleAddressChange("residential", "pinCode", e.target.value)
+                                  }
                                   placeholder="Enter pin code"
                                   className="border-gray-300"
                                   disabled={!isFieldEditable()}
@@ -3584,7 +3861,10 @@ export default function CURegistrationPage() {
 
                               {/* 7. Police Station */}
                               <div className="space-y-2">
-                                <Label htmlFor="residential-police" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="residential-police"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.7 Police Station
                                 </Label>
                                 <Input
@@ -3606,14 +3886,21 @@ export default function CURegistrationPage() {
 
                               {/* 8. Post Office */}
                               <div className="space-y-2">
-                                <Label htmlFor="residential-post" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="residential-post"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.8 Post Office
                                 </Label>
                                 <Input
                                   id="residential-post"
                                   value={addressData.residential.postOffice}
                                   onChange={(e) =>
-                                    handleAddressChange("residential", "postOffice", sanitizeTextOnly(e.target.value))
+                                    handleAddressChange(
+                                      "residential",
+                                      "postOffice",
+                                      sanitizeTextOnly(e.target.value),
+                                    )
                                   }
                                   placeholder="Enter post office name"
                                   className="border-gray-300"
@@ -3626,11 +3913,16 @@ export default function CURegistrationPage() {
 
                           {/* Mailing Address */}
                           <div className="space-y-4 xl:pl-8">
-                            <h3 className="text-sm sm:text-base font-medium text-gray-800">Mailing Address</h3>
+                            <h3 className="text-sm sm:text-base font-medium text-gray-800">
+                              Mailing Address
+                            </h3>
                             <div className="space-y-3">
                               {/* 1. Address Line */}
                               <div className="space-y-2">
-                                <Label htmlFor="mailing-address" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="mailing-address"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.9 Address Line
                                 </Label>
                                 <div className={getReadOnlyDivStyle()}>
@@ -3640,7 +3932,10 @@ export default function CURegistrationPage() {
 
                               {/* 2. Country */}
                               <div className="space-y-2">
-                                <Label htmlFor="mailing-country" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="mailing-country"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.10 Country
                                 </Label>
                                 <Input
@@ -3654,7 +3949,10 @@ export default function CURegistrationPage() {
 
                               {/* 3. State */}
                               <div className="space-y-2">
-                                <Label htmlFor="mailing-state" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="mailing-state"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.11 State
                                 </Label>
                                 <Input
@@ -3668,14 +3966,19 @@ export default function CURegistrationPage() {
 
                               {/* 4. District */}
                               <div className="space-y-2">
-                                <Label htmlFor="mailing-district" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="mailing-district"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.12 District
                                 </Label>
                                 {editableFields.mailing.district ? (
                                   <Input
                                     id="mailing-district"
                                     value={addressData.mailing.district}
-                                    onChange={(e) => handleDistrictChange("mailing", e.target.value)}
+                                    onChange={(e) =>
+                                      handleDistrictChange("mailing", e.target.value)
+                                    }
                                     placeholder="Enter district name"
                                     className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                   />
@@ -3688,7 +3991,10 @@ export default function CURegistrationPage() {
 
                               {/* 5. City */}
                               <div className="space-y-2">
-                                <Label htmlFor="mailing-city" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="mailing-city"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.13 City
                                 </Label>
                                 <div className={getReadOnlyDivStyle()}>
@@ -3698,13 +4004,18 @@ export default function CURegistrationPage() {
 
                               {/* 6. Pin Code */}
                               <div className="space-y-2">
-                                <Label htmlFor="mailing-pin" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="mailing-pin"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.14 Pin Code
                                 </Label>
                                 <Input
                                   id="mailing-pin"
                                   value={addressData.mailing.pinCode}
-                                  onChange={(e) => handleAddressChange("mailing", "pinCode", e.target.value)}
+                                  onChange={(e) =>
+                                    handleAddressChange("mailing", "pinCode", e.target.value)
+                                  }
                                   placeholder="Enter pin code"
                                   className="border-gray-300"
                                   disabled={!isFieldEditable()}
@@ -3713,14 +4024,21 @@ export default function CURegistrationPage() {
 
                               {/* 7. Police Station */}
                               <div className="space-y-2">
-                                <Label htmlFor="mailing-police" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="mailing-police"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.15 Police Station
                                 </Label>
                                 <Input
                                   id="mailing-police"
                                   value={addressData.mailing.policeStation}
                                   onChange={(e) =>
-                                    handleAddressChange("mailing", "policeStation", sanitizeTextOnly(e.target.value))
+                                    handleAddressChange(
+                                      "mailing",
+                                      "policeStation",
+                                      sanitizeTextOnly(e.target.value),
+                                    )
                                   }
                                   placeholder="Enter police station name"
                                   className="border-gray-300"
@@ -3731,14 +4049,21 @@ export default function CURegistrationPage() {
 
                               {/* 8. Post Office */}
                               <div className="space-y-2">
-                                <Label htmlFor="mailing-post" className="text-sm font-medium text-gray-700">
+                                <Label
+                                  htmlFor="mailing-post"
+                                  className="text-sm font-medium text-gray-700"
+                                >
                                   2.16 Post Office
                                 </Label>
                                 <Input
                                   id="mailing-post"
                                   value={addressData.mailing.postOffice}
                                   onChange={(e) =>
-                                    handleAddressChange("mailing", "postOffice", sanitizeTextOnly(e.target.value))
+                                    handleAddressChange(
+                                      "mailing",
+                                      "postOffice",
+                                      sanitizeTextOnly(e.target.value),
+                                    )
                                   }
                                   placeholder="Enter post office name"
                                   className="border-gray-300"
@@ -3768,7 +4093,8 @@ export default function CURegistrationPage() {
                               }`}
                               onClick={() => handleAddressDeclarationChange(true)}
                             >
-                              I declare that the addresses provided are correct (all fields mandatory).
+                              I declare that the addresses provided are correct (all fields
+                              mandatory).
                             </Label>
                           </div>
 
@@ -3776,8 +4102,8 @@ export default function CURegistrationPage() {
                           {!addressDeclared && !correctionRequest?.addressInfoDeclaration && (
                             <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
                               <p className="text-sm text-green-700">
-                                <span className="font-medium">Note:</span> Please check the declaration above to proceed
-                                to the next tab (Subjects Overview).
+                                <span className="font-medium">Note:</span> Please check the
+                                declaration above to proceed to the next tab (Subjects Overview).
                               </p>
                             </div>
                           )}
@@ -3786,7 +4112,9 @@ export default function CURegistrationPage() {
                           {addressErrors.length > 0 && (
                             <div className="bg-red-50 border border-red-200 rounded-md p-3">
                               <div className="text-sm text-red-800">
-                                <p className="font-medium mb-1">Please complete all address fields. Missing:</p>
+                                <p className="font-medium mb-1">
+                                  Please complete all address fields. Missing:
+                                </p>
                                 <p className="text-red-600">{addressErrors.join(", ")}</p>
                               </div>
                             </div>
@@ -3805,30 +4133,36 @@ export default function CURegistrationPage() {
                         <div className="space-y-2 text-sm text-purple-800">
                           <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>
-                              The subjects displayed include the mandatory subjects you must study from Semesters I to
-                              IV, along with the subjects you selected during the Subject Selection process.
+                              The subjects displayed include the mandatory subjects you must study
+                              from Semesters I to IV, along with the subjects you selected during
+                              the Subject Selection process.
                             </li>
                             <li>
-                              BA & BSc Students: If you wish to change the order or subject under Minor / IDC / AEC /
-                              CVAC categories, you may click on the slider at the top-right corner of the page to
-                              register a correction.
+                              BA & BSc Students: If you wish to change the order or subject under
+                              Minor / IDC / AEC / CVAC categories, you may click on the slider at
+                              the top-right corner of the page to register a correction.
                             </li>
                             <li>
-                              Please Note: Any request for changing the order of the previously selected subjects will
-                              be at the sole discretion of the college.
+                              Please Note: Any request for changing the order of the previously
+                              selected subjects will be at the sole discretion of the college.
                             </li>
                             <li>
-                              BCom Students: If you wish to change your Minor subject, you can click on the slider at
-                              the top-right corner to register a correction.
+                              BCom Students: If you wish to change your Minor subject, you can click
+                              on the slider at the top-right corner to register a correction.
                             </li>
-                            <li>BBA Students: All subjects displayed are mandatory and cannot be changed.</li>
+                            <li>
+                              BBA Students: All subjects displayed are mandatory and cannot be
+                              changed.
+                            </li>
                           </ul>
                         </div>
                       </div>
 
                       <div>
                         <div className="flex justify-between items-center mb-4">
-                          <h2 className="text-lg font-semibold text-gray-800">3.1 Subjects Overview (Semesters 1-4)</h2>
+                          <h2 className="text-lg font-semibold text-gray-800">
+                            3.1 Subjects Overview (Semesters 1-4)
+                          </h2>
                           {shouldShowSubjectsCorrectionFlag() && (
                             <div className="flex items-center space-x-2">
                               <span className="text-sm text-gray-600">Request correction</span>
@@ -3880,29 +4214,46 @@ export default function CURegistrationPage() {
                                       </td>
                                       {Object.entries(semesters).map(([sem, value]) => {
                                         const mandatorySubjectsList =
-                                          (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
-                                            sem as keyof typeof semesters
-                                          ] as string[]) || [];
-                                        const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
+                                          (mandatorySubjects[
+                                            category as keyof typeof mandatorySubjects
+                                          ]?.[sem as keyof typeof semesters] as string[]) || [];
+                                        const studentSubjectsList = Array.isArray(value)
+                                          ? value
+                                          : value
+                                            ? [value]
+                                            : [];
 
                                         return (
-                                          <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
+                                          <td
+                                            key={sem}
+                                            className="border border-gray-300 px-2 py-2 min-w-[150px]"
+                                          >
                                             <div className="text-sm text-gray-800">
                                               {(() => {
                                                 // Combine all subjects (mandatory + optional) into one array
-                                                let allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+                                                let allSubjects: Array<{
+                                                  name: string;
+                                                  isMandatory: boolean;
+                                                }> = [];
 
                                                 // Add mandatory subjects
                                                 mandatorySubjectsList.forEach((subject) => {
-                                                  allSubjects.push({ name: subject, isMandatory: true });
+                                                  allSubjects.push({
+                                                    name: subject,
+                                                    isMandatory: true,
+                                                  });
                                                 });
 
                                                 // Add optional subjects (filter out duplicates)
                                                 const filteredSubjects = studentSubjectsList.filter(
-                                                  (subject) => !mandatorySubjectsList.includes(subject),
+                                                  (subject) =>
+                                                    !mandatorySubjectsList.includes(subject),
                                                 );
                                                 filteredSubjects.forEach((subject) => {
-                                                  allSubjects.push({ name: subject, isMandatory: false });
+                                                  allSubjects.push({
+                                                    name: subject,
+                                                    isMandatory: false,
+                                                  });
                                                 });
 
                                                 // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
@@ -3912,8 +4263,9 @@ export default function CURegistrationPage() {
                                                   allSubjects.length === 0
                                                 ) {
                                                   const sem3Mandatory =
-                                                    (mandatorySubjects[category as keyof typeof mandatorySubjects]
-                                                      ?.sem3 as string[]) || [];
+                                                    (mandatorySubjects[
+                                                      category as keyof typeof mandatorySubjects
+                                                    ]?.sem3 as string[]) || [];
                                                   const sem3Student = Array.isArray(semesters.sem3)
                                                     ? semesters.sem3
                                                     : semesters.sem3
@@ -3922,7 +4274,10 @@ export default function CURegistrationPage() {
 
                                                   // Add sem3 mandatory subjects
                                                   sem3Mandatory.forEach((subject) => {
-                                                    allSubjects.push({ name: subject, isMandatory: true });
+                                                    allSubjects.push({
+                                                      name: subject,
+                                                      isMandatory: true,
+                                                    });
                                                   });
 
                                                   // Add sem3 student subjects (filter out duplicates)
@@ -3930,17 +4285,31 @@ export default function CURegistrationPage() {
                                                     (subject) => !sem3Mandatory.includes(subject),
                                                   );
                                                   filteredSem3Subjects.forEach((subject) => {
-                                                    allSubjects.push({ name: subject, isMandatory: false });
+                                                    allSubjects.push({
+                                                      name: subject,
+                                                      isMandatory: false,
+                                                    });
                                                   });
                                                 }
 
                                                 // If no subjects, display appropriate message
                                                 if (allSubjects.length === 0) {
                                                   // For BCOM/BBA students, show specific message for MDC
-                                                  if (category === "IDC" && isMdcProgramForDisplay) {
-                                                    return <span className="text-gray-500 italic">Not Applicable</span>;
+                                                  if (
+                                                    category === "IDC" &&
+                                                    isMdcProgramForDisplay
+                                                  ) {
+                                                    return (
+                                                      <span className="text-gray-500 italic">
+                                                        Not Applicable
+                                                      </span>
+                                                    );
                                                   }
-                                                  return <span className="text-gray-500 italic">Not Applicable</span>;
+                                                  return (
+                                                    <span className="text-gray-500 italic">
+                                                      Not Applicable
+                                                    </span>
+                                                  );
                                                 }
 
                                                 // Render all subjects as ordered list
@@ -4002,42 +4371,51 @@ export default function CURegistrationPage() {
                         <div className="space-y-2 text-sm text-orange-800">
                           <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>
-                              Upload only the scanned originals — photocopies, screenshots or internet-downloaded
-                              versions will not be accepted.
+                              Upload only the scanned originals — photocopies, screenshots or
+                              internet-downloaded versions will not be accepted.
                             </li>
                             <li>Each file must be in .jpg / .jpeg format and under 1 MB.</li>
                             <li>Ensure all text, seals, and photographs are clearly visible.</li>
                             <li>Do not use special characters or spaces while renaming files.</li>
                             <li>
-                              Upload Photo ID proof of parents (if applicable), issued by the Government. Only documents
-                              for parents with names listed in your family details are required.
+                              Upload Photo ID proof of parents (if applicable), issued by the
+                              Government. Only documents for parents with names listed in your
+                              family details are required.
                             </li>
-                            <li>Make sure each document is uploaded under the correct field name.</li>
-                            <li>EWS Certificate must be issued only by the Government of West Bengal.</li>
                             <li>
-                              For Foreign Nationals: merge the first and last pages of your Passport into a single page
-                              and then upload.
+                              Make sure each document is uploaded under the correct field name.
+                            </li>
+                            <li>
+                              EWS Certificate must be issued only by the Government of West Bengal.
+                            </li>
+                            <li>
+                              For Foreign Nationals: merge the first and last pages of your Passport
+                              into a single page and then upload.
                             </li>
                             <li>To preview the uploaded document, click on it to enlarge.</li>
                             <li>
-                              To change or re-upload a document, click the Upload button again before clicking Review &
-                              Confirm.
+                              To change or re-upload a document, click the Upload button again
+                              before clicking Review & Confirm.
                             </li>
                             <li>
-                              Once all applicable documents are uploaded, click on the Review & Confirm button to
-                              proceed.
+                              Once all applicable documents are uploaded, click on the Review &
+                              Confirm button to proceed.
                             </li>
                           </ul>
                         </div>
                       </div>
 
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4">4.1 Document Uploads</h2>
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                          4.1 Document Uploads
+                        </h2>
 
                         {/* Uploaded Documents Table */}
                         {uploadedDocuments.length > 0 && (
                           <div className="mb-6">
-                            <h3 className="text-md font-medium text-gray-800 mb-3">Uploaded Documents</h3>
+                            <h3 className="text-md font-medium text-gray-800 mb-3">
+                              Uploaded Documents
+                            </h3>
                             <div className="overflow-x-auto">
                               <table className="min-w-full border border-gray-300">
                                 <thead className="bg-gray-50">
@@ -4070,7 +4448,10 @@ export default function CURegistrationPage() {
                                           5: "Mother's Photo ID",
                                           10: "EWS Certificate",
                                         };
-                                        return documentTypeMap[doc.documentId] || `Document ${doc.documentId}`;
+                                        return (
+                                          documentTypeMap[doc.documentId] ||
+                                          `Document ${doc.documentId}`
+                                        );
                                       })();
                                     const fileSizeMB = doc.fileSize
                                       ? (doc.fileSize / 1024 / 1024).toFixed(2)
@@ -4086,14 +4467,23 @@ export default function CURegistrationPage() {
                                             <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
                                               {doc.fileType?.startsWith("image/") ? (
                                                 <img
-                                                  src={docPreviewUrls[doc.id] || toAbsoluteUrl(doc.documentUrl)}
+                                                  src={
+                                                    docPreviewUrls[doc.id] ||
+                                                    toAbsoluteUrl(doc.documentUrl)
+                                                  }
                                                   alt="Preview"
                                                   className="w-full h-full object-cover"
                                                   onError={async () => {
                                                     try {
-                                                      const url = await getCuRegistrationDocumentSignedUrl(doc.id);
+                                                      const url =
+                                                        await getCuRegistrationDocumentSignedUrl(
+                                                          doc.id,
+                                                        );
                                                       if (url) {
-                                                        setDocPreviewUrls((prev) => ({ ...prev, [doc.id]: url }));
+                                                        setDocPreviewUrls((prev) => ({
+                                                          ...prev,
+                                                          [doc.id]: url,
+                                                        }));
                                                       }
                                                     } catch {}
                                                   }}
@@ -4112,7 +4502,10 @@ export default function CURegistrationPage() {
                                                 className="text-xs text-blue-600 hover:underline"
                                                 onClick={async () => {
                                                   try {
-                                                    const url = await getCuRegistrationDocumentSignedUrl(doc.id);
+                                                    const url =
+                                                      await getCuRegistrationDocumentSignedUrl(
+                                                        doc.id,
+                                                      );
                                                     window.open(url, "_blank");
                                                   } catch {}
                                                 }}
@@ -4126,7 +4519,10 @@ export default function CURegistrationPage() {
                                           {fileSizeMB} MB
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                          <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs text-green-600 border-green-600"
+                                          >
                                             Uploaded
                                           </Badge>
                                         </td>
@@ -4148,7 +4544,10 @@ export default function CURegistrationPage() {
                                 <Label className="text-sm font-medium text-gray-700">
                                   Class XII Original Board Marksheet
                                 </Label>
-                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs text-red-600 border-red-600"
+                                >
                                   Required
                                 </Badge>
                               </div>
@@ -4161,13 +4560,16 @@ export default function CURegistrationPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => document.getElementById("classXIIMarksheet")?.click()}
+                                  onClick={() =>
+                                    document.getElementById("classXIIMarksheet")?.click()
+                                  }
                                   className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
                                 >
                                   Upload
                                 </Button>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Class XII Marksheet").maxSizeMB}MB • JPEG / JPG /PNG
+                                  Max {getFileSizeLimit("Class XII Marksheet").maxSizeMB}MB • JPEG /
+                                  JPG /PNG
                                 </p>
                                 <input
                                   id="classXIIMarksheet"
@@ -4176,12 +4578,15 @@ export default function CURegistrationPage() {
                                   className="hidden"
                                   onChange={(e) => {
                                     const f = e.target.files?.[0] || null;
-                                    console.info(`[CU-REG FRONTEND] Class XII Marksheet file selected:`, {
-                                      name: f?.name,
-                                      size: f?.size,
-                                      sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                      type: f?.type,
-                                    });
+                                    console.info(
+                                      `[CU-REG FRONTEND] Class XII Marksheet file selected:`,
+                                      {
+                                        name: f?.name,
+                                        size: f?.size,
+                                        sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                        type: f?.type,
+                                      },
+                                    );
                                     handleFileUpload("classXIIMarksheet", f);
                                   }}
                                 />
@@ -4195,12 +4600,16 @@ export default function CURegistrationPage() {
                                           src={getFilePreviewUrl(documents.classXIIMarksheet)}
                                           alt="Preview"
                                           className="w-full h-full object-cover cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.classXIIMarksheet!)}
+                                          onClick={() =>
+                                            handleFilePreview(documents.classXIIMarksheet!)
+                                          }
                                         />
                                       ) : (
                                         <div
                                           className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.classXIIMarksheet!)}
+                                          onClick={() =>
+                                            handleFilePreview(documents.classXIIMarksheet!)
+                                          }
                                         >
                                           PDF
                                         </div>
@@ -4225,8 +4634,13 @@ export default function CURegistrationPage() {
                             {personalInfo.nationality === "Indian" && (
                               <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                                 <div className="flex items-center justify-between mb-3">
-                                  <Label className="text-sm font-medium text-gray-700">Aadhaar Card</Label>
-                                  <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                  <Label className="text-sm font-medium text-gray-700">
+                                    Aadhaar Card
+                                  </Label>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs text-red-600 border-red-600"
+                                  >
                                     Required
                                   </Badge>
                                 </div>
@@ -4245,7 +4659,8 @@ export default function CURegistrationPage() {
                                     Upload
                                   </Button>
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Max {getFileSizeLimit("Aadhaar Card").maxSizeMB}MB • JPEG / JPG /PNG
+                                    Max {getFileSizeLimit("Aadhaar Card").maxSizeMB}MB • JPEG / JPG
+                                    /PNG
                                   </p>
                                   <input
                                     id="aadhaarCard"
@@ -4254,12 +4669,15 @@ export default function CURegistrationPage() {
                                     className="hidden"
                                     onChange={(e) => {
                                       const f = e.target.files?.[0] || null;
-                                      console.info(`[CU-REG FRONTEND] Aadhaar Card file selected:`, {
-                                        name: f?.name,
-                                        size: f?.size,
-                                        sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                        type: f?.type,
-                                      });
+                                      console.info(
+                                        `[CU-REG FRONTEND] Aadhaar Card file selected:`,
+                                        {
+                                          name: f?.name,
+                                          size: f?.size,
+                                          sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                          type: f?.type,
+                                        },
+                                      );
                                       handleFileUpload("aadhaarCard", f);
                                     }}
                                   />
@@ -4273,19 +4691,25 @@ export default function CURegistrationPage() {
                                             src={getFilePreviewUrl(documents.aadhaarCard)}
                                             alt="Preview"
                                             className="w-full h-full object-cover cursor-pointer"
-                                            onClick={() => handleFilePreview(documents.aadhaarCard!)}
+                                            onClick={() =>
+                                              handleFilePreview(documents.aadhaarCard!)
+                                            }
                                           />
                                         ) : (
                                           <div
                                             className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                            onClick={() => handleFilePreview(documents.aadhaarCard!)}
+                                            onClick={() =>
+                                              handleFilePreview(documents.aadhaarCard!)
+                                            }
                                           >
                                             PDF
                                           </div>
                                         )}
                                       </div>
                                       <div className="flex-1">
-                                        <p className="text-xs text-gray-600 truncate">{documents.aadhaarCard.name}</p>
+                                        <p className="text-xs text-gray-600 truncate">
+                                          {documents.aadhaarCard.name}
+                                        </p>
                                         <p className="text-xs text-gray-500">
                                           {formatFileSize(documents.aadhaarCard.size)}
                                         </p>
@@ -4299,8 +4723,13 @@ export default function CURegistrationPage() {
                             {/* APAAR ID Card */}
                             <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                               <div className="flex items-center justify-between mb-3">
-                                <Label className="text-sm font-medium text-gray-700">APAAR (ABC) ID Card</Label>
-                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                <Label className="text-sm font-medium text-gray-700">
+                                  APAAR (ABC) ID Card
+                                </Label>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs text-red-600 border-red-600"
+                                >
                                   Required
                                 </Badge>
                               </div>
@@ -4319,7 +4748,8 @@ export default function CURegistrationPage() {
                                   Upload
                                 </Button>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("APAAR ID Card").maxSizeMB}MB • JPEG / JPG /PNG
+                                  Max {getFileSizeLimit("APAAR ID Card").maxSizeMB}MB • JPEG / JPG
+                                  /PNG
                                 </p>
                                 <input
                                   id="apaarIdCard"
@@ -4359,7 +4789,9 @@ export default function CURegistrationPage() {
                                       )}
                                     </div>
                                     <div className="flex-1">
-                                      <p className="text-xs text-gray-600 truncate">{documents.apaarIdCard.name}</p>
+                                      <p className="text-xs text-gray-600 truncate">
+                                        {documents.apaarIdCard.name}
+                                      </p>
                                       <p className="text-xs text-gray-500">
                                         {formatFileSize(documents.apaarIdCard.size)}
                                       </p>
@@ -4372,10 +4804,13 @@ export default function CURegistrationPage() {
                             {/* Father's Government-issued Photo ID */}
                             {(() => {
                               const familyDetails = profileInfo?.studentFamily as any;
-                              const father = familyDetails?.members?.find((member: any) => member.type === "FATHER");
+                              const father = familyDetails?.members?.find(
+                                (member: any) => member.type === "FATHER",
+                              );
 
                               // Only show father's document section if father exists AND has meaningful name AND is not late
-                              if (!father || !father.name?.trim() || father.title === "LATE") return null;
+                              if (!father || !father.name?.trim() || father.title === "LATE")
+                                return null;
 
                               return (
                                 <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
@@ -4390,14 +4825,24 @@ export default function CURegistrationPage() {
                                       );
 
                                       // Show required only if father exists AND has meaningful name AND is not late
-                                      const isRequired = !!(father && father.name?.trim() && father.title !== "LATE");
+                                      const isRequired = !!(
+                                        father &&
+                                        father.name?.trim() &&
+                                        father.title !== "LATE"
+                                      );
 
                                       return isRequired ? (
-                                        <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs text-red-600 border-red-600"
+                                        >
                                           Required
                                         </Badge>
                                       ) : (
-                                        <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs text-gray-500 border-gray-300"
+                                        >
                                           Not Required
                                         </Badge>
                                       );
@@ -4413,12 +4858,15 @@ export default function CURegistrationPage() {
                                       className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                      Max {getFileSizeLimit("Father Photo ID").maxSizeMB}MB • JPEG / JPG /PNG
+                                      Max {getFileSizeLimit("Father Photo ID").maxSizeMB}MB • JPEG /
+                                      JPG /PNG
                                     </p>
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => document.getElementById("fatherPhotoId")?.click()}
+                                      onClick={() =>
+                                        document.getElementById("fatherPhotoId")?.click()
+                                      }
                                       className="absolute right-2 top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
                                     >
                                       Upload
@@ -4443,12 +4891,16 @@ export default function CURegistrationPage() {
                                               src={getFilePreviewUrl(documents.fatherPhotoId)}
                                               alt="Preview"
                                               className="w-full h-full object-cover cursor-pointer"
-                                              onClick={() => handleFilePreview(documents.fatherPhotoId!)}
+                                              onClick={() =>
+                                                handleFilePreview(documents.fatherPhotoId!)
+                                              }
                                             />
                                           ) : (
                                             <div
                                               className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                              onClick={() => handleFilePreview(documents.fatherPhotoId!)}
+                                              onClick={() =>
+                                                handleFilePreview(documents.fatherPhotoId!)
+                                              }
                                             >
                                               PDF
                                             </div>
@@ -4472,10 +4924,13 @@ export default function CURegistrationPage() {
                             {/* Mother's Government-issued Photo ID */}
                             {(() => {
                               const familyDetails = profileInfo?.studentFamily as any;
-                              const mother = familyDetails?.members?.find((member: any) => member.type === "MOTHER");
+                              const mother = familyDetails?.members?.find(
+                                (member: any) => member.type === "MOTHER",
+                              );
 
                               // Only show mother's document section if mother exists AND has meaningful name AND is not late
-                              if (!mother || !mother.name?.trim() || mother.title === "LATE") return null;
+                              if (!mother || !mother.name?.trim() || mother.title === "LATE")
+                                return null;
 
                               return (
                                 <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
@@ -4490,14 +4945,24 @@ export default function CURegistrationPage() {
                                       );
 
                                       // Show required only if mother exists AND has meaningful name AND is not late
-                                      const isRequired = !!(mother && mother.name?.trim() && mother.title !== "LATE");
+                                      const isRequired = !!(
+                                        mother &&
+                                        mother.name?.trim() &&
+                                        mother.title !== "LATE"
+                                      );
 
                                       return isRequired ? (
-                                        <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs text-red-600 border-red-600"
+                                        >
                                           Required
                                         </Badge>
                                       ) : (
-                                        <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs text-gray-500 border-gray-300"
+                                        >
                                           Not Required
                                         </Badge>
                                       );
@@ -4513,12 +4978,15 @@ export default function CURegistrationPage() {
                                       className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                      Max {getFileSizeLimit("Mother Photo ID").maxSizeMB}MB • JPEG/JPG/PNG
+                                      Max {getFileSizeLimit("Mother Photo ID").maxSizeMB}MB •
+                                      JPEG/JPG/PNG
                                     </p>
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => document.getElementById("motherPhotoId")?.click()}
+                                      onClick={() =>
+                                        document.getElementById("motherPhotoId")?.click()
+                                      }
                                       className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
                                     >
                                       Upload
@@ -4530,12 +4998,15 @@ export default function CURegistrationPage() {
                                       className="hidden"
                                       onChange={(e) => {
                                         const f = e.target.files?.[0] || null;
-                                        console.info(`[CU-REG FRONTEND] Mother Photo ID file selected:`, {
-                                          name: f?.name,
-                                          size: f?.size,
-                                          sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                          type: f?.type,
-                                        });
+                                        console.info(
+                                          `[CU-REG FRONTEND] Mother Photo ID file selected:`,
+                                          {
+                                            name: f?.name,
+                                            size: f?.size,
+                                            sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                            type: f?.type,
+                                          },
+                                        );
                                         handleFileUpload("motherPhotoId", f);
                                       }}
                                     />
@@ -4549,12 +5020,16 @@ export default function CURegistrationPage() {
                                               src={getFilePreviewUrl(documents.motherPhotoId)}
                                               alt="Preview"
                                               className="w-full h-full object-cover cursor-pointer"
-                                              onClick={() => handleFilePreview(documents.motherPhotoId!)}
+                                              onClick={() =>
+                                                handleFilePreview(documents.motherPhotoId!)
+                                              }
                                             />
                                           ) : (
                                             <div
                                               className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                              onClick={() => handleFilePreview(documents.motherPhotoId!)}
+                                              onClick={() =>
+                                                handleFilePreview(documents.motherPhotoId!)
+                                              }
                                             >
                                               PDF
                                             </div>
@@ -4579,8 +5054,13 @@ export default function CURegistrationPage() {
                             {personalInfo.ews === "Yes" && (
                               <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                                 <div className="flex items-center justify-between mb-3">
-                                  <Label className="text-sm font-medium text-gray-700">EWS Certificate</Label>
-                                  <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                  <Label className="text-sm font-medium text-gray-700">
+                                    EWS Certificate
+                                  </Label>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs text-red-600 border-red-600"
+                                  >
                                     Required
                                   </Badge>
                                 </div>
@@ -4591,12 +5071,15 @@ export default function CURegistrationPage() {
                                     className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                   />
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Max {getFileSizeLimit("EWS Certificate").maxSizeMB}MB • JPEG / JPG /PNG
+                                    Max {getFileSizeLimit("EWS Certificate").maxSizeMB}MB • JPEG /
+                                    JPG /PNG
                                   </p>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => document.getElementById("ewsCertificate")?.click()}
+                                    onClick={() =>
+                                      document.getElementById("ewsCertificate")?.click()
+                                    }
                                     className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
                                   >
                                     Upload
@@ -4608,12 +5091,15 @@ export default function CURegistrationPage() {
                                     className="hidden"
                                     onChange={(e) => {
                                       const f = e.target.files?.[0] || null;
-                                      console.info(`[CU-REG FRONTEND] EWS Certificate file selected:`, {
-                                        name: f?.name,
-                                        size: f?.size,
-                                        sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                        type: f?.type,
-                                      });
+                                      console.info(
+                                        `[CU-REG FRONTEND] EWS Certificate file selected:`,
+                                        {
+                                          name: f?.name,
+                                          size: f?.size,
+                                          sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                          type: f?.type,
+                                        },
+                                      );
                                       handleFileUpload("ewsCertificate", f);
                                     }}
                                   />
@@ -4628,14 +5114,16 @@ export default function CURegistrationPage() {
                                             alt="Preview"
                                             className="w-full h-full object-cover cursor-pointer"
                                             onClick={() =>
-                                              documents.ewsCertificate && handleFilePreview(documents.ewsCertificate)
+                                              documents.ewsCertificate &&
+                                              handleFilePreview(documents.ewsCertificate)
                                             }
                                           />
                                         ) : (
                                           <div
                                             className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
                                             onClick={() =>
-                                              documents.ewsCertificate && handleFilePreview(documents.ewsCertificate)
+                                              documents.ewsCertificate &&
+                                              handleFilePreview(documents.ewsCertificate)
                                             }
                                           >
                                             PDF
@@ -4659,14 +5147,21 @@ export default function CURegistrationPage() {
                             {/* Migration Certificate - Only show for migratory boards */}
                             {(() => {
                               const migratoryBoards = ["CBSE", "ICSE", "WBCHSE", "NIOS"];
-                              const boardCode = profileInfo?.applicationFormDto?.academicInfo?.board?.code;
-                              const isMigratoryBoard = boardCode && !migratoryBoards.includes(boardCode);
+                              const boardCode =
+                                profileInfo?.applicationFormDto?.academicInfo?.board?.code;
+                              const isMigratoryBoard =
+                                boardCode && !migratoryBoards.includes(boardCode);
                               return isMigratoryBoard;
                             })() && (
                               <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                                 <div className="flex items-center justify-between mb-3">
-                                  <Label className="text-sm font-medium text-gray-700">Migration Certificate</Label>
-                                  <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                  <Label className="text-sm font-medium text-gray-700">
+                                    Migration Certificate
+                                  </Label>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs text-red-600 border-red-600"
+                                  >
                                     Required
                                   </Badge>
                                 </div>
@@ -4677,12 +5172,15 @@ export default function CURegistrationPage() {
                                     className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                   />
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Max {getFileSizeLimit("Migration Certificate").maxSizeMB}MB • JPEG / JPG /PNG
+                                    Max {getFileSizeLimit("Migration Certificate").maxSizeMB}MB •
+                                    JPEG / JPG /PNG
                                   </p>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => document.getElementById("migrationCertificate")?.click()}
+                                    onClick={() =>
+                                      document.getElementById("migrationCertificate")?.click()
+                                    }
                                     className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
                                   >
                                     Upload
@@ -4694,12 +5192,15 @@ export default function CURegistrationPage() {
                                     className="hidden"
                                     onChange={(e) => {
                                       const f = e.target.files?.[0] || null;
-                                      console.info(`[CU-REG FRONTEND] Migration Certificate file selected:`, {
-                                        name: f?.name,
-                                        size: f?.size,
-                                        sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                        type: f?.type,
-                                      });
+                                      console.info(
+                                        `[CU-REG FRONTEND] Migration Certificate file selected:`,
+                                        {
+                                          name: f?.name,
+                                          size: f?.size,
+                                          sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                          type: f?.type,
+                                        },
+                                      );
                                       handleFileUpload("migrationCertificate", f);
                                     }}
                                   />
@@ -4708,7 +5209,9 @@ export default function CURegistrationPage() {
                                   <div className="mt-3">
                                     <div className="flex items-center space-x-2">
                                       <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                        {documents.migrationCertificate?.type.startsWith("image/") ? (
+                                        {documents.migrationCertificate?.type.startsWith(
+                                          "image/",
+                                        ) ? (
                                           <img
                                             src={getFilePreviewUrl(documents.migrationCertificate)}
                                             alt="Preview"
@@ -4751,9 +5254,15 @@ export default function CURegistrationPage() {
                           <div className="flex items-start space-x-3">
                             <Checkbox
                               id="documentsConfirmation"
-                              checked={documentsConfirmed || correctionRequest?.documentsDeclaration || false}
+                              checked={
+                                documentsConfirmed ||
+                                correctionRequest?.documentsDeclaration ||
+                                false
+                              }
                               onCheckedChange={handleDocumentsDeclarationChange}
-                              disabled={!isDeclarationInteractive() || !canCheckDocumentsDeclaration()}
+                              disabled={
+                                !isDeclarationInteractive() || !canCheckDocumentsDeclaration()
+                              }
                               className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                             />
                             <Label
@@ -4834,8 +5343,12 @@ export default function CURegistrationPage() {
                       <div className="w-full h-[70vh] border border-gray-300 rounded-md flex items-center justify-center bg-gray-50">
                         <div className="text-center">
                           <div className="text-6xl text-red-600 mb-4">📄</div>
-                          <p className="text-lg font-medium text-gray-700 mb-2">{previewFile.file.name}</p>
-                          <p className="text-sm text-gray-500">{formatFileSize(previewFile.file.size)}</p>
+                          <p className="text-lg font-medium text-gray-700 mb-2">
+                            {previewFile.file.name}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {formatFileSize(previewFile.file.size)}
+                          </p>
                           <p className="text-sm text-gray-500 mt-2">
                             PDF files cannot be previewed in the browser. Please download to view.
                           </p>
@@ -4856,7 +5369,12 @@ export default function CURegistrationPage() {
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 text-center">
             <div className="mb-6">
               <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-8 h-8 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -4867,7 +5385,8 @@ export default function CURegistrationPage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Subject Selection Required</h2>
               <p className="text-gray-700 text-lg">
-                Subject Selection process is not completed by you. Click on okay to select your subject first.
+                Subject Selection process is not completed by you. Click on okay to select your
+                subject first.
               </p>
             </div>
             <Button
@@ -4890,18 +5409,23 @@ export default function CURegistrationPage() {
             <CardContent>
               {/* Review & Confirm Notes */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <h3 className="text-lg font-semibold text-red-900 mb-3">Review & Confirm - Important Notes</h3>
+                <h3 className="text-lg font-semibold text-red-900 mb-3">
+                  Review & Confirm - Important Notes
+                </h3>
                 <div className="space-y-2 text-sm text-red-800">
                   <ul className="list-disc list-inside space-y-1 ml-4">
                     <li>
-                      If corrections are needed, click on the Back button and toggle to make the necessary corrections
-                      before final submission.
+                      If corrections are needed, click on the Back button and toggle to make the
+                      necessary corrections before final submission.
                     </li>
                     <li>Once you click Submit, no further edits will be allowed.</li>
-                    <li>Upon successful submission, you will get your Admission & Registration Datasheet.</li>
                     <li>
-                      You are required to download the same & follow the instructions given on the 1st page of the
+                      Upon successful submission, you will get your Admission & Registration
                       Datasheet.
+                    </li>
+                    <li>
+                      You are required to download the same & follow the instructions given on the
+                      1st page of the Datasheet.
                     </li>
                   </ul>
                 </div>
@@ -4929,7 +5453,9 @@ export default function CURegistrationPage() {
                           <tbody>
                             {correctionFlags.gender && (
                               <tr>
-                                <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">Gender</td>
+                                <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                  Gender
+                                </td>
                                 <td className="border border-gray-200 px-4 py-3 text-gray-600">
                                   {personalInfo.gender || "Not provided"}
                                 </td>
@@ -4951,7 +5477,8 @@ export default function CURegistrationPage() {
                                   Aadhaar Number
                                 </td>
                                 <td className="border border-gray-200 px-4 py-3 text-gray-600">
-                                  {formatAadhaarNumber(personalInfo.aadhaarNumber) || "Not provided"}
+                                  {formatAadhaarNumber(personalInfo.aadhaarNumber) ||
+                                    "Not provided"}
                                 </td>
                               </tr>
                             )}
@@ -4980,7 +5507,9 @@ export default function CURegistrationPage() {
                       </div>
                     </>
                   ) : (
-                    <p className="text-gray-500 italic text-base">No correction requests registered.</p>
+                    <p className="text-gray-500 italic text-base">
+                      No correction requests registered.
+                    </p>
                   )}
                 </div>
 
@@ -4992,8 +5521,8 @@ export default function CURegistrationPage() {
                     className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                   />
                   <Label htmlFor="finalDeclare" className="text-base text-gray-700">
-                    I confirm that all the information provided has been reviewed by me, and any further changes will be
-                    at the college's discretion.
+                    I confirm that all the information provided has been reviewed by me, and any
+                    further changes will be at the college's discretion.
                   </Label>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">

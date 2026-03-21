@@ -12,7 +12,16 @@ import { BookOpen, FileText, GraduationCap, Home, Upload, User } from "lucide-re
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { getCuRegistrationDocumentSignedUrl } from "@/services/cu-registration-documents";
 import type { DocumentKey } from "@/hooks/use-cu-registration-form";
 
@@ -39,14 +48,21 @@ function IntroSectionCard({
   const bulletColor = isDark ? "#60a5fa" : "#2563eb";
 
   return (
-    <View className="rounded-xl p-5" style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}>
+    <View
+      className="rounded-xl p-5"
+      style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
+    >
       <View className="flex-row items-center mb-4">
         <View className="rounded-full px-2.5 py-1 mr-3" style={{ backgroundColor: badgeBg }}>
           <Text style={{ color: badgeText, fontSize: 14, fontWeight: "500" }}>{number}</Text>
         </View>
         <Text style={{ color: textColor, fontSize: 17, fontWeight: "600", flex: 1 }}>{title}</Text>
       </View>
-      {intro ? <Text style={{ color: textColor, fontSize: 14, lineHeight: 22, marginBottom: 12 }}>{intro}</Text> : null}
+      {intro ? (
+        <Text style={{ color: textColor, fontSize: 14, lineHeight: 22, marginBottom: 12 }}>
+          {intro}
+        </Text>
+      ) : null}
       {items.map((item, i) => (
         <View key={i} className="flex-row items-start mb-2">
           <Text style={{ color: bulletColor, marginRight: 8, fontSize: 14 }}>•</Text>
@@ -132,7 +148,8 @@ export default function CuRegistrationScreen() {
   const form = useCuRegistrationForm(student);
 
   const isBBAProgram = React.useMemo(() => {
-    const programName = student?.programCourse?.name || student?.currentPromotion?.programCourse?.name || "";
+    const programName =
+      student?.programCourse?.name || student?.currentPromotion?.programCourse?.name || "";
     return programName
       .normalize("NFKD")
       .replace(/[^A-Za-z]/g, "")
@@ -141,7 +158,8 @@ export default function CuRegistrationScreen() {
   }, [student?.programCourse?.name, student?.currentPromotion?.programCourse?.name]);
 
   const isBcomProgram = React.useMemo(() => {
-    const programName = student?.programCourse?.name || student?.currentPromotion?.programCourse?.name || "";
+    const programName =
+      student?.programCourse?.name || student?.currentPromotion?.programCourse?.name || "";
     return programName
       .normalize("NFKD")
       .replace(/[^A-Za-z]/g, "")
@@ -182,14 +200,22 @@ export default function CuRegistrationScreen() {
     }
   }, [isSubjectSelectionCompleted, activeTab, student?.id]);
 
-  const instructionsConfirmedState = form.instructionsConfirmed || !!form.correctionRequest?.introductoryDeclaration;
-  const personalDeclaredState = form.personalDeclared || !!form.correctionRequest?.personalInfoDeclaration;
-  const addressDeclaredState = form.addressDeclared || !!form.correctionRequest?.addressInfoDeclaration;
-  const subjectsDeclaredState = form.subjectsDeclared || !!form.correctionRequest?.subjectsDeclaration;
+  const instructionsConfirmedState =
+    form.instructionsConfirmed || !!form.correctionRequest?.introductoryDeclaration;
+  const personalDeclaredState =
+    form.personalDeclared || !!form.correctionRequest?.personalInfoDeclaration;
+  const addressDeclaredState =
+    form.addressDeclared || !!form.correctionRequest?.addressInfoDeclaration;
+  const subjectsDeclaredState =
+    form.subjectsDeclared || !!form.correctionRequest?.subjectsDeclaration;
 
   const isPersonalTabValid = useCallback(() => {
     const apaarIdDigits = form.personalInfo.apaarId.replace(/\D/g, "");
-    return personalDeclaredState && form.personalInfo.apaarId.trim() !== "" && apaarIdDigits.length === 12;
+    return (
+      personalDeclaredState &&
+      form.personalInfo.apaarId.trim() !== "" &&
+      apaarIdDigits.length === 12
+    );
   }, [personalDeclaredState, form.personalInfo.apaarId]);
 
   const validateAddressFields = useCallback(() => {
@@ -234,10 +260,16 @@ export default function CuRegistrationScreen() {
     }
     if (form.personalInfo.ews === "Yes") required.push("ewsCertificate");
     const migratoryBoards = ["CBSE", "ICSE", "WBCHSE", "NIOS"];
-    const boardCode = (profileInfo?.academicInfo as { board?: { code?: string } } | null)?.board?.code;
+    const boardCode = (profileInfo?.academicInfo as { board?: { code?: string } } | null)?.board
+      ?.code;
     if (boardCode && !migratoryBoards.includes(boardCode)) required.push("migrationCertificate");
     return required;
-  }, [profileInfo, form.personalInfo.nationality, form.personalInfo.aadhaarNumber, form.personalInfo.ews]);
+  }, [
+    profileInfo,
+    form.personalInfo.nationality,
+    form.personalInfo.aadhaarNumber,
+    form.personalInfo.ews,
+  ]);
 
   const getMissingDocuments = useCallback((): DocumentKey[] => {
     const required = getRequiredDocuments();
@@ -265,7 +297,8 @@ export default function CuRegistrationScreen() {
     if (mother?.name?.trim() && mother?.title !== "LATE") keys.push("motherPhotoId");
     if (form.personalInfo.ews === "Yes") keys.push("ewsCertificate");
     const migratoryBoards = ["CBSE", "ICSE", "WBCHSE", "NIOS"];
-    const boardCode = (profileInfo?.academicInfo as { board?: { code?: string } } | null)?.board?.code;
+    const boardCode = (profileInfo?.academicInfo as { board?: { code?: string } } | null)?.board
+      ?.code;
     if (boardCode && !migratoryBoards.includes(boardCode)) keys.push("migrationCertificate");
     return keys;
   }, [profileInfo, form.personalInfo.nationality, form.personalInfo.ews]);
@@ -282,7 +315,13 @@ export default function CuRegistrationScreen() {
       subjectsDeclaredState &&
       isDocumentsTabValid() &&
       form.documentsConfirmed,
-    [isPersonalTabValid, isAddressTabValid, subjectsDeclaredState, isDocumentsTabValid, form.documentsConfirmed],
+    [
+      isPersonalTabValid,
+      isAddressTabValid,
+      subjectsDeclaredState,
+      isDocumentsTabValid,
+      form.documentsConfirmed,
+    ],
   );
 
   useEffect(() => {
@@ -292,7 +331,13 @@ export default function CuRegistrationScreen() {
   const canNavigateToTab = useCallback(
     (tabId: TabId): boolean => {
       if (!form.isFormEditable) return true;
-      const tabOrder: TabId[] = ["introductory", "personal-info", "address", "subjects", "documents"];
+      const tabOrder: TabId[] = [
+        "introductory",
+        "personal-info",
+        "address",
+        "subjects",
+        "documents",
+      ];
       const currentIdx = tabOrder.indexOf(activeTab);
       const targetIdx = tabOrder.indexOf(tabId);
       if (targetIdx <= currentIdx) return true;
@@ -306,7 +351,12 @@ export default function CuRegistrationScreen() {
         case "subjects":
           return instructionsConfirmedState && personalDeclaredState && addressDeclaredState;
         case "documents":
-          return instructionsConfirmedState && personalDeclaredState && addressDeclaredState && subjectsDeclaredState;
+          return (
+            instructionsConfirmedState &&
+            personalDeclaredState &&
+            addressDeclaredState &&
+            subjectsDeclaredState
+          );
         default:
           return false;
       }
@@ -365,7 +415,10 @@ export default function CuRegistrationScreen() {
     async (key: DocumentKey) => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission required", "Please allow access to your photo library to upload documents.");
+        Alert.alert(
+          "Permission required",
+          "Please allow access to your photo library to upload documents.",
+        );
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -392,9 +445,14 @@ export default function CuRegistrationScreen() {
 
   if (isCheckingSubjectSelection) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: theme.background }}>
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: theme.background }}
+      >
         <ActivityIndicator size="large" color={accent} />
-        <Text style={{ color: theme.text, marginTop: 12 }}>Checking subject selection status...</Text>
+        <Text style={{ color: theme.text, marginTop: 12 }}>
+          Checking subject selection status...
+        </Text>
       </View>
     );
   }
@@ -414,7 +472,14 @@ export default function CuRegistrationScreen() {
             borderColor: isDark ? "rgba(234,179,8,0.4)" : "#fde047",
           }}
         >
-          <Text style={{ color: isDark ? "#fde047" : "#854d0e", fontSize: 18, fontWeight: "600", marginBottom: 8 }}>
+          <Text
+            style={{
+              color: isDark ? "#fde047" : "#854d0e",
+              fontSize: 18,
+              fontWeight: "600",
+              marginBottom: 8,
+            }}
+          >
             Subject Selection Required
           </Text>
           <Text
@@ -441,7 +506,10 @@ export default function CuRegistrationScreen() {
 
   if (form.loading && !form.correctionRequestId) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: theme.background }}>
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: theme.background }}
+      >
         <ActivityIndicator size="large" color={accent} />
         <Text style={{ color: theme.text, marginTop: 12 }}>Loading form...</Text>
       </View>
@@ -450,11 +518,22 @@ export default function CuRegistrationScreen() {
 
   if (form.submitSuccess) {
     return (
-      <View className="flex-1 items-center justify-center p-6" style={{ backgroundColor: theme.background }}>
+      <View
+        className="flex-1 items-center justify-center p-6"
+        style={{ backgroundColor: theme.background }}
+      >
         <Text style={{ color: theme.text, fontSize: 18, fontWeight: "600", textAlign: "center" }}>
           CU Registration submitted successfully!
         </Text>
-        <Text style={{ color: theme.text, opacity: 0.8, fontSize: 14, marginTop: 8, textAlign: "center" }}>
+        <Text
+          style={{
+            color: theme.text,
+            opacity: 0.8,
+            fontSize: 14,
+            marginTop: 8,
+            textAlign: "center",
+          }}
+        >
           Your application has been submitted. You will receive further instructions via email.
         </Text>
       </View>
@@ -468,7 +547,9 @@ export default function CuRegistrationScreen() {
       <View style={{ paddingHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
         <View className="flex-row items-center justify-between mb-2">
           {appNumber ? (
-            <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", opacity: 0.9 }}>{appNumber}</Text>
+            <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", opacity: 0.9 }}>
+              {appNumber}
+            </Text>
           ) : null}
         </View>
         <Text
@@ -517,7 +598,14 @@ export default function CuRegistrationScreen() {
               }}
             >
               <Icon size={14} color={isActive ? "#fff" : theme.text} />
-              <Text style={{ color: isActive ? "#fff" : theme.text, fontSize: 11, fontWeight: "500", marginLeft: 3 }}>
+              <Text
+                style={{
+                  color: isActive ? "#fff" : theme.text,
+                  fontSize: 11,
+                  fontWeight: "500",
+                  marginLeft: 3,
+                }}
+              >
                 {tab.label}
               </Text>
             </Pressable>
@@ -530,7 +618,10 @@ export default function CuRegistrationScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="rounded-xl p-6" style={{ backgroundColor: tabBg, borderWidth: 1, borderColor: tabBorder }}>
+        <View
+          className="rounded-xl p-6"
+          style={{ backgroundColor: tabBg, borderWidth: 1, borderColor: tabBorder }}
+        >
           {/* Introductory - matches web view */}
           {activeTab === "introductory" && (
             <View style={{ gap: 24 }}>
@@ -560,8 +651,8 @@ export default function CuRegistrationScreen() {
                     lineHeight: 22,
                   }}
                 >
-                  To ensure a smooth completion of your Admission & Registration Data Submission, carefully go through
-                  the following points before you begin.
+                  To ensure a smooth completion of your Admission & Registration Data Submission,
+                  carefully go through the following points before you begin.
                 </Text>
               </View>
 
@@ -650,7 +741,9 @@ export default function CuRegistrationScreen() {
           {/* Personal Info */}
           {activeTab === "personal-info" && (
             <View>
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
+              <Text
+                style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}
+              >
                 Personal Information
               </Text>
               <Input
@@ -682,7 +775,9 @@ export default function CuRegistrationScreen() {
                 style={{ marginBottom: 12 }}
               />
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
                   1.5 EWS (Economically Weaker Section)
                 </Text>
                 <Select
@@ -699,7 +794,9 @@ export default function CuRegistrationScreen() {
               <Input
                 label="1.6 Aadhaar Number"
                 value={form.personalInfo.aadhaarNumber}
-                onChangeText={(v) => form.setPersonalInfo("aadhaarNumber", formatAadhaar(v).slice(0, 14))}
+                onChangeText={(v) =>
+                  form.setPersonalInfo("aadhaarNumber", formatAadhaar(v).slice(0, 14))
+                }
                 placeholder="XXXX-XXXX-XXXX"
                 keyboardType="number-pad"
                 maxLength={14}
@@ -726,7 +823,10 @@ export default function CuRegistrationScreen() {
                   onPress={async () => {
                     const apaarIdDigits = form.personalInfo.apaarId.replace(/\D/g, "");
                     if (form.personalInfo.apaarId.trim() === "" || apaarIdDigits.length !== 12) {
-                      Alert.alert("Validation", "Please enter a valid 12-digit APAAR (ABC) ID to proceed.");
+                      Alert.alert(
+                        "Validation",
+                        "Please enter a valid 12-digit APAAR (ABC) ID to proceed.",
+                      );
                       return;
                     }
                     try {
@@ -753,7 +853,9 @@ export default function CuRegistrationScreen() {
                 </Pressable>
               )}
               {form.personalDeclared && (
-                <Text style={{ color: "#22c55e", fontSize: 13, marginTop: 8 }}>✓ Personal info saved</Text>
+                <Text style={{ color: "#22c55e", fontSize: 13, marginTop: 8 }}>
+                  ✓ Personal info saved
+                </Text>
               )}
             </View>
           )}
@@ -761,32 +863,51 @@ export default function CuRegistrationScreen() {
           {/* Address */}
           {activeTab === "address" && (
             <View>
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
+              <Text
+                style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}
+              >
                 Residential Address
               </Text>
               <Input
                 label="Address Line"
                 value={form.residentialAddress.addressLine}
-                onChangeText={(v) => form.setResidentialAddress({ ...form.residentialAddress, addressLine: v })}
+                onChangeText={(v) =>
+                  form.setResidentialAddress({ ...form.residentialAddress, addressLine: v })
+                }
                 editable={form.isFieldEditable}
                 style={{ marginBottom: 12 }}
               />
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>City</Text>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
+                  City
+                </Text>
                 <Select
-                  options={form.cities.map((c: { id: number; name: string }) => ({ value: c.name, label: c.name }))}
+                  options={form.cities.map((c: { id: number; name: string }) => ({
+                    value: c.name,
+                    label: c.name,
+                  }))}
                   value={form.residentialAddress.city}
-                  onChange={(v) => form.setResidentialAddress({ ...form.residentialAddress, city: v })}
+                  onChange={(v) =>
+                    form.setResidentialAddress({ ...form.residentialAddress, city: v })
+                  }
                   placeholder="Select city"
                   disabled={!form.isFieldEditable}
                 />
               </View>
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>District</Text>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
+                  District
+                </Text>
                 <Select
                   options={form.districts.map((d) => ({ value: d.name, label: d.name }))}
                   value={form.residentialAddress.district}
-                  onChange={(v) => form.setResidentialAddress({ ...form.residentialAddress, district: v })}
+                  onChange={(v) =>
+                    form.setResidentialAddress({ ...form.residentialAddress, district: v })
+                  }
                   placeholder="Select district"
                   disabled={!form.isFieldEditable}
                 />
@@ -794,40 +915,57 @@ export default function CuRegistrationScreen() {
               <Input
                 label="Police Station"
                 value={form.residentialAddress.policeStation}
-                onChangeText={(v) => form.setResidentialAddress({ ...form.residentialAddress, policeStation: v })}
+                onChangeText={(v) =>
+                  form.setResidentialAddress({ ...form.residentialAddress, policeStation: v })
+                }
                 editable={form.isFieldEditable}
                 style={{ marginBottom: 12 }}
               />
               <Input
                 label="Post Office"
                 value={form.residentialAddress.postOffice}
-                onChangeText={(v) => form.setResidentialAddress({ ...form.residentialAddress, postOffice: v })}
+                onChangeText={(v) =>
+                  form.setResidentialAddress({ ...form.residentialAddress, postOffice: v })
+                }
                 editable={form.isFieldEditable}
                 style={{ marginBottom: 12 }}
               />
               <Input
                 label="PIN Code"
                 value={form.residentialAddress.pinCode}
-                onChangeText={(v) => form.setResidentialAddress({ ...form.residentialAddress, pinCode: v })}
+                onChangeText={(v) =>
+                  form.setResidentialAddress({ ...form.residentialAddress, pinCode: v })
+                }
                 keyboardType="number-pad"
                 maxLength={6}
                 editable={form.isFieldEditable}
                 style={{ marginBottom: 16 }}
               />
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
+              <Text
+                style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}
+              >
                 Mailing Address
               </Text>
               <Input
                 label="Address Line"
                 value={form.mailingAddress.addressLine}
-                onChangeText={(v) => form.setMailingAddress({ ...form.mailingAddress, addressLine: v })}
+                onChangeText={(v) =>
+                  form.setMailingAddress({ ...form.mailingAddress, addressLine: v })
+                }
                 editable={form.isFieldEditable}
                 style={{ marginBottom: 12 }}
               />
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>City</Text>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
+                  City
+                </Text>
                 <Select
-                  options={form.cities.map((c: { id: number; name: string }) => ({ value: c.name, label: c.name }))}
+                  options={form.cities.map((c: { id: number; name: string }) => ({
+                    value: c.name,
+                    label: c.name,
+                  }))}
                   value={form.mailingAddress.city}
                   onChange={(v) => form.setMailingAddress({ ...form.mailingAddress, city: v })}
                   placeholder="Select city"
@@ -835,7 +973,11 @@ export default function CuRegistrationScreen() {
                 />
               </View>
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>District</Text>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
+                  District
+                </Text>
                 <Select
                   options={form.mailingDistricts.map((d: { id: number; name: string }) => ({
                     value: d.name,
@@ -850,14 +992,18 @@ export default function CuRegistrationScreen() {
               <Input
                 label="Police Station"
                 value={form.mailingAddress.policeStation}
-                onChangeText={(v) => form.setMailingAddress({ ...form.mailingAddress, policeStation: v })}
+                onChangeText={(v) =>
+                  form.setMailingAddress({ ...form.mailingAddress, policeStation: v })
+                }
                 editable={form.isFieldEditable}
                 style={{ marginBottom: 12 }}
               />
               <Input
                 label="Post Office"
                 value={form.mailingAddress.postOffice}
-                onChangeText={(v) => form.setMailingAddress({ ...form.mailingAddress, postOffice: v })}
+                onChangeText={(v) =>
+                  form.setMailingAddress({ ...form.mailingAddress, postOffice: v })
+                }
                 editable={form.isFieldEditable}
                 style={{ marginBottom: 12 }}
               />
@@ -879,7 +1025,9 @@ export default function CuRegistrationScreen() {
                     backgroundColor: isDark ? "rgba(239,68,68,0.2)" : "#fef2f2",
                   }}
                 >
-                  <Text style={{ color: "#dc2626", fontSize: 13, fontWeight: "500", marginBottom: 4 }}>
+                  <Text
+                    style={{ color: "#dc2626", fontSize: 13, fontWeight: "500", marginBottom: 4 }}
+                  >
                     Please fill:
                   </Text>
                   <Text style={{ color: "#dc2626", fontSize: 12 }}>{addressErrors.join(", ")}</Text>
@@ -889,7 +1037,10 @@ export default function CuRegistrationScreen() {
                 <Pressable
                   onPress={async () => {
                     if (!validateAddressFields()) {
-                      Alert.alert("Validation", `Please fill all required fields: ${addressErrors.join(", ")}`);
+                      Alert.alert(
+                        "Validation",
+                        `Please fill all required fields: ${addressErrors.join(", ")}`,
+                      );
                       return;
                     }
                     try {
@@ -906,7 +1057,9 @@ export default function CuRegistrationScreen() {
                 </Pressable>
               )}
               {form.addressDeclared && (
-                <Text style={{ color: "#22c55e", fontSize: 13, marginTop: 8 }}>✓ Address saved</Text>
+                <Text style={{ color: "#22c55e", fontSize: 13, marginTop: 8 }}>
+                  ✓ Address saved
+                </Text>
               )}
             </View>
           )}
@@ -925,20 +1078,42 @@ export default function CuRegistrationScreen() {
                 }}
               >
                 <Text
-                  style={{ color: isDark ? "#c4b5fd" : "#5b21b6", fontSize: 14, fontWeight: "600", marginBottom: 8 }}
+                  style={{
+                    color: isDark ? "#c4b5fd" : "#5b21b6",
+                    fontSize: 14,
+                    fontWeight: "600",
+                    marginBottom: 8,
+                  }}
                 >
                   Academic Details - Important Notes
                 </Text>
                 <Text style={{ color: theme.text, fontSize: 12, lineHeight: 18, opacity: 0.9 }}>
-                  • The subjects displayed include the mandatory subjects you must study from Semesters I to IV, along
-                  with the subjects you selected during the Subject Selection process.
+                  • The subjects displayed include the mandatory subjects you must study from
+                  Semesters I to IV, along with the subjects you selected during the Subject
+                  Selection process.
                 </Text>
-                <Text style={{ color: theme.text, fontSize: 12, lineHeight: 18, opacity: 0.9, marginTop: 4 }}>
-                  • Please Note: Any request for changing the order of the previously selected subjects will be at the
-                  sole discretion of the college.
+                <Text
+                  style={{
+                    color: theme.text,
+                    fontSize: 12,
+                    lineHeight: 18,
+                    opacity: 0.9,
+                    marginTop: 4,
+                  }}
+                >
+                  • Please Note: Any request for changing the order of the previously selected
+                  subjects will be at the sole discretion of the college.
                 </Text>
                 {isBBAProgram && (
-                  <Text style={{ color: theme.text, fontSize: 12, lineHeight: 18, opacity: 0.9, marginTop: 4 }}>
+                  <Text
+                    style={{
+                      color: theme.text,
+                      fontSize: 12,
+                      lineHeight: 18,
+                      opacity: 0.9,
+                      marginTop: 4,
+                    }}
+                  >
                     • BBA Students: All subjects displayed are mandatory and cannot be changed.
                   </Text>
                 )}
@@ -956,7 +1131,9 @@ export default function CuRegistrationScreen() {
                 </Text>
                 {!isBBAProgram && form.isFieldEditable && (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ color: theme.text, fontSize: 12, opacity: 0.8 }}>Request correction</Text>
+                    <Text style={{ color: theme.text, fontSize: 12, opacity: 0.8 }}>
+                      Request correction
+                    </Text>
                     <Switch
                       checked={form.correctionFlags.subjects}
                       onCheckedChange={() => form.handleCorrectionToggle("subjects")}
@@ -969,7 +1146,11 @@ export default function CuRegistrationScreen() {
                 <ActivityIndicator size="small" color={accent} style={{ marginVertical: 24 }} />
               ) : (
                 <>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ marginBottom: 16 }}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={true}
+                    style={{ marginBottom: 16 }}
+                  >
                     <View style={{ minWidth: 600 }}>
                       {/* Table header */}
                       <View
@@ -990,31 +1171,43 @@ export default function CuRegistrationScreen() {
                             borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
                           }}
                         >
-                          <Text style={{ color: theme.text, fontSize: 12, fontWeight: "600" }}>Category</Text>
+                          <Text style={{ color: theme.text, fontSize: 12, fontWeight: "600" }}>
+                            Category
+                          </Text>
                         </View>
-                        {["Semester I", "Semester II", "Semester III", "Semester IV"].map((label) => (
-                          <View
-                            key={label}
-                            style={{
-                              width: 125,
-                              paddingVertical: 10,
-                              paddingHorizontal: 6,
-                              backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6",
-                              borderRightWidth: 1,
-                              borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
-                            }}
-                          >
-                            <Text style={{ color: theme.text, fontSize: 12, fontWeight: "600", textAlign: "center" }}>
-                              {label}
-                            </Text>
-                          </View>
-                        ))}
+                        {["Semester I", "Semester II", "Semester III", "Semester IV"].map(
+                          (label) => (
+                            <View
+                              key={label}
+                              style={{
+                                width: 125,
+                                paddingVertical: 10,
+                                paddingHorizontal: 6,
+                                backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6",
+                                borderRightWidth: 1,
+                                borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: theme.text,
+                                  fontSize: 12,
+                                  fontWeight: "600",
+                                  textAlign: "center",
+                                }}
+                              >
+                                {label}
+                              </Text>
+                            </View>
+                          ),
+                        )}
                       </View>
                       {/* Table body - matches web: combine mandatory + student subjects, Minor sem4 fallback */}
                       {Object.entries(form.subjectsData)
                         .filter(([cat]) => cat !== "SEC")
                         .map(([category, sems]) => {
-                          const categoryLabel = category === "IDC" && isMdcProgramForDisplay ? "MDC" : category;
+                          const categoryLabel =
+                            category === "IDC" && isMdcProgramForDisplay ? "MDC" : category;
                           return (
                             <View
                               key={category}
@@ -1035,30 +1228,49 @@ export default function CuRegistrationScreen() {
                                   borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
                                 }}
                               >
-                                <Text style={{ color: theme.text, fontSize: 12, fontWeight: "500" }}>
+                                <Text
+                                  style={{ color: theme.text, fontSize: 12, fontWeight: "500" }}
+                                >
                                   {categoryLabel}
                                 </Text>
                               </View>
                               {(["sem1", "sem2", "sem3", "sem4"] as const).map((semKey) => {
-                                const rawMandatory = (form.mandatorySubjects ?? {})[category]?.[semKey];
-                                const mandatoryList: string[] = Array.isArray(rawMandatory) ? rawMandatory : [];
+                                const rawMandatory = (form.mandatorySubjects ?? {})[category]?.[
+                                  semKey
+                                ];
+                                const mandatoryList: string[] = Array.isArray(rawMandatory)
+                                  ? rawMandatory
+                                  : [];
                                 const studentList =
-                                  ((sems as Record<string, string[]>)[semKey] as string[] | undefined) || [];
+                                  ((sems as Record<string, string[]>)[semKey] as
+                                    | string[]
+                                    | undefined) || [];
                                 let allSubjects: string[] = [...mandatoryList];
                                 studentList.forEach((s) => {
                                   if (!mandatoryList.includes(s)) allSubjects.push(s);
                                 });
-                                if (category === "Minor" && semKey === "sem4" && allSubjects.length === 0) {
+                                if (
+                                  category === "Minor" &&
+                                  semKey === "sem4" &&
+                                  allSubjects.length === 0
+                                ) {
                                   const rawSem3 = (form.mandatorySubjects ?? {})[category]?.sem3;
-                                  const sem3Mandatory: string[] = Array.isArray(rawSem3) ? rawSem3 : [];
+                                  const sem3Mandatory: string[] = Array.isArray(rawSem3)
+                                    ? rawSem3
+                                    : [];
                                   const rawSem3Student = (sems as Record<string, string[]>).sem3;
-                                  const sem3Student: string[] = Array.isArray(rawSem3Student) ? rawSem3Student : [];
+                                  const sem3Student: string[] = Array.isArray(rawSem3Student)
+                                    ? rawSem3Student
+                                    : [];
                                   sem3Mandatory.forEach((s) => allSubjects.push(s));
                                   sem3Student.forEach((s) => {
                                     if (!sem3Mandatory.includes(s)) allSubjects.push(s);
                                   });
                                 }
-                                const text = allSubjects.length > 0 ? allSubjects.join(", ") : "Not Applicable";
+                                const text =
+                                  allSubjects.length > 0
+                                    ? allSubjects.join(", ")
+                                    : "Not Applicable";
                                 return (
                                   <View
                                     key={semKey}
@@ -1104,7 +1316,9 @@ export default function CuRegistrationScreen() {
                     label="I confirm the subjects listed above."
                   />
                   {form.subjectsDeclared && (
-                    <Text style={{ color: "#22c55e", fontSize: 13, marginTop: 8 }}>✓ Subjects confirmed</Text>
+                    <Text style={{ color: "#22c55e", fontSize: 13, marginTop: 8 }}>
+                      ✓ Subjects confirmed
+                    </Text>
                   )}
                 </>
               )}
@@ -1126,7 +1340,12 @@ export default function CuRegistrationScreen() {
                 }}
               >
                 <Text
-                  style={{ color: isDark ? "#fdba74" : "#9a3412", fontSize: 16, fontWeight: "600", marginBottom: 12 }}
+                  style={{
+                    color: isDark ? "#fdba74" : "#9a3412",
+                    fontSize: 16,
+                    fontWeight: "600",
+                    marginBottom: 12,
+                  }}
                 >
                   Document Upload - Important Notes
                 </Text>
@@ -1140,7 +1359,15 @@ export default function CuRegistrationScreen() {
                     "To change a document, select a new file and upload again before confirming.",
                   ].map((item, i) => (
                     <View key={i} className="flex-row items-start">
-                      <Text style={{ color: isDark ? "#fdba74" : "#c2410c", marginRight: 8, fontSize: 14 }}>•</Text>
+                      <Text
+                        style={{
+                          color: isDark ? "#fdba74" : "#c2410c",
+                          marginRight: 8,
+                          fontSize: 14,
+                        }}
+                      >
+                        •
+                      </Text>
                       <Text
                         style={{
                           color: isDark ? "rgba(253,186,116,0.95)" : "#9a3412",
@@ -1156,14 +1383,18 @@ export default function CuRegistrationScreen() {
                 </View>
               </View>
 
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
+              <Text
+                style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}
+              >
                 4.1 Document Uploads
               </Text>
 
               {/* Uploaded Documents Table */}
               {Array.isArray(form.uploadedDocuments) && form.uploadedDocuments.length > 0 && (
                 <View style={{ marginBottom: 20 }}>
-                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600", marginBottom: 10 }}>
+                  <Text
+                    style={{ color: theme.text, fontSize: 14, fontWeight: "600", marginBottom: 10 }}
+                  >
                     Uploaded Documents
                   </Text>
                   <View
@@ -1185,7 +1416,9 @@ export default function CuRegistrationScreen() {
                       }[]
                     ).map((doc, index) => {
                       const documentType =
-                        doc.document?.name || DOCUMENT_ID_TO_LABEL[doc.documentId ?? 0] || `Document ${doc.documentId}`;
+                        doc.document?.name ||
+                        DOCUMENT_ID_TO_LABEL[doc.documentId ?? 0] ||
+                        `Document ${doc.documentId}`;
                       const fileSizeStr = doc.fileSize ? formatFileSize(doc.fileSize) : "—";
                       return (
                         <View
@@ -1212,26 +1445,45 @@ export default function CuRegistrationScreen() {
                             }}
                           >
                             {doc.fileType?.startsWith("image/") ? (
-                              <Text style={{ color: theme.text, fontSize: 10, opacity: 0.7 }}>IMG</Text>
+                              <Text style={{ color: theme.text, fontSize: 10, opacity: 0.7 }}>
+                                IMG
+                              </Text>
                             ) : (
-                              <Text style={{ color: isDark ? "#f87171" : "#dc2626", fontSize: 10 }}>PDF</Text>
+                              <Text style={{ color: isDark ? "#f87171" : "#dc2626", fontSize: 10 }}>
+                                PDF
+                              </Text>
                             )}
                           </View>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ color: theme.text, fontSize: 12, fontWeight: "500" }} numberOfLines={1}>
+                            <Text
+                              style={{ color: theme.text, fontSize: 12, fontWeight: "500" }}
+                              numberOfLines={1}
+                            >
                               {documentType}
                             </Text>
-                            <Text style={{ color: theme.text, fontSize: 11, opacity: 0.8 }} numberOfLines={1}>
+                            <Text
+                              style={{ color: theme.text, fontSize: 11, opacity: 0.8 }}
+                              numberOfLines={1}
+                            >
                               {doc.fileName || "—"}
                             </Text>
                           </View>
-                          <Text style={{ color: theme.text, fontSize: 11, opacity: 0.8, marginRight: 8 }}>
+                          <Text
+                            style={{
+                              color: theme.text,
+                              fontSize: 11,
+                              opacity: 0.8,
+                              marginRight: 8,
+                            }}
+                          >
                             {fileSizeStr}
                           </Text>
                           <Pressable
                             onPress={async () => {
                               try {
-                                const url = doc.id ? await getCuRegistrationDocumentSignedUrl(doc.id) : null;
+                                const url = doc.id
+                                  ? await getCuRegistrationDocumentSignedUrl(doc.id)
+                                  : null;
                                 if (url) await Linking.openURL(url);
                               } catch {}
                             }}
@@ -1243,7 +1495,9 @@ export default function CuRegistrationScreen() {
                               borderColor: accent,
                             }}
                           >
-                            <Text style={{ color: accent, fontSize: 11, fontWeight: "500" }}>Open</Text>
+                            <Text style={{ color: accent, fontSize: 11, fontWeight: "500" }}>
+                              Open
+                            </Text>
                           </Pressable>
                           <View
                             style={{
@@ -1254,7 +1508,9 @@ export default function CuRegistrationScreen() {
                               backgroundColor: isDark ? "rgba(34,197,94,0.2)" : "#dcfce7",
                             }}
                           >
-                            <Text style={{ color: "#22c55e", fontSize: 10, fontWeight: "500" }}>Uploaded</Text>
+                            <Text style={{ color: "#22c55e", fontSize: 10, fontWeight: "500" }}>
+                              Uploaded
+                            </Text>
                           </View>
                         </View>
                       );
@@ -1269,9 +1525,12 @@ export default function CuRegistrationScreen() {
                   {getVisibleDocumentKeys().map((key) => {
                     const docId = DOCUMENT_IDS[key];
                     const uploaded = Array.isArray(form.uploadedDocuments)
-                      ? (form.uploadedDocuments as { documentId?: number; document?: { id?: number } }[]).find(
-                          (d) => (d.document?.id ?? d.documentId) === docId,
-                        )
+                      ? (
+                          form.uploadedDocuments as {
+                            documentId?: number;
+                            document?: { id?: number };
+                          }[]
+                        ).find((d) => (d.document?.id ?? d.documentId) === docId)
                       : null;
                     const isRequired = getRequiredDocuments().includes(key);
                     const localFile = form.documents[key];
@@ -1304,7 +1563,9 @@ export default function CuRegistrationScreen() {
                             marginBottom: 12,
                           }}
                         >
-                          <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600", flex: 1 }}>
+                          <Text
+                            style={{ color: theme.text, fontSize: 14, fontWeight: "600", flex: 1 }}
+                          >
                             {docLabel}
                           </Text>
                           {isRequired && (
@@ -1317,16 +1578,27 @@ export default function CuRegistrationScreen() {
                                 borderColor: "#dc2626",
                               }}
                             >
-                              <Text style={{ color: "#dc2626", fontSize: 11, fontWeight: "500" }}>Required</Text>
+                              <Text style={{ color: "#dc2626", fontSize: 11, fontWeight: "500" }}>
+                                Required
+                              </Text>
                             </View>
                           )}
                         </View>
                         {(key === "fatherPhotoId" || key === "motherPhotoId") && (
-                          <Text style={{ color: theme.text, fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
+                          <Text
+                            style={{
+                              color: theme.text,
+                              fontSize: 12,
+                              opacity: 0.8,
+                              marginBottom: 8,
+                            }}
+                          >
                             Aadhar/ Voter/ PAN Card/ Passport/ Driving License
                           </Text>
                         )}
-                        <Text style={{ color: theme.text, fontSize: 11, opacity: 0.7, marginBottom: 8 }}>
+                        <Text
+                          style={{ color: theme.text, fontSize: 11, opacity: 0.7, marginBottom: 8 }}
+                        >
                           Max 1MB • JPEG / JPG / PNG
                         </Text>
                         <View className="flex-row items-center gap-2 flex-wrap">
@@ -1359,7 +1631,14 @@ export default function CuRegistrationScreen() {
                           )}
                         </View>
                         {(localFile || uploaded) && (
-                          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, gap: 10 }}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              marginTop: 12,
+                              gap: 10,
+                            }}
+                          >
                             {localFile?.uri ? (
                               <Image
                                 source={{ uri: localFile.uri }}
@@ -1382,7 +1661,9 @@ export default function CuRegistrationScreen() {
                             ) : null}
                             <View style={{ flex: 1 }}>
                               <Text style={{ color: theme.text, fontSize: 12 }} numberOfLines={1}>
-                                {localFile?.name || (uploaded as { fileName?: string })?.fileName || "File"}
+                                {localFile?.name ||
+                                  (uploaded as { fileName?: string })?.fileName ||
+                                  "File"}
                               </Text>
                               {localFile?.fileSize != null && (
                                 <Text style={{ color: theme.text, fontSize: 11, opacity: 0.7 }}>
@@ -1439,7 +1720,9 @@ export default function CuRegistrationScreen() {
                 label="I confirm all required documents are uploaded."
               />
               {form.documentsConfirmed && (
-                <Text style={{ color: "#22c55e", fontSize: 13, marginTop: 8 }}>✓ Documents confirmed</Text>
+                <Text style={{ color: "#22c55e", fontSize: 13, marginTop: 8 }}>
+                  ✓ Documents confirmed
+                </Text>
               )}
             </View>
           )}
@@ -1455,8 +1738,8 @@ export default function CuRegistrationScreen() {
               Review & Submit
             </Text>
             <Text style={{ color: theme.text, opacity: 0.8, fontSize: 14, marginBottom: 16 }}>
-              Please review all information before final submission. You will not be able to make changes after
-              submitting.
+              Please review all information before final submission. You will not be able to make
+              changes after submitting.
             </Text>
             <Checkbox
               checked={form.finalDeclaration}
@@ -1468,7 +1751,8 @@ export default function CuRegistrationScreen() {
               disabled={form.submitting || !form.finalDeclaration}
               className="py-3 rounded-xl items-center"
               style={{
-                backgroundColor: form.submitting || !form.finalDeclaration ? "rgba(79,70,229,0.5)" : accent,
+                backgroundColor:
+                  form.submitting || !form.finalDeclaration ? "rgba(79,70,229,0.5)" : accent,
               }}
             >
               {form.submitting ? (

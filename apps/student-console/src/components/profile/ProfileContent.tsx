@@ -120,7 +120,9 @@ export default function ProfileContent() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Profile</h1>
-              <p className="text-gray-600 mt-1">Manage your personal information and academic details</p>
+              <p className="text-gray-600 mt-1">
+                Manage your personal information and academic details
+              </p>
             </div>
           </div>
         </div>
@@ -140,14 +142,18 @@ export default function ProfileContent() {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <span className="text-gray-600 text-2xl font-bold">{user?.name?.charAt(0) || "S"}</span>
+                        <span className="text-gray-600 text-2xl font-bold">
+                          {user?.name?.charAt(0) || "S"}
+                        </span>
                       )}
                     </div>
                     <Badge className="absolute -top-1 -right-1 bg-green-500 text-white text-xs px-2 py-1">
                       Student
                     </Badge>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">{user?.name || "Not Available"}</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">
+                    {user?.name || "Not Available"}
+                  </h2>
                   <p className="text-sm text-gray-600 mb-4">UID: {student?.uid}</p>
 
                   <Separator />
@@ -208,7 +214,10 @@ export default function ProfileContent() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Application Number */}
                         <div className="space-y-2">
-                          <label htmlFor="applicationNo" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="applicationNo"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Application Number
                           </label>
                           <Input
@@ -232,7 +241,10 @@ export default function ProfileContent() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="dateOfBirth"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Date of Birth
                           </label>
                           <Input
@@ -254,7 +266,10 @@ export default function ProfileContent() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="nationality" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="nationality"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Nationality
                           </label>
                           <Input
@@ -309,7 +324,10 @@ export default function ProfileContent() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="mobileNumber" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="mobileNumber"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Mobile Number
                           </label>
                           <Input
@@ -320,7 +338,10 @@ export default function ProfileContent() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="whatsappNumber" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="whatsappNumber"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             WhatsApp Number
                           </label>
                           <Input
@@ -332,7 +353,10 @@ export default function ProfileContent() {
                         </div>
                         {/* Father Name */}
                         <div className="space-y-2">
-                          <label htmlFor="fatherNamePersonal" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="fatherNamePersonal"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Father's Name
                           </label>
                           {(() => {
@@ -349,7 +373,10 @@ export default function ProfileContent() {
                         </div>
                         {/* Mother Name */}
                         <div className="space-y-2">
-                          <label htmlFor="motherNamePersonal" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="motherNamePersonal"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Mother's Name
                           </label>
                           {(() => {
@@ -366,7 +393,10 @@ export default function ProfileContent() {
                         </div>
                         {/* Emails */}
                         <div className="space-y-2">
-                          <label htmlFor="personalEmail" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="personalEmail"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Personal Email ID
                           </label>
                           <Input
@@ -377,10 +407,18 @@ export default function ProfileContent() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="institutionalEmail" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="institutionalEmail"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Institutional Email ID
                           </label>
-                          <Input id="institutionalEmail" value={user?.email || ""} disabled className="bg-gray-50" />
+                          <Input
+                            id="institutionalEmail"
+                            value={user?.email || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
                         </div>
                         {/* <div className="space-y-2">
                           <label htmlFor="motherTongue" className="text-sm font-medium text-gray-700">
@@ -662,13 +700,21 @@ export default function ProfileContent() {
                       <h4 className="text-md font-semibold text-gray-800">Father's Information</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label htmlFor="fatherTitle" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="fatherTitle"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Title
                           </label>
                           {(() => {
                             const father = familyDetails?.members?.find((m) => m.type === "FATHER");
                             return (
-                              <Input id="fatherTitle" value={father?.title || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="fatherTitle"
+                                value={father?.title || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
@@ -678,33 +724,59 @@ export default function ProfileContent() {
                           </label>
                           {(() => {
                             const father = familyDetails?.members?.find((m) => m.type === "FATHER");
-                            return <Input id="fatherName" value={father?.name || ""} disabled className="bg-gray-50" />;
+                            return (
+                              <Input
+                                id="fatherName"
+                                value={father?.name || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
+                            );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="fatherPhone" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="fatherPhone"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Phone Number
                           </label>
                           {(() => {
                             const father = familyDetails?.members?.find((m) => m.type === "FATHER");
                             return (
-                              <Input id="fatherPhone" value={father?.phone || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="fatherPhone"
+                                value={father?.phone || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="fatherEmail" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="fatherEmail"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Email
                           </label>
                           {(() => {
                             const father = familyDetails?.members?.find((m) => m.type === "FATHER");
                             return (
-                              <Input id="fatherEmail" value={father?.email || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="fatherEmail"
+                                value={father?.email || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="fatherOccupation" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="fatherOccupation"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Occupation
                           </label>
                           {(() => {
@@ -739,13 +811,21 @@ export default function ProfileContent() {
                       <h4 className="text-md font-semibold text-gray-800">Mother's Information</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label htmlFor="motherTitle" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="motherTitle"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Title
                           </label>
                           {(() => {
                             const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
                             return (
-                              <Input id="motherTitle" value={mother?.title || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="motherTitle"
+                                value={mother?.title || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
@@ -755,33 +835,59 @@ export default function ProfileContent() {
                           </label>
                           {(() => {
                             const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
-                            return <Input id="motherName" value={mother?.name || ""} disabled className="bg-gray-50" />;
+                            return (
+                              <Input
+                                id="motherName"
+                                value={mother?.name || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
+                            );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="motherPhone" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="motherPhone"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Phone Number
                           </label>
                           {(() => {
                             const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
                             return (
-                              <Input id="motherPhone" value={mother?.phone || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="motherPhone"
+                                value={mother?.phone || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="motherEmail" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="motherEmail"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Email
                           </label>
                           {(() => {
                             const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
                             return (
-                              <Input id="motherEmail" value={mother?.email || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="motherEmail"
+                                value={mother?.email || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="motherOccupation" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="motherOccupation"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Occupation
                           </label>
                           {(() => {
@@ -813,58 +919,105 @@ export default function ProfileContent() {
                     {/* Guardian's Information */}
                     <div className="space-y-4">
                       <Separator />
-                      <h4 className="text-md font-semibold text-gray-800">Guardian's Information</h4>
+                      <h4 className="text-md font-semibold text-gray-800">
+                        Guardian's Information
+                      </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label htmlFor="guardianTitle" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="guardianTitle"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Title
                           </label>
                           {(() => {
-                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            const guardian = familyDetails?.members?.find(
+                              (m) => m.type === "GUARDIAN",
+                            );
                             return (
-                              <Input id="guardianTitle" value={guardian?.title || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="guardianTitle"
+                                value={guardian?.title || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="guardianName" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="guardianName"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Name
                           </label>
                           {(() => {
-                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            const guardian = familyDetails?.members?.find(
+                              (m) => m.type === "GUARDIAN",
+                            );
                             return (
-                              <Input id="guardianName" value={guardian?.name || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="guardianName"
+                                value={guardian?.name || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="guardianPhone" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="guardianPhone"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Phone Number
                           </label>
                           {(() => {
-                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            const guardian = familyDetails?.members?.find(
+                              (m) => m.type === "GUARDIAN",
+                            );
                             return (
-                              <Input id="guardianPhone" value={guardian?.phone || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="guardianPhone"
+                                value={guardian?.phone || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="guardianEmail" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="guardianEmail"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Email
                           </label>
                           {(() => {
-                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            const guardian = familyDetails?.members?.find(
+                              (m) => m.type === "GUARDIAN",
+                            );
                             return (
-                              <Input id="guardianEmail" value={guardian?.email || ""} disabled className="bg-gray-50" />
+                              <Input
+                                id="guardianEmail"
+                                value={guardian?.email || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
                             );
                           })()}
                         </div>
                         <div className="space-y-2">
-                          <label htmlFor="guardianOccupation" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="guardianOccupation"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Occupation
                           </label>
                           {(() => {
-                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            const guardian = familyDetails?.members?.find(
+                              (m) => m.type === "GUARDIAN",
+                            );
                             return (
                               <Input
                                 id="guardianOccupation"
@@ -941,7 +1094,12 @@ export default function ProfileContent() {
                         </label>
                         <Input
                           id="uid"
-                          value={user?.payload.uid || "" || applicationForm?.courseApplication?.[0]?.rfidNumber || ""}
+                          value={
+                            user?.payload.uid ||
+                            "" ||
+                            applicationForm?.courseApplication?.[0]?.rfidNumber ||
+                            ""
+                          }
                           disabled
                           className="bg-gray-50"
                         />
@@ -954,7 +1112,10 @@ export default function ProfileContent() {
                       <h4 className="text-md font-semibold text-gray-900">Academic Details</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label htmlFor="lastInstitution" className="text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="lastInstitution"
+                            className="text-sm font-medium text-gray-700"
+                          >
                             Last Institution
                           </label>
                           <Input
@@ -1002,7 +1163,9 @@ export default function ProfileContent() {
 
                     {/* Board Subjects Table */}
                     <div className="space-y-3">
-                      <h4 className="text-md font-semibold text-gray-900">12th Board Subjects & Marks</h4>
+                      <h4 className="text-md font-semibold text-gray-900">
+                        12th Board Subjects & Marks
+                      </h4>
                       <div className="overflow-x-auto border rounded-lg">
                         <table className="w-full text-sm">
                           <thead className="bg-gray-50 text-gray-700">
@@ -1012,9 +1175,15 @@ export default function ProfileContent() {
                               <th className="px-4 py-3 text-left font-semibold">Subject Name</th>
                               {/* <th className="px-4 py-3 text-center font-semibold">Passing (Theory)</th> */}
                               {/* <th className="px-4 py-3 text-center font-semibold">Passing (Practical)</th> */}
-                              <th className="px-4 py-3 text-center font-semibold">Theory (Obtained/Full)</th>
-                              <th className="px-4 py-3 text-center font-semibold">Practical (Obtained/Full)</th>
-                              <th className="px-4 py-3 text-center font-semibold">Total (Obtained/Full)</th>
+                              <th className="px-4 py-3 text-center font-semibold">
+                                Theory (Obtained/Full)
+                              </th>
+                              <th className="px-4 py-3 text-center font-semibold">
+                                Practical (Obtained/Full)
+                              </th>
+                              <th className="px-4 py-3 text-center font-semibold">
+                                Total (Obtained/Full)
+                              </th>
                               <th className="px-4 py-3 text-center font-semibold">Status</th>
                             </tr>
                           </thead>
@@ -1028,13 +1197,23 @@ export default function ProfileContent() {
                             ) : (
                               applicationForm!.academicInfo!.subjects!.map(
                                 (item: StudentAcademicSubjectsDto, index: number) => {
-                                  const subjectCode = item?.boardSubject?.boardSubjectName?.code || "";
+                                  const subjectCode =
+                                    item?.boardSubject?.boardSubjectName?.code || "";
                                   const subjectName =
-                                    item?.boardSubject?.boardSubjectName?.name || `Subject ${index + 1}`;
-                                  const fullMarksTheory = Number(item?.boardSubject?.fullMarksTheory || 0);
-                                  const passingMarksTheory = Number(item?.boardSubject?.passingMarksTheory || 0);
-                                  const fullMarksPractical = Number(item?.boardSubject?.fullMarksPractical || 0);
-                                  const passingMarksPractical = Number(item?.boardSubject?.passingMarksPractical || 0);
+                                    item?.boardSubject?.boardSubjectName?.name ||
+                                    `Subject ${index + 1}`;
+                                  const fullMarksTheory = Number(
+                                    item?.boardSubject?.fullMarksTheory || 0,
+                                  );
+                                  const passingMarksTheory = Number(
+                                    item?.boardSubject?.passingMarksTheory || 0,
+                                  );
+                                  const fullMarksPractical = Number(
+                                    item?.boardSubject?.fullMarksPractical || 0,
+                                  );
+                                  const passingMarksPractical = Number(
+                                    item?.boardSubject?.passingMarksPractical || 0,
+                                  );
                                   const theoryMarks = Number(item?.theoryMarks || 0);
                                   const practicalMarks = Number(item?.practicalMarks || 0);
                                   const computedMarks = theoryMarks + practicalMarks;
@@ -1132,7 +1311,10 @@ export default function ProfileContent() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label htmlFor="emergencyContact" className="text-sm font-medium text-gray-700">
+                        <label
+                          htmlFor="emergencyContact"
+                          className="text-sm font-medium text-gray-700"
+                        >
                           Contact Person
                         </label>
                         <Input
@@ -1154,7 +1336,10 @@ export default function ProfileContent() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="emergencyPhone" className="text-sm font-medium text-gray-700">
+                        <label
+                          htmlFor="emergencyPhone"
+                          className="text-sm font-medium text-gray-700"
+                        >
                           Phone Number
                         </label>
                         <Input
@@ -1165,7 +1350,10 @@ export default function ProfileContent() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="emergencyEmail" className="text-sm font-medium text-gray-700">
+                        <label
+                          htmlFor="emergencyEmail"
+                          className="text-sm font-medium text-gray-700"
+                        >
                           Email
                         </label>
                         <Input

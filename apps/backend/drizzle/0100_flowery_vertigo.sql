@@ -1,0 +1,2 @@
+DO $$ BEGIN ALTER TABLE "app_modules" ADD COLUMN "application" "academic360_application_domain_type" NOT NULL; EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "user_statuses_master" ADD COLUMN "bg_color" varchar(255); EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;

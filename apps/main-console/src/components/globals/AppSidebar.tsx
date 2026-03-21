@@ -1,7 +1,13 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, useSidebar } from "@/components/ui/sidebar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import {
   Settings,
@@ -74,13 +80,26 @@ const data = {
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
-    { title: "Physical CUReg Marking", url: "/dashboard/cu-reg/physical-marking", icon: CheckSquare },
+    {
+      title: "Admit Card Distributions",
+      url: "/dashboard/admit-card-distributions",
+      icon: ClipboardList,
+    },
+    {
+      title: "Physical CUReg Marking",
+      url: "/dashboard/cu-reg/physical-marking",
+      icon: CheckSquare,
+    },
     { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
     { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
     { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
     { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
     { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
-    { title: "Student Console Simulation", url: "/dashboard/apps/student-console/simulation", icon: BookOpen },
+    {
+      title: "Student Console Simulation",
+      url: "/dashboard/apps/student-console/simulation",
+      icon: BookOpen,
+    },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
@@ -201,7 +220,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h1 className="text-base font-bold text-white leading-tight truncate">
-                      {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console Panel
+                      {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console
+                      Panel
                     </h1>
                     <p className="text-xs text-purple-200 truncate">
                       {academicYearLoading
@@ -222,11 +242,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </div>
                   <div className="border-t border-gray-100 mt-2 pt-2">
                     {academicYearLoading ? (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">Loading academic years...</div>
+                      <div className="px-2 py-1.5 text-sm text-gray-500">
+                        Loading academic years...
+                      </div>
                     ) : academicYearError ? (
-                      <div className="px-2 py-1.5 text-sm text-red-500">Error: {academicYearError}</div>
+                      <div className="px-2 py-1.5 text-sm text-red-500">
+                        Error: {academicYearError}
+                      </div>
                     ) : availableAcademicYears.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">No academic years found</div>
+                      <div className="px-2 py-1.5 text-sm text-gray-500">
+                        No academic years found
+                      </div>
                     ) : (
                       availableAcademicYears.map((year) => (
                         <DropdownMenuItem
@@ -305,9 +331,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <div className="space-y-1">
                       {data.navMain
                         .filter((item) => {
-                          // For temp users, only show "Physical CUReg Marking"
+                          // For temp users, only show Admit Card Distributions and Physical CUReg Marking
                           if (user?.email && TEMP_USER_EMAILS.includes(user.email)) {
-                            return item.title === "Physical CUReg Marking";
+                            return (
+                              item.title === "Physical CUReg Marking" ||
+                              item.title === "Admit Card Distributions"
+                            );
                           }
                           // For non-temp users, show all items
                           return true;
@@ -466,7 +495,12 @@ export function NavItem({ href, icon, children, isActive }: NavItemProps) {
       )}
     >
       <div className="flex items-center gap-3 w-full">
-        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white group-hover:text-white")}>
+        <span
+          className={cn(
+            "h-5 w-5",
+            isActive ? "text-purple-600" : "text-white group-hover:text-white",
+          )}
+        >
           {icon}
         </span>
         <span className="text-inherit truncate">{children}</span>

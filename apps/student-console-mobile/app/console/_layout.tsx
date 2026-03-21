@@ -9,7 +9,9 @@ import { Platform, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 function WebStatusBar({ theme }: { theme: { background: string; text: string } }) {
-  const [time, setTime] = useState(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+  const [time, setTime] = useState(
+    new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+  );
   useEffect(() => {
     const id = setInterval(
       () => setTime(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })),
@@ -44,25 +46,27 @@ export default function ConsoleLayout() {
   const { theme } = useTheme();
 
   return (
-    <ErrorBoundary>
-      <ExamSocketProvider>
-        <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background }} className="h-full flex-1">
-          <WebStatusBar theme={theme} />
-          <Header />
-          <Breadcrumb />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              // Configure right-to-left slide animation
-              animation: "slide_from_right",
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="exams/[id]" />
-            {/* <Stack.Screen name="console" /> */}
-          </Stack>
-        </SafeAreaView>
-      </ExamSocketProvider>
-    </ErrorBoundary>
+    <ExamSocketProvider>
+      <SafeAreaView
+        edges={["top"]}
+        style={{ backgroundColor: theme.background }}
+        className="h-full flex-1"
+      >
+        <WebStatusBar theme={theme} />
+        <Header />
+        <Breadcrumb />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            // Configure right-to-left slide animation
+            animation: "slide_from_right",
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="exams/[id]" />
+          {/* <Stack.Screen name="console" /> */}
+        </Stack>
+      </SafeAreaView>
+    </ExamSocketProvider>
   );
 }

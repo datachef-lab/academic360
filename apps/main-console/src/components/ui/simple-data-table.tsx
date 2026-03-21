@@ -1,6 +1,20 @@
 import * as React from "react";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable, Row, PaginationState } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  Row,
+  PaginationState,
+} from "@tanstack/react-table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -79,7 +93,9 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -101,7 +117,9 @@ export function DataTable<TData, TValue>({
                   className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -130,7 +148,9 @@ export function DataTable<TData, TValue>({
           <Button
             variant="outline"
             className="h-8 w-8 p-0"
-            onClick={() => setPagination({ ...pagination, pageIndex: Math.max(0, pagination.pageIndex - 1) })}
+            onClick={() =>
+              setPagination({ ...pagination, pageIndex: Math.max(0, pagination.pageIndex - 1) })
+            }
             disabled={pagination.pageIndex === 0}
           >
             <ChevronLeft className="h-4 w-4" />

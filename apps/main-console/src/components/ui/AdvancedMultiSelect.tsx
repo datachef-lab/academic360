@@ -33,8 +33,10 @@ const multiSelectVariants = cva("m-1 transition-all duration-300 ease-in-out", {
   variants: {
     variant: {
       default: "border-foreground/10 text-foreground bg-card hover:bg-card/80",
-      secondary: "border-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80",
-      destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+      secondary:
+        "border-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80",
+      destructive:
+        "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
       inverted: "inverted",
     },
     badgeAnimation: {
@@ -70,7 +72,8 @@ interface MultiSelectGroup {
 }
 
 interface MultiSelectProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "animationConfig">,
+  extends
+    Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "animationConfig">,
     VariantProps<typeof multiSelectVariants> {
   options: MultiSelectOption[] | MultiSelectGroup[];
   onValueChange: (value: string[]) => void;
@@ -650,7 +653,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                     <div
                       className={cn(
                         "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                        selectedValues.length === getAllOptions().filter((opt) => !opt.disabled).length
+                        selectedValues.length ===
+                          getAllOptions().filter((opt) => !opt.disabled).length
                           ? "bg-primary text-primary-foreground"
                           : "opacity-50 [&_svg]:invisible",
                       )}
@@ -665,7 +669,9 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                 </CommandGroup>
               )}
               {/* Render options or groups */}
-              {filteredOptions.length > 0 && filteredOptions[0] && "heading" in filteredOptions[0] ? (
+              {filteredOptions.length > 0 &&
+              filteredOptions[0] &&
+              "heading" in filteredOptions[0] ? (
                 (filteredOptions as MultiSelectGroup[]).map((group) => (
                   <CommandGroup key={group.heading} heading={group.heading}>
                     {group.options.map((option) => {
@@ -674,18 +680,25 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                         <CommandItem
                           key={option.value}
                           onSelect={() => toggleOption(option.value)}
-                          className={cn("cursor-pointer", option.disabled && "opacity-50 cursor-not-allowed")}
+                          className={cn(
+                            "cursor-pointer",
+                            option.disabled && "opacity-50 cursor-not-allowed",
+                          )}
                           disabled={option.disabled}
                         >
                           <div
                             className={cn(
                               "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                              isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible",
+                              isSelected
+                                ? "bg-primary text-primary-foreground"
+                                : "opacity-50 [&_svg]:invisible",
                             )}
                           >
                             <CheckIcon className="h-4 w-4" />
                           </div>
-                          {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
+                          {option.icon && (
+                            <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                          )}
                           <span>{option.label}</span>
                         </CommandItem>
                       );
@@ -700,18 +713,25 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                       <CommandItem
                         key={option.value}
                         onSelect={() => toggleOption(option.value)}
-                        className={cn("cursor-pointer", option.disabled && "opacity-50 cursor-not-allowed")}
+                        className={cn(
+                          "cursor-pointer",
+                          option.disabled && "opacity-50 cursor-not-allowed",
+                        )}
                         disabled={option.disabled}
                       >
                         <div
                           className={cn(
                             "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                            isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50 [&_svg]:invisible",
                           )}
                         >
                           <CheckIcon className="h-4 w-4" />
                         </div>
-                        {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
+                        {option.icon && (
+                          <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        )}
                         <span>{option.label}</span>
                       </CommandItem>
                     );
@@ -723,7 +743,10 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                 <div className="flex items-center justify-between">
                   {selectedValues.length > 0 && (
                     <>
-                      <CommandItem onSelect={handleClear} className="flex-1 justify-center cursor-pointer">
+                      <CommandItem
+                        onSelect={handleClear}
+                        className="flex-1 justify-center cursor-pointer"
+                      >
                         Clear
                       </CommandItem>
                       <Separator orientation="vertical" className="flex min-h-6 h-full" />

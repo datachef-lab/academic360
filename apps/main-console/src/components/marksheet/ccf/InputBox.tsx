@@ -5,7 +5,14 @@ import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export function InputBox({ fullMarks }: { fullMarks: number }) {
@@ -40,7 +47,9 @@ export function InputBox({ fullMarks }: { fullMarks: number }) {
           className="w-[95%] justify-between rounded-none h-[92%] border-slate-400 border-none"
         >
           <span className="text-slate-400 text-xs">
-            {value ? marksOptions.find((marksOption) => marksOption.value === value)?.label : "type marks..."}
+            {value
+              ? marksOptions.find((marksOption) => marksOption.value === value)?.label
+              : "type marks..."}
           </span>
           <ChevronsUpDown className="opacity-50" />
         </Button>
@@ -61,7 +70,12 @@ export function InputBox({ fullMarks }: { fullMarks: number }) {
                   }}
                 >
                   {framework.label}
-                  <Check className={cn("ml-auto", value === framework.value ? "opacity-100" : "opacity-0")} />
+                  <Check
+                    className={cn(
+                      "ml-auto",
+                      value === framework.value ? "opacity-100" : "opacity-0",
+                    )}
+                  />
                 </CommandItem>
               ))}
             </CommandGroup>

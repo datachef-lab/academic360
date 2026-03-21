@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Calendar, PlusCircle, Search, Filter, FileDown, CheckCircle, XCircle } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -16,15 +23,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 // import { getAllAcademicYears, createAcademicYear, updateAcademicYearById } from "@/services/academic-identifiers.service";
 import { AcademicYear } from "@/types/academics/academic-year";
-import { createAcademicYear, getAllAcademicYears, updateAcademicYearById } from "@/services/academic-year-api";
-
+import {
+  createAcademicYear,
+  getAllAcademicYears,
+  updateAcademicYearById,
+} from "@/services/academic-year-api";
 
 const AcademicYearPage: React.FC = () => {
   const [data, setData] = useState<AcademicYear[]>([]);
   const [filteredData, setFilteredData] = useState<AcademicYear[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<AcademicYear | null>(null);
-  const [form, setForm] = useState<AcademicYear>({ id: 0, year: "", isCurrentYear: true, });
+  const [form, setForm] = useState<AcademicYear>({ id: 0, year: "", isCurrentYear: true });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
@@ -53,7 +63,9 @@ const AcademicYearPage: React.FC = () => {
       updated = updated.filter((y) => y.year.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     if (statusFilter !== "all") {
-      updated = updated.filter((y) => (statusFilter === "active" ? y.isCurrentYear : !y.isCurrentYear));
+      updated = updated.filter((y) =>
+        statusFilter === "active" ? y.isCurrentYear : !y.isCurrentYear,
+      );
     }
     setFilteredData(updated);
   }, [data, searchTerm, statusFilter]);
@@ -207,7 +219,9 @@ const AcademicYearPage: React.FC = () => {
               <Filter className="h-3.5 w-3.5" />
               Filters
               {statusFilter !== "all" && (
-                <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">1</span>
+                <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  1
+                </span>
               )}
             </button>
 
@@ -263,28 +277,50 @@ const AcademicYearPage: React.FC = () => {
         <Table>
           <TableHeader className="bg-gray-50 border-b border-gray-200">
             <TableRow className="hover:bg-gray-50">
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">#</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Academic Year</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                #
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Academic Year
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Status
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white divide-y divide-gray-200">
             {filteredData.length ? (
               filteredData.map((item, index) => (
                 <TableRow key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{index + 1}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
+                    {index + 1}
+                  </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm font-medium text-gray-900">{item.year}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.isCurrentYear ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.isCurrentYear ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                    >
                       {item.isCurrentYear ? "Active" : "Inactive"}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                    <button onClick={() => handleEdit(item)} className="text-purple-600 hover:text-purple-800">Edit</button>
-                    <button onClick={() => handleDelete(item.id!)} className="text-red-600 hover:text-red-800 ml-4">Delete</button>
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="text-purple-600 hover:text-purple-800"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id!)}
+                      className="text-red-600 hover:text-red-800 ml-4"
+                    >
+                      Delete
+                    </button>
                   </TableCell>
                 </TableRow>
               ))
@@ -302,7 +338,9 @@ const AcademicYearPage: React.FC = () => {
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{editingItem ? "Edit Academic Year" : "Add New Academic Year"}</DialogTitle>
+            <DialogTitle>
+              {editingItem ? "Edit Academic Year" : "Add New Academic Year"}
+            </DialogTitle>
             <DialogDescription>Configure academic year period and status.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -312,7 +350,7 @@ const AcademicYearPage: React.FC = () => {
                 id="year"
                 type="text"
                 value={form.year}
-                onChange={e => {
+                onChange={(e) => {
                   setForm({ ...form, year: e.target.value });
                 }}
                 placeholder="e.g., 2025"
@@ -323,13 +361,17 @@ const AcademicYearPage: React.FC = () => {
               <Switch
                 id="isCurrentYear"
                 checked={form.isCurrentYear}
-                onCheckedChange={checked => setForm({ ...form, isCurrentYear: checked })}
+                onCheckedChange={(checked) => setForm({ ...form, isCurrentYear: checked })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">{editingItem ? "Update" : "Create"} Academic Year</Button>
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">
+              {editingItem ? "Update" : "Create"} Academic Year
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

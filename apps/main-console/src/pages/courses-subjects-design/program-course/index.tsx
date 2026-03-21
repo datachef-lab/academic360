@@ -6,8 +6,21 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Library, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -47,7 +60,9 @@ import * as XLSX from "xlsx";
 const ProgramCoursesPage = () => {
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedProgramCourse, setSelectedProgramCourse] = React.useState<ProgramCourse | null>(null);
+  const [selectedProgramCourse, setSelectedProgramCourse] = React.useState<ProgramCourse | null>(
+    null,
+  );
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [programCourses, setProgramCourses] = React.useState<ProgramCourse[]>([]);
@@ -157,15 +172,21 @@ const ProgramCoursesPage = () => {
 
   const fetchLookupData = async () => {
     try {
-      const [streamsData, coursesData, courseTypesData, courseLevelsData, affiliationsData, regulationTypesData] =
-        await Promise.all([
-          getStreams(),
-          getCourses(),
-          getCourseTypes(),
-          getCourseLevels(),
-          getAffiliations(),
-          getRegulationTypes(),
-        ]);
+      const [
+        streamsData,
+        coursesData,
+        courseTypesData,
+        courseLevelsData,
+        affiliationsData,
+        regulationTypesData,
+      ] = await Promise.all([
+        getStreams(),
+        getCourses(),
+        getCourseTypes(),
+        getCourseLevels(),
+        getAffiliations(),
+        getRegulationTypes(),
+      ]);
 
       setStreams((streamsData as Stream[]) || []);
       setCourses((coursesData as Course[]) || []);
@@ -246,7 +267,9 @@ const ProgramCoursesPage = () => {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       setTimeout(() => {
-        toast.error(`Failed to ${selectedProgramCourse ? "update" : "create"} program course: ${errorMessage}`);
+        toast.error(
+          `Failed to ${selectedProgramCourse ? "update" : "create"} program course: ${errorMessage}`,
+        );
       }, 2000);
     } finally {
       setIsFormSubmitting(false);
@@ -273,12 +296,20 @@ const ProgramCoursesPage = () => {
           const workbook = XLSX.read(data, { type: "array" });
           const sheetName = workbook.SheetNames[0];
           if (!sheetName) {
-            resolve({ isValid: false, errors: [{ message: "No sheets found in workbook" }], warnings: [] });
+            resolve({
+              isValid: false,
+              errors: [{ message: "No sheets found in workbook" }],
+              warnings: [],
+            });
             return;
           }
           const sheet = workbook.Sheets[sheetName];
           if (!sheet) {
-            resolve({ isValid: false, errors: [{ message: "Sheet not found in workbook" }], warnings: [] });
+            resolve({
+              isValid: false,
+              errors: [{ message: "Sheet not found in workbook" }],
+              warnings: [],
+            });
             return;
           }
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
@@ -373,22 +404,40 @@ const ProgramCoursesPage = () => {
 
             // Check if all names exist
             if (!streamsByName[streamName.toLowerCase()]) {
-              errors.push({ row: i + 2, message: `Stream "${streamName}" not found in the system.` });
+              errors.push({
+                row: i + 2,
+                message: `Stream "${streamName}" not found in the system.`,
+              });
             }
             if (!coursesByName[courseName.toLowerCase()]) {
-              errors.push({ row: i + 2, message: `Course "${courseName}" not found in the system.` });
+              errors.push({
+                row: i + 2,
+                message: `Course "${courseName}" not found in the system.`,
+              });
             }
             if (!courseTypesByName[courseTypeName.toLowerCase()]) {
-              errors.push({ row: i + 2, message: `Course Type "${courseTypeName}" not found in the system.` });
+              errors.push({
+                row: i + 2,
+                message: `Course Type "${courseTypeName}" not found in the system.`,
+              });
             }
             if (!courseLevelsByName[courseLevelName.toLowerCase()]) {
-              errors.push({ row: i + 2, message: `Course Level "${courseLevelName}" not found in the system.` });
+              errors.push({
+                row: i + 2,
+                message: `Course Level "${courseLevelName}" not found in the system.`,
+              });
             }
             if (!affiliationsByName[affiliationName.toLowerCase()]) {
-              errors.push({ row: i + 2, message: `Affiliation "${affiliationName}" not found in the system.` });
+              errors.push({
+                row: i + 2,
+                message: `Affiliation "${affiliationName}" not found in the system.`,
+              });
             }
             if (!regulationTypesByName[regulationTypeName.toLowerCase()]) {
-              errors.push({ row: i + 2, message: `Regulation Type "${regulationTypeName}" not found in the system.` });
+              errors.push({
+                row: i + 2,
+                message: `Regulation Type "${regulationTypeName}" not found in the system.`,
+              });
             }
 
             // Validate numeric fields
@@ -417,7 +466,9 @@ const ProgramCoursesPage = () => {
 
     if (!validation.isValid) {
       // Show validation errors
-      const errorMessages = validation.errors.map((err) => `Row ${err.row}: ${err.message}`).join("\n");
+      const errorMessages = validation.errors
+        .map((err) => `Row ${err.row}: ${err.message}`)
+        .join("\n");
       toast.error(`Validation failed:\n${errorMessages}`, {
         duration: 10000,
       });
@@ -532,7 +583,9 @@ const ProgramCoursesPage = () => {
         Duration: pc.duration,
         TotalSemesters: pc.totalSemesters,
         Affiliation: pc.affiliationId ? (affiliationsLookup[pc.affiliationId] ?? "-") : "-",
-        RegulationType: pc.regulationTypeId ? (regulationTypesLookup[pc.regulationTypeId] ?? "-") : "-",
+        RegulationType: pc.regulationTypeId
+          ? (regulationTypesLookup[pc.regulationTypeId] ?? "-")
+          : "-",
         Status: pc.isActive ? "Active" : "Inactive",
         "Created At": pc.createdAt,
         "Updated At": pc.updatedAt,
@@ -577,25 +630,31 @@ const ProgramCoursesPage = () => {
   };
 
   const handleDownloadUnprocessedData = () => {
-    if (!bulkUploadResult || !bulkUploadResult.unprocessedData || bulkUploadResult.unprocessedData.length === 0) {
+    if (
+      !bulkUploadResult ||
+      !bulkUploadResult.unprocessedData ||
+      bulkUploadResult.unprocessedData.length === 0
+    ) {
       toast.error("No unprocessed data to download");
       return;
     }
     try {
-      const unprocessedData = bulkUploadResult.unprocessedData.map((item: BulkUploadRow, index: number) => ({
-        "Row Number": index + 1,
-        Reason: "Not processed",
-        "Original Data": JSON.stringify(item),
-        Stream: (item as unknown as string[])[0] || "",
-        Course: (item as unknown as string[])[1] || "",
-        CourseType: (item as unknown as string[])[2] || "",
-        CourseLevel: (item as unknown as string[])[3] || "",
-        Duration: (item as unknown as string[])[4] || "",
-        TotalSemesters: (item as unknown as string[])[5] || "",
-        Affiliation: (item as unknown as string[])[6] || "",
-        RegulationType: (item as unknown as string[])[7] || "",
-        Disabled: (item as unknown as string[])[8] || "",
-      }));
+      const unprocessedData = bulkUploadResult.unprocessedData.map(
+        (item: BulkUploadRow, index: number) => ({
+          "Row Number": index + 1,
+          Reason: "Not processed",
+          "Original Data": JSON.stringify(item),
+          Stream: (item as unknown as string[])[0] || "",
+          Course: (item as unknown as string[])[1] || "",
+          CourseType: (item as unknown as string[])[2] || "",
+          CourseLevel: (item as unknown as string[])[3] || "",
+          Duration: (item as unknown as string[])[4] || "",
+          TotalSemesters: (item as unknown as string[])[5] || "",
+          Affiliation: (item as unknown as string[])[6] || "",
+          RegulationType: (item as unknown as string[])[7] || "",
+          Disabled: (item as unknown as string[])[8] || "",
+        }),
+      );
       const ws = XLSX.utils.json_to_sheet(unprocessedData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Unprocessed Program Courses");
@@ -613,7 +672,9 @@ const ProgramCoursesPage = () => {
       courseType: pc.courseTypeId ? (courseTypesLookup[pc.courseTypeId] ?? "-") : "-",
       courseLevel: pc.courseLevelId ? (courseLevelsLookup[pc.courseLevelId] ?? "-") : "-",
       affiliation: pc.affiliationId ? (affiliationsLookup[pc.affiliationId] ?? "-") : "-",
-      regulationType: pc.regulationTypeId ? (regulationTypesLookup[pc.regulationTypeId] ?? "-") : "-",
+      regulationType: pc.regulationTypeId
+        ? (regulationTypesLookup[pc.regulationTypeId] ?? "-")
+        : "-",
     })
       .join(" ")
       .toLowerCase()
@@ -653,7 +714,9 @@ const ProgramCoursesPage = () => {
               <Library className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               <span className="truncate">Program Courses</span>
             </CardTitle>
-            <div className="text-xs sm:text-sm text-muted-foreground mt-1">A list of all program courses.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+              A list of all program courses.
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -714,63 +777,89 @@ const ProgramCoursesPage = () => {
                       <h4 className="font-medium">Upload Results</h4>
                       <div className="grid grid-cols-4 gap-4 text-sm">
                         <div>
-                          <span className="font-medium">Total:</span> {bulkUploadResult.summary.total}
+                          <span className="font-medium">Total:</span>{" "}
+                          {bulkUploadResult.summary.total}
                         </div>
                         <div className="text-green-600">
-                          <span className="font-medium">Successful:</span> {bulkUploadResult.summary.successful}
+                          <span className="font-medium">Successful:</span>{" "}
+                          {bulkUploadResult.summary.successful}
                         </div>
                         <div className="text-red-600">
-                          <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
+                          <span className="font-medium">Failed:</span>{" "}
+                          {bulkUploadResult.summary.failed}
                         </div>
                         <div className="text-orange-600">
-                          <span className="font-medium">Unprocessed:</span> {bulkUploadResult.summary.unprocessed || 0}
+                          <span className="font-medium">Unprocessed:</span>{" "}
+                          {bulkUploadResult.summary.unprocessed || 0}
                         </div>
                       </div>
                       {bulkUploadResult.errors && bulkUploadResult.errors.length > 0 && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <h5 className="font-medium text-red-600">Errors:</h5>
-                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleDownloadFailedData}
+                              className="text-xs"
+                            >
                               <Download className="mr-1 h-3 w-3" />
                               Download Failed Data
                             </Button>
                           </div>
                           <div className="max-h-40 overflow-y-auto space-y-1">
-                            {bulkUploadResult.errors.map((error: BulkUploadError, index: number) => (
-                              <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
-                                <span className="font-medium">Row {error.row}:</span> {error.error}
-                              </div>
-                            ))}
+                            {bulkUploadResult.errors.map(
+                              (error: BulkUploadError, index: number) => (
+                                <div
+                                  key={index}
+                                  className="text-xs p-2 bg-red-50 border border-red-200 rounded"
+                                >
+                                  <span className="font-medium">Row {error.row}:</span>{" "}
+                                  {error.error}
+                                </div>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}
-                      {bulkUploadResult.unprocessedData && bulkUploadResult.unprocessedData.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h5 className="font-medium text-orange-600">Unprocessed Data:</h5>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleDownloadUnprocessedData}
-                              className="text-xs"
-                            >
-                              <Download className="mr-1 h-3 w-3" />
-                              Download Unprocessed Data
-                            </Button>
+                      {bulkUploadResult.unprocessedData &&
+                        bulkUploadResult.unprocessedData.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h5 className="font-medium text-orange-600">Unprocessed Data:</h5>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleDownloadUnprocessedData}
+                                className="text-xs"
+                              >
+                                <Download className="mr-1 h-3 w-3" />
+                                Download Unprocessed Data
+                              </Button>
+                            </div>
+                            <div className="max-h-40 overflow-y-auto space-y-1">
+                              {bulkUploadResult.unprocessedData.map(
+                                (_item: BulkUploadRow, index: number) => (
+                                  <div
+                                    key={index}
+                                    className="text-xs p-2 bg-orange-50 border border-orange-200 rounded"
+                                  >
+                                    <span className="font-medium">Row {index + 1}:</span> Not
+                                    processed
+                                  </div>
+                                ),
+                              )}
+                            </div>
                           </div>
-                          <div className="max-h-40 overflow-y-auto space-y-1">
-                            {bulkUploadResult.unprocessedData.map((_item: BulkUploadRow, index: number) => (
-                              <div key={index} className="text-xs p-2 bg-orange-50 border border-orange-200 rounded">
-                                <span className="font-medium">Row {index + 1}:</span> Not processed
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
+                    <Button
+                      onClick={handleBulkUpload}
+                      disabled={!bulkFile || isBulkUploading}
+                      className="flex-1"
+                    >
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
                     <Button
@@ -794,7 +883,10 @@ const ProgramCoursesPage = () => {
             </Button>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
+                <Button
+                  onClick={handleAddNew}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add
                 </Button>
@@ -831,7 +923,9 @@ const ProgramCoursesPage = () => {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
               <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 30, background: "#f3f4f6" }}>
+                <TableHeader
+                  style={{ position: "sticky", top: 0, zIndex: 30, background: "#f3f4f6" }}
+                >
                   <TableRow>
                     <TableHead style={{ width: 40 }}>#</TableHead>
                     <TableHead style={{ width: 90 }}>Stream</TableHead>
@@ -854,28 +948,44 @@ const ProgramCoursesPage = () => {
                     filteredProgramCourses.map((pc, idx) => (
                       <TableRow key={pc.id} className="group">
                         <TableCell>{idx + 1}</TableCell>
-                        <TableCell>{pc.streamId ? (streamsLookup[pc.streamId] ?? "-") : "-"}</TableCell>
+                        <TableCell>
+                          {pc.streamId ? (streamsLookup[pc.streamId] ?? "-") : "-"}
+                        </TableCell>
                         <TableCell>
                           <div>{pc.name}</div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            Duration: {pc.duration} year{pc.duration > 1 ? "s" : ""} | Sems: {pc.totalSemesters}
+                            Duration: {pc.duration} year{pc.duration > 1 ? "s" : ""} | Sems:{" "}
+                            {pc.totalSemesters}
                           </div>
                         </TableCell>
-                        <TableCell>{pc.courseLevelId ? (courseLevelsLookup[pc.courseLevelId] ?? "-") : "-"}</TableCell>
-                        <TableCell>{pc.affiliationId ? (affiliationsLookup[pc.affiliationId] ?? "-") : "-"}</TableCell>
                         <TableCell>
-                          {pc.regulationTypeId ? (regulationTypesLookup[pc.regulationTypeId] ?? "-") : "-"}
+                          {pc.courseLevelId ? (courseLevelsLookup[pc.courseLevelId] ?? "-") : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {pc.affiliationId ? (affiliationsLookup[pc.affiliationId] ?? "-") : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {pc.regulationTypeId
+                            ? (regulationTypesLookup[pc.regulationTypeId] ?? "-")
+                            : "-"}
                         </TableCell>
                         <TableCell>
                           {pc.isActive ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>
                           )}
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(pc)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(pc)}
+                              className="h-5 w-5 p-0"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button

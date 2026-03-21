@@ -95,8 +95,12 @@ export default function SubjectConfigurationMaster() {
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
               <div>
-                <h4 className="font-semibold text-blue-900 text-sm mb-1">{currentPageNote.title}</h4>
-                <p className="text-xs text-blue-700 leading-relaxed">{currentPageNote.description}</p>
+                <h4 className="font-semibold text-blue-900 text-sm mb-1">
+                  {currentPageNote.title}
+                </h4>
+                <p className="text-xs text-blue-700 leading-relaxed">
+                  {currentPageNote.description}
+                </p>
               </div>
             </div>
           </div>

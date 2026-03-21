@@ -64,10 +64,10 @@ export default function PhysicalCURegMarkingPage() {
 
   const isBlocked = Boolean(
     studentStatus &&
-      (studentStatus.studentInactive ||
-        studentStatus.userInactive ||
-        studentStatus.userSuspended ||
-        !!studentStatus.leavingDate),
+    (studentStatus.studentInactive ||
+      studentStatus.userInactive ||
+      studentStatus.userSuspended ||
+      !!studentStatus.leavingDate),
   );
 
   const handleSearch = async () => {
@@ -125,48 +125,53 @@ export default function PhysicalCURegMarkingPage() {
 
       if (response.data.httpStatus === "SUCCESS" && response.data.payload) {
         // Transform the API response to match our interface
-        const transformedData: CuRegistrationData[] = response.data.payload.map((record: unknown) => {
-          const rec = record as {
-            id: number;
-            student?: {
-              uid?: string;
-              user?: { name?: string };
-              programCourseName?: string;
-            };
-            cuRegistrationApplicationNumber?: string;
-            status?: string;
-            physicalRegistrationDone?: boolean;
-            physicalRegistrationDoneAt?: string | null;
-            physicalRegistrationDoneBy?: {
+        const transformedData: CuRegistrationData[] = response.data.payload.map(
+          (record: unknown) => {
+            const rec = record as {
               id: number;
-              name: string;
-            } | null;
-            createdAt?: string;
-          };
+              student?: {
+                uid?: string;
+                user?: { name?: string };
+                programCourseName?: string;
+              };
+              cuRegistrationApplicationNumber?: string;
+              status?: string;
+              physicalRegistrationDone?: boolean;
+              physicalRegistrationDoneAt?: string | null;
+              physicalRegistrationDoneBy?: {
+                id: number;
+                name: string;
+              } | null;
+              createdAt?: string;
+            };
 
-          // Check if program course is MA or MCOM (case insensitive)
-          const programCourseName = rec.student?.programCourseName || "Unknown";
-          const normalizedProgramName = programCourseName
-            .normalize("NFKD")
-            .replace(/[^A-Za-z]/g, "")
-            .toUpperCase();
+            // Check if program course is MA or MCOM (case insensitive)
+            const programCourseName = rec.student?.programCourseName || "Unknown";
+            const normalizedProgramName = programCourseName
+              .normalize("NFKD")
+              .replace(/[^A-Za-z]/g, "")
+              .toUpperCase();
 
-          const isMAOrMCOM = normalizedProgramName.startsWith("MA") || normalizedProgramName.startsWith("MCOM");
+            const isMAOrMCOM =
+              normalizedProgramName.startsWith("MA") || normalizedProgramName.startsWith("MCOM");
 
-          return {
-            id: rec.id,
-            studentName: rec.student?.user?.name || "Unknown",
-            studentUid: rec.student?.uid || "",
-            programCourseName: isMAOrMCOM ? "CU Registration Process Not Applicable" : programCourseName,
-            cuRegistrationApplicationNumber: rec.cuRegistrationApplicationNumber || "N/A",
-            status: rec.status || "",
-            physicalRegistrationDone: rec.physicalRegistrationDone || false,
-            physicalRegistrationDoneAt: rec.physicalRegistrationDoneAt || null,
-            physicalRegistrationDoneBy: rec.physicalRegistrationDoneBy || null,
-            createdAt: rec.createdAt || "",
-            isMAOrMCOM, // Add this flag for UI logic
-          };
-        });
+            return {
+              id: rec.id,
+              studentName: rec.student?.user?.name || "Unknown",
+              studentUid: rec.student?.uid || "",
+              programCourseName: isMAOrMCOM
+                ? "CU Registration Process Not Applicable"
+                : programCourseName,
+              cuRegistrationApplicationNumber: rec.cuRegistrationApplicationNumber || "N/A",
+              status: rec.status || "",
+              physicalRegistrationDone: rec.physicalRegistrationDone || false,
+              physicalRegistrationDoneAt: rec.physicalRegistrationDoneAt || null,
+              physicalRegistrationDoneBy: rec.physicalRegistrationDoneBy || null,
+              createdAt: rec.createdAt || "",
+              isMAOrMCOM, // Add this flag for UI logic
+            };
+          },
+        );
 
         setCuRegistrationData(transformedData);
         setSuccess(`Found ${transformedData.length} CU registration record(s)`);
@@ -183,7 +188,9 @@ export default function PhysicalCURegMarkingPage() {
 
   const handleMarkPhysicalDone = async (correctionRequestId: number) => {
     if (isBlocked) {
-      setError("This student is not eligible for physical marking due to inactive/suspended/leaving status.");
+      setError(
+        "This student is not eligible for physical marking due to inactive/suspended/leaving status.",
+      );
       return;
     }
     // Find the record to check its status
@@ -191,7 +198,9 @@ export default function PhysicalCURegMarkingPage() {
 
     // Check if status is REQUEST_CORRECTION - show alert and return early
     if (record && record.status === "REQUEST_CORRECTION") {
-      setError("Rectification request is still pending. Physical submission will be allowed only after rectification.");
+      setError(
+        "Rectification request is still pending. Physical submission will be allowed only after rectification.",
+      );
       return;
     }
 
@@ -224,7 +233,8 @@ export default function PhysicalCURegMarkingPage() {
                   physicalRegistrationDone: true,
                   status: "PHYSICAL_REGISTRATION_DONE",
                   physicalRegistrationDoneAt:
-                    response.data.payload?.correctionRequest?.physicalRegistrationDoneAt || new Date().toISOString(),
+                    response.data.payload?.correctionRequest?.physicalRegistrationDoneAt ||
+                    new Date().toISOString(),
                   physicalRegistrationDoneBy:
                     response.data.payload?.correctionRequest?.physicalRegistrationDoneBy || null,
                 }
@@ -239,7 +249,9 @@ export default function PhysicalCURegMarkingPage() {
 
       if (err && typeof err === "object" && "response" in err) {
         const axiosError = err as { response?: { status?: number; data?: { message?: string } } };
-        setError(`Failed to mark physical registration: ${axiosError.response?.data?.message || "Server error"}`);
+        setError(
+          `Failed to mark physical registration: ${axiosError.response?.data?.message || "Server error"}`,
+        );
       } else {
         setError("Failed to mark physical registration as done. Please try again.");
       }
@@ -253,8 +265,12 @@ export default function PhysicalCURegMarkingPage() {
       <div className="max-w-6xl mx-auto px-3 sm:px-4">
         {/* Header */}
         <div className="mb-4 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Physical CU Registration Marking</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-2">Mark physical registration completion for students</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Physical CU Registration Marking
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">
+            Mark physical registration completion for students
+          </p>
         </div>
 
         {/* Search Section */}
@@ -322,7 +338,9 @@ export default function PhysicalCURegMarkingPage() {
                 {studentStatus.userSuspended && (
                   <div>
                     Suspended
-                    {studentStatus.suspendedTillDate ? ` till ${formatDateTime(studentStatus.suspendedTillDate)}` : ""}
+                    {studentStatus.suspendedTillDate
+                      ? ` till ${formatDateTime(studentStatus.suspendedTillDate)}`
+                      : ""}
                     {studentStatus.suspendedReason ? ` — ${studentStatus.suspendedReason}` : ""}
                   </div>
                 )}
@@ -413,7 +431,8 @@ export default function PhysicalCURegMarkingPage() {
                             <span className="font-medium">Program:</span> {record.programCourseName}
                           </div>
                           <div className="break-words">
-                            <span className="font-medium">CU Form No:</span> {record.cuRegistrationApplicationNumber}
+                            <span className="font-medium">CU Form No:</span>{" "}
+                            {record.cuRegistrationApplicationNumber}
                           </div>
                           <div className="break-words sm:col-span-2 lg:col-span-1">
                             <span className="font-medium">Status:</span> {record.status}
@@ -458,17 +477,22 @@ export default function PhysicalCURegMarkingPage() {
                             </div>
                             {record.physicalRegistrationDoneAt && (
                               <div className="text-xs text-gray-500 mt-1">
-                                {new Date(record.physicalRegistrationDoneAt).toLocaleString("en-IN", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                                {new Date(record.physicalRegistrationDoneAt).toLocaleString(
+                                  "en-IN",
+                                  {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
                               </div>
                             )}
                             {record.physicalRegistrationDoneBy && (
-                              <div className="text-xs text-gray-500">by {record.physicalRegistrationDoneBy.name}</div>
+                              <div className="text-xs text-gray-500">
+                                by {record.physicalRegistrationDoneBy.name}
+                              </div>
                             )}
                           </div>
                         )}

@@ -1,6 +1,6 @@
 /**
  * Degree Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Degree module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -16,7 +16,7 @@ export enum DegreeLevel {
   SECONDARY = "SECONDARY",
   HIGHER_SECONDARY = "HIGHER_SECONDARY",
   UNDER_GRADUATE = "UNDER_GRADUATE",
-  POST_GRADUATE = "POST_GRADUATE"
+  POST_GRADUATE = "POST_GRADUATE",
 }
 
 // ============================================================================
@@ -27,7 +27,7 @@ export enum DegreeLevel {
  * Main Degree interface that mirrors the backend model
  */
 export interface Degree {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   level: DegreeLevel;
   sequence?: number | null;
@@ -139,15 +139,15 @@ export interface DegreeState {
  * Action types for degree state management
  */
 export type DegreeAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_DEGREES'; payload: Degree[] }
-  | { type: 'SET_CURRENT_DEGREE'; payload: Degree | null }
-  | { type: 'ADD_DEGREE'; payload: Degree }
-  | { type: 'UPDATE_DEGREE'; payload: Degree }
-  | { type: 'DELETE_DEGREE'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_DEGREES"; payload: Degree[] }
+  | { type: "SET_CURRENT_DEGREE"; payload: Degree | null }
+  | { type: "ADD_DEGREE"; payload: Degree }
+  | { type: "UPDATE_DEGREE"; payload: Degree }
+  | { type: "DELETE_DEGREE"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -162,7 +162,7 @@ export interface DegreeTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -180,7 +180,7 @@ export interface DegreeFilter {
  */
 export interface DegreeSort {
   field: keyof Degree;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -220,7 +220,7 @@ export type DegreeDisabled = boolean;
  * Default values for degree
  */
 export const DEFAULT_DEGREE: CreateDegreePayload = {
-  name: '',
+  name: "",
   level: DegreeLevel.UNDER_GRADUATE,
   sequence: null,
   disabled: false,
@@ -230,9 +230,9 @@ export const DEFAULT_DEGREE: CreateDegreePayload = {
  * Default form data for degree
  */
 export const DEFAULT_DEGREE_FORM: DegreeFormData = {
-  name: '',
+  name: "",
   level: DegreeLevel.UNDER_GRADUATE,
-  sequence: '',
+  sequence: "",
   disabled: false,
 };
 
@@ -240,23 +240,23 @@ export const DEFAULT_DEGREE_FORM: DegreeFormData = {
  * Table columns configuration for degree
  */
 export const DEGREE_TABLE_COLUMNS: DegreeTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Degree Name', sortable: true, filterable: true },
-  { key: 'level', label: 'Level', sortable: true, filterable: true, width: '150px' },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Degree Name", sortable: true, filterable: true },
+  { key: "level", label: "Level", sortable: true, filterable: true, width: "150px" },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Degree level options for forms
  */
 export const DEGREE_LEVEL_OPTIONS = [
-  { value: DegreeLevel.SECONDARY, label: 'Secondary' },
-  { value: DegreeLevel.HIGHER_SECONDARY, label: 'Higher Secondary' },
-  { value: DegreeLevel.UNDER_GRADUATE, label: 'Under Graduate' },
-  { value: DegreeLevel.POST_GRADUATE, label: 'Post Graduate' },
+  { value: DegreeLevel.SECONDARY, label: "Secondary" },
+  { value: DegreeLevel.HIGHER_SECONDARY, label: "Higher Secondary" },
+  { value: DegreeLevel.UNDER_GRADUATE, label: "Under Graduate" },
+  { value: DegreeLevel.POST_GRADUATE, label: "Post Graduate" },
 ] as const;
 
 // ============================================================================
@@ -269,13 +269,13 @@ export const DEGREE_LEVEL_OPTIONS = [
 export function isDegree(obj: object): obj is Degree {
   return (
     obj &&
-    typeof (obj as Degree).id === 'number' &&
-    typeof (obj as Degree).name === 'string' &&
+    typeof (obj as Degree).id === "number" &&
+    typeof (obj as Degree).name === "string" &&
     Object.values(DegreeLevel).includes((obj as Degree).level) &&
-    ((obj as Degree).sequence === null || typeof (obj as Degree).sequence === 'number') &&
-    typeof (obj as Degree).disabled === 'boolean' &&
-    typeof (obj as Degree).createdAt === 'string' &&
-    typeof (obj as Degree).updatedAt === 'string'
+    ((obj as Degree).sequence === null || typeof (obj as Degree).sequence === "number") &&
+    typeof (obj as Degree).disabled === "boolean" &&
+    typeof (obj as Degree).createdAt === "string" &&
+    typeof (obj as Degree).updatedAt === "string"
   );
 }
 
@@ -285,10 +285,13 @@ export function isDegree(obj: object): obj is Degree {
 export function isCreateDegreePayload(obj: object): obj is CreateDegreePayload {
   return (
     obj &&
-    typeof (obj as CreateDegreePayload).name === 'string' &&
+    typeof (obj as CreateDegreePayload).name === "string" &&
     Object.values(DegreeLevel).includes((obj as CreateDegreePayload).level) &&
-    ((obj as CreateDegreePayload).sequence === undefined || (obj as CreateDegreePayload).sequence === null || typeof (obj as CreateDegreePayload).sequence === 'number') &&
-    ((obj as CreateDegreePayload).disabled === undefined || typeof (obj as CreateDegreePayload).disabled === 'boolean')
+    ((obj as CreateDegreePayload).sequence === undefined ||
+      (obj as CreateDegreePayload).sequence === null ||
+      typeof (obj as CreateDegreePayload).sequence === "number") &&
+    ((obj as CreateDegreePayload).disabled === undefined ||
+      typeof (obj as CreateDegreePayload).disabled === "boolean")
   );
 }
 
@@ -298,10 +301,15 @@ export function isCreateDegreePayload(obj: object): obj is CreateDegreePayload {
 export function isUpdateDegreePayload(obj: object): obj is UpdateDegreePayload {
   return (
     obj &&
-    ((obj as UpdateDegreePayload).name === undefined || typeof (obj as UpdateDegreePayload).name === 'string') &&
-    ((obj as UpdateDegreePayload).level === undefined || Object.values(DegreeLevel).includes((obj as UpdateDegreePayload).level as DegreeLevel)) &&
-    ((obj as UpdateDegreePayload).sequence === undefined || (obj as UpdateDegreePayload).sequence === null || typeof (obj as UpdateDegreePayload).sequence === 'number') &&
-    ((obj as UpdateDegreePayload).disabled === undefined || typeof (obj as UpdateDegreePayload).disabled === 'boolean')
+    ((obj as UpdateDegreePayload).name === undefined ||
+      typeof (obj as UpdateDegreePayload).name === "string") &&
+    ((obj as UpdateDegreePayload).level === undefined ||
+      Object.values(DegreeLevel).includes((obj as UpdateDegreePayload).level as DegreeLevel)) &&
+    ((obj as UpdateDegreePayload).sequence === undefined ||
+      (obj as UpdateDegreePayload).sequence === null ||
+      typeof (obj as UpdateDegreePayload).sequence === "number") &&
+    ((obj as UpdateDegreePayload).disabled === undefined ||
+      typeof (obj as UpdateDegreePayload).disabled === "boolean")
   );
 }
 
@@ -335,7 +343,7 @@ export function apiDataToFormData(degree: Degree): DegreeFormData {
   return {
     name: degree.name,
     level: degree.level,
-    sequence: degree.sequence?.toString() || '',
+    sequence: degree.sequence?.toString() || "",
     disabled: degree.disabled,
   };
 }
@@ -359,10 +367,10 @@ export function formatDegreeName(name: string): string {
  */
 export function getDegreeLevelText(level: DegreeLevel): string {
   const levelMap: Record<DegreeLevel, string> = {
-    [DegreeLevel.SECONDARY]: 'Secondary',
-    [DegreeLevel.HIGHER_SECONDARY]: 'Higher Secondary',
-    [DegreeLevel.UNDER_GRADUATE]: 'Under Graduate',
-    [DegreeLevel.POST_GRADUATE]: 'Post Graduate',
+    [DegreeLevel.SECONDARY]: "Secondary",
+    [DegreeLevel.HIGHER_SECONDARY]: "Higher Secondary",
+    [DegreeLevel.UNDER_GRADUATE]: "Under Graduate",
+    [DegreeLevel.POST_GRADUATE]: "Post Graduate",
   };
   return levelMap[level] || level;
 }
@@ -372,26 +380,26 @@ export function getDegreeLevelText(level: DegreeLevel): string {
  */
 export function getDegreeLevelColor(level: DegreeLevel): string {
   const colorMap: Record<DegreeLevel, string> = {
-    [DegreeLevel.SECONDARY]: 'text-blue-600',
-    [DegreeLevel.HIGHER_SECONDARY]: 'text-green-600',
-    [DegreeLevel.UNDER_GRADUATE]: 'text-purple-600',
-    [DegreeLevel.POST_GRADUATE]: 'text-orange-600',
+    [DegreeLevel.SECONDARY]: "text-blue-600",
+    [DegreeLevel.HIGHER_SECONDARY]: "text-green-600",
+    [DegreeLevel.UNDER_GRADUATE]: "text-purple-600",
+    [DegreeLevel.POST_GRADUATE]: "text-orange-600",
   };
-  return colorMap[level] || 'text-gray-600';
+  return colorMap[level] || "text-gray-600";
 }
 
 /**
  * Get degree status text
  */
 export function getDegreeStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get degree status color
  */
 export function getDegreeStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
@@ -405,4 +413,4 @@ export function getDegreeLevelOrder(level: DegreeLevel): number {
     [DegreeLevel.POST_GRADUATE]: 4,
   };
   return orderMap[level] || 0;
-} 
+}

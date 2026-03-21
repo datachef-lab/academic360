@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Layers3, PlusCircle, Search, Filter, FileDown, Edit, Trash2 } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,7 +43,8 @@ const FeesSlabPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filteredData, setFilteredData] = useState<FeesSlabType[]>([]);
 
-  const { feesSlabs, loading, addFeesSlab, updateFeesSlabById, deleteFeesSlabById } = useFeesSlabs();
+  const { feesSlabs, loading, addFeesSlab, updateFeesSlabById, deleteFeesSlabById } =
+    useFeesSlabs();
 
   // Listen for fee slab socket events (only for staff/admin)
   useEffect(() => {
@@ -157,7 +165,9 @@ const FeesSlabPage: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Fees Slabs</h1>
-            <p className="text-sm text-gray-600">Define various concession slabs for fee management</p>
+            <p className="text-sm text-gray-600">
+              Define various concession slabs for fee management
+            </p>
           </div>
         </div>
       </div>
@@ -270,7 +280,9 @@ const FeesSlabPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Fees Slab" : "Add New Fees Slab"}</DialogTitle>
             <DialogDescription>
-              {editingItem ? "Update the fees slab details below." : "Fill in the details to create a new fees slab."}
+              {editingItem
+                ? "Update the fees slab details below."
+                : "Fill in the details to create a new fees slab."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

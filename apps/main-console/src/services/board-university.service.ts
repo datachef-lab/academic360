@@ -11,12 +11,12 @@ import {
 
 /**
  * Board University Service
- * 
+ *
  * This service handles all CRUD operations for the Board University module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/board-universities';
+const BASE_URL = "/api/board-universities";
 
 // ============================================================================
 // GET OPERATIONS
@@ -31,7 +31,7 @@ export async function getAllBoardUniversities(): Promise<BoardUniversity[]> {
     const response = await axiosInstance.get(BASE_URL);
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching board universities:', error);
+    console.error("Error fetching board universities:", error);
     throw error;
   }
 }
@@ -44,7 +44,7 @@ export async function getAllBoardUniversities(): Promise<BoardUniversity[]> {
 export async function getBoardUniversityById(id: number): Promise<BoardUniversity> {
   try {
     if (!id) {
-      throw new Error('Board university ID is required');
+      throw new Error("Board university ID is required");
     }
 
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
@@ -64,7 +64,7 @@ export async function getActiveBoardUniversities(): Promise<BoardUniversity[]> {
     const response = await axiosInstance.get(`${BASE_URL}?disabled=false`);
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching active board universities:', error);
+    console.error("Error fetching active board universities:", error);
     throw error;
   }
 }
@@ -78,16 +78,18 @@ export async function getActiveBoardUniversities(): Promise<BoardUniversity[]> {
  * @param payload - Board university creation data
  * @returns Promise<BoardUniversity> - Created board university data
  */
-export async function createBoardUniversity(payload: CreateBoardUniversityPayload): Promise<BoardUniversity> {
+export async function createBoardUniversity(
+  payload: CreateBoardUniversityPayload,
+): Promise<BoardUniversity> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('Board university name is required');
+      throw new Error("Board university name is required");
     }
 
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data.payload;
   } catch (error) {
-    console.error('Error creating board university:', error);
+    console.error("Error creating board university:", error);
     throw error;
   }
 }
@@ -102,14 +104,17 @@ export async function createBoardUniversity(payload: CreateBoardUniversityPayloa
  * @param payload - Board university update data
  * @returns Promise<BoardUniversity> - Updated board university data
  */
-export async function updateBoardUniversity(id: number, payload: UpdateBoardUniversityPayload): Promise<BoardUniversity> {
+export async function updateBoardUniversity(
+  id: number,
+  payload: UpdateBoardUniversityPayload,
+): Promise<BoardUniversity> {
   try {
     if (!id) {
-      throw new Error('Board university ID is required');
+      throw new Error("Board university ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('Board university name cannot be empty');
+      throw new Error("Board university name cannot be empty");
     }
 
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
@@ -132,7 +137,7 @@ export async function updateBoardUniversity(id: number, payload: UpdateBoardUniv
 export async function deleteBoardUniversity(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Board university ID is required');
+      throw new Error("Board university ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -158,11 +163,11 @@ export async function searchBoardUniversities(searchTerm: string): Promise<Board
     }
 
     const response = await axiosInstance.get(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.payload;
   } catch (error) {
-    console.error('Error searching board universities:', error);
+    console.error("Error searching board universities:", error);
     throw error;
   }
 }
@@ -182,12 +187,10 @@ export async function checkBoardUniversityExists(name: string): Promise<boolean>
       return false;
     }
 
-    const response = await axiosInstance.get(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
-    );
+    const response = await axiosInstance.get(`${BASE_URL}?name=${encodeURIComponent(name.trim())}`);
     return response.data.payload.length > 0;
   } catch (error) {
-    console.error('Error checking board university existence:', error);
+    console.error("Error checking board university existence:", error);
     return false;
   }
 }
@@ -201,19 +204,19 @@ export const boardUniversityService = {
   getAllBoardUniversities,
   getBoardUniversityById,
   getActiveBoardUniversities,
-  
+
   // Create operations
   createBoardUniversity,
-  
+
   // Update operations
   updateBoardUniversity,
-  
+
   // Delete operations
   deleteBoardUniversity,
-  
+
   // Search and filter operations
   searchBoardUniversities,
-  
+
   // Utility functions
   checkBoardUniversityExists,
-}; 
+};

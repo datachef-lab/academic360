@@ -7,3 +7,8 @@ packages
 .env
 .env.local
 .env.**
+
+
+.next
+coverage
+pnpm-lock.yaml

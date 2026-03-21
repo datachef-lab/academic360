@@ -1,6 +1,6 @@
 /**
  * Category Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Category module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Category interface that mirrors the backend model
  */
 export interface Category {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   documentRequired: boolean;
   code: string;
@@ -130,15 +130,15 @@ export interface CategoryState {
  * Action types for category state management
  */
 export type CategoryAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_CATEGORIES'; payload: Category[] }
-  | { type: 'SET_CURRENT_CATEGORY'; payload: Category | null }
-  | { type: 'ADD_CATEGORY'; payload: Category }
-  | { type: 'UPDATE_CATEGORY'; payload: Category }
-  | { type: 'DELETE_CATEGORY'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_CATEGORIES"; payload: Category[] }
+  | { type: "SET_CURRENT_CATEGORY"; payload: Category | null }
+  | { type: "ADD_CATEGORY"; payload: Category }
+  | { type: "UPDATE_CATEGORY"; payload: Category }
+  | { type: "DELETE_CATEGORY"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -153,7 +153,7 @@ export interface CategoryTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -172,7 +172,7 @@ export interface CategoryFilter {
  */
 export interface CategorySort {
   field: keyof Category;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -217,9 +217,9 @@ export type CategoryDisabled = boolean;
  * Default values for category
  */
 export const DEFAULT_CATEGORY: CreateCategoryPayload = {
-  name: '',
+  name: "",
   documentRequired: false,
-  code: '',
+  code: "",
   sequence: null,
   disabled: false,
 };
@@ -228,10 +228,10 @@ export const DEFAULT_CATEGORY: CreateCategoryPayload = {
  * Default form data for category
  */
 export const DEFAULT_CATEGORY_FORM: CategoryFormData = {
-  name: '',
+  name: "",
   documentRequired: false,
-  code: '',
-  sequence: '',
+  code: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -239,14 +239,14 @@ export const DEFAULT_CATEGORY_FORM: CategoryFormData = {
  * Table columns configuration for category
  */
 export const CATEGORY_TABLE_COLUMNS: CategoryTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Name', sortable: true, filterable: true },
-  { key: 'code', label: 'Code', sortable: true, filterable: true, width: '100px' },
-  { key: 'documentRequired', label: 'Document Required', sortable: true, width: '150px' },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Name", sortable: true, filterable: true },
+  { key: "code", label: "Code", sortable: true, filterable: true, width: "100px" },
+  { key: "documentRequired", label: "Document Required", sortable: true, width: "150px" },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 // ============================================================================
@@ -259,14 +259,14 @@ export const CATEGORY_TABLE_COLUMNS: CategoryTableColumn[] = [
 export function isCategory(obj: object): obj is Category {
   return (
     obj &&
-    typeof (obj as Category).id === 'number' &&
-    typeof (obj as Category).name === 'string' &&
-    typeof (obj as Category).documentRequired === 'boolean' &&
-    typeof (obj as Category).code === 'string' &&
-    ((obj as Category).sequence === null || typeof (obj as Category).sequence === 'number') &&
-    typeof (obj as Category).disabled === 'boolean' &&
-    typeof (obj as Category).createdAt === 'string' &&
-    typeof (obj as Category).updatedAt === 'string'
+    typeof (obj as Category).id === "number" &&
+    typeof (obj as Category).name === "string" &&
+    typeof (obj as Category).documentRequired === "boolean" &&
+    typeof (obj as Category).code === "string" &&
+    ((obj as Category).sequence === null || typeof (obj as Category).sequence === "number") &&
+    typeof (obj as Category).disabled === "boolean" &&
+    typeof (obj as Category).createdAt === "string" &&
+    typeof (obj as Category).updatedAt === "string"
   );
 }
 
@@ -276,11 +276,14 @@ export function isCategory(obj: object): obj is Category {
 export function isCreateCategoryPayload(obj: object): obj is CreateCategoryPayload {
   return (
     obj &&
-    typeof (obj as CreateCategoryPayload).name === 'string' &&
-    typeof (obj as CreateCategoryPayload).documentRequired === 'boolean' &&
-    typeof (obj as CreateCategoryPayload).code === 'string' &&
-    ((obj as CreateCategoryPayload).sequence === undefined || (obj as CreateCategoryPayload).sequence === null || typeof (obj as CreateCategoryPayload).sequence === 'number') &&
-    ((obj as CreateCategoryPayload).disabled === undefined || typeof (obj as CreateCategoryPayload).disabled === 'boolean')
+    typeof (obj as CreateCategoryPayload).name === "string" &&
+    typeof (obj as CreateCategoryPayload).documentRequired === "boolean" &&
+    typeof (obj as CreateCategoryPayload).code === "string" &&
+    ((obj as CreateCategoryPayload).sequence === undefined ||
+      (obj as CreateCategoryPayload).sequence === null ||
+      typeof (obj as CreateCategoryPayload).sequence === "number") &&
+    ((obj as CreateCategoryPayload).disabled === undefined ||
+      typeof (obj as CreateCategoryPayload).disabled === "boolean")
   );
 }
 
@@ -290,11 +293,17 @@ export function isCreateCategoryPayload(obj: object): obj is CreateCategoryPaylo
 export function isUpdateCategoryPayload(obj: object): obj is UpdateCategoryPayload {
   return (
     obj &&
-    ((obj as UpdateCategoryPayload).name === undefined || typeof (obj as UpdateCategoryPayload).name === 'string') &&
-    ((obj as UpdateCategoryPayload).documentRequired === undefined || typeof (obj as UpdateCategoryPayload).documentRequired === 'boolean') &&
-    ((obj as UpdateCategoryPayload).code === undefined || typeof (obj as UpdateCategoryPayload).code === 'string') &&
-    ((obj as UpdateCategoryPayload).sequence === undefined || (obj as UpdateCategoryPayload).sequence === null || typeof (obj as UpdateCategoryPayload).sequence === 'number') &&
-    ((obj as UpdateCategoryPayload).disabled === undefined || typeof (obj as UpdateCategoryPayload).disabled === 'boolean')
+    ((obj as UpdateCategoryPayload).name === undefined ||
+      typeof (obj as UpdateCategoryPayload).name === "string") &&
+    ((obj as UpdateCategoryPayload).documentRequired === undefined ||
+      typeof (obj as UpdateCategoryPayload).documentRequired === "boolean") &&
+    ((obj as UpdateCategoryPayload).code === undefined ||
+      typeof (obj as UpdateCategoryPayload).code === "string") &&
+    ((obj as UpdateCategoryPayload).sequence === undefined ||
+      (obj as UpdateCategoryPayload).sequence === null ||
+      typeof (obj as UpdateCategoryPayload).sequence === "number") &&
+    ((obj as UpdateCategoryPayload).disabled === undefined ||
+      typeof (obj as UpdateCategoryPayload).disabled === "boolean")
   );
 }
 
@@ -323,7 +332,7 @@ export function apiDataToFormData(category: Category): CategoryFormData {
     name: category.name,
     documentRequired: category.documentRequired,
     code: category.code,
-    sequence: category.sequence?.toString() || '',
+    sequence: category.sequence?.toString() || "",
     disabled: category.disabled,
   };
 }
@@ -360,26 +369,26 @@ export function formatCategoryCode(code: string): string {
  * Get category document required text
  */
 export function getCategoryDocumentRequiredText(documentRequired: boolean): string {
-  return documentRequired ? 'Required' : 'Not Required';
+  return documentRequired ? "Required" : "Not Required";
 }
 
 /**
  * Get category document required color
  */
 export function getCategoryDocumentRequiredColor(documentRequired: boolean): string {
-  return documentRequired ? 'text-red-600' : 'text-green-600';
+  return documentRequired ? "text-red-600" : "text-green-600";
 }
 
 /**
  * Get category status text
  */
 export function getCategoryStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get category status color
  */
 export function getCategoryStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
-} 
+  return disabled ? "text-red-600" : "text-green-600";
+}

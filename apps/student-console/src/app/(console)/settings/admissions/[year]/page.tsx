@@ -17,7 +17,14 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -32,7 +39,13 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Work around strict shadcn typings with proper type extensions
 const DialogTriggerFixed = DialogTrigger as React.ComponentType<
@@ -54,7 +67,11 @@ const SelectContentFixed = SelectContent as React.ComponentType<
   React.ComponentProps<typeof SelectContent> & { children?: React.ReactNode }
 >;
 const SelectItemFixed = SelectItem as React.ComponentType<
-  React.ComponentProps<typeof SelectItem> & { children?: React.ReactNode; value?: string; key?: string }
+  React.ComponentProps<typeof SelectItem> & {
+    children?: React.ReactNode;
+    value?: string;
+    key?: string;
+  }
 >;
 const LabelFixed = Label as React.ComponentType<
   React.ComponentProps<typeof Label> & { children?: React.ReactNode; className?: string }
@@ -130,7 +147,11 @@ export default function AdmissionDetailsPage() {
         queryParams.append("formStatus", filters.formStatus);
       if (filters.course && filters.course !== "all" && filters.course !== "All")
         queryParams.append("course", filters.course);
-      if (filters.boardUniversity && filters.boardUniversity !== "all" && filters.boardUniversity !== "All")
+      if (
+        filters.boardUniversity &&
+        filters.boardUniversity !== "all" &&
+        filters.boardUniversity !== "All"
+      )
         queryParams.append("boardUniversity", filters.boardUniversity);
       console.log("Frontend filters:", filters, tempFilters);
       console.log(`/api/admissions/${year}?${queryParams.toString()}`);
@@ -296,7 +317,14 @@ export default function AdmissionDetailsPage() {
     );
   }
 
-  const formStatusOptions = ["DRAFT", "PAYMENT_DUE", "PAYMENT_SUCCESS", "SUBMITTED", "APPROVED", "REJECTED"];
+  const formStatusOptions = [
+    "DRAFT",
+    "PAYMENT_DUE",
+    "PAYMENT_SUCCESS",
+    "SUBMITTED",
+    "APPROVED",
+    "REJECTED",
+  ];
   const genderOptions = ["MALE", "FEMALE", "TRANSGENDER"];
   const isGujaratiOptions = [
     { label: "All", value: "all" },
@@ -305,7 +333,13 @@ export default function AdmissionDetailsPage() {
   ];
   const categoryOptions = ["General", "OBC", "SC", "ST"];
   const religionOptions = ["Hinduism", "Muslim", "Christian", "Sikh"];
-  const annualIncomeOptions = ["Below 2 LPA", "2-5 LPA", "5-10 LPA", "Above 10 LPA", "₹ 5 Lakh - ₹ 7.5 Lakh"];
+  const annualIncomeOptions = [
+    "Below 2 LPA",
+    "2-5 LPA",
+    "5-10 LPA",
+    "Above 10 LPA",
+    "₹ 5 Lakh - ₹ 7.5 Lakh",
+  ];
   const courseOptions = ["B.Tech", "M.Tech", "MBA", "MCA", "BBA", "BCA"];
   const boardUniversityOptions = ["CBSE", "ICSE", "State Board", "Gujarat University", "Other"];
 
@@ -313,9 +347,14 @@ export default function AdmissionDetailsPage() {
     <div className="">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admission Details - {admission.academicYear.year}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Admission Details - {admission.academicYear.year}
+          </h1>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => window.open(`/api/admissions/${year}/download-report`, "_blank")}>
+            <Button
+              variant="outline"
+              onClick={() => window.open(`/api/admissions/${year}/download-report`, "_blank")}
+            >
               <FileText className="w-4 h-4 mr-2" />
               Download Report
             </Button>
@@ -336,7 +375,9 @@ export default function AdmissionDetailsPage() {
                         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-6 rounded-lg shadow-md flex flex-col items-center">
                           <AlertCircle className="h-10 w-10 mb-4" />
                           <p className="text-lg font-semibold">Admission Data Not Loaded</p>
-                          <p className="mt-2 text-center text-sm">Unable to load admission details for year {year}.</p>
+                          <p className="mt-2 text-center text-sm">
+                            Unable to load admission details for year {year}.
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -471,7 +512,9 @@ export default function AdmissionDetailsPage() {
                 <DialogContent className="sm:max-w-2xl p-6">
                   <DialogHeader>
                     <DialogTitleFixed>Filter Applications</DialogTitleFixed>
-                    <DialogDescriptionFixed>Apply filters to narrow down the application forms.</DialogDescriptionFixed>
+                    <DialogDescriptionFixed>
+                      Apply filters to narrow down the application forms.
+                    </DialogDescriptionFixed>
                   </DialogHeader>
                   {/* {console.log('Dialog tempFilters:', tempFilters)} */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
@@ -553,7 +596,10 @@ export default function AdmissionDetailsPage() {
           </div>
 
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={() => window.open(`/api/admissions/${year}/download-forms`, "_blank")}>
+            <Button
+              variant="outline"
+              onClick={() => window.open(`/api/admissions/${year}/download-forms`, "_blank")}
+            >
               <FileText className="w-4 h-4 mr-2" />
               Download
             </Button>
@@ -625,8 +671,12 @@ export default function AdmissionDetailsPage() {
                           className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                       </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{app.id}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{app.name}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                        {app.id}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                        {app.name}
+                      </TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -702,9 +752,12 @@ export default function AdmissionDetailsPage() {
                 <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm text-gray-700">
-                      Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
-                      <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{" "}
-                      <span className="font-medium">{totalItems}</span> results
+                      Showing{" "}
+                      <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
+                      <span className="font-medium">
+                        {Math.min(currentPage * itemsPerPage, totalItems)}
+                      </span>{" "}
+                      of <span className="font-medium">{totalItems}</span> results
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -795,7 +848,9 @@ const StatCard = ({
   bgColor?: string;
   textColor?: string;
 }) => (
-  <div className={`${bgColor} p-5 rounded-lg shadow border border-gray-200 flex items-center justify-between`}>
+  <div
+    className={`${bgColor} p-5 rounded-lg shadow border border-gray-200 flex items-center justify-between`}
+  >
     <div>
       <div className={`text-sm font-medium ${textColor} mb-2`}>{label}</div>
       <div className={`text-3xl font-bold ${textColor}`}>{value.toLocaleString()}</div>
@@ -827,7 +882,13 @@ const FilterSelect = ({
           <SelectItemFixed value="all">All</SelectItemFixed>
           {options.map((option) => (
             <SelectItemFixed key={option} value={option}>
-              {label === "Is Gujarati" ? (option === "true" ? "Yes" : option === "false" ? "No" : "All") : option}
+              {label === "Is Gujarati"
+                ? option === "true"
+                  ? "Yes"
+                  : option === "false"
+                    ? "No"
+                    : "All"
+                : option}
             </SelectItemFixed>
           ))}
         </SelectContentFixed>

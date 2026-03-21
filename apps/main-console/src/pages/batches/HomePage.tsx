@@ -3,7 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CustomPaginationState } from "@/components/settings/SettingsContent";
 import React from "react";
 import { motion } from "framer-motion";
@@ -64,16 +70,21 @@ export default function HomePage() {
   });
 
   // Fetch batches from backend with academicYearId filter
-  const { data: batches = [], isLoading, error } = useQuery<BatchSummary[]>({
+  const {
+    data: batches = [],
+    isLoading,
+    error,
+  } = useQuery<BatchSummary[]>({
     queryKey: ["batches", academicYearId],
     queryFn: () => getAllBatches(academicYearId),
   });
 
   // Filter logic (frontend filters for course, shift, section)
-  const filteredBatches = batches.filter(batch =>
-    (!course || batch.courseName === course) &&
-    (!shift || (typeof batch.shift === 'string' ? batch.shift : batch.shift?.name) === shift) &&
-    (!section || batch.sectionName === section)
+  const filteredBatches = batches.filter(
+    (batch) =>
+      (!course || batch.courseName === course) &&
+      (!shift || (typeof batch.shift === "string" ? batch.shift : batch.shift?.name) === shift) &&
+      (!section || batch.sectionName === section),
   );
 
   // Pagination logic
@@ -81,7 +92,7 @@ export default function HomePage() {
   const totalPages = Math.ceil(totalElements / pagination.pageSize) || 1;
   const paginatedBatches = filteredBatches.slice(
     pagination.pageIndex * pagination.pageSize,
-    (pagination.pageIndex + 1) * pagination.pageSize
+    (pagination.pageIndex + 1) * pagination.pageSize,
   );
 
   // Update pagination state when filteredBatches changes
@@ -128,26 +139,66 @@ export default function HomePage() {
         {/* Filters Card */}
         <div className="w-full bg-white rounded-xl shadow-md px-8 py-6 mb-8 flex flex-wrap gap-4 items-center border border-gray-100">
           <span className="font-medium text-gray-700 mr-2">Filters:</span>
-          <Select value={academicYearId ? academicYearId.toString() : ""} onValueChange={v => setAcademicYearId(v ? Number(v) : undefined)}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Academic Year" /></SelectTrigger>
-            <SelectContent>{academicYears.map(y => <SelectItem key={y.id} value={y.id?.toString() || ""}>{y.year}</SelectItem>)}</SelectContent>
+          <Select
+            value={academicYearId ? academicYearId.toString() : ""}
+            onValueChange={(v) => setAcademicYearId(v ? Number(v) : undefined)}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Academic Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {academicYears.map((y) => (
+                <SelectItem key={y.id} value={y.id?.toString() || ""}>
+                  {y.year}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
           <Select value={course} onValueChange={setCourse}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Course" /></SelectTrigger>
-            <SelectContent>{courses.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Course" />
+            </SelectTrigger>
+            <SelectContent>
+              {courses.map((c) => (
+                <SelectItem key={c.id} value={c.name}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
           <Select value={shift} onValueChange={setShift}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Shift" /></SelectTrigger>
-            <SelectContent>{shifts.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Shift" />
+            </SelectTrigger>
+            <SelectContent>
+              {shifts.map((s) => (
+                <SelectItem key={s.id} value={s.name}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
           <Select value={section} onValueChange={setSection}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Section" /></SelectTrigger>
-            <SelectContent>{sections.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Section" />
+            </SelectTrigger>
+            <SelectContent>
+              {sections.map((s) => (
+                <SelectItem key={s.id} value={s.name}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
           <Button
             variant="outline"
             className="ml-auto"
-            onClick={() => { setAcademicYearId(undefined); setCourse(""); setShift(""); setSection(""); }}
+            onClick={() => {
+              setAcademicYearId(undefined);
+              setCourse("");
+              setShift("");
+              setSection("");
+            }}
           >
             Reset
           </Button>
@@ -163,8 +214,12 @@ export default function HomePage() {
             searchText={""}
             setSearchText={() => {}}
             setDataLength={() => {}}
-            onRowClick={(row: Row<BatchSummary>) => navigate(`/dashboard/batches/${row.original.id}`)}
-            refetch={async () => Promise.resolve({} as QueryObserverResult<BatchSummary[] | undefined, Error>)}
+            onRowClick={(row: Row<BatchSummary>) =>
+              navigate(`/dashboard/batches/${row.original.id}`)
+            }
+            refetch={async () =>
+              Promise.resolve({} as QueryObserverResult<BatchSummary[] | undefined, Error>)
+            }
           />
           {error ? <div className="text-red-500 p-4">Failed to load batches.</div> : null}
         </div>

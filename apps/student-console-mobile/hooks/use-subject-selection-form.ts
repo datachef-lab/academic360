@@ -44,7 +44,10 @@ export interface SavedSelections {
   cvac4?: string;
 }
 
-function transformActualSelectionsToDisplayFormat(actualSelections: any[], metas: any[]): SavedSelections {
+function transformActualSelectionsToDisplayFormat(
+  actualSelections: any[],
+  metas: any[],
+): SavedSelections {
   const result: SavedSelections = {};
   for (const selection of actualSelections) {
     const subjectName = selection.subjectName;
@@ -157,21 +160,31 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
           setSavedSelections(transformed);
         }
 
-        const minorGroup = groups.find((g) => isMinor(g.subjectType?.name || "", g.subjectType?.code!));
+        const minorGroup = groups.find((g) =>
+          isMinor(g.subjectType?.name || "", g.subjectType?.code!),
+        );
         const idcGroup = groups.find((g) => isIDC(g.subjectType?.name || "", g.subjectType?.code!));
         const aecGroup = groups.find((g) => isAEC(g.subjectType?.name || "", g.subjectType?.code!));
-        const cvacGroup = groups.find((g) => isCVAC(g.subjectType?.name || "", g.subjectType?.code!));
+        const cvacGroup = groups.find((g) =>
+          isCVAC(g.subjectType?.name || "", g.subjectType?.code!),
+        );
 
         const dedupe = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
 
-        const minorSem1And2 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "I") || isSem(p, "II"));
-        const minorSem3And4 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+        const minorSem1And2 = (minorGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "I") || isSem(p, "II"),
+        );
+        const minorSem3And4 = (minorGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "III") || isSem(p, "IV"),
+        );
         const minorSem3Only = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
         const idcSem1Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "I"));
         const idcSem2Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
         const idcSem3Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
-        const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+        const aec3Papers = (aecGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "III") || isSem(p, "IV"),
+        );
         const cvac4Papers = (cvacGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
 
         setAdmissionMinor1Subjects(dedupe(minorSem1And2.map(getLabel)));
@@ -197,7 +210,9 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
           firstOrEmpty(
             dedupe(
               (minorGroup?.paperOptions || [])
-                .filter((p) => (p as any)?.autoAssign === true && (isSem(p, "III") || isSem(p, "IV")))
+                .filter(
+                  (p) => (p as any)?.autoAssign === true && (isSem(p, "III") || isSem(p, "IV")),
+                )
                 .map(getLabel),
             ),
           ),
@@ -242,7 +257,9 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
           firstOrEmpty(
             dedupe(
               (aecGroup?.paperOptions || [])
-                .filter((p) => (p as any)?.autoAssign === true && (isSem(p, "III") || isSem(p, "IV")))
+                .filter(
+                  (p) => (p as any)?.autoAssign === true && (isSem(p, "III") || isSem(p, "IV")),
+                )
                 .map(getLabel),
             ),
           ),
@@ -254,7 +271,10 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
           String(s || "")
             .trim()
             .toUpperCase();
-        const rgMap: Record<string, { semesters: string[]; cannotCombineWith: Set<string>; categoryCode: string }> = {};
+        const rgMap: Record<
+          string,
+          { semesters: string[]; cannotCombineWith: Set<string>; categoryCode: string }
+        > = {};
         const catFlags: Record<string, boolean> = {};
 
         for (const rg of rgs) {
@@ -271,7 +291,11 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
           const code = norm((rg.subjectType as any)?.code || (rg.subjectType as any)?.name || "");
           const targetKey = norm(target);
           if (!rgMap[targetKey]) {
-            rgMap[targetKey] = { semesters, cannotCombineWith: new Set<string>(), categoryCode: code };
+            rgMap[targetKey] = {
+              semesters,
+              cannotCombineWith: new Set<string>(),
+              categoryCode: code,
+            };
           }
           for (const c of cannot) rgMap[targetKey].cannotCombineWith.add(c);
           for (const c of cannot) {
@@ -357,7 +381,12 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
   );
 
   const getFilteredByCategory = useCallback(
-    (sourceList: string[], currentValue: string, categoryCode: string, contextSemester?: string | string[]) => {
+    (
+      sourceList: string[],
+      currentValue: string,
+      categoryCode: string,
+      contextSemester?: string | string[],
+    ) => {
       const norm = (s: string) =>
         String(s || "")
           .trim()
@@ -407,7 +436,18 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
         return true;
       });
     },
-    [restrictedCategories, restrictedBySubject, minor1, minor2, minor3, idc1, idc2, idc3, aec3, cvac4],
+    [
+      restrictedCategories,
+      restrictedBySubject,
+      minor1,
+      minor2,
+      minor3,
+      idc1,
+      idc2,
+      idc3,
+      aec3,
+      cvac4,
+    ],
   );
 
   const preserveAecIfPresent = useCallback(
@@ -422,7 +462,9 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
 
   const getGlobalExcludes = useCallback(
     (currentValue: string) => {
-      return [minor1, minor2, minor3, idc1, idc2, idc3, cvac4].filter(Boolean).filter((s) => s !== currentValue);
+      return [minor1, minor2, minor3, idc1, idc2, idc3, cvac4]
+        .filter(Boolean)
+        .filter((s) => s !== currentValue);
     },
     [minor1, minor2, minor3, idc1, idc2, idc3, cvac4],
   );
@@ -432,14 +474,26 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
     const shouldAskForAec = hasActualOptions(availableAecSubjects);
     const shouldAskForCvac = hasActualOptions(availableCvacOptions);
 
-    if (hasActualOptions(admissionMinor1Subjects) && !minor1) newErrors.push("Minor I subject is required");
-    if (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) && !minor2)
+    if (hasActualOptions(admissionMinor1Subjects) && !minor1)
+      newErrors.push("Minor I subject is required");
+    if (
+      hasActualOptions(admissionMinor1Subjects) &&
+      hasActualOptions(admissionMinor2Subjects) &&
+      !minor2
+    )
       newErrors.push("Minor II subject is required");
-    if (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && !minor3)
+    if (
+      !hasActualOptions(admissionMinor1Subjects) &&
+      hasActualOptions(admissionMinor3Subjects) &&
+      !minor3
+    )
       newErrors.push("Minor subject is required");
-    if (hasActualOptions(availableIdcSem1Subjects) && !idc1) newErrors.push("IDC 1 subject is required");
-    if (hasActualOptions(availableIdcSem2Subjects) && !idc2) newErrors.push("IDC 2 subject is required");
-    if (hasActualOptions(availableIdcSem3Subjects) && !idc3) newErrors.push("IDC 3 subject is required");
+    if (hasActualOptions(availableIdcSem1Subjects) && !idc1)
+      newErrors.push("IDC 1 subject is required");
+    if (hasActualOptions(availableIdcSem2Subjects) && !idc2)
+      newErrors.push("IDC 2 subject is required");
+    if (hasActualOptions(availableIdcSem3Subjects) && !idc3)
+      newErrors.push("IDC 3 subject is required");
     if (shouldAskForAec && !aec3) newErrors.push("AEC 3 subject is required");
     if (shouldAskForCvac && !cvac4) newErrors.push("CVAC 4 subject is required");
 
@@ -458,7 +512,9 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
     if (idc2 && idc3 && idc2 === idc3) newErrors.push("IDC 2 and IDC 3 cannot be the same");
 
     if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1 && minor3 !== autoMinor1) {
-      newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
+      newErrors.push(
+        `${autoMinor1} is mandatory and must be selected in one of the Minor subjects`,
+      );
     }
     if (
       autoMinor3 &&
@@ -497,9 +553,13 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
   ]);
 
   const createSelectionsForSave = useCallback(
-    (freshMetas: SubjectSelectionMetaDto[], freshSession: { id: number } | null): StudentSubjectSelectionForSave[] => {
+    (
+      freshMetas: SubjectSelectionMetaDto[],
+      freshSession: { id: number } | null,
+    ): StudentSubjectSelectionForSave[] => {
       const selectionsToSave: StudentSubjectSelectionForSave[] = [];
-      if (!student?.id || !selections || freshMetas.length === 0 || !freshSession?.id) return selectionsToSave;
+      if (!student?.id || !selections || freshMetas.length === 0 || !freshSession?.id)
+        return selectionsToSave;
 
       const findSubjectId = (subjectName: string): number | null => {
         for (const group of selections) {
@@ -659,19 +719,32 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
         setStep(1);
         setMinorMismatch(false);
       } else {
-        setSaveError("Validation failed: " + (result.errors?.map((e) => e.message).join(", ") || "Unknown error"));
+        setSaveError(
+          "Validation failed: " +
+            (result.errors?.map((e) => e.message).join(", ") || "Unknown error"),
+        );
       }
     } catch (error: any) {
       setSaveError(error.message || "Failed to save selections");
     } finally {
       setSaving(false);
     }
-  }, [agree1, agree2, agree3, student?.id, subjectSelectionMetas, currentSession, createSelectionsForSave]);
+  }, [
+    agree1,
+    agree2,
+    agree3,
+    student?.id,
+    subjectSelectionMetas,
+    currentSession,
+    createSelectionsForSave,
+  ]);
 
   useEffect(() => {
     if (minor1 && !minor2 && autoMinor1) {
       const programCourseName =
-        student?.currentPromotion?.programCourse?.name || (student as any)?.programCourse?.course?.name || "";
+        student?.currentPromotion?.programCourse?.name ||
+        (student as any)?.programCourse?.course?.name ||
+        "";
       const isBcomProgram = programCourseName.toLowerCase().replace(/[.\s]/g, "").includes("bcom");
       const semesterContext = isBcomProgram ? ["III"] : ["III", "IV"];
       const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", semesterContext);
@@ -702,7 +775,9 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
   useEffect(() => {
     if (minor1 && autoMinor1 && minor1 !== autoMinor1) {
       const programCourseName =
-        (student as any)?.currentPromotion?.programCourse?.name || (student as any)?.programCourse?.course?.name || "";
+        (student as any)?.currentPromotion?.programCourse?.name ||
+        (student as any)?.programCourse?.course?.name ||
+        "";
       const isBcomProgram = programCourseName.toLowerCase().replace(/[.\s]/g, "").includes("bcom");
       const semesterContext = isBcomProgram ? ["III"] : ["III", "IV"];
       const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", semesterContext);
@@ -724,7 +799,9 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
   const getDynamicLabel = useCallback(
     (subjectTypeCode: string, semester?: string): string => {
       const programCourseName =
-        (student as any)?.currentPromotion?.programCourse?.name || (student as any)?.programCourse?.course?.name || "";
+        (student as any)?.currentPromotion?.programCourse?.name ||
+        (student as any)?.programCourse?.course?.name ||
+        "";
       const isBcomProgram = programCourseName.toLowerCase().replace(/[.\s]/g, "").includes("bcom");
 
       const meta = subjectSelectionMetas.find((m) => {
@@ -766,7 +843,9 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
       excludeValues: string[] = [],
       selectLabel: string = "Select",
     ): { value: string; label: string }[] => {
-      const options = subjects.filter((s) => !excludeValues.includes(s)).map((s) => ({ value: s, label: s }));
+      const options = subjects
+        .filter((s) => !excludeValues.includes(s))
+        .map((s) => ({ value: s, label: s }));
       return [{ value: "", label: selectLabel }, ...options];
     },
     [],

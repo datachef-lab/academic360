@@ -13,7 +13,9 @@ export async function getAllEmergencyContacts(): Promise<ApiResponse<EmergencyCo
   }
 }
 
-export async function getEmergencyContactById(id: number): Promise<ApiResponse<EmergencyContact | null>> {
+export async function getEmergencyContactById(
+  id: number,
+): Promise<ApiResponse<EmergencyContact | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -22,7 +24,9 @@ export async function getEmergencyContactById(id: number): Promise<ApiResponse<E
   }
 }
 
-export async function getEmergencyContactByStudentId(studentId: number): Promise<ApiResponse<EmergencyContact | null>> {
+export async function getEmergencyContactByStudentId(
+  studentId: number,
+): Promise<ApiResponse<EmergencyContact | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
@@ -66,7 +70,9 @@ export async function deleteEmergencyContact(id: number): Promise<ApiResponse<nu
   }
 }
 
-export async function deleteEmergencyContactByStudentId(studentId: number): Promise<ApiResponse<null>> {
+export async function deleteEmergencyContactByStudentId(
+  studentId: number,
+): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data;

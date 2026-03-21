@@ -5,9 +5,13 @@ import type { CuRegistrationDocumentUploadDto } from "@repo/db/dtos/admissions";
 const BASE = "/api/admissions/cu-registration-document-uploads";
 
 export async function getCuRegistrationDocuments(cuRegistrationCorrectionRequestId: number) {
-  console.info(`[CU-REG FRONTEND] Fetching documents for correction request: ${cuRegistrationCorrectionRequestId}`);
+  console.info(
+    `[CU-REG FRONTEND] Fetching documents for correction request: ${cuRegistrationCorrectionRequestId}`,
+  );
   try {
-    const res = await api.get<ApiResponse<any[]>>(`${BASE}/request/${cuRegistrationCorrectionRequestId}`);
+    const res = await api.get<ApiResponse<any[]>>(
+      `${BASE}/request/${cuRegistrationCorrectionRequestId}`,
+    );
     console.info(`[CU-REG FRONTEND] Documents response:`, res.data);
     return res.data.payload as any[];
   } catch (error: any) {
@@ -49,14 +53,20 @@ export async function uploadCuRegistrationDocument(args: {
   }
 }
 
-export async function getCuRegistrationDocumentSignedUrl(id: number, opts?: { expiresIn?: number }) {
+export async function getCuRegistrationDocumentSignedUrl(
+  id: number,
+  opts?: { expiresIn?: number },
+) {
   try {
     const url = `${BASE}/${id}/signed-url${opts?.expiresIn ? `?expiresIn=${opts.expiresIn}` : ""}`;
     const res = await api.get<ApiResponse<{ signedUrl: string; documentUrl: string }>>(url);
     const payload: any = res.data.payload;
     return (payload?.signedUrl as string) || (payload?.documentUrl as string);
   } catch (error: any) {
-    console.error(`[CU-REG FRONTEND] Error getting signed URL for document ${id}:`, error?.response?.data || error);
+    console.error(
+      `[CU-REG FRONTEND] Error getting signed URL for document ${id}:`,
+      error?.response?.data || error,
+    );
     throw error;
   }
 }
