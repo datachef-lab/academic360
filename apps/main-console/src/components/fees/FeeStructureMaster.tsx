@@ -32,7 +32,7 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Shift } from "@/types/academics/shift";
 import { FeesReceiptType } from "@/types/fees";
-import type { FeeConcessionSlabT } from "@/schemas";
+import type { FeeSlabT as FeeConcessionSlabT } from "@/schemas";
 import type { FeesHead } from "@/types/fees";
 import { Class } from "@/types/academics/class";
 import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";

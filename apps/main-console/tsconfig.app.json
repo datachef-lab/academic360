@@ -9,6 +9,10 @@
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*", "../../packages/db/src/*"],
+      "@/dtos": ["../../packages/db/src/dtos"],
+      "@/dtos/*": ["../../packages/db/src/dtos/*"],
+      "@/schemas": ["../../packages/db/src/schemas"],
+      "@/schemas/*": ["../../packages/db/src/schemas/*"],
       "@repo/db": ["../../packages/db/src"],
       "@repo/db/*": ["../../packages/db/src/*"]
     },
@@ -27,5 +31,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "../../packages/db/src"]
 }

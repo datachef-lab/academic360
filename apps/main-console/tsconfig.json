@@ -11,6 +11,10 @@
     "noUnusedParameters": false,
     "paths": {
       "@/*": ["./src/*", "../../packages/db/src/*"],
+      "@/dtos": ["../../packages/db/src/dtos"],
+      "@/dtos/*": ["../../packages/db/src/dtos/*"],
+      "@/schemas": ["../../packages/db/src/schemas"],
+      "@/schemas/*": ["../../packages/db/src/schemas/*"],
       "@repo/db": ["../../packages/db/src"],
       "@repo/db/*": ["../../packages/db/src/*"]
     }

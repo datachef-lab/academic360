@@ -12,14 +12,16 @@ apps/**/dist
 apps/**/.next
 apps/**/.turbo
 .turbo
+packages/**/dist
 
 # Logs
 *.log
 apps/**/logs
 
-# Env files (keep on servers only)
+# Env files (keep on servers only) - main-console needs .env.example for Vite build
 .env
 .env.*
+!apps/main-console/.env.example
 
 # Editor/OS
 .DS_Store
@@ -30,10 +32,12 @@ apps/**/logs
 coverage
 **/uploads
 **/public/temp
-
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
 
 dist
-.env*
 logs
 .turbo
-!packages/db/dist

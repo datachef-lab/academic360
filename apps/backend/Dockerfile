@@ -5,23 +5,23 @@ RUN npm install -g pnpm turbo
 FROM base AS pruner
 WORKDIR /app
 COPY . .
-RUN turbo prune --scope=backend --docker
+RUN turbo prune backend --docker
 
 # ── Installer stage ───────────────────────────────────────────────────
 FROM base AS installer
 WORKDIR /app
 
-# Copy pruned lockfile + package.jsons
+# Layer 1: deps metadata (cached unless package.json/lockfile changes)
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-
 RUN pnpm install --frozen-lockfile
 
-# Copy pruned source
+# Layer 2: source (cached unless source changes)
 COPY --from=pruner /app/out/full/ .
 
-RUN pnpm turbo run build --filter=backend...
+# Layer 3: build (cached unless layers above change)
+RUN pnpm turbo run build --filter=backend
 
 # ── Runner stage ──────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
