@@ -3,6 +3,7 @@ import roomRouter from "./room.routes.js";
 import examTypeRouter from "./exam-type.routes.js";
 import examScheduleRouter from "./exam-schedule.routes.js";
 import examGroupRouter from "./exam-group.routes.js";
+import admitCardRouter from "./admit-card.routes.js";
 
 export {
   floorRouter,
@@ -10,4 +11,5 @@ export {
   examTypeRouter,
   examScheduleRouter,
   examGroupRouter,
+  admitCardRouter,
 };
