@@ -5,10 +5,14 @@ import {
   AccessGroupApplication,
   AccessGroupApplicationT,
 } from "@repo/db/schemas/models/administration";
+import { academic360ApplicationDomainEnum } from "@repo/db/schemas/enums";
+
+type Academic360ApplicationDomainType =
+  (typeof academic360ApplicationDomainEnum.enumValues)[number];
 
 async function ensureUniqueAccessGroupIdAndType(
   accessGroupId: number,
-  type: AccessGroupApplicationT["type"],
+  type: Academic360ApplicationDomainType,
   excludeId?: number,
 ): Promise<boolean> {
   const whereClause =

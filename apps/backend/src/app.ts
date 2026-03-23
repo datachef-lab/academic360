@@ -85,7 +85,15 @@ import {
   userStatusMasterRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
+  accessGroupModuleClassRouter,
+  accessGroupModulePermissionRouter,
+  accessGroupModuleProgramCourseRouter,
+  accessGroupModuleRouter,
   accessGroupUserTypeRouter,
+  appModuleRouter,
+  departmentRouter,
+  identityMasterRouter,
+  institutionalRoleRouter,
   userTypeRouter,
   userRouter,
   // userStatusMasterDomainRouter,
@@ -383,6 +391,7 @@ app.use("/api/users", userRouter);
 
 // User status master endpoints
 app.use("/api/administration/user-status-masters", userStatusMasterRouter);
+app.use("/api/administration/app-modules", appModuleRouter);
 // // User status master level endpoints
 // app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
 // // User status master domain endpoints
@@ -441,8 +450,9 @@ app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
 
-// app.use("/api/administration/departments", departmentRouter);
-
+app.use("/api/administration/departments", departmentRouter);
+app.use("/api/administration/identity-masters", identityMasterRouter);
+app.use("/api/administration/institutional-roles", institutionalRoleRouter);
 app.use("/api/administration/designations", designationRouter);
 app.use("/api/administration/session-statuses", sessionStatusRouter);
 
@@ -455,6 +465,19 @@ app.use(
 app.use(
   "/api/administration/access-group-designations",
   accessGroupDesignationRouter,
+);
+app.use("/api/administration/access-group-modules", accessGroupModuleRouter);
+app.use(
+  "/api/administration/access-group-module-classes",
+  accessGroupModuleClassRouter,
+);
+app.use(
+  "/api/administration/access-group-module-permissions",
+  accessGroupModulePermissionRouter,
+);
+app.use(
+  "/api/administration/access-group-module-program-courses",
+  accessGroupModuleProgramCourseRouter,
 );
 app.use(
   "/api/administration/access-group-user-types",
