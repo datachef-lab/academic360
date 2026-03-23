@@ -4,7 +4,9 @@ import {
   AccessGroupModuleProgramCourse,
   AccessGroupModuleProgramCourseT,
   accessGroupModuleProgramCourseModel,
+  accessGroupModuleProgramCourseClassModel,
 } from "@repo/db/schemas/models/administration";
+import { classModel } from "@repo/db/schemas/models/academics";
 import { AccessGroupModuleProgramCourseDto } from "@repo/db/dtos/administration";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 
@@ -55,10 +57,33 @@ async function modelToDto(
   );
   if (!programCourseDto) return null;
 
+  const pcClassRows = await db
+    .select()
+    .from(accessGroupModuleProgramCourseClassModel)
+    .where(
+      eq(
+        accessGroupModuleProgramCourseClassModel.accessGroupModuleProgramCourseId,
+        model.id,
+      ),
+    );
+  const pcClasses = [];
+  for (const pcc of pcClassRows) {
+    const [c] = await db
+      .select()
+      .from(classModel)
+      .where(eq(classModel.id, pcc.classId))
+      .limit(1);
+    if (c) {
+      const { classId: _c, ...rest } = pcc;
+      pcClasses.push({ ...rest, class: c });
+    }
+  }
+
   const { programCourseId: _programCourseId, ...rest } = model;
   return {
     ...rest,
     programCourse: programCourseDto,
+    classes: pcClasses,
   };
 }
 

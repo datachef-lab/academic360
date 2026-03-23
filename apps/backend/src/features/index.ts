@@ -79,9 +79,9 @@ import {
   examScheduleRouter,
 } from "./exams/routes/index.js";
 import {
+  accessGroupRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
-  accessGroupModuleClassRouter,
   accessGroupModulePermissionRouter,
   accessGroupModuleProgramCourseRouter,
   accessGroupModuleRouter,
@@ -163,9 +163,9 @@ export {
   roomRouter,
   examTypeRouter,
   examScheduleRouter,
+  accessGroupRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
-  accessGroupModuleClassRouter,
   accessGroupModulePermissionRouter,
   accessGroupModuleProgramCourseRouter,
   accessGroupModuleRouter,

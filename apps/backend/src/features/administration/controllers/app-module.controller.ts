@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
+import type {
+  AppModuleCreateInput,
+  AppModuleUpdateInput,
+} from "../services/app-module.service.js";
 import {
   createAppModule as createAppModuleService,
   deleteAppModuleSafe as deleteAppModuleSafeService,
@@ -8,9 +12,47 @@ import {
   updateAppModule as updateAppModuleService,
 } from "../services/app-module.service.js";
 
+function parseFormDataBody(
+  body: Record<string, unknown>,
+): AppModuleCreateInput | AppModuleUpdateInput {
+  const dataRaw = body.data ?? body.payload ?? body;
+  const data = typeof dataRaw === "string" ? JSON.parse(dataRaw) : dataRaw;
+
+  if (data.parentAppModule?.id != null) {
+    data.parentAppModuleId = data.parentAppModule.id;
+    delete data.parentAppModule;
+  }
+  if (data.parentAppModuleId === undefined && data.parentAppModule === null) {
+    data.parentAppModuleId = null;
+  }
+
+  return data as AppModuleCreateInput | AppModuleUpdateInput;
+}
+
 export const createAppModule = async (req: Request, res: Response) => {
   try {
-    const created = await createAppModuleService(req.body);
+    const contentType = req.headers["content-type"] ?? "";
+    const isFormData = contentType.includes("multipart/form-data");
+
+    let data: AppModuleCreateInput;
+    const imageFile = req.file;
+
+    if (isFormData) {
+      data = parseFormDataBody(req.body) as AppModuleCreateInput;
+    } else {
+      data = req.body as AppModuleCreateInput;
+      const body = data as Record<string, unknown>;
+      if (
+        body.parentAppModule &&
+        typeof body.parentAppModule === "object" &&
+        "id" in body.parentAppModule
+      ) {
+        data.parentAppModuleId = (body.parentAppModule as { id: number }).id;
+        delete body.parentAppModule;
+      }
+    }
+
+    const created = await createAppModuleService(data, imageFile);
     res
       .status(201)
       .json(
@@ -69,7 +111,28 @@ export const getAppModuleById = async (req: Request, res: Response) => {
 export const updateAppModule = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const updated = await updateAppModuleService(id, req.body);
+    const contentType = req.headers["content-type"] ?? "";
+    const isFormData = contentType.includes("multipart/form-data");
+
+    let data: AppModuleUpdateInput;
+    const imageFile = req.file;
+
+    if (isFormData) {
+      data = parseFormDataBody(req.body) as AppModuleUpdateInput;
+    } else {
+      data = req.body as AppModuleUpdateInput;
+      const body = data as Record<string, unknown>;
+      if (
+        body.parentAppModule &&
+        typeof body.parentAppModule === "object" &&
+        "id" in body.parentAppModule
+      ) {
+        data.parentAppModuleId = (body.parentAppModule as { id: number }).id;
+        delete body.parentAppModule;
+      }
+    }
+
+    const updated = await updateAppModuleService(id, data, imageFile);
 
     if (!updated) {
       return res

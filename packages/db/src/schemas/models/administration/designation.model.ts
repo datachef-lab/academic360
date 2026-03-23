@@ -7,6 +7,8 @@ export const designationModel = pgTable("designations", {
     name: varchar({ length: 255 }).notNull().unique(),
     description: varchar({ length: 500 }),
     code: varchar({ length: 255 }),
+    color: varchar({ length: 255 }),
+    bgColor: varchar({ length: 255 }),
     isActive: boolean().default(false).notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date())

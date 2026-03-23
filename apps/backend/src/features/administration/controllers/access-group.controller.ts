@@ -1,19 +1,16 @@
 import { Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
-  createAccessGroupModuleClass as createAccessGroupModuleClassService,
-  deleteAccessGroupModuleClassSafe as deleteAccessGroupModuleClassSafeService,
-  findAccessGroupModuleClassById,
-  getAllAccessGroupModuleClasses as getAllAccessGroupModuleClassesService,
-  updateAccessGroupModuleClass as updateAccessGroupModuleClassService,
-} from "../services/access-group-module-class.service.js";
+  createAccessGroup as createAccessGroupService,
+  deleteAccessGroupSafe as deleteAccessGroupSafeService,
+  findAccessGroupById,
+  getAllAccessGroups as getAllAccessGroupsService,
+  updateAccessGroup as updateAccessGroupService,
+} from "../services/access-group.service.js";
 
-export const createAccessGroupModuleClass = async (
-  req: Request,
-  res: Response,
-) => {
+export const createAccessGroup = async (req: Request, res: Response) => {
   try {
-    const created = await createAccessGroupModuleClassService(req.body);
+    const created = await createAccessGroupService(req.body);
     res
       .status(201)
       .json(
@@ -21,7 +18,7 @@ export const createAccessGroupModuleClass = async (
           201,
           "SUCCESS",
           created,
-          "Access group module class created successfully.",
+          "Access group created successfully.",
         ),
       );
   } catch (error: unknown) {
@@ -30,46 +27,28 @@ export const createAccessGroupModuleClass = async (
   }
 };
 
-export const getAllAccessGroupModuleClasses = async (
-  _req: Request,
-  res: Response,
-) => {
+export const getAllAccessGroups = async (_req: Request, res: Response) => {
   try {
-    const all = await getAllAccessGroupModuleClassesService();
+    const all = await getAllAccessGroupsService();
     res
       .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          all,
-          "Access group module classes fetched.",
-        ),
-      );
+      .json(new ApiResponse(200, "SUCCESS", all, "Access groups fetched."));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json(new ApiResponse(500, "ERROR", null, message));
   }
 };
 
-export const getAccessGroupModuleClassById = async (
-  req: Request,
-  res: Response,
-) => {
+export const getAccessGroupById = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const found = await findAccessGroupModuleClassById(id);
+    const found = await findAccessGroupById(id);
 
     if (!found) {
       return res
         .status(404)
         .json(
-          new ApiResponse(
-            404,
-            "NOT_FOUND",
-            null,
-            "Access group module class not found.",
-          ),
+          new ApiResponse(404, "NOT_FOUND", null, "Access group not found."),
         );
     }
 
@@ -80,7 +59,7 @@ export const getAccessGroupModuleClassById = async (
           200,
           "SUCCESS",
           found,
-          "Access group module class fetched successfully.",
+          "Access group fetched successfully.",
         ),
       );
   } catch (error: unknown) {
@@ -89,24 +68,16 @@ export const getAccessGroupModuleClassById = async (
   }
 };
 
-export const updateAccessGroupModuleClass = async (
-  req: Request,
-  res: Response,
-) => {
+export const updateAccessGroup = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const updated = await updateAccessGroupModuleClassService(id, req.body);
+    const updated = await updateAccessGroupService(id, req.body);
 
     if (!updated) {
       return res
         .status(404)
         .json(
-          new ApiResponse(
-            404,
-            "NOT_FOUND",
-            null,
-            "Access group module class not found.",
-          ),
+          new ApiResponse(404, "NOT_FOUND", null, "Access group not found."),
         );
     }
 
@@ -117,7 +88,7 @@ export const updateAccessGroupModuleClass = async (
           200,
           "UPDATED",
           updated,
-          "Access group module class updated successfully.",
+          "Access group updated successfully.",
         ),
       );
   } catch (error: unknown) {
@@ -126,25 +97,15 @@ export const updateAccessGroupModuleClass = async (
   }
 };
 
-export const deleteAccessGroupModuleClass = async (
-  req: Request,
-  res: Response,
-) => {
+export const deleteAccessGroup = async (req: Request, res: Response) => {
   try {
-    const result = await deleteAccessGroupModuleClassSafeService(
-      Number(req.params.id),
-    );
+    const result = await deleteAccessGroupSafeService(Number(req.params.id));
 
     if (result === null) {
       return res
         .status(404)
         .json(
-          new ApiResponse(
-            404,
-            "NOT_FOUND",
-            null,
-            "Access group module class not found.",
-          ),
+          new ApiResponse(404, "NOT_FOUND", null, "Access group not found."),
         );
     }
 

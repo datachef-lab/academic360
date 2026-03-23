@@ -1,4 +1,4 @@
-import { AccessGroupApplicationT, AccessGroupDesignationT, AccessGroupModuleClassT, AccessGroupModulePermissionT, AccessGroupModuleProgramCourseT, AccessGroupModuleT, AccessGroupT, AccessGroupUserTypeT, AppModuleT, ClassT, DepartmentT, DesignationT, UserStatusMasterT, UserTypeT } from "@/schemas";
+import { AccessGroupApplicationT, AccessGroupDesignationT, AccessGroupModulePermissionT, AccessGroupModuleProgramCourseClass, AccessGroupModuleProgramCourseT, AccessGroupModuleT, AccessGroupT, AccessGroupUserTypeT, AppModuleT, ClassT, DepartmentT, DesignationT, UserStatusMasterT, UserTypeT } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 
 export interface UserTypeDto extends Omit<UserTypeT, "parentUserTypeId"> {
@@ -25,18 +25,19 @@ export interface AccessGroupUserTypeDto extends Omit<AccessGroupUserTypeT, "user
    userType: UserTypeT;
 }
 
-export interface AccessGroupModuleProgramCourseDto extends Omit<AccessGroupModuleProgramCourseT, "programCourseId"> {
-   programCourse: ProgramCourseDto;
+export interface AccessGroupModuleProgramCourseDto
+  extends Omit<AccessGroupModuleProgramCourseT, "programCourseId"> {
+  programCourse: ProgramCourseDto;
+  classes: AccessGroupModuleProgramCourseClassDto[];
 }
 
-export interface AccessGroupModuleClassDto extends Omit<AccessGroupModuleClassT, "classId"> {
+export interface AccessGroupModuleProgramCourseClassDto extends Omit<AccessGroupModuleProgramCourseClass, "classId"> {
    class: ClassT;
 }
 
 export interface AccessGroupModuleDto extends Omit<AccessGroupModuleT, "appModuleId"> {
    appModule: AppModuleT;
-   programCourses: AccessGroupModuleProgramCourseDto[];
-   classes: AccessGroupModuleClassDto[];
+   programCourseAndClasses: AccessGroupModuleProgramCourseDto[];
 }
 
 export interface AccessGroupDto extends AccessGroupT {
@@ -46,3 +47,56 @@ export interface AccessGroupDto extends AccessGroupT {
    features: AccessGroupModuleDto[];
    permissions: AccessGroupModulePermissionT[];
 }
+
+/** Nested input for access group create/update */
+export interface AccessGroupApplicationInput {
+   type: AccessGroupApplicationT["type"];
+}
+
+export interface AccessGroupDesignationInput {
+   designationId: number;
+}
+
+export interface AccessGroupUserTypeInput {
+   userTypeId: number;
+}
+
+export interface AccessGroupModulePermissionInput {
+   type: AccessGroupModulePermissionT["type"];
+}
+
+export interface AccessGroupModuleClassInput {
+   classId: number;
+   isAllowed?: boolean;
+}
+
+export interface AccessGroupModuleProgramCourseInput {
+  programCourseId: number;
+  isAllowed?: boolean;
+  classes?: AccessGroupModuleClassInput[];
+}
+
+export interface AccessGroupModuleInput {
+   appModuleId: number;
+   type?: AccessGroupModuleT["type"];
+   isAllowed?: boolean;
+   permissions?: AccessGroupModulePermissionInput[];
+   classes?: AccessGroupModuleClassInput[];
+   programCourses?: AccessGroupModuleProgramCourseInput[];
+}
+
+export interface AccessGroupCreateInput {
+   name: string;
+   type?: AccessGroupT["type"];
+   userStatusId: number;
+   code?: string | null;
+   description?: string | null;
+   remarks?: string | null;
+   isActive?: boolean;
+   applications?: AccessGroupApplicationInput[];
+   designations?: AccessGroupDesignationInput[];
+   userTypes?: AccessGroupUserTypeInput[];
+   features?: AccessGroupModuleInput[];
+}
+
+export type AccessGroupUpdateInput = Partial<AccessGroupCreateInput>;

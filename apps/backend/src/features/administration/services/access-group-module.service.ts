@@ -5,16 +5,14 @@ import {
   AccessGroupModuleT,
   accessGroupModuleModel,
   accessGroupModuleProgramCourseModel,
-  accessGroupModuleClassModel,
+  accessGroupModuleProgramCourseClassModel,
   appModuleModel,
 } from "@repo/db/schemas/models/administration";
 import { classModel } from "@repo/db/schemas/models/academics";
 import {
   AccessGroupModuleDto,
   AccessGroupModuleProgramCourseDto,
-  AccessGroupModuleClassDto,
 } from "@repo/db/dtos/administration";
-import { ProgramCourseDto } from "@repo/db/dtos/course-design";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 
 async function ensureUniqueAccessGroupAndAppModule(
@@ -62,37 +60,38 @@ async function modelToDto(
       eq(accessGroupModuleProgramCourseModel.accessGroupModuleId, model.id),
     );
 
-  const programCourses: AccessGroupModuleProgramCourseDto[] = [];
+  const programCourseAndClasses: AccessGroupModuleProgramCourseDto[] = [];
   for (const row of programCourseRows) {
     const programCourseDto = await programCourseService.findById(
       row.programCourseId,
     );
     if (programCourseDto) {
+      const pcClassRows = await db
+        .select()
+        .from(accessGroupModuleProgramCourseClassModel)
+        .where(
+          eq(
+            accessGroupModuleProgramCourseClassModel.accessGroupModuleProgramCourseId,
+            row.id,
+          ),
+        );
+      const pcClasses = [];
+      for (const pcc of pcClassRows) {
+        const [classRow] = await db
+          .select()
+          .from(classModel)
+          .where(eq(classModel.id, pcc.classId))
+          .limit(1);
+        if (classRow) {
+          const { classId: _classId, ...cRest } = pcc;
+          pcClasses.push({ ...cRest, class: classRow });
+        }
+      }
       const { programCourseId: _pcId, ...rest } = row;
-      programCourses.push({
+      programCourseAndClasses.push({
         ...rest,
         programCourse: programCourseDto,
-      });
-    }
-  }
-
-  const classRows = await db
-    .select()
-    .from(accessGroupModuleClassModel)
-    .where(eq(accessGroupModuleClassModel.accessGroupModuleId, model.id));
-
-  const classes: AccessGroupModuleClassDto[] = [];
-  for (const row of classRows) {
-    const [classRow] = await db
-      .select()
-      .from(classModel)
-      .where(eq(classModel.id, row.classId))
-      .limit(1);
-    if (classRow) {
-      const { classId: _classId, ...rest } = row;
-      classes.push({
-        ...rest,
-        class: classRow,
+        classes: pcClasses,
       });
     }
   }
@@ -101,8 +100,7 @@ async function modelToDto(
   return {
     ...rest,
     appModule,
-    programCourses,
-    classes,
+    programCourseAndClasses,
   };
 }
 

@@ -31,6 +31,22 @@ function normaliseDesignationPayload<
     clone.code = clone.code.trim() as T["code"];
   }
 
+  if (
+    clone.color !== undefined &&
+    clone.color !== null &&
+    typeof clone.color === "string"
+  ) {
+    clone.color = clone.color.trim() as T["color"];
+  }
+
+  if (
+    clone.bgColor !== undefined &&
+    clone.bgColor !== null &&
+    typeof clone.bgColor === "string"
+  ) {
+    clone.bgColor = clone.bgColor.trim() as T["bgColor"];
+  }
+
   return clone;
 }
 

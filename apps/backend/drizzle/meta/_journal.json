@@ -729,6 +729,20 @@
       "when": 1774015563832,
       "tag": "0103_new_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1774246235278,
+      "tag": "0104_bizarre_arachne",
+      "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1774263179365,
+      "tag": "0105_icy_kitty_pryde",
+      "breakpoints": true
     }
   ]
 }

@@ -83,9 +83,9 @@ import {
   designationRouter,
   sessionStatusRouter,
   userStatusMasterRouter,
+  accessGroupRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
-  accessGroupModuleClassRouter,
   accessGroupModulePermissionRouter,
   accessGroupModuleProgramCourseRouter,
   accessGroupModuleRouter,
@@ -297,6 +297,12 @@ app.use(passport.session());
 
 app.use("/", express.static(path.join(__dirname, "..", "public")));
 
+// Explicitly serve app-module images (same path as saveAppModuleImage uses)
+const appModuleImageBase = path.resolve(
+  process.env.APP_MODULE_IMAGE_BASE_PATH ?? "./public/app-module-images",
+);
+app.use("/app-module-images", express.static(appModuleImageBase));
+
 // Serve CU registration documents from the configured path
 const cuRegAppPath = process.env.CU_REGISTRATION_APP_PATH;
 if (cuRegAppPath) {
@@ -461,6 +467,7 @@ app.use("/api/administration/session-statuses", sessionStatusRouter);
 
 // app.use("/api/administration/sub-departments", subDepartmentRouter);
 app.use("/api/administration/user-types", userTypeRouter);
+app.use("/api/administration/access-groups", accessGroupRouter);
 app.use(
   "/api/administration/access-group-applications",
   accessGroupApplicationRouter,
@@ -470,10 +477,6 @@ app.use(
   accessGroupDesignationRouter,
 );
 app.use("/api/administration/access-group-modules", accessGroupModuleRouter);
-app.use(
-  "/api/administration/access-group-module-classes",
-  accessGroupModuleClassRouter,
-);
 app.use(
   "/api/administration/access-group-module-permissions",
   accessGroupModulePermissionRouter,

@@ -1,8 +1,8 @@
 import userTypeRouter from "./user-type.routes.js";
 import userStatusMasterRouter from "./user-status-master.routes.js";
+import accessGroupRouter from "./access-group.routes.js";
 import accessGroupApplicationRouter from "./access-group-application.routes.js";
 import accessGroupDesignationRouter from "./access-group-designation.routes.js";
-import accessGroupModuleClassRouter from "./access-group-module-class.routes.js";
 import accessGroupModulePermissionRouter from "./access-group-module-permission.routes.js";
 import accessGroupModuleProgramCourseRouter from "./access-group-module-program-course.routes.js";
 import accessGroupModuleRouter from "./access-group-module.routes.js";
@@ -17,9 +17,9 @@ import institutionalRoleRouter from "./institutional-role.routes.js";
 export {
   userTypeRouter,
   userStatusMasterRouter,
+  accessGroupRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
-  accessGroupModuleClassRouter,
   accessGroupModulePermissionRouter,
   accessGroupModuleProgramCourseRouter,
   accessGroupModuleRouter,

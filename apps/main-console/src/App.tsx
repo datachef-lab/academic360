@@ -517,11 +517,13 @@ const router = createBrowserRouter(
           element: <administrationModule.UserGroupsAccessLayout />,
           children: [
             { path: "", element: <administrationModule.UserGroupsAccessHomePage /> },
+            { path: "app-modules", element: <administrationModule.AppModulePage /> },
             { path: "user-groups", element: <div>TODO: User Groups Master</div> },
             { path: "faculties", element: <div>TODO: User Directory</div> },
             { path: "create", element: <div>TODO: Create User Group</div> },
             { path: "departments", element: <administrationModule.DepartmentPage /> },
             { path: "designations", element: <administrationModule.DesignationPage /> },
+            { path: "access-groups", element: <administrationModule.AccessGroupPage /> },
             { path: "user-types", element: <administrationModule.UserTypePage /> },
             { path: "roles", element: <div>TODO: Roles & Permissions Page</div> },
             { path: "user-statuses", element: <administrationModule.UserStatusPage /> },
