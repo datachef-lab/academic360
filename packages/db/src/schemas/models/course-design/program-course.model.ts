@@ -26,6 +26,7 @@ export const programCourseModel = pgTable("program_courses", {
     codePrefix: varchar("code_prefix", { length: 255 }),
     universityCode: varchar("university_code", { length: 255 }),
     isActive: boolean("is_active").default(true),
+    validYears: integer().default(7).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

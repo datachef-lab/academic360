@@ -108,6 +108,42 @@ const ICON_TYPE_DEFAULTS = {
   __none__: "",
 } as const;
 
+const APP_MODULE_PARAMETER_FLAG_TITLES = {
+  isActive: "Active",
+  isLayout: "Layout",
+  isProtected: "Protected",
+  isDynamic: "Dynamic",
+  isMasterModule: "Master module",
+  isReadOnly: "Read-only",
+} as const;
+
+const APP_MODULE_PARAMETER_FLAG_NOTES = {
+  isActive: {
+    on: "The module appears in navigation and can be opened normally.",
+    off: "The module stays hidden from users until you turn Active back on.",
+  },
+  isLayout: {
+    on: "Nested routes render inside this module's shell instead of replacing the whole view.",
+    off: "This screen is not a layout parent; it does not wrap child routes.",
+  },
+  isProtected: {
+    on: "Visitors must be authenticated before this route is allowed.",
+    off: "No sign-in requirement is attached to this route flag.",
+  },
+  isDynamic: {
+    on: "Trailing URL segments are treated as variable parameters for this module.",
+    off: "The path is static; dynamic segments are not expected here.",
+  },
+  isMasterModule: {
+    on: "Flagged as a primary module in the hierarchy (top-level grouping).",
+    off: "Not flagged as a master module.",
+  },
+  isReadOnly: {
+    on: "Most fields are locked here—you can usually only change whether it is active.",
+    off: "You can edit this module’s details from this dialog.",
+  },
+} as const;
+
 function ModuleNameCell({
   item,
   onImageClick,
@@ -190,24 +226,17 @@ const appModuleSchema = z.object({
     .transform((v) => v.trim()),
   iconType: z
     .string()
+    .nullable()
     .optional()
     .transform((v) => (v && v !== "__none__" ? v : null)),
   iconValue: z
     .string()
+    .nullable()
     .optional()
-    .transform((v) => v?.trim() || null),
-  componentKey: z
-    .string()
-    .min(1, "Component key is required")
-    .transform((v) => v.trim()),
-  routePath: z
-    .string()
-    .min(1, "Route path is required")
-    .transform((v) => v.trim()),
-  moduleUrl: z
-    .string()
-    .min(1, "Module URL is required")
-    .transform((v) => v.trim()),
+    .transform((v) => (typeof v === "string" ? v.trim() || null : null)),
+  componentKey: z.string().transform((v) => v.trim()),
+  routePath: z.string().transform((v) => v.trim()),
+  moduleUrl: z.string().transform((v) => v.trim()),
   isDynamic: z.boolean().default(false),
   isLayout: z.boolean().default(false),
   isProtected: z.boolean().default(false),
@@ -347,6 +376,11 @@ function AppModuleForm({
     setEmojiPickerOpen(false);
   }, [initialData, reset]);
 
+  const emptyToNull = (s: string) => {
+    const t = s.trim();
+    return t === "" ? null : t;
+  };
+
   const submit = async (values: AppModuleFormValues) => {
     const payload: AppModulePayload = {
       name: values.name,
@@ -355,9 +389,9 @@ function AppModuleForm({
       description: values.description,
       iconType: values.iconType,
       iconValue: values.iconValue,
-      componentKey: values.componentKey,
-      routePath: values.routePath,
-      moduleUrl: values.moduleUrl,
+      componentKey: emptyToNull(values.componentKey),
+      routePath: emptyToNull(values.routePath),
+      moduleUrl: emptyToNull(values.moduleUrl),
       isDynamic: values.isDynamic,
       isLayout: values.isLayout,
       isProtected: values.isProtected,
@@ -368,8 +402,12 @@ function AppModuleForm({
     await onSubmit(payload, imageFile);
   };
 
+  const onSubmitInvalid = () => {
+    toast.error("Please fill all required fields on the General tab.");
+  };
+
   return (
-    <form onSubmit={handleSubmit(submit)} className="flex flex-col h-[82vh]">
+    <form onSubmit={handleSubmit(submit, onSubmitInvalid)} className="flex flex-col h-[82vh]">
       <div className="flex flex-1 min-h-0 gap-0">
         {/* Left panel: cover image - full height */}
         <div
@@ -698,7 +736,7 @@ function AppModuleForm({
                       </TableBody>
                     </table>
                   </div>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-col gap-3">
                     {(
                       [
                         "isActive",
@@ -708,29 +746,41 @@ function AppModuleForm({
                         "isMasterModule",
                         "isReadOnly",
                       ] as const
-                    ).map((key) => (
-                      <div key={key} className="flex items-center gap-2">
-                        <Controller
-                          name={key}
-                          control={control}
-                          render={({ field }) => (
-                            <Checkbox
-                              id={key}
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={key !== "isActive"}
-                              className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                            />
-                          )}
-                        />
-                        <Label htmlFor={key} className="font-normal text-sm">
-                          {key
-                            .replace(/^is/, "")
-                            .replace(/([A-Z])/g, " $1")
-                            .trim()}
-                        </Label>
-                      </div>
-                    ))}
+                    ).map((key) => {
+                      const isOn = Boolean(watch(key));
+                      const note = APP_MODULE_PARAMETER_FLAG_NOTES[key][isOn ? "on" : "off"];
+                      const title = APP_MODULE_PARAMETER_FLAG_TITLES[key];
+                      return (
+                        <div key={key} className="flex items-start gap-2">
+                          <Controller
+                            name={key}
+                            control={control}
+                            render={({ field }) => (
+                              <Checkbox
+                                id={key}
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                disabled={key !== "isActive"}
+                                className="mt-0.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                              />
+                            )}
+                          />
+                          <Label
+                            htmlFor={key}
+                            className={`flex min-w-0 flex-1 items-start gap-2 text-sm leading-snug ${
+                              key === "isActive" ? "cursor-pointer" : "cursor-default"
+                            }`}
+                          >
+                            <span className="min-w-36 shrink-0 font-semibold text-foreground">
+                              {title}
+                            </span>
+                            <span className="min-w-0 font-normal text-muted-foreground">
+                              {note}
+                            </span>
+                          </Label>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </TabsContent>
@@ -973,6 +1023,17 @@ export default function AppModulePage() {
             >
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Download</span>
+            </Button>
+            <Button
+              type="button"
+              className="flex items-center gap-2 flex-shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => {
+                setSelected(null);
+                setIsDialogOpen(true);
+              }}
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Add</span>
             </Button>
           </div>
 

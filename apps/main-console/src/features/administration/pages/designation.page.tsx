@@ -49,14 +49,6 @@ const designationSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value ? value.trim() : "")),
-  color: z
-    .string()
-    .optional()
-    .transform((v) => (v ? v.trim() : null)),
-  bgColor: z
-    .string()
-    .optional()
-    .transform((v) => (v ? v.trim() : null)),
   isActive: z.boolean().default(true),
 });
 
@@ -82,8 +74,6 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
       name: initialData?.name ?? "",
       code: initialData?.code ?? "",
       description: initialData?.description ?? "",
-      color: initialData?.color ?? "",
-      bgColor: initialData?.bgColor ?? "",
       isActive: initialData?.isActive ?? true,
     },
   });
@@ -93,8 +83,6 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
       name: initialData?.name ?? "",
       code: initialData?.code ?? "",
       description: initialData?.description ?? "",
-      color: initialData?.color ?? "",
-      bgColor: initialData?.bgColor ?? "",
       isActive: initialData?.isActive ?? true,
     });
   }, [initialData, reset]);
@@ -104,8 +92,8 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
       name: values.name,
       code: values.code || null,
       description: values.description || null,
-      color: values.color || null,
-      bgColor: values.bgColor || null,
+      color: initialData?.color ?? null,
+      bgColor: initialData?.bgColor ?? null,
       isActive: values.isActive,
     });
   };
@@ -124,16 +112,6 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea id="description" className="min-h-[80px] resize-y" {...register("description")} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="color">Color</Label>
-          <Input id="color" type="text" placeholder="#059669" {...register("color")} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="bgColor">Background Color</Label>
-          <Input id="bgColor" type="text" placeholder="#d1fae5" {...register("bgColor")} />
-        </div>
       </div>
       <div className="flex items-center gap-2">
         <Controller

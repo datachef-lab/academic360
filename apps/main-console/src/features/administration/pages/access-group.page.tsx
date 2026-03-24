@@ -137,6 +137,8 @@ interface ModuleConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "add" | "edit";
+  /** When true (editing an existing access group), module + type cannot be changed in this dialog. */
+  lockModuleAndType: boolean;
   initialValue: FeatureFormValue | null;
   appModules: AppModuleDto[];
   usedModuleIds: number[];
@@ -152,6 +154,7 @@ function ModuleConfigDialog({
   open,
   onOpenChange,
   mode,
+  lockModuleAndType,
   initialValue,
   appModules,
   usedModuleIds,
@@ -162,6 +165,7 @@ function ModuleConfigDialog({
   regulationTypes,
   onSave,
 }: ModuleConfigDialogProps) {
+  const disableModuleTypePicker = mode === "edit" && lockModuleAndType;
   const toProgramCourseSelections = (
     arr:
       | {
@@ -348,9 +352,9 @@ function ModuleConfigDialog({
               <Select
                 value={appModuleId ? String(appModuleId) : ""}
                 onValueChange={(v) => setAppModuleId(Number(v))}
-                disabled={mode === "edit"}
+                disabled={disableModuleTypePicker}
               >
-                <SelectTrigger disabled={mode === "edit"}>
+                <SelectTrigger disabled={disableModuleTypePicker}>
                   <SelectValue placeholder="Select module" />
                 </SelectTrigger>
                 <SelectContent>
@@ -373,9 +377,9 @@ function ModuleConfigDialog({
               <Select
                 value={type}
                 onValueChange={(v) => setType(v as "STATIC" | "CONDITIONAL")}
-                disabled={mode === "edit"}
+                disabled={disableModuleTypePicker}
               >
-                <SelectTrigger disabled={mode === "edit"}>
+                <SelectTrigger disabled={disableModuleTypePicker}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -570,7 +574,10 @@ const accessGroupSchema = z.object({
     .min(1, "Name is required")
     .transform((v) => v.trim()),
   type: z.enum(["BASIC", "ADD-ON", "SPECIAL"]).optional(),
-  userStatusId: z.number().int().positive("User status is required"),
+  userStatusId: z
+    .number({ invalid_type_error: "User status is required" })
+    .int()
+    .min(1, "User status is required"),
   code: z
     .string()
     .optional()
@@ -584,13 +591,16 @@ const accessGroupSchema = z.object({
     .optional()
     .transform((v) => v?.trim() || null),
   isActive: z.boolean().default(true),
-  applications: z.array(z.object({ type: z.enum([...APPLICATION_OPTIONS]) })).optional(),
+  applications: z
+    .array(z.object({ type: z.enum([...APPLICATION_OPTIONS]) }))
+    .max(1, "Only one application can be selected")
+    .optional(),
   designations: z.array(z.object({ designationId: z.number().int().positive() })).optional(),
   userTypes: z
     .array(z.object({ userTypeId: z.number().int().positive() }))
-    .optional()
-    .refine((arr) => !arr || arr.length <= 1, "Only one user type can be selected"),
-  features: z.array(featureItemSchema).optional(),
+    .min(1, "Select a user type")
+    .max(1, "Only one user type can be selected"),
+  features: z.array(featureItemSchema).min(1, "Include at least one module feature"),
 });
 
 type AccessGroupFormValues = z.infer<typeof accessGroupSchema>;
@@ -631,6 +641,7 @@ function AccessGroupForm({
     reset,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<AccessGroupFormValues>({
     resolver: zodResolver(accessGroupSchema),
@@ -649,18 +660,12 @@ function AccessGroupForm({
     },
   });
 
-  const {
-    fields: featureFields,
-    append: appendFeature,
-    remove: removeFeature,
-  } = useFieldArray({
+  const { append: appendFeature, remove: removeFeature } = useFieldArray({
     control,
     name: "features",
   });
 
-  const [moduleConfigState, setModuleConfigState] = useState<
-    { mode: "add" } | { mode: "edit"; index: number } | null
-  >(null);
+  const [featureDialogIndex, setFeatureDialogIndex] = useState<number | null>(null);
 
   const rootUserStatuses = useMemo(
     () => userStatuses.filter((s) => !s.parentUserStatusMaster),
@@ -690,20 +695,44 @@ function AccessGroupForm({
   }, [childUserTypes, accessGroupType, parentUserTypeMap]);
 
   const isEditMode = initialData != null;
+  const initiallyIncludedModuleIds = useMemo(
+    () =>
+      new Set(
+        initialData?.features
+          ?.map((f) => f.appModule?.id)
+          .filter((id): id is number => id != null) ?? [],
+      ),
+    [initialData],
+  );
+
+  const applicationsWatch = watch("applications");
+  const selectedApplicationTypes = useMemo(
+    () => applicationsWatch?.map((a) => a.type) ?? [],
+    [applicationsWatch],
+  );
+
+  const catalogModules = useMemo(() => {
+    if (selectedApplicationTypes.length === 0) return [];
+    const set = new Set(selectedApplicationTypes);
+    return appModules
+      .filter((m) => m.id != null && m.application && set.has(m.application))
+      .slice()
+      .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+  }, [appModules, selectedApplicationTypes]);
+
+  useEffect(() => {
+    const catalogIds = new Set(catalogModules.map((m) => m.id!));
+    const features = getValues("features") ?? [];
+    const next = features.filter((f) => catalogIds.has(f.appModuleId));
+    if (next.length !== features.length) {
+      setValue("features", next, { shouldDirty: true });
+    }
+  }, [catalogModules, getValues, setValue]);
 
   const usedModuleIds =
     watch("features")
       ?.map((f) => f.appModuleId)
       .filter((id): id is number => typeof id === "number") ?? [];
-  const availableModules = useMemo(
-    () =>
-      appModules.filter((m) => {
-        const id = m.id;
-        return id != null && !usedModuleIds.includes(id);
-      }),
-    [appModules, usedModuleIds],
-  );
-
   const selectedUserTypeIds = watch("userTypes") ?? [];
   const selectedUtId = selectedUserTypeIds[0]?.userTypeId;
   const selectedUt = selectedUtId ? childUserTypes.find((u) => u.id === selectedUtId) : null;
@@ -754,7 +783,10 @@ function AccessGroupForm({
       description: initialData.description ?? "",
       remarks: initialData.remarks ?? "",
       isActive: initialData.isActive ?? true,
-      applications: initialData.applications?.map((a) => ({ type: a.type })) ?? [],
+      applications:
+        initialData.applications?.length && initialData.applications[0]
+          ? [{ type: initialData.applications[0].type }]
+          : [],
       designations:
         initialData.designations
           ?.filter((d) => d.designation?.id != null)
@@ -842,23 +874,39 @@ function AccessGroupForm({
     await onSubmit(payload);
   };
 
-  const addFeature = () => {
-    if (availableModules.length > 0) {
-      setModuleConfigState({ mode: "add" });
+  const handleModuleConfigSave = (value: FeatureFormValue) => {
+    if (featureDialogIndex != null) {
+      setValue(`features.${featureDialogIndex}`, value);
     }
+    setFeatureDialogIndex(null);
   };
 
-  const handleModuleConfigSave = (value: FeatureFormValue) => {
-    if (moduleConfigState?.mode === "add") {
-      appendFeature(value);
-    } else if (moduleConfigState?.mode === "edit" && moduleConfigState.index !== undefined) {
-      setValue(`features.${moduleConfigState.index}`, value);
+  const toggleModuleInFeatures = (appModuleId: number) => {
+    const feats = getValues("features") ?? [];
+    const idx = feats.findIndex((f) => f.appModuleId === appModuleId);
+    if (idx >= 0) {
+      removeFeature(idx);
+      return;
     }
-    setModuleConfigState(null);
+    appendFeature({
+      appModuleId,
+      type: "STATIC",
+      isAllowed: true,
+      permissions: ["READ"],
+    });
+  };
+
+  const featureIndexForModule = (appModuleId: number) =>
+    (watch("features") ?? []).findIndex((f) => f.appModuleId === appModuleId);
+
+  const onSubmitInvalid = () => {
+    toast.error(
+      "Please complete required fields: user status, user type, application, and at least one module.",
+    );
   };
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="flex flex-col min-h-0 flex-1">
+    <form onSubmit={handleSubmit(submit, onSubmitInvalid)} className="flex flex-col min-h-0 flex-1">
       <div className="flex gap-6 overflow-hidden flex-1 min-h-0">
         {/* General */}
         <section className="flex-1 min-w-[200px] flex flex-col overflow-y-auto border-r pr-4">
@@ -920,7 +968,11 @@ function AccessGroupForm({
                   control={control}
                   render={({ field }) => (
                     <Select
-                      value={field.value ? String(field.value) : ""}
+                      value={
+                        typeof field.value === "number" && field.value > 0
+                          ? String(field.value)
+                          : ""
+                      }
                       onValueChange={(v) => field.onChange(Number(v))}
                       disabled={isEditMode}
                     >
@@ -954,46 +1006,6 @@ function AccessGroupForm({
               <Label htmlFor="remarks">Remarks</Label>
               <Input id="remarks" {...register("remarks")} />
             </div>
-            <div className="pt-2">
-              <Label className="text-sm">Applications</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Select applications this access group applies to.
-              </p>
-              <Controller
-                name="applications"
-                control={control}
-                render={({ field }) => (
-                  <div className="grid grid-cols-1 gap-3">
-                    {APPLICATION_OPTIONS.map((opt) => {
-                      const checked = field.value?.some((a) => a.type === opt);
-                      const disabled = isEditMode && checked;
-                      return (
-                        <div key={opt} className="flex items-center gap-2 p-2 rounded border">
-                          <Checkbox
-                            id={`app-${opt}`}
-                            checked={checked}
-                            disabled={disabled}
-                            onCheckedChange={(checked) => {
-                              if (disabled) return;
-                              const current = field.value ?? [];
-                              if (checked) {
-                                field.onChange([...current, { type: opt }]);
-                              } else {
-                                field.onChange(current.filter((a) => a.type !== opt));
-                              }
-                            }}
-                            className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 data-[state=checked]:text-white"
-                          />
-                          <Label htmlFor={`app-${opt}`} className="cursor-pointer">
-                            {toSentenceCase(opt)}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              />
-            </div>
           </div>
         </section>
 
@@ -1005,7 +1017,7 @@ function AccessGroupForm({
           </div>
           <div className="space-y-4 pt-2">
             <div>
-              <Label>User Types</Label>
+              <Label>User Types *</Label>
               <p className="text-xs text-muted-foreground mb-2">
                 Assign this group to users with these types.
               </p>
@@ -1055,6 +1067,9 @@ function AccessGroupForm({
                   </div>
                 )}
               />
+              {errors.userTypes?.message && (
+                <p className="text-sm text-red-600">{errors.userTypes.message}</p>
+              )}
             </div>
             {selectedUt != null && !isParentStudent ? (
               <div>
@@ -1113,22 +1128,54 @@ function AccessGroupForm({
             </h3>
           </div>
           <div className="space-y-4 pt-2">
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addFeature}
-                disabled={availableModules.length === 0}
-              >
-                <PlusCircle className="h-4 w-4 mr-1" />
-                Add module
-              </Button>
+            <div className="max-w-md space-y-1.5">
+              <Controller
+                name="applications"
+                control={control}
+                render={({ field }) => {
+                  const selectedType = field.value?.[0]?.type;
+                  return (
+                    <Select
+                      value={selectedType ?? "__none__"}
+                      onValueChange={(v) => {
+                        if (v === "__none__") {
+                          field.onChange([]);
+                          return;
+                        }
+                        field.onChange([{ type: v as (typeof APPLICATION_OPTIONS)[number] }]);
+                      }}
+                      disabled={isEditMode}
+                    >
+                      <SelectTrigger disabled={isEditMode} className="w-full">
+                        <SelectValue placeholder="Select application" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">—</SelectItem>
+                        {APPLICATION_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {toSentenceCase(opt)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                }}
+              />
+              {errors.applications?.message && (
+                <p className="text-sm text-red-600 mt-1">{errors.applications.message}</p>
+              )}
             </div>
+            {errors.features?.message && (
+              <p className="text-sm text-red-600">{errors.features.message}</p>
+            )}
             <div className="border rounded-md overflow-hidden border-border [&_td]:border [&_th]:border">
               <Table>
                 <TableHeader>
                   <TableRow className="border-b bg-slate-50 dark:bg-slate-800/50">
+                    <TableHead
+                      className="border-r font-medium w-10 text-center"
+                      aria-label="Include"
+                    />
                     <TableHead className="border-r font-medium">Sr. No</TableHead>
                     <TableHead className="border-r font-medium">Feature</TableHead>
                     <TableHead className="border-r font-medium">Type</TableHead>
@@ -1138,53 +1185,80 @@ function AccessGroupForm({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {featureFields.length === 0 ? (
+                  {selectedApplicationTypes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
-                        No modules added. Click &quot;Add module&quot; to configure.
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                        Select an application to load app modules.
+                      </TableCell>
+                    </TableRow>
+                  ) : catalogModules.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                        No app modules found for the selected application.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    featureFields.map((field, idx) => {
-                      const feat = watch(`features.${idx}`);
-                      const mod =
-                        feat?.appModuleId != null
-                          ? appModules.find((m) => m.id === feat.appModuleId)
-                          : null;
+                    catalogModules.map((mod, rowIdx) => {
+                      const mid = mod.id!;
+                      const fIdx = featureIndexForModule(mid);
+                      const included = fIdx >= 0;
+                      const feat = included ? watch(`features.${fIdx}`) : null;
                       const typeVal = feat?.type ?? "STATIC";
                       const perms = feat?.permissions ?? [];
+                      const checkboxDisabled =
+                        isEditMode && included && initiallyIncludedModuleIds.has(mid);
                       return (
-                        <TableRow key={field.id} className="border-b">
-                          <TableCell className="border-r">{idx + 1}</TableCell>
-                          <TableCell className="border-r">{mod?.name ?? "—"}</TableCell>
+                        <TableRow key={mid} className="border-b">
+                          <TableCell className="border-r text-center align-middle">
+                            <Checkbox
+                              checked={included}
+                              disabled={checkboxDisabled}
+                              onCheckedChange={() => {
+                                if (checkboxDisabled) return;
+                                toggleModuleInFeatures(mid);
+                              }}
+                              className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 data-[state=checked]:text-white"
+                              aria-label={`Include ${mod.name ?? "module"}`}
+                            />
+                          </TableCell>
+                          <TableCell className="border-r">{rowIdx + 1}</TableCell>
+                          <TableCell className="border-r">{mod.name ?? "—"}</TableCell>
                           <TableCell className="border-r">
-                            <Badge
-                              variant="outline"
-                              className={
-                                typeVal === "CONDITIONAL"
-                                  ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300"
-                                  : "bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300"
-                              }
-                            >
-                              {typeVal}
-                            </Badge>
+                            {included ? (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  typeVal === "CONDITIONAL"
+                                    ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300"
+                                    : "bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300"
+                                }
+                              >
+                                {typeVal}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="border-r">
-                            <div className="flex flex-wrap gap-1">
-                              {perms.length === 0 ? (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              ) : (
-                                perms.map((p) => (
-                                  <Badge
-                                    key={p}
-                                    variant="outline"
-                                    className="text-xs bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30"
-                                  >
-                                    {getPermissionLabel(p)}
-                                  </Badge>
-                                ))
-                              )}
-                            </div>
+                            {included ? (
+                              <div className="flex flex-wrap gap-1">
+                                {perms.length === 0 ? (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                ) : (
+                                  perms.map((p) => (
+                                    <Badge
+                                      key={p}
+                                      variant="outline"
+                                      className="text-xs bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30"
+                                    >
+                                      {getPermissionLabel(p)}
+                                    </Badge>
+                                  ))
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="border-r">0</TableCell>
                           <TableCell className="border-r">
@@ -1194,7 +1268,10 @@ function AccessGroupForm({
                                 variant="outline"
                                 size="icon"
                                 className="h-7 w-7"
-                                onClick={() => setModuleConfigState({ mode: "edit", index: idx })}
+                                disabled={!included}
+                                onClick={() =>
+                                  included && fIdx >= 0 ? setFeatureDialogIndex(fIdx) : undefined
+                                }
                                 title="Edit"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -1204,8 +1281,9 @@ function AccessGroupForm({
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => removeFeature(idx)}
-                                title="Remove"
+                                disabled={!included || checkboxDisabled}
+                                onClick={() => included && fIdx >= 0 && removeFeature(fIdx)}
+                                title="Remove from group"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -1221,19 +1299,18 @@ function AccessGroupForm({
           </div>
 
           <ModuleConfigDialog
-            open={moduleConfigState !== null}
-            onOpenChange={(open) => !open && setModuleConfigState(null)}
-            mode={moduleConfigState?.mode ?? "add"}
+            open={featureDialogIndex !== null}
+            onOpenChange={(open) => !open && setFeatureDialogIndex(null)}
+            mode="edit"
+            lockModuleAndType={isEditMode}
             initialValue={
-              moduleConfigState?.mode === "edit" && moduleConfigState.index !== undefined
-                ? (watch(`features.${moduleConfigState.index}`) ?? null)
-                : null
+              featureDialogIndex != null ? (watch(`features.${featureDialogIndex}`) ?? null) : null
             }
             appModules={appModules}
             usedModuleIds={
-              moduleConfigState?.mode === "edit" && moduleConfigState.index !== undefined
+              featureDialogIndex != null
                 ? usedModuleIds.filter(
-                    (id) => id !== watch(`features.${moduleConfigState.index}`)?.appModuleId,
+                    (id) => id !== watch(`features.${featureDialogIndex}`)?.appModuleId,
                   )
                 : usedModuleIds
             }

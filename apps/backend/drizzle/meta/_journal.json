@@ -743,6 +743,27 @@
       "when": 1774263179365,
       "tag": "0105_icy_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1774335786321,
+      "tag": "0106_thin_ozymandias",
+      "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1774337431781,
+      "tag": "0107_tranquil_deadpool",
+      "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1774338413542,
+      "tag": "0108_freezing_molly_hayes",
+      "breakpoints": true
     }
   ]
 }

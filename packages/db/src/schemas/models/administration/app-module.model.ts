@@ -12,9 +12,9 @@ export const appModuleModel = pgTable("app_modules", {
    description: varchar({ length: 1000 }).notNull(),
    iconType: appModuleIconEnum(),
    iconValue: varchar({ length: 255 }),
-   componentKey: varchar({ length: 255 }).notNull().unique(), // SCREAMING_SNAKE filename e.g. FEES_STRUCTURE_PAGE
-   routePath: varchar({ length: 1000 }).notNull().unique(), // /dashboard/fees-structure
-   moduleUrl: varchar({ length: 1000 }).notNull(),
+   componentKey: varchar({ length: 255 }).unique(), // SCREAMING_SNAKE filename e.g. FEES_STRUCTURE_PAGE
+   routePath: varchar({ length: 1000 }).unique(), // /dashboard/fees-structure
+   moduleUrl: varchar({ length: 1000 }),
    image: varchar({ length: 5000 }),
 
    isDynamic: boolean().notNull().default(false),

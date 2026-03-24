@@ -11,9 +11,9 @@ export type AppModulePayload = {
   description: string;
   iconType?: string | null;
   iconValue?: string | null;
-  componentKey: string;
-  routePath: string;
-  moduleUrl: string;
+  componentKey?: string | null;
+  routePath?: string | null;
+  moduleUrl?: string | null;
   image?: string | null;
   isDynamic?: boolean;
   isLayout?: boolean;

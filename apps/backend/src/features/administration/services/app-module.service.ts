@@ -21,7 +21,7 @@ export async function loadDefaultAppModules() {
       .where(
         ilike(
           appModuleModel.componentKey,
-          primaryAppModule.componentKey.trim(),
+          primaryAppModule.componentKey!.trim(),
         ),
       );
 
@@ -87,6 +87,15 @@ function normaliseAppModulePayload<T extends Partial<AppModule | AppModuleT>>(
     clone.image = clone.image.trim() as T["image"];
   }
 
+  for (const key of ["componentKey", "routePath", "moduleUrl"] as const) {
+    const v = (clone as Record<string, unknown>)[key];
+    if (v === undefined) continue;
+    if (v === null) continue;
+    if (typeof v === "string" && v.trim() === "") {
+      (clone as Record<string, unknown>)[key] = null;
+    }
+  }
+
   return clone;
 }
 
@@ -109,10 +118,12 @@ async function ensureUniqueName(
 }
 
 async function ensureUniqueComponentKey(
-  componentKey: string,
+  componentKey: string | null | undefined,
   excludeId?: number,
 ): Promise<boolean> {
-  const trimmed = componentKey.trim();
+  if (componentKey == null) return false;
+  const trimmed = String(componentKey).trim();
+  if (!trimmed) return false;
   const whereClause =
     excludeId !== undefined
       ? and(
@@ -206,14 +217,6 @@ export async function createAppModule(
 
   if (!payload.application) {
     throw new Error("Application is required.");
-  }
-
-  if (!payload.moduleUrl) {
-    throw new Error("Module URL is required.");
-  }
-
-  if (!payload.componentKey) {
-    throw new Error("Component key is required.");
   }
 
   if (await ensureUniqueName(payload.name)) {
@@ -319,15 +322,8 @@ async function upsertChildAppModule(
       .returning();
     return updated ?? null;
   } else {
-    if (
-      !payload.name ||
-      !payload.application ||
-      !payload.moduleUrl ||
-      !payload.componentKey
-    ) {
-      throw new Error(
-        "Child module must have name, application, moduleUrl, and componentKey.",
-      );
+    if (!payload.name || !payload.application) {
+      throw new Error("Child module must have name and application.");
     }
     if (await ensureUniqueName(payload.name)) {
       throw new Error(`App module name "${payload.name}" already exists.`);
