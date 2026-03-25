@@ -179,7 +179,7 @@ function UserStatusForm({
           />
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4">
+      {/* <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="color">Color</Label>
           <Input id="color" type="text" placeholder="#059669" {...register("color")} />
@@ -188,7 +188,7 @@ function UserStatusForm({
           <Label htmlFor="bgColor">Background Color</Label>
           <Input id="bgColor" type="text" placeholder="#d1fae5" {...register("bgColor")} />
         </div>
-      </div>
+      </div> */}
       <div className="flex items-center gap-2">
         <Controller
           name="isActive"

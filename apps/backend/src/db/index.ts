@@ -89,8 +89,8 @@ export const connectToDatabase = async () => {
 
     loadDefaultSubjectSelectionMetas();
 
-    loadDefaultUserTypes();
-    loadDefaultUserStatusMasters();
+    // loadDefaultUserTypes();
+    // loadDefaultUserStatusMasters();
     loadDefaultAppModules();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
