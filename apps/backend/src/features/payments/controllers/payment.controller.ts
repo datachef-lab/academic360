@@ -145,6 +145,7 @@ export const initiateFeePaymentHandler = async (
       feeStudentMappingId,
       amount,
       studentId,
+      returnUrl,
       email,
       mobile,
       firstName,
@@ -153,6 +154,7 @@ export const initiateFeePaymentHandler = async (
       feeStudentMappingId: number;
       amount: string | number;
       studentId: number;
+      returnUrl?: string;
       email?: string;
       mobile?: string;
       firstName?: string;
@@ -181,6 +183,7 @@ export const initiateFeePaymentHandler = async (
       orderId,
       amount: amountStr,
       gatewayName: "PAYTM",
+      remarks: returnUrl || null,
     });
 
     const custId = `FEE_${studentId}_${feeStudentMappingId}`;
@@ -457,10 +460,30 @@ export const paymentCallbackHandler = async (
       // Continue to redirect even if update fails - the payment exists
     }
 
-    const frontendUrl = process.env.CORS_ORIGIN || "http://localhost:5173";
+    const fallbackUrl = process.env.CORS_ORIGIN || "http://localhost:5173";
+    const resolvedReturnUrl =
+      payment.remarks && /^https?:\/\//i.test(payment.remarks)
+        ? payment.remarks
+        : null;
+    const frontendUrl = resolvedReturnUrl
+      ? new URL(resolvedReturnUrl).origin
+      : fallbackUrl;
     const paymentResult = status === "TXN_SUCCESS" ? "success" : "failed";
+    const respMsg =
+      body.RESPMSG ??
+      body.respMsg ??
+      (paymentResult === "success"
+        ? "Payment recorded successfully"
+        : "Payment failed");
 
-    let redirectUrl = `${frontendUrl}/dashboard/fees/student-fees`;
+    const redirect = resolvedReturnUrl
+      ? new URL(resolvedReturnUrl)
+      : new URL("/dashboard/fees/student-fees", frontendUrl);
+    redirect.searchParams.set("payment", paymentResult);
+    redirect.searchParams.set("orderId", orderId);
+    redirect.searchParams.set("respMsg", respMsg);
+
+    let redirectUrl = redirect.toString();
     let studentUid = "";
 
     // For FEE payments: get student UID for search param
@@ -479,17 +502,13 @@ export const paymentCallbackHandler = async (
 
           if (student?.uid) {
             studentUid = student.uid;
-            redirectUrl = `${redirectUrl}?search=${encodeURIComponent(student.uid)}`;
+            redirect.searchParams.set("search", student.uid);
+            redirectUrl = redirect.toString();
           }
         }
       } catch (mappingError) {
         console.error("Failed to fetch student UID:", mappingError);
       }
-    }
-
-    // Append payment status if no search param was added
-    if (!studentUid) {
-      redirectUrl = `${redirectUrl}?payment=${paymentResult}&orderId=${orderId}`;
     }
 
     res.setHeader("Content-Type", "text/html");
@@ -502,7 +521,8 @@ export const paymentCallbackHandler = async (
                 type: "PAYTM_PAYMENT_RESULT", 
                 payment: "${paymentResult}", 
                 orderId: "${orderId}", 
-                studentUid: "${studentUid}" 
+                studentUid: "${studentUid}",
+                respMsg: ${JSON.stringify(respMsg)}
               }, "${frontendUrl}"); 
             } catch(e) {}
             window.close();

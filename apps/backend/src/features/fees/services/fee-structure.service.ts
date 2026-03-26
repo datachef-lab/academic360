@@ -40,6 +40,7 @@ import {
 } from "@repo/db/schemas/models/academics";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import { promotionModel } from "@repo/db/schemas/models/batches";
+import { paymentModel } from "@repo/db/schemas/models/payments";
 import {
   and,
   eq,
@@ -1474,6 +1475,23 @@ export const deleteFeeStructure = async (
         eq(feeGroupPromotionMappingModel.promotionId, promotionModel.id),
       )
       .where(eq(feeStudentMappingModel.feeStructureId, id));
+
+    // Delete dependent payment rows first to satisfy FK
+    // payments.feeStudentMappingId -> fee_student_mappings.id.
+    const mappingIds = await tx
+      .select({ id: feeStudentMappingModel.id })
+      .from(feeStudentMappingModel)
+      .where(eq(feeStudentMappingModel.feeStructureId, id));
+
+    if (mappingIds.length > 0) {
+      await tx.delete(paymentModel).where(
+        inArray(
+          paymentModel.feeStudentMappingId,
+          mappingIds.map((m) => m.id),
+        ),
+      );
+    }
+
     await tx
       .delete(feeStudentMappingModel)
       .where(eq(feeStudentMappingModel.feeStructureId, id));

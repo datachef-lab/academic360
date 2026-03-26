@@ -1,0 +1,311 @@
+import { db } from "@/db/index.js";
+import {
+  academicYearModel,
+  careerProgressionFormCertificateModel,
+  careerProgressionFormFieldModel,
+  careerProgressionFormModel,
+  certificateMasterModel,
+  createCareerProgressionFormSchema,
+  studentModel,
+} from "@repo/db/schemas";
+import { and, asc, eq } from "drizzle-orm";
+import type {
+  CareerProgressionFormCertificateDto,
+  CareerProgressionFormDto,
+} from "@repo/db/dtos/academics";
+import { findCareerProgressionFormFieldsByCertificateId } from "./career-progression-form-field.service.js";
+
+export type CareerProgressionSubmitPayload = {
+  studentId: number;
+  academicYearId: number;
+  certificates: Array<{
+    certificateMasterId: number;
+    fields: Array<{
+      certificateFieldMasterId: number;
+      certificateFieldOptionMasterId?: number | null;
+      value?: string | null;
+    }>;
+  }>;
+};
+
+export async function careerProgressionFormRowToDto(
+  row: typeof careerProgressionFormModel.$inferSelect,
+): Promise<CareerProgressionFormDto | null> {
+  const [ay] = await db
+    .select()
+    .from(academicYearModel)
+    .where(eq(academicYearModel.id, row.academicYearId));
+
+  if (!ay) return null;
+
+  const certificateRows = await db
+    .select()
+    .from(careerProgressionFormCertificateModel)
+    .where(
+      eq(careerProgressionFormCertificateModel.careerProgressionFormId, row.id),
+    )
+    .orderBy(asc(careerProgressionFormCertificateModel.id));
+
+  const certificates: CareerProgressionFormCertificateDto[] = [];
+  for (const certRow of certificateRows) {
+    const [certificateMaster] = await db
+      .select()
+      .from(certificateMasterModel)
+      .where(eq(certificateMasterModel.id, certRow.certificateMasterId));
+
+    if (!certificateMaster) continue;
+
+    const fields = await findCareerProgressionFormFieldsByCertificateId(
+      certRow.id,
+    );
+
+    certificates.push({
+      id: certRow.id,
+      careerProgressionFormId: certRow.careerProgressionFormId,
+      createdAt: certRow.createdAt,
+      updatedAt: certRow.updatedAt,
+      certificateMaster,
+      fields,
+    });
+  }
+
+  return {
+    id: row.id,
+    studentId: row.studentId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    academicYear: ay,
+    certificates,
+  };
+}
+
+export async function findAllCareerProgressionForms(
+  studentId?: number,
+): Promise<CareerProgressionFormDto[]> {
+  const rows =
+    studentId != null
+      ? await db
+          .select()
+          .from(careerProgressionFormModel)
+          .where(eq(careerProgressionFormModel.studentId, studentId))
+          .orderBy(asc(careerProgressionFormModel.id))
+      : await db
+          .select()
+          .from(careerProgressionFormModel)
+          .orderBy(asc(careerProgressionFormModel.id));
+
+  const dtos: Array<CareerProgressionFormDto | null> = await Promise.all(
+    rows.map((r) => careerProgressionFormRowToDto(r)),
+  );
+  return dtos.filter((d): d is CareerProgressionFormDto => d !== null);
+}
+
+export async function findCareerProgressionFormById(
+  id: number,
+): Promise<CareerProgressionFormDto | null> {
+  const [row] = await db
+    .select()
+    .from(careerProgressionFormModel)
+    .where(eq(careerProgressionFormModel.id, id));
+
+  if (!row) return null;
+  return careerProgressionFormRowToDto(row);
+}
+
+async function assertAcademicYearExists(id: number): Promise<boolean> {
+  const [y] = await db
+    .select({ id: academicYearModel.id })
+    .from(academicYearModel)
+    .where(eq(academicYearModel.id, id));
+  return !!y;
+}
+
+async function assertStudentExists(id: number): Promise<boolean> {
+  const [s] = await db
+    .select({ id: studentModel.id })
+    .from(studentModel)
+    .where(eq(studentModel.id, id));
+  return !!s;
+}
+
+export async function createCareerProgressionForm(
+  data: typeof createCareerProgressionFormSchema._type,
+): Promise<CareerProgressionFormDto | null> {
+  if (!(await assertAcademicYearExists(data.academicYearId))) return null;
+  if (!(await assertStudentExists(data.studentId))) return null;
+
+  const [created] = await db
+    .insert(careerProgressionFormModel)
+    .values(data)
+    .returning();
+
+  if (!created) return null;
+  return careerProgressionFormRowToDto(created);
+}
+
+export async function updateCareerProgressionForm(
+  id: number,
+  data: Partial<typeof createCareerProgressionFormSchema._type>,
+): Promise<CareerProgressionFormDto | null> {
+  const [existing] = await db
+    .select()
+    .from(careerProgressionFormModel)
+    .where(eq(careerProgressionFormModel.id, id));
+
+  if (!existing) return null;
+
+  if (data.academicYearId != null) {
+    if (!(await assertAcademicYearExists(data.academicYearId))) return null;
+  }
+  if (data.studentId != null) {
+    if (!(await assertStudentExists(data.studentId))) return null;
+  }
+
+  const [updated] = await db
+    .update(careerProgressionFormModel)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(careerProgressionFormModel.id, id))
+    .returning();
+
+  if (!updated) return null;
+  return careerProgressionFormRowToDto(updated);
+}
+
+export async function deleteCareerProgressionForm(
+  id: number,
+): Promise<boolean> {
+  const [existing] = await db
+    .select()
+    .from(careerProgressionFormModel)
+    .where(eq(careerProgressionFormModel.id, id));
+
+  if (!existing) return false;
+
+  const certificates = await db
+    .select({ id: careerProgressionFormCertificateModel.id })
+    .from(careerProgressionFormCertificateModel)
+    .where(
+      eq(careerProgressionFormCertificateModel.careerProgressionFormId, id),
+    );
+
+  const certificateIdSet = new Set(certificates.map((c) => c.id));
+
+  if (certificateIdSet.size > 0) {
+    const allFields = await db.select().from(careerProgressionFormFieldModel);
+    const fieldIdsToDelete = allFields
+      .filter((f) => certificateIdSet.has(f.careerProgressionFormCertificateId))
+      .map((f) => f.id);
+
+    for (const fieldId of fieldIdsToDelete) {
+      await db
+        .delete(careerProgressionFormFieldModel)
+        .where(eq(careerProgressionFormFieldModel.id, fieldId));
+    }
+  }
+
+  await db
+    .delete(careerProgressionFormCertificateModel)
+    .where(
+      eq(careerProgressionFormCertificateModel.careerProgressionFormId, id),
+    );
+
+  const deleted = await db
+    .delete(careerProgressionFormModel)
+    .where(eq(careerProgressionFormModel.id, id))
+    .returning({ id: careerProgressionFormModel.id });
+
+  return deleted.length > 0;
+}
+
+export async function submitCareerProgressionFormForCurrentYear(
+  data: CareerProgressionSubmitPayload,
+): Promise<CareerProgressionFormDto | null> {
+  if (!(await assertAcademicYearExists(data.academicYearId))) return null;
+  if (!(await assertStudentExists(data.studentId))) return null;
+
+  const [existingForm] = await db
+    .select()
+    .from(careerProgressionFormModel)
+    .where(
+      and(
+        eq(careerProgressionFormModel.studentId, data.studentId),
+        eq(careerProgressionFormModel.academicYearId, data.academicYearId),
+      ),
+    )
+    .limit(1);
+
+  const form =
+    existingForm ??
+    (
+      await db
+        .insert(careerProgressionFormModel)
+        .values({
+          studentId: data.studentId,
+          academicYearId: data.academicYearId,
+        })
+        .returning()
+    )[0];
+
+  if (!form) return null;
+
+  const existingCertificates = await db
+    .select({ id: careerProgressionFormCertificateModel.id })
+    .from(careerProgressionFormCertificateModel)
+    .where(
+      eq(
+        careerProgressionFormCertificateModel.careerProgressionFormId,
+        form.id,
+      ),
+    );
+
+  for (const cert of existingCertificates) {
+    const fields = await db
+      .select({ id: careerProgressionFormFieldModel.id })
+      .from(careerProgressionFormFieldModel)
+      .where(
+        eq(
+          careerProgressionFormFieldModel.careerProgressionFormCertificateId,
+          cert.id,
+        ),
+      );
+
+    for (const field of fields) {
+      await db
+        .delete(careerProgressionFormFieldModel)
+        .where(eq(careerProgressionFormFieldModel.id, field.id));
+    }
+  }
+
+  await db
+    .delete(careerProgressionFormCertificateModel)
+    .where(
+      eq(
+        careerProgressionFormCertificateModel.careerProgressionFormId,
+        form.id,
+      ),
+    );
+
+  for (const cert of data.certificates) {
+    const [createdCert] = await db
+      .insert(careerProgressionFormCertificateModel)
+      .values({
+        careerProgressionFormId: form.id,
+        certificateMasterId: cert.certificateMasterId,
+      })
+      .returning();
+
+    if (!createdCert) continue;
+
+    for (const field of cert.fields) {
+      await db.insert(careerProgressionFormFieldModel).values({
+        careerProgressionFormCertificateId: createdCert.id,
+        certificateFieldMasterId: field.certificateFieldMasterId,
+        certificateFieldOptionMasterId:
+          field.certificateFieldOptionMasterId ?? null,
+        value: field.value ?? null,
+      });
+    }
+  }
+
+  return careerProgressionFormRowToDto(form);
+}

@@ -6,3 +6,4 @@ export * from "./course-design/index.js";
 export * from "./resources/index.js";
 export * from "./subject-selection/index.js";
 export * from "./exams/index.js";
+export * from "./academics/index.js";

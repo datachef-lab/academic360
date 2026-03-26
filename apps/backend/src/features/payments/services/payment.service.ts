@@ -32,6 +32,7 @@ export async function createFeePayment(payment: {
   orderId: string;
   amount: string;
   gatewayName?: string;
+  remarks?: string;
 }) {
   const [newPayment] = await db
     .insert(paymentModel)
@@ -42,6 +43,7 @@ export async function createFeePayment(payment: {
       orderId: payment.orderId,
       amount: payment.amount,
       gatewayName: payment.gatewayName ?? "PAYTM",
+      remarks: payment.remarks ?? null,
     })
     .returning();
 

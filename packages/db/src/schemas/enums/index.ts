@@ -400,3 +400,11 @@ export const accessGroupModuleTypeEnum = pgEnum("access_group_module_type", [
     "STATIC",
     "CONDITIONAL",
 ]);
+
+export const certificateFieldMasterTypeEnum = pgEnum("certificate_field_master_type", [
+    "TEXT",
+    "TEXTAREA",
+    "SELECT",
+    "NUMBER",
+    "DATE",
+]);

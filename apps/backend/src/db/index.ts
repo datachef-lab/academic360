@@ -41,6 +41,7 @@ import { createLogger } from "@/config/logger.js";
 import { loadDefaultUserTypes } from "@/features/administration/services/user-type.service";
 import { loadDefaultUserStatusMasters } from "@/features/administration/services/user-status-master.service";
 import { loadDefaultAppModules } from "@/features/administration/services/app-module.service";
+import { loadDefaultCertificateMasters } from "@/features/academics/services/default-certificate-master-loader.service.js";
 const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -92,6 +93,9 @@ export const connectToDatabase = async () => {
     // loadDefaultUserTypes();
     // loadDefaultUserStatusMasters();
     loadDefaultAppModules();
+    loadDefaultCertificateMasters().catch((e) => {
+      log.warn("Default certificate master load failed", { error: e });
+    });
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();

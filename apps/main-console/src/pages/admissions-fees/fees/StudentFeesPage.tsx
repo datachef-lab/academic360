@@ -140,12 +140,13 @@ const StudentFeesPage: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get("payment");
     const orderId = params.get("orderId");
+    const respMsg = params.get("respMsg");
     const studentIdParam = params.get("studentId");
     if (payment && orderId) {
       if (payment === "success") {
-        toast.success("Payment recorded successfully");
+        toast.success(respMsg || "Payment recorded successfully");
       } else if (payment === "failed") {
-        toast.error("Payment failed");
+        toast.error(respMsg || "Payment failed");
       }
       if (studentIdParam) {
         const sid = parseInt(studentIdParam, 10);
@@ -162,6 +163,7 @@ const StudentFeesPage: React.FC = () => {
       }
       params.delete("payment");
       params.delete("orderId");
+      params.delete("respMsg");
       params.delete("studentId");
       const newSearch = params.toString();
       const newUrl = newSearch
@@ -176,9 +178,9 @@ const StudentFeesPage: React.FC = () => {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "PAYTM_PAYMENT_RESULT") {
         if (e.data.payment === "success") {
-          toast.success("Payment recorded successfully");
+          toast.success(e.data.respMsg || "Payment recorded successfully");
         } else if (e.data.payment === "failed") {
-          toast.error("Payment failed");
+          toast.error(e.data.respMsg || "Payment failed");
         }
         const sid = e.data.studentId ? parseInt(e.data.studentId, 10) : selectedStudent?.id;
         if (sid && !isNaN(sid)) fetchStudentMappings(sid);

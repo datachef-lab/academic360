@@ -34,6 +34,9 @@ import {
   sectionRoutes,
   sessionRouter,
   shiftRouter,
+  careerProgressionFormFieldRouter,
+  careerProgressionFormRouter,
+  certificateFieldMasterRouter,
 } from "@/features/academics/routes/index.js";
 import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -408,6 +411,18 @@ app.use("/api/administration/app-modules", appModuleRouter);
 // // User status master frequency endpoints
 // app.use("/api/user-status-master-frequencies", userStatusMasterFrequencyRouter);
 app.use("/api/sessions", sessionRouter);
+
+app.use(
+  "/api/academics/career-progression-form-fields",
+  careerProgressionFormFieldRouter,
+);
+
+app.use("/api/academics/career-progression-forms", careerProgressionFormRouter);
+
+app.use(
+  "/api/academics/certificate-field-masters",
+  certificateFieldMasterRouter,
+);
 
 app.use("/api/personal-details", personalDetailsRouter);
 
