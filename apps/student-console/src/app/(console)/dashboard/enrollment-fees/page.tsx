@@ -15,7 +15,9 @@ import {
   CheckCircle2,
   CircleMinus,
   CreditCard,
+  Download,
   Landmark,
+  Loader2,
   Pencil,
   Plus,
   School,
@@ -74,6 +76,28 @@ type RowDraft = { certificateMasterId: number; fields: RowField[] };
 
 type DialogStage = "form" | "submitted" | "payment";
 type PaymentMode = "cash" | "online" | null;
+const FEE_CTX_KEY = "enrollment_fee_ctx_v1";
+
+type FeeCtx = { feeStudentMappingId: number; feeStructureId: number; totalPayable: number };
+
+const encodeFeeCtx = (ctx: FeeCtx): string => {
+  try {
+    return btoa(JSON.stringify(ctx));
+  } catch {
+    return "";
+  }
+};
+
+const decodeFeeCtx = (encoded: string): FeeCtx | null => {
+  try {
+    const parsed = JSON.parse(atob(encoded));
+    if (Number.isFinite(parsed?.feeStudentMappingId) && Number.isFinite(parsed?.feeStructureId))
+      return parsed as FeeCtx;
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 const formatInr = (n: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -101,6 +125,7 @@ export default function EnrollmentFeesPage() {
   const [stage, setStage] = useState<DialogStage>("form");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>(null);
   const [paymentMsg, setPaymentMsg] = useState<string | null>(null);
+  const [paymentResult, setPaymentResult] = useState<"success" | "failed" | null>(null);
   const [savingCp, setSavingCp] = useState(false);
 
   const [selectedFee, setSelectedFee] = useState<{
@@ -115,6 +140,10 @@ export default function EnrollmentFeesPage() {
   const [editingMasterId, setEditingMasterId] = useState<number | null>(null);
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
   const [editingValues, setEditingValues] = useState<Record<number, string>>({});
+  const [openedFromQuery, setOpenedFromQuery] = useState(false);
+  const [generatingReceipt, setGeneratingReceipt] = useState(false);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
+  const [paymentTimestamp, setPaymentTimestamp] = useState<string>("");
   const studentGenderRaw = String(
     (
       student as {
@@ -133,8 +162,13 @@ export default function EnrollmentFeesPage() {
   const studentGender = studentGenderRaw.toUpperCase();
   const careerProgressionImageSrc =
     studentGender.includes("FEMALE") || studentGender === "F"
-      ? "/career-progression-female.png"
-      : "/career-progression-male.png";
+      ? `${process.env.NEXT_PUBLIC_URL!}/career-progression-female.png`
+      : `${process.env.NEXT_PUBLIC_URL!}/career-progression-male.png`;
+  const leftPanelImageSrc =
+    stage === "payment"
+      ? `${process.env.NEXT_PUBLIC_URL!}/fee-details-1.png`
+      : careerProgressionImageSrc;
+  const leftPanelImageAlt = stage === "payment" ? "Fee payment details" : "Career progression";
 
   const fetchMappings = async () => {
     if (!student?.id) return;
@@ -177,23 +211,136 @@ export default function EnrollmentFeesPage() {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get("payment");
     const respMsg = params.get("respMsg");
+    const ctxParam = params.get("ctx");
     if (payment) {
-      setPaymentMsg(respMsg || (payment === "success" ? "Payment successful" : "Payment failed"));
+      const feeCtx = ctxParam ? decodeFeeCtx(ctxParam) : null;
+      if (feeCtx) {
+        setSelectedFee(feeCtx);
+      }
+      const urlResult = payment === "success" ? "success" : "failed";
+      setPaymentResult(urlResult);
+      setPaymentMsg(
+        respMsg ||
+          (urlResult === "success"
+            ? "Payment recorded successfully!"
+            : "Payment failed due to a technical error. Please try after some time."),
+      );
+      setPaymentMode(urlResult === "success" ? "online" : null);
       setCpOpen(true);
       setStage("payment");
-      setPaymentMode(payment === "success" ? "online" : null);
+      setOpenedFromQuery(true);
       params.delete("payment");
       params.delete("orderId");
       params.delete("respMsg");
+      params.delete("ctx");
       const next = params.toString();
       window.history.replaceState(
         {},
         "",
         next ? `${window.location.pathname}?${next}` : window.location.pathname,
       );
-      fetchMappings();
+
+      const verifyAndShow = async () => {
+        try {
+          if (student?.id) {
+            const { data: mapData } = await axiosInstance.get<ApiResponse<FeeMapping[]>>(
+              `/api/v1/fees/student-mappings/student/${student.id}`,
+            );
+            const freshMappings = Array.isArray(mapData?.payload) ? mapData.payload : [];
+            setMappings(freshMappings);
+
+            if (feeCtx) {
+              const mapping = freshMappings.find((m) => m.id === feeCtx.feeStudentMappingId);
+              const dbStatus = String(mapping?.paymentStatus || "").toUpperCase();
+              const isPaidInDb = dbStatus === "COMPLETED" || dbStatus === "SUCCESS";
+
+              if (mapping?.feeStructure?.academicYear?.year) {
+                setSelectedAcademicYear(mapping.feeStructure.academicYear.year);
+              }
+
+              if (isPaidInDb) {
+                setPaymentResult("success");
+                setPaymentMsg(respMsg || "Payment recorded successfully!");
+                setPaymentMode("online");
+                setPaymentTimestamp(
+                  new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
+                );
+              } else {
+                setPaymentResult("failed");
+                setPaymentMsg(
+                  respMsg || "Payment failed due to a technical error. Please try after some time.",
+                );
+                setPaymentMode(null);
+              }
+            } else {
+              setPaymentResult(urlResult);
+              setPaymentMsg(
+                respMsg ||
+                  (urlResult === "success"
+                    ? "Payment recorded successfully!"
+                    : "Payment failed due to a technical error. Please try after some time."),
+              );
+              setPaymentMode(urlResult === "success" ? "online" : null);
+            }
+
+            axiosInstance
+              .get<ApiResponse<CareerProgressionTemplatePayload>>(
+                `/api/academics/career-progression-forms/student/${student.id}/current`,
+              )
+              .then(({ data }) => {
+                setCpData(data?.payload ?? null);
+                setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
+              })
+              .catch(() => {});
+          }
+        } catch {
+          setPaymentResult(urlResult);
+          setPaymentMsg(
+            respMsg ||
+              (urlResult === "success"
+                ? "Payment recorded successfully!"
+                : "Payment failed due to a technical error. Please try after some time."),
+          );
+          setPaymentMode(urlResult === "success" ? "online" : null);
+        } finally {
+          setLoading(false);
+        }
+      };
+      verifyAndShow();
     }
   }, []);
+
+  useEffect(() => {
+    if (!mappings.length || openedFromQuery) return;
+    const params = new URLSearchParams(window.location.search);
+    const cp = params.get("cp");
+    if (cp !== "1") return;
+
+    const ctxParam = params.get("ctx");
+    let ctx: FeeCtx | null = ctxParam ? decodeFeeCtx(ctxParam) : null;
+
+    if (!ctx) {
+      const rawCtx = window.sessionStorage.getItem(FEE_CTX_KEY);
+      if (rawCtx) {
+        try {
+          ctx = JSON.parse(rawCtx) as FeeCtx;
+        } catch {
+          ctx = null;
+        }
+      }
+    }
+
+    const feeStudentMappingId = Number(ctx?.feeStudentMappingId);
+    if (!Number.isFinite(feeStudentMappingId) || feeStudentMappingId <= 0) return;
+    const selected = mappings.find((m) => m.id === feeStudentMappingId);
+    if (!selected) return;
+    setOpenedFromQuery(true);
+    openCareerProgression({
+      id: selected.id,
+      feeStructureId: selected.feeStructureId,
+      total: Number(selected.totalPayable || 0),
+    });
+  }, [mappings, openedFromQuery]);
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -215,7 +362,7 @@ export default function EnrollmentFeesPage() {
         className: m.feeStructure?.class?.name || "—",
         academicYear: m.feeStructure?.academicYear?.year || "—",
         total: Number(m.totalPayable || 0),
-        isPaid: String(m.paymentStatus).toUpperCase() === "COMPLETED",
+        isPaid: ["COMPLETED", "SUCCESS"].includes(String(m.paymentStatus).toUpperCase()),
         installmentLabel:
           m.feeStructureInstallment?.name ||
           (m.type === "INSTALLMENT"
@@ -286,6 +433,8 @@ export default function EnrollmentFeesPage() {
     id: number;
     feeStructureId: number;
     total: number;
+    isPaid?: boolean;
+    academicYear?: string;
   }) => {
     if (!student?.id) return;
     setSelectedFee({
@@ -293,19 +442,55 @@ export default function EnrollmentFeesPage() {
       feeStructureId: fee.feeStructureId,
       totalPayable: fee.total,
     });
+    if (fee.academicYear) setSelectedAcademicYear(fee.academicYear);
     setCpOpen(true);
+
+    if (fee.isPaid) {
+      setStage("payment");
+      setPaymentResult("success");
+      setPaymentMsg("Payment recorded successfully!");
+      setPaymentMode("online");
+      setPaymentTimestamp(
+        new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
+      );
+      setCpLoading(false);
+      setCpError(null);
+      axiosInstance
+        .get<ApiResponse<CareerProgressionTemplatePayload>>(
+          `/api/academics/career-progression-forms/student/${student.id}/current`,
+        )
+        .then(({ data }) => {
+          setCpData(data?.payload ?? null);
+          setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
+        })
+        .catch(() => {});
+      return;
+    }
+
     setCpLoading(true);
     setCpError(null);
     setCpData(null);
     setStage("form");
     setPaymentMode(null);
     setPaymentMsg(null);
+    setPaymentResult(null);
     setRowsByMaster({});
     setQuestionByField({});
     setEditingMasterKey(null);
     setEditingMasterId(null);
     setEditingRowIndex(null);
     setEditingValues({});
+    window.sessionStorage.setItem(
+      FEE_CTX_KEY,
+      JSON.stringify({
+        feeStudentMappingId: fee.id,
+        feeStructureId: fee.feeStructureId,
+        totalPayable: fee.total,
+      }),
+    );
+    const params = new URLSearchParams();
+    params.set("cp", "1");
+    window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
     try {
       const { data } = await axiosInstance.get<ApiResponse<CareerProgressionTemplatePayload>>(
         `/api/academics/career-progression-forms/student/${student.id}/current`,
@@ -438,19 +623,35 @@ export default function EnrollmentFeesPage() {
 
   const handleGenerateFeeReceipt = async () => {
     if (!selectedFee || !student?.id) return;
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/fees/student-mappings/download-receipt?feeStructureId=${selectedFee.feeStructureId}&studentId=${student.id}`,
-      { credentials: "include" },
-    );
-    if (!response.ok) return;
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
-    window.open(url, "_blank");
+    try {
+      setGeneratingReceipt(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/fees/student-mappings/download-receipt?feeStructureId=${selectedFee.feeStructureId}&studentId=${student.id}`,
+        { credentials: "include" },
+      );
+      if (!response.ok) {
+        setPaymentMsg("Failed to generate fee challan. Please try again.");
+        return;
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error(error);
+      setPaymentMsg("Failed to generate fee challan. Please try again.");
+    } finally {
+      setGeneratingReceipt(false);
+    }
   };
 
   const handleProceedToPaytm = async () => {
     if (!selectedFee || !student?.id) return;
-    const returnUrl = `${window.location.origin}${window.location.pathname}?studentId=${student.id}`;
+    window.sessionStorage.setItem(FEE_CTX_KEY, JSON.stringify(selectedFee));
+    const returnParams = new URLSearchParams();
+    returnParams.set("cp", "1");
+    returnParams.set("stage", "payment");
+    returnParams.set("ctx", encodeFeeCtx(selectedFee));
+    const returnUrl = `${window.location.origin}${window.location.pathname}?${returnParams.toString()}`;
     const [configRes, initRes] = await Promise.all([
       axiosInstance.get<ApiResponse<{ mid: string; host: string }>>("/api/payments/config"),
       axiosInstance.post<ApiResponse<{ orderId: string; txnToken: string }>>(
@@ -477,7 +678,7 @@ export default function EnrollmentFeesPage() {
     const form = document.createElement("form");
     form.method = "POST";
     form.action = url;
-    form.target = "_blank";
+    form.target = "_self";
     form.style.display = "none";
     [
       { name: "mid", value: config.mid },
@@ -541,6 +742,8 @@ export default function EnrollmentFeesPage() {
                   id: fee.id,
                   feeStructureId: fee.feeStructureId,
                   total: fee.total,
+                  isPaid: fee.isPaid,
+                  academicYear: fee.academicYear,
                 })
               }
             >
@@ -583,22 +786,71 @@ export default function EnrollmentFeesPage() {
         </div>
       </main>
 
-      <Dialog open={cpOpen} onOpenChange={setCpOpen}>
-        <DialogContent className="h-[94vh] w-[99vw] max-w-[1700px] overflow-hidden p-0">
+      <Dialog
+        open={cpOpen}
+        onOpenChange={(nextOpen) => {
+          setCpOpen(nextOpen);
+          if (!nextOpen) {
+            const params = new URLSearchParams(window.location.search);
+            params.delete("cp");
+            params.delete("stage");
+            window.sessionStorage.removeItem(FEE_CTX_KEY);
+            const next = params.toString();
+            window.history.replaceState(
+              {},
+              "",
+              next ? `${window.location.pathname}?${next}` : window.location.pathname,
+            );
+          }
+        }}
+      >
+        <DialogContent
+          className={`overflow-hidden p-0 ${
+            paymentResult === "success" && stage === "payment"
+              ? "h-auto max-h-[90vh] w-[95vw] max-w-2xl"
+              : "h-[94vh] w-[99vw] max-w-[1700px]"
+          }`}
+        >
           <div className="flex h-full w-full min-h-0">
-            <div className="hidden h-full w-[32%] overflow-hidden bg-slate-100 md:block">
-              <img
-                src={careerProgressionImageSrc}
-                alt="Career progression"
-                className="h-full w-full object-cover object-center"
-              />
-            </div>
+            {paymentResult !== "success" && (
+              <div
+                className={`hidden h-full w-[32%] overflow-hidden bg-slate-100 md:block ${
+                  stage === "payment" ? "border-r-2 border-indigo-200" : ""
+                }`}
+              >
+                <div className="relative h-full w-full">
+                  <img
+                    src={leftPanelImageSrc}
+                    alt={leftPanelImageAlt}
+                    className="h-full w-full object-cover object-center"
+                  />
+                </div>
+              </div>
+            )}
 
-            <div className="flex h-full min-h-0 w-full flex-col md:w-[68%]">
-              <DialogHeader className="shrink-0 border-b bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 text-white">
+            <div
+              className={`flex h-full min-h-0 w-full flex-col ${
+                paymentResult !== "success" ? "md:w-[68%]" : ""
+              }`}
+            >
+              <DialogHeader
+                className={`shrink-0 border-b px-6 py-4 text-white ${
+                  paymentResult === "success" && stage === "payment"
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600"
+                    : "bg-gradient-to-r from-violet-600 to-indigo-600"
+                }`}
+              >
                 <DialogTitle className="flex items-center gap-2 text-white">
-                  <Sparkles className="h-4 w-4" />
-                  Career Progression Form
+                  {paymentResult === "success" && stage === "payment" ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {stage === "payment"
+                    ? paymentResult === "success"
+                      ? "Payment Successful"
+                      : "Fee Payment Details"
+                    : "Career Progression Form"}
                 </DialogTitle>
               </DialogHeader>
 
@@ -637,7 +889,7 @@ export default function EnrollmentFeesPage() {
                       </div>
                     </div>
                     <Button
-                      className="h-12 w-full bg-slate-900 text-lg text-white hover:bg-slate-800"
+                      className="h-12 w-full bg-indigo-700 text-lg text-white hover:bg-indigo-800"
                       onClick={() => setStage("payment")}
                     >
                       Proceed to Enrolment <ArrowRight className="ml-2 h-5 w-5" />
@@ -645,102 +897,259 @@ export default function EnrollmentFeesPage() {
                   </div>
                 ) : stage === "payment" ? (
                   <div className="mx-auto max-w-3xl space-y-5">
-                    {paymentMsg ? (
-                      <div className="rounded-md bg-slate-100 p-3 text-sm text-slate-700">
-                        {paymentMsg}
-                      </div>
-                    ) : null}
-                    <h2 className="text-4xl font-bold text-slate-900">Fee Payment</h2>
-                    <p className="text-slate-700">
-                      Choose your preferred payment mode below and proceed with payment.
-                    </p>
-                    <div className="rounded-xl border bg-white">
-                      <div className="rounded-t-xl bg-slate-900 px-5 py-4 text-white">
-                        <span className="font-semibold">Fee Summary</span>
-                        <span className="mx-2">·</span>
-                        <span>Academic Year {cpData?.academicYear.year}</span>
-                      </div>
-                      <div className="px-5 py-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Amount to Pay
+                    {paymentResult === "success" ? (
+                      <>
+                        <h2 className="text-2xl font-bold text-slate-900">Confirmation</h2>
+                        <p className="text-slate-600">
+                          Your fee payment has been successfully received and confirmed.
                         </p>
-                        <p className="text-5xl font-bold text-slate-900">
-                          {formatInr(selectedFee?.totalPayable || 0)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border bg-white p-5">
-                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Select Payment Mode
-                      </p>
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        <button
-                          className={`rounded-xl border p-4 text-left ${
-                            paymentMode === "cash"
-                              ? "border-teal-600 bg-teal-50"
-                              : "border-slate-200 bg-slate-50"
-                          }`}
-                          onClick={() => setPaymentMode("cash")}
-                        >
-                          <Landmark className="mb-2 h-5 w-5 text-slate-700" />
-                          <p className="font-bold text-slate-900">Cash Payment</p>
-                          <p className="text-sm text-slate-500">Pay at bank branch</p>
-                        </button>
-                        <button
-                          className={`rounded-xl border p-4 text-left ${
-                            paymentMode === "online"
-                              ? "border-teal-600 bg-teal-50"
-                              : "border-slate-200 bg-slate-50"
-                          }`}
-                          onClick={() => setPaymentMode("online")}
-                        >
-                          <CreditCard className="mb-2 h-5 w-5 text-slate-700" />
-                          <p className="font-bold text-slate-900">Online Payment</p>
-                          <p className="text-sm text-slate-500">Pay securely via Paytm</p>
-                        </button>
-                      </div>
 
-                      {paymentMode === "cash" ? (
-                        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
-                          <p className="mb-2 font-semibold text-amber-900">
-                            Instructions for Cash Payment
+                        <div className="rounded-xl border bg-white overflow-hidden">
+                          <div className="rounded-t-xl bg-emerald-800 px-5 py-4 text-white">
+                            <span className="font-semibold">Fee Summary</span>
+                            <span className="mx-2">·</span>
+                            <span>
+                              AY {selectedAcademicYear || cpData?.academicYear?.year || ""}
+                            </span>
+                          </div>
+                          <div className="px-5 py-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Amount Paid
+                            </p>
+                            <p className="text-5xl font-bold text-slate-800">
+                              {formatInr(selectedFee?.totalPayable || 0)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-5 py-4">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
+                            <CheckCircle2 className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-green-800">Payment Confirmed</p>
+                            <p className="text-xs text-green-700">
+                              {paymentMsg}
+                              {paymentTimestamp ? ` · ${paymentTimestamp}` : ""}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border bg-white p-5">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Fee Challan
                           </p>
-                          <ul className="list-disc space-y-1 pl-5 text-amber-900">
-                            <li>
-                              Download and print your fee challan by clicking Generate Fee Challan
-                              below.
-                            </li>
-                            <li>Visit bank branch with challan and cash.</li>
-                            <li>You will receive confirmation after fee update in profile.</li>
-                          </ul>
+                          <p className="mt-1 text-sm text-slate-700">
+                            Your paid challan with a <span className="font-bold">PAID</span> stamp
+                            is available for download.
+                          </p>
                           <Button
-                            className="mt-4 w-full bg-slate-900 text-white hover:bg-slate-800"
+                            className="mt-4 w-full border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                            variant="outline"
                             onClick={handleGenerateFeeReceipt}
+                            disabled={generatingReceipt}
                           >
-                            Generate Fee Challan
+                            {generatingReceipt ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="mr-2 h-4 w-4" />
+                                Download Paid Challan
+                              </>
+                            )}
                           </Button>
                         </div>
-                      ) : null}
-
-                      {paymentMode === "online" ? (
-                        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
-                          <p className="mb-2 font-semibold text-amber-900">
-                            Instructions for Online Payment
+                      </>
+                    ) : (
+                      <>
+                        {paymentMsg ? (
+                          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">
+                            <X className="h-5 w-5 shrink-0 text-red-600" />
+                            {paymentMsg}
+                          </div>
+                        ) : null}
+                        <p className="text-slate-700 pt-1">
+                          Choose your preferred payment mode below and proceed with payment.
+                        </p>
+                        <div className="rounded-xl border bg-white">
+                          <div className="rounded-t-xl bg-indigo-800 px-5 py-4 text-white">
+                            <span className="font-semibold">Fee Summary</span>
+                            <span className="mx-2">·</span>
+                            <span>
+                              Academic Year {selectedAcademicYear || cpData?.academicYear?.year}
+                            </span>
+                          </div>
+                          <div className="px-5 py-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Amount to Pay
+                            </p>
+                            <p className="text-5xl font-bold text-slate-800">
+                              {formatInr(selectedFee?.totalPayable || 0)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="rounded-xl border bg-white p-5">
+                          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Select Payment Mode
                           </p>
-                          <ul className="list-disc space-y-1 pl-5 text-amber-900">
-                            <li>You will be redirected to the Paytm secure payment gateway.</li>
-                            <li>Do not close this window during transaction.</li>
-                            <li>On callback, status and response message will be shown here.</li>
-                          </ul>
-                          <Button
-                            className="mt-4 w-full bg-slate-900 text-white hover:bg-slate-800"
-                            onClick={handleProceedToPaytm}
-                          >
-                            Proceed to Pay
-                          </Button>
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <button
+                              className={`rounded-xl border p-4 text-left ${
+                                paymentMode === "cash"
+                                  ? "border-teal-600 bg-teal-50"
+                                  : "border-slate-200 bg-slate-50"
+                              }`}
+                              onClick={() => setPaymentMode("cash")}
+                            >
+                              <div className="mb-2 flex items-center justify-between">
+                                <Landmark className="h-5 w-5 text-slate-700" />
+                                <span
+                                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${
+                                    paymentMode === "cash"
+                                      ? "border-teal-600 bg-teal-600 text-white"
+                                      : "border-slate-300 bg-white text-transparent"
+                                  }`}
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                </span>
+                              </div>
+                              <p className="font-bold text-slate-900">Cash Payment</p>
+                              <p className="text-sm text-slate-500">
+                                Pay at Federal Bank, any branch
+                              </p>
+                            </button>
+                            <button
+                              className={`rounded-xl border p-4 text-left ${
+                                paymentMode === "online"
+                                  ? "border-teal-600 bg-teal-50"
+                                  : "border-slate-200 bg-slate-50"
+                              }`}
+                              onClick={() => setPaymentMode("online")}
+                            >
+                              <div className="mb-2 flex items-center justify-between">
+                                <CreditCard className="h-5 w-5 text-slate-700" />
+                                <span
+                                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${
+                                    paymentMode === "online"
+                                      ? "border-teal-600 bg-teal-600 text-white"
+                                      : "border-slate-300 bg-white text-transparent"
+                                  }`}
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                </span>
+                              </div>
+                              <p className="font-bold text-slate-900">Online Payment</p>
+                              <p className="text-sm text-slate-500">
+                                Pay securely via Paytm gateway
+                              </p>
+                            </button>
+                          </div>
+
+                          {paymentMode === "cash" ? (
+                            <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                              <p className="mb-2 font-semibold text-amber-900">
+                                📋 Instructions for Cash Payment
+                              </p>
+                              <ul className="list-disc space-y-1 pl-5 text-amber-900">
+                                <li>
+                                  Download and print your fee challan by clicking{" "}
+                                  <span className="font-semibold">Generate Challan</span> below.
+                                </li>
+                                <li>
+                                  Visit{" "}
+                                  <span className="font-semibold">Federal Bank, any branch</span>,
+                                  with the printed challan and cash to pay the fee in cash at the
+                                  bank.
+                                </li>
+                                <li>
+                                  After the payment, email us the scan copy of your fee paid challan
+                                  to{" "}
+                                  <span className="font-semibold underline">
+                                    fees@institution.edu
+                                  </span>
+                                  .
+                                </li>
+                                <li>
+                                  You will receive an email on your institutional email ID once the
+                                  fee is updated in your online profile - this usually takes{" "}
+                                  <span className="font-semibold">5-7 working days</span>.
+                                </li>
+                                <li>
+                                  You are advised to keep the copy of your original fee paid
+                                  challan, received from the bank, for future institutional
+                                  purposes.
+                                </li>
+                              </ul>
+                              <Button
+                                className="mt-4 w-full bg-indigo-800 text-white hover:bg-indigo-900"
+                                onClick={handleGenerateFeeReceipt}
+                                disabled={generatingReceipt}
+                              >
+                                {generatingReceipt ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Generating Challan...
+                                  </>
+                                ) : (
+                                  "Generate Fee Challan"
+                                )}
+                              </Button>
+                            </div>
+                          ) : null}
+
+                          {paymentMode === "online" ? (
+                            <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                              <p className="mb-2 font-semibold text-amber-900">
+                                🔒 Instructions for Online Payment
+                              </p>
+                              <ul className="list-disc space-y-1 pl-5 text-amber-900">
+                                <li>
+                                  You will be redirected to the Paytm secure payment gateway.{" "}
+                                  <span className="font-semibold">
+                                    Do not close the window or go back
+                                  </span>{" "}
+                                  mid-transaction.
+                                </li>
+                                <li>
+                                  Accepted methods: UPI, Debit/Credit Card, Net Banking, and Paytm
+                                  Wallet.
+                                </li>
+                                <li>
+                                  A payment confirmation will be sent to your institutional email
+                                  ID, along with an{" "}
+                                  <span className="font-semibold">e-paid copy of your challan</span>
+                                  , upon successful transaction.
+                                </li>
+                                <li>
+                                  In case of a failed transaction (if the amount is debited from
+                                  your account but you do not receive an e-paid copy of your
+                                  receipt), please wait for{" "}
+                                  <span className="font-semibold">2-3 working days</span> before
+                                  re-attempting to make the payment.
+                                </li>
+                                <li>
+                                  For any payment issues, send an email to{" "}
+                                  <span className="font-semibold underline">
+                                    fees@institution.edu
+                                  </span>{" "}
+                                  from your institutional email ID only, with your transaction
+                                  details.
+                                </li>
+                              </ul>
+                              <Button
+                                className="mt-4 w-full bg-indigo-800 text-white hover:bg-indigo-900"
+                                onClick={handleProceedToPaytm}
+                              >
+                                Proceed to Pay
+                              </Button>
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
-                    </div>
+                      </>
+                    )}
                   </div>
                 ) : cpData ? (
                   <div className="space-y-5">

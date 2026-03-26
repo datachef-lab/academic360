@@ -486,11 +486,14 @@ export const paymentCallbackHandler = async (
     let redirectUrl = redirect.toString();
     let studentUid = "";
 
-    // For FEE payments: get student UID for search param
-    if (payment.feeStudentMappingId) {
+    // For main-console fallback (no custom returnUrl): add search & feeStructureId
+    if (!resolvedReturnUrl && payment.feeStudentMappingId) {
       try {
         const [mapping] = await db
-          .select({ studentId: feeStudentMappingModel.studentId })
+          .select({
+            studentId: feeStudentMappingModel.studentId,
+            feeStructureId: feeStudentMappingModel.feeStructureId,
+          })
           .from(feeStudentMappingModel)
           .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId));
 
@@ -503,9 +506,17 @@ export const paymentCallbackHandler = async (
           if (student?.uid) {
             studentUid = student.uid;
             redirect.searchParams.set("search", student.uid);
-            redirectUrl = redirect.toString();
           }
         }
+
+        if (mapping?.feeStructureId) {
+          redirect.searchParams.set(
+            "feeStructureId",
+            String(mapping.feeStructureId),
+          );
+        }
+
+        redirectUrl = redirect.toString();
       } catch (mappingError) {
         console.error("Failed to fetch student UID:", mappingError);
       }

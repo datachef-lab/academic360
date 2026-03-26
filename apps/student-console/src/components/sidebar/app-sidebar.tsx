@@ -35,6 +35,7 @@ import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamDto } from "@/dtos";
 import { useAuth } from "@/hooks/use-auth";
 import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { axiosInstance } from "@/lib/utils";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isNestedIframe = window.self !== window.top;
@@ -47,6 +48,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     isLoading: isLoadingSettings,
   } = useCollegeSettings();
   const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
+  const [hasCareerProgressionForm, setHasCareerProgressionForm] = React.useState(false);
   const socketRef = React.useRef<any | null>(null);
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
   console.log("pathname:", pathname);
@@ -123,6 +125,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     updateExamCount();
   }, [updateExamCount]);
+
+  React.useEffect(() => {
+    if (!student?.id) return;
+    axiosInstance
+      .get<{ payload: { hasExistingForms: boolean } }>(
+        `/api/academics/career-progression-forms/student/${student.id}/current`,
+      )
+      .then(({ data }) => setHasCareerProgressionForm(Boolean(data?.payload?.hasExistingForms)))
+      .catch(() => setHasCareerProgressionForm(false));
+  }, [student?.id]);
 
   // Setup socket connection to update badge count on exam changes
   React.useEffect(() => {
@@ -303,6 +315,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: IndianRupee,
       isActive: pathname === "/dashboard/enrollment-fees",
     },
+    hasCareerProgressionForm
+      ? {
+          title: "Career Progression",
+          url: "/dashboard/career-progression",
+          icon: ScrollText,
+          isActive: pathname === "/dashboard/career-progression",
+        }
+      : null,
     {
       title: "Library",
       url: "/dashboard/library",

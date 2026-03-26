@@ -567,13 +567,14 @@ export class PdfGenerationService {
       const browser = await this.getBrowser();
       const page = await browser.newPage();
 
-      // Set content and wait for resources to load (CDN script + barcode render)
+      // Use "load" to avoid long hangs from persistent network connections.
+      // networkidle0 can block for ~30s in local/dev environments.
       await page.setContent(htmlContent, {
-        waitUntil: "networkidle0",
-        timeout: 30000,
+        waitUntil: "load",
+        timeout: 12000,
       });
-      page.setDefaultNavigationTimeout(30000);
-      page.setDefaultTimeout(15000);
+      page.setDefaultNavigationTimeout(12000);
+      page.setDefaultTimeout(12000);
 
       // Wait for JsBarcode to render barcodes before capturing PDF (avoids blank barcodes)
       await page
