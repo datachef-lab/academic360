@@ -156,12 +156,14 @@ export default function DashboardLayout({
                       <BreadcrumbPage className="font-medium text-gray-800 dark:text-gray-200">
                         {pathname === "/dashboard"
                           ? "Dashboard"
-                          : pathname
-                              .split("/")
-                              .pop()
-                              ?.split("-")
-                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                              .join(" ")}
+                          : pathname.endsWith("/enrollment-fees")
+                            ? "Enrolment Fees"
+                            : pathname
+                                .split("/")
+                                .pop()
+                                ?.split("-")
+                                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(" ")}
                       </BreadcrumbPage>
                     </BreadcrumbItem>
                   </BreadcrumbList>

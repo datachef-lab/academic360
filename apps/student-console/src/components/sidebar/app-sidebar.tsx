@@ -319,7 +319,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     //   isActive: pathname === "/dashboard/documents",
     // },
     {
-      title: "Enrollment & Fees",
+      title: "Enrolment & Fees",
       url: "/dashboard/enrollment-fees",
       icon: IndianRupee,
       isActive: pathname === "/dashboard/enrollment-fees",

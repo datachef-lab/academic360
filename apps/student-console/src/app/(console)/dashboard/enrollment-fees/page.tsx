@@ -5,6 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { axiosInstance } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
@@ -110,6 +117,14 @@ const statusBadgeClass = (isPaid: boolean) =>
   isPaid
     ? "bg-green-100 text-green-800 border border-green-200"
     : "bg-yellow-100 text-yellow-800 border border-yellow-200";
+
+const sectionPriority = (name: string): number => {
+  const normalized = name.toLowerCase();
+  if (normalized.includes("work experience") || normalized.includes("internship")) return 0;
+  if (normalized.includes("skills") || normalized.includes("certification")) return 1;
+  if (normalized.includes("competitive exam") || normalized.includes("professional")) return 2;
+  return 10;
+};
 
 export default function EnrollmentFeesPage() {
   const { student } = useStudent();
@@ -751,11 +766,11 @@ export default function EnrollmentFeesPage() {
                     <WalletCards className="h-3.5 w-3.5 text-indigo-500" />
                     <span>{fee.installmentLabel}</span>
                   </div>
-                  {hasExistingCpForm === false ? (
+                  {/* {hasExistingCpForm === false ? (
                     <p className="rounded-md bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
                       Please fill up the career-progression form before proceeding with payment.
                     </p>
-                  ) : null}
+                  ) : null} */}
                 </CardContent>
               </div>
             </Card>
@@ -785,7 +800,7 @@ export default function EnrollmentFeesPage() {
           className={`overflow-hidden p-0 ${
             paymentResult === "success" && stage === "payment"
               ? "h-auto max-h-[90vh] w-[95vw] max-w-2xl"
-              : "h-[94vh] w-[99vw] max-w-[1700px]"
+              : "h-[90vh] w-[92vw] max-w-7xl"
           }`}
         >
           <div className="flex h-full w-full min-h-0">
@@ -864,10 +879,14 @@ export default function EnrollmentFeesPage() {
                         <div className="rounded-xl border bg-white overflow-hidden">
                           <div className="rounded-t-xl bg-emerald-800 px-5 py-4 text-white">
                             <span className="font-semibold">Fee Summary</span>
-                            <span className="mx-2">·</span>
-                            <span>
-                              AY {selectedAcademicYear || cpData?.academicYear?.year || ""}
-                            </span>
+                            {selectedAcademicYear || cpData?.academicYear?.year ? (
+                              <>
+                                <span className="mx-2">·</span>
+                                <span>
+                                  Academic Year {selectedAcademicYear || cpData?.academicYear?.year}
+                                </span>
+                              </>
+                            ) : null}
                           </div>
                           <div className="px-5 py-4">
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -897,8 +916,7 @@ export default function EnrollmentFeesPage() {
                             Fee Challan
                           </p>
                           <p className="mt-1 text-sm text-slate-700">
-                            Your paid challan with a <span className="font-bold">PAID</span> stamp
-                            is available for download.
+                            Click below to download your paid copy of the fee challan.
                           </p>
                           <Button
                             className="mt-4 w-full border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
@@ -1013,7 +1031,7 @@ export default function EnrollmentFeesPage() {
                               <ul className="list-disc space-y-1 pl-5 text-amber-900">
                                 <li>
                                   Download and print your fee challan by clicking{" "}
-                                  <span className="font-semibold">Generate Challan</span> below.
+                                  <span className="font-semibold">Generate Fee Challan</span> below.
                                 </li>
                                 <li>
                                   Visit{" "}
@@ -1025,7 +1043,7 @@ export default function EnrollmentFeesPage() {
                                   After the payment, email us the scan copy of your fee paid challan
                                   to{" "}
                                   <span className="font-semibold underline">
-                                    fees@institution.edu
+                                    feeupdate@thebges.edu.in
                                   </span>
                                   .
                                 </li>
@@ -1064,15 +1082,14 @@ export default function EnrollmentFeesPage() {
                               </p>
                               <ul className="list-disc space-y-1 pl-5 text-amber-900">
                                 <li>
-                                  You will be redirected to the Paytm secure payment gateway.{" "}
+                                  You will be redirected to the secure payment gateway.{" "}
                                   <span className="font-semibold">
                                     Do not close the window or go back
                                   </span>{" "}
                                   mid-transaction.
                                 </li>
                                 <li>
-                                  Accepted methods: UPI, Debit/Credit Card, Net Banking, and Paytm
-                                  Wallet.
+                                  Accepted methods: UPI, Debit/Credit Card, Net Banking, and Wallet.
                                 </li>
                                 <li>
                                   A payment confirmation will be sent to your institutional email
@@ -1088,12 +1105,12 @@ export default function EnrollmentFeesPage() {
                                   re-attempting to make the payment.
                                 </li>
                                 <li>
-                                  For any payment issues, send an email to{" "}
-                                  <span className="font-semibold underline">
-                                    fees@institution.edu
-                                  </span>{" "}
-                                  from your institutional email ID only, with your transaction
-                                  details.
+                                  For any payment issues,{" "}
+                                  <a href="#" className="font-semibold underline">
+                                    Click here
+                                  </a>{" "}
+                                  to fill the google form (accessible from your institutional email
+                                  ID only).
                                 </li>
                               </ul>
                               <Button
@@ -1109,7 +1126,7 @@ export default function EnrollmentFeesPage() {
                     )}
                   </div>
                 ) : cpData ? (
-                  <div className="space-y-5">
+                  <div className="w-full space-y-5">
                     <div className="rounded-xl bg-gradient-to-r from-violet-100 via-indigo-100 to-blue-100 p-4">
                       <p className="font-semibold text-indigo-900">
                         Academic Year: {cpData.academicYear.year}
@@ -1121,7 +1138,11 @@ export default function EnrollmentFeesPage() {
 
                     {cpData.certificateMasters
                       .slice()
-                      .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
+                      .sort((a, b) => {
+                        const priorityDiff = sectionPriority(a.name) - sectionPriority(b.name);
+                        if (priorityDiff !== 0) return priorityDiff;
+                        return (a.sequence ?? 0) - (b.sequence ?? 0);
+                      })
                       .map((cm, idx) => {
                         const masterId = Number(cm.id);
                         const masterKey = getMasterKey(cm, idx);
@@ -1156,7 +1177,10 @@ export default function EnrollmentFeesPage() {
                                   {questionFields.map((qf) => {
                                     const qfId = Number(qf.id);
                                     return (
-                                      <div key={`${masterId}-${qfId}`}>
+                                      <div
+                                        key={`${masterId}-${qfId}`}
+                                        className="grid gap-2 md:grid-cols-[minmax(260px,42%)_1fr] md:items-center"
+                                      >
                                         <label className="text-xs font-semibold text-slate-700">
                                           {qf.name}
                                           {qf.isRequired || qf.isQuestion ? (
@@ -1164,29 +1188,32 @@ export default function EnrollmentFeesPage() {
                                           ) : null}
                                         </label>
                                         {qf.type === "SELECT" ? (
-                                          <select
-                                            className="mt-1 h-9 w-full rounded-md bg-white px-2 text-sm outline-none"
+                                          <Select
                                             value={questionByField[qfId] || ""}
-                                            onChange={(e) =>
+                                            onValueChange={(value) =>
                                               setQuestionByField((prev) => ({
                                                 ...prev,
-                                                [qfId]: e.target.value,
+                                                [qfId]: value,
                                               }))
                                             }
                                           >
-                                            <option value="">Select option</option>
-                                            {qf.options.map((opt) => (
-                                              <option
-                                                key={`${qfId}-${opt.id}-${opt.name}`}
-                                                value={opt.name}
-                                              >
-                                                {opt.name}
-                                              </option>
-                                            ))}
-                                          </select>
+                                            <SelectTrigger className="h-9 w-full bg-white text-sm">
+                                              <SelectValue placeholder="Select option" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {qf.options.map((opt) => (
+                                                <SelectItem
+                                                  key={`${qfId}-${opt.id}-${opt.name}`}
+                                                  value={opt.name}
+                                                >
+                                                  {opt.name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
                                         ) : (
                                           <input
-                                            className="mt-1 h-9 w-full rounded-md bg-white px-2 text-sm outline-none"
+                                            className="h-9 w-full rounded-md bg-white px-2 text-sm outline-none"
                                             value={questionByField[qfId] || ""}
                                             onChange={(e) =>
                                               setQuestionByField((prev) => ({
@@ -1203,7 +1230,7 @@ export default function EnrollmentFeesPage() {
                               ) : null}
 
                               <div className="overflow-x-auto rounded-lg border">
-                                <table className="w-full min-w-[860px] table-fixed border-collapse text-xs">
+                                <table className="w-full min-w-[680px] table-fixed border-collapse text-xs">
                                   <thead className="bg-slate-50 text-slate-700">
                                     <tr>
                                       {tableFields.map((f) => (
@@ -1234,26 +1261,29 @@ export default function EnrollmentFeesPage() {
                                               className="border p-1.5 align-top whitespace-normal break-words"
                                             >
                                               {f.type === "SELECT" ? (
-                                                <select
-                                                  className="h-8 w-full rounded px-2 text-xs outline-none"
+                                                <Select
                                                   value={value}
-                                                  onChange={(e) =>
+                                                  onValueChange={(nextValue) =>
                                                     setEditingValues((prev) => ({
                                                       ...prev,
-                                                      [fieldId]: e.target.value,
+                                                      [fieldId]: nextValue,
                                                     }))
                                                   }
                                                 >
-                                                  <option value="">Select</option>
-                                                  {f.options.map((opt) => (
-                                                    <option
-                                                      key={`${fieldId}-${opt.id}`}
-                                                      value={opt.name}
-                                                    >
-                                                      {opt.name}
-                                                    </option>
-                                                  ))}
-                                                </select>
+                                                  <SelectTrigger className="h-8 w-full text-xs">
+                                                    <SelectValue placeholder="Select" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {f.options.map((opt) => (
+                                                      <SelectItem
+                                                        key={`${fieldId}-${opt.id}`}
+                                                        value={opt.name}
+                                                      >
+                                                        {opt.name}
+                                                      </SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
                                               ) : (
                                                 <input
                                                   type="text"
