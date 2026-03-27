@@ -8,12 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { axiosInstance } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
+import { useFeeSocket } from "@/providers/fee-socket-provider";
 import {
   ArrowRight,
   Calendar,
   Check,
   CheckCircle2,
-  CircleMinus,
   CreditCard,
   Download,
   Landmark,
@@ -113,6 +113,7 @@ const statusBadgeClass = (isPaid: boolean) =>
 
 export default function EnrollmentFeesPage() {
   const { student } = useStudent();
+  const { feeMappingsVersion, cpFormVersion, invalidateCpForm } = useFeeSocket();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mappings, setMappings] = useState<FeeMapping[]>([]);
@@ -144,31 +145,6 @@ export default function EnrollmentFeesPage() {
   const [generatingReceipt, setGeneratingReceipt] = useState(false);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
   const [paymentTimestamp, setPaymentTimestamp] = useState<string>("");
-  const studentGenderRaw = String(
-    (
-      student as {
-        gender?: string | null;
-        personalDetails?: { gender?: string | null };
-      } | null
-    )?.personalDetails?.gender ??
-      (
-        student as {
-          gender?: string | null;
-          personalDetails?: { gender?: string | null };
-        } | null
-      )?.gender ??
-      "",
-  ).trim();
-  const studentGender = studentGenderRaw.toUpperCase();
-  const careerProgressionImageSrc =
-    studentGender.includes("FEMALE") || studentGender === "F"
-      ? `${process.env.NEXT_PUBLIC_URL!}/career-progression-female.png`
-      : `${process.env.NEXT_PUBLIC_URL!}/career-progression-male.png`;
-  const leftPanelImageSrc =
-    stage === "payment"
-      ? `${process.env.NEXT_PUBLIC_URL!}/fee-details-1.png`
-      : careerProgressionImageSrc;
-  const leftPanelImageAlt = stage === "payment" ? "Fee payment details" : "Career progression";
 
   const fetchMappings = async () => {
     if (!student?.id) return;
@@ -190,7 +166,7 @@ export default function EnrollmentFeesPage() {
 
   useEffect(() => {
     fetchMappings();
-  }, [student?.id]);
+  }, [student?.id, feeMappingsVersion]);
 
   useEffect(() => {
     const checkCp = async () => {
@@ -205,7 +181,7 @@ export default function EnrollmentFeesPage() {
       }
     };
     checkCp();
-  }, [student?.id]);
+  }, [student?.id, cpFormVersion]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -613,6 +589,7 @@ export default function EnrollmentFeesPage() {
 
       setHasExistingCpForm(true);
       setStage("submitted");
+      invalidateCpForm();
     } catch (e) {
       console.error(e);
       setCpError("Failed to submit career progression form");
@@ -719,7 +696,7 @@ export default function EnrollmentFeesPage() {
           <div>
             <h1 className="text-2xl font-bold md:text-4xl">Fees & Instalments</h1>
             <p className="mt-1 text-sm text-blue-100 md:text-base">
-              Track your fee status and pending payments in one place
+              Track your fee status and pending payments here
             </p>
           </div>
         </div>
@@ -812,27 +789,7 @@ export default function EnrollmentFeesPage() {
           }`}
         >
           <div className="flex h-full w-full min-h-0">
-            {paymentResult !== "success" && (
-              <div
-                className={`hidden h-full w-[32%] overflow-hidden bg-slate-100 md:block ${
-                  stage === "payment" ? "border-r-2 border-indigo-200" : ""
-                }`}
-              >
-                <div className="relative h-full w-full">
-                  <img
-                    src={leftPanelImageSrc}
-                    alt={leftPanelImageAlt}
-                    className="h-full w-full object-cover object-center"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div
-              className={`flex h-full min-h-0 w-full flex-col ${
-                paymentResult !== "success" ? "md:w-[68%]" : ""
-              }`}
-            >
+            <div className="flex h-full min-h-0 w-full flex-col">
               <DialogHeader
                 className={`shrink-0 border-b px-6 py-4 text-white ${
                   paymentResult === "success" && stage === "payment"

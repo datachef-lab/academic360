@@ -183,7 +183,7 @@ export const initiateFeePaymentHandler = async (
       orderId,
       amount: amountStr,
       gatewayName: "PAYTM",
-      remarks: returnUrl || null,
+      remarks: returnUrl || undefined,
     });
 
     const custId = `FEE_${studentId}_${feeStudentMappingId}`;

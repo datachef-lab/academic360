@@ -238,6 +238,26 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
     .from(programCourseModel)
     .where(eq(programCourseModel.id, feeStructure.programCourseId));
 
+  const io = socketService.getIO();
+  const studentUserIdCache = new Map<number, number>();
+  const emitFeeStudentMappingUpdated = async (studentId: number) => {
+    if (!io) return;
+    let userId = studentUserIdCache.get(studentId);
+    if (!userId) {
+      const [stu] = await db
+        .select({ userId: studentModel.userId })
+        .from(studentModel)
+        .where(eq(studentModel.id, studentId));
+      if (!stu?.userId) return;
+      userId = stu.userId;
+      studentUserIdCache.set(studentId, userId);
+    }
+    io.to(`user:${userId}`).emit("fee_student_mapping_updated", {
+      studentId,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
   let processed = 0;
   for (const promotion of promotions) {
     // 1. Ensure fee-group-promotion-mapping exists for (promotion)
@@ -442,6 +462,8 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
             updatedAt: new Date(),
           })
           .where(eq(feeStudentMappingModel.id, existingFeeStudentMapping.id!));
+
+        await emitFeeStudentMappingUpdated(promotion.studentId);
       }
       continue;
     }
@@ -480,8 +502,8 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
       feeStructureId: feeStructure.id!,
       feeGroupPromotionMappingId,
       totalPayable,
-      // Other fields use their database defaults (e.g. type, totals)
     });
+    await emitFeeStudentMappingUpdated(promotion.studentId);
   }
 
   emitProgress(

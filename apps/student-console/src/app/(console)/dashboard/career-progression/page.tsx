@@ -344,6 +344,12 @@ export default function CareerProgressionPage() {
     }
   };
 
+  useEffect(() => {
+    if (!loading && !cpData?.hasExistingForms) {
+      router.replace("/dashboard/enrollment-fees");
+    }
+  }, [loading, cpData?.hasExistingForms, router]);
+
   if (loading) {
     return (
       <div className="space-y-4 p-2">
@@ -360,12 +366,6 @@ export default function CareerProgressionPage() {
       </Card>
     );
   }
-
-  useEffect(() => {
-    if (!loading && !cpData?.hasExistingForms) {
-      router.replace("/dashboard/enrollment-fees");
-    }
-  }, [loading, cpData?.hasExistingForms, router]);
 
   if (!cpData?.hasExistingForms) {
     return (

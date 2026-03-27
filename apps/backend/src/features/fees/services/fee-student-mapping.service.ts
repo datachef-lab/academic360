@@ -19,6 +19,7 @@ import {
 } from "@repo/db/schemas";
 import { and, eq } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import { socketService } from "@/services/socketService.js";
 import * as feeStructureService from "./fee-structure.service.js";
 import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";
 import * as feeStructureInstallmentService from "./fee-structure-installment.service.js";
@@ -86,6 +87,25 @@ async function modelToDto(
   };
 }
 
+const emitFeeStudentMappingUpdate = async (studentId: number) => {
+  try {
+    const io = socketService.getIO();
+    if (!io) return;
+    const [student] = await db
+      .select({ userId: studentModel.userId })
+      .from(studentModel)
+      .where(eq(studentModel.id, studentId));
+    if (student?.userId) {
+      io.to(`user:${student.userId}`).emit("fee_student_mapping_updated", {
+        studentId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch {
+    // non-critical
+  }
+};
+
 /**
  * Services should accept validated DTOs (controller validates via zod) and
  * return raw rows / arrays / null. Do not catch errors here — controller will handle them.
@@ -99,6 +119,7 @@ export const createFeeStudentMapping = async (
     .returning();
 
   const dto = await modelToDto(created);
+  emitFeeStudentMappingUpdate(created.studentId);
   return dto!;
 };
 
@@ -198,6 +219,7 @@ export const updateFeeStudentMapping = async (
     .where(eq(feeStudentMappingModel.id, id))
     .returning();
 
+  if (updated) emitFeeStudentMappingUpdate(updated.studentId);
   return await modelToDto(updated ?? null);
 };
 

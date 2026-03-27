@@ -1,5 +1,5 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { certificateMasterModel } from "./certificate-master.model";
+
 import z from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { academicYearModel } from "./academic-year.model";

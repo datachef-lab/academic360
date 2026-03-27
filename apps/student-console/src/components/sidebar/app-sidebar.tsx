@@ -36,12 +36,14 @@ import { ExamDto } from "@/dtos";
 import { useAuth } from "@/hooks/use-auth";
 import { useCollegeSettings } from "@/hooks/use-college-settings";
 import { axiosInstance } from "@/lib/utils";
+import { useFeeSocket } from "@/providers/fee-socket-provider";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isNestedIframe = window.self !== window.top;
   const pathname = usePathname();
   const { user } = useAuth();
   const { accessControl, student } = useStudent();
+  const { invalidateFeeMappings, cpFormVersion } = useFeeSocket();
   const {
     name: collegeName,
     logoUrl: collegeLogoUrl,
@@ -126,7 +128,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     updateExamCount();
   }, [updateExamCount]);
 
-  React.useEffect(() => {
+  const refreshCpFormStatus = React.useCallback(() => {
     if (!student?.id) return;
     axiosInstance
       .get<{ payload: { hasExistingForms: boolean } }>(
@@ -135,6 +137,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       .then(({ data }) => setHasCareerProgressionForm(Boolean(data?.payload?.hasExistingForms)))
       .catch(() => setHasCareerProgressionForm(false));
   }, [student?.id]);
+
+  React.useEffect(() => {
+    refreshCpFormStatus();
+  }, [refreshCpFormStatus, cpFormVersion]);
 
   // Setup socket connection to update badge count on exam changes
   React.useEffect(() => {
@@ -188,13 +194,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           }
         });
 
-        // Listen for exam updates and refresh count
         socket.on("exam_created", () => {
           updateExamCount();
         });
 
         socket.on("exam_updated", () => {
           updateExamCount();
+        });
+
+        socket.on("fee_student_mapping_updated", () => {
+          invalidateFeeMappings();
         });
       } catch (err) {
         console.error("[Sidebar] Failed to load socket.io-client:", err);
@@ -210,7 +219,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         socketRef.current = null;
       }
     };
-  }, [student?.id, updateExamCount]);
+  }, [student?.id, user?.id, updateExamCount, invalidateFeeMappings]);
 
   // Check if student's program course is MA or MCOM (hide admission registration for these)
   const isBlockedProgram = React.useMemo(() => {
