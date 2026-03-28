@@ -1106,7 +1106,12 @@ export default function EnrollmentFeesPage() {
                                 </li>
                                 <li>
                                   For any payment issues,{" "}
-                                  <a href="#" className="font-semibold underline">
+                                  <a
+                                    href="https://docs.google.com/forms/d/e/1FAIpQLSfh0tY1CgvWFNJ3SAyJRwAu8C5KkOPdREc7nYW-WqGAhp7GVQ/viewform"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-semibold underline"
+                                  >
                                     Click here
                                   </a>{" "}
                                   to fill the google form (accessible from your institutional email
