@@ -8,6 +8,7 @@ import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@/sc
 
 
 import { feeGroupPromotionMappingModel } from "./fee-group-promotion-mapping.model";
+import { paymentModel } from "../payments";
 
 export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     id: serial().primaryKey(),
@@ -33,12 +34,14 @@ export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     lateFee: integer().notNull().default(0),
     totalPayable: integer().notNull().default(0),
     amountPaid: integer().notNull().default(0),
-    paymentStatus: paymentStatusEnum().notNull().default("PENDING").notNull(),
-    paymentMode: paymentModeEnum(),
-    transactionRef: text(),
-    transactionDate: timestamp({withTimezone: true}),
-    receiptNumber: varchar({ length: 2555 }),
+    // paymentStatus: paymentStatusEnum().notNull().default("PENDING").notNull(),
+    // paymentMode: paymentModeEnum(),
+    // transactionRef: text(),
+    // transactionDate: timestamp({withTimezone: true}),
+    receiptNumber: varchar({ length: 2555 }).unique(),
     challanGeneratedAt: timestamp({withTimezone: true}),
+    paymentId: integer("payment_id_fk")
+        .references(() => paymentModel.id),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });

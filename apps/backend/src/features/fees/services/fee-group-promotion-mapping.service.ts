@@ -7,6 +7,7 @@ import {
   feeSlabModel,
   promotionModel,
   boardResultStatusModel,
+  paymentModel,
 } from "@repo/db/schemas";
 import { promotionStatusModel } from "@repo/db/schemas/models/batches";
 import {
@@ -386,9 +387,13 @@ export const getAllFeeGroupPromotionMappings = async (
               feeStudentMappingModel.feeGroupPromotionMappingId,
             totalPayable: feeStudentMappingModel.totalPayable,
             amountPaid: feeStudentMappingModel.amountPaid,
-            paymentStatus: feeStudentMappingModel.paymentStatus,
+            // paymentStatus: paymentModel.paymentStatus,
           })
           .from(feeStudentMappingModel)
+          .leftJoin(
+            paymentModel,
+            eq(paymentModel.id, feeStudentMappingModel.paymentId),
+          )
           .where(
             inArray(
               feeStudentMappingModel.feeGroupPromotionMappingId,
@@ -411,15 +416,15 @@ export const getAllFeeGroupPromotionMappings = async (
       0,
     );
     let paymentStatus: "Paid" | "Pending" | "Unpaid" = "Pending";
-    if (related.length === 0) {
-      paymentStatus = "Pending";
-    } else if (related.every((r) => r.paymentStatus === "COMPLETED")) {
-      paymentStatus = "Paid";
-    } else if (related.some((r) => r.paymentStatus === "PENDING")) {
-      paymentStatus = "Pending";
-    } else {
-      paymentStatus = "Unpaid";
-    }
+    // if (related.length === 0) {
+    //   paymentStatus = "Pending";
+    // } else if (related.every((r) => r.paymentStatus === "COMPLETED")) {
+    //   paymentStatus = "Paid";
+    // } else if (related.some((r) => r.paymentStatus === "PENDING")) {
+    //   paymentStatus = "Pending";
+    // } else {
+    //   paymentStatus = "Unpaid";
+    // }
     paymentByMappingId.set(mappingId, { paymentStatus, amountToPay });
   }
 
