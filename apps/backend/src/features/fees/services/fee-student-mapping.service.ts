@@ -446,6 +446,33 @@ async function generateFeeReceiptInternal(params: {
 
   const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
 
+  // Optional: For successful ONLINE payments, show ePAID metadata block in PDF.
+  const ePaid = await (async () => {
+    const paymentId = feeStudentMapping.paymentId;
+    if (!paymentId) return null;
+    const [pay] = await db
+      .select({
+        status: paymentModel.status,
+        paymentMode: paymentModel.paymentMode,
+        orderId: paymentModel.orderId,
+        txnDate: paymentModel.txnDate,
+      })
+      .from(paymentModel)
+      .where(eq(paymentModel.id, paymentId));
+    const isSuccess = String(pay?.status || "").toUpperCase() === "SUCCESS";
+    const isOnline = String(pay?.paymentMode || "").toUpperCase() === "ONLINE";
+    const orderId = String(pay?.orderId || "").trim();
+    const txnDateRaw = String(pay?.txnDate || "").trim();
+    if (!isSuccess || !isOnline || !orderId || !txnDateRaw) return null;
+
+    const d = new Date(txnDateRaw);
+    const transactionDate = Number.isFinite(d.getTime())
+      ? d.toLocaleDateString("en-GB")
+      : "";
+    if (!transactionDate) return null;
+    return { orderId, transactionDate };
+  })();
+
   // Generate PDF buffer
   const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
     session: session.name,
@@ -462,6 +489,7 @@ async function generateFeeReceiptInternal(params: {
     totalPayableAmountInWords: numberToWords(feeStudentMapping.totalPayable),
     challanNumber,
     challanDate: challanGeneratedAt.toLocaleDateString("en-GB"),
+    ePaid,
     feeComponents: componentDtos,
     pageTitle,
   });

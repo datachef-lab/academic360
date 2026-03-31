@@ -543,6 +543,10 @@ export class PdfGenerationService {
     shift: string;
     challanNumber: string;
     challanDate: string; // dd/mm/yyyy — immutable generation date
+    ePaid?: null | {
+      orderId: string;
+      transactionDate: string; // dd/mm/yyyy
+    };
     feeComponents: Array<{
       name: string;
       amount: string;
