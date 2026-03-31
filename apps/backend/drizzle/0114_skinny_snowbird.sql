@@ -1,0 +1,113 @@
+CREATE TYPE "public"."payment_online_options" AS ENUM('UPI', 'WALLET', 'NET_BANKING', 'CREDIT_CARD', 'DEBIT_CARD', 'PAYTM_BALANCE');--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "user_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "context" "payment_for_type" NOT NULL;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "amount" double precision DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "status" "payment_status" DEFAULT 'PENDING' NOT NULL;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "payment_mode" "payment_mode" NOT NULL;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "payment_gateway_vendor" varchar(255);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "payment_option" "payment_online_options";--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "order_id" varchar(1000);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "mid" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "mcc" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "merchant_vpa" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "merchant_name" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "merchant_logo" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_result_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_result_status" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_result_message" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_pay_method" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_base_transaction_amount_value" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_base_transaction_amount_currency" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_fee_amount_value" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_fee_amount_currency" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_tax_amount_value" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_tax_amount_currency" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_total_convenience_charges_value" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_total_convenience_charges_currency" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_total_transaction_amount_value" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_total_transaction_amount_currency" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_text" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "pcf_consult_details_display_text" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_issuing_bank" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_issuing_bank_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_payment_mode" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_channel_name" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_channel_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "min_card_number_digits" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "max_card_number_digits" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_bin_cvv_required" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_cvv_length" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_bin_expiry_required" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "isbin_indian" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "isbin_active" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_country_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_country_name" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_country_numeric_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_currency_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_currency_name" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_currency_numeric_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bin_currency_symbol" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_bin_eligible_for_coft" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_bin_coft_payment_supported" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_bin_eligible_for_alt_id" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_bin_alt_id_payment_supported" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "has_low_success_rate_status" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "has_low_success_rate_message" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_emi_available" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "icon_url" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "error_message" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_subscription_available" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_hybrid_pay_mode_disabled" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "prepaid_card" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "prepaid_card_max_amount" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "native_otp_eligible" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_response_code" varchar(255);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_status" varchar(255);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_response_message" varchar(255);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_id" varchar(500);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bank_transaction_id" varchar(500);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_amount" varchar(500);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_type" varchar(500);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_gateway_name" varchar(500);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_gateway_info" varchar(500);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bank_name" varchar(1000);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_payment_mode" varchar(1000);--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_refund_amount" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transaction_date" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "subscription_id" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "payable_amount" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "payment_promo_checkout_data" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "van" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "beneficiary_name" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "ifsc_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "van_bank_name" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "van_purpose" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "customer_name" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "customer_email" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "customer_phone" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "source_account_number_masked" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "source_account_holder_name" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "transfer_mode" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "utr" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "bank_transaction_date" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "rrn_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "arn_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "arn_available" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "auth_code" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "merchant_unique_reference" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "card_scheme" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "card_last_four_digit" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "international_card_payment" boolean;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "blocked_amount" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "auth_ref_id" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "checksum_hash" varchar;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "is_manual_entry" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "recorded_by_user_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "internal_remarks" text;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "remarks" text;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "gateway_response" jsonb;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "created_at" timestamp DEFAULT now();--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "updated_at" timestamp DEFAULT now();--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_fk_users_id_fk" FOREIGN KEY ("user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_recorded_by_user_id_fk_users_id_fk" FOREIGN KEY ("recorded_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;

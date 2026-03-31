@@ -275,7 +275,7 @@ export async function findByUid(uid: string): Promise<StudentDto | null> {
       or(ilike(studentModel.uid, uid), ilike(studentModel.rfidNumber, uid)),
     );
 
-  console.log("Found student by UID:", foundStudent);
+  // console.log("Found student by UID:", foundStudent);
   return await modelToDto(foundStudent);
 }
 

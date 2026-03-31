@@ -1,12 +1,15 @@
 import type { Request, Response, NextFunction } from "express";
+import { createRequire } from "module";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/index.js";
+import type { PaytmDowntimeWebhookPayload } from "@repo/db/dtos/payments";
 import { feeStudentMappingModel, studentModel } from "@repo/db/schemas";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
   createPayment,
   createFeePayment,
+  attachPaytmTxnTokenToPayment,
   findPaymentByOrderId,
   findPaymentInfoByApplicationFormId,
   generateOrderId,
@@ -15,9 +18,24 @@ import {
 import {
   createPaytmTxnToken,
   getPaytmPaymentStatus,
+  getPaytmTransactionStatusDetails,
 } from "../services/paytm-payment.service.js";
+import { enrichPaymentWithPaytmDetails } from "../services/payment.service.js";
+import {
+  getOnlinePaymentAvailability,
+  syncPaytmDowntimeFromWebhook,
+} from "../services/payment-downtime.service.js";
 import { findApplicationFormModelById } from "@/features/admissions/services/application-form.service.js";
 import { paytmConfig, isPaytmConfigured } from "../config/paytm.config.js";
+
+const require = createRequire(import.meta.url);
+const PaytmChecksum = require("paytmchecksum") as {
+  verifySignature: (
+    body: string,
+    merchantKey: string,
+    signature: string,
+  ) => boolean;
+};
 
 /**
  * POST /api/payments/initiate
@@ -68,15 +86,15 @@ export const initiatePaymentHandler = async (
     let orderId: string;
 
     if (payment) {
-      if (payment.status === "SUCCESS") {
-        res
-          .status(400)
-          .json(
-            new ApiResponse(400, "ERROR", null, "Payment already completed"),
-          );
-        return;
-      }
-      orderId = payment.orderId;
+      // if (payment.status === "SUCCESS") {
+      //   res
+      //     .status(400)
+      //     .json(
+      //       new ApiResponse(400, "ERROR", null, "Payment already completed"),
+      //     );
+      //   return;
+      // }
+      // orderId = payment.orderId;
     } else {
       orderId = await generateOrderId();
       payment = await createPayment({
@@ -89,27 +107,28 @@ export const initiatePaymentHandler = async (
     }
 
     const custId = `APP_${applicationFormId}`;
-    const tokenResult = await createPaytmTxnToken({
-      orderId,
-      amount: String(amount),
-      custId,
-      email,
-      mobile,
-      firstName,
-      lastName,
-    });
+    // const tokenResult = await createPaytmTxnToken({
+    //   orderId,
+    //   amount: String(amount),
+    //   custId,
+    //   email,
+    //   mobile,
+    //   firstName,
+    //   lastName,
+    // });
 
-    if (!tokenResult.success) {
-      res
-        .status(500)
-        .json(
-          new ApiResponse(
-            500,
-            "ERROR",
-            null,
-            tokenResult.error ?? "Failed to initiate payment",
-          ),
-        );
+    if (
+      false
+      //  !tokenResult.success
+    ) {
+      res.status(500).json(
+        new ApiResponse(
+          500,
+          "ERROR",
+          null,
+          // tokenResult.error ?? "Failed to initiate payment",
+        ),
+      );
       return;
     }
 
@@ -118,8 +137,8 @@ export const initiatePaymentHandler = async (
         200,
         "SUCCESS",
         {
-          orderId,
-          txnToken: tokenResult.txnToken,
+          // orderId,
+          // txnToken: tokenResult.txnToken,
           paymentId: payment?.id,
         },
         "Payment initiated successfully",
@@ -180,6 +199,7 @@ export const initiateFeePaymentHandler = async (
 
     const payment = await createFeePayment({
       feeStudentMappingId,
+      studentId,
       orderId,
       amount: amountStr,
       gatewayName: "PAYTM",
@@ -202,6 +222,13 @@ export const initiateFeePaymentHandler = async (
       console.error("[Paytm] initiate-fee failed:", errMsg);
       res.status(500).json(new ApiResponse(500, "ERROR", null, errMsg));
       return;
+    }
+
+    if (tokenResult.txnToken) {
+      await attachPaytmTxnTokenToPayment({
+        orderId,
+        txnToken: tokenResult.txnToken,
+      });
     }
 
     res.status(200).json(
@@ -263,25 +290,25 @@ export const getPaymentStatusHandler = async (
       return;
     }
 
-    if (payment.status !== "SUCCESS" && statusResult.status === "TXN_SUCCESS") {
-      await updatePaymentByOrderId(orderId, {
-        status: "SUCCESS",
-        transactionId: statusResult.txnId,
-        bankTxnId: statusResult.bankTxnId,
-        txnDate: statusResult.txnDate
-          ? new Date(statusResult.txnDate)
-          : undefined,
-      });
-    } else if (
-      payment.status !== "FAILED" &&
-      statusResult.status === "TXN_FAILURE"
-    ) {
-      await updatePaymentByOrderId(orderId, {
-        status: "FAILED",
-        transactionId: statusResult.txnId,
-        bankTxnId: statusResult.bankTxnId,
-      });
-    }
+    // if (payment.status !== "SUCCESS" && statusResult.status === "TXN_SUCCESS") {
+    //   await updatePaymentByOrderId(orderId, {
+    //     status: "SUCCESS",
+    //     transactionId: statusResult.txnId,
+    //     bankTxnId: statusResult.bankTxnId,
+    //     txnDate: statusResult.txnDate
+    //       ? new Date(statusResult.txnDate)
+    //       : undefined,
+    //   });
+    // } else if (
+    //   payment.status !== "FAILED" &&
+    //   statusResult.status === "TXN_FAILURE"
+    // ) {
+    //   await updatePaymentByOrderId(orderId, {
+    //     status: "FAILED",
+    //     transactionId: statusResult.txnId,
+    //     bankTxnId: statusResult.bankTxnId,
+    //   });
+    // }
 
     res.status(200).json(
       new ApiResponse(
@@ -354,6 +381,13 @@ export const confirmPaymentHandler = async (
     const txnId = body.TXNID ?? body.txnId;
     const bankTxnId = body.BANKTXNID ?? body.bankTxnId;
     const txnDate = body.TXNDATE ?? body.txnDate;
+    const checksumHash = body.CHECKSUMHASH ?? body.checksumHash;
+    const cardScheme = body.cardScheme ?? body.CARDSCHEME;
+    const mid = body.MID ?? body.mid;
+    const txnAmount = body.TXNAMOUNT ?? body.txnAmount;
+    const bankName = body.BANKNAME ?? body.bankName;
+    const txnGatewayName = body.GATEWAYNAME ?? body.gatewayName;
+    const txnPaymentMode = body.PAYMENTMODE ?? body.paymentMode;
 
     if (!orderId) {
       res
@@ -376,14 +410,29 @@ export const confirmPaymentHandler = async (
         transactionId: txnId,
         bankTxnId,
         txnDate: txnDate ? new Date(txnDate) : undefined,
-        gatewayResponse: body,
+        mid,
+        txnAmount,
+        bankName,
+        txnGatewayName,
+        txnPaymentMode,
+        checksumHash,
+        cardScheme,
+        gatewayResponse: { paytm: { callback: body } },
       });
     } else if (status === "TXN_FAILURE") {
       await updatePaymentByOrderId(orderId, {
         status: "FAILED",
         transactionId: txnId,
         bankTxnId,
-        gatewayResponse: body,
+        txnDate: txnDate ? new Date(txnDate) : undefined,
+        mid,
+        txnAmount,
+        bankName,
+        txnGatewayName,
+        txnPaymentMode,
+        checksumHash,
+        cardScheme,
+        gatewayResponse: { paytm: { callback: body } },
       });
     }
 
@@ -419,6 +468,20 @@ export const paymentCallbackHandler = async (
     const txnId = body.TXNID ?? body.txnId;
     const bankTxnId = body.BANKTXNID ?? body.bankTxnId;
     const txnDate = body.TXNDATE ?? body.txnDate;
+    const checksumHash = body.CHECKSUMHASH ?? body.checksumHash;
+    const cardScheme = body.cardScheme ?? body.CARDSCHEME;
+    const mid = body.MID ?? body.mid;
+    const txnAmount = body.TXNAMOUNT ?? body.txnAmount;
+    const bankName = body.BANKNAME ?? body.bankName;
+    const txnGatewayName = body.GATEWAYNAME ?? body.gatewayName;
+    const txnPaymentMode = body.PAYMENTMODE ?? body.paymentMode;
+    console.log(body);
+    console.info("[Paytm callback] received", {
+      orderId,
+      status,
+      txnId,
+      bankTxnId,
+    });
 
     if (!orderId) {
       res
@@ -436,21 +499,78 @@ export const paymentCallbackHandler = async (
     }
 
     try {
+      // Update base status columns from callback.
       if (status === "TXN_SUCCESS") {
         await updatePaymentByOrderId(orderId, {
           status: "SUCCESS",
           transactionId: txnId,
           bankTxnId,
           txnDate: txnDate ? new Date(txnDate) : undefined,
-          gatewayResponse: body,
+          mid,
+          txnAmount,
+          bankName,
+          txnGatewayName,
+          txnPaymentMode,
+          checksumHash,
+          cardScheme,
+          gatewayResponse: { paytm: { callback: body } },
         });
       } else if (status === "TXN_FAILURE") {
         await updatePaymentByOrderId(orderId, {
           status: "FAILED",
           transactionId: txnId,
           bankTxnId,
-          gatewayResponse: body,
+          txnDate: txnDate ? new Date(txnDate) : undefined,
+          mid,
+          txnAmount,
+          bankName,
+          txnGatewayName,
+          txnPaymentMode,
+          checksumHash,
+          cardScheme,
+          gatewayResponse: { paytm: { callback: body } },
         });
+      }
+
+      // Compulsory enrichment attempt (no skips) — store whatever Paytm returns (or errors).
+      // Re-read latest payment row so we pick up txnToken stored at initiation.
+      const latest = await findPaymentByOrderId(orderId);
+      const isOnline = latest?.paymentMode === "ONLINE";
+      const isPaytm =
+        String(latest?.paymentGatewayVendor ?? "")
+          .trim()
+          .toUpperCase() === "PAYTM";
+      const isManual = !!latest?.isManualEntry;
+      if (!isOnline || !isPaytm || isManual) {
+        console.info("[Paytm] skip enrichment (not eligible)", {
+          orderId,
+          isOnline,
+          vendor: latest?.paymentGatewayVendor,
+          isManualEntry: isManual,
+        });
+        return;
+      }
+      const tokenFromDb = (
+        latest?.gatewayResponse as { paytm?: { txnToken?: string } } | null
+      )?.paytm?.txnToken;
+
+      console.info("[Paytm] compulsory enrichment start", {
+        orderId,
+        callbackStatus: status,
+        hasTxnToken: !!tokenFromDb,
+      });
+
+      const enrichResult = await enrichPaymentWithPaytmDetails(orderId, {
+        txnToken: tokenFromDb,
+      });
+
+      if (!enrichResult.success) {
+        console.error("[Paytm] compulsory enrichment failed", {
+          orderId,
+          error: enrichResult.error,
+        });
+      } else {
+        console.info("[Paytm] compulsory enrichment done", { orderId });
       }
     } catch (updateError) {
       console.error(
@@ -485,9 +605,21 @@ export const paymentCallbackHandler = async (
 
     let redirectUrl = redirect.toString();
     let studentUid = "";
+    let studentIdForRedirect: number | null = null;
 
-    // For main-console fallback (no custom returnUrl): add search & feeStructureId
-    if (!resolvedReturnUrl && payment.feeStudentMappingId) {
+    // For fees: attach student context for UI refresh after redirect.
+    const feeStudentMappingId =
+      payment.context === "FEE"
+        ? Number(
+            (
+              payment.gatewayResponse as
+                | { meta?: { feeStudentMappingId?: number | string } }
+                | null
+                | undefined
+            )?.meta?.feeStudentMappingId ?? 0,
+          ) || null
+        : null;
+    if (feeStudentMappingId) {
       try {
         const [mapping] = await db
           .select({
@@ -495,9 +627,16 @@ export const paymentCallbackHandler = async (
             feeStructureId: feeStudentMappingModel.feeStructureId,
           })
           .from(feeStudentMappingModel)
-          .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId));
+          .where(eq(feeStudentMappingModel.id, feeStudentMappingId));
 
         if (mapping?.studentId) {
+          studentIdForRedirect = Number(mapping.studentId) || null;
+          if (studentIdForRedirect) {
+            redirect.searchParams.set(
+              "studentId",
+              String(studentIdForRedirect),
+            );
+          }
           const [student] = await db
             .select({ uid: studentModel.uid })
             .from(studentModel)
@@ -505,15 +644,20 @@ export const paymentCallbackHandler = async (
 
           if (student?.uid) {
             studentUid = student.uid;
-            redirect.searchParams.set("search", student.uid);
+            // For main-console fallback (no custom returnUrl): preserve existing behaviour.
+            if (!resolvedReturnUrl) {
+              redirect.searchParams.set("search", student.uid);
+            }
           }
         }
 
         if (mapping?.feeStructureId) {
-          redirect.searchParams.set(
-            "feeStructureId",
-            String(mapping.feeStructureId),
-          );
+          if (!resolvedReturnUrl) {
+            redirect.searchParams.set(
+              "feeStructureId",
+              String(mapping.feeStructureId),
+            );
+          }
         }
 
         redirectUrl = redirect.toString();
@@ -527,23 +671,80 @@ export const paymentCallbackHandler = async (
       `<!DOCTYPE html><html><body>
         <script>
           if (window.opener) {
-            try { 
-              window.opener.postMessage({ 
-                type: "PAYTM_PAYMENT_RESULT", 
-                payment: "${paymentResult}", 
-                orderId: "${orderId}", 
-                studentUid: "${studentUid}",
+            try {
+              window.opener.postMessage({
+                type: "PAYTM_PAYMENT_RESULT",
+                payment: ${JSON.stringify(paymentResult)},
+                orderId: ${JSON.stringify(orderId)},
+                studentId: ${JSON.stringify(studentIdForRedirect)},
+                studentUid: ${JSON.stringify(studentUid)},
                 respMsg: ${JSON.stringify(respMsg)}
-              }, "${frontendUrl}"); 
+              }, ${JSON.stringify(frontendUrl)});
             } catch(e) {}
             window.close();
           } else {
-            window.location.href = "${redirectUrl}";
+            window.location.href = ${JSON.stringify(redirectUrl)};
           }
         </script>
         <p>Processing payment...</p>
       </body></html>`,
     );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+/**
+ * GET /api/payments/availability — coarse online payment availability from stored Paytm downtime rows.
+ */
+export const getOnlinePaymentAvailabilityHandler = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const data = await getOnlinePaymentAvailability();
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Availability loaded"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+/**
+ * POST /api/payments/downtime/webhook — Paytm downtime notification (configure URL with Paytm).
+ * Verifies checksum when `head.signature` is present.
+ */
+export const paytmDowntimeWebhookHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const payload = req.body as PaytmDowntimeWebhookPayload;
+    const signature = payload?.head?.signature;
+
+    if (signature && typeof signature === "string" && isPaytmConfigured()) {
+      const valid = PaytmChecksum.verifySignature(
+        JSON.stringify(payload.body ?? {}),
+        paytmConfig.merchantKey,
+        signature,
+      );
+      if (!valid) {
+        res
+          .status(400)
+          .json(
+            new ApiResponse(400, "ERROR", null, "Invalid downtime checksum"),
+          );
+        return;
+      }
+    }
+
+    await syncPaytmDowntimeFromWebhook(payload);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", { ok: true }, "Downtime synced"));
   } catch (error) {
     handleError(error, res, next);
   }

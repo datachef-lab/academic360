@@ -118,7 +118,7 @@ export async function save(
     const safeName = existingSetting.name
       .replace(/[^a-z0-9]/gi, "_")
       .toLowerCase();
-    const fileName = `${safeName}.${ext}`;
+    const fileName = `${id}.${ext}`;
     const filePath = path.join(SETTINGS_PATH, fileName);
 
     // Delete existing file if exists
@@ -157,6 +157,8 @@ export async function findByIdOrName(idOrName: string | number) {
 }
 
 export async function getSettingFileService(idOrName: string) {
+  console.log("idOrName", idOrName);
+
   const setting = await db
     .select()
     .from(settingsModel)
@@ -167,17 +169,35 @@ export async function getSettingFileService(idOrName: string) {
     )
     .then((res) => res[0]);
 
+  console.log("setting", setting);
+
   if (!setting || setting.type !== "FILE") {
+    console.log("setting not found");
     return null;
   }
 
-  const filePath = path.join(SETTINGS_PATH, `${setting.name}.jpeg`);
+  // ✅ Try all possible extensions
+  const extensions = ["jpg", "jpeg", "png", "webp"];
 
-  console.log(filePath);
+  let filePath: string | null = null;
+
+  for (const ext of extensions) {
+    const fullPath = path.join(SETTINGS_PATH, `${setting.id}.${ext}`);
+    if (fs.existsSync(fullPath)) {
+      filePath = fullPath;
+      break;
+    }
+  }
+
+  console.log("resolved filePath:", filePath);
+
+  if (!filePath) {
+    console.log("file not found on disk");
+    return null;
+  }
+
   const contentType = mime.lookup(filePath) || "application/octet-stream";
-
-  if (!fs.existsSync(filePath)) return null;
-
   const stream = fs.createReadStream(filePath);
+
   return { stream, contentType };
 }

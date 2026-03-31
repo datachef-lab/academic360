@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -160,6 +160,7 @@ export default function EnrollmentFeesPage() {
   const [generatingReceipt, setGeneratingReceipt] = useState(false);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
   const [paymentTimestamp, setPaymentTimestamp] = useState<string>("");
+  const handledPaymentRedirectRef = useRef(false);
 
   const fetchMappings = async () => {
     if (!student?.id) return;
@@ -199,92 +200,76 @@ export default function EnrollmentFeesPage() {
   }, [student?.id, cpFormVersion]);
 
   useEffect(() => {
+    if (handledPaymentRedirectRef.current) return;
+    if (!student?.id) return;
+
     const params = new URLSearchParams(window.location.search);
     const payment = params.get("payment");
+    if (!payment) return;
+    handledPaymentRedirectRef.current = true;
+
     const respMsg = params.get("respMsg");
     const ctxParam = params.get("ctx");
-    if (payment) {
-      const feeCtx = ctxParam ? decodeFeeCtx(ctxParam) : null;
-      if (feeCtx) {
-        setSelectedFee(feeCtx);
-      }
-      const urlResult = payment === "success" ? "success" : "failed";
-      setPaymentResult(urlResult);
-      setPaymentMsg(
-        respMsg ||
-          (urlResult === "success"
-            ? "Payment recorded successfully!"
-            : "Payment failed due to a technical error. Please try after some time."),
-      );
-      setPaymentMode(urlResult === "success" ? "online" : null);
-      setCpOpen(true);
-      setStage("payment");
-      setOpenedFromQuery(true);
-      params.delete("payment");
-      params.delete("orderId");
-      params.delete("respMsg");
-      params.delete("ctx");
-      const next = params.toString();
-      window.history.replaceState(
-        {},
-        "",
-        next ? `${window.location.pathname}?${next}` : window.location.pathname,
-      );
 
-      const verifyAndShow = async () => {
-        try {
-          if (student?.id) {
-            const { data: mapData } = await axiosInstance.get<ApiResponse<FeeMapping[]>>(
-              `/api/v1/fees/student-mappings/student/${student.id}`,
-            );
-            const freshMappings = Array.isArray(mapData?.payload) ? mapData.payload : [];
-            setMappings(freshMappings);
+    const feeCtx = ctxParam ? decodeFeeCtx(ctxParam) : null;
+    if (feeCtx) setSelectedFee(feeCtx);
 
-            if (feeCtx) {
-              const mapping = freshMappings.find((m) => m.id === feeCtx.feeStudentMappingId);
-              const dbStatus = String(mapping?.paymentStatus || "").toUpperCase();
-              const isPaidInDb = dbStatus === "COMPLETED" || dbStatus === "SUCCESS";
+    const urlResult = payment === "success" ? "success" : "failed";
+    setPaymentResult(urlResult);
+    setPaymentMsg(
+      respMsg ||
+        (urlResult === "success"
+          ? "Payment recorded successfully!"
+          : "Payment failed due to a technical error. Please try after some time."),
+    );
+    setPaymentMode(urlResult === "success" ? "online" : null);
+    setCpOpen(true);
+    setStage("payment");
+    setOpenedFromQuery(true);
 
-              if (mapping?.feeStructure?.academicYear?.year) {
-                setSelectedAcademicYear(mapping.feeStructure.academicYear.year);
-              }
+    params.delete("payment");
+    params.delete("orderId");
+    params.delete("respMsg");
+    params.delete("ctx");
+    const next = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      next ? `${window.location.pathname}?${next}` : window.location.pathname,
+    );
 
-              if (isPaidInDb) {
-                setPaymentResult("success");
-                setPaymentMsg(respMsg || "Payment recorded successfully!");
-                setPaymentMode("online");
-                setPaymentTimestamp(
-                  new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
-                );
-              } else {
-                setPaymentResult("failed");
-                setPaymentMsg(
-                  respMsg || "Payment failed due to a technical error. Please try after some time.",
-                );
-                setPaymentMode(null);
-              }
-            } else {
-              setPaymentResult(urlResult);
-              setPaymentMsg(
-                respMsg ||
-                  (urlResult === "success"
-                    ? "Payment recorded successfully!"
-                    : "Payment failed due to a technical error. Please try after some time."),
-              );
-              setPaymentMode(urlResult === "success" ? "online" : null);
-            }
+    const verifyAndShow = async () => {
+      try {
+        const { data: mapData } = await axiosInstance.get<ApiResponse<FeeMapping[]>>(
+          `/api/v1/fees/student-mappings/student/${student.id}`,
+        );
+        const freshMappings = Array.isArray(mapData?.payload) ? mapData.payload : [];
+        setMappings(freshMappings);
 
-            axiosInstance
-              .get<ApiResponse<CareerProgressionTemplatePayload>>(
-                `/api/academics/career-progression-forms/student/${student.id}/current`,
-              )
-              .then(({ data }) => {
-                setCpData(data?.payload ?? null);
-                setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
-              })
-              .catch(() => {});
+        if (feeCtx) {
+          const mapping = freshMappings.find((m) => m.id === feeCtx.feeStudentMappingId);
+          const dbStatus = String(mapping?.paymentStatus || "").toUpperCase();
+          const isPaidInDb = dbStatus === "COMPLETED" || dbStatus === "SUCCESS";
+
+          if (mapping?.feeStructure?.academicYear?.year) {
+            setSelectedAcademicYear(mapping.feeStructure.academicYear.year);
           }
-        } catch {
+
+          if (isPaidInDb) {
+            setPaymentResult("success");
+            setPaymentMsg(respMsg || "Payment recorded successfully!");
+            setPaymentMode("online");
+            setPaymentTimestamp(
+              new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
+            );
+          } else {
+            setPaymentResult("failed");
+            setPaymentMsg(
+              respMsg || "Payment failed due to a technical error. Please try after some time.",
+            );
+            setPaymentMode(null);
+          }
+        } else {
           setPaymentResult(urlResult);
           setPaymentMsg(
             respMsg ||
@@ -293,13 +278,33 @@ export default function EnrollmentFeesPage() {
                 : "Payment failed due to a technical error. Please try after some time."),
           );
           setPaymentMode(urlResult === "success" ? "online" : null);
-        } finally {
-          setLoading(false);
         }
-      };
-      verifyAndShow();
-    }
-  }, []);
+
+        axiosInstance
+          .get<ApiResponse<CareerProgressionTemplatePayload>>(
+            `/api/academics/career-progression-forms/student/${student.id}/current`,
+          )
+          .then(({ data }) => {
+            setCpData(data?.payload ?? null);
+            setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
+          })
+          .catch(() => {});
+      } catch {
+        setPaymentResult(urlResult);
+        setPaymentMsg(
+          respMsg ||
+            (urlResult === "success"
+              ? "Payment recorded successfully!"
+              : "Payment failed due to a technical error. Please try after some time."),
+        );
+        setPaymentMode(urlResult === "success" ? "online" : null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyAndShow();
+  }, [student?.id]);
 
   useEffect(() => {
     if (!mappings.length || openedFromQuery) return;

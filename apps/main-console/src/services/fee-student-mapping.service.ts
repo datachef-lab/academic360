@@ -9,3 +9,16 @@ export async function downloadFeeReceipt(feeStructureId: number, studentId: numb
   );
   return response.data;
 }
+
+export async function downloadFeeReceiptOffline(
+  feeStructureId: number,
+  studentId: number,
+): Promise<Blob> {
+  const response = await axiosInstance.get(
+    `/api/v1/fees/student-mappings/download-receipt-offline?feeStructureId=${feeStructureId}&studentId=${studentId}`,
+    {
+      responseType: "blob",
+    },
+  );
+  return response.data;
+}

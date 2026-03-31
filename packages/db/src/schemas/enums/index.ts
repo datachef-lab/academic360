@@ -100,11 +100,7 @@ export const paymentStatusEnum = pgEnum("payment_status", [
     "CANCELLED",
 ])
 
-export const paymentModeEnum = pgEnum("payment_mode", [
-    "CASH",
-    "CHEQUE",
-    "ONLINE",
-]);
+
 
 export const studentFeesMappingEnum = pgEnum("student_fee_mapping_type", [
     "FULL",
@@ -158,7 +154,13 @@ export const personTitleType = pgEnum("person_title_type", [
     "MR", "MRS", "MS", "DR", "PROF", "REV", "OTHER",
 ]);
 
-export const paymentMode = pgEnum("payment_mode", [
+export const paymentModeEnum = pgEnum("payment_mode", [
+    "CASH",
+    "CHEQUE",
+    "ONLINE",
+]);
+
+export const paymentOnlineOptions = pgEnum("payment_online_options", [
     "UPI", "WALLET", "NET_BANKING", "CREDIT_CARD", "DEBIT_CARD", "PAYTM_BALANCE"
 ]);
 

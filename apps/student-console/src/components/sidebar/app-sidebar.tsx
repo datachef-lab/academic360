@@ -40,6 +40,7 @@ import { useFeeSocket } from "@/providers/fee-socket-provider";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isNestedIframe = window.self !== window.top;
+  const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
   const pathname = usePathname();
   const { user } = useAuth();
   const { accessControl, student } = useStudent();
@@ -289,13 +290,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isActive: pathname === "/dashboard/exams",
       badge: upcomingExamCount > 0 ? upcomingExamCount : undefined,
     },
-
-    {
-      title: "Admission & Reg. Data",
-      url: "/dashboard/admission-registration",
-      icon: FileText,
-      isActive: pathname === "/dashboard/admission-registration",
-    },
     // 20 Feb 2026, 16:00 PM IST
     Date.now() > new Date("2026-02-20T16:00:00+05:30").getTime() && !isBlockedProgram
       ? {
@@ -332,12 +326,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           isActive: pathname === "/dashboard/career-progression",
         }
       : null,
-    {
-      title: "Library",
-      url: "/dashboard/library",
-      icon: Library,
-      isActive: pathname === "/dashboard/library",
-    },
+    !isProduction
+      ? {
+          title: "Library",
+          url: "/dashboard/library",
+          icon: Library,
+          isActive: pathname === "/dashboard/library",
+        }
+      : null,
     {
       title: "Profile",
       url: "/dashboard/profile",

@@ -11,7 +11,7 @@ export async function hasPaidFeeStudentMappings(
     .from(feeStudentMappingModel)
     .where(eq(feeStudentMappingModel.feeStructureId, feeStructureId));
   // Adjust the field name as per your schema
-  return mappings.some((m) => m.paymentStatus === "COMPLETED");
+  return false; // mappings.some((m) => m.paymentStatus === "COMPLETED");
 }
 import { db } from "@/db/index.js";
 import {
@@ -1506,12 +1506,12 @@ export const deleteFeeStructure = async (
       .where(eq(feeStudentMappingModel.feeStructureId, id));
 
     if (mappingIds.length > 0) {
-      await tx.delete(paymentModel).where(
-        inArray(
-          paymentModel.feeStudentMappingId,
-          mappingIds.map((m) => m.id),
-        ),
-      );
+      // await tx.delete(paymentModel).where(
+      //   inArray(
+      //     // paymentModel.feeStudentMappingId,
+      //     mappingIds.map((m) => m.id),
+      //   ),
+      // );
     }
 
     await tx

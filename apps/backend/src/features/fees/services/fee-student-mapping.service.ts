@@ -5,6 +5,7 @@ import {
   feeStructureModel,
   feeGroupPromotionMappingModel,
   feeGroupModel,
+  paymentModel,
   studentModel,
   academicYearModel,
   sessionModel,
@@ -17,7 +18,7 @@ import {
   feeHeadModel,
   receiptTypeModel,
 } from "@repo/db/schemas";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
 import { socketService } from "@/services/socketService.js";
 import * as feeStructureService from "./fee-structure.service.js";
@@ -50,6 +51,17 @@ async function modelToDto(
 ): Promise<FeeStudentMappingDto | null> {
   if (!model) return null;
 
+  const [payment] = model.paymentId
+    ? await db
+        .select({
+          status: paymentModel.status,
+          txnDate: paymentModel.txnDate,
+          updatedAt: paymentModel.updatedAt,
+        })
+        .from(paymentModel)
+        .where(eq(paymentModel.id, model.paymentId))
+    : [null];
+
   const [
     feeStructure,
     feeGroupPromotionMapping,
@@ -78,12 +90,28 @@ async function modelToDto(
   // This might need to be adjusted based on your business logic
   const feeGroupPromotionMappings = [feeGroupPromotionMapping];
 
+  const totalPayable = model.totalPayable ?? 0;
+  const amountPaid = model.amountPaid ?? 0;
+  const paymentStatus: FeeStudentMappingDto["paymentStatus"] =
+    payment?.status === "FAILED"
+      ? "FAILED"
+      : totalPayable > 0 && amountPaid >= totalPayable
+        ? "COMPLETED"
+        : "PENDING";
+
+  const transactionDate: FeeStudentMappingDto["transactionDate"] =
+    (payment as { txnDate?: string | null } | null)?.txnDate ??
+    (payment as { updatedAt?: Date | string | null } | null)?.updatedAt ??
+    null;
+
   return {
     ...model,
     feeStructure,
     feeGroupPromotionMappings,
     feeStructureInstallment,
     waivedOffByUser,
+    paymentStatus,
+    transactionDate,
   };
 }
 
@@ -238,6 +266,30 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
   feeStructureId: number,
   studentId: number,
 ) {
+  return generateFeeReceiptInternal({
+    feeStructureId,
+    studentId,
+    offline: false,
+  });
+}
+
+export async function generateFeeReceiptOfflineByFeeStructureIdAndStudentId(
+  feeStructureId: number,
+  studentId: number,
+): Promise<Awaited<ReturnType<typeof generateFeeReceiptInternal>>> {
+  return generateFeeReceiptInternal({
+    feeStructureId,
+    studentId,
+    offline: true,
+  });
+}
+
+async function generateFeeReceiptInternal(params: {
+  feeStructureId: number;
+  studentId: number;
+  offline: boolean;
+}) {
+  const { feeStructureId, studentId, offline } = params;
   if (!feeStructureId || !studentId) {
     throw Error("feeStructureId or studentId is not valid");
   }
@@ -373,13 +425,53 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
   let challanGeneratedAt = feeStudentMapping.challanGeneratedAt;
   if (!challanGeneratedAt) {
     challanGeneratedAt = new Date();
-    await db
-      .update(feeStudentMappingModel)
-      .set({ challanGeneratedAt })
-      .where(eq(feeStudentMappingModel.id, feeStudentMapping.id));
+    // Persist using snake_case DB columns (avoid changing model column mapping).
+    await db.execute(sql`
+      UPDATE public.fee_student_mappings
+      SET challan_generated_at = ${challanGeneratedAt}
+      WHERE id = ${feeStudentMapping.id}
+        AND challan_generated_at IS NULL
+    `);
+  }
+
+  // Offline receipt: also persist receipt_number as `uid/semesterNumber` (once).
+  if (offline) {
+    await db.execute(sql`
+      UPDATE public.fee_student_mappings
+      SET receipt_number = ${challanNumber}
+      WHERE id = ${feeStudentMapping.id}
+        AND (receipt_number IS NULL OR trim(receipt_number) = '')
+    `);
   }
 
   const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
+
+  // Optional: For successful ONLINE payments, show ePAID metadata block in PDF.
+  const ePaid = await (async () => {
+    const paymentId = feeStudentMapping.paymentId;
+    if (!paymentId) return null;
+    const [pay] = await db
+      .select({
+        status: paymentModel.status,
+        paymentMode: paymentModel.paymentMode,
+        orderId: paymentModel.orderId,
+        txnDate: paymentModel.txnDate,
+      })
+      .from(paymentModel)
+      .where(eq(paymentModel.id, paymentId));
+    const isSuccess = String(pay?.status || "").toUpperCase() === "SUCCESS";
+    const isOnline = String(pay?.paymentMode || "").toUpperCase() === "ONLINE";
+    const orderId = String(pay?.orderId || "").trim();
+    const txnDateRaw = String(pay?.txnDate || "").trim();
+    if (!isSuccess || !isOnline || !orderId || !txnDateRaw) return null;
+
+    const d = new Date(txnDateRaw);
+    const transactionDate = Number.isFinite(d.getTime())
+      ? d.toLocaleDateString("en-GB")
+      : "";
+    if (!transactionDate) return null;
+    return { orderId, transactionDate };
+  })();
 
   // Generate PDF buffer
   const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
@@ -397,6 +489,7 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
     totalPayableAmountInWords: numberToWords(feeStudentMapping.totalPayable),
     challanNumber,
     challanDate: challanGeneratedAt.toLocaleDateString("en-GB"),
+    ePaid,
     feeComponents: componentDtos,
     pageTitle,
   });
