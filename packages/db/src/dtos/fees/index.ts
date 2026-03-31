@@ -63,9 +63,14 @@ export interface FeeStudentMappingDto extends Omit<FeeStudentMappingT,
     | "feeGroupPromotionMappingId" 
     | "feeStructureInstallmentId"
     | "waivedOffByUserId"
+    | "transactionDate"
 > {
     feeStructure: FeeStructureDto;
     feeGroupPromotionMappings: FeeGroupPromotionMappingDto[];
     feeStructureInstallment: FeeStructureInstallmentT | null;
     waivedOffByUser: UserDto | null;
+    /** Computed status for UI rendering */
+    paymentStatus?: "COMPLETED" | "PENDING" | "FAILED";
+    /** Computed from linked `payments` row (txnDate / updatedAt). */
+    transactionDate?: string | Date | null;
 }

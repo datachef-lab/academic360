@@ -316,6 +316,7 @@ const router = createBrowserRouter(
             { path: "reports", element: <admissionFeesModule.feesModule.FeesReportsPage /> },
             { path: "structure", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
             { path: "student-fees", element: <admissionFeesModule.feesModule.StudentFees /> },
+            { path: "marking", element: <admissionFeesModule.feesModule.FeePaymentMarkingPage /> },
             {
               path: "fee-group-promotion-mapping",
               element: <admissionFeesModule.feesModule.FeeGroupPromotionMappingPage />,

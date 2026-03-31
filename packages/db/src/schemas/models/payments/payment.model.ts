@@ -82,9 +82,6 @@ export const paymentModel = pgTable("payments", {
     nativeOtpEligible: varchar(),
     
     // Transaction Details
-    txnResponseCode: varchar("transaction_response_code", { length: 255 }),
-    txnStatus: varchar("transaction_status", { length: 255 }),
-    txnResponseMessage: varchar("transaction_response_message", { length: 255 }),
     txnId: varchar("transaction_id", { length: 500 }),
     bankTxnId: varchar("bank_transaction_id", { length: 500 }),
     txnAmount: varchar("transaction_amount", { length: 500 }),

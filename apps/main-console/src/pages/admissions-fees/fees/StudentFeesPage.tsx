@@ -56,7 +56,10 @@ import {
 import { StudentDto } from "@repo/db/dtos/user";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { UserAvatar } from "@/hooks/UserAvatar";
-import { downloadFeeReceipt } from "@/services/fee-student-mapping.service";
+import {
+  downloadFeeReceipt,
+  downloadFeeReceiptOffline,
+} from "@/services/fee-student-mapping.service";
 
 const StudentFeesPage: React.FC = () => {
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -437,6 +440,34 @@ const StudentFeesPage: React.FC = () => {
     }
   };
 
+  const handleDownloadReceiptOffline = async (feeStructureId: number, studentId: number) => {
+    if (!feeStructureId || !studentId) return;
+    feeStructureId = Number(feeStructureId);
+    studentId = Number(studentId);
+    if (isNaN(feeStructureId) || feeStructureId <= 0 || isNaN(studentId) || studentId <= 0) return;
+
+    setDownloading(true);
+
+    try {
+      const blob = await downloadFeeReceiptOffline(feeStructureId, studentId);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const newTab = window.open(url, "_blank");
+      if (newTab) {
+        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
+      } else {
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      }
+    } catch {
+      toast({
+        title: "Download failed",
+        description: "Failed to download receipt. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handleNotificationSubmit = async () => {
     if (!notificationItem || !selectedStudent) {
       toast.error("Missing notification information");
@@ -679,29 +710,36 @@ const StudentFeesPage: React.FC = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(mapping)}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Waived Off
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setPaymentItem(mapping);
-                                    const remaining = Math.max(
-                                      0,
-                                      (mapping.totalPayable || 0) - (mapping.amountPaid || 0),
-                                    );
-                                    setPaymentForm({
-                                      amountPaid: remaining,
-                                      paymentMode:
-                                        (mapping.paymentMode as "CASH" | "CHEQUE" | "ONLINE") ||
-                                        "CASH",
-                                    });
-                                    setShowPaymentModal(true);
-                                  }}
-                                >
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  Record Payment
-                                </DropdownMenuItem>
+                                {paymentStatus !== "COMPLETED" && (
+                                  <DropdownMenuItem onClick={() => handleEdit(mapping)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit Waived Off
+                                  </DropdownMenuItem>
+                                )}
+                                {/*
+                                  Temporarily disabled as requested.
+                                  {paymentStatus !== "COMPLETED" && (
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setPaymentItem(mapping);
+                                        const remaining = Math.max(
+                                          0,
+                                          (mapping.totalPayable || 0) - (mapping.amountPaid || 0),
+                                        );
+                                        setPaymentForm({
+                                          amountPaid: remaining,
+                                          paymentMode:
+                                            (mapping.paymentMode as "CASH" | "CHEQUE" | "ONLINE") ||
+                                            "CASH",
+                                        });
+                                        setShowPaymentModal(true);
+                                      }}
+                                    >
+                                      <CreditCard className="h-4 w-4 mr-2" />
+                                      Record Payment
+                                    </DropdownMenuItem>
+                                  )}
+                                */}
                                 <DropdownMenuItem
                                   onClick={() => {
                                     handleDownloadReceipt(
@@ -715,24 +753,39 @@ const StudentFeesPage: React.FC = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    setNotificationItem(mapping);
-                                    setNotificationForm({
-                                      message: "",
-                                      notificationType: "EMAIL",
-                                    });
-                                    setShowNotificationModal(true);
+                                    handleDownloadReceiptOffline(
+                                      mapping.feeStructure.id,
+                                      mapping.studentId,
+                                    );
                                   }}
                                 >
-                                  <Bell className="h-4 w-4 mr-2" />
-                                  Send Notification
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Download Receipt (Offline)
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteClick(mapping)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
+                                {paymentStatus !== "COMPLETED" && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setNotificationItem(mapping);
+                                      setNotificationForm({
+                                        message: "",
+                                        notificationType: "EMAIL",
+                                      });
+                                      setShowNotificationModal(true);
+                                    }}
+                                  >
+                                    <Bell className="h-4 w-4 mr-2" />
+                                    Send Notification
+                                  </DropdownMenuItem>
+                                )}
+                                {paymentStatus !== "COMPLETED" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteClick(mapping)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

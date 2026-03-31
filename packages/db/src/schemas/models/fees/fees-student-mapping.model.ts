@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { studentModel, userModel } from "@/schemas/models/user";
 import { feeStructureInstallmentModel, feeStructureModel } from "@/schemas/models/fees";
-import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@/schemas/enums";
+import { studentFeesMappingEnum } from "@/schemas/enums";
 
 
 import { feeGroupPromotionMappingModel } from "./fee-group-promotion-mapping.model";

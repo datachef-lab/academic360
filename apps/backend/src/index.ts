@@ -81,6 +81,7 @@ import "dotenv/config";
 import { httpServer } from "@/app.js";
 import { connectToDatabase, connectToMySQL } from "@/db/index.js";
 import { createLogger } from "@/config/logger.js"; // not createLogger
+import { startPaytmDowntimeScheduler } from "@/features/payments/schedulers/paytm-downtime.scheduler.js";
 const log = createLogger("db");
 
 const PORT = process.env.PORT || 8080;
@@ -142,6 +143,7 @@ function checkRequiredEnvs() {
       log.info(`academic360 running on http://localhost:${PORT} 🚀`);
       log.info(`Profile: ${process.env.NODE_ENV}`);
       log.debug("Press Ctrl+C to stop the application.");
+      startPaytmDowntimeScheduler();
     });
   } catch (error) {
     log.error("Failed to start the application ⚠️", { error });

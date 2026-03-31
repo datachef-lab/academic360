@@ -57,3 +57,56 @@ export async function confirmPaymentFromClient(
   const response = await axiosInstance.post(`${PAYMENTS_BASE}/confirm`, transactionData);
   return response.data;
 }
+
+export type FeePaymentMarkingLoadedRecord = {
+  mapping: any;
+  student: { id: number; uid: string; userId: number | null };
+  user: { id: number; name: string; email: string; phone: string | null };
+  paymentEntry: {
+    id: number;
+    status: string;
+    amount: number;
+    paymentMode: string | null;
+    isManualEntry: boolean;
+    remarks: string | null;
+    txnDate: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    recordedBy: { id: number; name: string; image: string | null } | null;
+  } | null;
+};
+
+export async function loadFeePaymentMarkingCash(
+  receiptNumber: string,
+): Promise<ApiResponse<FeePaymentMarkingLoadedRecord>> {
+  const response = await axiosInstance.get(`${PAYMENTS_BASE}/marking/cash`, {
+    params: { receiptNumber },
+  });
+  return response.data;
+}
+
+export async function receiveFeePaymentCash(data: {
+  receiptNumber: string;
+  receiptDateIso: string;
+  remarks?: string;
+}): Promise<ApiResponse<FeePaymentMarkingLoadedRecord>> {
+  const response = await axiosInstance.post(`${PAYMENTS_BASE}/marking/cash/receive`, data);
+  return response.data;
+}
+
+export async function loadFeePaymentMarkingOnline(
+  orderId: string,
+): Promise<ApiResponse<FeePaymentMarkingLoadedRecord>> {
+  const response = await axiosInstance.get(`${PAYMENTS_BASE}/marking/online`, {
+    params: { orderId },
+  });
+  return response.data;
+}
+
+export async function markFeePaymentOnlineSuccess(data: {
+  orderId: string;
+  remarks?: string;
+}): Promise<ApiResponse<FeePaymentMarkingLoadedRecord>> {
+  const response = await axiosInstance.post(`${PAYMENTS_BASE}/marking/online/mark-success`, data);
+  return response.data;
+}

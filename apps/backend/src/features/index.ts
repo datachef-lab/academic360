@@ -95,7 +95,7 @@ import {
   userStatusMasterRouter,
   userTypeRouter,
 } from "./administration/routes/index.js";
-
+import paymentRouter from "./payments/routes/payment.route.js";
 export {
   documentRouter,
   marksheetRouter,
