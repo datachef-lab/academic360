@@ -1,7 +1,6 @@
 /**
- * Checks if any fee-student-mapping for a fee structure is marked as paid
- * Returns true if any mapping is paid, else false
- * Adjust the field name (isPaid/paymentStatus) as per your schema
+ * Checks if any fee-student-mapping for a fee structure has successful payments
+ * Returns true if any mapping has a linked payment with SUCCESS status, else false
  */
 export async function hasPaidFeeStudentMappings(
   feeStructureId: number,
@@ -9,9 +8,14 @@ export async function hasPaidFeeStudentMappings(
   const mappings = await db
     .select()
     .from(feeStudentMappingModel)
+    .leftJoin(
+      paymentModel,
+      eq(feeStudentMappingModel.paymentId, paymentModel.id),
+    )
     .where(eq(feeStudentMappingModel.feeStructureId, feeStructureId));
-  // Adjust the field name as per your schema
-  return false; // mappings.some((m) => m.paymentStatus === "COMPLETED");
+
+  // Check if any mapping has a linked payment with SUCCESS status
+  return mappings.some((m) => m.payments?.status === "SUCCESS");
 }
 import { db } from "@/db/index.js";
 import {
@@ -1409,6 +1413,14 @@ export const updateFeeStructure = async (
   data: Partial<FeeStructure>,
   userId: number,
 ): Promise<FeeStructureDto | null> => {
+  // Check if there are any fee-student-mappings with successful payments
+  const hasPaidMappings = await hasPaidFeeStudentMappings(id);
+  if (hasPaidMappings) {
+    throw new Error(
+      "PAID_MAPPINGS_EXIST|Cannot update fee structure: Some students have already paid for this fee structure. Please contact support if you need to make changes.",
+    );
+  }
+
   const [updated] = await db
     .update(feeStructureModel)
     .set({
@@ -1462,6 +1474,14 @@ export const deleteFeeStructure = async (
   id: number,
   userId?: number,
 ): Promise<FeeStructureDto | null> => {
+  // Check if there are any fee-student-mappings with successful payments
+  const hasPaidMappings = await hasPaidFeeStudentMappings(id);
+  if (hasPaidMappings) {
+    throw new Error(
+      "PAID_MAPPINGS_EXIST|Cannot delete fee structure: Some students have already paid for this fee structure. Please contact support if deletion is necessary.",
+    );
+  }
+
   // First, get the fee structure to return it later
   const [existingFeeStructure] = await db
     .select()

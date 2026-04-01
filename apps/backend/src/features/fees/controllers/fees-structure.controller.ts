@@ -278,6 +278,19 @@ export const updateFeeStructure = async (
       .status(200)
       .json(new ApiResponse(200, "UPDATED", updated, "Fee structure updated"));
   } catch (error) {
+    // Handle paid mappings validation error
+    if (
+      error instanceof Error &&
+      error.message.startsWith("PAID_MAPPINGS_EXIST")
+    ) {
+      const message =
+        error.message.split("|")[1] ||
+        "Cannot update fee structure with paid mappings";
+      res
+        .status(409)
+        .json(new ApiResponse(409, "PAID_MAPPINGS_EXIST", null, message));
+      return;
+    }
     handleError(error, res, next);
   }
 };
@@ -314,6 +327,19 @@ export const deleteFeeStructure = async (
       .status(200)
       .json(new ApiResponse(200, "DELETED", deleted, "Fee structure deleted"));
   } catch (error) {
+    // Handle paid mappings validation error
+    if (
+      error instanceof Error &&
+      error.message.startsWith("PAID_MAPPINGS_EXIST")
+    ) {
+      const message =
+        error.message.split("|")[1] ||
+        "Cannot delete fee structure with paid mappings";
+      res
+        .status(409)
+        .json(new ApiResponse(409, "PAID_MAPPINGS_EXIST", null, message));
+      return;
+    }
     handleError(error, res, next);
   }
 };

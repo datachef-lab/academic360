@@ -726,6 +726,17 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     const selectedSlab = feeConcessionSlabs.find((fcs) => fcs.id === slabId);
     if (!selectedSlab) return;
 
+    // Check if a fee group exists for this slab
+    const feeGroup = feeGroups.find((fg) => fg.feeSlab?.id === slabId);
+    if (!feeGroup) {
+      const message =
+        'Cannot add slab "' +
+        selectedSlab.name +
+        '": No fee group exists for this slab. Please create a fee group first.';
+      toast.error(message, { duration: 4000 });
+      return;
+    }
+
     // Check if slab is already added
     if (feeStructureRow.concessionSlabs.some((cs) => cs.id === slabId)) {
       return;
@@ -913,7 +924,20 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       onClose();
     } catch (error) {
       console.error("Error saving fee structure:", error);
-      toast.error("Failed to save fee structure. Please try again.");
+      // Handle paid mappings error
+      if (error instanceof Error && error.message.includes("PAID_MAPPINGS_EXIST")) {
+        toast.error(
+          "Cannot update fee structure: Some students have already paid for this fee structure. Please contact support if you need to make changes.",
+          { duration: 5000 },
+        );
+      } else if (error instanceof Error && error.message.includes("409")) {
+        toast.error(
+          "Cannot update fee structure: Some students have already paid for this fee structure.",
+          { duration: 5000 },
+        );
+      } else {
+        toast.error("Failed to save fee structure. Please try again.");
+      }
     } finally {
       setSaving(false);
     }
@@ -936,7 +960,20 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       }
     } catch (error) {
       console.error("Error publishing fee structure:", error);
-      toast.error("Failed to publish fee structure. Please try again.");
+      if (
+        error instanceof Error &&
+        (error.message.includes("PAID_MAPPINGS_EXIST") ||
+          (error as any).code === "PAID_MAPPINGS_EXIST")
+      ) {
+        toast.error(
+          "Cannot update fee structure: Some students have already paid for this fee structure. Please contact support if you need to make changes.",
+          { duration: 5000 },
+        );
+      } else if (error instanceof Error && error.message) {
+        toast.error(error.message, { duration: 4000 });
+      } else {
+        toast.error("Failed to publish fee structure. Please try again.");
+      }
     } finally {
       setIsPublishing(false);
     }
@@ -960,7 +997,20 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       }
     } catch (error) {
       console.error("Error deleting fee structure:", error);
-      toast.error("Failed to delete fee structure. Please try again.");
+      // Handle paid mappings error
+      if (error instanceof Error && error.message.includes("PAID_MAPPINGS_EXIST")) {
+        toast.error(
+          "Cannot delete fee structure: Some students have already paid for this fee structure. Please contact support if deletion is necessary.",
+          { duration: 5000 },
+        );
+      } else if (error instanceof Error && error.message.includes("409")) {
+        toast.error(
+          "Cannot delete fee structure: Some students have already paid for this fee structure.",
+          { duration: 5000 },
+        );
+      } else {
+        toast.error("Failed to delete fee structure. Please try again.");
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -1342,7 +1392,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             {feeConcessionSlabs
                               .filter(
                                 (fcs) =>
-                                  !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id),
+                                  !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
+                                  feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
                               )
                               .map((fcs) => (
                                 <SelectItem key={fcs.id} value={String(fcs.id)}>
@@ -1596,7 +1647,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                         onClick={() => {
                           const availableSlab = feeConcessionSlabs.find(
                             (slab) =>
-                              !feeStructureRow.concessionSlabs.some((cs) => cs.id === slab.id),
+                              !feeStructureRow.concessionSlabs.some((cs) => cs.id === slab.id) &&
+                              feeGroups.some((fg) => fg.feeSlab?.id === slab.id),
                           );
                           if (availableSlab) {
                             addSlab(availableSlab.id!);
@@ -1606,7 +1658,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                         disabled={
                           feeConcessionSlabs.filter(
                             (fcs) =>
-                              !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id),
+                              !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
+                              feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
                           ).length === 0
                         }
                       >
@@ -2049,7 +2102,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 <SelectContent>
                   {feeConcessionSlabs
                     .filter(
-                      (fcs) => !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id),
+                      (fcs) =>
+                        !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
+                        feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
                     )
                     .map((fcs) => (
                       <SelectItem key={fcs.id} value={String(fcs.id)}>
@@ -2060,7 +2115,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
               </Select>
             </div>
             {feeConcessionSlabs.filter(
-              (fcs) => !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id),
+              (fcs) =>
+                !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
+                feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
             ).length === 0 && (
               <div className="text-center text-sm text-gray-500 py-4">
                 All concession slabs have been added

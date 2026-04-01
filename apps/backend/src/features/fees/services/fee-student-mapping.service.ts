@@ -15,7 +15,6 @@ import {
   programCourseModel,
   shiftModel,
   feeStructureComponentModel,
-  feeHeadModel,
   receiptTypeModel,
 } from "@repo/db/schemas";
 import { and, eq, sql } from "drizzle-orm";
@@ -269,27 +268,14 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
   return generateFeeReceiptInternal({
     feeStructureId,
     studentId,
-    offline: false,
-  });
-}
-
-export async function generateFeeReceiptOfflineByFeeStructureIdAndStudentId(
-  feeStructureId: number,
-  studentId: number,
-): Promise<Awaited<ReturnType<typeof generateFeeReceiptInternal>>> {
-  return generateFeeReceiptInternal({
-    feeStructureId,
-    studentId,
-    offline: true,
   });
 }
 
 async function generateFeeReceiptInternal(params: {
   feeStructureId: number;
   studentId: number;
-  offline: boolean;
 }) {
-  const { feeStructureId, studentId, offline } = params;
+  const { feeStructureId, studentId } = params;
   if (!feeStructureId || !studentId) {
     throw Error("feeStructureId or studentId is not valid");
   }
@@ -309,6 +295,7 @@ async function generateFeeReceiptInternal(params: {
       shift: shiftModel,
       programCourse: programCourseModel,
       receiptType: receiptTypeModel,
+      payment: paymentModel,
     })
     .from(feeStudentMappingModel)
     .innerJoin(
@@ -318,6 +305,13 @@ async function generateFeeReceiptInternal(params: {
     .innerJoin(
       studentModel,
       eq(studentModel.id, feeStudentMappingModel.studentId),
+    )
+    .leftJoin(
+      paymentModel,
+      and(
+        eq(paymentModel.id, feeStudentMappingModel.paymentId),
+        eq(paymentModel.status, "SUCCESS"),
+      ),
     )
     .innerJoin(userModel, eq(userModel.id, studentModel.userId))
     .leftJoin(
@@ -375,6 +369,7 @@ async function generateFeeReceiptInternal(params: {
     class: classRecord,
     shift,
     programCourse,
+    payment,
     receiptType,
   } = result[0];
 
@@ -395,7 +390,7 @@ async function generateFeeReceiptInternal(params: {
           component.feeHeadId,
         );
         return {
-          amount: component.amount!.toString(),
+          amount: formatIndianNumber(component.amount!).toString(),
           name: feeHead?.name || "Unknown",
         };
       }),
@@ -424,7 +419,13 @@ async function generateFeeReceiptInternal(params: {
   // Set challanGeneratedAt once (immutable) — persist if not already set
   let challanGeneratedAt = feeStudentMapping.challanGeneratedAt;
   if (!challanGeneratedAt) {
-    challanGeneratedAt = new Date();
+    if (payment && payment.paymentMode === "ONLINE") {
+      challanGeneratedAt = payment.txnDate
+        ? new Date(payment.txnDate)
+        : new Date();
+    } else {
+      challanGeneratedAt = new Date();
+    }
     // Persist using snake_case DB columns (avoid changing model column mapping).
     await db.execute(sql`
       UPDATE public.fee_student_mappings
@@ -435,7 +436,7 @@ async function generateFeeReceiptInternal(params: {
   }
 
   // Offline receipt: also persist receipt_number as `uid/semesterNumber` (once).
-  if (offline) {
+  if (payment?.paymentMode !== "ONLINE" && !feeStudentMapping.receiptNumber) {
     await db.execute(sql`
       UPDATE public.fee_student_mappings
       SET receipt_number = ${challanNumber}
@@ -492,6 +493,11 @@ async function generateFeeReceiptInternal(params: {
     ePaid,
     feeComponents: componentDtos,
     pageTitle,
+    isPaid: payment?.status === "SUCCESS",
+    mode: ePaid ? "online" : "offline",
+    paidDate: payment?.txnDate
+      ? new Date(payment.txnDate).toLocaleDateString("en-GB")
+      : "",
   });
 
   return {
