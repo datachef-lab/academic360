@@ -119,19 +119,13 @@
     .student-info {
       flex: 1;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
     }
 
-    /* Table: first column auto-sizes to longest label; right-aligned labels = tight gap before ":"; colons + values align */
-    .student-info-table {
-      width: 100%;
-      border-collapse: collapse;
-      border-spacing: 0;
-      table-layout: auto;
-    }
-
-    .student-info-table td {
-      padding: 2px 0;
-      font-size: 10px;
+    .student-info-row {
+      display: flex;
       line-height: 14px;
       align-items: center;
       gap: 3px;
@@ -140,6 +134,24 @@
     .student-info-row>span:not(.student-info-value) {
       flex-shrink: 0;
       font-size: 10px;
+    }
+
+    .student-info-label {
+      font-weight: bold;
+      padding: 2px 6px 2px 0;
+      font-size: 10px;
+      white-space: nowrap;
+      min-width: 50px;
+      text-align: left;
+      flex-shrink: 0;
+    }
+
+    .student-info-value {
+      display: inline;
+      padding: 2px 0;
+      font-size: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .student-info-table .si-label {
@@ -485,14 +497,14 @@
                     (<%= ePaid.transactionDate %>)
                   </span>
                   <br /><br />
-                    <span style="font-weight: normal; font-size: 14px;">E-paid challan do not<br />require bank
-                      stamp</span>
-                    <% } else { %>
-                      <br /> <br /><br /><span style="font-size: 14px;">
-                        PAID (<%= paidDate %>)
-                      </span>
-                      <br /><br /><br />
-                        <% } %>
+                  <span style="font-weight: normal; font-size: 14px;">E-paid challan do not<br />require bank
+                    stamp</span>
+                  <% } else { %>
+                    <br /> <br /><br /><span style="font-size: 14px;">
+                      PAID (<%= paidDate %>)
+                    </span>
+                    <br /><br /><br />
+                    <% } %>
               </div>
             </div>
             <% } else { %>
