@@ -4,8 +4,12 @@ import {
   createFeeGroupSchema,
   feeCategoryModel,
   feeSlabModel,
+  promotionModel,
+  sessionModel,
+  feeStructureModel,
+  feeStructureComponentModel,
 } from "@repo/db/schemas";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, inArray, sql } from "drizzle-orm";
 import { FeeGroupDto } from "@repo/db/dtos/fees";
 
 /**
@@ -218,4 +222,92 @@ export const deleteFeeGroup = async (
     .returning();
 
   return await modelToDto(deleted ?? null);
+};
+
+export type FeeGroupTotalForPromotion = {
+  feeGroupId: number;
+  totalPayable: number;
+};
+
+/**
+ * For a given promotion (student session/class/program/shift), compute total payable per fee-group.
+ *
+ * Logic:
+ * - Find matching fee structures for the promotion context (ac.y, class, programCourse, shift)
+ * - Sum fee structure component amounts grouped by slab (feeSlabId) across all matching structures
+ * - Map slab totals to fee groups via feeGroup.feeSlabId
+ */
+export const getFeeGroupTotalsForPromotion = async (
+  promotionId: number,
+): Promise<FeeGroupTotalForPromotion[]> => {
+  const [promotionRow] = await db
+    .select({
+      classId: promotionModel.classId,
+      programCourseId: promotionModel.programCourseId,
+      shiftId: promotionModel.shiftId,
+      academicYearId: sessionModel.academicYearId,
+    })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .where(eq(promotionModel.id, promotionId))
+    .limit(1);
+
+  if (
+    !promotionRow ||
+    !promotionRow.academicYearId ||
+    !promotionRow.classId ||
+    !promotionRow.programCourseId ||
+    !promotionRow.shiftId
+  ) {
+    return [];
+  }
+
+  const feeStructures = await db
+    .select({ id: feeStructureModel.id })
+    .from(feeStructureModel)
+    .where(
+      and(
+        eq(feeStructureModel.academicYearId, promotionRow.academicYearId),
+        eq(feeStructureModel.classId, promotionRow.classId),
+        eq(feeStructureModel.programCourseId, promotionRow.programCourseId),
+        eq(feeStructureModel.shiftId, promotionRow.shiftId),
+      ),
+    );
+
+  const feeStructureIds = feeStructures
+    .map((s) => s.id)
+    .filter((id): id is number => typeof id === "number");
+
+  const feeGroups = await db
+    .select({ id: feeGroupModel.id, feeSlabId: feeGroupModel.feeSlabId })
+    .from(feeGroupModel);
+
+  if (feeStructureIds.length === 0) {
+    return feeGroups.map((g) => ({
+      feeGroupId: g.id!,
+      totalPayable: 0,
+    }));
+  }
+
+  const slabTotals = await db
+    .select({
+      feeSlabId: feeStructureComponentModel.feeSlabId,
+      total: sql<number>`COALESCE(SUM(${feeStructureComponentModel.amount}), 0)`,
+    })
+    .from(feeStructureComponentModel)
+    .where(inArray(feeStructureComponentModel.feeStructureId, feeStructureIds))
+    .groupBy(feeStructureComponentModel.feeSlabId);
+
+  const slabTotalMap = new Map<number, number>(
+    slabTotals
+      .filter((r) => typeof r.feeSlabId === "number")
+      .map((r) => [r.feeSlabId as number, Number(r.total || 0)]),
+  );
+
+  return feeGroups
+    .filter((g) => typeof g.id === "number" && typeof g.feeSlabId === "number")
+    .map((g) => ({
+      feeGroupId: g.id as number,
+      totalPayable: Math.round(slabTotalMap.get(g.feeSlabId as number) ?? 0),
+    }));
 };

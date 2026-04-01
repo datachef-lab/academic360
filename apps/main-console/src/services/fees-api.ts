@@ -771,6 +771,7 @@ export async function getFeeStudentMappingsByStudentId(
 export interface NewFeeCategory {
   name: string;
   description?: string | null;
+  code?: string | null;
 }
 
 export async function getAllFeeCategories(): Promise<ApiResponse<FeeCategoryDto[]>> {

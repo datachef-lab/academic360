@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,16 @@ function safeText(v: unknown, fallback = "-"): string {
   return s.trim() ? s : fallback;
 }
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof AxiosError) {
+    return (
+      ((error.response?.data as Record<string, unknown>)?.message as string | undefined) ||
+      "Unknown error"
+    );
+  }
+  return "Unknown error";
+}
+
 export default function FeePaymentMarkingPage() {
   const { user: loggedInUser } = useAuth();
   const [mode, setMode] = useState<Mode>("CASH");
@@ -48,7 +59,7 @@ export default function FeePaymentMarkingPage() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const mapping = (record?.mapping ?? null) as any;
+  const mapping = record?.mapping;
   const feeStructure = mapping?.feeStructure;
   const promotion = mapping?.feeGroupPromotionMappings?.[0]?.promotion;
 
@@ -84,6 +95,7 @@ export default function FeePaymentMarkingPage() {
   const studentUid = safeText(record?.student?.uid);
   const userEmail = safeText(record?.user?.email);
   const userPhone = safeText(record?.user?.phone);
+  const fatherName = safeText(record?.user?.fatherName);
   const programCourse = safeText(feeStructure?.programCourse?.name);
   const academicYear = safeText(feeStructure?.academicYear?.year);
   const className = safeText(promotion?.class?.name ?? feeStructure?.class?.name);
@@ -145,15 +157,21 @@ export default function FeePaymentMarkingPage() {
         const res = await loadFeePaymentMarkingOnline(orderId);
         setRecord(res.payload ?? null);
       }
-    } catch (e: any) {
-      const status = Number(e?.response?.status);
-      const message = e?.response?.data?.message as string | undefined;
-      if (status === 404) {
-        toast.error(message || "No record found. Please verify the number and try again.");
-      } else if (status === 401 || status === 403) {
-        toast.error("You are not authorized. Please re-login and try again.");
+    } catch (e: unknown) {
+      if (e instanceof AxiosError) {
+        const status = e.response?.status;
+        const message = (e.response?.data as Record<string, unknown>)?.message as
+          | string
+          | undefined;
+        if (status === 404) {
+          toast.error(message || "No record found. Please verify the number and try again.");
+        } else if (status === 401 || status === 403) {
+          toast.error("You are not authorized. Please re-login and try again.");
+        } else {
+          toast.error(message || "Failed to load record");
+        }
       } else {
-        toast.error(message || "Failed to load record");
+        toast.error("Failed to load record");
       }
       setRecord(null);
     } finally {
@@ -302,6 +320,11 @@ export default function FeePaymentMarkingPage() {
                 </div>
               </div>
 
+              <div className="rounded-md border p-3">
+                <div className="text-xs text-slate-500">Father/Mother Name</div>
+                <div className="font-medium">{fatherName}</div>
+              </div>
+
               <div className="rounded-md border p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -448,8 +471,8 @@ export default function FeePaymentMarkingPage() {
                 try {
                   setLoading(true);
                   await confirmConfig?.doConfirm();
-                } catch (e: any) {
-                  toast.error(e?.response?.data?.message || "Failed to save payment");
+                } catch (e: unknown) {
+                  toast.error(extractErrorMessage(e) || "Failed to save payment");
                 } finally {
                   setLoading(false);
                   setConfirmOpen(false);

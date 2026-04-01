@@ -217,7 +217,7 @@
 
     .challan-barcode {
       display: block;
-      width: 160px;
+      width: 100%;
       height: 40px;
       margin: 0;
       flex-shrink: 0;
@@ -380,7 +380,8 @@
       <% SECTIONS.forEach((section, sectionIndex)=> { %>
         <div class="challan-copy">
           <div class="challan-header">
-            <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4"
+            <img class="college-logo"
+              src="<%= collegeLogoDataUrl || 'https://besc.academic360.app/api/api/v1/settings/file/4' %>"
               alt="College Logo" />
             <div class="header-text">
               <div class="college-name">The Bhawanipur Education Society College</div>
@@ -400,7 +401,7 @@
           </div>
           <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
           <div class="student-info-wrapper">
-            <div class="student-info">
+            <div class="student-info" style="width: 45%; ">
               <div class="student-info-row">
                 <div class="student-info-label">Name</div>
                 <span>:</span>
@@ -444,7 +445,7 @@
                 </span>
               </div>
             </div>
-            <div class="challan-barcode-block">
+            <div class="challan-barcode-block" style="width: 55%;">
               <span class="challan-no-value">Challan No : <%= challanNumber %></span>
               <div class="challan-barcode-wrap">
                 <canvas class="challan-barcode" data-challan="<%= challanNumber %>"></canvas>

@@ -61,7 +61,13 @@ export async function confirmPaymentFromClient(
 export type FeePaymentMarkingLoadedRecord = {
   mapping: any;
   student: { id: number; uid: string; userId: number | null };
-  user: { id: number; name: string; email: string; phone: string | null };
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    fatherName: string | null;
+  };
   paymentEntry: {
     id: number;
     status: string;

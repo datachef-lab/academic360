@@ -78,6 +78,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   >([]);
   const [approvalSearchText, setApprovalSearchText] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [feeGroupTotalsById, setFeeGroupTotalsById] = useState<Record<number, number>>({});
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [bulkUploadResult, setBulkUploadResult] = useState<BulkUploadResult | null>(null);
@@ -821,6 +822,36 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       });
     }
   }, [editDialogOpen]);
+
+  // Load fee-group totals (amount) for slab dropdown
+  useEffect(() => {
+    const promotionId = editingItem?.promotion?.id;
+    if (!editDialogOpen || !promotionId) {
+      setFeeGroupTotalsById({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axiosInstance.get(`/api/v1/fees/groups/promotion/${promotionId}/totals`);
+        const payload = Array.isArray(res.data?.payload) ? res.data.payload : [];
+        const map: Record<number, number> = {};
+        payload.forEach((row: any) => {
+          if (typeof row?.feeGroupId === "number") {
+            map[row.feeGroupId] = Number(row?.totalPayable ?? 0);
+          }
+        });
+        if (!cancelled) setFeeGroupTotalsById(map);
+      } catch (e) {
+        if (!cancelled) setFeeGroupTotalsById({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editDialogOpen, editingItem?.promotion?.id]);
 
   const filteredAdminStaffUsers = useMemo(() => {
     if (!approvalSearchText.trim()) return adminStaffUsers;
@@ -1750,10 +1781,20 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                           })();
                     return groups?.map((fg) => (
                       <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
-                        <div className="flex items-center gap-2">
-                          <span>{fg.feeSlab?.name || "-"}</span>
-                          <span className="text-gray-400">|</span>
-                          <span>{fg.feeCategory?.name || "-"}</span>
+                        <div className="grid w-full grid-cols-[1fr_auto] items-center gap-3">
+                          <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+                            <span>{fg.feeSlab?.name || "-"}</span>
+                            <span className="text-gray-400">|</span>
+                            <span className="text-slate-700 font-semibold whitespace-nowrap">
+                              ₹
+                              {Number(feeGroupTotalsById?.[fg.id as number] ?? 0).toLocaleString(
+                                "en-IN",
+                              )}
+                            </span>
+                          </div>
+                          <span className="justify-self-end text-right whitespace-nowrap text-slate-700">
+                            ({fg.feeCategory?.name || "-"})
+                          </span>
                         </div>
                       </SelectItem>
                     ));

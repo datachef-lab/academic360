@@ -42,9 +42,11 @@ const FeeCategoryPage: React.FC = () => {
   const [form, setForm] = useState<{
     name: string;
     description: string;
+    code?: string;
   }>({
     name: "",
     description: "",
+    code: undefined,
   });
 
   const { feeCategories, loading, addFeeCategory, updateFeeCategoryById, deleteFeeCategoryById } =
@@ -147,6 +149,7 @@ const FeeCategoryPage: React.FC = () => {
       const categoryData: NewFeeCategory = {
         name: trimmedName,
         description: trimmedDescription || null,
+        code: form.code?.trim() || null,
       };
 
       if (editingItem) {
@@ -292,6 +295,22 @@ const FeeCategoryPage: React.FC = () => {
                         autoFocus
                       />
                     </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>
+                        Code <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        value={form.code}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value.length > 0 && value[0] === " ") return;
+                          setForm({ ...form, code: value });
+                        }}
+                        placeholder="Enter category code"
+                        maxLength={255}
+                        autoFocus
+                      />
+                    </div>
 
                     {/* Description – full width */}
                     <div className="flex flex-col gap-2 sm:col-span-2">
@@ -350,7 +369,8 @@ const FeeCategoryPage: React.FC = () => {
                 >
                   <TableRow>
                     <TableHead style={{ width: "5%", whiteSpace: "nowrap" }}>Sr. No.</TableHead>
-                    <TableHead style={{ width: "30%" }}>Category Name</TableHead>
+                    <TableHead style={{ width: "15%" }}>Category Name</TableHead>
+                    <TableHead style={{ width: "15%" }}>Code</TableHead>
                     <TableHead style={{ width: "50%" }}>Description</TableHead>
                     <TableHead style={{ width: "15%" }}>Actions</TableHead>
                   </TableRow>
@@ -366,8 +386,11 @@ const FeeCategoryPage: React.FC = () => {
                     filteredFeeCategories.map((row, index) => (
                       <TableRow key={row.id} className="group">
                         <TableCell style={{ width: "5%" }}>{index + 1}</TableCell>
-                        <TableCell style={{ width: "30%" }} className="truncate" title={row.name}>
+                        <TableCell style={{ width: "15%%" }} className="truncate" title={row.name}>
                           {row.name}
+                        </TableCell>
+                        <TableCell style={{ width: "15%" }} className="truncate" title={row.name}>
+                          {row.code}
                         </TableCell>
                         <TableCell
                           style={{ width: "50%" }}

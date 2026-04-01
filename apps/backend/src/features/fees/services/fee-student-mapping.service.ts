@@ -16,6 +16,7 @@ import {
   shiftModel,
   feeStructureComponentModel,
   receiptTypeModel,
+  feeCategoryModel,
 } from "@repo/db/schemas";
 import { and, eq, sql } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
@@ -40,6 +41,47 @@ import {
 export function normalizeChallanNumber(scanned: string): string {
   if (!scanned || typeof scanned !== "string") return scanned;
   return scanned.trim().replace(/-/g, "/");
+}
+
+/**
+ * Gets the next receipt number for a given student UID.
+ * Finds all existing receipt numbers starting with the UID, extracts the numeric part,
+ * and returns the next incremented number (zero-padded to 2 digits).
+ */
+async function getNextReceiptNumberForUid(uid: string): Promise<string> {
+  try {
+    // Find all existing receipt numbers for this UID (format: uid/NN)
+    const { rows } = await db.execute(sql`
+      SELECT receipt_number
+      FROM public.fee_student_mappings
+      WHERE receipt_number ~ ${`^${uid}/\\d+$`}
+      ORDER BY receipt_number DESC
+      LIMIT 1
+    `);
+
+    if (rows && rows.length > 0) {
+      const lastReceiptNumber = (rows[0] as any)?.receipt_number;
+      if (lastReceiptNumber && typeof lastReceiptNumber === "string") {
+        // Extract number from "uid/NN" format
+        const parts = lastReceiptNumber.split("/");
+        const numPart = parts[1];
+        if (numPart && /^\d+$/.test(numPart)) {
+          const nextNum = parseInt(numPart, 10) + 1;
+          return String(nextNum).padStart(2, "0");
+        }
+      }
+    }
+
+    // Default to "01" if no existing receipt number found
+    return "01";
+  } catch (error) {
+    console.warn(
+      `[FEE_SERVICE] Error getting next receipt number for UID ${uid}:`,
+      error,
+    );
+    // Fallback to "01" on error
+    return "01";
+  }
 }
 
 /**
@@ -275,11 +317,13 @@ async function generateFeeReceiptInternal(params: {
   feeStructureId: number;
   studentId: number;
 }) {
+  console.log("Fired generateFeeReceiptInternal()", new Date().toISOString());
   const { feeStructureId, studentId } = params;
   if (!feeStructureId || !studentId) {
     throw Error("feeStructureId or studentId is not valid");
   }
 
+  console.log("Fetch data-1", new Date().toISOString());
   // Fetch all data with joins
   const result = await db
     .select({
@@ -296,6 +340,7 @@ async function generateFeeReceiptInternal(params: {
       programCourse: programCourseModel,
       receiptType: receiptTypeModel,
       payment: paymentModel,
+      feeCategoryCode: feeCategoryModel.code,
     })
     .from(feeStudentMappingModel)
     .innerJoin(
@@ -328,6 +373,10 @@ async function generateFeeReceiptInternal(params: {
     .innerJoin(
       feeGroupModel,
       eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .leftJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
     )
     .innerJoin(
       academicYearModel,
@@ -371,7 +420,10 @@ async function generateFeeReceiptInternal(params: {
     programCourse,
     payment,
     receiptType,
+    feeCategoryCode,
   } = result[0];
+
+  console.log("Fetch data-2", new Date().toISOString());
 
   // Fetch fee structure components and filter by student's assigned slab
   const components = await db
@@ -396,26 +448,25 @@ async function generateFeeReceiptInternal(params: {
       }),
   );
 
-  // Generate challan number
-  const romanMap: Record<string, number> = {
-    I: 1,
-    II: 2,
-    III: 3,
-    IV: 4,
-    V: 5,
-    VI: 6,
-    VII: 7,
-    VIII: 8,
-  };
+  // Generate or reuse challan number with format: uid/receipt-number
+  // If receipt number already exists, use it; otherwise generate new one (only set once)
+  let challanNumber: string;
+  if (
+    feeStudentMapping.receiptNumber &&
+    feeStudentMapping.receiptNumber.trim()
+  ) {
+    challanNumber = feeStudentMapping.receiptNumber;
+  } else {
+    const nextReceiptNum = await getNextReceiptNumberForUid(student.uid);
+    challanNumber = feeCategoryCode
+      ? `${student.uid}/${nextReceiptNum}-${feeCategoryCode}`
+      : `${student.uid}/${nextReceiptNum}`;
+  }
 
+  // Get semester name from class record
   const semesterName = toSentenceCase(classRecord.name);
-  const semRoman = semesterName.replace("Semester ", "");
-  const semIndex = romanMap[semRoman];
-  const semNum =
-    typeof semIndex === "number" ? String(semIndex).padStart(2, "0") : semRoman;
 
-  const challanNumber = `${student.uid}/${semNum}`;
-
+  console.log("Update challanGeneratedAt in db", new Date().toISOString());
   // Set challanGeneratedAt once (immutable) — persist if not already set
   let challanGeneratedAt = feeStudentMapping.challanGeneratedAt;
   if (!challanGeneratedAt) {
@@ -447,6 +498,8 @@ async function generateFeeReceiptInternal(params: {
 
   const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
 
+  console.log("fetch data-3", new Date().toISOString());
+
   // Optional: For successful ONLINE payments, show ePAID metadata block in PDF.
   const ePaid = await (async () => {
     const paymentId = feeStudentMapping.paymentId;
@@ -474,6 +527,8 @@ async function generateFeeReceiptInternal(params: {
     return { orderId, transactionDate };
   })();
 
+  console.log("Generate PDF buffer called", new Date().toISOString());
+
   // Generate PDF buffer
   const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
     session: session.name,
@@ -499,6 +554,8 @@ async function generateFeeReceiptInternal(params: {
       ? new Date(payment.txnDate).toLocaleDateString("en-GB")
       : "",
   });
+
+  console.log("PDF buffer generated", new Date().toISOString());
 
   return {
     pdfBuffer,

@@ -9,6 +9,7 @@ export const feeCategoryModel = pgTable("fee_categories", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
     description: varchar({ length: 500 }),
+    code: varchar({ length: 100 }).unique(),
     createdAt: timestamp({withTimezone: true})
         .notNull()
         .defaultNow(),

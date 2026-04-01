@@ -3,6 +3,8 @@ import { feeStudentMappingModel } from "@repo/db/schemas/models/fees";
 import { paymentModel } from "@repo/db/schemas/models/payments";
 import { studentModel } from "@repo/db/schemas/models/user";
 import { userModel } from "@repo/db/schemas/models/user/user.model";
+import { familyModel } from "@repo/db/schemas/models/user";
+import { personModel } from "@repo/db/schemas/models/user/person.model";
 import { and, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { getFeeStudentMappingById } from "@/features/fees/services/fee-student-mapping.service.js";
@@ -20,7 +22,13 @@ function normalizeReceiptNumber(input: string): string {
 export type FeePaymentMarkingLoadedRecord = {
   mapping: Awaited<ReturnType<typeof getFeeStudentMappingById>>;
   student: { id: number; uid: string; userId: number | null };
-  user: { id: number; name: string; email: string; phone: string | null };
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    fatherName: string | null;
+  };
   paymentEntry: {
     id: number;
     status: string;
@@ -134,6 +142,44 @@ export async function loadFeePaymentMarkingByReceiptNumber(params: {
         .where(eq(userModel.id, student.userId))
     : [null];
 
+  // Fetch father's name from family > person relationship, fallback to mother if not found
+  const [fatherRecord] = student.userId
+    ? await db
+        .select({
+          fatherName: personModel.name,
+        })
+        .from(personModel)
+        .innerJoin(familyModel, eq(personModel.familyId, familyModel.id))
+        .where(
+          and(
+            eq(familyModel.userId, student.userId),
+            eq(personModel.type, "FATHER"),
+          ),
+        )
+        .limit(1)
+    : [null];
+
+  // If no father, fetch mother's name
+  const [motherRecord] =
+    !fatherRecord && student.userId
+      ? await db
+          .select({
+            fatherName: personModel.name,
+          })
+          .from(personModel)
+          .innerJoin(familyModel, eq(personModel.familyId, familyModel.id))
+          .where(
+            and(
+              eq(familyModel.userId, student.userId),
+              eq(personModel.type, "MOTHER"),
+            ),
+          )
+          .limit(1)
+      : [null];
+
+  const parentName =
+    fatherRecord?.fatherName ?? motherRecord?.fatherName ?? null;
+
   const paymentEntry = await getPaymentEntryForMarking(
     mapping?.paymentId ?? null,
   );
@@ -153,8 +199,9 @@ export async function loadFeePaymentMarkingByReceiptNumber(params: {
             name: user.name,
             email: user.email,
             phone: user.phone ?? null,
+            fatherName: parentName,
           }
-        : { id: 0, name: "-", email: "-", phone: null },
+        : { id: 0, name: "-", email: "-", phone: null, fatherName: null },
       paymentEntry,
     },
   };
@@ -321,6 +368,44 @@ export async function loadFeePaymentMarkingByOrderId(params: {
         .where(eq(userModel.id, student.userId))
     : [null];
 
+  // Fetch father's name from family > person relationship, fallback to mother if not found
+  const [fatherRecord] = student.userId
+    ? await db
+        .select({
+          fatherName: personModel.name,
+        })
+        .from(personModel)
+        .innerJoin(familyModel, eq(personModel.familyId, familyModel.id))
+        .where(
+          and(
+            eq(familyModel.userId, student.userId),
+            eq(personModel.type, "FATHER"),
+          ),
+        )
+        .limit(1)
+    : [null];
+
+  // If no father, fetch mother's name
+  const [motherRecord] =
+    !fatherRecord && student.userId
+      ? await db
+          .select({
+            fatherName: personModel.name,
+          })
+          .from(personModel)
+          .innerJoin(familyModel, eq(personModel.familyId, familyModel.id))
+          .where(
+            and(
+              eq(familyModel.userId, student.userId),
+              eq(personModel.type, "MOTHER"),
+            ),
+          )
+          .limit(1)
+      : [null];
+
+  const parentName =
+    fatherRecord?.fatherName ?? motherRecord?.fatherName ?? null;
+
   const paymentEntry = await getPaymentEntryForMarking(payment.id);
 
   return {
@@ -338,8 +423,9 @@ export async function loadFeePaymentMarkingByOrderId(params: {
             name: user.name,
             email: user.email,
             phone: user.phone ?? null,
+            fatherName: parentName,
           }
-        : { id: 0, name: "-", email: "-", phone: null },
+        : { id: 0, name: "-", email: "-", phone: null, fatherName: null },
       paymentEntry,
     },
   };

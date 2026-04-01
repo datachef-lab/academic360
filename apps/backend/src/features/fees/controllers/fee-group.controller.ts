@@ -5,6 +5,7 @@ import {
   getFeeGroupById,
   updateFeeGroup,
   deleteFeeGroup,
+  getFeeGroupTotalsForPromotion,
 } from "../services/fee-group.service.js";
 import { createFeeGroupSchema, feeGroupModel } from "@repo/db/schemas";
 import { handleError } from "@/utils";
@@ -79,6 +80,41 @@ export async function getAllFeeGroupsHandler(_req: Request, res: Response) {
           "SUCCESS",
           rows,
           "Fee groups retrieved successfully",
+        ),
+      );
+  } catch (error) {
+    return handleError(error, res);
+  }
+}
+
+export async function getFeeGroupTotalsForPromotionHandler(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const promotionId = parseInt(req.params.promotionId as string, 10);
+    if (Number.isNaN(promotionId)) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid promotionId format",
+          ),
+        );
+    }
+
+    const rows = await getFeeGroupTotalsForPromotion(promotionId);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          rows,
+          "Fee group totals retrieved successfully",
         ),
       );
   } catch (error) {
