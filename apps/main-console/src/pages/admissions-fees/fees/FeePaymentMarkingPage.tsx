@@ -97,7 +97,8 @@ export default function FeePaymentMarkingPage() {
           "Please verify challan details before recording. This action cannot be reversed.",
         confirmText: "Receive cash payment",
         doConfirm: async () => {
-          const receiptDateIso = new Date(`${cashReceiptDate}T00:00:00.000+05:30`).toISOString();
+          // Create ISO date for midnight UTC on the selected date (avoids timezone offset issues)
+          const receiptDateIso = new Date(`${cashReceiptDate}T00:00:00Z`).toISOString();
           const res = await receiveFeePaymentCash({
             receiptNumber: cashReceiptNumber,
             receiptDateIso,

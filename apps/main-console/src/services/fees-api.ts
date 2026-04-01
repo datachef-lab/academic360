@@ -177,17 +177,49 @@ export async function updateFeesStructure(
   feesStructureId: number,
   feesStructure: Partial<FeeStructureDto>,
 ): Promise<ApiResponse<FeeStructureDto>> {
-  const response = await axiosInstance.put(
-    `${BASE_PATH}/structure/${feesStructureId}`,
-    feesStructure,
-  );
-  return response.data;
+  try {
+    const response = await axiosInstance.put(
+      `${BASE_PATH}/structure/${feesStructureId}`,
+      feesStructure,
+    );
+    if (!response.data?.success) {
+      const error = new Error(response.data?.message || "Failed to update fee structure");
+      (error as any).status = response.data?.statusCode;
+      (error as any).code = response.data?.code;
+      throw error;
+    }
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.message) {
+      const apiError = new Error(error.response.data.message);
+      (apiError as any).status = error.response.data.statusCode;
+      (apiError as any).code = error.response.data.code;
+      throw apiError;
+    }
+    throw error;
+  }
 }
 
 // Delete a fees structure
 export async function deleteFeesStructure(feesStructureId: number): Promise<ApiResponse<void>> {
-  const response = await axiosInstance.delete(`${BASE_PATH}/structure/${feesStructureId}`);
-  return response.data;
+  try {
+    const response = await axiosInstance.delete(`${BASE_PATH}/structure/${feesStructureId}`);
+    if (!response.data?.success) {
+      const error = new Error(response.data?.message || "Failed to delete fee structure");
+      (error as any).status = response.data?.statusCode;
+      (error as any).code = response.data?.code;
+      throw error;
+    }
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.message) {
+      const apiError = new Error(error.response.data.message);
+      (apiError as any).status = error.response.data.statusCode;
+      (apiError as any).code = error.response.data.code;
+      throw apiError;
+    }
+    throw error;
+  }
 }
 
 // ==================== FEES HEADS APIs ====================

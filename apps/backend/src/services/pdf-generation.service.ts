@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import puppeteer, { Browser } from "puppeteer";
 import ejs from "ejs";
 import path from "path";
 import fs from "fs/promises";
@@ -542,6 +542,9 @@ export class PdfGenerationService {
     programCourse: string;
     shift: string;
     challanNumber: string;
+    paidDate: string; // dd/mm/yyyy
+    isPaid: boolean;
+    mode: "online" | "offline";
     challanDate: string; // dd/mm/yyyy — immutable generation date
     ePaid?: null | {
       orderId: string;
@@ -627,13 +630,13 @@ export class PdfGenerationService {
   }
 }
 
-function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-}
+// function chunkArray<T>(array: T[], size: number): T[][] {
+//   const chunks: T[][] = [];
+//   for (let i = 0; i < array.length; i += size) {
+//     chunks.push(array.slice(i, i + size));
+//   }
+//   return chunks;
+// }
 
 // Export singleton instance
 export const pdfGenerationService = PdfGenerationService.getInstance();

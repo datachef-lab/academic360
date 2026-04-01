@@ -3,7 +3,6 @@ import {
   createFeeStudentMappingHandler,
   deleteFeeStudentMappingHandler,
   downloadFeeReceiptController,
-  downloadFeeReceiptOfflineController,
   getAllFeeStudentMappingsHandler,
   getFeeStudentMappingByIdHandler,
   getFeeStudentMappingsByStudentIdHandler,
@@ -22,10 +21,7 @@ function asyncHandler(
 
 router.get("/", asyncHandler(getAllFeeStudentMappingsHandler));
 router.get("/download-receipt", asyncHandler(downloadFeeReceiptController));
-router.get(
-  "/download-receipt-offline",
-  asyncHandler(downloadFeeReceiptOfflineController),
-);
+
 router.get(
   "/student/:studentId",
   asyncHandler(getFeeStudentMappingsByStudentIdHandler),

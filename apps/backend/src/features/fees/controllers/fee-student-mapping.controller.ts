@@ -7,12 +7,10 @@ import {
   updateFeeStudentMapping,
   deleteFeeStudentMapping,
   generateFeeReceiptByFeeStructureIdAndStudentId,
-  generateFeeReceiptOfflineByFeeStructureIdAndStudentId,
 } from "../services/fee-student-mapping.service";
 import { createFeeStudentMappingSchema } from "@repo/db/schemas";
 import { ApiError, handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
-import { z } from "zod";
 
 export async function createFeeStudentMappingHandler(
   req: Request,
@@ -283,63 +281,6 @@ export const downloadFeeReceiptController = async (
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${result.uid} | ${result.receiptName} - ${result.semester} | ${result.programCourse} (${result.session}).pdf"`,
-    );
-
-    res.send(result.pdfBuffer);
-  } catch (error) {
-    handleError(error, res, next);
-  }
-};
-
-export const downloadFeeReceiptOfflineController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const { feeStructureId, studentId } = req.query;
-
-    if (feeStructureId == undefined || studentId == undefined) {
-      res
-        .status(400)
-        .json(
-          new ApiError(400, "feeStructureId and studentId are both required"),
-        );
-      return;
-    }
-
-    const feeStructureIdNum = Number(feeStructureId);
-    const studentIdNum = Number(studentId);
-
-    if (isNaN(feeStructureIdNum) || isNaN(studentIdNum)) {
-      res
-        .status(400)
-        .json(new ApiError(400, "feeStructureId or studentId is invalid"));
-      return;
-    }
-
-    // Offline receipt: persists `receipt_number = uid/semesterNumber` and `challan_generated_at`.
-    const result = await generateFeeReceiptOfflineByFeeStructureIdAndStudentId(
-      feeStructureIdNum,
-      studentIdNum,
-    );
-
-    if (!result) {
-      res
-        .status(404)
-        .json(
-          new ApiError(
-            404,
-            "Fee Receipt not found for the given feeStrucure and studentId",
-          ),
-        );
-      return;
-    }
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${result.uid} | ${result.receiptName} - ${result.semester} | ${result.programCourse} (${result.session}) (Offline).pdf"`,
     );
 
     res.send(result.pdfBuffer);

@@ -1023,7 +1023,7 @@ export default function EnrollmentFeesPage() {
                               </div>
                               <p className="font-bold text-slate-900">Online Payment</p>
                               <p className="text-sm text-slate-500">
-                                Pay securely via Paytm gateway
+                                Pay securely via Payment gateway
                               </p>
                             </button>
                           </div>

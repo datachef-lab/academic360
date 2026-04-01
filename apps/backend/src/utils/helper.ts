@@ -560,11 +560,16 @@ export function numberToWords(amount: number): string {
 }
 
 export function formatIndianNumber(amount: number): string {
-  const str = amount.toString();
-  const lastThree = str.slice(-3);
-  const rest = str.slice(0, -3);
+  // Format to 2 decimal places
+  const fixedAmount = amount.toFixed(2);
+  const [integerPart, decimalPart] = fixedAmount.split(".");
+
+  const lastThree = integerPart.slice(-3);
+  const rest = integerPart.slice(0, -3);
   const formatted = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
-  return rest ? formatted + "," + lastThree : lastThree;
+
+  const formattedInteger = rest ? formatted + "," + lastThree : lastThree;
+  return formattedInteger + "." + decimalPart;
 }
 export function toSentenceCase(str: string): string {
   let result = str

@@ -751,17 +751,7 @@ const StudentFeesPage: React.FC = () => {
                                   <CreditCard className="h-4 w-4 mr-2" />
                                   Download Receipt
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    handleDownloadReceiptOffline(
-                                      mapping.feeStructure.id,
-                                      mapping.studentId,
-                                    );
-                                  }}
-                                >
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  Download Receipt (Offline)
-                                </DropdownMenuItem>
+
                                 {paymentStatus !== "COMPLETED" && (
                                   <DropdownMenuItem
                                     onClick={() => {
@@ -775,15 +765,6 @@ const StudentFeesPage: React.FC = () => {
                                   >
                                     <Bell className="h-4 w-4 mr-2" />
                                     Send Notification
-                                  </DropdownMenuItem>
-                                )}
-                                {paymentStatus !== "COMPLETED" && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeleteClick(mapping)}
-                                    className="text-red-600"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>
