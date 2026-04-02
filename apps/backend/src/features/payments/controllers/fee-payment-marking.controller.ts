@@ -126,6 +126,9 @@ export const markOnlineSuccessManualHandler = async (
       .object({
         orderId: z.string().min(1),
         remarks: z.string().optional(),
+        paymentDateIso: z.string().min(1).optional(),
+        transactionId: z.string().optional(),
+        paymentGatewayVendor: z.string().optional(),
       })
       .safeParse(req.body);
     if (!parsed.success) {
@@ -140,6 +143,9 @@ export const markOnlineSuccessManualHandler = async (
     const result = await markOnlineFeePaymentSuccessManual({
       orderId: parsed.data.orderId,
       remarks: parsed.data.remarks,
+      paymentDateIso: parsed.data.paymentDateIso,
+      transactionId: parsed.data.transactionId,
+      paymentGatewayVendor: parsed.data.paymentGatewayVendor,
       recordedByUserId,
     });
     if (!result.success) {

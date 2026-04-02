@@ -387,7 +387,7 @@ export const getAllFeeGroupPromotionMappings = async (
               feeStudentMappingModel.feeGroupPromotionMappingId,
             totalPayable: feeStudentMappingModel.totalPayable,
             amountPaid: feeStudentMappingModel.amountPaid,
-            // paymentStatus: paymentModel.paymentStatus,
+            linkedPaymentStatus: paymentModel.status,
           })
           .from(feeStudentMappingModel)
           .leftJoin(
@@ -404,28 +404,45 @@ export const getAllFeeGroupPromotionMappings = async (
 
   const paymentByMappingId = new Map<
     number,
-    { paymentStatus: "Paid" | "Pending" | "Unpaid"; amountToPay: number }
+    {
+      paymentStatus: "Paid" | "Pending" | "Unpaid";
+      amountToPay: number;
+      totalPayableAmount: number;
+      saveBlockedForEdit: boolean;
+    }
   >();
   for (const mappingId of mappingIds) {
     const related = feeStudentMappings.filter(
       (fsm) => fsm.feeGroupPromotionMappingId === mappingId,
+    );
+    const totalPayableAmount = related.reduce(
+      (sum, r) => sum + (r.totalPayable || 0),
+      0,
     );
     const amountToPay = related.reduce(
       (sum, r) =>
         sum + Math.max(0, (r.totalPayable || 0) - (r.amountPaid || 0)),
       0,
     );
-    let paymentStatus: "Paid" | "Pending" | "Unpaid" = "Pending";
-    // if (related.length === 0) {
-    //   paymentStatus = "Pending";
-    // } else if (related.every((r) => r.paymentStatus === "COMPLETED")) {
-    //   paymentStatus = "Paid";
-    // } else if (related.some((r) => r.paymentStatus === "PENDING")) {
-    //   paymentStatus = "Pending";
-    // } else {
-    //   paymentStatus = "Unpaid";
-    // }
-    paymentByMappingId.set(mappingId, { paymentStatus, amountToPay });
+    const hasSuccessfulPayment = related.some(
+      (r) => r.linkedPaymentStatus === "SUCCESS",
+    );
+    // Only lock the mapping edit UI after a completed (SUCCESS) payment — pending/challan still editable
+    const saveBlockedForEdit = hasSuccessfulPayment;
+    let paymentStatus: "Paid" | "Pending" | "Unpaid";
+    if (hasSuccessfulPayment) {
+      paymentStatus = "Paid";
+    } else if (related.length === 0) {
+      paymentStatus = "Unpaid";
+    } else {
+      paymentStatus = "Pending";
+    }
+    paymentByMappingId.set(mappingId, {
+      paymentStatus,
+      amountToPay,
+      totalPayableAmount,
+      saveBlockedForEdit,
+    });
   }
 
   // Batch fetch updatedBy users for approval details
@@ -474,6 +491,8 @@ export const getAllFeeGroupPromotionMappings = async (
       promotion: promotionDto,
       paymentStatus: payment?.paymentStatus ?? "Pending",
       amountToPay: payment?.amountToPay ?? 0,
+      totalPayableAmount: payment?.totalPayableAmount ?? 0,
+      saveBlockedForEdit: payment?.saveBlockedForEdit ?? false,
       updatedByUser: updatedByUser
         ? {
             name: updatedByUser.name || "Unknown",

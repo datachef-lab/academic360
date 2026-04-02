@@ -864,9 +864,34 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     );
   }, [adminStaffUsers, approvalSearchText]);
 
+  /** Linked payment status SUCCESS — read-only dialog (Okay only) */
+  const isEditSaveHidden = editingItem?.saveBlockedForEdit === true;
+
+  const editDialogSlabTotal = useMemo(() => {
+    const fgId = editForm.feeGroupId ?? editingItem?.feeGroup?.id ?? null;
+    if (fgId == null) return null;
+    const v = feeGroupTotalsById[fgId];
+    return typeof v === "number" ? v : null;
+  }, [editForm.feeGroupId, editingItem?.feeGroup?.id, feeGroupTotalsById]);
+
+  /** Sum from fee_student_mappings, else slab total for mapped fee group */
+  const editReadOnlyTotalPayable = useMemo(() => {
+    const tp = editingItem?.totalPayableAmount;
+    if (tp != null && tp > 0) return tp;
+    const fgId = editingItem?.feeGroup?.id;
+    if (fgId != null && typeof feeGroupTotalsById[fgId] === "number") {
+      return feeGroupTotalsById[fgId] as number;
+    }
+    return null;
+  }, [editingItem?.totalPayableAmount, editingItem?.feeGroup?.id, feeGroupTotalsById]);
+
   const handleEditSave = async () => {
     if (!editingItem?.id || !editForm.feeGroupId) {
       toast.error("Please select a slab type");
+      return;
+    }
+    if (editingItem?.saveBlockedForEdit) {
+      toast.error("Cannot save: a successful payment is already recorded for this mapping.");
       return;
     }
     setSavingEdit(true);
@@ -1084,7 +1109,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   <TableHead className="text-center">Semester</TableHead>
                   <TableHead>Shift</TableHead>
                   <TableHead>Payment Status</TableHead>
-                  <TableHead>Amount to Pay</TableHead>
+                  <TableHead>Amount</TableHead>
                   <TableHead>Slab Type</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -1120,6 +1145,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     const shiftName = promo.shift?.name || "-";
                     const paymentStatus = mapping.paymentStatus ?? "Pending";
                     const amountToPay = mapping.amountToPay ?? 0;
+                    const totalPayableAmt = mapping.totalPayableAmount ?? 0;
+                    const displayAmount = totalPayableAmt > 0 ? totalPayableAmt : amountToPay;
 
                     const globalIndex = (currentPage - 1) * pageSize + index + 1;
 
@@ -1196,7 +1223,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <span className="font-semibold text-gray-900">
-                            ₹{amountToPay.toLocaleString("en-IN")}
+                            ₹{displayAmount.toLocaleString("en-IN")}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -1233,9 +1260,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => paymentStatus !== "Paid" && handleEditClick(mapping)}
-                              disabled={paymentStatus === "Paid"}
-                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none"
+                              onClick={() => handleEditClick(mapping)}
+                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -1729,185 +1755,290 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </div>
           </DialogHeader>
           <div className="space-y-4 py-4 overflow-y-auto max-h-[90vh]">
-            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
-              <div>
-                <span className="text-muted-foreground">Program Course:</span>
-                <p className="font-medium">{editingItem?.promotion?.programCourse?.name ?? "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Semester:</span>
-                <p className="font-medium">{editingItem?.promotion?.class?.name ?? "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Shift:</span>
-                <p className="font-medium">{editingItem?.promotion?.shift?.name ?? "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Amount to Pay:</span>
-                <p className="font-semibold">
-                  ₹{(editingItem?.amountToPay ?? 0).toLocaleString("en-IN")}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Slab Type</Label>
-              <Select
-                value={editForm.feeGroupId?.toString() ?? ""}
-                onValueChange={(v) =>
-                  setEditForm((prev) => ({ ...prev, feeGroupId: v ? Number(v) : null }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select slab type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(() => {
-                    const groups =
-                      feeGroups && feeGroups.length > 0
-                        ? feeGroups
-                        : (() => {
-                            const seen = new Set<number>();
-                            const out: typeof feeGroups = [];
-                            for (const m of mappings) {
-                              if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
-                                seen.add(m.feeGroup.id);
-                                out.push(m.feeGroup);
-                              }
-                            }
-                            if (editingItem?.feeGroup?.id && !seen.has(editingItem.feeGroup.id)) {
-                              out.unshift(editingItem.feeGroup);
-                            }
-                            return out;
-                          })();
-                    return groups?.map((fg) => (
-                      <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
-                        <div className="grid w-full grid-cols-[1fr_auto] items-center gap-3">
-                          <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-                            <span>{fg.feeSlab?.name || "-"}</span>
-                            <span className="text-gray-400">|</span>
-                            <span className="text-slate-700 font-semibold whitespace-nowrap">
-                              ₹
-                              {Number(feeGroupTotalsById?.[fg.id as number] ?? 0).toLocaleString(
-                                "en-IN",
-                              )}
-                            </span>
-                          </div>
-                          <span className="justify-self-end text-right whitespace-nowrap text-slate-700">
-                            ({fg.feeCategory?.name || "-"})
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ));
-                  })()}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <Label>Approval Details</Label>
-                  <p className="text-xs text-muted-foreground">Select approver (admin/staff)</p>
+            {isEditSaveHidden ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Program Course:</span>
+                    <p className="font-medium">
+                      {editingItem?.promotion?.programCourse?.name ?? "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Semester:</span>
+                    <p className="font-medium">{editingItem?.promotion?.class?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Shift:</span>
+                    <p className="font-medium">{editingItem?.promotion?.shift?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total payable:</span>
+                    <p className="font-semibold">
+                      {editReadOnlyTotalPayable != null
+                        ? `₹${editReadOnlyTotalPayable.toLocaleString("en-IN")}`
+                        : "—"}
+                    </p>
+                  </div>
                 </div>
-                <Input
-                  placeholder="Search by name, email, type..."
-                  value={approvalSearchText}
-                  onChange={(e) => setApprovalSearchText(e.target.value)}
-                  className="max-w-[200px] h-8 text-sm"
-                />
-              </div>
-              <div
-                className="border rounded-md max-h-48 overflow-y-auto divide-y"
-                role="listbox"
-                aria-label="Select approver"
-              >
-                {filteredAdminStaffUsers.length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground text-center">
-                    {approvalSearchText ? "No users match your search" : "No users available"}
-                  </p>
-                ) : (
-                  filteredAdminStaffUsers.map((u) => {
-                    const isSelected = editForm.updatedByUserId === u.id;
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        role="option"
-                        aria-selected={isSelected}
-                        onClick={() =>
-                          setEditForm((prev) => ({
-                            ...prev,
-                            updatedByUserId: isSelected ? null : u.id,
-                          }))
-                        }
-                        className={`w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-slate-100 ${
-                          isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "bg-transparent"
-                        }`}
-                      >
-                        <UserAvatar
-                          user={{ name: u.name, image: u.image ?? undefined }}
-                          size="sm"
-                          className="rounded-full shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{u.name}</p>
-                            {u.type && (
-                              <Badge
-                                variant="secondary"
-                                className="text-[10px] px-1.5 py-0 h-4 shrink-0"
-                              >
-                                {u.type}
-                              </Badge>
-                            )}
-                          </div>
-                          {u.email && (
-                            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-              {editForm.updatedByUserId && editingItem?.updatedAt && (
-                <p className="text-xs text-muted-foreground">
-                  Last updated:{" "}
-                  {new Date(editingItem.updatedAt).toLocaleString("en-GB", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  })}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Remarks</Label>
-              <Textarea
-                placeholder="Optional remarks"
-                value={editForm.remarks}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, remarks: e.target.value }))}
-                rows={3}
-                className="resize-none"
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label>Slab Type</Label>
+                  <div className="rounded-md border border-input bg-muted/40 px-3 py-2.5 text-sm">
+                    {editingItem?.feeGroup
+                      ? (() => {
+                          const fg = editingItem.feeGroup;
+                          const amt = feeGroupTotalsById[fg.id as number];
+                          return (
+                            <span className="font-medium text-foreground">
+                              {fg.feeSlab?.name ?? "—"}
+                              <span className="text-muted-foreground"> | </span>₹
+                              {Number(amt ?? 0).toLocaleString("en-IN")}
+                              <span className="text-muted-foreground">
+                                {" "}
+                                ({fg.feeCategory?.name ?? "—"})
+                              </span>
+                            </span>
+                          );
+                        })()
+                      : "—"}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Approval Details</Label>
+                  {editingItem?.updatedByUser ? (
+                    <div className="flex items-center gap-3 rounded-md border border-input bg-muted/40 px-3 py-2.5">
+                      <UserAvatar
+                        user={{
+                          name: editingItem.updatedByUser.name,
+                          image: editingItem.updatedByUser.avatarUrl ?? undefined,
+                        }}
+                        size="sm"
+                        className="rounded-full shrink-0"
+                      />
+                      <p className="text-sm font-medium">{editingItem.updatedByUser.name}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground rounded-md border border-dashed px-3 py-2.5">
+                      —
+                    </p>
+                  )}
+                  {editingItem?.updatedAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Last updated:{" "}
+                      {new Date(editingItem.updatedAt).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
+                  <div className="rounded-md border border-input bg-muted/40 px-3 py-2.5 text-sm whitespace-pre-wrap min-h-[4.5rem]">
+                    {editingItem?.remarks?.trim() ? editingItem.remarks : "—"}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Program Course:</span>
+                    <p className="font-medium">
+                      {editingItem?.promotion?.programCourse?.name ?? "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Semester:</span>
+                    <p className="font-medium">{editingItem?.promotion?.class?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Shift:</span>
+                    <p className="font-medium">{editingItem?.promotion?.shift?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Slab fee (total):</span>
+                    <p className="font-semibold">
+                      {editDialogSlabTotal != null
+                        ? `₹${editDialogSlabTotal.toLocaleString("en-IN")}`
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Slab Type</Label>
+                  <Select
+                    value={editForm.feeGroupId?.toString() ?? ""}
+                    onValueChange={(v) =>
+                      setEditForm((prev) => ({ ...prev, feeGroupId: v ? Number(v) : null }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select slab type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(() => {
+                        const groups =
+                          feeGroups && feeGroups.length > 0
+                            ? feeGroups
+                            : (() => {
+                                const seen = new Set<number>();
+                                const out: typeof feeGroups = [];
+                                for (const m of mappings) {
+                                  if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
+                                    seen.add(m.feeGroup.id);
+                                    out.push(m.feeGroup);
+                                  }
+                                }
+                                if (
+                                  editingItem?.feeGroup?.id &&
+                                  !seen.has(editingItem.feeGroup.id)
+                                ) {
+                                  out.unshift(editingItem.feeGroup);
+                                }
+                                return out;
+                              })();
+                        return groups?.map((fg) => (
+                          <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
+                            <div className="grid w-full grid-cols-[1fr_auto] items-center gap-3">
+                              <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+                                <span>{fg.feeSlab?.name || "-"}</span>
+                                <span className="text-gray-400">|</span>
+                                <span className="text-slate-700 font-semibold whitespace-nowrap">
+                                  ₹
+                                  {Number(
+                                    feeGroupTotalsById?.[fg.id as number] ?? 0,
+                                  ).toLocaleString("en-IN")}
+                                </span>
+                              </div>
+                              <span className="justify-self-end text-right whitespace-nowrap text-slate-700">
+                                ({fg.feeCategory?.name || "-"})
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ));
+                      })()}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <Label>Approval Details</Label>
+                      <p className="text-xs text-muted-foreground">Select approver (admin/staff)</p>
+                    </div>
+                    <Input
+                      placeholder="Search by name, email, type..."
+                      value={approvalSearchText}
+                      onChange={(e) => setApprovalSearchText(e.target.value)}
+                      className="max-w-[200px] h-8 text-sm"
+                    />
+                  </div>
+                  <div
+                    className="border rounded-md max-h-48 overflow-y-auto divide-y"
+                    role="listbox"
+                    aria-label="Select approver"
+                  >
+                    {filteredAdminStaffUsers.length === 0 ? (
+                      <p className="p-3 text-sm text-muted-foreground text-center">
+                        {approvalSearchText ? "No users match your search" : "No users available"}
+                      </p>
+                    ) : (
+                      filteredAdminStaffUsers.map((u) => {
+                        const isSelected = editForm.updatedByUserId === u.id;
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            onClick={() =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                updatedByUserId: isSelected ? null : u.id,
+                              }))
+                            }
+                            className={`w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-slate-100 ${
+                              isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "bg-transparent"
+                            }`}
+                          >
+                            <UserAvatar
+                              user={{ name: u.name, image: u.image ?? undefined }}
+                              size="sm"
+                              className="rounded-full shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium truncate">{u.name}</p>
+                                {u.type && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] px-1.5 py-0 h-4 shrink-0"
+                                  >
+                                    {u.type}
+                                  </Badge>
+                                )}
+                              </div>
+                              {u.email && (
+                                <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                  {editForm.updatedByUserId && editingItem?.updatedAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Last updated:{" "}
+                      {new Date(editingItem.updatedAt).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
+                  <Textarea
+                    placeholder="Optional remarks"
+                    value={editForm.remarks}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, remarks: e.target.value }))}
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
+              </>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditSave} disabled={savingEdit}>
-              {savingEdit ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Saving...
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
+          <DialogFooter className={isEditSaveHidden ? "sm:justify-end" : undefined}>
+            {isEditSaveHidden ? (
+              <Button onClick={() => setEditDialogOpen(false)}>Okay</Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleEditSave} disabled={savingEdit}>
+                  {savingEdit ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

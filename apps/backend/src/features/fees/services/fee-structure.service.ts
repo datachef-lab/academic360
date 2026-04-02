@@ -17,6 +17,54 @@ export async function hasPaidFeeStudentMappings(
   // Check if any mapping has a linked payment with SUCCESS status
   return mappings.some((m) => m.payments?.status === "SUCCESS");
 }
+
+/**
+ * Returns slabIds (feeSlabId) that are locked for a given feeStructureId.
+ *
+ * A slab is considered locked if there exists any fee-student-mapping for this fee structure
+ * whose linked fee group points to that slab AND at least one of:
+ * - challanGeneratedAt is set
+ * - paymentId is set
+ * - linked payment status is SUCCESS
+ */
+export async function getLockedSlabIdsForFeeStructure(
+  feeStructureId: number,
+): Promise<number[]> {
+  const rows = await db
+    .select({
+      feeSlabId: feeGroupModel.feeSlabId,
+      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      paymentId: feeStudentMappingModel.paymentId,
+      paymentStatus: paymentModel.status,
+    })
+    .from(feeStudentMappingModel)
+    .innerJoin(
+      feeGroupPromotionMappingModel,
+      eq(
+        feeGroupPromotionMappingModel.id,
+        feeStudentMappingModel.feeGroupPromotionMappingId,
+      ),
+    )
+    .innerJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .leftJoin(
+      paymentModel,
+      eq(paymentModel.id, feeStudentMappingModel.paymentId),
+    )
+    .where(eq(feeStudentMappingModel.feeStructureId, feeStructureId));
+
+  const locked = new Set<number>();
+  for (const r of rows) {
+    const slabId = r.feeSlabId;
+    if (typeof slabId !== "number") continue;
+    if (r.challanGeneratedAt) locked.add(slabId);
+    else if (typeof r.paymentId === "number") locked.add(slabId);
+    else if (r.paymentStatus === "SUCCESS") locked.add(slabId);
+  }
+  return Array.from(locked);
+}
 import { db } from "@/db/index.js";
 import {
   CreateFeeStructureDto,
@@ -1318,6 +1366,58 @@ export async function updateFeeStructureByDto(
     return null;
   }
 
+  // Prevent updates to slabs that have any payment/challan activity
+  const lockedSlabIds = await getLockedSlabIdsForFeeStructure(feeStructureId);
+  if (lockedSlabIds.length > 0) {
+    // Existing components for locked slabs
+    const existingLockedComponents = await db
+      .select()
+      .from(feeStructureComponentModel)
+      .where(
+        and(
+          eq(feeStructureComponentModel.feeStructureId, feeStructureId),
+          inArray(feeStructureComponentModel.feeSlabId, lockedSlabIds),
+        ),
+      );
+
+    const existingMap = new Map<string, number>();
+    for (const c of existingLockedComponents) {
+      existingMap.set(`${c.feeSlabId}:${c.feeHeadId}`, Number(c.amount || 0));
+    }
+
+    const incoming = Array.isArray(givenDto.components)
+      ? givenDto.components
+      : [];
+    const incomingLocked = incoming.filter((c) =>
+      lockedSlabIds.includes((c as any).feeSlabId),
+    );
+
+    const incomingMap = new Map<string, number>();
+    for (const c of incomingLocked) {
+      const slabId = (c as any).feeSlabId as number;
+      const headId = (c as any).feeHeadId as number;
+      incomingMap.set(`${slabId}:${headId}`, Number((c as any).amount || 0));
+    }
+
+    let mismatch = false;
+    if (incomingMap.size !== existingMap.size) {
+      mismatch = true;
+    } else {
+      for (const [k, v] of existingMap.entries()) {
+        if (!incomingMap.has(k) || incomingMap.get(k)! !== v) {
+          mismatch = true;
+          break;
+        }
+      }
+    }
+
+    if (mismatch) {
+      throw new Error(
+        `LOCKED_SLAB_UPDATE_NOT_ALLOWED: One or more slabs have payment/challan activity. Locked slabs: ${lockedSlabIds.join(", ")}`,
+      );
+    }
+  }
+
   // Step 3: Upsert components (delete existing and insert new)
   // Delete existing components
   await db
@@ -1474,11 +1574,11 @@ export const deleteFeeStructure = async (
   id: number,
   userId?: number,
 ): Promise<FeeStructureDto | null> => {
-  // Check if there are any fee-student-mappings with successful payments
-  const hasPaidMappings = await hasPaidFeeStudentMappings(id);
-  if (hasPaidMappings) {
+  // Block deletion if any payment/challan activity exists for any slab under this structure
+  const lockedSlabIds = await getLockedSlabIdsForFeeStructure(id);
+  if (lockedSlabIds.length > 0) {
     throw new Error(
-      "PAID_MAPPINGS_EXIST|Cannot delete fee structure: Some students have already paid for this fee structure. Please contact support if deletion is necessary.",
+      "LOCKED_MAPPINGS_EXIST|Cannot delete fee structure: Payment/challan exists for this fee structure. Please contact support if deletion is necessary.",
     );
   }
 

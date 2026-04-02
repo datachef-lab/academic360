@@ -20,6 +20,10 @@ router.get(
 );
 router.get("/", feesStructureController.getAllFeeStructures);
 router.get("/:id", feesStructureController.getFeeStructureById);
+router.get(
+  "/:id/locked-slabs",
+  feesStructureController.getLockedSlabsForFeeStructure,
+);
 router.put("/:id", feesStructureController.updateFeeStructure);
 router.delete("/:id", feesStructureController.deleteFeeStructure);
 

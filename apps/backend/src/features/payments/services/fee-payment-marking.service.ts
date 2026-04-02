@@ -34,8 +34,10 @@ export type FeePaymentMarkingLoadedRecord = {
     status: string;
     amount: number;
     paymentMode: string | null;
+    paymentGatewayVendor: string | null;
     isManualEntry: boolean;
     remarks: string | null;
+    txnId: string | null;
     txnDate: string | null;
     createdAt: Date | null;
     updatedAt: Date | null;
@@ -51,8 +53,10 @@ async function getPaymentEntryForMarking(paymentId?: number | null) {
       status: paymentModel.status,
       amount: paymentModel.amount,
       paymentMode: paymentModel.paymentMode,
+      paymentGatewayVendor: paymentModel.paymentGatewayVendor,
       isManualEntry: paymentModel.isManualEntry,
       remarks: paymentModel.remarks,
+      txnId: paymentModel.txnId,
       txnDate: paymentModel.txnDate,
       createdAt: paymentModel.createdAt,
       updatedAt: paymentModel.updatedAt,
@@ -78,8 +82,10 @@ async function getPaymentEntryForMarking(paymentId?: number | null) {
     status: payment.status,
     amount: Number(payment.amount ?? 0),
     paymentMode: payment.paymentMode ?? null,
+    paymentGatewayVendor: payment.paymentGatewayVendor ?? null,
     isManualEntry: Boolean(payment.isManualEntry),
     remarks: payment.remarks ?? null,
+    txnId: payment.txnId ?? null,
     txnDate: payment.txnDate ?? null,
     createdAt: payment.createdAt ?? null,
     updatedAt: payment.updatedAt ?? null,
@@ -299,11 +305,13 @@ export async function receiveCashFeePayment(params: {
       paymentId = created?.id ?? null;
     }
 
+    const rd = new Date(receiptDateIso);
     await tx
       .update(feeStudentMappingModel)
       .set({
         amountPaid: amountToRecord,
         paymentId: paymentId ?? undefined,
+        challanGeneratedAt: Number.isFinite(rd.getTime()) ? rd : new Date(),
       })
       .where(eq(feeStudentMappingModel.id, row.id));
   });
@@ -434,6 +442,11 @@ export async function loadFeePaymentMarkingByOrderId(params: {
 export async function markOnlineFeePaymentSuccessManual(params: {
   orderId: string;
   remarks?: string;
+  /** ISO date string for payment / transaction date (stored on payments.txnDate) */
+  paymentDateIso?: string;
+  /** Gateway transaction reference (payments.transaction_id) */
+  transactionId?: string;
+  paymentGatewayVendor?: string | null;
   recordedByUserId: number;
 }): Promise<
   | { success: true; data: FeePaymentMarkingLoadedRecord }
@@ -447,7 +460,13 @@ export async function markOnlineFeePaymentSuccessManual(params: {
   const payment = await findPaymentByOrderId(orderId);
   if (!payment?.id) return { success: false, error: "Payment not found" };
 
+  const paymentDateIso =
+    String(params.paymentDateIso || "").trim() ||
+    new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
+  const txnIdTrimmed = String(params.transactionId || "").trim();
+
   await db.transaction(async (tx) => {
+    const vendor = String(params.paymentGatewayVendor ?? "").trim();
     await tx
       .update(paymentModel)
       .set({
@@ -455,6 +474,9 @@ export async function markOnlineFeePaymentSuccessManual(params: {
         isManualEntry: true,
         recordedBy: params.recordedByUserId,
         remarks: params.remarks ?? payment.remarks ?? null,
+        txnDate: paymentDateIso,
+        ...(txnIdTrimmed ? { txnId: txnIdTrimmed } : {}),
+        ...(vendor ? { paymentGatewayVendor: vendor } : {}),
       })
       .where(
         and(eq(paymentModel.id, payment.id), eq(paymentModel.context, "FEE")),
@@ -468,9 +490,14 @@ export async function markOnlineFeePaymentSuccessManual(params: {
     if (mapping?.id) {
       const totalPayable = Number(mapping.totalPayable ?? 0);
       const amountToSet = Number.isFinite(totalPayable) ? totalPayable : 0;
+      const rd = new Date(paymentDateIso);
       await tx
         .update(feeStudentMappingModel)
-        .set({ amountPaid: amountToSet, paymentId: payment.id })
+        .set({
+          amountPaid: amountToSet,
+          paymentId: payment.id,
+          challanGeneratedAt: Number.isFinite(rd.getTime()) ? rd : new Date(),
+        })
         .where(eq(feeStudentMappingModel.id, mapping.id));
     }
   });

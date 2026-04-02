@@ -209,6 +209,37 @@ export const getFeeStructureById = async (
   }
 };
 
+export const getLockedSlabsForFeeStructure = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+
+    const slabIds =
+      await feeStructureService.getLockedSlabIdsForFeeStructure(id);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { slabIds },
+          "Locked slabs fetched successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
 export const updateFeeStructure = async (
   req: Request,
   res: Response,
@@ -547,11 +578,21 @@ export const updateFeeStructureByDto = async (
       return;
     }
 
-    const updated = await feeStructureService.updateFeeStructureByDto(
-      id,
-      data,
-      userId,
-    );
+    let updated: FeeStructureDto | null = null;
+    try {
+      updated = await feeStructureService.updateFeeStructureByDto(
+        id,
+        data,
+        userId,
+      );
+    } catch (e: any) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.startsWith("LOCKED_SLAB_UPDATE_NOT_ALLOWED")) {
+        res.status(409).json(new ApiResponse(409, "LOCKED_SLAB", null, msg));
+        return;
+      }
+      throw e;
+    }
 
     if (!updated) {
       res

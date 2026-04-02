@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,16 +22,31 @@ import {
   receiveFeePaymentCash,
   type FeePaymentMarkingLoadedRecord,
 } from "@/services/payments-api";
-import { Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CreditCard, Info, Search, Wallet, X } from "lucide-react";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { useAuth } from "@/features/auth/providers/auth-provider";
+import { cn } from "@/lib/utils";
 
 type Mode = "CASH" | "ONLINE";
+
+/** Online fee marking is Paytm-only for now */
+const ONLINE_GATEWAY_PAYTM = "Paytm";
 
 function safeText(v: unknown, fallback = "-"): string {
   if (v === null || v === undefined) return fallback;
   const s = String(v);
   return s.trim() ? s : fallback;
+}
+
+/** Normalize payment txnDate string to yyyy-mm-dd for <input type="date" /> */
+function txnDateToInputValue(txnDate: string | null | undefined): string | null {
+  if (!txnDate) return null;
+  const d = new Date(txnDate);
+  if (Number.isNaN(d.getTime())) {
+    const m = /^(\d{4}-\d{2}-\d{2})/.exec(txnDate);
+    return m?.[1] ?? null;
+  }
+  return d.toISOString().slice(0, 10);
 }
 
 function extractErrorMessage(error: unknown): string {
@@ -51,10 +66,11 @@ export default function FeePaymentMarkingPage() {
   const [record, setRecord] = useState<FeePaymentMarkingLoadedRecord | null>(null);
 
   const [cashReceiptNumber, setCashReceiptNumber] = useState("");
-  const [cashReceiptDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [cashRemarks, setCashRemarks] = useState("");
 
   const [onlineOrderId, setOnlineOrderId] = useState("");
+  const [onlineTransactionId, setOnlineTransactionId] = useState("");
   const [onlineRemarks, setOnlineRemarks] = useState("");
 
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -62,6 +78,7 @@ export default function FeePaymentMarkingPage() {
   const mapping = record?.mapping;
   const feeStructure = mapping?.feeStructure;
   const promotion = mapping?.feeGroupPromotionMappings?.[0]?.promotion;
+  const feeGroup = mapping?.feeGroupPromotionMappings?.[0]?.feeGroup;
 
   const paymentStatus = safeText(mapping?.paymentStatus, "PENDING").toUpperCase();
   const challanAmount = Number(mapping?.totalPayable ?? 0) || 0;
@@ -73,10 +90,11 @@ export default function FeePaymentMarkingPage() {
     : paymentEntry?.updatedAt
       ? new Date(paymentEntry.updatedAt)
       : null;
-  const isCashRecorded =
-    paymentStatus === "COMPLETED" ||
-    amountPaid >= challanAmount ||
-    paymentEntry?.status === "SUCCESS";
+  /** Editable marking fields only when fee mapping is pending and payment is not already SUCCESS */
+  const paymentEntryStatus = paymentEntry?.status?.toUpperCase() ?? "";
+  const isPaymentSuccess = paymentEntryStatus === "SUCCESS";
+  const canEditMarkingFields = paymentStatus === "PENDING" && !isPaymentSuccess;
+  const isMarkingFormLocked = !canEditMarkingFields;
 
   const recordedAtText = paymentRecordedAt
     ? new Intl.DateTimeFormat("en-IN", {
@@ -100,6 +118,29 @@ export default function FeePaymentMarkingPage() {
   const academicYear = safeText(feeStructure?.academicYear?.year);
   const className = safeText(promotion?.class?.name ?? feeStructure?.class?.name);
 
+  const feeGroupLabel =
+    feeGroup?.feeCategory?.name && feeGroup?.feeSlab?.name
+      ? `${feeGroup.feeCategory.name} | ${feeGroup.feeSlab.name}`
+      : feeGroup?.feeSlab?.name || feeGroup?.feeCategory?.name || "—";
+
+  const displayGatewayVendor = paymentEntry?.paymentGatewayVendor?.trim() || ONLINE_GATEWAY_PAYTM;
+
+  const academicLine = `${academicYear} · ${className}`;
+
+  useEffect(() => {
+    if (!record) return;
+    const pe = record.paymentEntry;
+    const txnFromPayment = pe?.txnDate ? txnDateToInputValue(pe.txnDate) : null;
+    const mapDate = (record.mapping as { challanGeneratedAt?: string | null })?.challanGeneratedAt;
+    const fromMapping = mapDate ? txnDateToInputValue(mapDate) : null;
+    const fallbackDate = new Date().toISOString().slice(0, 10);
+
+    setPaymentDate(txnFromPayment ?? fromMapping ?? fallbackDate);
+    if (mode === "ONLINE") {
+      setOnlineTransactionId(pe?.txnId?.trim() ?? "");
+    }
+  }, [record, mode]);
+
   const confirmConfig = useMemo(() => {
     if (!record) return null;
     if (mode === "CASH") {
@@ -109,8 +150,7 @@ export default function FeePaymentMarkingPage() {
           "Please verify challan details before recording. This action cannot be reversed.",
         confirmText: "Receive cash payment",
         doConfirm: async () => {
-          // Create ISO date for midnight UTC on the selected date (avoids timezone offset issues)
-          const receiptDateIso = new Date(`${cashReceiptDate}T00:00:00Z`).toISOString();
+          const receiptDateIso = new Date(`${paymentDate}T00:00:00Z`).toISOString();
           const res = await receiveFeePaymentCash({
             receiptNumber: cashReceiptNumber,
             receiptDateIso,
@@ -124,18 +164,41 @@ export default function FeePaymentMarkingPage() {
     return {
       title: "Confirm online marking",
       description:
-        "This will mark the payment as SUCCESS and manual. Please verify orderId before proceeding.",
-      confirmText: "Mark as success",
+        "This will mark the payment as SUCCESS and manual. Please verify order ID and transaction reference before proceeding.",
+      confirmText: "Update online payment",
       doConfirm: async () => {
+        const paymentDateIso = new Date(`${paymentDate}T00:00:00Z`).toISOString();
         const res = await markFeePaymentOnlineSuccess({
           orderId: onlineOrderId,
           remarks: onlineRemarks.trim() || undefined,
+          paymentDateIso,
+          transactionId: onlineTransactionId.trim() || undefined,
+          paymentGatewayVendor: ONLINE_GATEWAY_PAYTM,
         });
         setRecord(res.payload ?? null);
         toast.success("Online payment marked as success");
       },
     };
-  }, [record, mode, cashReceiptDate, cashReceiptNumber, cashRemarks, onlineOrderId, onlineRemarks]);
+  }, [
+    record,
+    mode,
+    paymentDate,
+    cashReceiptNumber,
+    cashRemarks,
+    onlineOrderId,
+    onlineRemarks,
+    onlineTransactionId,
+  ]);
+
+  function clearLoadedRecord() {
+    setRecord(null);
+    setCashReceiptNumber("");
+    setCashRemarks("");
+    setPaymentDate(new Date().toISOString().slice(0, 10));
+    setOnlineOrderId("");
+    setOnlineRemarks("");
+    setOnlineTransactionId("");
+  }
 
   async function handleLoad() {
     try {
@@ -151,7 +214,7 @@ export default function FeePaymentMarkingPage() {
       } else {
         const orderId = onlineOrderId.trim();
         if (!orderId) {
-          toast.error("Enter orderId");
+          toast.error("Enter order ID");
           return;
         }
         const res = await loadFeePaymentMarkingOnline(orderId);
@@ -180,94 +243,136 @@ export default function FeePaymentMarkingPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Always verify challan / transaction details before recording. This action{" "}
-        <span className="font-semibold">cannot be reversed</span>.
+    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex gap-3">
+        <AlertTriangle className="h-5 w-5 shrink-0 text-amber-700 mt-0.5" aria-hidden />
+        <p>
+          Always verify challan / transaction details before recording. This action{" "}
+          <span className="font-semibold">cannot be reversed</span>.
+        </p>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Payment mode</CardTitle>
+      <Card className="rounded-xl shadow-sm border-slate-200">
+        <CardHeader className="pb-2 flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
+          <CardTitle className="text-sm font-semibold tracking-wide uppercase text-slate-600">
+            Payment mode
+          </CardTitle>
+          <p className="text-xs text-slate-500">Select a mode, then load student record</p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
+              type="button"
               onClick={() => {
                 setMode("CASH");
-                setRecord(null);
+                clearLoadedRecord();
               }}
-              className={
+              className={cn(
+                "rounded-lg h-12 gap-2 justify-center",
                 mode === "CASH"
-                  ? "bg-blue-50 text-blue-700 border-blue-500 hover:bg-blue-100 hover:text-blue-800"
-                  : "text-slate-600"
-              }
+                  ? "bg-sky-50 text-sky-800 border-2 border-sky-500 hover:bg-sky-100"
+                  : "text-slate-600 border-slate-200",
+              )}
             >
+              <Wallet className="h-5 w-5 shrink-0" />
               Cash Payment
             </Button>
             <Button
               variant="outline"
+              type="button"
               onClick={() => {
                 setMode("ONLINE");
-                setRecord(null);
+                clearLoadedRecord();
               }}
-              className={
+              className={cn(
+                "rounded-lg h-12 gap-2 justify-center",
                 mode === "ONLINE"
-                  ? "bg-blue-50 text-blue-700 border-blue-500 hover:bg-blue-100 hover:text-blue-800"
-                  : "text-slate-600"
-              }
+                  ? "bg-sky-50 text-sky-800 border-2 border-sky-500 hover:bg-sky-100"
+                  : "text-slate-600 border-slate-200",
+              )}
             >
+              <CreditCard className="h-5 w-5 shrink-0" />
               Online Payment
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>
-            {mode === "CASH" ? "Cash — challan lookup" : "Online — order lookup"}
-          </CardTitle>
+      <Card className="rounded-xl shadow-sm border-slate-200 overflow-hidden">
+        <CardHeader className="pb-3 border-b bg-slate-50/80">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-sm font-semibold tracking-wide uppercase text-slate-600 flex items-center gap-2">
+              <Search className="h-4 w-4 text-sky-600 shrink-0" />
+              {mode === "CASH" ? "Cash — challan lookup" : "Online — challan lookup"}
+            </CardTitle>
+            <p className="text-xs text-slate-500">
+              {mode === "CASH"
+                ? "Enter challan or receipt number to load student record"
+                : "Enter order ID from Paytm."}
+            </p>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {mode === "CASH" ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              <div className="md:col-span-2">
-                <Label>Challan / Receipt number</Label>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+              <div className="md:col-span-9">
+                <Label className="text-xs font-semibold uppercase text-slate-500">
+                  Challan / receipt number
+                </Label>
                 <Input
                   value={cashReceiptNumber}
                   onChange={(e) => setCashReceiptNumber(e.target.value)}
                   placeholder="e.g. 1234/01"
+                  className="mt-1.5"
                 />
               </div>
-              <Button
-                onClick={handleLoad}
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                {loading ? "Loading..." : "Load"}
-              </Button>
+              <div className="md:col-span-3 flex md:justify-end">
+                <Button
+                  type="button"
+                  onClick={handleLoad}
+                  disabled={loading}
+                  className="bg-sky-600 hover:bg-sky-700 w-full md:w-auto min-w-[120px]"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  {loading ? "Loading..." : "Load"}
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              <div className="md:col-span-2">
-                <Label>Order ID</Label>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+              <div className="md:col-span-3">
+                <Label className="text-xs font-semibold uppercase text-slate-500">
+                  Payment gateway
+                </Label>
+                <Input
+                  value={ONLINE_GATEWAY_PAYTM}
+                  readOnly
+                  disabled
+                  className="mt-1.5 bg-slate-100 text-slate-800 cursor-not-allowed"
+                  aria-label="Payment gateway (Paytm only)"
+                />
+              </div>
+              <div className="md:col-span-5">
+                <Label className="text-xs font-semibold uppercase text-slate-500">Order ID</Label>
                 <Input
                   value={onlineOrderId}
                   onChange={(e) => setOnlineOrderId(e.target.value)}
                   placeholder="e.g. 545172"
+                  className="mt-1.5"
                 />
               </div>
-              <Button
-                onClick={handleLoad}
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                {loading ? "Loading..." : "Load"}
-              </Button>
+              <div className="md:col-span-4 flex justify-end">
+                <Button
+                  type="button"
+                  onClick={handleLoad}
+                  disabled={loading}
+                  className="bg-sky-600 hover:bg-sky-700 min-w-[120px] w-full md:w-auto"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  {loading ? "Loading..." : "Load"}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
@@ -275,178 +380,274 @@ export default function FeePaymentMarkingPage() {
 
       {record && (
         <>
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle>Student record</CardTitle>
+          <Card className="rounded-xl shadow-sm border-slate-200 overflow-hidden">
+            <CardHeader className="pb-3 border-b bg-slate-50/80 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-semibold tracking-wide uppercase text-slate-600">
+                Student record
+              </CardTitle>
+              <div className="flex items-center gap-2">
                 <Badge
                   className={
                     paymentStatus === "COMPLETED"
-                      ? "bg-green-100 text-green-800"
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                       : paymentStatus === "FAILED"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-yellow-100 text-yellow-800"
+                        ? "bg-red-100 text-red-800 border-red-200"
+                        : "bg-amber-100 text-amber-900 border-amber-200"
                   }
                 >
                   {paymentStatus}
                 </Badge>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1"
+                  onClick={clearLoadedRecord}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-md border bg-slate-900 text-white p-4 flex items-center justify-between">
+            <CardContent className="space-y-0 p-0">
+              <div className="bg-[#1e3a5f] text-white px-5 py-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="font-semibold">{studentName}</div>
-                  <div className="text-xs opacity-80">UID - {studentUid}</div>
+                  <div className="text-xl font-bold tracking-tight">{studentName}</div>
+                  <div className="text-sm text-white/80 mt-0.5">UID · {studentUid}</div>
                 </div>
-                <Badge className="bg-slate-800 text-slate-100 border border-slate-700">
+                <Badge className="bg-sky-500/90 hover:bg-sky-500 text-white border-0 rounded-full px-3 py-1 text-xs font-medium">
                   {programCourse}
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-md border p-3">
-                  <div className="text-xs text-slate-500">Mobile</div>
-                  <div className="font-medium">{userPhone}</div>
-                </div>
-                <div className="rounded-md border p-3">
-                  <div className="text-xs text-slate-500">Email</div>
-                  <div className="font-medium">{userEmail}</div>
-                </div>
-                <div className="rounded-md border p-3">
-                  <div className="text-xs text-slate-500">Academic</div>
-                  <div className="font-medium">
-                    {academicYear} · {className}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-md border p-3">
-                <div className="text-xs text-slate-500">Father/Mother Name</div>
-                <div className="font-medium">{fatherName}</div>
-              </div>
-
-              <div className="rounded-md border p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-slate-500">Challan amount</div>
-                    <div className="text-lg font-semibold">
-                      ₹{challanAmount.toLocaleString("en-IN")}
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-slate-200">
+                {[
+                  { k: "Mobile", v: userPhone },
+                  { k: "Email", v: userEmail },
+                  { k: "Father's name", v: fatherName },
+                  { k: "Fee group", v: feeGroupLabel },
+                  { k: "Academic year", v: academicLine },
+                ].map((cell) => (
+                  <div
+                    key={cell.k}
+                    className="border-b sm:border-b-0 sm:border-r border-slate-200 last:border-r-0 p-4 bg-white min-w-0"
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      {cell.k}
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-slate-900 break-words">
+                      {cell.v}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs text-slate-500">Amount paid</div>
-                    <div className="text-lg font-semibold">
-                      ₹{amountPaid.toLocaleString("en-IN")}
-                    </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 bg-slate-50 rounded-b-md">
+                <div className="p-4 border-r border-slate-200 min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Challan amount
+                  </div>
+                  <div className="text-xl font-bold text-slate-900 mt-1">
+                    ₹{challanAmount.toLocaleString("en-IN")}
+                  </div>
+                </div>
+                <div className="p-4 min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Amount paid
+                  </div>
+                  <div className="text-xl font-bold text-slate-900 mt-1">
+                    ₹{amountPaid.toLocaleString("en-IN")}
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>
-                {mode === "CASH" ? "Record cash payment" : "Mark online payment"}
+          <Card className="rounded-xl shadow-sm border-slate-200 overflow-hidden">
+            <CardHeader className="pb-3 border-b bg-slate-50/80 flex flex-row items-center justify-between gap-2">
+              <CardTitle className="text-sm font-semibold tracking-wide uppercase text-slate-600">
+                {mode === "CASH" ? "Record cash payment" : "Update online payment"}
               </CardTitle>
+              {mode === "CASH" ? (
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-normal">
+                  Cash
+                </Badge>
+              ) : (
+                displayGatewayVendor && (
+                  <Badge variant="secondary" className="font-normal text-sky-800 bg-sky-100">
+                    {displayGatewayVendor}
+                  </Badge>
+                )
+              )}
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5 pt-6">
               {mode === "CASH" ? (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <Label>Challan amount (₹)</Label>
-                      <Input value={String(challanAmount)} readOnly />
+                      <Label className="text-xs font-semibold uppercase text-slate-500">
+                        Challan amount (₹)
+                      </Label>
+                      <Input
+                        value={`₹ ${challanAmount.toLocaleString("en-IN")}`}
+                        readOnly
+                        className="mt-1.5 bg-slate-50"
+                      />
                     </div>
                     <div>
-                      <Label>Receipt date *</Label>
-                      <Input type="date" value={cashReceiptDate} disabled />
+                      <Label className="text-xs font-semibold uppercase text-slate-500">
+                        Payment date <span className="text-red-600">*</span>
+                      </Label>
+                      <Input
+                        type="date"
+                        value={paymentDate}
+                        onChange={(e) => setPaymentDate(e.target.value)}
+                        disabled={isMarkingFormLocked}
+                        className="mt-1.5"
+                      />
                     </div>
                   </div>
                   <div>
-                    <Label>Remarks (optional)</Label>
+                    <Label className="text-xs font-semibold uppercase text-slate-500">
+                      Remarks (optional)
+                    </Label>
                     <Textarea
                       value={cashRemarks}
                       onChange={(e) => setCashRemarks(e.target.value)}
                       placeholder="Any notes for this transaction"
                       rows={3}
+                      className="mt-1.5"
+                      disabled={isMarkingFormLocked}
                     />
                   </div>
-                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="text-xs text-slate-500 mb-2">
-                      {isCashRecorded ? "Recorded by" : "Will be recorded by"}
+                      {isMarkingFormLocked ? "Recorded by" : "Will be recorded by"}
                     </div>
                     <div className="flex items-center gap-3">
                       <UserAvatar
                         size="sm"
                         user={{
                           name:
-                            (isCashRecorded ? recordedBy?.name : loggedInUser?.name) ?? undefined,
+                            (isMarkingFormLocked ? recordedBy?.name : loggedInUser?.name) ??
+                            undefined,
                           image:
-                            (isCashRecorded ? recordedBy?.image : loggedInUser?.image) ?? undefined,
+                            (isMarkingFormLocked ? recordedBy?.image : loggedInUser?.image) ??
+                            undefined,
                         }}
                       />
                       <div>
                         <div className="text-sm font-medium">
-                          {(isCashRecorded ? recordedBy?.name : loggedInUser?.name) ||
+                          {(isMarkingFormLocked ? recordedBy?.name : loggedInUser?.name) ||
                             "Unknown user"}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {isCashRecorded ? recordedAtText : "After you click Receive"}
+                          {isMarkingFormLocked ? recordedAtText : "After you confirm"}
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-3">
                     <Button
+                      type="button"
                       variant="outline"
-                      onClick={() => {
-                        setRecord(null);
-                        setCashReceiptNumber("");
-                        setCashRemarks("");
-                      }}
-                      className="w-full"
+                      onClick={clearLoadedRecord}
+                      className="flex-1"
                     >
-                      Clear
+                      Clear form
                     </Button>
                     <Button
+                      type="button"
                       onClick={() => setConfirmOpen(true)}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
-                      disabled={isCashRecorded}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                      disabled={isMarkingFormLocked}
                     >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
                       Receive cash payment
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <Label className="text-xs font-semibold uppercase text-slate-500">
+                        Amount (₹)
+                      </Label>
+                      <Input
+                        value={`₹ ${challanAmount.toLocaleString("en-IN")}`}
+                        readOnly
+                        className="mt-1.5 bg-slate-50"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold uppercase text-slate-500">
+                        Payment date <span className="text-red-600">*</span>
+                      </Label>
+                      <Input
+                        type="date"
+                        value={paymentDate}
+                        onChange={(e) => setPaymentDate(e.target.value)}
+                        disabled={isMarkingFormLocked}
+                        className="mt-1.5"
+                      />
+                    </div>
+                  </div>
                   <div>
-                    <Label>Remarks (optional)</Label>
+                    <Label className="text-xs font-semibold uppercase text-slate-500">
+                      Reference / transaction no. <span className="text-red-600">*</span>
+                    </Label>
+                    <Input
+                      value={onlineTransactionId}
+                      onChange={(e) => setOnlineTransactionId(e.target.value)}
+                      placeholder="e.g. TXN2025042100831"
+                      disabled={isMarkingFormLocked}
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold uppercase text-slate-500">
+                      Remarks (optional)
+                    </Label>
                     <Textarea
                       value={onlineRemarks}
                       onChange={(e) => setOnlineRemarks(e.target.value)}
                       placeholder="Any notes for this transaction"
                       rows={3}
+                      className="mt-1.5"
+                      disabled={isMarkingFormLocked}
                     />
                   </div>
-                  <div className="flex gap-3">
+                  <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 flex gap-3 text-sm text-sky-900">
+                    <Info className="h-5 w-5 shrink-0 text-sky-600 mt-0.5" />
+                    <span>
+                      Verify the order ID and transaction reference from the gateway dashboard
+                      before updating.
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 pt-3">
                     <Button
+                      type="button"
                       variant="outline"
-                      onClick={() => {
-                        setRecord(null);
-                        setOnlineOrderId("");
-                        setOnlineRemarks("");
-                      }}
-                      className="w-full"
+                      onClick={clearLoadedRecord}
+                      className="flex-1"
                     >
-                      Clear
+                      Clear form
                     </Button>
                     <Button
-                      onClick={() => setConfirmOpen(true)}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
-                      disabled={paymentStatus === "COMPLETED"}
+                      type="button"
+                      onClick={() => {
+                        if (!onlineTransactionId.trim()) {
+                          toast.error("Enter the reference / transaction number from the gateway");
+                          return;
+                        }
+                        setConfirmOpen(true);
+                      }}
+                      className="flex-1 bg-sky-600 hover:bg-sky-700"
+                      disabled={isMarkingFormLocked}
                     >
-                      Mark as success
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Update online payment
                     </Button>
                   </div>
                 </>

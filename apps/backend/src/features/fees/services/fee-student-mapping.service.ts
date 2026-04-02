@@ -141,6 +141,7 @@ async function modelToDto(
         : "PENDING";
 
   const transactionDate: FeeStudentMappingDto["transactionDate"] =
+    model.challanGeneratedAt ??
     (payment as { txnDate?: string | null } | null)?.txnDate ??
     (payment as { updatedAt?: Date | string | null } | null)?.updatedAt ??
     null;

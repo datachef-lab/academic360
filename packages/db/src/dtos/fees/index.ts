@@ -50,10 +50,14 @@ export interface FeeGroupDto extends Omit<FeeGroupT, "feeCategoryId" | "feeSlabI
 export interface FeeGroupPromotionMappingDto extends Omit<FeeGroupPromotionMappingT, "feeGroupId" | "promotionId"> {
     feeGroup: FeeGroupDto;
     promotion: PromotionDto;
-    /** Aggregated from related fee_student_mappings. "Paid" | "Pending" | "Unpaid" */
+    /** Set to Paid when any related fee_student_mapping has a linked payment with status SUCCESS */
     paymentStatus?: "Paid" | "Pending" | "Unpaid";
-    /** Sum of (totalPayable - amountPaid) from related fee_student_mappings */
+    /** Remaining balance: sum of max(0, totalPayable - amountPaid) per related fee_student_mapping (0 when fully paid) */
     amountToPay?: number;
+    /** Sum of fee_student_mappings.totalPayable for this mapping (for display as actual fee amount) */
+    totalPayableAmount?: number;
+    /** True when any related fee_student_mapping has a linked payment with status SUCCESS — read-only edit dialog */
+    saveBlockedForEdit?: boolean;
     /** For approval details in edit dialog */
     updatedByUser?: { name: string; avatarUrl?: string | null } | null;
 }

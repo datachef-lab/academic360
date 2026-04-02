@@ -73,8 +73,10 @@ export type FeePaymentMarkingLoadedRecord = {
     status: string;
     amount: number;
     paymentMode: string | null;
+    paymentGatewayVendor: string | null;
     isManualEntry: boolean;
     remarks: string | null;
+    txnId: string | null;
     txnDate: string | null;
     createdAt: string | null;
     updatedAt: string | null;
@@ -112,6 +114,10 @@ export async function loadFeePaymentMarkingOnline(
 export async function markFeePaymentOnlineSuccess(data: {
   orderId: string;
   remarks?: string;
+  /** ISO date (e.g. from date input) — stored as payment txn date and mapping receipt date */
+  paymentDateIso?: string;
+  transactionId?: string;
+  paymentGatewayVendor?: string;
 }): Promise<ApiResponse<FeePaymentMarkingLoadedRecord>> {
   const response = await axiosInstance.post(`${PAYMENTS_BASE}/marking/online/mark-success`, data);
   return response.data;
