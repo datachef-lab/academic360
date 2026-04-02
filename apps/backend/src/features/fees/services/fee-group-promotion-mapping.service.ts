@@ -603,6 +603,9 @@ export const updateFeeGroupPromotionMapping = async (
         .update(feeStudentMappingModel)
         .set({
           totalPayable: finalTotalPayable,
+          // New slab / fee group → challan format (e.g. category code) may differ; re-issue on next download
+          receiptNumber: null,
+          challanGeneratedAt: null,
           updatedAt: new Date(),
         })
         .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
@@ -1265,6 +1268,9 @@ export const bulkUploadFeeGroupPromotionMappings = async (
             );
 
           if (existingFeeStudentMapping) {
+            const promotionMappingChanged =
+              existingFeeStudentMapping.feeGroupPromotionMappingId !==
+              createdMappingId;
             await db
               .update(feeStudentMappingModel)
               .set({
@@ -1276,6 +1282,9 @@ export const bulkUploadFeeGroupPromotionMappings = async (
                       ? existingFeeStudentMapping.waivedOffAmount || 0
                       : 0),
                 ),
+                ...(promotionMappingChanged
+                  ? { receiptNumber: null, challanGeneratedAt: null }
+                  : {}),
                 updatedAt: new Date(),
               })
               .where(

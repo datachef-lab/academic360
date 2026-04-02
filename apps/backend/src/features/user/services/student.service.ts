@@ -650,20 +650,24 @@ export async function searchStudent(
   const query = searchText.trim();
   const pattern = `%${query}%`;
 
-  // Search by UID, Roll Number, or User Name and return name for UI display
+  // UID, roll / registration on students, display roll / SI roll on promotions, or user name
   const rows = await db
-    .select({
+    .selectDistinct({
       id: studentModel.id,
       uid: studentModel.uid,
       name: userModel.name,
     })
     .from(studentModel)
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
     .where(
       or(
         ilike(studentModel.uid, pattern),
         ilike(studentModel.rollNumber, pattern),
+        ilike(studentModel.registrationNumber, pattern),
         ilike(userModel.name, pattern),
+        ilike(promotionModel.rollNumber, pattern),
+        ilike(promotionModel.rollNumberSI, pattern),
       ),
     )
     .orderBy(desc(studentModel.id))
@@ -739,64 +743,7 @@ export async function searchStudentsByRollNumber(
   page: number = 1,
   pageSize: number = 10,
 ) {
-  // Trim spaces and convert searchText to lowercase
-  searchText = searchText.trim().toLowerCase();
-
-  // Query students based on student roll number (Partial match)
-  // const studentsQuery = db
-  //     .select()
-  //     .from(studentModel)
-  //     .leftJoin(
-  //         academicIdentifierModel,
-  //         eq(academicIdentifierModel.studentId, studentModel.id),
-  //     ) // Join with academic identifiers
-  //     .where(
-  //         ilike(
-  //             sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
-  //             `%${searchText.replace(/[^a-zA-Z0-9]/g, "")}%`,
-  //         ),
-  //     );
-
-  // // Get the paginated students
-  // const students = await studentsQuery
-  //     .limit(pageSize)
-  //     .offset((page - 1) * pageSize);
-
-  // console.log(students);
-
-  // // Get the total count of students matching the filter
-  // const [{ count: countRows }] = await db
-  //     .select({ count: count() })
-  //     .from(studentModel)
-
-  //     .leftJoin(
-  //         academicIdentifierModel,
-  //         eq(academicIdentifierModel.studentId, studentModel.id),
-  //     ) // Join with academic identifiers
-  //     .where(
-  //         or(
-  //             ilike(
-  //                 sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
-  //                 `%${searchText.replace(/[^a-zA-Z0-9]/g, "")}%`,
-  //             ),
-  //         ),
-  //     );
-
-  // // Map the result to a properly formatted response
-  // const content = await Promise.all(
-  //     students.map(async (studentRecord) => {
-  //         const student = studentRecord.students; // Extract the student data
-  //         return await studentResponseFormat(student);
-  //     }),
-  // );
-
-  return {
-    content: [],
-    page,
-    pageSize,
-    totalElements: Number(0), // Now this count is correct!
-    totalPages: Math.ceil(Number(0) / pageSize),
-  };
+  return searchStudent(searchText.trim(), page, pageSize);
 }
 
 export async function findFilteredStudents({

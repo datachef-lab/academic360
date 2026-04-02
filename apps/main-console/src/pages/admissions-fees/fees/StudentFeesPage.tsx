@@ -47,23 +47,13 @@ import {
 } from "@/services/fees-api";
 import { usePaytmCheckout } from "@/hooks/usePaytmCheckout";
 import { useError } from "@/hooks/useError";
-import {
-  fetchStudentByUid,
-  getSearchedStudentsByRollNumber,
-  getSearchedStudents,
-  getStudentById,
-} from "@/services/student";
+import { fetchStudentByUid, getSearchedStudents, getStudentById } from "@/services/student";
 import { StudentDto } from "@repo/db/dtos/user";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { UserAvatar } from "@/hooks/UserAvatar";
-import {
-  downloadFeeReceipt,
-  downloadFeeReceiptOffline,
-} from "@/services/fee-student-mapping.service";
+import { openFeeReceiptPdfInNewTab } from "@/services/fee-student-mapping.service";
 
 const StudentFeesPage: React.FC = () => {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
-  const { accessToken } = useAuth();
   const [downloading, setDownloading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchText, setSearchText] = useState(searchParams.get("search") || "");
@@ -240,21 +230,7 @@ const StudentFeesPage: React.FC = () => {
             }
           }
         } catch (searchError) {
-          // General search failed, try roll number specific search
-        }
-
-        // Try to find student by roll number (specific endpoint)
-        try {
-          const student = await getSearchedStudentsByRollNumber(valueToSearch);
-          if (student && student.id) {
-            setSelectedStudent(student);
-            setSearchParams({ search: valueToSearch });
-            // Fetch all fee-student-mappings for this student
-            await fetchStudentMappings(student.id);
-            return;
-          }
-        } catch (rollError) {
-          // Roll number search failed
+          // General search failed
         }
 
         // If all searches failed, show error
@@ -409,7 +385,6 @@ const StudentFeesPage: React.FC = () => {
   };
 
   const handleDownloadReceipt = async (feeStructureId: number, studentId: number) => {
-    console.log(`feeStructureId: ${feeStructureId}, studentId: ${studentId}`);
     if (!feeStructureId || !studentId) return;
     feeStructureId = Number(feeStructureId);
     studentId = Number(studentId);
@@ -418,21 +393,11 @@ const StudentFeesPage: React.FC = () => {
     setDownloading(true);
 
     try {
-      const blob = await downloadFeeReceipt(feeStructureId, studentId);
-
-      // Create a download link
-      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
-      const newTab = window.open(url, "_blank");
-
-      if (newTab) {
-        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
-      } else {
-        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
-      }
-    } catch (err) {
+      await openFeeReceiptPdfInNewTab(feeStructureId, studentId);
+    } catch {
       toast({
         title: "Download failed",
-        description: "Failed to download admit card. Please try again.",
+        description: "Failed to open fee receipt. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -441,31 +406,7 @@ const StudentFeesPage: React.FC = () => {
   };
 
   const handleDownloadReceiptOffline = async (feeStructureId: number, studentId: number) => {
-    if (!feeStructureId || !studentId) return;
-    feeStructureId = Number(feeStructureId);
-    studentId = Number(studentId);
-    if (isNaN(feeStructureId) || feeStructureId <= 0 || isNaN(studentId) || studentId <= 0) return;
-
-    setDownloading(true);
-
-    try {
-      const blob = await downloadFeeReceiptOffline(feeStructureId, studentId);
-      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
-      const newTab = window.open(url, "_blank");
-      if (newTab) {
-        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
-      } else {
-        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
-      }
-    } catch {
-      toast({
-        title: "Download failed",
-        description: "Failed to download receipt. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setDownloading(false);
-    }
+    await handleDownloadReceipt(feeStructureId, studentId);
   };
 
   const handleNotificationSubmit = async () => {
@@ -495,7 +436,7 @@ const StudentFeesPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto min-w-0 max-w-full px-4 py-4 sm:p-6 space-y-6">
       {/* Download Receipt Loading Overlay */}
       {downloading && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -515,7 +456,7 @@ const StudentFeesPage: React.FC = () => {
           </p>
         </div>
       )}
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -527,7 +468,7 @@ const StudentFeesPage: React.FC = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-w-0">
           {/* Search Input */}
           <div className="mb-4">
             <form onSubmit={handleSearchSubmit} className="flex gap-2">
@@ -595,19 +536,30 @@ const StudentFeesPage: React.FC = () => {
               <div className="text-lg">Loading student fees mappings...</div>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
+            <div className="min-w-0 rounded-md border">
+              <Table
+                containerClassName="overflow-x-hidden max-w-full"
+                className="table-fixed w-full text-[11px] sm:text-sm [&_th]:!h-auto [&_th]:!px-1.5 [&_th]:!py-2 sm:[&_th]:!px-2.5 [&_tbody_td]:!px-1.5 [&_tbody_td]:!py-2 sm:[&_tbody_td]:!px-2.5 [&_td]:align-top"
+              >
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">Sr. No</TableHead>
-                    <TableHead className="text-center">Academic Year / Semester</TableHead>
-                    <TableHead className="text-center">Receipt Type</TableHead>
-                    <TableHead className="text-center">Total Payable</TableHead>
-                    <TableHead className="text-center">Fee Group</TableHead>
-                    <TableHead className="text-center">Waived Off</TableHead>
-                    <TableHead className="text-center">Summary</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead className="text-center w-[2.25rem] sm:w-10">#</TableHead>
+                    <TableHead className="text-center w-[13%] min-w-0 leading-tight">
+                      <span className="hidden sm:inline">Academic Year / Semester</span>
+                      <span className="sm:hidden">Year / Sem.</span>
+                    </TableHead>
+                    <TableHead className="text-center w-[11%] min-w-0 leading-tight">
+                      <span className="hidden md:inline">Receipt Type</span>
+                      <span className="md:hidden">Receipt</span>
+                    </TableHead>
+                    <TableHead className="text-center w-[9%] min-w-0">Payable</TableHead>
+                    <TableHead className="text-center w-[21%] min-w-0">Fee Group</TableHead>
+                    <TableHead className="text-center w-[6%] min-w-0 leading-tight">
+                      Waiver
+                    </TableHead>
+                    <TableHead className="text-center w-[14%] min-w-0">Summary</TableHead>
+                    <TableHead className="text-center w-[9%] min-w-0">Status</TableHead>
+                    <TableHead className="text-center w-[8%] min-w-0 pr-1">Act.</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -636,18 +588,18 @@ const StudentFeesPage: React.FC = () => {
                       return (
                         <TableRow key={mapping.id}>
                           <TableCell className="text-center">{index + 1}</TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex flex-col gap-1 items-center">
-                              <Badge className="bg-blue-100 text-blue-800 border-blue-300">
+                          <TableCell className="text-center min-w-0">
+                            <div className="flex flex-col gap-0.5 items-center">
+                              <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal text-center leading-tight max-w-full">
                                 {academicYear}
                               </Badge>
-                              <Badge className="bg-green-100 text-green-800 border-green-300">
+                              <Badge className="bg-green-100 text-green-800 border-green-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal text-center leading-tight max-w-full">
                                 {semester}
                               </Badge>
                             </div>
                           </TableCell>
-                          <TableCell className="text-center">
-                            <Badge className="bg-purple-100 text-purple-800 border-purple-300">
+                          <TableCell className="text-center min-w-0">
+                            <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal text-center leading-tight max-w-full">
                               {receiptType}
                             </Badge>
                           </TableCell>
@@ -656,13 +608,12 @@ const StudentFeesPage: React.FC = () => {
                               ₹{totalPayable.toLocaleString("en-IN")}
                             </span>
                           </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <Badge className="bg-indigo-100 text-indigo-800 border-indigo-300 whitespace-nowrap">
+                          <TableCell className="text-center min-w-0">
+                            <div className="flex flex-col items-stretch justify-center gap-1 w-full min-w-0">
+                              <Badge className="bg-indigo-100 text-indigo-800 border-indigo-300 whitespace-normal text-center text-[10px] sm:text-xs leading-snug px-1.5 py-0.5 w-full min-w-0 break-words">
                                 {feeCategoryName}
                               </Badge>
-                              <span className="text-gray-400">|</span>
-                              <Badge className="bg-orange-100 text-orange-800 border-orange-300 whitespace-nowrap">
+                              <Badge className="bg-orange-100 text-orange-800 border-orange-300 whitespace-normal text-center text-[10px] sm:text-xs leading-snug px-1.5 py-0.5 w-full min-w-0 break-words">
                                 {slabName}
                               </Badge>
                             </div>
@@ -676,27 +627,29 @@ const StudentFeesPage: React.FC = () => {
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center min-w-0">
                             <Button
                               variant="ghost"
                               size="sm"
+                              type="button"
+                              aria-label="View fee mapping summary"
                               onClick={() => setSelectedSummaryItem(mapping)}
-                              className="flex items-center gap-1"
+                              className="inline-flex h-auto min-h-8 w-full max-w-full flex-col gap-0.5 whitespace-normal px-1 py-1.5 sm:flex-row sm:items-center sm:justify-center sm:gap-1 sm:px-2 [&_span]:text-center [&_span]:leading-tight [&_span]:text-[10px] sm:[&_span]:text-xs"
                             >
-                              <Eye className="h-4 w-4" />
-                              View Summary
+                              <Eye className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                              <span>View summary</span>
                             </Button>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center min-w-0">
                             <Badge
                               className={
                                 paymentStatus === "COMPLETED"
-                                  ? "bg-green-100 text-green-800"
+                                  ? "bg-green-100 text-green-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
                                   : paymentStatus === "PENDING"
-                                    ? "bg-yellow-100 text-yellow-800"
+                                    ? "bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
                                     : paymentStatus === "FAILED"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-gray-100 text-gray-800"
+                                      ? "bg-red-100 text-red-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
+                                      : "bg-gray-100 text-gray-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
                               }
                             >
                               {paymentStatus}

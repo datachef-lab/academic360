@@ -107,6 +107,7 @@ import {
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
 import feeStudentMappingRouter from "@/features/fees/routes/fee-student-mapping.route.js";
+import feeReceiptRouter from "@/features/fees/routes/fee-receipt.route.js";
 import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
@@ -532,6 +533,7 @@ app.use("/api/v1/fees/structure", feesStructureRouter);
 
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
 app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
+app.use("/api/v1/fees/receipts", feeReceiptRouter);
 app.use("/api/v1/fees/receipt-types", receiptTypeRouter);
 app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/slabs", feeSlabRouter);
@@ -898,6 +900,7 @@ app.use("/api/v1/academics", academicYearRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
 app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
+app.use("/api/v1/fees/receipts", feeReceiptRouter);
 app.use("/api/v1/fees/heads", feeHeadRouter);
 app.use("/api/v1/fees", feesRouter);
 

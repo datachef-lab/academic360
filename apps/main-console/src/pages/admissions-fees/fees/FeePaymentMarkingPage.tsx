@@ -131,11 +131,9 @@ export default function FeePaymentMarkingPage() {
     if (!record) return;
     const pe = record.paymentEntry;
     const txnFromPayment = pe?.txnDate ? txnDateToInputValue(pe.txnDate) : null;
-    const mapDate = (record.mapping as { challanGeneratedAt?: string | null })?.challanGeneratedAt;
-    const fromMapping = mapDate ? txnDateToInputValue(mapDate) : null;
     const fallbackDate = new Date().toISOString().slice(0, 10);
 
-    setPaymentDate(txnFromPayment ?? fromMapping ?? fallbackDate);
+    setPaymentDate(txnFromPayment ?? fallbackDate);
     if (mode === "ONLINE") {
       setOnlineTransactionId(pe?.txnId?.trim() ?? "");
     }

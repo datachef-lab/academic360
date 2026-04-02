@@ -305,13 +305,11 @@ export async function receiveCashFeePayment(params: {
       paymentId = created?.id ?? null;
     }
 
-    const rd = new Date(receiptDateIso);
     await tx
       .update(feeStudentMappingModel)
       .set({
         amountPaid: amountToRecord,
         paymentId: paymentId ?? undefined,
-        challanGeneratedAt: Number.isFinite(rd.getTime()) ? rd : new Date(),
       })
       .where(eq(feeStudentMappingModel.id, row.id));
   });
@@ -490,13 +488,11 @@ export async function markOnlineFeePaymentSuccessManual(params: {
     if (mapping?.id) {
       const totalPayable = Number(mapping.totalPayable ?? 0);
       const amountToSet = Number.isFinite(totalPayable) ? totalPayable : 0;
-      const rd = new Date(paymentDateIso);
       await tx
         .update(feeStudentMappingModel)
         .set({
           amountPaid: amountToSet,
           paymentId: payment.id,
-          challanGeneratedAt: Number.isFinite(rd.getTime()) ? rd : new Date(),
         })
         .where(eq(feeStudentMappingModel.id, mapping.id));
     }

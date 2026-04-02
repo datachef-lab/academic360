@@ -400,6 +400,8 @@ export const updateFeeCategoryPromotionMapping = async (
           .update(feeStudentMappingModel)
           .set({
             totalPayable: finalTotalPayable,
+            receiptNumber: null,
+            challanGeneratedAt: null,
             updatedAt: new Date(),
           })
           .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));

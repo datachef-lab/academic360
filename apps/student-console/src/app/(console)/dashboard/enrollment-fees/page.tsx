@@ -620,19 +620,33 @@ export default function EnrollmentFeesPage() {
 
   const handleGenerateFeeReceipt = async () => {
     if (!selectedFee || !student?.id) return;
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "";
     try {
       setGeneratingReceipt(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/fees/student-mappings/download-receipt?feeStructureId=${selectedFee.feeStructureId}&studentId=${student.id}`,
-        { credentials: "include" },
-      );
-      if (!response.ok) {
+      const postRes = await fetch(`${base}/api/v1/fees/receipts`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feeStructureId: selectedFee.feeStructureId,
+          studentId: student.id,
+        }),
+      });
+      if (!postRes.ok) {
         setPaymentMsg("Failed to generate fee challan. Please try again.");
         return;
       }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
-      window.open(url, "_blank");
+      const postJson = (await postRes.json()) as {
+        payload?: { url?: string };
+      };
+      const pathWithQuery = postJson.payload?.url;
+      if (!pathWithQuery) {
+        setPaymentMsg("Failed to generate fee challan. Please try again.");
+        return;
+      }
+      const origin = base.replace(/\/$/, "");
+      const path = pathWithQuery.startsWith("/") ? pathWithQuery : `/${pathWithQuery}`;
+      window.open(`${origin}${path}`, "_blank", "noopener,noreferrer");
     } catch (error) {
       console.error(error);
       setPaymentMsg("Failed to generate fee challan. Please try again.");

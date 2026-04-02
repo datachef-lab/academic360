@@ -971,8 +971,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <Card>
+    <div className="container mx-auto min-w-0 max-w-full px-4 py-4 sm:p-6 space-y-6">
+      <Card className="min-w-0 overflow-hidden">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -993,7 +993,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-w-0">
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
             <div className="flex items-center gap-2 w-full md:w-auto">
               <Button
@@ -1093,196 +1093,212 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           {loading && hasFilters ? (
             <div className="text-center py-8">Loading mappings...</div>
           ) : (
-            <Table className="border rounded-md">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      aria-label="Select all on page"
-                      checked={allSelectedOnPage}
-                      onCheckedChange={toggleSelectAllOnPage}
-                    />
-                  </TableHead>
-                  <TableHead className="w-[60px]">Sr No.</TableHead>
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Program Course</TableHead>
-                  <TableHead className="text-center">Semester</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead>Payment Status</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Slab Type</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!hasFilters ? (
+            <div className="min-w-0 rounded-md border overflow-hidden">
+              <Table
+                containerClassName="overflow-x-hidden max-w-full"
+                className="border-0 rounded-none text-[11px] sm:text-sm table-fixed w-full [&_th]:!h-auto [&_th]:!px-1.5 [&_th]:!py-2 sm:[&_th]:!px-2.5 [&_tbody_td]:!px-1.5 [&_tbody_td]:!py-2 sm:[&_tbody_td]:!px-2.5"
+              >
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-gray-500">
-                      <p className="font-medium">Apply filters to load data</p>
-                      <p className="text-sm mt-1">
-                        Select at least one filter (e.g. Academic Year, Semester) to view student
-                        fee group mappings.
-                      </p>
-                    </TableCell>
+                    <TableHead className="w-8 min-w-0 p-0">
+                      <Checkbox
+                        aria-label="Select all on page"
+                        checked={allSelectedOnPage}
+                        onCheckedChange={toggleSelectAllOnPage}
+                      />
+                    </TableHead>
+                    <TableHead className="w-8 min-w-0 text-center">#</TableHead>
+                    <TableHead className="min-w-0 w-[18%]">Student</TableHead>
+                    <TableHead className="min-w-0 w-[14%] leading-tight">
+                      <span className="hidden sm:inline">Program</span>
+                      <span className="sm:hidden">Prog.</span>
+                    </TableHead>
+                    <TableHead className="text-center min-w-0 w-[9%]">Sem.</TableHead>
+                    <TableHead className="min-w-0 w-[8%]">Shift</TableHead>
+                    <TableHead className="min-w-0 w-[10%] leading-tight">Pay status</TableHead>
+                    <TableHead className="min-w-0 w-[9%]">Amt</TableHead>
+                    <TableHead className="min-w-0 w-[16%] leading-tight">Slab</TableHead>
+                    <TableHead className="min-w-0 w-[8%] text-right pr-1">Act.</TableHead>
                   </TableRow>
-                ) : paginatedMappings.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                      No mappings found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedMappings.map((mapping, index) => {
-                    const promo: any = mapping.promotion || {};
-                    const studentName = promo.studentName || promo.name || "-";
-                    const uid = promo.uid || promo.studentUid || "";
-                    const programCourseName = promo.programCourse?.name || "-";
-                    const rawSemesterName = promo.class?.name || "-";
-                    const semesterParts =
-                      typeof rawSemesterName === "string" ? rawSemesterName.split(/\s+/) : [];
-                    const semesterName =
-                      semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
-                    const shiftName = promo.shift?.name || "-";
-                    const paymentStatus = mapping.paymentStatus ?? "Pending";
-                    const amountToPay = mapping.amountToPay ?? 0;
-                    const totalPayableAmt = mapping.totalPayableAmount ?? 0;
-                    const displayAmount = totalPayableAmt > 0 ? totalPayableAmt : amountToPay;
+                </TableHeader>
+                <TableBody>
+                  {!hasFilters ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-12 text-gray-500">
+                        <p className="font-medium">Apply filters to load data</p>
+                        <p className="text-sm mt-1">
+                          Select at least one filter (e.g. Academic Year, Semester) to view student
+                          fee group mappings.
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedMappings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                        No mappings found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedMappings.map((mapping, index) => {
+                      const promo: any = mapping.promotion || {};
+                      const studentName = promo.studentName || promo.name || "-";
+                      const uid = promo.uid || promo.studentUid || "";
+                      const programCourseName = promo.programCourse?.name || "-";
+                      const rawSemesterName = promo.class?.name || "-";
+                      const semesterParts =
+                        typeof rawSemesterName === "string" ? rawSemesterName.split(/\s+/) : [];
+                      const semesterName =
+                        semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
+                      const shiftName = promo.shift?.name || "-";
+                      const paymentStatus = mapping.paymentStatus ?? "Pending";
+                      const amountToPay = mapping.amountToPay ?? 0;
+                      const totalPayableAmt = mapping.totalPayableAmount ?? 0;
+                      const displayAmount = totalPayableAmt > 0 ? totalPayableAmt : amountToPay;
 
-                    const globalIndex = (currentPage - 1) * pageSize + index + 1;
+                      const globalIndex = (currentPage - 1) * pageSize + index + 1;
 
-                    const promotionId = promo.id as number | undefined;
-                    const mappingCountForPromotion = promotionId
-                      ? (promotionMappingCounts.get(promotionId) ?? 0)
-                      : 0;
-                    const canDelete = mappingCountForPromotion > 1;
+                      const promotionId = promo.id as number | undefined;
+                      const mappingCountForPromotion = promotionId
+                        ? (promotionMappingCounts.get(promotionId) ?? 0)
+                        : 0;
+                      const canDelete = mappingCountForPromotion > 1;
 
-                    return (
-                      <TableRow key={mapping.id}>
-                        <TableCell>
-                          <Checkbox
-                            aria-label="Select row"
-                            checked={mapping.id ? selectedIds.includes(mapping.id) : false}
-                            onCheckedChange={(checked) => toggleOne(mapping.id, checked)}
-                          />
-                        </TableCell>
-                        <TableCell>{globalIndex}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span>{studentName}</span>
-                            {uid && <span className="text-xs text-gray-500">UID: {uid}</span>}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {programCourseName !== "-" ? (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                            >
-                              {programCourseName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {semesterName !== "-" ? (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-orange-300 text-orange-700 bg-orange-50"
-                            >
-                              {semesterName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {shiftName !== "-" ? (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
-                            >
-                              {shiftName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              paymentStatus === "Paid"
-                                ? "bg-green-100 text-green-800 border-green-300"
-                                : paymentStatus === "Pending"
-                                  ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                  : "bg-red-100 text-red-800 border-red-300"
-                            }
-                          >
-                            {paymentStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-gray-900">
-                            ₹{displayAmount.toLocaleString("en-IN")}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {mapping.feeGroup?.feeCategory?.name &&
-                          mapping.feeGroup?.feeSlab?.name ? (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <Badge
-                                variant="outline"
-                                className="text-xs border-pink-300 text-pink-700 bg-pink-50"
-                              >
-                                {mapping.feeGroup.feeSlab.name}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className="text-xs border-purple-300 text-purple-700 bg-purple-50"
-                              >
-                                {mapping.feeGroup.feeCategory.name}
-                              </Badge>
+                      return (
+                        <TableRow key={mapping.id}>
+                          <TableCell className="min-w-0 p-1 align-middle">
+                            <Checkbox
+                              aria-label="Select row"
+                              checked={mapping.id ? selectedIds.includes(mapping.id) : false}
+                              onCheckedChange={(checked) => toggleOne(mapping.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell className="min-w-0 text-center tabular-nums">
+                            {globalIndex}
+                          </TableCell>
+                          <TableCell className="min-w-0">
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                              <span className="line-clamp-2 break-words leading-tight">
+                                {studentName}
+                              </span>
+                              {uid && (
+                                <span className="text-[10px] text-gray-500 truncate" title={uid}>
+                                  {uid}
+                                </span>
+                              )}
                             </div>
-                          ) : mapping.feeCategory?.name ? (
-                            // Fallback for old structure if feeGroup is not available
+                          </TableCell>
+                          <TableCell className="min-w-0">
+                            {programCourseName !== "-" ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] sm:text-xs border-blue-300 text-blue-700 bg-blue-50 whitespace-normal text-left leading-tight max-w-full block"
+                              >
+                                {programCourseName}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center min-w-0">
+                            {semesterName !== "-" ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] sm:text-xs border-orange-300 text-orange-700 bg-orange-50 whitespace-normal leading-tight max-w-full"
+                              >
+                                {semesterName}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="min-w-0">
+                            {shiftName !== "-" ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] sm:text-xs border-emerald-300 text-emerald-700 bg-emerald-50 whitespace-normal leading-tight max-w-full"
+                              >
+                                {shiftName}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="min-w-0">
                             <Badge
-                              variant="outline"
-                              className="text-xs border-purple-300 text-purple-700 bg-purple-50"
+                              className={
+                                paymentStatus === "Paid"
+                                  ? "bg-green-100 text-green-800 border-green-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal"
+                                  : paymentStatus === "Pending"
+                                    ? "bg-yellow-100 text-yellow-800 border-yellow-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal"
+                                    : "bg-red-100 text-red-800 border-red-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal"
+                              }
                             >
-                              {mapping.feeCategory.name}
+                              {paymentStatus}
                             </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditClick(mapping)}
-                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {canDelete && (
+                          </TableCell>
+                          <TableCell className="min-w-0 tabular-nums">
+                            <span className="font-semibold text-gray-900 text-[11px] sm:text-sm">
+                              ₹{displayAmount.toLocaleString("en-IN")}
+                            </span>
+                          </TableCell>
+                          <TableCell className="min-w-0">
+                            {mapping.feeGroup?.feeCategory?.name &&
+                            mapping.feeGroup?.feeSlab?.name ? (
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] sm:text-xs border-pink-300 text-pink-700 bg-pink-50 whitespace-normal leading-tight w-full justify-start"
+                                >
+                                  {mapping.feeGroup.feeSlab.name}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] sm:text-xs border-purple-300 text-purple-700 bg-purple-50 whitespace-normal leading-tight w-full justify-start"
+                                >
+                                  {mapping.feeGroup.feeCategory.name}
+                                </Badge>
+                              </div>
+                            ) : mapping.feeCategory?.name ? (
+                              // Fallback for old structure if feeGroup is not available
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] sm:text-xs border-purple-300 text-purple-700 bg-purple-50 whitespace-normal leading-tight max-w-full"
+                              >
+                                {mapping.feeCategory.name}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="min-w-0 text-right">
+                            <div className="flex items-center justify-end gap-0.5">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteClick(mapping)}
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                onClick={() => handleEditClick(mapping)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                              {canDelete && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteClick(mapping)}
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
 
           {/* Simple pagination controls */}

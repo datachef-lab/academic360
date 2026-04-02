@@ -43,6 +43,144 @@ export function normalizeChallanNumber(scanned: string): string {
   return scanned.trim().replace(/-/g, "/");
 }
 
+/** DB lookup key for receipt_number (aligned with fee payment marking). */
+export function normalizeReceiptLookupKey(input: string): string {
+  return String(input || "")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/-/g, "/")
+    .replace(/\/+/g, "/")
+    .toUpperCase();
+}
+
+/**
+ * First-time receipt download: assigns receipt_number and challan_generated_at.
+ * If receipt_number exists but challan_generated_at is missing (legacy), sets timestamp once.
+ */
+async function persistReceiptIssuanceIfNeeded(params: {
+  mappingId: number;
+  existingReceiptNumber: string | null | undefined;
+  existingChallanGeneratedAt: Date | null | undefined;
+  studentUid: string;
+  feeCategoryCode: string | null | undefined;
+}): Promise<{ challanNumber: string; challanGeneratedAt: Date }> {
+  const { mappingId, studentUid, feeCategoryCode } = params;
+  const existingRn = params.existingReceiptNumber?.trim() || "";
+
+  if (existingRn) {
+    let cg = params.existingChallanGeneratedAt ?? null;
+    if (!cg) {
+      const now = new Date();
+      await db
+        .update(feeStudentMappingModel)
+        .set({ challanGeneratedAt: now })
+        .where(eq(feeStudentMappingModel.id, mappingId));
+      cg = now;
+    }
+    return { challanNumber: existingRn, challanGeneratedAt: cg };
+  }
+
+  const nextReceiptNum = await getNextReceiptNumberForUid(studentUid);
+  const challanNumber = feeCategoryCode
+    ? `${studentUid}/${nextReceiptNum}-${feeCategoryCode}`
+    : `${studentUid}/${nextReceiptNum}`;
+  const now = new Date();
+  await db
+    .update(feeStudentMappingModel)
+    .set({
+      receiptNumber: challanNumber,
+      challanGeneratedAt: now,
+    })
+    .where(eq(feeStudentMappingModel.id, mappingId));
+
+  return { challanNumber, challanGeneratedAt: now };
+}
+
+async function fetchFeeReceiptJoinRow(
+  feeStructureId: number,
+  studentId: number,
+) {
+  const result = await db
+    .select({
+      feeStudentMapping: feeStudentMappingModel,
+      feeStructure: feeStructureModel,
+      student: studentModel,
+      user: userModel,
+      personalDetails: personalDetailsModel,
+      session: sessionModel,
+      feeGroup: feeGroupModel,
+      academicYear: academicYearModel,
+      class: classModel,
+      shift: shiftModel,
+      programCourse: programCourseModel,
+      receiptType: receiptTypeModel,
+      payment: paymentModel,
+      feeCategoryCode: feeCategoryModel.code,
+    })
+    .from(feeStudentMappingModel)
+    .innerJoin(
+      feeStructureModel,
+      eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+    )
+    .innerJoin(
+      studentModel,
+      eq(studentModel.id, feeStudentMappingModel.studentId),
+    )
+    .leftJoin(
+      paymentModel,
+      and(
+        eq(paymentModel.id, feeStudentMappingModel.paymentId),
+        eq(paymentModel.status, "SUCCESS"),
+      ),
+    )
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      personalDetailsModel,
+      eq(personalDetailsModel.userId, userModel.id),
+    )
+    .innerJoin(
+      feeGroupPromotionMappingModel,
+      eq(
+        feeGroupPromotionMappingModel.id,
+        feeStudentMappingModel.feeGroupPromotionMappingId,
+      ),
+    )
+    .innerJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .leftJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+    )
+    .innerJoin(
+      academicYearModel,
+      eq(academicYearModel.id, feeStructureModel.academicYearId),
+    )
+    .innerJoin(
+      sessionModel,
+      eq(sessionModel.academicYearId, academicYearModel.id),
+    )
+    .innerJoin(classModel, eq(classModel.id, feeStructureModel.classId))
+    .innerJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
+    .innerJoin(
+      programCourseModel,
+      eq(programCourseModel.id, feeStructureModel.programCourseId),
+    )
+    .innerJoin(
+      receiptTypeModel,
+      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    .where(
+      and(
+        eq(feeStudentMappingModel.studentId, studentId),
+        eq(feeStudentMappingModel.feeStructureId, feeStructureId),
+      ),
+    );
+
+  return result[0] ?? null;
+}
+
 /**
  * Gets the next receipt number for a given student UID.
  * Finds all existing receipt numbers starting with the UID, extracts the numeric part,
@@ -141,7 +279,6 @@ async function modelToDto(
         : "PENDING";
 
   const transactionDate: FeeStudentMappingDto["transactionDate"] =
-    model.challanGeneratedAt ??
     (payment as { txnDate?: string | null } | null)?.txnDate ??
     (payment as { updatedAt?: Date | string | null } | null)?.updatedAt ??
     null;
@@ -314,97 +451,64 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
   });
 }
 
+/** POST /fees/receipts — ensure receipt/challan row exists; returns relative URL for GET PDF. */
+export async function ensureFeeReceiptChallanUrl(
+  feeStructureId: number,
+  studentId: number,
+): Promise<{ url: string; challanNumber: string } | null> {
+  if (!feeStructureId || !studentId) return null;
+  const row = await fetchFeeReceiptJoinRow(feeStructureId, studentId);
+  if (!row) return null;
+
+  const { challanNumber } = await persistReceiptIssuanceIfNeeded({
+    mappingId: row.feeStudentMapping.id,
+    existingReceiptNumber: row.feeStudentMapping.receiptNumber,
+    existingChallanGeneratedAt: row.feeStudentMapping.challanGeneratedAt,
+    studentUid: row.student.uid,
+    feeCategoryCode: row.feeCategoryCode,
+  });
+
+  const url = `/api/v1/fees/receipts?challanNumber=${challanNumber}`;
+  return { url, challanNumber };
+}
+
+/** GET /fees/receipts?challanNumber= — generate PDF by challan / receipt number. */
+export async function generateFeeReceiptByChallanNumber(
+  challanNumberRaw: string,
+) {
+  const key = normalizeReceiptLookupKey(challanNumberRaw);
+  if (!key) return null;
+
+  const { rows } = await db.execute<{
+    studentId: number;
+    feeStructureId: number;
+  }>(sql`
+    SELECT student_id_fk AS "studentId", fee_structure_id_fk AS "feeStructureId"
+    FROM public.fee_student_mappings
+    WHERE upper(replace(trim(receipt_number), '-', '/')) = ${key}
+    LIMIT 1
+  `);
+
+  const r = rows[0];
+  if (!r) return null;
+
+  return generateFeeReceiptByFeeStructureIdAndStudentId(
+    Number(r.feeStructureId),
+    Number(r.studentId),
+  );
+}
+
 async function generateFeeReceiptInternal(params: {
   feeStructureId: number;
   studentId: number;
 }) {
-  console.log("Fired generateFeeReceiptInternal()", new Date().toISOString());
   const { feeStructureId, studentId } = params;
   if (!feeStructureId || !studentId) {
     throw Error("feeStructureId or studentId is not valid");
   }
 
-  console.log("Fetch data-1", new Date().toISOString());
-  // Fetch all data with joins
-  const result = await db
-    .select({
-      feeStudentMapping: feeStudentMappingModel,
-      feeStructure: feeStructureModel,
-      student: studentModel,
-      user: userModel,
-      personalDetails: personalDetailsModel,
-      session: sessionModel,
-      feeGroup: feeGroupModel,
-      academicYear: academicYearModel,
-      class: classModel,
-      shift: shiftModel,
-      programCourse: programCourseModel,
-      receiptType: receiptTypeModel,
-      payment: paymentModel,
-      feeCategoryCode: feeCategoryModel.code,
-    })
-    .from(feeStudentMappingModel)
-    .innerJoin(
-      feeStructureModel,
-      eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
-    )
-    .innerJoin(
-      studentModel,
-      eq(studentModel.id, feeStudentMappingModel.studentId),
-    )
-    .leftJoin(
-      paymentModel,
-      and(
-        eq(paymentModel.id, feeStudentMappingModel.paymentId),
-        eq(paymentModel.status, "SUCCESS"),
-      ),
-    )
-    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      personalDetailsModel,
-      eq(personalDetailsModel.userId, userModel.id),
-    )
-    .innerJoin(
-      feeGroupPromotionMappingModel,
-      eq(
-        feeGroupPromotionMappingModel.id,
-        feeStudentMappingModel.feeGroupPromotionMappingId,
-      ),
-    )
-    .innerJoin(
-      feeGroupModel,
-      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
-    )
-    .leftJoin(
-      feeCategoryModel,
-      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
-    )
-    .innerJoin(
-      academicYearModel,
-      eq(academicYearModel.id, feeStructureModel.academicYearId),
-    )
-    .innerJoin(
-      sessionModel,
-      eq(sessionModel.academicYearId, academicYearModel.id),
-    )
-    .innerJoin(classModel, eq(classModel.id, feeStructureModel.classId))
-    .innerJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
-    .innerJoin(
-      programCourseModel,
-      eq(programCourseModel.id, feeStructureModel.programCourseId),
-    )
-    .innerJoin(
-      receiptTypeModel,
-      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
-    )
-    .where(
-      and(
-        eq(feeStudentMappingModel.studentId, studentId),
-        eq(feeStudentMappingModel.feeStructureId, feeStructureId),
-      ),
-    );
-
-  if (!result.length) {
+  const joinRow = await fetchFeeReceiptJoinRow(feeStructureId, studentId);
+  if (!joinRow) {
     return null;
   }
 
@@ -422,11 +526,19 @@ async function generateFeeReceiptInternal(params: {
     payment,
     receiptType,
     feeCategoryCode,
-  } = result[0];
+  } = joinRow;
 
-  console.log("Fetch data-2", new Date().toISOString());
+  const { challanNumber, challanGeneratedAt } =
+    await persistReceiptIssuanceIfNeeded({
+      mappingId: feeStudentMapping.id,
+      existingReceiptNumber: feeStudentMapping.receiptNumber,
+      existingChallanGeneratedAt: feeStudentMapping.challanGeneratedAt,
+      studentUid: student.uid,
+      feeCategoryCode: feeCategoryCode,
+    });
 
-  // Fetch fee structure components and filter by student's assigned slab
+  const semesterName = toSentenceCase(classRecord.name);
+
   const components = await db
     .select()
     .from(feeStructureComponentModel)
@@ -449,59 +561,8 @@ async function generateFeeReceiptInternal(params: {
       }),
   );
 
-  // Generate or reuse challan number with format: uid/receipt-number
-  // If receipt number already exists, use it; otherwise generate new one (only set once)
-  let challanNumber: string;
-  if (
-    feeStudentMapping.receiptNumber &&
-    feeStudentMapping.receiptNumber.trim()
-  ) {
-    challanNumber = feeStudentMapping.receiptNumber;
-  } else {
-    const nextReceiptNum = await getNextReceiptNumberForUid(student.uid);
-    challanNumber = feeCategoryCode
-      ? `${student.uid}/${nextReceiptNum}-${feeCategoryCode}`
-      : `${student.uid}/${nextReceiptNum}`;
-  }
-
-  // Get semester name from class record
-  const semesterName = toSentenceCase(classRecord.name);
-
-  console.log("Update challanGeneratedAt in db", new Date().toISOString());
-  // Set challanGeneratedAt once (immutable) — persist if not already set
-  let challanGeneratedAt = feeStudentMapping.challanGeneratedAt;
-  if (!challanGeneratedAt) {
-    if (payment && payment.paymentMode === "ONLINE") {
-      challanGeneratedAt = payment.txnDate
-        ? new Date(payment.txnDate)
-        : new Date();
-    } else {
-      challanGeneratedAt = new Date();
-    }
-    // Persist using snake_case DB columns (avoid changing model column mapping).
-    await db.execute(sql`
-      UPDATE public.fee_student_mappings
-      SET challan_generated_at = ${challanGeneratedAt}
-      WHERE id = ${feeStudentMapping.id}
-        AND challan_generated_at IS NULL
-    `);
-  }
-
-  // Offline receipt: also persist receipt_number as `uid/semesterNumber` (once).
-  if (payment?.paymentMode !== "ONLINE" && !feeStudentMapping.receiptNumber) {
-    await db.execute(sql`
-      UPDATE public.fee_student_mappings
-      SET receipt_number = ${challanNumber}
-      WHERE id = ${feeStudentMapping.id}
-        AND (receipt_number IS NULL OR trim(receipt_number) = '')
-    `);
-  }
-
   const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
 
-  console.log("fetch data-3", new Date().toISOString());
-
-  // Optional: For successful ONLINE payments, show ePAID metadata block in PDF.
   const ePaid = await (async () => {
     const paymentId = feeStudentMapping.paymentId;
     if (!paymentId) return null;
@@ -528,9 +589,6 @@ async function generateFeeReceiptInternal(params: {
     return { orderId, transactionDate };
   })();
 
-  console.log("Generate PDF buffer called", new Date().toISOString());
-
-  // Generate PDF buffer
   const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
     session: session.name,
     name: user.name,
@@ -555,8 +613,6 @@ async function generateFeeReceiptInternal(params: {
       ? new Date(payment.txnDate).toLocaleDateString("en-GB")
       : "",
   });
-
-  console.log("PDF buffer generated", new Date().toISOString());
 
   return {
     pdfBuffer,
