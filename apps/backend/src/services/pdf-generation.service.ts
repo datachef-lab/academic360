@@ -825,6 +825,9 @@ export class PdfGenerationService {
       const modifiedTemplateData = {
         ...formData,
         collegeLogoDataUrl: collegeLogoBase64,
+        showSpecimenWatermark:
+          process.env.NODE_ENV === "development" ||
+          process.env.NODE_ENV === "staging",
       };
 
       // Render the template with data

@@ -334,6 +334,48 @@
       margin-bottom: 12px;
     }
 
+    /* Non-production: watermark — warm amber (draft/specimen; less “error” than red) */
+    .specimen-watermark {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .specimen-watermark-inner {
+      transform: rotate(-32deg);
+      font-size: 26pt;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      /* Light amber fill + darker amber stroke — readable over table lines, still clearly a watermark */
+      color: rgba(253, 212, 128, 0.46);
+      -webkit-text-stroke: 0.7px rgba(180, 83, 9, 0.52);
+      paint-order: stroke fill;
+      text-align: center;
+      line-height: 1.15;
+      white-space: nowrap;
+      max-width: 95%;
+      user-select: none;
+    }
+
+    .challan-copy--specimen {
+      position: relative;
+    }
+
+    .challan-copy--specimen > .specimen-watermark {
+      z-index: 1;
+    }
+
+    .challan-copy--specimen > *:not(.specimen-watermark) {
+      position: relative;
+      z-index: 2;
+    }
+
     @media print {
 
       html,
@@ -369,6 +411,14 @@
       .print-tip {
         display: none !important;
       }
+
+      .specimen-watermark-inner {
+        font-size: 27pt !important;
+        color: rgba(253, 212, 128, 0.52) !important;
+        -webkit-text-stroke: 0.8px rgba(154, 52, 18, 0.55) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
     }
   </style>
 </head>
@@ -378,7 +428,12 @@
     <% const SECTIONS=["STUDENT COPY", "COLLEGE COPY" , "BANK COPY" ]; %>
 
       <% SECTIONS.forEach((section, sectionIndex)=> { %>
-        <div class="challan-copy">
+        <div class="challan-copy<%= typeof showSpecimenWatermark !== 'undefined' && showSpecimenWatermark ? ' challan-copy--specimen' : '' %>">
+          <% if (typeof showSpecimenWatermark !== 'undefined' && showSpecimenWatermark) { %>
+          <div class="specimen-watermark" aria-hidden="true">
+            <div class="specimen-watermark-inner">SPECIMEN ONLY</div>
+          </div>
+          <% } %>
           <div class="challan-header">
             <img class="college-logo"
               src="<%= collegeLogoDataUrl || 'https://besc.academic360.app/api/api/v1/settings/file/4' %>"
