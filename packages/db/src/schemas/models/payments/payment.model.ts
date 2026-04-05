@@ -126,8 +126,8 @@ export const paymentModel = pgTable("payments", {
 
     remarks: text(),
     gatewayResponse: jsonb("gateway_response"),
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createPaymentSchema = createInsertSchema(paymentModel);
