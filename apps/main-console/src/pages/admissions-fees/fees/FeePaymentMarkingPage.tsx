@@ -49,6 +49,27 @@ function txnDateToInputValue(txnDate: string | null | undefined): string | null 
   return d.toISOString().slice(0, 10);
 }
 
+/** yyyy-mm-dd in local calendar for comparison with `<input type="date" />` values */
+function localDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function isPaymentDateFuture(paymentDateStr: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paymentDateStr)) return false;
+  return paymentDateStr > localDateString(new Date());
+}
+
+/** Display `yyyy-mm-dd` as `dd/mm/yyyy` (e.g. for dialogs; input still uses ISO for `type="date"`). */
+function formatYyyyMmDdAsDdMmYyyy(yyyyMmDd: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(yyyyMmDd.trim());
+  if (!m) return yyyyMmDd;
+  const [, y, mo, d] = m;
+  return `${d}/${mo}/${y}`;
+}
+
 function extractErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
     return (
@@ -74,6 +95,7 @@ export default function FeePaymentMarkingPage() {
   const [onlineRemarks, setOnlineRemarks] = useState("");
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [futureDateConfirmOpen, setFutureDateConfirmOpen] = useState(false);
 
   const mapping = record?.mapping;
   const feeStructure = mapping?.feeStructure;
@@ -96,12 +118,12 @@ export default function FeePaymentMarkingPage() {
   const canEditMarkingFields = paymentStatus === "PENDING" && !isPaymentSuccess;
   const isMarkingFormLocked = !canEditMarkingFields;
 
+  /** Use the browser's local timezone so the time matches the user's system clock (API sends UTC via ISO strings). */
   const recordedAtText = paymentRecordedAt
     ? new Intl.DateTimeFormat("en-IN", {
-        timeZone: "Asia/Kolkata",
-        year: "numeric",
-        month: "2-digit",
         day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
@@ -188,8 +210,18 @@ export default function FeePaymentMarkingPage() {
     onlineTransactionId,
   ]);
 
+  function requestMainConfirm() {
+    if (isPaymentDateFuture(paymentDate)) {
+      setFutureDateConfirmOpen(true);
+      return;
+    }
+    setConfirmOpen(true);
+  }
+
   function clearLoadedRecord() {
     setRecord(null);
+    setConfirmOpen(false);
+    setFutureDateConfirmOpen(false);
     setCashReceiptNumber("");
     setCashRemarks("");
     setPaymentDate(new Date().toISOString().slice(0, 10));
@@ -556,7 +588,7 @@ export default function FeePaymentMarkingPage() {
                     </Button>
                     <Button
                       type="button"
-                      onClick={() => setConfirmOpen(true)}
+                      onClick={() => requestMainConfirm()}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700"
                       disabled={isMarkingFormLocked}
                     >
@@ -639,7 +671,7 @@ export default function FeePaymentMarkingPage() {
                           toast.error("Enter the reference / transaction number from the gateway");
                           return;
                         }
-                        setConfirmOpen(true);
+                        requestMainConfirm();
                       }}
                       className="flex-1 bg-sky-600 hover:bg-sky-700"
                       disabled={isMarkingFormLocked}
@@ -654,6 +686,46 @@ export default function FeePaymentMarkingPage() {
           </Card>
         </>
       )}
+
+      <Dialog open={futureDateConfirmOpen} onOpenChange={setFutureDateConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" aria-hidden />
+              Future payment date
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground pt-1">
+                <p>
+                  The payment date you selected (
+                  <span className="font-medium text-foreground">
+                    {formatYyyyMmDdAsDdMmYyyy(paymentDate)}
+                  </span>
+                  ) is <span className="font-semibold text-foreground">after today</span> (
+                  {formatYyyyMmDdAsDdMmYyyy(localDateString(new Date()))}).
+                </p>
+                <p>
+                  Continue only if this is intentional (for example, a post-dated or planned entry).
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setFutureDateConfirmOpen(false)}>
+              Go back
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setFutureDateConfirmOpen(false);
+                setConfirmOpen(true);
+              }}
+            >
+              Yes, continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmOpen} onOpenChange={(v) => setConfirmOpen(v)}>
         <DialogContent>
