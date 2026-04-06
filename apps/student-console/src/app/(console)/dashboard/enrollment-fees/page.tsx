@@ -1177,9 +1177,16 @@ export default function EnrollmentFeesPage() {
                         const tableFields = sortedFields.filter((f) => !f.isQuestion);
                         const rows = rowsByMaster[masterKey] || [];
                         const isEditing = editingMasterKey === masterKey;
+                        const sectionTint =
+                          idx % 2 === 0
+                            ? "border-sky-200/70 bg-sky-50"
+                            : "border-emerald-200/70 bg-emerald-50";
                         return (
-                          <div key={`${cm.name}-${idx}`} className="rounded-xl border bg-white">
-                            <div className="flex items-start justify-between gap-3 border-b p-4">
+                          <div
+                            key={`${cm.name}-${idx}`}
+                            className={`rounded-xl border ${sectionTint}`}
+                          >
+                            <div className="flex items-start justify-between gap-3 border-b border-black/5 p-4">
                               <div>
                                 <p className="text-sm font-semibold text-slate-900">
                                   {String.fromCharCode(65 + idx)}. {cm.name}
@@ -1197,15 +1204,15 @@ export default function EnrollmentFeesPage() {
 
                             <div className="p-4">
                               {questionFields.length > 0 ? (
-                                <div className="mb-4 space-y-3 rounded-lg border bg-slate-50 p-3">
+                                <div className="mb-4 space-y-3 rounded-lg border border-slate-200/80 bg-white/70 p-4">
                                   {questionFields.map((qf) => {
                                     const qfId = Number(qf.id);
                                     return (
                                       <div
                                         key={`${masterId}-${qfId}`}
-                                        className="grid gap-2 md:grid-cols-[minmax(260px,42%)_1fr] md:items-center"
+                                        className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
                                       >
-                                        <label className="text-xs font-semibold text-slate-700">
+                                        <label className="text-base font-semibold leading-snug text-slate-800">
                                           {qf.name}
                                           {qf.isRequired || qf.isQuestion ? (
                                             <span className="ml-1 text-red-600">*</span>
@@ -1221,7 +1228,7 @@ export default function EnrollmentFeesPage() {
                                               }))
                                             }
                                           >
-                                            <SelectTrigger className="h-9 w-full bg-white text-sm">
+                                            <SelectTrigger className="h-10 w-full max-w-[240px] bg-white text-base md:justify-self-end">
                                               <SelectValue placeholder="Select option" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -1237,7 +1244,7 @@ export default function EnrollmentFeesPage() {
                                           </Select>
                                         ) : (
                                           <input
-                                            className="h-9 w-full rounded-md bg-white px-2 text-sm outline-none"
+                                            className="h-10 w-full max-w-md rounded-md border border-slate-200 bg-white px-3 text-base outline-none"
                                             value={questionByField[qfId] || ""}
                                             onChange={(e) =>
                                               setQuestionByField((prev) => ({
