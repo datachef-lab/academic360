@@ -25,7 +25,6 @@ import {
   Download,
   Landmark,
   Loader2,
-  Pencil,
   Plus,
   School,
   Sparkles,
@@ -126,6 +125,47 @@ const sectionPriority = (name: string): number => {
   return 10;
 };
 
+const sortCpCertificateMasters = (masters: CertificateMaster[]) =>
+  masters.slice().sort((a, b) => {
+    const priorityDiff = sectionPriority(a.name) - sectionPriority(b.name);
+    if (priorityDiff !== 0) return priorityDiff;
+    return (a.sequence ?? 0) - (b.sequence ?? 0);
+  });
+
+const buildEmptyRowDraft = (master: CertificateMaster): RowDraft => {
+  const tableFields = master.fields
+    .filter((f) => !f.isQuestion)
+    .sort((a, b) => a.sequence - b.sequence);
+  return {
+    certificateMasterId: Number(master.id) || 0,
+    fields: tableFields
+      .filter((f) => f.id != null)
+      .map((f) => ({
+        certificateFieldMasterId: Number(f.id),
+        value: "",
+      })),
+  };
+};
+
+const buildRowDraftFromEditingValues = (
+  master: CertificateMaster,
+  editingValues: Record<number, string>,
+  certificateMasterId: number,
+): RowDraft => ({
+  certificateMasterId: Number(master.id) || certificateMasterId || 0,
+  fields: master.fields
+    .filter((f) => !f.isQuestion)
+    .sort((a, b) => a.sequence - b.sequence)
+    .filter((f) => f.id != null)
+    .map((f) => {
+      const fid = Number(f.id);
+      return {
+        certificateFieldMasterId: fid,
+        value: editingValues[fid] ?? "",
+      };
+    }),
+});
+
 export default function EnrollmentFeesPage() {
   const { student } = useStudent();
   const { feeMappingsVersion, cpFormVersion, invalidateCpForm } = useFeeSocket();
@@ -152,10 +192,6 @@ export default function EnrollmentFeesPage() {
 
   const [rowsByMaster, setRowsByMaster] = useState<Record<string, RowDraft[]>>({});
   const [questionByField, setQuestionByField] = useState<Record<number, string>>({});
-  const [editingMasterKey, setEditingMasterKey] = useState<string | null>(null);
-  const [editingMasterId, setEditingMasterId] = useState<number | null>(null);
-  const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
-  const [editingValues, setEditingValues] = useState<Record<number, string>>({});
   const [openedFromQuery, setOpenedFromQuery] = useState(false);
   const [generatingReceipt, setGeneratingReceipt] = useState(false);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
@@ -375,54 +411,40 @@ export default function EnrollmentFeesPage() {
     return `master_${master.name}_${idx}`;
   };
 
-  const startAddRow = (master: CertificateMaster, idx: number) => {
-    const masterId = Number(master.id) || 0;
+  const appendEmptyRow = (master: CertificateMaster, idx: number) => {
     const key = getMasterKey(master, idx);
-    const initial: Record<number, string> = {};
-    master.fields
-      .filter((f) => !f.isQuestion)
-      .sort((a, b) => a.sequence - b.sequence)
-      .forEach((f) => {
-        if (f.id) initial[Number(f.id)] = "";
-      });
-    setEditingMasterKey(key);
-    setEditingMasterId(masterId);
-    setEditingRowIndex(null);
-    setEditingValues(initial);
+    setRowsByMaster((prev) => ({
+      ...prev,
+      [key]: [...(prev[key] || []), buildEmptyRowDraft(master)],
+    }));
   };
 
-  const startEditRow = (master: CertificateMaster, rowIdx: number, idx: number) => {
-    const key = getMasterKey(master, idx);
-    const row = rowsByMaster[key]?.[rowIdx];
-    if (!row) return;
-    const values: Record<number, string> = {};
-    row.fields.forEach((f) => (values[f.certificateFieldMasterId] = f.value));
-    setEditingMasterKey(key);
-    setEditingMasterId(Number(master.id) || 0);
-    setEditingRowIndex(rowIdx);
-    setEditingValues(values);
-  };
-
-  const saveRow = () => {
-    if (!editingMasterKey) return;
-    const row: RowDraft = {
-      certificateMasterId: editingMasterId || 0,
-      fields: Object.entries(editingValues).map(([id, value]) => ({
-        certificateFieldMasterId: Number(id),
-        value: value ?? "",
-      })),
-    };
+  const updateRowCell = (
+    master: CertificateMaster,
+    masterKey: string,
+    rowIdx: number,
+    fieldId: number,
+    value: string,
+  ) => {
     setRowsByMaster((prev) => {
-      const current = prev[editingMasterKey] || [];
-      if (editingRowIndex == null) return { ...prev, [editingMasterKey]: [...current, row] };
+      const current = prev[masterKey] || [];
+      const row = current[rowIdx];
+      if (!row) return prev;
+      const tableFields = master.fields
+        .filter((f) => !f.isQuestion)
+        .sort((a, b) => a.sequence - b.sequence);
+      const values: Record<number, string> = {};
+      tableFields.forEach((f) => {
+        if (f.id == null) return;
+        const fid = Number(f.id);
+        values[fid] = row.fields.find((rf) => rf.certificateFieldMasterId === fid)?.value ?? "";
+      });
+      values[fieldId] = value;
+      const newRow = buildRowDraftFromEditingValues(master, values, Number(master.id) || 0);
       const next = [...current];
-      next[editingRowIndex] = row;
-      return { ...prev, [editingMasterKey]: next };
+      next[rowIdx] = newRow;
+      return { ...prev, [masterKey]: next };
     });
-    setEditingMasterKey(null);
-    setEditingMasterId(null);
-    setEditingRowIndex(null);
-    setEditingValues({});
   };
 
   const openCareerProgression = async (fee: {
@@ -472,10 +494,6 @@ export default function EnrollmentFeesPage() {
     setPaymentResult(null);
     setRowsByMaster({});
     setQuestionByField({});
-    setEditingMasterKey(null);
-    setEditingMasterId(null);
-    setEditingRowIndex(null);
-    setEditingValues({});
     window.sessionStorage.setItem(
       FEE_CTX_KEY,
       JSON.stringify({
@@ -493,7 +511,16 @@ export default function EnrollmentFeesPage() {
       );
       setCpData(data?.payload ?? null);
       setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
-      if (data?.payload?.hasExistingForms) setStage("payment");
+      if (data?.payload?.hasExistingForms) {
+        setStage("payment");
+      } else if (data?.payload) {
+        const sorted = sortCpCertificateMasters(data.payload.certificateMasters);
+        const initialRows: Record<string, RowDraft[]> = {};
+        sorted.forEach((master, idx) => {
+          initialRows[getMasterKey(master, idx)] = [buildEmptyRowDraft(master)];
+        });
+        setRowsByMaster(initialRows);
+      }
     } catch (e) {
       console.error(e);
       setCpError("Failed to load career progression form");
@@ -1176,35 +1203,35 @@ export default function EnrollmentFeesPage() {
                         const questionFields = sortedFields.filter((f) => f.isQuestion);
                         const tableFields = sortedFields.filter((f) => !f.isQuestion);
                         const rows = rowsByMaster[masterKey] || [];
-                        const isEditing = editingMasterKey === masterKey;
-                        const sectionTint =
-                          idx % 2 === 0
-                            ? "border-sky-200/70 bg-sky-50"
-                            : "border-emerald-200/70 bg-emerald-50";
+                        const isWorkExperienceSection = sectionPriority(cm.name) === 0;
                         return (
                           <div
                             key={`${cm.name}-${idx}`}
-                            className={`rounded-xl border ${sectionTint}`}
+                            className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm"
                           >
-                            <div className="flex items-start justify-between gap-3 border-b border-black/5 p-4">
+                            <div className="flex items-start justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-slate-100 via-white to-slate-100 px-5 py-4">
                               <div>
-                                <p className="text-sm font-semibold text-slate-900">
+                                <p className="text-lg font-semibold tracking-tight text-slate-900">
                                   {String.fromCharCode(65 + idx)}. {cm.name}
                                 </p>
-                                <p className="mt-1 text-xs text-slate-600">{cm.description}</p>
+                                <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                                  {cm.description}
+                                </p>
                               </div>
-                              <Button
-                                size="sm"
-                                className="bg-blue-600 text-white hover:bg-blue-700"
-                                onClick={() => startAddRow(cm, idx)}
-                              >
-                                <Plus className="mr-1 h-3.5 w-3.5" /> Add Row
-                              </Button>
+                              {!isWorkExperienceSection ? (
+                                <Button
+                                  size="sm"
+                                  className="shrink-0 bg-violet-600 text-sm text-white hover:bg-violet-700"
+                                  onClick={() => appendEmptyRow(cm, idx)}
+                                >
+                                  <Plus className="mr-1 h-4 w-4" /> Add Row
+                                </Button>
+                              ) : null}
                             </div>
 
-                            <div className="p-4">
+                            <div className="bg-white px-5 pb-5 pt-4">
                               {questionFields.length > 0 ? (
-                                <div className="mb-4 space-y-3 rounded-lg border border-slate-200/80 bg-white/70 p-4">
+                                <div className="mb-5 space-y-4 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
                                   {questionFields.map((qf) => {
                                     const qfId = Number(qf.id);
                                     return (
@@ -1228,7 +1255,7 @@ export default function EnrollmentFeesPage() {
                                               }))
                                             }
                                           >
-                                            <SelectTrigger className="h-10 w-full max-w-[240px] bg-white text-base md:justify-self-end">
+                                            <SelectTrigger className="h-11 w-full max-w-[260px] bg-white text-base md:justify-self-end">
                                               <SelectValue placeholder="Select option" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -1244,7 +1271,7 @@ export default function EnrollmentFeesPage() {
                                           </Select>
                                         ) : (
                                           <input
-                                            className="h-10 w-full max-w-md rounded-md border border-slate-200 bg-white px-3 text-base outline-none"
+                                            className="h-11 w-full max-w-md rounded-md border border-slate-200 bg-white px-3 text-base outline-none"
                                             value={questionByField[qfId] || ""}
                                             onChange={(e) =>
                                               setQuestionByField((prev) => ({
@@ -1260,14 +1287,26 @@ export default function EnrollmentFeesPage() {
                                 </div>
                               ) : null}
 
-                              <div className="overflow-x-auto rounded-lg border">
-                                <table className="w-full min-w-[680px] table-fixed border-collapse text-xs">
-                                  <thead className="bg-slate-50 text-slate-700">
+                              {isWorkExperienceSection ? (
+                                <div className="mb-4 flex justify-end">
+                                  <Button
+                                    size="sm"
+                                    className="bg-violet-600 text-sm text-white hover:bg-violet-700"
+                                    onClick={() => appendEmptyRow(cm, idx)}
+                                  >
+                                    <Plus className="mr-1 h-4 w-4" /> Add Row
+                                  </Button>
+                                </div>
+                              ) : null}
+
+                              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                                <table className="w-full min-w-[680px] table-fixed border-collapse text-sm">
+                                  <thead className="bg-slate-100/90 text-slate-800">
                                     <tr>
                                       {tableFields.map((f) => (
                                         <th
                                           key={`${masterId}-${f.id}`}
-                                          className="border px-2 py-2 text-left font-semibold whitespace-normal break-words"
+                                          className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
                                         >
                                           {f.name.toUpperCase()}
                                           {f.isRequired ? (
@@ -1275,98 +1314,19 @@ export default function EnrollmentFeesPage() {
                                           ) : null}
                                         </th>
                                       ))}
-                                      <th className="w-[120px] border px-2 py-2 text-left font-semibold whitespace-normal break-words">
+                                      <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">
                                         ACTION
                                       </th>
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {isEditing ? (
-                                      <tr>
-                                        {tableFields.map((f) => {
-                                          const fieldId = Number(f.id);
-                                          const value = editingValues[fieldId] || "";
-                                          return (
-                                            <td
-                                              key={`${masterId}-edit-${fieldId}`}
-                                              className="border p-1.5 align-top whitespace-normal break-words"
-                                            >
-                                              {f.type === "SELECT" ? (
-                                                <Select
-                                                  value={value}
-                                                  onValueChange={(nextValue) =>
-                                                    setEditingValues((prev) => ({
-                                                      ...prev,
-                                                      [fieldId]: nextValue,
-                                                    }))
-                                                  }
-                                                >
-                                                  <SelectTrigger className="h-8 w-full text-xs">
-                                                    <SelectValue placeholder="Select" />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    {f.options.map((opt) => (
-                                                      <SelectItem
-                                                        key={`${fieldId}-${opt.id}`}
-                                                        value={opt.name}
-                                                      >
-                                                        {opt.name}
-                                                      </SelectItem>
-                                                    ))}
-                                                  </SelectContent>
-                                                </Select>
-                                              ) : (
-                                                <input
-                                                  type="text"
-                                                  className="h-8 w-full rounded px-2 text-xs outline-none"
-                                                  value={value}
-                                                  onChange={(e) =>
-                                                    setEditingValues((prev) => ({
-                                                      ...prev,
-                                                      [fieldId]:
-                                                        f.type === "NUMBER"
-                                                          ? e.target.value.replace(/[^\d]/g, "")
-                                                          : e.target.value,
-                                                    }))
-                                                  }
-                                                />
-                                              )}
-                                            </td>
-                                          );
-                                        })}
-                                        <td className="border p-1.5 align-top whitespace-normal break-words">
-                                          <div className="flex items-center gap-2">
-                                            <Button
-                                              size="sm"
-                                              className="h-8 w-8 bg-violet-600 p-0 text-white hover:bg-violet-700"
-                                              onClick={saveRow}
-                                              title="Save row"
-                                              aria-label="Save row"
-                                            >
-                                              <Check className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-8 w-8 border-violet-300 p-0 text-violet-700"
-                                              onClick={() => setEditingMasterKey(null)}
-                                              title="Cancel editing row"
-                                              aria-label="Cancel editing row"
-                                            >
-                                              <X className="h-3.5 w-3.5" />
-                                            </Button>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    ) : null}
-
                                     {rows.length === 0 ? (
                                       <tr>
                                         <td
-                                          className="border px-3 py-5 text-center text-xs text-slate-500"
+                                          className="border border-slate-200 px-3 py-6 text-center text-sm text-slate-500"
                                           colSpan={tableFields.length + 1}
                                         >
-                                          No entries yet. Click “Add Row” to begin.
+                                          No rows yet. Use “Add Row” to add one.
                                         </td>
                                       </tr>
                                     ) : (
@@ -1374,47 +1334,86 @@ export default function EnrollmentFeesPage() {
                                         <tr key={`${masterId}-row-${rowIdx}`}>
                                           {tableFields.map((f) => {
                                             const fieldId = Number(f.id);
-                                            const v =
+                                            const cellValue =
                                               row.fields.find(
                                                 (rf) => rf.certificateFieldMasterId === fieldId,
-                                              )?.value || "-";
+                                              )?.value ?? "";
                                             return (
                                               <td
                                                 key={`${masterId}-${rowIdx}-${fieldId}`}
-                                                className="border px-2 py-2 align-top whitespace-normal break-words"
+                                                className="border border-slate-200 p-2 align-top whitespace-normal break-words"
                                               >
-                                                {v}
+                                                {f.type === "SELECT" ? (
+                                                  <Select
+                                                    value={cellValue}
+                                                    onValueChange={(nextValue) =>
+                                                      updateRowCell(
+                                                        cm,
+                                                        masterKey,
+                                                        rowIdx,
+                                                        fieldId,
+                                                        nextValue,
+                                                      )
+                                                    }
+                                                  >
+                                                    <SelectTrigger className="h-10 w-full text-sm">
+                                                      <SelectValue placeholder="Select" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                      {f.options.map((opt) => (
+                                                        <SelectItem
+                                                          key={`${fieldId}-${opt.id}`}
+                                                          value={opt.name}
+                                                        >
+                                                          {opt.name}
+                                                        </SelectItem>
+                                                      ))}
+                                                    </SelectContent>
+                                                  </Select>
+                                                ) : (
+                                                  <input
+                                                    type="text"
+                                                    inputMode={
+                                                      f.type === "NUMBER" ? "numeric" : undefined
+                                                    }
+                                                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
+                                                    value={cellValue}
+                                                    onChange={(e) =>
+                                                      updateRowCell(
+                                                        cm,
+                                                        masterKey,
+                                                        rowIdx,
+                                                        fieldId,
+                                                        f.type === "NUMBER"
+                                                          ? e.target.value.replace(/[^\d]/g, "")
+                                                          : e.target.value,
+                                                      )
+                                                    }
+                                                  />
+                                                )}
                                               </td>
                                             );
                                           })}
-                                          <td className="border px-2 py-2 align-top whitespace-normal break-words">
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-8 w-8 border-violet-300 p-0 text-violet-700 hover:bg-violet-50"
-                                              onClick={() => startEditRow(cm, rowIdx, idx)}
-                                              title="Edit row"
-                                              aria-label="Edit row"
-                                            >
-                                              <Pencil className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="ml-2 h-8 w-8 border-rose-300 p-0 text-rose-700 hover:bg-rose-50"
-                                              onClick={() =>
-                                                setRowsByMaster((prev) => ({
-                                                  ...prev,
-                                                  [masterKey]: (prev[masterKey] || []).filter(
-                                                    (_, i) => i !== rowIdx,
-                                                  ),
-                                                }))
-                                              }
-                                              title="Delete row"
-                                              aria-label="Delete row"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
+                                          <td className="border border-slate-200 p-2 align-top whitespace-normal break-words">
+                                            {rows.length > 1 ? (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-9 w-9 border-slate-300 p-0 text-rose-700 hover:bg-rose-50"
+                                                onClick={() =>
+                                                  setRowsByMaster((prev) => ({
+                                                    ...prev,
+                                                    [masterKey]: (prev[masterKey] || []).filter(
+                                                      (_, i) => i !== rowIdx,
+                                                    ),
+                                                  }))
+                                                }
+                                                title="Delete row"
+                                                aria-label="Delete row"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                              </Button>
+                                            ) : null}
                                           </td>
                                         </tr>
                                       ))
