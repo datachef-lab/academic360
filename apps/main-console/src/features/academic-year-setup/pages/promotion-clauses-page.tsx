@@ -123,13 +123,13 @@ export default function PromotionClausesPage() {
                       <TableCell className="align-top py-3 min-w-[180px]">
                         <div className="flex flex-wrap gap-1.5">
                           {Array.isArray(r.classes) && r.classes.length > 0 ? (
-                            r.classes.map((cm) => (
+                            r.classes.map((cls) => (
                               <Badge
-                                key={cm.id ?? `${cm.classId}-${cm.promotionClauseId}`}
+                                key={cls.id ?? cls.name}
                                 variant="outline"
                                 className="text-xs font-normal border-purple-200 text-purple-800 bg-purple-50/60"
                               >
-                                {cm.class?.name ?? `Class #${cm.classId}`}
+                                {cls.name}
                               </Badge>
                             ))
                           ) : (

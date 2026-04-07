@@ -53,6 +53,82 @@ import { useAuth } from "@/features/auth/providers/auth-provider";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { openFeeReceiptPdfInNewTab } from "@/services/fee-student-mapping.service";
 
+const DISPLAY_TZ = "Asia/Kolkata";
+
+/** API uses SUCCESS (aligned with payments.status); show PAID in the UI. */
+function paymentStatusLabel(status: string | undefined): string {
+  const s = (status || "PENDING").toUpperCase();
+  if (s === "SUCCESS" || s === "COMPLETED") return "PAID";
+  return s;
+}
+
+function isFeeMappingPaid(status: string | undefined): boolean {
+  const s = (status || "").toUpperCase();
+  return s === "SUCCESS" || s === "COMPLETED";
+}
+
+/**
+ * txnDate is varchar (ISO, date-only, gateway-specific). Format for India (Asia/Kolkata).
+ * - YYYY-MM-DD → calendar date only (no spurious midnight).
+ * - ...T00:00:00.000Z → date-only in IST (common synthetic default, not a real clock time).
+ * - Otherwise full ISO → date + time in IST.
+ */
+function formatFeeTransactionDateTime(value: string | Date | null | undefined): string {
+  if (value == null || value === "") return "-";
+  if (value instanceof Date) {
+    if (!Number.isFinite(value.getTime())) return "-";
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: DISPLAY_TZ,
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).format(value);
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return "-";
+
+  const ymdOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (ymdOnly) {
+    const y = Number(ymdOnly[1]);
+    const mo = Number(ymdOnly[2]);
+    const d = Number(ymdOnly[3]);
+    const anchor = new Date(Date.UTC(y, mo - 1, d, 12, 0, 0));
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: DISPLAY_TZ,
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(anchor);
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T00:00:00(\.\d{3})?Z$/.test(raw)) {
+    const inst = new Date(raw);
+    if (!Number.isFinite(inst.getTime())) return raw;
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: DISPLAY_TZ,
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(inst);
+  }
+
+  const parsed = new Date(raw);
+  if (!Number.isFinite(parsed.getTime())) return raw;
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: DISPLAY_TZ,
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(parsed);
+}
+
 const StudentFeesPage: React.FC = () => {
   const [downloading, setDownloading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -361,7 +437,7 @@ const StudentFeesPage: React.FC = () => {
         paymentMode: paymentForm.paymentMode,
         paymentStatus:
           newTotalPaid >= (paymentItem.totalPayable || 0)
-            ? "COMPLETED"
+            ? "SUCCESS"
             : newTotalPaid > 0
               ? "PENDING"
               : "PENDING",
@@ -643,7 +719,7 @@ const StudentFeesPage: React.FC = () => {
                           <TableCell className="text-center min-w-0">
                             <Badge
                               className={
-                                paymentStatus === "COMPLETED"
+                                isFeeMappingPaid(paymentStatus)
                                   ? "bg-green-100 text-green-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
                                   : paymentStatus === "PENDING"
                                     ? "bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
@@ -652,7 +728,7 @@ const StudentFeesPage: React.FC = () => {
                                       : "bg-gray-100 text-gray-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
                               }
                             >
-                              {paymentStatus}
+                              {paymentStatusLabel(paymentStatus)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
@@ -663,7 +739,7 @@ const StudentFeesPage: React.FC = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                {paymentStatus !== "COMPLETED" && (
+                                {!isFeeMappingPaid(paymentStatus) && (
                                   <DropdownMenuItem onClick={() => handleEdit(mapping)}>
                                     <Edit className="h-4 w-4 mr-2" />
                                     Edit Waived Off
@@ -671,7 +747,7 @@ const StudentFeesPage: React.FC = () => {
                                 )}
                                 {/*
                                   Temporarily disabled as requested.
-                                  {paymentStatus !== "COMPLETED" && (
+                                  {!isFeeMappingPaid(paymentStatus) && (
                                     <DropdownMenuItem
                                       onClick={() => {
                                         setPaymentItem(mapping);
@@ -705,7 +781,7 @@ const StudentFeesPage: React.FC = () => {
                                   Download Receipt
                                 </DropdownMenuItem>
 
-                                {paymentStatus !== "COMPLETED" && (
+                                {!isFeeMappingPaid(paymentStatus) && (
                                   <DropdownMenuItem
                                     onClick={() => {
                                       setNotificationItem(mapping);
@@ -830,7 +906,7 @@ const StudentFeesPage: React.FC = () => {
                       <TableCell className="text-center p-2 min-h-[100px]">
                         <Badge
                           className={
-                            selectedSummaryItem.paymentStatus === "COMPLETED"
+                            isFeeMappingPaid(selectedSummaryItem.paymentStatus)
                               ? "bg-green-100 text-green-800"
                               : selectedSummaryItem.paymentStatus === "PENDING"
                                 ? "bg-yellow-100 text-yellow-800"
@@ -839,7 +915,7 @@ const StudentFeesPage: React.FC = () => {
                                   : "bg-gray-100 text-gray-800"
                           }
                         >
-                          {selectedSummaryItem.paymentStatus || "PENDING"}
+                          {paymentStatusLabel(selectedSummaryItem.paymentStatus)}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -902,15 +978,7 @@ const StudentFeesPage: React.FC = () => {
                       Payment Date & Time
                     </p>
                     <p className="text-sm font-semibold text-gray-900">
-                      {selectedSummaryItem.transactionDate
-                        ? new Date(selectedSummaryItem.transactionDate).toLocaleString("en-IN", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "-"}
+                      {formatFeeTransactionDateTime(selectedSummaryItem.transactionDate)}
                     </p>
                   </div>
                   <div>
@@ -919,7 +987,7 @@ const StudentFeesPage: React.FC = () => {
                     </p>
                     <Badge
                       className={
-                        selectedSummaryItem.paymentStatus === "COMPLETED"
+                        isFeeMappingPaid(selectedSummaryItem.paymentStatus)
                           ? "bg-green-100 text-green-800"
                           : selectedSummaryItem.paymentStatus === "PENDING"
                             ? "bg-yellow-100 text-yellow-800"
@@ -928,7 +996,7 @@ const StudentFeesPage: React.FC = () => {
                               : "bg-gray-100 text-gray-800"
                       }
                     >
-                      {selectedSummaryItem.paymentStatus || "PENDING"}
+                      {paymentStatusLabel(selectedSummaryItem.paymentStatus)}
                     </Badge>
                   </div>
                 </div>

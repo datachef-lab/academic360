@@ -9,7 +9,6 @@ import {
   Shield,
   Database,
   Star,
-  Workflow,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
@@ -92,17 +91,17 @@ const featureCards = [
     items: "0 configured",
     illustration: "/academic-setup-illustrations/subject-selection-config.png",
   },
-  {
-    title: "Student Promotion Logic Builder",
-    description: "Define promotion clauses and builder rules for class progression",
-    icon: Workflow,
-    href: "/dashboard/academic-year-setup/student-promotion-logic",
-    color: "bg-violet-50 border-violet-200 hover:bg-violet-100",
-    iconColor: "text-violet-600",
-    status: "Ready",
-    items: "Promotion rules",
-    illustration: null,
-  },
+  // {
+  //   title: "Student Promotion Logic Builder",
+  //   description: "Define promotion clauses and builder rules for class progression",
+  //   icon: Workflow,
+  //   href: "/dashboard/academic-year-setup/student-promotion-logic",
+  //   color: "bg-violet-50 border-violet-200 hover:bg-violet-100",
+  //   iconColor: "text-violet-600",
+  //   status: "Ready",
+  //   items: "Promotion rules",
+  //   illustration: null,
+  // },
 ];
 
 export default function AcademicYearSetupPage() {

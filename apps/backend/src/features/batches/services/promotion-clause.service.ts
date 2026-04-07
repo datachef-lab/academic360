@@ -9,10 +9,7 @@ import {
 import { asc, eq } from "drizzle-orm";
 
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-import type {
-  PromotionClauseClassMappingDto,
-  PromotionClauseDto,
-} from "@repo/db/dtos/batches";
+import type { PromotionClauseDto } from "@repo/db/dtos/batches";
 import type { ClassT } from "@repo/db/schemas/models/academics";
 
 export async function findAllPromotionClauses(opts?: {
@@ -60,10 +57,7 @@ async function toClauseWithClasses(
     .where(eq(promotionClauseClassMappingModel.promotionClauseId, clause.id))
     .orderBy(asc(classModel.name));
 
-  const classes: PromotionClauseClassMappingDto[] = mappings.map((m) => ({
-    ...m.mapping,
-    class: m.cls as ClassT,
-  }));
+  const classes: ClassT[] = mappings.map((m) => m.cls as ClassT);
 
   return {
     ...clause,

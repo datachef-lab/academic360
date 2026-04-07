@@ -418,14 +418,16 @@ export default function FeePaymentMarkingPage() {
               <div className="flex items-center gap-2">
                 <Badge
                   className={
-                    paymentStatus === "COMPLETED"
+                    paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED"
                       ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                       : paymentStatus === "FAILED"
                         ? "bg-red-100 text-red-800 border-red-200"
                         : "bg-amber-100 text-amber-900 border-amber-200"
                   }
                 >
-                  {paymentStatus}
+                  {paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED"
+                    ? "PAID"
+                    : paymentStatus}
                 </Badge>
                 <Button
                   type="button"

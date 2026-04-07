@@ -457,9 +457,10 @@ export async function markOnlineFeePaymentSuccessManual(params: {
   const payment = await findPaymentByOrderId(orderId);
   if (!payment?.id) return { success: false, error: "Payment not found" };
 
+  // Date-only default avoids UTC-midnight strings that display as confusing local midnights in UIs.
   const paymentDateIso =
     String(params.paymentDateIso || "").trim() ||
-    new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
+    new Date().toISOString().slice(0, 10);
   const txnIdTrimmed = String(params.transactionId || "").trim();
 
   await db.transaction(async (tx) => {

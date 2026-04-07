@@ -11,7 +11,8 @@ export async function getPromotionBuilders(affiliationId?: number): Promise<Prom
       params: affiliationId != null ? { affiliationId } : undefined,
     },
   );
-  return res.data.payload ?? [];
+  const payload = res.data?.payload;
+  return Array.isArray(payload) ? payload : [];
 }
 
 export async function getPromotionClauses(opts?: {

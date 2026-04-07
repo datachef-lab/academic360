@@ -36,7 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFeeCategories, useFeeGroups } from "@/hooks/useFees";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
-import { FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
+import { FeeGroupPromotionMappingDto, type FeeGroupDto } from "@repo/db/dtos/fees";
 import { toast } from "sonner";
 import { NewFeeGroupPromotionMapping, BulkUploadResult, BulkUploadRow } from "@/services/fees-api";
 import {
@@ -823,7 +823,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     }
   }, [editDialogOpen]);
 
-  // Load fee-group totals (amount) for slab dropdown
+  // Load fee-group totals for slab dropdown — backend returns fee groups for every slab
+  // that appears in this promotion's fee structure(s). Do not pass feeCategoryId: changing
+  // slab often means moving to another fee category (e.g. General F vs Sports B vs Aid C).
   useEffect(() => {
     const promotionId = editingItem?.promotion?.id;
     if (!editDialogOpen || !promotionId) {
@@ -832,6 +834,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     }
 
     let cancelled = false;
+    setFeeGroupTotalsById({});
     (async () => {
       try {
         const res = await axiosInstance.get(`/api/v1/fees/groups/promotion/${promotionId}/totals`);
@@ -884,6 +887,50 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     }
     return null;
   }, [editingItem?.totalPayableAmount, editingItem?.feeGroup?.id, feeGroupTotalsById]);
+
+  /** Fee groups allowed for this promotion: slabs present in fee structure (all categories). */
+  const slabDropdownFeeGroups = useMemo((): FeeGroupDto[] => {
+    const base: FeeGroupDto[] =
+      feeGroups && feeGroups.length > 0
+        ? feeGroups
+        : (() => {
+            const seen = new Set<number>();
+            const out: FeeGroupDto[] = [];
+            for (const m of mappings) {
+              if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
+                seen.add(m.feeGroup.id);
+                out.push(m.feeGroup);
+              }
+            }
+            if (editingItem?.feeGroup?.id && !seen.has(editingItem.feeGroup.id)) {
+              out.unshift(editingItem.feeGroup);
+            }
+            return out;
+          })();
+
+    const allowedIds = new Set(
+      Object.keys(feeGroupTotalsById)
+        .map((k) => Number(k))
+        .filter((n) => Number.isFinite(n)),
+    );
+
+    if (allowedIds.size > 0) {
+      let filtered = base.filter((fg) => fg.id != null && allowedIds.has(fg.id));
+      if (editingItem?.feeGroup?.id && !filtered.some((g) => g.id === editingItem.feeGroup?.id)) {
+        filtered = [editingItem.feeGroup, ...filtered];
+      }
+      filtered.sort((a, b) => {
+        const slab = (a.feeSlab?.name ?? "").localeCompare(b.feeSlab?.name ?? "", undefined, {
+          numeric: true,
+        });
+        if (slab !== 0) return slab;
+        return (a.feeCategory?.name ?? "").localeCompare(b.feeCategory?.name ?? "");
+      });
+      return filtered;
+    }
+
+    return editingItem?.feeGroup ? [editingItem.feeGroup] : base;
+  }, [feeGroups, mappings, editingItem?.feeGroup, feeGroupTotalsById]);
 
   const handleEditSave = async () => {
     if (!editingItem?.id || !editForm.feeGroupId) {
@@ -1897,47 +1944,25 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                       <SelectValue placeholder="Select slab type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(() => {
-                        const groups =
-                          feeGroups && feeGroups.length > 0
-                            ? feeGroups
-                            : (() => {
-                                const seen = new Set<number>();
-                                const out: typeof feeGroups = [];
-                                for (const m of mappings) {
-                                  if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
-                                    seen.add(m.feeGroup.id);
-                                    out.push(m.feeGroup);
-                                  }
-                                }
-                                if (
-                                  editingItem?.feeGroup?.id &&
-                                  !seen.has(editingItem.feeGroup.id)
-                                ) {
-                                  out.unshift(editingItem.feeGroup);
-                                }
-                                return out;
-                              })();
-                        return groups?.map((fg) => (
-                          <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
-                            <div className="grid w-full grid-cols-[1fr_auto] items-center gap-3">
-                              <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-                                <span>{fg.feeSlab?.name || "-"}</span>
-                                <span className="text-gray-400">|</span>
-                                <span className="text-slate-700 font-semibold whitespace-nowrap">
-                                  ₹
-                                  {Number(
-                                    feeGroupTotalsById?.[fg.id as number] ?? 0,
-                                  ).toLocaleString("en-IN")}
-                                </span>
-                              </div>
-                              <span className="justify-self-end text-right whitespace-nowrap text-slate-700">
-                                ({fg.feeCategory?.name || "-"})
+                      {slabDropdownFeeGroups.map((fg) => (
+                        <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
+                          <div className="grid w-full grid-cols-[1fr_auto] items-center gap-3">
+                            <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+                              <span>{fg.feeSlab?.name || "-"}</span>
+                              <span className="text-gray-400">|</span>
+                              <span className="text-slate-700 font-semibold whitespace-nowrap">
+                                ₹
+                                {Number(feeGroupTotalsById?.[fg.id as number] ?? 0).toLocaleString(
+                                  "en-IN",
+                                )}
                               </span>
                             </div>
-                          </SelectItem>
-                        ));
-                      })()}
+                            <span className="justify-self-end text-right whitespace-nowrap text-slate-700">
+                              ({fg.feeCategory?.name || "-"})
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

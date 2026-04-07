@@ -300,7 +300,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         icon={<Plus className="h-5 w-5" />}
                         href={"/dashboard/academic-year-setup"}
                       >
-                        <span className="text">New Academic Setup</span>
+                        <span className="text">New Academic Session</span>
                       </NavItem>
                     </div>
                   )}

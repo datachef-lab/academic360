@@ -37,7 +37,7 @@ export interface PromotionDto extends Omit<
 }
 
 export interface PromotionClauseDto extends PromotionClauseT {
-    classes: PromotionClauseClassMappingDto[];
+    classes: ClassT[]; // This is added to include the classes associated with the promotion clause, which can be derived from the promotion_clause_class_mapping table
 }
 
 export interface PromotionBuilderClauseClassMappingDto extends Omit<PromotionBuilderClauseClassMappingT, "promotionClauseClassId"> {
@@ -53,9 +53,4 @@ export interface PromotionBuilderDto extends Omit<PromotionBuilderT, "affiliatio
     affiliation: AffiliationT;
     targetClass: ClassT;
     rules: PromotionBuilderClauseDto[];
-}
-
-/** Single row from `promotion_clause_class_mapping` with joined `class` */
-export interface PromotionClauseClassMappingDto extends PromotionClauseClassMappingT {
-    class: ClassT;
 }
