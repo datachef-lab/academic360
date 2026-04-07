@@ -957,10 +957,7 @@ export default function EnrollmentFeesPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-green-800">Payment Confirmed</p>
-                            <p className="text-xs text-green-700">
-                              {paymentMsg}
-                              {paymentTimestamp ? ` · ${paymentTimestamp}` : ""}
-                            </p>
+                            <p className="text-xs text-green-700">{paymentMsg}</p>
                           </div>
                         </div>
 
