@@ -96,6 +96,46 @@ const buildRowDraftFromEditingValues = (
     }),
 });
 
+const isInternshipOnlySection = (name: string) => {
+  const n = name.trim().toLowerCase();
+  return n.includes("internship") && !n.includes("work experience");
+};
+
+const shouldAlwaysShowDeleteForSection = (name: string) => {
+  const n = name.trim().toLowerCase();
+  return (
+    n.includes("work experience") ||
+    n.includes("skills") ||
+    n.includes("certification") ||
+    n.includes("professional") ||
+    n.includes("competitive") ||
+    n.includes("club") ||
+    n.includes("committee")
+  );
+};
+
+/** True if at least one table cell has non-whitespace text (used to drop blank rows on load / avoid duplicate empties). */
+function rowHasTableData(master: CertificateMaster, row: RowDraft): boolean {
+  const tableIds = master.fields
+    .filter((f) => !f.isQuestion)
+    .map((f) => Number(f.id))
+    .filter((id) => Number.isFinite(id));
+  return tableIds.some((id) => {
+    const v = row.fields.find((x) => x.certificateFieldMasterId === id)?.value ?? "";
+    return String(v).trim() !== "";
+  });
+}
+
+/** Keep only rows with data; if none, show a single empty row for editing. */
+function normalizeTableRowsForMaster(master: CertificateMaster, rows: RowDraft[]): RowDraft[] {
+  if (isInternshipOnlySection(master.name)) return rows;
+  const tableFields = master.fields.filter((f) => !f.isQuestion);
+  if (tableFields.length === 0) return rows.length > 0 ? rows : [buildEmptyRowDraft(master)];
+  const nonEmpty = rows.filter((r) => rowHasTableData(master, r));
+  if (nonEmpty.length > 0) return nonEmpty;
+  return [buildEmptyRowDraft(master)];
+}
+
 export default function CareerProgressionPage() {
   const { student } = useStudent();
   const router = useRouter();
@@ -161,7 +201,10 @@ export default function CareerProgressionPage() {
       if (Object.keys(prev).length > 0) return prev;
       const next: Record<string, RowDraft[]> = {};
       sorted.forEach((master, idx) => {
-        next[getMasterKey(master, idx)] = [buildEmptyRowDraft(master)];
+        const hasTableFields = master.fields.some((f) => !f.isQuestion);
+        if (!isInternshipOnlySection(master.name) && hasTableFields) {
+          next[getMasterKey(master, idx)] = [buildEmptyRowDraft(master)];
+        }
       });
       return next;
     });
@@ -224,12 +267,14 @@ export default function CareerProgressionPage() {
             }
           });
 
-          if (rows.length > 0) nextRowsByMaster[masterKey] = rows;
+          if (rows.length > 0) {
+            nextRowsByMaster[masterKey] = normalizeTableRowsForMaster(master, rows);
+          }
         });
 
         sortCpCertificateMasters(cpData.certificateMasters).forEach((master, idx) => {
           const mk = getMasterKey(master, idx);
-          if (!nextRowsByMaster[mk]?.length) {
+          if (!nextRowsByMaster[mk]?.length && !isInternshipOnlySection(master.name)) {
             nextRowsByMaster[mk] = [buildEmptyRowDraft(master)];
           }
         });
@@ -293,7 +338,9 @@ export default function CareerProgressionPage() {
         const val = questionByField[Number(qf.id)] || "";
         if (!val.trim()) return false;
       }
-      const requiredTableFields = master.fields.filter((f) => !f.isQuestion && f.isRequired);
+      const requiredTableFields = isInternshipOnlySection(master.name)
+        ? []
+        : master.fields.filter((f) => !f.isQuestion && f.isRequired);
       if (requiredTableFields.length > 0) {
         if (rows.length === 0) return false;
         for (const row of rows) {
@@ -325,7 +372,9 @@ export default function CareerProgressionPage() {
         const key = getMasterKey(master, idx);
         const rows = rowsByMaster[key] || [];
         const questionFields = master.fields.filter((f) => f.isQuestion);
-        const tableFields = master.fields.filter((f) => !f.isQuestion);
+        const tableFields = isInternshipOnlySection(master.name)
+          ? []
+          : master.fields.filter((f) => !f.isQuestion);
 
         const qMapped = questionFields
           .map((f) => {
@@ -370,9 +419,12 @@ export default function CareerProgressionPage() {
             value?: string | null;
           }>;
 
+          const merged = [...qMapped, ...mappedRowFields];
+          if (merged.length === 0) return;
+
           certificates.push({
             certificateMasterId: Number(master.id),
-            fields: [...qMapped, ...mappedRowFields],
+            fields: merged,
           });
         });
       });
@@ -463,6 +515,8 @@ export default function CareerProgressionPage() {
         const questionFields = sortedFields.filter((f) => f.isQuestion);
         const tableFields = orderTableFieldsTypeFirst(sortedFields.filter((f) => !f.isQuestion));
         const rows = rowsByMaster[masterKey] || [];
+        const isInternshipOnly = isInternshipOnlySection(cm.name);
+        const showTable = !isInternshipOnly && tableFields.length > 0;
         const isInternshipWorkLayout = usesInternshipWorkRowLayout(cm.name);
         return (
           <div
@@ -476,7 +530,7 @@ export default function CareerProgressionPage() {
                 </p>
                 <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{cm.description}</p>
               </div>
-              {!isInternshipWorkLayout ? (
+              {!isInternshipWorkLayout && showTable ? (
                 <Button
                   size="sm"
                   className="shrink-0 bg-violet-600 text-sm text-white hover:bg-violet-700"
@@ -536,7 +590,7 @@ export default function CareerProgressionPage() {
                 </div>
               ) : null}
 
-              {isInternshipWorkLayout ? (
+              {isInternshipWorkLayout && showTable ? (
                 <div className="mb-4 flex justify-end">
                   <Button
                     size="sm"
@@ -548,114 +602,116 @@ export default function CareerProgressionPage() {
                 </div>
               ) : null}
 
-              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                <table className="w-full min-w-[860px] table-fixed border-collapse text-sm">
-                  <thead className="bg-slate-100/90 text-slate-800">
-                    <tr>
-                      {tableFields.map((f) => (
-                        <th
-                          key={`${masterId}-${f.id}`}
-                          className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
-                        >
-                          {f.name.toUpperCase()}
-                          {f.isRequired ? <span className="ml-1 text-red-600">*</span> : null}
-                        </th>
-                      ))}
-                      <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">
-                        ACTION
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.length === 0 ? (
+              {showTable ? (
+                <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                  <table className="w-full min-w-[860px] table-fixed border-collapse text-sm">
+                    <thead className="bg-slate-100/90 text-slate-800">
                       <tr>
-                        <td
-                          className="border px-3 py-6 text-center text-sm text-slate-500"
-                          colSpan={tableFields.length + 1}
-                        >
-                          No rows yet. Use “Add Row” to add one.
-                        </td>
+                        {tableFields.map((f) => (
+                          <th
+                            key={`${masterId}-${f.id}`}
+                            className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
+                          >
+                            {f.name.toUpperCase()}
+                            {f.isRequired ? <span className="ml-1 text-red-600">*</span> : null}
+                          </th>
+                        ))}
+                        <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">
+                          ACTION
+                        </th>
                       </tr>
-                    ) : (
-                      rows.map((row, rowIdx) => (
-                        <tr key={`${masterId}-row-${rowIdx}`}>
-                          {tableFields.map((f) => {
-                            const fieldId = Number(f.id);
-                            const cellValue =
-                              row.fields.find((rf) => rf.certificateFieldMasterId === fieldId)
-                                ?.value ?? "";
-                            return (
-                              <td
-                                key={`${masterId}-${rowIdx}-${fieldId}`}
-                                className="border border-slate-200 p-2 align-top whitespace-normal break-words"
-                              >
-                                {f.type === "SELECT" ? (
-                                  <Select
-                                    value={cellValue}
-                                    onValueChange={(nextValue) =>
-                                      updateRowCell(cm, masterKey, rowIdx, fieldId, nextValue)
-                                    }
-                                  >
-                                    <SelectTrigger className="h-10 w-full text-sm">
-                                      <SelectValue placeholder="Select" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {f.options.map((opt) => (
-                                        <SelectItem key={`${fieldId}-${opt.id}`} value={opt.name}>
-                                          {opt.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
-                                  <input
-                                    type="text"
-                                    inputMode={f.type === "NUMBER" ? "numeric" : undefined}
-                                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
-                                    value={cellValue}
-                                    onChange={(e) =>
-                                      updateRowCell(
-                                        cm,
-                                        masterKey,
-                                        rowIdx,
-                                        fieldId,
-                                        f.type === "NUMBER"
-                                          ? e.target.value.replace(/[^\d]/g, "")
-                                          : e.target.value,
-                                      )
-                                    }
-                                  />
-                                )}
-                              </td>
-                            );
-                          })}
-                          <td className="border border-slate-200 p-2 align-top whitespace-normal break-words">
-                            {rows.length > 1 ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-9 w-9 border-slate-300 p-0 text-rose-700 hover:bg-rose-50"
-                                onClick={() =>
-                                  setRowsByMaster((prev) => ({
-                                    ...prev,
-                                    [masterKey]: (prev[masterKey] || []).filter(
-                                      (_, i) => i !== rowIdx,
-                                    ),
-                                  }))
-                                }
-                                title="Delete row"
-                                aria-label="Delete row"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            ) : null}
+                    </thead>
+                    <tbody>
+                      {rows.length === 0 ? (
+                        <tr>
+                          <td
+                            className="border px-3 py-6 text-center text-sm text-slate-500"
+                            colSpan={tableFields.length + 1}
+                          >
+                            No rows yet. Use "Add Row" to add one.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ) : (
+                        rows.map((row, rowIdx) => (
+                          <tr key={`${masterId}-row-${rowIdx}`}>
+                            {tableFields.map((f) => {
+                              const fieldId = Number(f.id);
+                              const cellValue =
+                                row.fields.find((rf) => rf.certificateFieldMasterId === fieldId)
+                                  ?.value ?? "";
+                              return (
+                                <td
+                                  key={`${masterId}-${rowIdx}-${fieldId}`}
+                                  className="border border-slate-200 p-2 align-top whitespace-normal break-words"
+                                >
+                                  {f.type === "SELECT" ? (
+                                    <Select
+                                      value={cellValue}
+                                      onValueChange={(nextValue) =>
+                                        updateRowCell(cm, masterKey, rowIdx, fieldId, nextValue)
+                                      }
+                                    >
+                                      <SelectTrigger className="h-10 w-full text-sm">
+                                        <SelectValue placeholder="Select" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {f.options.map((opt) => (
+                                          <SelectItem key={`${fieldId}-${opt.id}`} value={opt.name}>
+                                            {opt.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      inputMode={f.type === "NUMBER" ? "numeric" : undefined}
+                                      className="h-10 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
+                                      value={cellValue}
+                                      onChange={(e) =>
+                                        updateRowCell(
+                                          cm,
+                                          masterKey,
+                                          rowIdx,
+                                          fieldId,
+                                          f.type === "NUMBER"
+                                            ? e.target.value.replace(/[^\d]/g, "")
+                                            : e.target.value,
+                                        )
+                                      }
+                                    />
+                                  )}
+                                </td>
+                              );
+                            })}
+                            <td className="border border-slate-200 p-2 align-top whitespace-normal break-words">
+                              {rows.length > 1 || shouldAlwaysShowDeleteForSection(cm.name) ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-9 w-9 border-slate-300 p-0 text-rose-700 hover:bg-rose-50"
+                                  onClick={() =>
+                                    setRowsByMaster((prev) => ({
+                                      ...prev,
+                                      [masterKey]: (prev[masterKey] || []).filter(
+                                        (_, i) => i !== rowIdx,
+                                      ),
+                                    }))
+                                  }
+                                  title="Delete row"
+                                  aria-label="Delete row"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </div>
           </div>
         );

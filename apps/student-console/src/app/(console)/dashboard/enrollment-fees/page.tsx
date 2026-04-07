@@ -124,6 +124,11 @@ const statusBadgeClass = (isPaid: boolean) =>
     ? "min-w-[68.72px] text-center bg-green-100 hover:bg-green-100 text-green-800 border border-green-200"
     : "min-w-[68.72px] text-center bg-yellow-100 hover:bg-yellow-100 text-yellow-800 border border-yellow-200";
 
+const isInternshipOnlySection = (name: string) => {
+  const n = name.trim().toLowerCase();
+  return n.includes("internship") && !n.includes("work experience");
+};
+
 const buildEmptyRowDraft = (master: CertificateMaster): RowDraft => {
   const tableFields = master.fields
     .filter((f) => !f.isQuestion)
@@ -517,7 +522,10 @@ export default function EnrollmentFeesPage() {
         const sorted = sortCpCertificateMasters(data.payload.certificateMasters);
         const initialRows: Record<string, RowDraft[]> = {};
         sorted.forEach((master, idx) => {
-          initialRows[getMasterKey(master, idx)] = [buildEmptyRowDraft(master)];
+          const hasTableFields = master.fields.some((f) => !f.isQuestion);
+          if (!isInternshipOnlySection(master.name) && hasTableFields) {
+            initialRows[getMasterKey(master, idx)] = [buildEmptyRowDraft(master)];
+          }
         });
         setRowsByMaster(initialRows);
       }
@@ -542,7 +550,9 @@ export default function EnrollmentFeesPage() {
         const val = questionByField[Number(qf.id)] || "";
         if (!val.trim()) return false;
       }
-      const requiredTableFields = master.fields.filter((f) => !f.isQuestion && f.isRequired);
+      const requiredTableFields = isInternshipOnlySection(master.name)
+        ? []
+        : master.fields.filter((f) => !f.isQuestion && f.isRequired);
       if (requiredTableFields.length > 0) {
         if (rows.length === 0) return false;
         for (const row of rows) {
@@ -574,7 +584,9 @@ export default function EnrollmentFeesPage() {
         const key = getMasterKey(master, idx);
         const rows = rowsByMaster[key] || [];
         const questionFields = master.fields.filter((f) => f.isQuestion);
-        const tableFields = master.fields.filter((f) => !f.isQuestion);
+        const tableFields = isInternshipOnlySection(master.name)
+          ? []
+          : master.fields.filter((f) => !f.isQuestion);
 
         const qMapped = questionFields
           .map((f) => {
@@ -622,9 +634,12 @@ export default function EnrollmentFeesPage() {
             value?: string | null;
           }>;
 
+          const merged = [...qMapped, ...mappedRowFields];
+          if (merged.length === 0) return;
+
           certificates.push({
             certificateMasterId: Number(master.id),
-            fields: [...qMapped, ...mappedRowFields],
+            fields: merged,
           });
         });
       });
@@ -755,10 +770,7 @@ export default function EnrollmentFeesPage() {
             <School className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold md:text-4xl">Fees & Instalments</h1>
-            <p className="mt-1 text-sm text-blue-100 md:text-base">
-              Track your fee status and pending payments here
-            </p>
+            <h1 className="text-2xl font-bold md:text-4xl">Enrolment & Fees</h1>
           </div>
         </div>
       </div>
@@ -1005,8 +1017,7 @@ export default function EnrollmentFeesPage() {
                         <div className="rounded-xl border bg-white">
                           <div className="rounded-t-xl bg-indigo-800 px-5 py-4 text-white">
                             <span className="font-semibold">
-                              Fee Summary (Fees for semester{" "}
-                              {toSentenceCase(selectedClassName || "")})
+                              Fee Summary (Fees for {toSentenceCase(selectedClassName || "")})
                             </span>
                             <span className="mx-2">·</span>
                             <span>
@@ -1208,6 +1219,8 @@ export default function EnrollmentFeesPage() {
                         sortedFields.filter((f) => !f.isQuestion),
                       );
                       const rows = rowsByMaster[masterKey] || [];
+                      const isInternshipOnly = isInternshipOnlySection(cm.name);
+                      const showTable = !isInternshipOnly && tableFields.length > 0;
                       const isInternshipWorkLayout = usesInternshipWorkRowLayout(cm.name);
                       return (
                         <div
@@ -1223,7 +1236,7 @@ export default function EnrollmentFeesPage() {
                                 {cm.description}
                               </p>
                             </div>
-                            {!isInternshipWorkLayout ? (
+                            {!isInternshipWorkLayout && showTable ? (
                               <Button
                                 size="sm"
                                 className="shrink-0 bg-violet-600 text-sm text-white hover:bg-violet-700"
@@ -1292,7 +1305,7 @@ export default function EnrollmentFeesPage() {
                               </div>
                             ) : null}
 
-                            {isInternshipWorkLayout ? (
+                            {isInternshipWorkLayout && showTable ? (
                               <div className="mb-4 flex justify-end">
                                 <Button
                                   size="sm"
@@ -1304,103 +1317,103 @@ export default function EnrollmentFeesPage() {
                               </div>
                             ) : null}
 
-                            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                              <table className="w-full min-w-[680px] table-fixed border-collapse text-sm">
-                                <thead className="bg-slate-100/90 text-slate-800">
-                                  <tr>
-                                    {tableFields.map((f) => (
-                                      <th
-                                        key={`${masterId}-${f.id}`}
-                                        className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
-                                      >
-                                        {f.name.toUpperCase()}
-                                        {f.isRequired ? (
-                                          <span className="ml-1 text-red-600">*</span>
-                                        ) : null}
-                                      </th>
-                                    ))}
-                                    <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">
-                                      ACTION
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {rows.length === 0 ? (
+                            {showTable ? (
+                              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                                <table className="w-full min-w-[680px] table-fixed border-collapse text-sm">
+                                  <thead className="bg-slate-100/90 text-slate-800">
                                     <tr>
-                                      <td
-                                        className="border border-slate-200 px-3 py-6 text-center text-sm text-slate-500"
-                                        colSpan={tableFields.length + 1}
-                                      >
-                                        No rows yet. Use “Add Row” to add one.
-                                      </td>
+                                      {tableFields.map((f) => (
+                                        <th
+                                          key={`${masterId}-${f.id}`}
+                                          className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
+                                        >
+                                          {f.name.toUpperCase()}
+                                          {f.isRequired ? (
+                                            <span className="ml-1 text-red-600">*</span>
+                                          ) : null}
+                                        </th>
+                                      ))}
+                                      <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">
+                                        ACTION
+                                      </th>
                                     </tr>
-                                  ) : (
-                                    rows.map((row, rowIdx) => (
-                                      <tr key={`${masterId}-row-${rowIdx}`}>
-                                        {tableFields.map((f) => {
-                                          const fieldId = Number(f.id);
-                                          const cellValue =
-                                            row.fields.find(
-                                              (rf) => rf.certificateFieldMasterId === fieldId,
-                                            )?.value ?? "";
-                                          return (
-                                            <td
-                                              key={`${masterId}-${rowIdx}-${fieldId}`}
-                                              className="border border-slate-200 p-2 align-top whitespace-normal break-words"
-                                            >
-                                              {f.type === "SELECT" ? (
-                                                <Select
-                                                  value={cellValue}
-                                                  onValueChange={(nextValue) =>
-                                                    updateRowCell(
-                                                      cm,
-                                                      masterKey,
-                                                      rowIdx,
-                                                      fieldId,
-                                                      nextValue,
-                                                    )
-                                                  }
-                                                >
-                                                  <SelectTrigger className="h-10 w-full text-sm">
-                                                    <SelectValue placeholder="Select" />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    {f.options.map((opt) => (
-                                                      <SelectItem
-                                                        key={`${fieldId}-${opt.id}`}
-                                                        value={opt.name}
-                                                      >
-                                                        {opt.name}
-                                                      </SelectItem>
-                                                    ))}
-                                                  </SelectContent>
-                                                </Select>
-                                              ) : (
-                                                <input
-                                                  type="text"
-                                                  inputMode={
-                                                    f.type === "NUMBER" ? "numeric" : undefined
-                                                  }
-                                                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
-                                                  value={cellValue}
-                                                  onChange={(e) =>
-                                                    updateRowCell(
-                                                      cm,
-                                                      masterKey,
-                                                      rowIdx,
-                                                      fieldId,
-                                                      f.type === "NUMBER"
-                                                        ? e.target.value.replace(/[^\d]/g, "")
-                                                        : e.target.value,
-                                                    )
-                                                  }
-                                                />
-                                              )}
-                                            </td>
-                                          );
-                                        })}
-                                        <td className="border border-slate-200 p-2 align-top whitespace-normal break-words">
-                                          {rows.length > 1 ? (
+                                  </thead>
+                                  <tbody>
+                                    {rows.length === 0 ? (
+                                      <tr>
+                                        <td
+                                          className="border border-slate-200 px-3 py-6 text-center text-sm text-slate-500"
+                                          colSpan={tableFields.length + 1}
+                                        >
+                                          No rows yet. Use "Add Row" to add one.
+                                        </td>
+                                      </tr>
+                                    ) : (
+                                      rows.map((row, rowIdx) => (
+                                        <tr key={`${masterId}-row-${rowIdx}`}>
+                                          {tableFields.map((f) => {
+                                            const fieldId = Number(f.id);
+                                            const cellValue =
+                                              row.fields.find(
+                                                (rf) => rf.certificateFieldMasterId === fieldId,
+                                              )?.value ?? "";
+                                            return (
+                                              <td
+                                                key={`${masterId}-${rowIdx}-${fieldId}`}
+                                                className="border border-slate-200 p-2 align-top whitespace-normal break-words"
+                                              >
+                                                {f.type === "SELECT" ? (
+                                                  <Select
+                                                    value={cellValue}
+                                                    onValueChange={(nextValue) =>
+                                                      updateRowCell(
+                                                        cm,
+                                                        masterKey,
+                                                        rowIdx,
+                                                        fieldId,
+                                                        nextValue,
+                                                      )
+                                                    }
+                                                  >
+                                                    <SelectTrigger className="h-10 w-full text-sm">
+                                                      <SelectValue placeholder="Select" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                      {f.options.map((opt) => (
+                                                        <SelectItem
+                                                          key={`${fieldId}-${opt.id}`}
+                                                          value={opt.name}
+                                                        >
+                                                          {opt.name}
+                                                        </SelectItem>
+                                                      ))}
+                                                    </SelectContent>
+                                                  </Select>
+                                                ) : (
+                                                  <input
+                                                    type="text"
+                                                    inputMode={
+                                                      f.type === "NUMBER" ? "numeric" : undefined
+                                                    }
+                                                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
+                                                    value={cellValue}
+                                                    onChange={(e) =>
+                                                      updateRowCell(
+                                                        cm,
+                                                        masterKey,
+                                                        rowIdx,
+                                                        fieldId,
+                                                        f.type === "NUMBER"
+                                                          ? e.target.value.replace(/[^\d]/g, "")
+                                                          : e.target.value,
+                                                      )
+                                                    }
+                                                  />
+                                                )}
+                                              </td>
+                                            );
+                                          })}
+                                          <td className="border border-slate-200 p-2 align-top whitespace-normal break-words">
                                             <Button
                                               size="sm"
                                               variant="outline"
@@ -1418,14 +1431,14 @@ export default function EnrollmentFeesPage() {
                                             >
                                               <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
-                                          ) : null}
-                                        </td>
-                                      </tr>
-                                    ))
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
+                                          </td>
+                                        </tr>
+                                      ))
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       );
