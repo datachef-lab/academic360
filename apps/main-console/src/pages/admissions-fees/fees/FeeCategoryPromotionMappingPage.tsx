@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useFeeCategories, useFeeGroups } from "@/hooks/useFees";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
@@ -72,12 +73,22 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     feeGroupId: number | null;
     remarks: string;
     updatedByUserId: number | null;
-  }>({ feeGroupId: null, remarks: "", updatedByUserId: null });
+    approvalType: "SYSTEM" | "MANUAL";
+    approvalUserId: number | null;
+  }>({
+    feeGroupId: null,
+    remarks: "",
+    updatedByUserId: null,
+    approvalType: "SYSTEM",
+    approvalUserId: null,
+  });
   const [adminStaffUsers, setAdminStaffUsers] = useState<
     { id: number; name: string; email: string; image: string | null; type?: string }[]
   >([]);
   const [approvalSearchText, setApprovalSearchText] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingEditData, setPendingEditData] = useState<typeof editForm | null>(null);
   const [feeGroupTotalsById, setFeeGroupTotalsById] = useState<Record<number, number>>({});
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
@@ -796,11 +807,17 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
   const handleEditClick = (mapping: FeeGroupPromotionMappingDto) => {
     setEditingItem(mapping);
-    const mappingAny = mapping as { updatedByUserId?: number | null };
+    const mappingAny = mapping as {
+      updatedByUserId?: number | null;
+      approvalType?: "SYSTEM" | "MANUAL";
+      approvalUserId?: number | null;
+    };
     setEditForm({
       feeGroupId: mapping.feeGroup?.id ?? null,
       remarks: mapping.remarks ?? "",
       updatedByUserId: mappingAny?.updatedByUserId ?? null,
+      approvalType: (mappingAny?.approvalType ?? "SYSTEM") as "SYSTEM" | "MANUAL",
+      approvalUserId: mappingAny?.approvalUserId ?? null,
     });
     setEditDialogOpen(true);
   };
@@ -937,22 +954,41 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       toast.error("Please select a slab type");
       return;
     }
+    if (editForm.approvalType === "MANUAL" && !editForm.approvalUserId) {
+      toast.error("Please select an approval user for manual approval");
+      return;
+    }
     if (editingItem?.saveBlockedForEdit) {
       toast.error("Cannot save: a successful payment is already recorded for this mapping.");
       return;
     }
+
+    // Store pending data and show confirmation dialog
+    setPendingEditData(editForm);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmEdit = async () => {
+    if (!editingItem?.id || !pendingEditData) {
+      return;
+    }
+
     setSavingEdit(true);
     try {
       await updateMutation.mutateAsync({
         id: editingItem.id,
         data: {
-          feeGroupId: editForm.feeGroupId,
-          remarks: editForm.remarks || undefined,
-          updatedByUserId: editForm.updatedByUserId ?? undefined,
+          feeGroupId: pendingEditData.feeGroupId,
+          remarks: pendingEditData.remarks || undefined,
+          updatedByUserId: pendingEditData.updatedByUserId ?? undefined,
+          approvalType: pendingEditData.approvalType,
+          approvalUserId: pendingEditData.approvalUserId ?? undefined,
         },
       });
       setEditDialogOpen(false);
       setEditingItem(null);
+      setShowConfirmDialog(false);
+      setPendingEditData(null);
     } catch {
       // Error handled by mutation
     } finally {
@@ -1969,84 +2005,200 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <Label>Approval Details</Label>
-                      <p className="text-xs text-muted-foreground">Select approver (admin/staff)</p>
+                      <Label>Approval Type</Label>
+                      <p className="text-xs text-muted-foreground">Choose approval method</p>
                     </div>
-                    <Input
-                      placeholder="Search by name, email, type..."
-                      value={approvalSearchText}
-                      onChange={(e) => setApprovalSearchText(e.target.value)}
-                      className="max-w-[200px] h-8 text-sm"
-                    />
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-sm ${editForm.approvalType === "SYSTEM" ? "font-semibold" : "text-muted-foreground"}`}
+                      >
+                        System
+                      </span>
+                      <Switch
+                        checked={editForm.approvalType === "MANUAL"}
+                        onCheckedChange={(checked) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            approvalType: checked ? "MANUAL" : "SYSTEM",
+                            approvalUserId: checked ? prev.approvalUserId : null,
+                          }))
+                        }
+                      />
+                      <span
+                        className={`text-sm ${editForm.approvalType === "MANUAL" ? "font-semibold" : "text-muted-foreground"}`}
+                      >
+                        Manual
+                      </span>
+                    </div>
                   </div>
-                  <div
-                    className="border rounded-md max-h-48 overflow-y-auto divide-y"
-                    role="listbox"
-                    aria-label="Select approver"
-                  >
-                    {filteredAdminStaffUsers.length === 0 ? (
-                      <p className="p-3 text-sm text-muted-foreground text-center">
-                        {approvalSearchText ? "No users match your search" : "No users available"}
-                      </p>
-                    ) : (
-                      filteredAdminStaffUsers.map((u) => {
-                        const isSelected = editForm.updatedByUserId === u.id;
-                        return (
-                          <button
-                            key={u.id}
-                            type="button"
-                            role="option"
-                            aria-selected={isSelected}
-                            onClick={() =>
-                              setEditForm((prev) => ({
-                                ...prev,
-                                updatedByUserId: isSelected ? null : u.id,
-                              }))
-                            }
-                            className={`w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-slate-100 ${
-                              isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "bg-transparent"
-                            }`}
-                          >
-                            <UserAvatar
-                              user={{ name: u.name, image: u.image ?? undefined }}
-                              size="sm"
-                              className="rounded-full shrink-0"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium truncate">{u.name}</p>
-                                {u.type && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] px-1.5 py-0 h-4 shrink-0"
-                                  >
-                                    {u.type}
-                                  </Badge>
+                </div>
+
+                {editForm.approvalType === "MANUAL" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <Label className="text-red-600">Approval User *</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Select approver (admin/staff)
+                        </p>
+                      </div>
+                      <Input
+                        placeholder="Search by name, email, type..."
+                        value={approvalSearchText}
+                        onChange={(e) => setApprovalSearchText(e.target.value)}
+                        className="max-w-[200px] h-8 text-sm"
+                      />
+                    </div>
+                    <div
+                      className="border rounded-md max-h-48 overflow-y-auto divide-y"
+                      role="listbox"
+                      aria-label="Select approver"
+                    >
+                      {filteredAdminStaffUsers.length === 0 ? (
+                        <p className="p-3 text-sm text-muted-foreground text-center">
+                          {approvalSearchText ? "No users match your search" : "No users available"}
+                        </p>
+                      ) : (
+                        filteredAdminStaffUsers.map((u) => {
+                          const isSelected = editForm.approvalUserId === u.id;
+                          return (
+                            <button
+                              key={u.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() =>
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  approvalUserId: isSelected ? null : u.id,
+                                }))
+                              }
+                              className={`w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-slate-100 ${
+                                isSelected
+                                  ? "bg-primary/10 ring-1 ring-primary/30"
+                                  : "bg-transparent"
+                              }`}
+                            >
+                              <UserAvatar
+                                user={{ name: u.name, image: u.image ?? undefined }}
+                                size="sm"
+                                className="rounded-full shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium truncate">{u.name}</p>
+                                  {u.type && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-[10px] px-1.5 py-0 h-4 shrink-0"
+                                    >
+                                      {u.type}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {u.email && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {u.email}
+                                  </p>
                                 )}
                               </div>
-                              {u.email && (
-                                <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {editForm.approvalType === "MANUAL" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <Label>Approval Details</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Select approver (admin/staff)
+                        </p>
+                      </div>
+                      <Input
+                        placeholder="Search by name, email, type..."
+                        value={approvalSearchText}
+                        onChange={(e) => setApprovalSearchText(e.target.value)}
+                        className="max-w-[200px] h-8 text-sm"
+                      />
+                    </div>
+                    <div
+                      className="border rounded-md max-h-48 overflow-y-auto divide-y"
+                      role="listbox"
+                      aria-label="Select approver"
+                    >
+                      {filteredAdminStaffUsers.length === 0 ? (
+                        <p className="p-3 text-sm text-muted-foreground text-center">
+                          {approvalSearchText ? "No users match your search" : "No users available"}
+                        </p>
+                      ) : (
+                        filteredAdminStaffUsers.map((u) => {
+                          const isSelected = editForm.updatedByUserId === u.id;
+                          return (
+                            <button
+                              key={u.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() =>
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  updatedByUserId: isSelected ? null : u.id,
+                                }))
+                              }
+                              className={`w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-slate-100 ${
+                                isSelected
+                                  ? "bg-primary/10 ring-1 ring-primary/30"
+                                  : "bg-transparent"
+                              }`}
+                            >
+                              <UserAvatar
+                                user={{ name: u.name, image: u.image ?? undefined }}
+                                size="sm"
+                                className="rounded-full shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium truncate">{u.name}</p>
+                                  {u.type && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-[10px] px-1.5 py-0 h-4 shrink-0"
+                                    >
+                                      {u.type}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {u.email && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {u.email}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                    {editForm.updatedByUserId && editingItem?.updatedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Last updated:{" "}
+                        {new Date(editingItem.updatedAt).toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}
+                      </p>
                     )}
                   </div>
-                  {editForm.updatedByUserId && editingItem?.updatedAt && (
-                    <p className="text-xs text-muted-foreground">
-                      Last updated:{" "}
-                      {new Date(editingItem.updatedAt).toLocaleString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
-                    </p>
-                  )}
-                </div>
+                )}
                 <div className="space-y-2">
                   <Label>Remarks</Label>
                   <Textarea
@@ -2068,7 +2220,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                 <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleEditSave} disabled={savingEdit}>
+                <Button
+                  onClick={handleEditSave}
+                  disabled={
+                    savingEdit || (editForm.approvalType === "MANUAL" && !editForm.approvalUserId)
+                  }
+                >
                   {savingEdit ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -2105,6 +2262,125 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         }}
         progressUpdate={currentProgressUpdate}
       />
+
+      {/* Confirmation Dialog for Edit */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Changes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-foreground">
+              Do you really want to update the <span className="font-semibold">slab type</span> or{" "}
+              <span className="font-semibold">approval details</span>?
+            </p>
+            {pendingEditData && (
+              <div className="space-y-3 bg-slate-50 p-3 rounded-md">
+                <div className="text-sm">
+                  <p className="text-muted-foreground">Changes to be made:</p>
+                  <ul className="list-disc list-inside space-y-2 mt-2 text-foreground">
+                    <li>
+                      <span className="font-medium">Slab Type:</span>{" "}
+                      {editingItem?.feeGroup?.feeSlab?.name ? (
+                        <div className="ml-4 mt-1">
+                          <div>
+                            {editingItem.feeGroup.feeSlab.name}
+                            <span className="text-muted-foreground"> | </span>₹
+                            {Number(
+                              feeGroupTotalsById[editingItem.feeGroup.id as number] ?? 0,
+                            ).toLocaleString("en-IN")}
+                            <span className="text-muted-foreground">
+                              {" "}
+                              ({editingItem.feeGroup.feeCategory?.name})
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </li>
+                    <li>
+                      <span className="font-medium">Approval Type:</span>{" "}
+                      {pendingEditData.approvalType}
+                    </li>
+                    {pendingEditData.approvalType === "MANUAL" &&
+                      pendingEditData.approvalUserId && (
+                        <li>
+                          <span className="font-medium">Approval User:</span>
+                          {(() => {
+                            const user = adminStaffUsers.find(
+                              (u) => u.id === pendingEditData.approvalUserId,
+                            );
+                            return user ? (
+                              <div className="ml-4 mt-1 flex items-center gap-3 p-2 bg-white rounded border border-input">
+                                <UserAvatar
+                                  user={{ name: user.name, image: user.image ?? undefined }}
+                                  size="sm"
+                                  className="rounded-full shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-medium truncate">{user.name}</p>
+                                    {user.type && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-[10px] px-1.5 py-0 h-4 shrink-0"
+                                      >
+                                        {user.type}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {user.email && (
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {user.email}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              "—"
+                            );
+                          })()}
+                        </li>
+                      )}
+                    {pendingEditData.remarks && (
+                      <li>
+                        <span className="font-medium">Remarks:</span>{" "}
+                        {pendingEditData.remarks.substring(0, 50)}
+                        {pendingEditData.remarks.length > 50 ? "..." : ""}
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              This action will update the fee group promotion mapping record.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfirmDialog(false);
+                setPendingEditData(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmEdit} disabled={savingEdit}>
+              {savingEdit ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Confirming...
+                </>
+              ) : (
+                "Yes, Update"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
