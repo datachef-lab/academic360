@@ -276,7 +276,6 @@ export async function receiveCashFeePayment(params: {
           isManualEntry: true,
           recordedBy: params.recordedByUserId,
           remarks: params.remarks ?? null,
-          txnDate: receiptDateIso,
         })
         .where(eq(paymentModel.id, existingPaymentId));
     } else {
@@ -294,7 +293,6 @@ export async function receiveCashFeePayment(params: {
           isManualEntry: true,
           recordedBy: params.recordedByUserId,
           remarks: params.remarks ?? null,
-          txnDate: receiptDateIso,
           gatewayResponse: {
             meta: { feeStudentMappingId: row.id },
             cash: { receiptNumber, receiptDateIso },
@@ -326,6 +324,7 @@ export async function loadFeePaymentMarkingByOrderId(params: {
   | { success: true; data: FeePaymentMarkingLoadedRecord }
   | { success: false; error: string }
 > {
+  console.log("Loading fee payment marking for orderId:", params.orderId);
   const orderId = String(params.orderId || "").trim();
   if (!orderId) return { success: false, error: "orderId is required" };
 

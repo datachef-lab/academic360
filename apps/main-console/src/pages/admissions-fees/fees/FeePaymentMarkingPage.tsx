@@ -699,15 +699,11 @@ export default function FeePaymentMarkingPage() {
             <DialogDescription asChild>
               <div className="space-y-2 text-sm text-muted-foreground pt-1">
                 <p>
-                  The payment date you selected (
+                  You have selected a future payment date (
                   <span className="font-medium text-foreground">
                     {formatYyyyMmDdAsDdMmYyyy(paymentDate)}
                   </span>
-                  ) is <span className="font-semibold text-foreground">after today</span> (
-                  {formatYyyyMmDdAsDdMmYyyy(localDateString(new Date()))}).
-                </p>
-                <p>
-                  Continue only if this is intentional (for example, a post-dated or planned entry).
+                  ). Do you want to proceed?.
                 </p>
               </div>
             </DialogDescription>
