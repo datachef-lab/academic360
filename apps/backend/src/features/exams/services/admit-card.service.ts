@@ -18,6 +18,12 @@ export async function searchCandidate(
   examGroupId: number | undefined,
   searchTerm: string,
 ): Promise<AdmitCardSearchResponse | null> {
+  const normalizeRollNumber = (value: unknown): string | null => {
+    if (value == null) return null;
+    const s = String(value).trim();
+    return s ? s : null;
+  };
+
   const term = `%${searchTerm}%`;
 
   const distributedByUser = alias(userModel, "distributed_by_user");
@@ -91,17 +97,14 @@ export async function searchCandidate(
 
   const first = rows[0];
 
-  const rollNumber =
-    first.promotionRollNumber ??
-    first.studentRollNumber ??
-    first.promotionClassRollNumber ??
-    null;
+  // Important: some DB columns store "" (empty string) instead of NULL.
+  // `??` doesn't treat "" as missing, so normalize first to ensure fallback works.
+  // As requested, use ONLY student roll number (not promotion roll numbers).
+  const rollNumber = normalizeRollNumber(first.studentRollNumber) ?? null;
 
+  // As requested, use ONLY student registration number (not admission table values).
   const registrationNumber =
-    first.studentRegistrationNumber ??
-    first.admissionRegistrationNumber ??
-    first.admissionCuRegistrationNumber ??
-    null;
+    normalizeRollNumber(first.studentRegistrationNumber) ?? null;
 
   const collectionDate = first.distributionCreatedAt
     ? first.distributionCreatedAt.toISOString()
@@ -169,6 +172,11 @@ export async function listAdmitCardDistributions(examGroupId?: number): Promise<
   }>
 > {
   const distributedByUser = alias(userModel, "distribution_user");
+  const normalizeRollNumber = (value: unknown): string | null => {
+    if (value == null) return null;
+    const s = String(value).trim();
+    return s ? s : null;
+  };
 
   const rows = await db
     .select({
@@ -216,17 +224,12 @@ export async function listAdmitCardDistributions(examGroupId?: number): Promise<
     .orderBy(desc(tempAdmitCardDistributionsModel.createdAt));
 
   return rows.map((row) => {
-    const rollNumber =
-      row.promotionRollNumber ??
-      row.studentRollNumber ??
-      row.promotionClassRollNumber ??
-      null;
+    // As requested, use ONLY student roll number (not promotion roll numbers).
+    const rollNumber = normalizeRollNumber(row.studentRollNumber) ?? null;
 
+    // As requested, use ONLY student registration number (not admission table values).
     const registrationNumber =
-      row.studentRegistrationNumber ??
-      row.admissionRegistrationNumber ??
-      row.admissionCuRegistrationNumber ??
-      null;
+      normalizeRollNumber(row.studentRegistrationNumber) ?? null;
 
     return {
       studentId: row.studentId,

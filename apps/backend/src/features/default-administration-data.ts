@@ -311,11 +311,16 @@ const defaultPrimaryAppModules: AppModuleDto[] = [
     application: "MAIN_CONSOLE",
     description:
       "Secure entry point for authenticated access to the management console.",
-    moduleUrl: "/",
     parentAppModule: null,
     iconType: "lucide",
     iconValue: "LogIn",
     image: "",
+    componentKey: "LOGIN_PAGE",
+    routePath: "/",
+    isDynamic: false,
+    isLayout: false,
+    isProtected: false,
+    moduleUrl: "/",
     isReadOnly: true,
     isMasterModule: false,
   },
@@ -324,12 +329,19 @@ const defaultPrimaryAppModules: AppModuleDto[] = [
     application: "MAIN_CONSOLE",
     description:
       "Central overview of institutional activity, metrics, and quick-access modules.",
-    moduleUrl: "/dashboard",
     parentAppModule: null,
     iconType: "lucide",
     iconValue: "LayoutDashboard",
     image: "",
+    componentKey: "DASHBOARD_HOME_PAGE",
+    routePath: "/dashboard",
+    moduleUrl: "/dashboard",
+    isDynamic: false,
+    isLayout: true,
+    isProtected: true,
     isReadOnly: true,
     isMasterModule: false,
   },
 ];
+
+export const appModuleData = { defaultPrimaryAppModules };

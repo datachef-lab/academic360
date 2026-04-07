@@ -83,9 +83,17 @@ import {
   designationRouter,
   sessionStatusRouter,
   userStatusMasterRouter,
+  accessGroupRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
+  accessGroupModulePermissionRouter,
+  accessGroupModuleProgramCourseRouter,
+  accessGroupModuleRouter,
   accessGroupUserTypeRouter,
+  appModuleRouter,
+  departmentRouter,
+  identityMasterRouter,
+  institutionalRoleRouter,
   userTypeRouter,
   userRouter,
   // userStatusMasterDomainRouter,
@@ -159,7 +167,10 @@ import {
   subjectSpecificPassingRoutes,
 } from "@/features/subject-selection/routes/index.js";
 // import { userStatusMappingRouter } from "./features/user/routes/index.js";
-import { examGroupRouter } from "./features/exams/routes/index.js";
+import {
+  admitCardRouter,
+  examGroupRouter,
+} from "./features/exams/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -286,6 +297,12 @@ app.use(passport.session());
 
 app.use("/", express.static(path.join(__dirname, "..", "public")));
 
+// Explicitly serve app-module images (same path as saveAppModuleImage uses)
+const appModuleImageBase = path.resolve(
+  process.env.APP_MODULE_IMAGE_BASE_PATH ?? "./public/app-module-images",
+);
+app.use("/app-module-images", express.static(appModuleImageBase));
+
 // Serve CU registration documents from the configured path
 const cuRegAppPath = process.env.CU_REGISTRATION_APP_PATH;
 if (cuRegAppPath) {
@@ -383,6 +400,7 @@ app.use("/api/users", userRouter);
 
 // User status master endpoints
 app.use("/api/administration/user-status-masters", userStatusMasterRouter);
+app.use("/api/administration/app-modules", appModuleRouter);
 // // User status master level endpoints
 // app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
 // // User status master domain endpoints
@@ -441,13 +459,15 @@ app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
 
-// app.use("/api/administration/departments", departmentRouter);
-
+app.use("/api/administration/departments", departmentRouter);
+app.use("/api/administration/identity-masters", identityMasterRouter);
+app.use("/api/administration/institutional-roles", institutionalRoleRouter);
 app.use("/api/administration/designations", designationRouter);
 app.use("/api/administration/session-statuses", sessionStatusRouter);
 
 // app.use("/api/administration/sub-departments", subDepartmentRouter);
 app.use("/api/administration/user-types", userTypeRouter);
+app.use("/api/administration/access-groups", accessGroupRouter);
 app.use(
   "/api/administration/access-group-applications",
   accessGroupApplicationRouter,
@@ -455,6 +475,15 @@ app.use(
 app.use(
   "/api/administration/access-group-designations",
   accessGroupDesignationRouter,
+);
+app.use("/api/administration/access-group-modules", accessGroupModuleRouter);
+app.use(
+  "/api/administration/access-group-module-permissions",
+  accessGroupModulePermissionRouter,
+);
+app.use(
+  "/api/administration/access-group-module-program-courses",
+  accessGroupModuleProgramCourseRouter,
 );
 app.use(
   "/api/administration/access-group-user-types",
@@ -507,6 +536,7 @@ app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
 app.use("/api/exams/schedule", examScheduleRouter);
 app.use("/api/exam-groups", examGroupRouter);
+app.use("/api/admit-card", admitCardRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/application-forms", applicationFormRouter);

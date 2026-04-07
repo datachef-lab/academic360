@@ -40,6 +40,7 @@ import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.
 import { createLogger } from "@/config/logger.js";
 import { loadDefaultUserTypes } from "@/features/administration/services/user-type.service";
 import { loadDefaultUserStatusMasters } from "@/features/administration/services/user-status-master.service";
+import { loadDefaultAppModules } from "@/features/administration/services/app-module.service";
 const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -88,8 +89,9 @@ export const connectToDatabase = async () => {
 
     loadDefaultSubjectSelectionMetas();
 
-    loadDefaultUserTypes();
-    loadDefaultUserStatusMasters();
+    // loadDefaultUserTypes();
+    // loadDefaultUserStatusMasters();
+    loadDefaultAppModules();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();

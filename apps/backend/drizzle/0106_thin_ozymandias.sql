@@ -1,0 +1,1 @@
+ALTER TABLE "program_courses" ADD COLUMN "valid_years" integer DEFAULT 7 NOT NULL;

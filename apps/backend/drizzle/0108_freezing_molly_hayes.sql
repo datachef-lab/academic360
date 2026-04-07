@@ -1,0 +1,1 @@
+ALTER TABLE "app_modules" ALTER COLUMN "module_url" DROP NOT NULL;

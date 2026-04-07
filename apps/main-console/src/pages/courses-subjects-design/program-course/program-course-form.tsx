@@ -215,6 +215,7 @@ export function ProgramCourseForm({
     onSubmit({
       streamId: data.streamId,
       courseId: data.courseId,
+      validYears: 7,
       name: data.name?.trim() || null,
       courseTypeId: data.courseTypeId,
       courseLevelId: data.courseLevelId,
