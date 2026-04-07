@@ -18,7 +18,7 @@ import {
   sortCpCertificateMasters,
   usesInternshipWorkRowLayout,
 } from "@/lib/career-progression-form-utils";
-import { axiosInstance } from "@/lib/utils";
+import { axiosInstance, toSentenceCase } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
 import {
@@ -28,6 +28,8 @@ import {
   CheckCircle2,
   CreditCard,
   Download,
+  ExternalLink,
+  ExternalLinkIcon,
   Landmark,
   Loader2,
   Plus,
@@ -119,8 +121,8 @@ const formatInr = (n: number) =>
 
 const statusBadgeClass = (isPaid: boolean) =>
   isPaid
-    ? "bg-green-100 text-green-800 border border-green-200"
-    : "bg-yellow-100 text-yellow-800 border border-yellow-200";
+    ? "min-w-[68.72px] text-center bg-green-100 hover:bg-green-100 text-green-800 border border-green-200"
+    : "min-w-[68.72px] text-center bg-yellow-100 hover:bg-yellow-100 text-yellow-800 border border-yellow-200";
 
 const buildEmptyRowDraft = (master: CertificateMaster): RowDraft => {
   const tableFields = master.fields
@@ -167,6 +169,7 @@ export default function EnrollmentFeesPage() {
   const [cpOpen, setCpOpen] = useState(false);
   const [cpLoading, setCpLoading] = useState(false);
   const [cpError, setCpError] = useState<string | null>(null);
+  const [selectedClassName, setSelectedClassName] = useState<string | null>(null);
   const [cpData, setCpData] = useState<CareerProgressionTemplatePayload | null>(null);
   const [stage, setStage] = useState<DialogStage>("form");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>(null);
@@ -274,6 +277,8 @@ export default function EnrollmentFeesPage() {
 
         if (feeCtx) {
           const mapping = freshMappings.find((m) => m.id === feeCtx.feeStudentMappingId);
+          const className = mapping?.feeStructure?.class?.name || "";
+          setSelectedClassName(className);
           const dbStatus = String(mapping?.paymentStatus || "").toUpperCase();
           const isPaidInDb = dbStatus === "COMPLETED" || dbStatus === "SUCCESS";
 
@@ -444,12 +449,17 @@ export default function EnrollmentFeesPage() {
     isPaid?: boolean;
     academicYear?: string;
   }) => {
+    setSelectedClassName(
+      mappings.find((m) => m.feeStructureId === fee.feeStructureId)?.feeStructure?.class?.name ||
+        null,
+    );
     if (!student?.id) return;
     setSelectedFee({
       feeStudentMappingId: fee.id,
       feeStructureId: fee.feeStructureId,
       totalPayable: fee.total,
     });
+
     if (fee.academicYear) setSelectedAcademicYear(fee.academicYear);
     setCpOpen(true);
 
@@ -764,43 +774,48 @@ export default function EnrollmentFeesPage() {
           {cards.map((fee) => (
             <Card
               key={fee.id}
-              className="h-full max-w-[360px] cursor-pointer overflow-hidden border-none bg-white shadow-lg transition-all hover:shadow-xl"
-              onClick={() =>
-                openCareerProgression({
-                  id: fee.id,
-                  feeStructureId: fee.feeStructureId,
-                  total: fee.total,
-                  isPaid: fee.isPaid,
-                  academicYear: fee.academicYear,
-                })
-              }
+              className="h-full max-w-[360px] overflow-hidden border bg-white shadow-lg transition-all hover:shadow-xl"
             >
               <div className="relative h-full">
                 <div className="absolute top-0 h-1.5 w-full bg-gradient-to-r from-blue-500 to-indigo-600" />
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/[0.03] to-indigo-500/[0.03]" />
-                <CardHeader className="relative pb-1">
-                  <CardTitle className="line-clamp-1 text-[30px] font-bold leading-none text-slate-900">
-                    {fee.title}
-                  </CardTitle>
+                <CardHeader className="relative pb-4">
+                  <div className="flex justify-between items-center">
+                    <div className="space-y-1">
+                      <CardTitle className="line-clamp-1 text-[24px] font-bold leading-none text-slate-900">
+                        Fees for {toSentenceCase(fee.className)}
+                      </CardTitle>
+                      <p className="text-sm">Academic Year {fee.academicYear}</p>
+                    </div>
+                    <Badge
+                      className={`text-[10px] font-semibold text-center block ${statusBadgeClass(fee.isPaid)}`}
+                    >
+                      {fee.isPaid ? "PAID" : "PENDING"}
+                    </Badge>
+                  </div>
                 </CardHeader>
                 <CardContent className="relative space-y-3 pt-0 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[34px] font-bold leading-none text-blue-700">
                       {formatInr(fee.total)}
                     </p>
-                    <Badge className={`text-[10px] font-semibold ${statusBadgeClass(fee.isPaid)}`}>
-                      {fee.isPaid ? "PAID" : "PENDING"}
-                    </Badge>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-                    <span>
-                      {fee.className} - {fee.academicYear}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <WalletCards className="h-3.5 w-3.5 text-indigo-500" />
-                    <span>{fee.installmentLabel}</span>
+                  <div className="flex pt-4 justify-center items-center gap-2 text-xs text-slate-600">
+                    <Button
+                      onClick={() =>
+                        openCareerProgression({
+                          id: fee.id,
+                          feeStructureId: fee.feeStructureId,
+                          total: fee.total,
+                          isPaid: fee.isPaid,
+                          academicYear: fee.academicYear,
+                        })
+                      }
+                      className="bg-indigo-700 w-full hover:bg-indigo-800"
+                    >
+                      <span>{fee.isPaid ? "View Details" : "Click here to proceed"}</span>
+                      <ExternalLinkIcon />
+                    </Button>
                   </div>
                   {/* {hasExistingCpForm === false ? (
                     <p className="rounded-md bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
@@ -921,6 +936,8 @@ export default function EnrollmentFeesPage() {
                                 <span>
                                   Academic Year {selectedAcademicYear || cpData?.academicYear?.year}
                                 </span>
+                                <span className="mx-2">·</span>
+                                <span>{toSentenceCase(selectedClassName || "")}</span>
                               </>
                             ) : null}
                           </div>
@@ -987,7 +1004,10 @@ export default function EnrollmentFeesPage() {
                         </p>
                         <div className="rounded-xl border bg-white">
                           <div className="rounded-t-xl bg-indigo-800 px-5 py-4 text-white">
-                            <span className="font-semibold">Fee Summary</span>
+                            <span className="font-semibold">
+                              Fee Summary (Fees for semester{" "}
+                              {toSentenceCase(selectedClassName || "")})
+                            </span>
                             <span className="mx-2">·</span>
                             <span>
                               Academic Year {selectedAcademicYear || cpData?.academicYear?.year}

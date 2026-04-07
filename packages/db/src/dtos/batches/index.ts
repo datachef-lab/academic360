@@ -1,6 +1,10 @@
 import { ProgramCourseDto } from "../course-design";
 import { Batch, ClassT, SectionT, SessionT, ShiftT } from "../../schemas/models/academics";
-import { AffiliationT, BoardResultStatusT, PromotionBuilderClauseClassMappingT, PromotionBuilderClauseMappingT, PromotionBuilderT, PromotionClauseClassMappingT, PromotionClauseT, PromotionStatusT, PromotionT } from "@/schemas";
+import { AffiliationT, BoardResultStatusT,  PromotionStatusT, PromotionT } from "@/schemas";
+import { PromotionClauseT } from "@/schemas/models/batches/promotion-clause.model";
+import { PromotionBuilderClauseClassMappingT } from "@/schemas/models/batches/promotion-builder-clause-class-mapping.model";
+import { PromotionBuilderClauseMappingT } from "@/schemas/models/batches/promotion-builder-clause-mapping.model";
+import { PromotionBuilderT } from "@/schemas/models/batches/promotion-builder.model";
 
 export interface BatchDto extends Omit<
     Batch, 

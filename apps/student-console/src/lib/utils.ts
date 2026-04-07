@@ -36,3 +36,18 @@ export interface PaginatedResponse<T> {
   /** Count of unique exam subjects (papers) the student is enrolled in via exam_candidates. Present for exam-group responses. */
   totalSubjectCount?: number;
 }
+
+export function toSentenceCase(str: string): string {
+  let result = str
+    .replace(/_/g, " ") // Replace underscores with spaces
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // Add space before capital letters
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
+  // Remove "Student" prefix from registration and roll number headers
+  result = result.replace(/^Student Registration Number$/, "Registration Number");
+  result = result.replace(/^Student Roll Number$/, "Roll Number");
+
+  return result;
+}
