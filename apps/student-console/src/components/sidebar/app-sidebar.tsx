@@ -37,12 +37,16 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCollegeSettings } from "@/hooks/use-college-settings";
 import { axiosInstance } from "@/lib/utils";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
+import { FeeMapping } from "@/app/(console)/dashboard/enrollment-fees/page";
+
+type ApiResponse<T> = { payload: T; message?: string };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isNestedIframe = window.self !== window.top;
   const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
   const pathname = usePathname();
   const { user } = useAuth();
+  const [mappings, setMappings] = React.useState<FeeMapping[]>([]);
   const { accessControl, student } = useStudent();
   const { invalidateFeeMappings, cpFormVersion } = useFeeSocket();
   const {
@@ -129,13 +133,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     updateExamCount();
   }, [updateExamCount]);
 
+  const fetchMappings = async () => {
+    if (!student?.id) return;
+    try {
+      const { data } = await axiosInstance.get<ApiResponse<FeeMapping[]>>(
+        `/api/v1/fees/student-mappings/student/${student.id}`,
+      );
+      setMappings(Array.isArray(data?.payload) ? data.payload : []);
+      return data?.payload || [];
+    } catch (e) {
+      console.error(e);
+      setMappings([]);
+      return [];
+    }
+  };
+
   const refreshCpFormStatus = React.useCallback(() => {
     if (!student?.id) return;
     axiosInstance
       .get<{ payload: { hasExistingForms: boolean } }>(
         `/api/academics/career-progression-forms/student/${student.id}/current`,
       )
-      .then(({ data }) => setHasCareerProgressionForm(Boolean(data?.payload?.hasExistingForms)))
+      .then(async ({ data }) => {
+        setHasCareerProgressionForm(Boolean(data?.payload?.hasExistingForms));
+        const mappings = await fetchMappings();
+        const isPaid = mappings?.some(
+          (m) => m.paymentStatus === "COMPLETED" || m.paymentStatus === "SUCCESS",
+        );
+        if (Boolean(data?.payload?.hasExistingForms) || isPaid) {
+          setHasCareerProgressionForm(true);
+        } else {
+          setHasCareerProgressionForm(false);
+        }
+      })
       .catch(() => setHasCareerProgressionForm(false));
   }, [student?.id]);
 

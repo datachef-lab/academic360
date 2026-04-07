@@ -165,8 +165,8 @@ export default function CareerProgressionPage() {
   const studentGender = studentGenderRaw.toUpperCase();
   const careerProgressionImageSrc =
     studentGender.includes("FEMALE") || studentGender === "F"
-      ? "/career-progression-female.png"
-      : "/career-progression-male.png";
+      ? `${process.env.NEXT_PUBLIC_URL}/career-progression-female.png`
+      : `${process.env.NEXT_PUBLIC_URL}/career-progression-male.png`;
 
   const getMasterKey = (master: CertificateMaster, idx: number) => {
     const idNum = Number(master.id);

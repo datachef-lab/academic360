@@ -270,6 +270,7 @@ export async function receiveCashFeePayment(params: {
           context: "FEE",
           amount: amountToRecord,
           paymentMode: "CASH",
+          txnDate: params.receiptDateIso,
           paymentGatewayVendor: null,
           paymentOption: null,
           status: "SUCCESS",
@@ -291,6 +292,7 @@ export async function receiveCashFeePayment(params: {
           status: "SUCCESS",
           orderId: null,
           isManualEntry: true,
+          txnDate: params.receiptDateIso,
           recordedBy: params.recordedByUserId,
           remarks: params.remarks ?? null,
           gatewayResponse: {

@@ -107,11 +107,11 @@ export default function FeePaymentMarkingPage() {
   const amountPaid = Number(mapping?.amountPaid ?? 0) || 0;
   const paymentEntry = record?.paymentEntry ?? null;
   const recordedBy = paymentEntry?.recordedBy ?? null;
-  const paymentRecordedAt = paymentEntry?.createdAt
-    ? new Date(paymentEntry.createdAt)
-    : paymentEntry?.updatedAt
-      ? new Date(paymentEntry.updatedAt)
-      : null;
+  // const paymentRecordedAt = paymentEntry?.createdAt
+  //   ? new Date(paymentEntry.createdAt)
+  //   : paymentEntry?.updatedAt
+  //     ? new Date(paymentEntry.updatedAt)
+  //     : null;
   /** Editable marking fields only when fee mapping is pending and payment is not already SUCCESS */
   const paymentEntryStatus = paymentEntry?.status?.toUpperCase() ?? "";
   const isPaymentSuccess = paymentEntryStatus === "SUCCESS";
@@ -119,17 +119,17 @@ export default function FeePaymentMarkingPage() {
   const isMarkingFormLocked = !canEditMarkingFields;
 
   /** Use the browser's local timezone so the time matches the user's system clock (API sends UTC via ISO strings). */
-  const recordedAtText = paymentRecordedAt
-    ? new Intl.DateTimeFormat("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      }).format(paymentRecordedAt)
-    : "-";
+  // const recordedAtText = paymentRecordedAt
+  //   ? new Intl.DateTimeFormat("en-IN", {
+  //       day: "2-digit",
+  //       month: "2-digit",
+  //       year: "numeric",
+  //       hour: "2-digit",
+  //       minute: "2-digit",
+  //       second: "2-digit",
+  //       hour12: true,
+  //     }).format(paymentRecordedAt)
+  //   : "-";
 
   const studentName = safeText(record?.user?.name);
   const studentUid = safeText(record?.student?.uid);

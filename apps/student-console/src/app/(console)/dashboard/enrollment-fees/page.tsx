@@ -42,7 +42,7 @@ import {
 
 type ApiResponse<T> = { payload: T; message?: string };
 
-type FeeMapping = {
+export type FeeMapping = {
   id: number;
   studentId: number;
   feeStructureId: number;
