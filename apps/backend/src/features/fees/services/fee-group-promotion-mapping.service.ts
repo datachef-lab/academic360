@@ -21,7 +21,7 @@ import {
   studentModel,
   personalDetailsModel,
 } from "@repo/db/schemas/models/user";
-import { and, inArray, or, ilike, desc, eq } from "drizzle-orm";
+import { and, inArray, desc, eq } from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import {
   feeStructureModel,
@@ -30,21 +30,15 @@ import {
 import XLSX from "xlsx";
 import fs from "fs";
 import * as studentService from "@/features/user/services/student.service.js";
-import * as classService from "@/features/academics/services/class.service.js";
 import { socketService } from "@/services/socketService.js";
 import { feeStudentMappingModel } from "@repo/db/schemas";
-import {
-  FeeGroupPromotionMappingDto,
-  FeeGroupDto,
-  FeeCategoryDto,
-} from "@repo/db/dtos/fees";
+import { FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
 import { PromotionDto } from "@repo/db/dtos/batches";
 import {
   religionModel,
   categoryModel,
 } from "@repo/db/schemas/models/resources";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
-import * as feeCategoryService from "./fee-category.service.js";
 import * as userService from "@/features/user/services/user.service.js";
 
 /**
@@ -274,8 +268,6 @@ export const createFeeGroupPromotionMapping = async (
     .insert(feeGroupPromotionMappingModel)
     .values({
       ...data,
-      createdByUserId: userId,
-      updatedByUserId: userId,
     })
     .returning();
 
@@ -341,7 +333,6 @@ export const getAllFeeGroupPromotionMappings = async (
   ]);
 
   const feeGroupMap = new Map(feeGroups.map((fg) => [fg.id, fg]));
-  const promotionMap = new Map(promotions.map((p) => [p.id, p]));
 
   // Batch fetch fee categories and slabs
   const feeCategoryIds = [...new Set(feeGroups.map((fg) => fg.feeCategoryId))];
@@ -445,24 +436,6 @@ export const getAllFeeGroupPromotionMappings = async (
     });
   }
 
-  // Batch fetch updatedBy users for approval details
-  const updatedByUserIds = [
-    ...new Set(
-      rows
-        .map((r) => r.updatedByUserId)
-        .filter((id): id is number => id != null),
-    ),
-  ];
-  const updatedByUsers =
-    updatedByUserIds.length > 0
-      ? await Promise.all(
-          updatedByUserIds.map((id) => userService.findById(id)),
-        )
-      : [];
-  const updatedByUserMap = new Map(
-    updatedByUserIds.map((id, i) => [id, updatedByUsers[i]]),
-  );
-
   // Build DTOs using cached data
   const dtos: FeeGroupPromotionMappingDto[] = [];
   for (const row of rows) {
@@ -477,9 +450,6 @@ export const getAllFeeGroupPromotionMappings = async (
     if (!feeCategory || !feeSlab) continue;
 
     const payment = row.id ? paymentByMappingId.get(row.id) : undefined;
-    const updatedByUser = row.updatedByUserId
-      ? updatedByUserMap.get(row.updatedByUserId)
-      : null;
 
     dtos.push({
       ...row,
@@ -493,14 +463,6 @@ export const getAllFeeGroupPromotionMappings = async (
       amountToPay: payment?.amountToPay ?? 0,
       totalPayableAmount: payment?.totalPayableAmount ?? 0,
       saveBlockedForEdit: payment?.saveBlockedForEdit ?? false,
-      updatedByUser: updatedByUser
-        ? {
-            name: updatedByUser.name || "Unknown",
-            avatarUrl:
-              (updatedByUser as { avatarUrl?: string | null } | null)
-                ?.avatarUrl ?? null,
-          }
-        : null,
     });
   }
 
@@ -562,7 +524,6 @@ export const updateFeeGroupPromotionMapping = async (
     .set({
       ...data,
       updatedAt: new Date(),
-      updatedByUserId: data.updatedByUserId ?? userId,
     })
     .where(eq(feeGroupPromotionMappingModel.id, id))
     .returning();
@@ -649,10 +610,10 @@ export const deleteFeeGroupPromotionMapping = async (
   userId?: number,
 ): Promise<FeeGroupPromotionMappingDto | null> => {
   // Get the mapping before deletion for socket event
-  const [existing] = await db
-    .select()
-    .from(feeGroupPromotionMappingModel)
-    .where(eq(feeGroupPromotionMappingModel.id, id));
+  // const [existing] = await db
+  //   .select()
+  //   .from(feeGroupPromotionMappingModel)
+  //   .where(eq(feeGroupPromotionMappingModel.id, id));
 
   const [deleted] = await db
     .delete(feeGroupPromotionMappingModel)
@@ -1217,7 +1178,6 @@ export const bulkUploadFeeGroupPromotionMappings = async (
           await db
             .update(feeGroupPromotionMappingModel)
             .set({
-              updatedByUserId: approvedByUser.id,
               updatedAt: new Date(),
               remarks: rowData.Remarks || existingMapping.remarks,
             })
@@ -1228,8 +1188,7 @@ export const bulkUploadFeeGroupPromotionMappings = async (
             .values({
               feeGroupId,
               promotionId: promotionRecord.id,
-              createdByUserId: userId,
-              updatedByUserId: approvedByUser.id,
+
               remarks: rowData.Remarks || null,
             })
             .returning();

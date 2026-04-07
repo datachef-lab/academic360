@@ -425,3 +425,8 @@ export const classTrackTypeEnum = pgEnum("class_track_type", [
     "ODD",
     "EVEN",
 ]);
+
+export const feeGroupPromotionMappingApprovalTypeEnum = pgEnum("fee_group_promotion_mapping_approval_type", [
+    "SYSTEM",
+    "MANUAL"
+]);

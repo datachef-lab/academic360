@@ -90,7 +90,11 @@ import {
   shiftModel,
   sessionModel,
 } from "@repo/db/schemas/models/academics";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import {
+  affiliationModel,
+  programCourseModel,
+  regulationTypeModel,
+} from "@repo/db/schemas/models/course-design";
 import { promotionModel } from "@repo/db/schemas/models/batches";
 import { paymentModel } from "@repo/db/schemas/models/payments";
 import {
@@ -99,12 +103,9 @@ import {
   count,
   desc,
   inArray,
-  sql,
-  ne,
-  not,
-  notInArray,
   or,
   asc,
+  aliasedTable,
 } from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as academicYearService from "@/features/academics/services/academic-year.service.js";
@@ -330,8 +331,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
           .values({
             feeGroupId: generalFeeGroup.id,
             promotionId: promotion.id,
-            createdByUserId: userId,
-            updatedByUserId: userId,
+            approvalType: "SYSTEM",
           })
           .returning();
 
@@ -370,6 +370,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
           );
 
         let shouldFeeGroupCarryForwarded: boolean = false;
+        console.log(shouldFeeGroupCarryForwarded);
 
         if (!previousFeeGroup) {
           shouldFeeGroupCarryForwarded = false;
@@ -449,6 +450,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
             `Invalid validity type for fee group ${previousFeeGroup.id}`,
           );
         }
+        console.log(shouldFeeGroupCarryForwarded);
 
         if (shouldFeeGroupCarryForwarded) {
           feeGroupPromotionMappingId = previousFeeGroupPromotionMapping.id!;
@@ -458,8 +460,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
             .values({
               feeGroupId: generalFeeGroup.id,
               promotionId: promotion.id,
-              createdByUserId: userId,
-              updatedByUserId: userId,
+              approvalType: "SYSTEM",
             })
             .returning();
 
@@ -609,18 +610,18 @@ export async function calculateTotalPayableForFeeStudentMapping(
       return sum + (component.amount || 0);
     }, 0);
 
-    const [feeStudentMapping] = await db
-      .select()
-      .from(feeStudentMappingModel)
-      .where(
-        and(
-          eq(
-            feeStudentMappingModel.feeGroupPromotionMappingId,
-            feeGroupPromotionMapping.id,
-          ),
-          eq(feeStudentMappingModel.feeStructureId, feeStructureId),
-        ),
-      );
+    // const [feeStudentMapping] = await db
+    //   .select()
+    //   .from(feeStudentMappingModel)
+    //   .where(
+    //     and(
+    //       eq(
+    //         feeStudentMappingModel.feeGroupPromotionMappingId,
+    //         feeGroupPromotionMapping.id,
+    //       ),
+    //       eq(feeStudentMappingModel.feeStructureId, feeStructureId),
+    //     ),
+    //   );
 
     // Return base total (sum of components) without applying any student-specific
     // waived off amounts. Waiver adjustments are handled at the mapping/update
@@ -711,6 +712,15 @@ async function modelToDto(
       advanceForClassId,
       ...rest
     } = model;
+    console.log(
+      receiptTypeId,
+      academicYearId,
+      programCourseId,
+      classId,
+      shiftId,
+      advanceForProgramCourseId,
+      advanceForClassId,
+    );
 
     return {
       ...rest,
@@ -888,7 +898,6 @@ export const getAllFeeStructures = async (
   const [
     receiptTypes,
     academicYears,
-    programCoursesRaw,
     classes,
     shifts,
     components,
@@ -906,12 +915,7 @@ export const getAllFeeStructures = async (
           .from(academicYearModel)
           .where(inArray(academicYearModel.id, academicYearIds))
       : [],
-    programCourseIds.length > 0
-      ? db
-          .select()
-          .from(programCourseModel)
-          .where(inArray(programCourseModel.id, programCourseIds))
-      : [],
+
     classIds.length > 0
       ? db.select().from(classModel).where(inArray(classModel.id, classIds))
       : [],
@@ -2428,3 +2432,60 @@ export const checkUniqueFeeStructureAmounts = async (
     },
   };
 };
+
+export async function downloadFeeStructures(academicYearId: number) {
+  const advanceClass = aliasedTable(classModel, "advance_class");
+
+  await db
+    .select({
+      id: feeStructureModel.id,
+      affiliation: affiliationModel.name,
+      regulation: regulationTypeModel.name,
+      academicYear: academicYearModel.year,
+      programCourse: programCourseModel.name,
+      receipt: receiptTypeModel.name,
+      closingDate: feeStructureModel.closingDate,
+      semester: classModel.name,
+      shift: shiftModel.name,
+
+      advanceForSemester: advanceClass.name,
+      startDate: feeStructureModel.startDate,
+      endDate: feeStructureModel.endDate,
+      onlineStartDate: feeStructureModel.onlineStartDate,
+      onlineEndDate: feeStructureModel.onlineEndDate,
+      numberOfInstallments: feeStructureModel.numberOfInstallments,
+      isPublished: feeStructureModel.isPublished,
+    })
+    .from(feeStructureModel)
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, feeStructureModel.academicYearId),
+    )
+    .leftJoin(
+      receiptTypeModel,
+      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, feeStructureModel.programCourseId),
+    )
+    .leftJoin(
+      affiliationModel,
+      eq(affiliationModel.id, programCourseModel.affiliationId),
+    )
+    .leftJoin(
+      regulationTypeModel,
+      eq(regulationTypeModel.id, programCourseModel.regulationTypeId),
+    )
+    .leftJoin(classModel, eq(classModel.id, feeStructureModel.classId))
+    .leftJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
+    .leftJoin(
+      advanceClass,
+      eq(advanceClass.id, feeStructureModel.advanceForClassId),
+    )
+    .leftJoin(
+      feeStructureComponentModel,
+      eq(feeStructureComponentModel.feeStructureId, feeStructureModel.id),
+    )
+    .where(eq(academicYearModel.id, academicYearId));
+}

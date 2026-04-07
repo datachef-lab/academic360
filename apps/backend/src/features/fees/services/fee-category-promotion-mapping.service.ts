@@ -266,8 +266,6 @@ export const createFeeCategoryPromotionMapping = async (
     .insert(feeGroupPromotionMappingModel)
     .values({
       ...data,
-      createdByUserId: userId,
-      updatedByUserId: userId,
     })
     .returning();
 
@@ -349,7 +347,6 @@ export const updateFeeCategoryPromotionMapping = async (
     .set({
       ...data,
       updatedAt: new Date(),
-      updatedByUserId: userId,
     })
     .where(eq(feeGroupPromotionMappingModel.id, id))
     .returning();
@@ -753,8 +750,6 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
             .values({
               feeGroupId,
               promotionId: promotion.id,
-              createdByUserId: userId,
-              updatedByUserId: userId,
             })
             .returning();
 

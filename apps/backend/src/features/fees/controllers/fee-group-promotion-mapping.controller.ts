@@ -39,8 +39,6 @@ export async function createFeeGroupPromotionMappingHandler(
       id: true,
       createdAt: true,
       updatedAt: true,
-      createdByUserId: true,
-      updatedByUserId: true,
     });
     const parsed = schemaWithoutAutoFields.parse(req.body);
     const created = await createFeeGroupPromotionMapping(parsed, userId);
