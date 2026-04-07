@@ -418,14 +418,16 @@ export default function FeePaymentMarkingPage() {
               <div className="flex items-center gap-2">
                 <Badge
                   className={
-                    paymentStatus === "COMPLETED"
+                    paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED"
                       ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                       : paymentStatus === "FAILED"
                         ? "bg-red-100 text-red-800 border-red-200"
                         : "bg-amber-100 text-amber-900 border-amber-200"
                   }
                 >
-                  {paymentStatus}
+                  {paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED"
+                    ? "PAID"
+                    : paymentStatus}
                 </Badge>
                 <Button
                   type="button"
@@ -697,15 +699,11 @@ export default function FeePaymentMarkingPage() {
             <DialogDescription asChild>
               <div className="space-y-2 text-sm text-muted-foreground pt-1">
                 <p>
-                  The payment date you selected (
+                  You have selected a future payment date (
                   <span className="font-medium text-foreground">
                     {formatYyyyMmDdAsDdMmYyyy(paymentDate)}
                   </span>
-                  ) is <span className="font-semibold text-foreground">after today</span> (
-                  {formatYyyyMmDdAsDdMmYyyy(localDateString(new Date()))}).
-                </p>
-                <p>
-                  Continue only if this is intentional (for example, a post-dated or planned entry).
+                  ). Do you want to proceed?.
                 </p>
               </div>
             </DialogDescription>

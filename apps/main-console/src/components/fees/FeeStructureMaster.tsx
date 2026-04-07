@@ -1539,7 +1539,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                           : "bg-green-700 hover:bg-green-800 text-white"
                       }`}
                     >
-                      {activeSection === "components" ? "Save" : "Show Components"}
+                      {activeSection === "components"
+                        ? "Next: concession slabs →"
+                        : "← Back to components"}
                     </Button>
                   </div>
                 </div>
@@ -1654,10 +1656,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 )}
               </div>
 
-              {/* Concession Slabs Section */}
-              <div
-                className={`flex flex-col space-y-3 min-h-0 ${feeStructureRow.feeComponents.length === 0 ? "opacity-50 pointer-events-none" : ""}`}
-              >
+              {/* Concession Slabs Section — do not use pointer-events-none on this outer block
+                  or the step header stays unclickable; only dim the table body when no components */}
+              <div className="flex flex-col space-y-3 min-h-0">
                 <div
                   className={`flex items-center justify-between flex-shrink-0 px-4 py-3 rounded-md transition-colors ${
                     activeSection === "slabs"
@@ -1665,7 +1666,15 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                       : "bg-gray-200 text-gray-700"
                   }`}
                 >
-                  <h3 className="text-lg font-semibold">Step 2 : Concession Slabs</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold">Step 2 : Concession Slabs</h3>
+                    {activeSection === "slabs" && feeStructureRow.feeComponents.length > 0 && (
+                      <p className="text-xs font-normal text-gray-600 mt-1 max-w-xl">
+                        Enter <strong>₹ amounts</strong> per fee head for each slab. Use Step 1 only
+                        to add or remove fee heads; amounts are edited here.
+                      </p>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     {activeSection === "slabs" &&
                       feeStructureRow.feeComponents.length > 0 &&
@@ -1707,12 +1716,16 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                           : "bg-green-700 hover:bg-green-800 text-white"
                       }`}
                     >
-                      {activeSection === "slabs" ? "Save" : "Show Slabs"}
+                      {activeSection === "slabs"
+                        ? "← Back to components"
+                        : "Show concession slabs →"}
                     </Button>
                   </div>
                 </div>
                 {activeSection === "slabs" && (
-                  <div className="flex-1 overflow-hidden border-2 border-gray-400 rounded flex flex-col min-h-0">
+                  <div
+                    className={`flex-1 overflow-hidden border-2 border-gray-400 rounded flex flex-col min-h-0 ${feeStructureRow.feeComponents.length === 0 ? "opacity-50 pointer-events-none" : ""}`}
+                  >
                     <div className="flex-1 overflow-x-auto overflow-y-auto">
                       <Table className="w-full">
                         <TableHeader>
@@ -1940,7 +1953,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                                 ),
                                               }));
                                             }}
-                                            className="w-full h-8 text-sm text-center"
+                                            className="w-full h-8 text-sm text-center bg-white text-gray-900 border border-input shadow-sm disabled:opacity-60"
                                             min="0"
                                             step="0.01"
                                           />

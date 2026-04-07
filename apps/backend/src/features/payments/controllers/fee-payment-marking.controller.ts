@@ -90,6 +90,7 @@ export const loadOnlineOrderHandler = async (
 ) => {
   try {
     const orderId = String(req.query.orderId ?? "");
+    console.log("Loading fee payment marking for orderId:", orderId);
     const parsed = z
       .object({ orderId: z.string().min(1) })
       .safeParse({ orderId });

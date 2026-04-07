@@ -1,5 +1,5 @@
 {
-  "id": "61c32c53-c68e-46c9-ab44-a85b9eeee6a8",
+  "id": "9261ff0e-dc53-4c61-9a9f-fc7b359e4c0b",
   "prevId": "6e76d5ea-25bd-4801-be39-6e5912afcf13",
   "version": "7",
   "dialect": "postgresql",
@@ -768,6 +768,13 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "track": {
+          "name": "track",
+          "type": "class_track_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
         },
         "sequence": {
           "name": "sequence",
@@ -5509,6 +5516,467 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.promotion_builder_clause_class_mapping": {
+      "name": "promotion_builder_clause_class_mapping",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "promotion_builder_clause_id_fk": {
+          "name": "promotion_builder_clause_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "promotion_clause_class_id_fk": {
+          "name": "promotion_clause_class_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "promotion_builder_clause_class_mapping_promotion_builder_clause_id_fk_promotion_builder_clause_mapping_id_fk": {
+          "name": "promotion_builder_clause_class_mapping_promotion_builder_clause_id_fk_promotion_builder_clause_mapping_id_fk",
+          "tableFrom": "promotion_builder_clause_class_mapping",
+          "tableTo": "promotion_builder_clause_mapping",
+          "columnsFrom": [
+            "promotion_builder_clause_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "promotion_builder_clause_class_mapping_promotion_clause_class_id_fk_promotion_clause_class_mapping_id_fk": {
+          "name": "promotion_builder_clause_class_mapping_promotion_clause_class_id_fk_promotion_clause_class_mapping_id_fk",
+          "tableFrom": "promotion_builder_clause_class_mapping",
+          "tableTo": "promotion_clause_class_mapping",
+          "columnsFrom": [
+            "promotion_clause_class_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_promotion_builder_clause_class": {
+          "name": "uq_promotion_builder_clause_class",
+          "nullsNotDistinct": false,
+          "columns": [
+            "promotion_builder_clause_id_fk",
+            "promotion_clause_class_id_fk"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.promotion_builder_clause_mapping": {
+      "name": "promotion_builder_clause_mapping",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "promotion_builder_id_fk": {
+          "name": "promotion_builder_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "promotion_clause_id_fk": {
+          "name": "promotion_clause_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operator": {
+          "name": "operator",
+          "type": "promotion_builder_operator",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'EQUALS'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "promotion_builder_clause_mapping_promotion_builder_id_fk_promotion_builder_id_fk": {
+          "name": "promotion_builder_clause_mapping_promotion_builder_id_fk_promotion_builder_id_fk",
+          "tableFrom": "promotion_builder_clause_mapping",
+          "tableTo": "promotion_builder",
+          "columnsFrom": [
+            "promotion_builder_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "promotion_builder_clause_mapping_promotion_clause_id_fk_promotion_clause_id_fk": {
+          "name": "promotion_builder_clause_mapping_promotion_clause_id_fk_promotion_clause_id_fk",
+          "tableFrom": "promotion_builder_clause_mapping",
+          "tableTo": "promotion_clause",
+          "columnsFrom": [
+            "promotion_clause_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_promotion_builder_clause": {
+          "name": "uq_promotion_builder_clause",
+          "nullsNotDistinct": false,
+          "columns": [
+            "promotion_builder_id_fk",
+            "promotion_clause_id_fk"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.promotion_builder": {
+      "name": "promotion_builder",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "affiliation_id_fk": {
+          "name": "affiliation_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "logic": {
+          "name": "logic",
+          "type": "promotion_builder_logic_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'AUTO_PROMOTE'"
+        },
+        "target_class_id_fk": {
+          "name": "target_class_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "promotion_builder_affiliation_id_fk_affiliations_id_fk": {
+          "name": "promotion_builder_affiliation_id_fk_affiliations_id_fk",
+          "tableFrom": "promotion_builder",
+          "tableTo": "affiliations",
+          "columnsFrom": [
+            "affiliation_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "promotion_builder_target_class_id_fk_classes_id_fk": {
+          "name": "promotion_builder_target_class_id_fk_classes_id_fk",
+          "tableFrom": "promotion_builder",
+          "tableTo": "classes",
+          "columnsFrom": [
+            "target_class_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.promotion_clause_class_mapping": {
+      "name": "promotion_clause_class_mapping",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "promotion_clause_id_fk": {
+          "name": "promotion_clause_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "class_id_fk": {
+          "name": "class_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "promotion_clause_class_mapping_promotion_clause_id_fk_promotion_clause_id_fk": {
+          "name": "promotion_clause_class_mapping_promotion_clause_id_fk_promotion_clause_id_fk",
+          "tableFrom": "promotion_clause_class_mapping",
+          "tableTo": "promotion_clause",
+          "columnsFrom": [
+            "promotion_clause_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "promotion_clause_class_mapping_class_id_fk_classes_id_fk": {
+          "name": "promotion_clause_class_mapping_class_id_fk_classes_id_fk",
+          "tableFrom": "promotion_clause_class_mapping",
+          "tableTo": "classes",
+          "columnsFrom": [
+            "class_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_promotion_clause_class": {
+          "name": "uq_promotion_clause_class",
+          "nullsNotDistinct": false,
+          "columns": [
+            "promotion_clause_id_fk",
+            "class_id_fk"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.promotion_clause": {
+      "name": "promotion_clause",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "color": {
+          "name": "color",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bg_color": {
+          "name": "bg_color",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.promotion_status": {
+      "name": "promotion_status",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_promotion_status_id": {
+          "name": "legacy_promotion_status_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "promotion_status_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.promotions": {
       "name": "promotions",
       "schema": "",
@@ -5769,65 +6237,6 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.promotion_status": {
-      "name": "promotion_status",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "legacy_promotion_status_id": {
-          "name": "legacy_promotion_status_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "promotion_status_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -19877,6 +20286,14 @@
         "DATE"
       ]
     },
+    "public.class_track_type": {
+      "name": "class_track_type",
+      "schema": "public",
+      "values": [
+        "ODD",
+        "EVEN"
+      ]
+    },
     "public.class_type": {
       "name": "class_type",
       "schema": "public",
@@ -20207,6 +20624,22 @@
       "values": [
         "HONOURS",
         "GENERAL"
+      ]
+    },
+    "public.promotion_builder_logic_type": {
+      "name": "promotion_builder_logic_type",
+      "schema": "public",
+      "values": [
+        "AUTO_PROMOTE",
+        "CONDITIONAL"
+      ]
+    },
+    "public.promotion_builder_operator": {
+      "name": "promotion_builder_operator",
+      "schema": "public",
+      "values": [
+        "EQUALS",
+        "NONE_IN"
       ]
     },
     "public.promotion_status_type": {

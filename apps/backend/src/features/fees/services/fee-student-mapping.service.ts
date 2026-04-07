@@ -275,7 +275,7 @@ async function modelToDto(
     payment?.status === "FAILED"
       ? "FAILED"
       : totalPayable > 0 && amountPaid >= totalPayable
-        ? "COMPLETED"
+        ? "SUCCESS"
         : "PENDING";
 
   const transactionDate: FeeStudentMappingDto["transactionDate"] =

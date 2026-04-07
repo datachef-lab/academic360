@@ -82,6 +82,9 @@ import BoardSubjectPage from "./features/academic-year-setup/pages/board-subject
 import ProtectedRouteWrapper from "./components/globals/ProtectedRouteWrapper";
 import CuRegStudentPage from "./features/cu-registration/pages/CuRegStudentPage";
 import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/pages/board-subject-univ-subject-mapping-paper";
+import StudentPromotionLogicMaster from "./features/academic-year-setup/layouts/student-promotion-logic-master";
+import PromotionBuilderPage from "./features/academic-year-setup/pages/promotion-builder-page";
+import PromotionClausesPage from "./features/academic-year-setup/pages/promotion-clauses-page";
 import * as examManagementModule from "@/features/exam-management";
 import RealTimeTrackerPage from "./features/realtime-tracker/pages";
 import ReportsPage from "./features/reports/page";
@@ -178,6 +181,15 @@ const router = createBrowserRouter(
                 { path: "restricted-groupings", element: <RestrictedGroupingPage /> },
                 { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
                 { path: "semester-availability", element: <SemesterAvailabilityPage /> },
+              ],
+            },
+            {
+              path: "student-promotion-logic",
+              element: <StudentPromotionLogicMaster />,
+              children: [
+                { path: "", element: <PromotionBuilderPage /> },
+                { path: "classes", element: <courseSubjectModule.ClassesPage /> },
+                { path: "promotion-clauses", element: <PromotionClausesPage /> },
               ],
             },
           ],

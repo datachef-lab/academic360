@@ -239,6 +239,7 @@ export type FeeGroupTotalForPromotion = {
  */
 export const getFeeGroupTotalsForPromotion = async (
   promotionId: number,
+  options?: { feeCategoryId?: number },
 ): Promise<FeeGroupTotalForPromotion[]> => {
   const [promotionRow] = await db
     .select({
@@ -278,15 +279,20 @@ export const getFeeGroupTotalsForPromotion = async (
     .map((s) => s.id)
     .filter((id): id is number => typeof id === "number");
 
-  const feeGroups = await db
+  const feeGroupsQuery = db
     .select({ id: feeGroupModel.id, feeSlabId: feeGroupModel.feeSlabId })
     .from(feeGroupModel);
 
+  const feeGroups =
+    typeof options?.feeCategoryId === "number" &&
+    Number.isFinite(options.feeCategoryId)
+      ? await feeGroupsQuery.where(
+          eq(feeGroupModel.feeCategoryId, options.feeCategoryId),
+        )
+      : await feeGroupsQuery;
+
   if (feeStructureIds.length === 0) {
-    return feeGroups.map((g) => ({
-      feeGroupId: g.id!,
-      totalPayable: 0,
-    }));
+    return [];
   }
 
   const slabTotals = await db
@@ -304,8 +310,16 @@ export const getFeeGroupTotalsForPromotion = async (
       .map((r) => [r.feeSlabId as number, Number(r.total || 0)]),
   );
 
+  /** Only slabs that appear in this promotion's fee-structure components (excludes global slabs like M/S if unused). */
+  const relevantSlabIds = new Set(slabTotalMap.keys());
+
   return feeGroups
-    .filter((g) => typeof g.id === "number" && typeof g.feeSlabId === "number")
+    .filter(
+      (g) =>
+        typeof g.id === "number" &&
+        typeof g.feeSlabId === "number" &&
+        relevantSlabIds.has(g.feeSlabId as number),
+    )
     .map((g) => ({
       feeGroupId: g.id as number,
       totalPayable: Math.round(slabTotalMap.get(g.feeSlabId as number) ?? 0),

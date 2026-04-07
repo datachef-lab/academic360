@@ -410,3 +410,18 @@ export const certificateFieldMasterTypeEnum = pgEnum("certificate_field_master_t
     "NUMBER",
     "DATE",
 ]);
+
+export const promotionBuilderLogicTypeEnum = pgEnum("promotion_builder_logic_type", [
+    "AUTO_PROMOTE",
+    "CONDITIONAL",
+]);
+
+export const promotionBuilderOperatorEnum = pgEnum("promotion_builder_operator", [
+    "EQUALS",
+    "NONE_IN",
+]);
+
+export const classTrackTypeEnum = pgEnum("class_track_type", [
+    "ODD",
+    "EVEN",
+]);

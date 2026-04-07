@@ -106,7 +106,18 @@ export async function getFeeGroupTotalsForPromotionHandler(
         );
     }
 
-    const rows = await getFeeGroupTotalsForPromotion(promotionId);
+    const feeCategoryRaw = req.query.feeCategoryId;
+    const feeCategoryIdParsed =
+      feeCategoryRaw !== undefined && feeCategoryRaw !== ""
+        ? parseInt(String(feeCategoryRaw), 10)
+        : NaN;
+    const feeCategoryId = Number.isFinite(feeCategoryIdParsed)
+      ? feeCategoryIdParsed
+      : undefined;
+
+    const rows = await getFeeGroupTotalsForPromotion(promotionId, {
+      feeCategoryId,
+    });
     return res
       .status(200)
       .json(
