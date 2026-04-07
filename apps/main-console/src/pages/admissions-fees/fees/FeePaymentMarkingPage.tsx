@@ -574,7 +574,7 @@ export default function FeePaymentMarkingPage() {
                             "Unknown user"}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {isMarkingFormLocked ? recordedAtText : "After you confirm"}
+                          {isMarkingFormLocked ? "" : "After you confirm"}
                         </div>
                       </div>
                     </div>
