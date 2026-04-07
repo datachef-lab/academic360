@@ -13,6 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  orderTableFieldsTypeFirst,
+  sortCpCertificateMasters,
+  usesInternshipWorkRowLayout,
+} from "@/lib/career-progression-form-utils";
 import { axiosInstance } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
@@ -116,21 +121,6 @@ const statusBadgeClass = (isPaid: boolean) =>
   isPaid
     ? "bg-green-100 text-green-800 border border-green-200"
     : "bg-yellow-100 text-yellow-800 border border-yellow-200";
-
-const sectionPriority = (name: string): number => {
-  const normalized = name.toLowerCase();
-  if (normalized.includes("work experience") || normalized.includes("internship")) return 0;
-  if (normalized.includes("skills") || normalized.includes("certification")) return 1;
-  if (normalized.includes("competitive exam") || normalized.includes("professional")) return 2;
-  return 10;
-};
-
-const sortCpCertificateMasters = (masters: CertificateMaster[]) =>
-  masters.slice().sort((a, b) => {
-    const priorityDiff = sectionPriority(a.name) - sectionPriority(b.name);
-    if (priorityDiff !== 0) return priorityDiff;
-    return (a.sequence ?? 0) - (b.sequence ?? 0);
-  });
 
 const buildEmptyRowDraft = (master: CertificateMaster): RowDraft => {
   const tableFields = master.fields
@@ -1187,244 +1177,239 @@ export default function EnrollmentFeesPage() {
                       </p>
                     </div>
 
-                    {cpData.certificateMasters
-                      .slice()
-                      .sort((a, b) => {
-                        const priorityDiff = sectionPriority(a.name) - sectionPriority(b.name);
-                        if (priorityDiff !== 0) return priorityDiff;
-                        return (a.sequence ?? 0) - (b.sequence ?? 0);
-                      })
-                      .map((cm, idx) => {
-                        const masterId = Number(cm.id);
-                        const masterKey = getMasterKey(cm, idx);
-                        const sortedFields = cm.fields
-                          .slice()
-                          .sort((a, b) => a.sequence - b.sequence);
-                        const questionFields = sortedFields.filter((f) => f.isQuestion);
-                        const tableFields = sortedFields.filter((f) => !f.isQuestion);
-                        const rows = rowsByMaster[masterKey] || [];
-                        const isWorkExperienceSection = sectionPriority(cm.name) === 0;
-                        return (
-                          <div
-                            key={`${cm.name}-${idx}`}
-                            className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm"
-                          >
-                            <div className="flex items-start justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-slate-100 via-white to-slate-100 px-5 py-4">
-                              <div>
-                                <p className="text-lg font-semibold tracking-tight text-slate-900">
-                                  {String.fromCharCode(65 + idx)}. {cm.name}
-                                </p>
-                                <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
-                                  {cm.description}
-                                </p>
+                    {sortCpCertificateMasters(cpData.certificateMasters).map((cm, idx) => {
+                      const masterId = Number(cm.id);
+                      const masterKey = getMasterKey(cm, idx);
+                      const sortedFields = cm.fields
+                        .slice()
+                        .sort((a, b) => a.sequence - b.sequence);
+                      const questionFields = sortedFields.filter((f) => f.isQuestion);
+                      const tableFields = orderTableFieldsTypeFirst(
+                        sortedFields.filter((f) => !f.isQuestion),
+                      );
+                      const rows = rowsByMaster[masterKey] || [];
+                      const isInternshipWorkLayout = usesInternshipWorkRowLayout(cm.name);
+                      return (
+                        <div
+                          key={`${cm.name}-${idx}`}
+                          className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-slate-100 via-white to-slate-100 px-5 py-4">
+                            <div>
+                              <p className="text-lg font-semibold tracking-tight text-slate-900">
+                                {String.fromCharCode(65 + idx)}. {cm.name}
+                              </p>
+                              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                                {cm.description}
+                              </p>
+                            </div>
+                            {!isInternshipWorkLayout ? (
+                              <Button
+                                size="sm"
+                                className="shrink-0 bg-violet-600 text-sm text-white hover:bg-violet-700"
+                                onClick={() => appendEmptyRow(cm, idx)}
+                              >
+                                <Plus className="mr-1 h-4 w-4" /> Add Row
+                              </Button>
+                            ) : null}
+                          </div>
+
+                          <div className="bg-white px-5 pb-5 pt-4">
+                            {questionFields.length > 0 ? (
+                              <div className="mb-5 space-y-4 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
+                                {questionFields.map((qf) => {
+                                  const qfId = Number(qf.id);
+                                  return (
+                                    <div
+                                      key={`${masterId}-${qfId}`}
+                                      className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                                    >
+                                      <label className="text-base font-semibold leading-snug text-slate-800">
+                                        {qf.name}
+                                        {qf.isRequired || qf.isQuestion ? (
+                                          <span className="ml-1 text-red-600">*</span>
+                                        ) : null}
+                                      </label>
+                                      {qf.type === "SELECT" ? (
+                                        <Select
+                                          value={questionByField[qfId] || ""}
+                                          onValueChange={(value) =>
+                                            setQuestionByField((prev) => ({
+                                              ...prev,
+                                              [qfId]: value,
+                                            }))
+                                          }
+                                        >
+                                          <SelectTrigger className="h-11 w-full max-w-[260px] bg-white text-base md:justify-self-end">
+                                            <SelectValue placeholder="Select option" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {qf.options.map((opt) => (
+                                              <SelectItem
+                                                key={`${qfId}-${opt.id}-${opt.name}`}
+                                                value={opt.name}
+                                              >
+                                                {opt.name}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      ) : (
+                                        <input
+                                          className="h-11 w-full max-w-md rounded-md border border-slate-200 bg-white px-3 text-base outline-none"
+                                          value={questionByField[qfId] || ""}
+                                          onChange={(e) =>
+                                            setQuestionByField((prev) => ({
+                                              ...prev,
+                                              [qfId]: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
-                              {!isWorkExperienceSection ? (
+                            ) : null}
+
+                            {isInternshipWorkLayout ? (
+                              <div className="mb-4 flex justify-end">
                                 <Button
                                   size="sm"
-                                  className="shrink-0 bg-violet-600 text-sm text-white hover:bg-violet-700"
+                                  className="bg-violet-600 text-sm text-white hover:bg-violet-700"
                                   onClick={() => appendEmptyRow(cm, idx)}
                                 >
                                   <Plus className="mr-1 h-4 w-4" /> Add Row
                                 </Button>
-                              ) : null}
-                            </div>
+                              </div>
+                            ) : null}
 
-                            <div className="bg-white px-5 pb-5 pt-4">
-                              {questionFields.length > 0 ? (
-                                <div className="mb-5 space-y-4 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
-                                  {questionFields.map((qf) => {
-                                    const qfId = Number(qf.id);
-                                    return (
-                                      <div
-                                        key={`${masterId}-${qfId}`}
-                                        className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                              <table className="w-full min-w-[680px] table-fixed border-collapse text-sm">
+                                <thead className="bg-slate-100/90 text-slate-800">
+                                  <tr>
+                                    {tableFields.map((f) => (
+                                      <th
+                                        key={`${masterId}-${f.id}`}
+                                        className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
                                       >
-                                        <label className="text-base font-semibold leading-snug text-slate-800">
-                                          {qf.name}
-                                          {qf.isRequired || qf.isQuestion ? (
-                                            <span className="ml-1 text-red-600">*</span>
-                                          ) : null}
-                                        </label>
-                                        {qf.type === "SELECT" ? (
-                                          <Select
-                                            value={questionByField[qfId] || ""}
-                                            onValueChange={(value) =>
-                                              setQuestionByField((prev) => ({
-                                                ...prev,
-                                                [qfId]: value,
-                                              }))
-                                            }
-                                          >
-                                            <SelectTrigger className="h-11 w-full max-w-[260px] bg-white text-base md:justify-self-end">
-                                              <SelectValue placeholder="Select option" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {qf.options.map((opt) => (
-                                                <SelectItem
-                                                  key={`${qfId}-${opt.id}-${opt.name}`}
-                                                  value={opt.name}
-                                                >
-                                                  {opt.name}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        ) : (
-                                          <input
-                                            className="h-11 w-full max-w-md rounded-md border border-slate-200 bg-white px-3 text-base outline-none"
-                                            value={questionByField[qfId] || ""}
-                                            onChange={(e) =>
-                                              setQuestionByField((prev) => ({
-                                                ...prev,
-                                                [qfId]: e.target.value,
-                                              }))
-                                            }
-                                          />
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              ) : null}
-
-                              {isWorkExperienceSection ? (
-                                <div className="mb-4 flex justify-end">
-                                  <Button
-                                    size="sm"
-                                    className="bg-violet-600 text-sm text-white hover:bg-violet-700"
-                                    onClick={() => appendEmptyRow(cm, idx)}
-                                  >
-                                    <Plus className="mr-1 h-4 w-4" /> Add Row
-                                  </Button>
-                                </div>
-                              ) : null}
-
-                              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                                <table className="w-full min-w-[680px] table-fixed border-collapse text-sm">
-                                  <thead className="bg-slate-100/90 text-slate-800">
-                                    <tr>
-                                      {tableFields.map((f) => (
-                                        <th
-                                          key={`${masterId}-${f.id}`}
-                                          className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
-                                        >
-                                          {f.name.toUpperCase()}
-                                          {f.isRequired ? (
-                                            <span className="ml-1 text-red-600">*</span>
-                                          ) : null}
-                                        </th>
-                                      ))}
-                                      <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">
-                                        ACTION
+                                        {f.name.toUpperCase()}
+                                        {f.isRequired ? (
+                                          <span className="ml-1 text-red-600">*</span>
+                                        ) : null}
                                       </th>
+                                    ))}
+                                    <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">
+                                      ACTION
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {rows.length === 0 ? (
+                                    <tr>
+                                      <td
+                                        className="border border-slate-200 px-3 py-6 text-center text-sm text-slate-500"
+                                        colSpan={tableFields.length + 1}
+                                      >
+                                        No rows yet. Use “Add Row” to add one.
+                                      </td>
                                     </tr>
-                                  </thead>
-                                  <tbody>
-                                    {rows.length === 0 ? (
-                                      <tr>
-                                        <td
-                                          className="border border-slate-200 px-3 py-6 text-center text-sm text-slate-500"
-                                          colSpan={tableFields.length + 1}
-                                        >
-                                          No rows yet. Use “Add Row” to add one.
+                                  ) : (
+                                    rows.map((row, rowIdx) => (
+                                      <tr key={`${masterId}-row-${rowIdx}`}>
+                                        {tableFields.map((f) => {
+                                          const fieldId = Number(f.id);
+                                          const cellValue =
+                                            row.fields.find(
+                                              (rf) => rf.certificateFieldMasterId === fieldId,
+                                            )?.value ?? "";
+                                          return (
+                                            <td
+                                              key={`${masterId}-${rowIdx}-${fieldId}`}
+                                              className="border border-slate-200 p-2 align-top whitespace-normal break-words"
+                                            >
+                                              {f.type === "SELECT" ? (
+                                                <Select
+                                                  value={cellValue}
+                                                  onValueChange={(nextValue) =>
+                                                    updateRowCell(
+                                                      cm,
+                                                      masterKey,
+                                                      rowIdx,
+                                                      fieldId,
+                                                      nextValue,
+                                                    )
+                                                  }
+                                                >
+                                                  <SelectTrigger className="h-10 w-full text-sm">
+                                                    <SelectValue placeholder="Select" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {f.options.map((opt) => (
+                                                      <SelectItem
+                                                        key={`${fieldId}-${opt.id}`}
+                                                        value={opt.name}
+                                                      >
+                                                        {opt.name}
+                                                      </SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
+                                              ) : (
+                                                <input
+                                                  type="text"
+                                                  inputMode={
+                                                    f.type === "NUMBER" ? "numeric" : undefined
+                                                  }
+                                                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
+                                                  value={cellValue}
+                                                  onChange={(e) =>
+                                                    updateRowCell(
+                                                      cm,
+                                                      masterKey,
+                                                      rowIdx,
+                                                      fieldId,
+                                                      f.type === "NUMBER"
+                                                        ? e.target.value.replace(/[^\d]/g, "")
+                                                        : e.target.value,
+                                                    )
+                                                  }
+                                                />
+                                              )}
+                                            </td>
+                                          );
+                                        })}
+                                        <td className="border border-slate-200 p-2 align-top whitespace-normal break-words">
+                                          {rows.length > 1 ? (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-9 w-9 border-slate-300 p-0 text-rose-700 hover:bg-rose-50"
+                                              onClick={() =>
+                                                setRowsByMaster((prev) => ({
+                                                  ...prev,
+                                                  [masterKey]: (prev[masterKey] || []).filter(
+                                                    (_, i) => i !== rowIdx,
+                                                  ),
+                                                }))
+                                              }
+                                              title="Delete row"
+                                              aria-label="Delete row"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                          ) : null}
                                         </td>
                                       </tr>
-                                    ) : (
-                                      rows.map((row, rowIdx) => (
-                                        <tr key={`${masterId}-row-${rowIdx}`}>
-                                          {tableFields.map((f) => {
-                                            const fieldId = Number(f.id);
-                                            const cellValue =
-                                              row.fields.find(
-                                                (rf) => rf.certificateFieldMasterId === fieldId,
-                                              )?.value ?? "";
-                                            return (
-                                              <td
-                                                key={`${masterId}-${rowIdx}-${fieldId}`}
-                                                className="border border-slate-200 p-2 align-top whitespace-normal break-words"
-                                              >
-                                                {f.type === "SELECT" ? (
-                                                  <Select
-                                                    value={cellValue}
-                                                    onValueChange={(nextValue) =>
-                                                      updateRowCell(
-                                                        cm,
-                                                        masterKey,
-                                                        rowIdx,
-                                                        fieldId,
-                                                        nextValue,
-                                                      )
-                                                    }
-                                                  >
-                                                    <SelectTrigger className="h-10 w-full text-sm">
-                                                      <SelectValue placeholder="Select" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                      {f.options.map((opt) => (
-                                                        <SelectItem
-                                                          key={`${fieldId}-${opt.id}`}
-                                                          value={opt.name}
-                                                        >
-                                                          {opt.name}
-                                                        </SelectItem>
-                                                      ))}
-                                                    </SelectContent>
-                                                  </Select>
-                                                ) : (
-                                                  <input
-                                                    type="text"
-                                                    inputMode={
-                                                      f.type === "NUMBER" ? "numeric" : undefined
-                                                    }
-                                                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus-visible:ring-1 focus-visible:ring-slate-400"
-                                                    value={cellValue}
-                                                    onChange={(e) =>
-                                                      updateRowCell(
-                                                        cm,
-                                                        masterKey,
-                                                        rowIdx,
-                                                        fieldId,
-                                                        f.type === "NUMBER"
-                                                          ? e.target.value.replace(/[^\d]/g, "")
-                                                          : e.target.value,
-                                                      )
-                                                    }
-                                                  />
-                                                )}
-                                              </td>
-                                            );
-                                          })}
-                                          <td className="border border-slate-200 p-2 align-top whitespace-normal break-words">
-                                            {rows.length > 1 ? (
-                                              <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-9 w-9 border-slate-300 p-0 text-rose-700 hover:bg-rose-50"
-                                                onClick={() =>
-                                                  setRowsByMaster((prev) => ({
-                                                    ...prev,
-                                                    [masterKey]: (prev[masterKey] || []).filter(
-                                                      (_, i) => i !== rowIdx,
-                                                    ),
-                                                  }))
-                                                }
-                                                title="Delete row"
-                                                aria-label="Delete row"
-                                              >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                              </Button>
-                                            ) : null}
-                                          </td>
-                                        </tr>
-                                      ))
-                                    )}
-                                  </tbody>
-                                </table>
-                              </div>
+                                    ))
+                                  )}
+                                </tbody>
+                              </table>
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-sm text-slate-600">No data.</div>

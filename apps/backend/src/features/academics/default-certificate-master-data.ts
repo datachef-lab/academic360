@@ -10,19 +10,19 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
     fields: [
       {
         certificateMasterId: 0,
-        name: "Name",
-        type: "TEXT",
-        options: [],
-        sequence: 1,
-      },
-      {
-        certificateMasterId: 0,
         name: "Type",
         type: "SELECT",
         options: [
           { certificateFieldMasterId: 0, sequence: 1, name: "Skill Course" },
           { certificateFieldMasterId: 0, sequence: 2, name: "Certification" },
         ],
+        sequence: 1,
+      },
+      {
+        certificateMasterId: 0,
+        name: "Name",
+        type: "TEXT",
+        options: [],
         sequence: 2,
       },
       {
@@ -38,8 +38,8 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
         type: "SELECT",
         options: [
           { certificateFieldMasterId: 0, sequence: 1, name: "Ongoing" },
-          { certificateFieldMasterId: 0, sequence: 1, name: "Completed" },
-          { certificateFieldMasterId: 0, sequence: 1, name: "Dropped Out" },
+          { certificateFieldMasterId: 0, sequence: 2, name: "Completed" },
+          { certificateFieldMasterId: 0, sequence: 3, name: "Dropped Out" },
         ],
         sequence: 4,
       },
@@ -51,7 +51,7 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
         sequence: 5,
       },
     ],
-    sequence: 1,
+    sequence: 3,
   },
   {
     name: "Professional / Competitive Exams",
@@ -60,13 +60,6 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
     color: "#0F766E",
     bgColor: "#CCFBF1",
     fields: [
-      {
-        certificateMasterId: 0,
-        name: "Exam Name",
-        type: "TEXT",
-        options: [],
-        sequence: 1,
-      },
       {
         certificateMasterId: 0,
         name: "Type",
@@ -84,6 +77,13 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
             name: "Competitive Exam",
           },
         ],
+        sequence: 1,
+      },
+      {
+        certificateMasterId: 0,
+        name: "Exam Name",
+        type: "TEXT",
+        options: [],
         sequence: 2,
       },
       {
@@ -101,12 +101,12 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
         sequence: 4,
       },
     ],
-    sequence: 2,
+    sequence: 4,
   },
   {
-    name: "Work Experience / Internships",
+    name: "Internship",
     description:
-      "Prior work, internship, volunteering, or family business experience",
+      "Mandatory internship planning and internship experience (prior or upcoming).",
     color: "#B45309",
     bgColor: "#FEF3C7",
     fields: [
@@ -126,6 +126,65 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
       },
       {
         certificateMasterId: 0,
+        name: "Type",
+        type: "SELECT",
+        options: [
+          { certificateFieldMasterId: 0, sequence: 1, name: "Full-Time" },
+          { certificateFieldMasterId: 0, sequence: 2, name: "Part-Time" },
+          { certificateFieldMasterId: 0, sequence: 3, name: "Internship" },
+          { certificateFieldMasterId: 0, sequence: 4, name: "Valunteering" },
+          { certificateFieldMasterId: 0, sequence: 5, name: "Family Business" },
+          { certificateFieldMasterId: 0, sequence: 6, name: "Other" },
+        ],
+        sequence: 2,
+      },
+      {
+        certificateMasterId: 0,
+        name: "Organisation",
+        type: "TEXT",
+        options: [],
+        sequence: 3,
+      },
+      {
+        certificateMasterId: 0,
+        name: "Role / Designation",
+        type: "TEXT",
+        options: [],
+        sequence: 4,
+      },
+      {
+        certificateMasterId: 0,
+        name: "Duration",
+        type: "TEXT",
+        options: [],
+        sequence: 5,
+      },
+    ],
+    sequence: 1,
+  },
+  {
+    name: "Work Experience",
+    description:
+      "Employment, volunteering, family business, and other experience outside internships.",
+    color: "#B45309",
+    bgColor: "#FEF3C7",
+    fields: [
+      {
+        certificateMasterId: 0,
+        name: "Type",
+        type: "SELECT",
+        options: [
+          { certificateFieldMasterId: 0, sequence: 1, name: "Full-Time" },
+          { certificateFieldMasterId: 0, sequence: 2, name: "Part-Time" },
+          { certificateFieldMasterId: 0, sequence: 3, name: "Internship" },
+          { certificateFieldMasterId: 0, sequence: 4, name: "Valunteering" },
+          { certificateFieldMasterId: 0, sequence: 5, name: "Family Business" },
+          { certificateFieldMasterId: 0, sequence: 6, name: "Other" },
+        ],
+        sequence: 1,
+      },
+      {
+        certificateMasterId: 0,
         name: "Organisation",
         type: "TEXT",
         options: [],
@@ -140,27 +199,13 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
       },
       {
         certificateMasterId: 0,
-        name: "Type",
-        type: "SELECT",
-        options: [
-          { certificateFieldMasterId: 0, sequence: 1, name: "Full-Time" },
-          { certificateFieldMasterId: 0, sequence: 2, name: "Part-Time" },
-          { certificateFieldMasterId: 0, sequence: 3, name: "Internship" },
-          { certificateFieldMasterId: 0, sequence: 4, name: "Valunteering" },
-          { certificateFieldMasterId: 0, sequence: 5, name: "Family Business" },
-          { certificateFieldMasterId: 0, sequence: 5, name: "Other" },
-        ],
-        sequence: 4,
-      },
-      {
-        certificateMasterId: 0,
         name: "Duration",
         type: "TEXT",
         options: [],
-        sequence: 5,
+        sequence: 4,
       },
     ],
-    sequence: 3,
+    sequence: 2,
   },
   {
     name: "Clubs / Committees",
@@ -191,6 +236,6 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
         sequence: 3,
       },
     ],
-    sequence: 4,
+    sequence: 5,
   },
 ];

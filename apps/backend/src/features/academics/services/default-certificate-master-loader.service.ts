@@ -8,7 +8,54 @@ import { and, asc, eq } from "drizzle-orm";
 import type { CertificateMasterDto } from "@repo/db/dtos";
 import { defaultCertificateMasterData } from "@/features/academics/default-certificate-master-data.js";
 
+/** Rename legacy combined master and align field sequences with the Internship template. */
+async function migrateLegacyWorkExperienceInternshipSplit(): Promise<void> {
+  const [legacy] = await db
+    .select()
+    .from(certificateMasterModel)
+    .where(eq(certificateMasterModel.name, "Work Experience / Internships"))
+    .limit(1);
+
+  if (!legacy) return;
+
+  const internTemplate = defaultCertificateMasterData.find(
+    (m) => m.name === "Internship",
+  );
+  if (!internTemplate) return;
+
+  await db
+    .update(certificateMasterModel)
+    .set({
+      name: internTemplate.name,
+      description: internTemplate.description,
+      color: internTemplate.color ?? null,
+      bgColor: internTemplate.bgColor ?? null,
+      sequence: internTemplate.sequence,
+    })
+    .where(eq(certificateMasterModel.id, legacy.id));
+
+  const fieldRows = await db
+    .select()
+    .from(certificateFieldMasterModel)
+    .where(eq(certificateFieldMasterModel.certificateMasterId, legacy.id));
+
+  for (const tf of internTemplate.fields) {
+    const row = fieldRows.find((r) => r.name === tf.name);
+    if (!row) continue;
+    await db
+      .update(certificateFieldMasterModel)
+      .set({
+        sequence: tf.sequence,
+        isQuestion: Boolean(tf.isQuestion),
+        isRequired: Boolean(tf.isRequired),
+      })
+      .where(eq(certificateFieldMasterModel.id, row.id));
+  }
+}
+
 export async function loadDefaultCertificateMasters(): Promise<void> {
+  await migrateLegacyWorkExperienceInternshipSplit();
+
   for (const master of defaultCertificateMasterData) {
     const [existing] = await db
       .select()

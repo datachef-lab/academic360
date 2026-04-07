@@ -14,6 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  orderTableFieldsTypeFirst,
+  sortCpCertificateMasters,
+  usesInternshipWorkRowLayout,
+} from "@/lib/career-progression-form-utils";
 import { axiosInstance } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
 import { Plus, Sparkles, Trash2 } from "lucide-react";
@@ -56,21 +61,6 @@ type CareerProgressionFormPayload = {
     }>;
   }>;
 };
-
-const sectionPriority = (name: string): number => {
-  const normalized = name.toLowerCase();
-  if (normalized.includes("work experience") || normalized.includes("internship")) return 0;
-  if (normalized.includes("skills") || normalized.includes("certification")) return 1;
-  if (normalized.includes("competitive exam") || normalized.includes("professional")) return 2;
-  return 10;
-};
-
-const sortCpCertificateMasters = (masters: CertificateMaster[]) =>
-  masters.slice().sort((a, b) => {
-    const priorityDiff = sectionPriority(a.name) - sectionPriority(b.name);
-    if (priorityDiff !== 0) return priorityDiff;
-    return (a.sequence ?? 0) - (b.sequence ?? 0);
-  });
 
 const buildEmptyRowDraft = (master: CertificateMaster): RowDraft => {
   const tableFields = master.fields
@@ -471,9 +461,9 @@ export default function CareerProgressionPage() {
         const masterKey = getMasterKey(cm, idx);
         const sortedFields = cm.fields.slice().sort((a, b) => a.sequence - b.sequence);
         const questionFields = sortedFields.filter((f) => f.isQuestion);
-        const tableFields = sortedFields.filter((f) => !f.isQuestion);
+        const tableFields = orderTableFieldsTypeFirst(sortedFields.filter((f) => !f.isQuestion));
         const rows = rowsByMaster[masterKey] || [];
-        const isWorkExperienceSection = sectionPriority(cm.name) === 0;
+        const isInternshipWorkLayout = usesInternshipWorkRowLayout(cm.name);
         return (
           <div
             key={`${cm.name}-${idx}`}
@@ -486,7 +476,7 @@ export default function CareerProgressionPage() {
                 </p>
                 <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{cm.description}</p>
               </div>
-              {!isWorkExperienceSection ? (
+              {!isInternshipWorkLayout ? (
                 <Button
                   size="sm"
                   className="shrink-0 bg-violet-600 text-sm text-white hover:bg-violet-700"
@@ -546,7 +536,7 @@ export default function CareerProgressionPage() {
                 </div>
               ) : null}
 
-              {isWorkExperienceSection ? (
+              {isInternshipWorkLayout ? (
                 <div className="mb-4 flex justify-end">
                   <Button
                     size="sm"
