@@ -121,8 +121,8 @@ const formatInr = (n: number) =>
 
 const statusBadgeClass = (isPaid: boolean) =>
   isPaid
-    ? "min-w-[68.72px] text-center bg-green-100 hover:bg-green-100 text-green-800 border border-green-200"
-    : "min-w-[68.72px] text-center bg-yellow-100 hover:bg-yellow-100 text-yellow-800 border border-yellow-200";
+    ? "min-w-[92px] h-9 px-4 text-center rounded-xl bg-green-100 hover:bg-green-100 text-green-800 border border-green-200"
+    : "min-w-[92px] h-9 px-4 text-center rounded-xl bg-yellow-100 hover:bg-yellow-100 text-yellow-800 border border-yellow-200";
 
 const isInternshipOnlySection = (name: string) => {
   const n = name.trim().toLowerCase();
@@ -800,7 +800,7 @@ export default function EnrollmentFeesPage() {
                       <p className="text-sm">Academic Year {fee.academicYear}</p>
                     </div>
                     <Badge
-                      className={`text-[10px] font-semibold text-center block ${statusBadgeClass(fee.isPaid)}`}
+                      className={`text-sm font-semibold text-center block ${statusBadgeClass(fee.isPaid)}`}
                     >
                       {fee.isPaid ? "PAID" : "PENDING"}
                     </Badge>
