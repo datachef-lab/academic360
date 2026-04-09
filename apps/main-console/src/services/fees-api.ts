@@ -204,7 +204,9 @@ export async function updateFeesStructure(
 export async function deleteFeesStructure(feesStructureId: number): Promise<ApiResponse<void>> {
   try {
     const response = await axiosInstance.delete(`${BASE_PATH}/structure/${feesStructureId}`);
-    if (!response.data?.success) {
+    // Accept both legacy `{ success: true }` and ApiResponse-style success payloads.
+    // Only fail when backend explicitly marks it as unsuccessful.
+    if (response.data?.success === false) {
       const error = new Error(response.data?.message || "Failed to delete fee structure");
       (error as any).status = response.data?.statusCode;
       (error as any).code = response.data?.code;
@@ -897,6 +899,9 @@ export interface NewFeeGroupPromotionMapping {
   feeGroupId?: number;
   promotionId: number;
   updatedByUserId?: number;
+  remarks?: string;
+  approvalType?: "SYSTEM" | "MANUAL";
+  approvalUserId?: number;
 }
 
 export interface FeeGroupPromotionFilterRequest {

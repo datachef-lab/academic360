@@ -4,7 +4,7 @@ import {
   certificateFieldOptionMasterModel,
   certificateMasterModel,
 } from "@repo/db/schemas";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { CertificateMasterDto } from "@repo/db/dtos";
 import { defaultCertificateMasterData } from "@/features/academics/default-certificate-master-data.js";
 
@@ -51,6 +51,57 @@ async function migrateLegacyWorkExperienceInternshipSplit(): Promise<void> {
       })
       .where(eq(certificateFieldMasterModel.id, row.id));
   }
+}
+
+const MANDATORY_INTERNSHIP_SEMESTER_QUESTION =
+  "In which semester are you planning to pursue your mandatory internship?";
+
+/** Arabic-numeral labels that duplicate II / IV / VI; keep rows for FK integrity but hide from selects. */
+const LEGACY_ARABIC_INTERNSHIP_SEMESTER_OPTION_NAMES = [
+  "Semester 2",
+  "Semester 4",
+  "Semester 6",
+] as const;
+
+async function deactivateLegacyArabicInternshipSemesterOptions(): Promise<void> {
+  const [internMaster] = await db
+    .select({ id: certificateMasterModel.id })
+    .from(certificateMasterModel)
+    .where(eq(certificateMasterModel.name, "Internship"))
+    .limit(1);
+
+  if (!internMaster) return;
+
+  const [questionField] = await db
+    .select({ id: certificateFieldMasterModel.id })
+    .from(certificateFieldMasterModel)
+    .where(
+      and(
+        eq(certificateFieldMasterModel.certificateMasterId, internMaster.id),
+        eq(
+          certificateFieldMasterModel.name,
+          MANDATORY_INTERNSHIP_SEMESTER_QUESTION,
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (!questionField) return;
+
+  await db
+    .update(certificateFieldOptionMasterModel)
+    .set({ isActive: false, updatedAt: new Date() })
+    .where(
+      and(
+        eq(
+          certificateFieldOptionMasterModel.certificateFieldMasterId,
+          questionField.id,
+        ),
+        inArray(certificateFieldOptionMasterModel.name, [
+          ...LEGACY_ARABIC_INTERNSHIP_SEMESTER_OPTION_NAMES,
+        ]),
+      ),
+    );
 }
 
 export async function loadDefaultCertificateMasters(): Promise<void> {
@@ -137,6 +188,8 @@ export async function loadDefaultCertificateMasters(): Promise<void> {
       }
     }
   }
+
+  await deactivateLegacyArabicInternshipSemesterOptions();
 }
 
 export async function listCertificateMastersWithFields(): Promise<

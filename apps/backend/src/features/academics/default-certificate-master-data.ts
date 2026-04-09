@@ -14,9 +14,9 @@ export const defaultCertificateMasterData: CertificateMasterDto[] = [
         type: "SELECT",
         isQuestion: true,
         options: [
-          { certificateFieldMasterId: 0, sequence: 1, name: "Semester 2" },
-          { certificateFieldMasterId: 0, sequence: 2, name: "Semester 4" },
-          { certificateFieldMasterId: 0, sequence: 3, name: "Semester 6" },
+          { certificateFieldMasterId: 0, sequence: 1, name: "Semester II" },
+          { certificateFieldMasterId: 0, sequence: 2, name: "Semester IV" },
+          { certificateFieldMasterId: 0, sequence: 3, name: "Semester VI" },
           { certificateFieldMasterId: 0, sequence: 4, name: "Not Applicable" },
         ],
         sequence: 1,

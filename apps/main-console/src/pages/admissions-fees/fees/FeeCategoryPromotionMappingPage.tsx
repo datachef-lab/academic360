@@ -133,7 +133,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const { feeGroups } = useFeeGroups();
   const { currentAcademicYear } = useAcademicYear();
 
-  // Only fetch when user has applied at least one filter
+  // Fetch when user has applied filters OR typed search text
   const hasFilters =
     !!filters.academicYear ||
     !!filters.semesterOrClass ||
@@ -143,12 +143,14 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.community ||
     !!filters.category ||
     !!filters.feeCategory;
+  const hasSearch = !!searchText.trim();
+  const shouldFetchMappings = hasFilters || hasSearch;
 
   const {
     data: mappings = [],
     isLoading: loading,
     refetch: refetchMappings,
-  } = useFeeGroupPromotionMappings(10000, hasFilters);
+  } = useFeeGroupPromotionMappings(10000, shouldFetchMappings);
   const createMutation = useCreateFeeGroupPromotionMapping();
   const updateMutation = useUpdateFeeGroupPromotionMapping();
   const deleteMutation = useDeleteFeeGroupPromotionMapping();
@@ -460,6 +462,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         ""
       ).toLowerCase();
       const feeSlabName = (mapping.feeGroup?.feeSlab?.name || "").toLowerCase();
+      const paymentStatus = (mapping.paymentStatus || "").toLowerCase();
       const mappingId = mapping.id?.toString() || "";
 
       const matchesSearch =
@@ -474,6 +477,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         religionName.includes(searchLower) ||
         feeCategoryName.includes(searchLower) ||
         feeSlabName.includes(searchLower) ||
+        paymentStatus.includes(searchLower) ||
         mappingId.includes(searchText);
 
       return matchesSearch && matchesFilters(mapping);
@@ -974,6 +978,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     if (!editingItem?.id || !pendingEditData) {
       return;
     }
+    if (pendingEditData.feeGroupId == null) {
+      toast.error("Please select a slab type");
+      return;
+    }
 
     setSavingEdit(true);
     try {
@@ -987,6 +995,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           approvalUserId: pendingEditData.approvalUserId ?? undefined,
         },
       });
+      // Do not await refetch here: refetch can hang and leave "Confirming..." spinning forever.
+      // useUpdateFeeGroupPromotionMapping already invalidates this query on success.
+      void refetchMappings();
       setEditDialogOpen(false);
       setEditingItem(null);
       setShowConfirmDialog(false);
@@ -1158,10 +1169,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               </div>
             </div>
             <Input
-              placeholder="Search by fee category, UID, roll no, class roll, or ID..."
+              placeholder="Search: Student Name / UID / Program Course / Semester / Shift / Pay Status / Slab / Fee Category"
+              title="Search by Student Name, UID, Program Course, Semester, Shift, Pay Status, Slab, Fee Category"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              className="md:max-w-md md:ml-3"
+              className="w-full md:ml-3 md:flex-1 md:max-w-none"
             />
           </div>
 
@@ -1175,7 +1187,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </div>
           )}
 
-          {loading && hasFilters ? (
+          {loading && shouldFetchMappings ? (
             <div className="text-center py-8">Loading mappings...</div>
           ) : (
             <div className="min-w-0 rounded-md border overflow-hidden">
@@ -1207,13 +1219,13 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!hasFilters ? (
+                  {!shouldFetchMappings ? (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-12 text-gray-500">
-                        <p className="font-medium">Apply filters to load data</p>
+                        <p className="font-medium">Apply filters or type in search to load data</p>
                         <p className="text-sm mt-1">
-                          Select at least one filter (e.g. Academic Year, Semester) to view student
-                          fee group mappings.
+                          Select at least one filter (e.g. Academic Year, Semester) or start typing
+                          in search to view student fee group mappings.
                         </p>
                       </TableCell>
                     </TableRow>

@@ -49,8 +49,14 @@ const FeeCategoryPage: React.FC = () => {
     code: undefined,
   });
 
-  const { feeCategories, loading, addFeeCategory, updateFeeCategoryById, deleteFeeCategoryById } =
-    useFeeCategories();
+  const {
+    feeCategories,
+    loading,
+    fetchFeeCategories,
+    addFeeCategory,
+    updateFeeCategoryById,
+    deleteFeeCategoryById,
+  } = useFeeCategories();
 
   // Listen for fee category socket events (only for staff/admin)
   useEffect(() => {
@@ -62,8 +68,8 @@ const FeeCategoryPage: React.FC = () => {
       message: string;
     }) => {
       console.log("[Fee Category Page] Fee category created:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
+      // Refresh data in-place without full page reload
+      void fetchFeeCategories();
     };
 
     const handleFeeCategoryUpdated = (data: {
@@ -72,8 +78,8 @@ const FeeCategoryPage: React.FC = () => {
       message: string;
     }) => {
       console.log("[Fee Category Page] Fee category updated:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
+      // Refresh data in-place without full page reload
+      void fetchFeeCategories();
     };
 
     const handleFeeCategoryDeleted = (data: {
@@ -82,8 +88,8 @@ const FeeCategoryPage: React.FC = () => {
       message: string;
     }) => {
       console.log("[Fee Category Page] Fee category deleted:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
+      // Refresh data in-place without full page reload
+      void fetchFeeCategories();
     };
 
     socket.on("fee_category_created", handleFeeCategoryCreated);
@@ -95,7 +101,7 @@ const FeeCategoryPage: React.FC = () => {
       socket.off("fee_category_updated", handleFeeCategoryUpdated);
       socket.off("fee_category_deleted", handleFeeCategoryDeleted);
     };
-  }, [socket, isConnected, user?.type]);
+  }, [socket, isConnected, user?.type, fetchFeeCategories]);
 
   // Filter fee categories based on search text
   const filteredFeeCategories =

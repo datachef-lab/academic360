@@ -41,6 +41,8 @@ import { Label } from "@/components/ui/label";
 import { Class } from "@/types/academics/class";
 import { getAllClasses } from "@/services/classes.service";
 import { getAllShifts } from "@/services/academic";
+import { getProgramCourses } from "@/services/course-design.api";
+import type { ProgramCourse } from "@/types/course-design";
 import { Shift } from "@/types/academics/shift";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useSocket } from "@/hooks/useSocket";
@@ -53,6 +55,7 @@ interface FeeStructureFilters {
   academicYearId: number | null;
   receiptTypeId: number | null;
   classId: number | null;
+  programCourseId: number | null;
   shiftId: number | null;
 }
 
@@ -114,6 +117,7 @@ const FeesStructurePage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [classes, setClasses] = useState<Class[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [programCourses, setProgramCourses] = useState<ProgramCourse[]>([]);
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
   const [selectedFeeStructureForEdit, setSelectedFeeStructureForEdit] =
     useState<FeeStructureDto | null>(null);
@@ -126,6 +130,7 @@ const FeesStructurePage: React.FC = () => {
     academicYearId: null,
     receiptTypeId: null,
     classId: null,
+    programCourseId: null,
     shiftId: null,
   });
 
@@ -165,6 +170,10 @@ const FeesStructurePage: React.FC = () => {
   useEffect(() => {
     getAllClasses().then((data) => setClasses(data));
     getAllShifts().then((data) => setShifts(data));
+    getProgramCourses().then((data) => {
+      const list = data ?? [];
+      setProgramCourses([...list].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+    });
   }, []);
 
   // Memoize filters object for API call
@@ -185,6 +194,9 @@ const FeesStructurePage: React.FC = () => {
     }
     if (filters.classId) {
       filterObj.classId = filters.classId;
+    }
+    if (filters.programCourseId) {
+      filterObj.programCourseId = filters.programCourseId;
     }
     if (filters.shiftId) {
       filterObj.shiftId = filters.shiftId;
@@ -450,6 +462,32 @@ const FeesStructurePage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Course (Program Course) Filter */}
+                  <div className="grid gap-2 col-span-2">
+                    <Label htmlFor="program-course">Program Course</Label>
+                    <Select
+                      value={localFilters.programCourseId?.toString() || "all"}
+                      onValueChange={(value) =>
+                        setLocalFilters({
+                          ...localFilters,
+                          programCourseId: value === "all" ? null : Number(value),
+                        })
+                      }
+                    >
+                      <SelectTrigger id="program-course">
+                        <SelectValue placeholder="All Courses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Courses</SelectItem>
+                        {programCourses.map((pc) => (
+                          <SelectItem key={pc.id} value={pc.id!.toString()}>
+                            {pc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
@@ -461,6 +499,7 @@ const FeesStructurePage: React.FC = () => {
                       academicYearId: defaultAcademicYearId,
                       receiptTypeId: null,
                       classId: null,
+                      programCourseId: null,
                       shiftId: null,
                     });
                   }}
@@ -549,6 +588,24 @@ const FeesStructurePage: React.FC = () => {
                   className="ml-1 hover:text-purple-900"
                   onClick={() => {
                     setFilters({ ...filters, shiftId: null });
+                    setCurrentPage(1);
+                  }}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {filters.programCourseId && (
+              <Badge
+                variant="outline"
+                className="text-xs border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1"
+              >
+                {programCourses.find((c) => c.id === filters.programCourseId)?.name || "Course"}
+                <button
+                  aria-label="Clear course filter"
+                  className="ml-1 hover:text-teal-900"
+                  onClick={() => {
+                    setFilters({ ...filters, programCourseId: null });
                     setCurrentPage(1);
                   }}
                 >
