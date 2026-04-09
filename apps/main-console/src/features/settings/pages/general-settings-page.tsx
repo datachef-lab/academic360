@@ -2,12 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Library } from "lucide-react";
 import React, { useEffect, useState, useRef } from "react";
 import { findAllSettings, updateSetting } from "@/features/settings/services/settings-service";
 import { useSettings } from "../hooks/use-settings";
 import { Settings } from "@/features/settings/types/settings.type";
+import Swal from "sweetalert2";
 // import { useSettings } from "@/features/settings/providers/settings-provider";
 
 export default function GeneralSettingsPage() {
@@ -46,12 +47,20 @@ export default function GeneralSettingsPage() {
         updateSetting(Number(id), value),
       );
       await Promise.all(updatePromises);
-      alert("Settings updated successfully!");
+      await Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: "Settings updated successfully!",
+      });
       setUpdatedSettings({});
       //   window.location.reload(); // Refresh to load saved values
     } catch (err) {
       console.error("Error updating settings:", err);
-      alert("Failed to update settings.");
+      await Swal.fire({
+        icon: "error",
+        title: "Update failed",
+        text: "Failed to update settings.",
+      });
     } finally {
       findAllSettings().then((data) => {
         const payload = data.payload || [];
@@ -147,7 +156,10 @@ export default function GeneralSettingsPage() {
 
       {/* Zoom Image Dialog */}
       <Dialog open={!!zoomedImage} onOpenChange={() => setZoomedImage(null)}>
-        <DialogContent className="w-[95vw] sm:w-full max-w-3xl p-0">
+        <DialogContent className="w-[95vw] sm:w-full max-w-3xl p-0" aria-describedby={undefined}>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Image preview</DialogTitle>
+          </DialogHeader>
           {zoomedImage && (
             <img
               src={zoomedImage}

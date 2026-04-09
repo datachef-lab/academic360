@@ -442,12 +442,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </DropdownMenuContent>
           </DropdownMenu> */}
           <div className="font-bold">
-            <p className="text-xs text-center text-purple-100 space-x-1">
-              <Badge variant="secondary" className="">
-                academic360
-              </Badge>
+            <div className="flex flex-wrap items-center justify-center gap-1 text-xs text-center text-purple-100">
+              <Badge variant="secondary">academic360</Badge>
               <Badge variant="secondary">v1.0.0</Badge>
-            </p>
+            </div>
           </div>
         </SidebarFooter>
       </Sidebar>

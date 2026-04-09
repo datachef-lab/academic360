@@ -5,6 +5,7 @@ import {
   findByIdOrName,
   getSettingFileService,
   save,
+  SETTINGS_STORAGE_PATH,
 } from "../service/settings.service.js";
 import { settingsVariantEnum } from "@repo/db/schemas/enums";
 import { handleError } from "@/utils/handleError.js";
@@ -12,8 +13,6 @@ import { ApiResponse } from "@/utils/index.js";
 import { Settings } from "@repo/db/schemas/models/app";
 import path from "path";
 import fs from "fs";
-
-const SETTINGS_PATH = process.env.SETTINGS_PATH!;
 
 export const getAllSettingsHandler = async (
   req: Request,
@@ -36,16 +35,17 @@ export const getSettingsByIdHandler = async (
   next: NextFunction,
 ) => {
   try {
-    if (req.params.id) {
+    if (!req.params.id) {
       res
         .status(400)
         .json(
           new ApiResponse(
             400,
             "BAD_REQUEST",
-            "id required for fetching setiing",
+            "id required for fetching setting",
           ),
         );
+      return;
     }
     const settings = await findById(Number(req.params.id));
     if (!settings || settings.length === 0) {
@@ -82,16 +82,32 @@ export const updateSettingByIdHandler = async (
     }
 
     const file = req.file; // multer handles this
-    const body = req.body;
+    const body = req.body as Record<string, string | undefined>;
 
-    // Construct a Settings object from body
-    const settingData: Partial<Settings> & { file?: Express.Multer.File } = {
-      name: body.name,
-      value: body.value,
-      type: body.type,
-      variant: body.variant,
-      file,
-    };
+    const settingData: Partial<Settings> & { file?: Express.Multer.File } = {};
+    if (file) settingData.file = file;
+    if (body.value !== undefined && body.value !== null) {
+      settingData.value = body.value;
+    }
+    for (const key of ["name", "type", "variant"] as const) {
+      const v = body[key];
+      if (v !== undefined && v !== null && v !== "") {
+        (settingData as Record<string, string>)[key] = v;
+      }
+    }
+
+    if (!file && Object.keys(settingData).length === 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            "No fields to update (send value or file)",
+          ),
+        );
+      return;
+    }
 
     const [updated] = await save(
       Number(id),
@@ -150,7 +166,7 @@ export const downloadSettingFileHandler = async (
         );
     }
 
-    const filePath = path.join(SETTINGS_PATH, setting.value);
+    const filePath = path.join(SETTINGS_STORAGE_PATH, setting.value);
 
     if (!fs.existsSync(filePath)) {
       return res

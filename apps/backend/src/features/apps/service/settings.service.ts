@@ -2,8 +2,34 @@ import { db } from "@/db/index.js";
 import { Settings, settingsModel } from "../models/settings.model.js";
 import { and, asc, eq, ilike } from "drizzle-orm";
 import { settingsVariantEnum } from "@repo/db/schemas/enums";
+import fs from "fs";
+import path from "path";
+import { promisify } from "util";
+import mime from "mime-types";
 
-const SETTINGS_PATH = process.env.SETTINGS_PATH!;
+const DEFAULT_SETTINGS_STORAGE_PATH = path.join(
+  process.cwd(),
+  "uploads",
+  "settings",
+);
+
+/** Resolved directory for uploaded settings files with OS-safe fallback. */
+export const SETTINGS_STORAGE_PATH = (() => {
+  const raw = process.env.SETTINGS_PATH?.trim();
+  if (!raw) {
+    return DEFAULT_SETTINGS_STORAGE_PATH;
+  }
+
+  // Guard against stale Unix-style paths leaking into Windows env/session.
+  if (process.platform === "win32" && raw.startsWith("/")) {
+    return DEFAULT_SETTINGS_STORAGE_PATH;
+  }
+
+  return path.resolve(raw);
+})();
+
+const writeFile = promisify(fs.writeFile);
+const unlinkFile = promisify(fs.unlink);
 
 const defaultSettings: Settings[] = [
   {
@@ -84,13 +110,6 @@ export async function findAll(
 export async function findById(id: number) {
   return await db.select().from(settingsModel).where(eq(settingsModel.id, id));
 }
-import fs from "fs";
-import path from "path";
-import { promisify } from "util";
-import mime from "mime-types";
-
-const writeFile = promisify(fs.writeFile);
-const unlinkFile = promisify(fs.unlink);
 
 export async function save(
   id: number,
@@ -103,6 +122,10 @@ export async function save(
 
   if (!existingSetting) {
     throw new Error("Setting not found");
+  }
+
+  if (givenData.file && existingSetting.type !== "FILE") {
+    throw new Error("File uploads are only allowed for FILE-type settings");
   }
 
   // Handle FILE type
@@ -119,11 +142,16 @@ export async function save(
       .replace(/[^a-z0-9]/gi, "_")
       .toLowerCase();
     const fileName = `${safeName}.${ext}`;
-    const filePath = path.join(SETTINGS_PATH, fileName);
+    const filePath = path.join(SETTINGS_STORAGE_PATH, fileName);
+
+    await fs.promises.mkdir(SETTINGS_STORAGE_PATH, { recursive: true });
 
     // Delete existing file if exists
     if (existingSetting.value) {
-      const existingFilePath = path.join(SETTINGS_PATH, existingSetting.value);
+      const existingFilePath = path.join(
+        SETTINGS_STORAGE_PATH,
+        existingSetting.value,
+      );
       if (fs.existsSync(existingFilePath)) {
         await unlinkFile(existingFilePath);
       }
@@ -139,9 +167,19 @@ export async function save(
   // Remove file object before DB insert
   delete (givenData as any).file;
 
+  const updates = Object.fromEntries(
+    Object.entries(givenData as Record<string, unknown>).filter(
+      ([, v]) => v !== undefined && v !== null,
+    ),
+  ) as Partial<Settings>;
+
+  if (Object.keys(updates).length === 0) {
+    return [existingSetting];
+  }
+
   return await db
     .update(settingsModel)
-    .set(givenData)
+    .set(updates)
     .where(eq(settingsModel.id, id))
     .returning();
 }
@@ -171,9 +209,13 @@ export async function getSettingFileService(idOrName: string) {
     return null;
   }
 
-  const filePath = path.join(SETTINGS_PATH, `${setting.name}.jpeg`);
+  const storedName = setting.value?.trim();
+  if (!storedName) {
+    return null;
+  }
 
-  console.log(filePath);
+  const filePath = path.join(SETTINGS_STORAGE_PATH, storedName);
+
   const contentType = mime.lookup(filePath) || "application/octet-stream";
 
   if (!fs.existsSync(filePath)) return null;

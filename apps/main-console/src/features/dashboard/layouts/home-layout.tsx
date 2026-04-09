@@ -45,7 +45,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSearchedStudents, StudentSearchItem } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -157,9 +157,11 @@ function LayoutHeader({
         <Breadcrumb className="min-w-0 flex-1">
           <BreadcrumbList className="flex-wrap">
             <BreadcrumbItem className="hidden lg:inline-flex">
-              <BreadcrumbLink asChild>Academics</BreadcrumbLink>
-              <BreadcrumbSeparator className="hidden lg:inline-flex" />
+              <BreadcrumbLink asChild>
+                <Link to="/dashboard">Academics</Link>
+              </BreadcrumbLink>
             </BreadcrumbItem>
+            <BreadcrumbSeparator className="hidden lg:inline-flex" />
 
             {pathSegments.map((segment, index) => {
               const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
@@ -167,23 +169,24 @@ function LayoutHeader({
               const isLastSegment = index === pathSegments.length - 1;
 
               return (
-                <BreadcrumbItem
-                  key={index}
-                  className={isLastSegment ? "inline-flex" : "hidden lg:inline-flex"}
-                >
-                  <BreadcrumbLink asChild>
-                    <Link
-                      to={path}
-                      className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors text-sm lg:text-base truncate"
-                    >
-                      {Icon && (
-                        <Icon className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500 flex-shrink-0" />
-                      )}
-                      <span className="capitalize truncate">{segment.replace(/-/g, " ")}</span>
-                    </Link>
-                  </BreadcrumbLink>
+                <Fragment key={index}>
+                  <BreadcrumbItem
+                    className={isLastSegment ? "inline-flex" : "hidden lg:inline-flex"}
+                  >
+                    <BreadcrumbLink asChild>
+                      <Link
+                        to={path}
+                        className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors text-sm lg:text-base truncate"
+                      >
+                        {Icon && (
+                          <Icon className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500 flex-shrink-0" />
+                        )}
+                        <span className="capitalize truncate">{segment.replace(/-/g, " ")}</span>
+                      </Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
                   {!isLastSegment && <BreadcrumbSeparator className="hidden lg:inline-flex" />}
-                </BreadcrumbItem>
+                </Fragment>
               );
             })}
           </BreadcrumbList>

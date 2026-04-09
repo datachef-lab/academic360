@@ -11,14 +11,10 @@ export async function updateSetting(settingId: number, value: string | File) {
   const formData = new FormData();
   formData.append(typeof value === "string" ? "value" : "file", value);
 
+  // Omit Content-Type so the client sets multipart boundary correctly
   const res = await axiosInstance.put<ApiResponse<Settings>>(
     `/api/v1/settings/${settingId}`,
     formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    },
   );
 
   return res.data;

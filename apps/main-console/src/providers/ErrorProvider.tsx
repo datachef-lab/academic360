@@ -29,7 +29,6 @@ export const ErrorProvider = ({ children }: { children: ReactNode }) => {
   // Function to show an error (add to errors array)
   const showError = useCallback(
     (error: Omit<Error, "id">) => {
-      console.log("Show Error Fired");
       const newError = {
         ...error,
         id: Date.now(),
@@ -49,8 +48,6 @@ export const ErrorProvider = ({ children }: { children: ReactNode }) => {
         closeButton: true,
       });
 
-      console.log(newError);
-
       // Auto-dismiss error after 5 seconds
       setTimeout(() => {
         setErrors((prevErrors) => prevErrors.filter((e) => e.id !== newError.id));
@@ -60,7 +57,6 @@ export const ErrorProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    console.log("Error Provider Setup");
     setupAxiosInterceptors(showError); // Setup Axios interceptors on mount
   }, [showError]);
 

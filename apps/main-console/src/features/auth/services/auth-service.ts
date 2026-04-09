@@ -8,7 +8,6 @@ export async function login(credential: { email: string; password: string }) {
     credential,
     { withCredentials: true },
   );
-  console.log(response.data);
   return response.data;
 }
 
