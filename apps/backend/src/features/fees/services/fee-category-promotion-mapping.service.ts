@@ -360,48 +360,86 @@ export const updateFeeCategoryPromotionMapping = async (
     data.feeGroupId !== undefined && data.feeGroupId !== existing.feeGroupId;
 
   if (feeGroupChanged) {
-    // Import the calculateTotalPayableForFeeStudentMapping function from fee-structure service
-    const { calculateTotalPayableForFeeStudentMapping } =
-      await import("./fee-structure.service.js");
-
     // Find all fee-student-mappings that use this fee-group-promotion-mapping
     const relatedFeeStudentMappings = await db
-      .select()
+      .select({
+        id: feeStudentMappingModel.id,
+        feeStructureId: feeStudentMappingModel.feeStructureId,
+        isWaivedOff: feeStudentMappingModel.isWaivedOff,
+        waivedOffAmount: feeStudentMappingModel.waivedOffAmount,
+      })
       .from(feeStudentMappingModel)
       .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, id));
 
-    // Get fee group to get fee category ID
+    if (relatedFeeStudentMappings.length === 0) {
+      return await modelToDto(updated);
+    }
+
+    // Get fee group to access mapped slab
     const [feeGroup] = await db
-      .select()
+      .select({ feeSlabId: feeGroupModel.feeSlabId })
       .from(feeGroupModel)
       .where(eq(feeGroupModel.id, updated.feeGroupId));
 
-    if (feeGroup) {
-      // Update each fee-student-mapping with recalculated totalPayable
-      for (const feeStudentMapping of relatedFeeStudentMappings) {
-        const newTotalPayable = await calculateTotalPayableForFeeStudentMapping(
-          feeStudentMapping.feeStructureId,
-          updated,
-        );
+    if (feeGroup?.feeSlabId) {
+      const feeStructureIds = Array.from(
+        new Set(relatedFeeStudentMappings.map((m) => m.feeStructureId)),
+      );
 
-        // Recalculate final totalPayable accounting for waived off amount
-        const waivedOffAmount = feeStudentMapping.isWaivedOff
-          ? feeStudentMapping.waivedOffAmount || 0
-          : 0;
-        const finalTotalPayable = Math.max(
-          0,
-          newTotalPayable - waivedOffAmount,
-        );
+      const relevantComponents =
+        feeStructureIds.length > 0
+          ? await db
+              .select({
+                feeStructureId: feeStructureComponentModel.feeStructureId,
+                amount: feeStructureComponentModel.amount,
+              })
+              .from(feeStructureComponentModel)
+              .where(
+                and(
+                  inArray(
+                    feeStructureComponentModel.feeStructureId,
+                    feeStructureIds,
+                  ),
+                  eq(feeStructureComponentModel.feeSlabId, feeGroup.feeSlabId),
+                ),
+              )
+          : [];
 
-        await db
-          .update(feeStudentMappingModel)
-          .set({
-            totalPayable: finalTotalPayable,
-            receiptNumber: null,
-            challanGeneratedAt: null,
-            updatedAt: new Date(),
-          })
-          .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
+      const totalByFeeStructureId = new Map<number, number>();
+      for (const component of relevantComponents) {
+        totalByFeeStructureId.set(
+          component.feeStructureId,
+          (totalByFeeStructureId.get(component.feeStructureId) ?? 0) +
+            (component.amount || 0),
+        );
+      }
+
+      const chunkSize = 100;
+      for (let i = 0; i < relatedFeeStudentMappings.length; i += chunkSize) {
+        const chunk = relatedFeeStudentMappings.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map(async (feeStudentMapping) => {
+            const baseTotal =
+              Math.round(
+                totalByFeeStructureId.get(feeStudentMapping.feeStructureId) ??
+                  0,
+              ) || 0;
+            const waivedOffAmount = feeStudentMapping.isWaivedOff
+              ? feeStudentMapping.waivedOffAmount || 0
+              : 0;
+            const finalTotalPayable = Math.max(0, baseTotal - waivedOffAmount);
+
+            await db
+              .update(feeStudentMappingModel)
+              .set({
+                totalPayable: finalTotalPayable,
+                receiptNumber: null,
+                challanGeneratedAt: null,
+                updatedAt: new Date(),
+              })
+              .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
+          }),
+        );
       }
     }
   }

@@ -72,6 +72,21 @@ import { useAuth } from "@/features/auth/providers/auth-provider";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import type { ProgressUpdate } from "@/types/progress";
 
+const DotSpinnerLoader: React.FC = () => (
+  <div className="flex items-center justify-center py-8">
+    <div className="dot-spinner" role="status" aria-label="Loading mappings">
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+    </div>
+  </div>
+);
+
 const FeeGroupPromotionMappingPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -96,11 +111,17 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const [adminStaffUsers, setAdminStaffUsers] = useState<
     { id: number; name: string; email: string; image: string | null; type?: string }[]
   >([]);
+  const [adminStaffUsersLoading, setAdminStaffUsersLoading] = useState(false);
+  const [adminStaffUsersLoaded, setAdminStaffUsersLoaded] = useState(false);
   const [approvalSearchText, setApprovalSearchText] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingEditData, setPendingEditData] = useState<typeof editForm | null>(null);
   const [feeGroupTotalsById, setFeeGroupTotalsById] = useState<Record<number, number>>({});
+  const [feeGroupTotalsLoading, setFeeGroupTotalsLoading] = useState(false);
+  const [feeGroupTotalsCacheByPromotionId, setFeeGroupTotalsCacheByPromotionId] = useState<
+    Record<number, Record<number, number>>
+  >({});
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [bulkUploadResult, setBulkUploadResult] = useState<BulkUploadResult | null>(null);
@@ -157,8 +178,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.feeCategory;
   const hasSearch = !!searchText.trim();
   const shouldFetchMappings = hasFilters || hasSearch;
-
   const queryClient = useQueryClient();
+
   const {
     data: mappings = [],
     isLoading: loading,
@@ -213,10 +234,34 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       mappingId: number;
       type: string;
       message: string;
+      paymentStatus?: "Paid" | "Pending" | "Unpaid";
+      amountToPay?: number;
+      totalPayableAmount?: number;
+      saveBlockedForEdit?: boolean;
     }) => {
       console.log("[Fee Group Promotion Mapping Page] Mapping updated:", data);
-      // Silently refresh UI without showing toast
-      refetchMappings();
+      if (data?.type === "recalculation_completed" && typeof data.mappingId === "number") {
+        queryClient.setQueriesData<FeeGroupPromotionMappingDto[]>(
+          { queryKey: feeGroupPromotionMappingKeys.lists() },
+          (old) => {
+            if (!old?.length) return old;
+            return old.map((m) =>
+              m.id === data.mappingId
+                ? {
+                    ...m,
+                    paymentStatus: data.paymentStatus ?? m.paymentStatus,
+                    amountToPay: data.amountToPay ?? m.amountToPay,
+                    totalPayableAmount: data.totalPayableAmount ?? m.totalPayableAmount,
+                    saveBlockedForEdit: data.saveBlockedForEdit ?? m.saveBlockedForEdit,
+                  }
+                : m,
+            );
+          },
+        );
+        return;
+      }
+      // Avoid expensive full-list refetch for every update event.
+      // Local mutation already updates key fields for current user flow.
     };
 
     const handleFeeGroupPromotionMappingDeleted = (data: {
@@ -238,7 +283,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       socket.off("fee_group_promotion_mapping_updated", handleFeeGroupPromotionMappingUpdated);
       socket.off("fee_group_promotion_mapping_deleted", handleFeeGroupPromotionMappingDeleted);
     };
-  }, [socket, isConnected, user?.type, refetchMappings]);
+  }, [socket, isConnected, user?.type, refetchMappings, queryClient]);
 
   const [form, setForm] = useState<{
     feeCategoryId: number | undefined;
@@ -822,6 +867,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   };
 
   const handleEditClick = (mapping: FeeGroupPromotionMappingDto) => {
+    const promotionId = mapping?.promotion?.id ?? null;
+    if (promotionId && feeGroupTotalsCacheByPromotionId[promotionId]) {
+      setFeeGroupTotalsById(feeGroupTotalsCacheByPromotionId[promotionId]);
+    } else {
+      setFeeGroupTotalsById({});
+    }
     setEditingItem(mapping);
     const mappingAny = mapping as {
       updatedByUserId?: number | null;
@@ -838,23 +889,38 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     setEditDialogOpen(true);
   };
 
-  // Load admin/staff users when edit dialog opens
+  const loadAdminStaffUsers = useCallback(async () => {
+    if (adminStaffUsersLoaded || adminStaffUsersLoading) return;
+    setAdminStaffUsersLoading(true);
+    try {
+      const users = await findAdminsAndStaff(1, 200);
+      setAdminStaffUsers(
+        users.map((u) => ({
+          id: u.id as number,
+          name: u.name,
+          email: u.email,
+          image: u.image ?? null,
+          type: (u as { type?: string }).type,
+        })),
+      );
+      setAdminStaffUsersLoaded(true);
+    } finally {
+      setAdminStaffUsersLoading(false);
+    }
+  }, [adminStaffUsersLoaded, adminStaffUsersLoading]);
+
+  // Preload approvers once for instant dialog open.
+  useEffect(() => {
+    void loadAdminStaffUsers();
+  }, [loadAdminStaffUsers]);
+
+  // Ensure approvers are available when edit dialog opens.
   useEffect(() => {
     if (editDialogOpen) {
       setApprovalSearchText("");
-      findAdminsAndStaff(1, 200).then((users) => {
-        setAdminStaffUsers(
-          users.map((u) => ({
-            id: u.id as number,
-            name: u.name,
-            email: u.email,
-            image: u.image ?? null,
-            type: (u as { type?: string }).type,
-          })),
-        );
-      });
+      void loadAdminStaffUsers();
     }
-  }, [editDialogOpen]);
+  }, [editDialogOpen, loadAdminStaffUsers]);
 
   // Load fee-group totals for slab dropdown — backend returns fee groups for every slab
   // that appears in this promotion's fee structure(s). Do not pass feeCategoryId: changing
@@ -863,11 +929,20 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     const promotionId = editingItem?.promotion?.id;
     if (!editDialogOpen || !promotionId) {
       setFeeGroupTotalsById({});
+      setFeeGroupTotalsLoading(false);
+      return;
+    }
+
+    const cachedTotals = feeGroupTotalsCacheByPromotionId[promotionId];
+    if (cachedTotals) {
+      setFeeGroupTotalsById(cachedTotals);
+      setFeeGroupTotalsLoading(false);
       return;
     }
 
     let cancelled = false;
     setFeeGroupTotalsById({});
+    setFeeGroupTotalsLoading(true);
     (async () => {
       try {
         const res = await axiosInstance.get(`/api/v1/fees/groups/promotion/${promotionId}/totals`);
@@ -878,16 +953,24 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             map[row.feeGroupId] = Number(row?.totalPayable ?? 0);
           }
         });
-        if (!cancelled) setFeeGroupTotalsById(map);
+        if (!cancelled) {
+          setFeeGroupTotalsById(map);
+          setFeeGroupTotalsCacheByPromotionId((prev) => ({
+            ...prev,
+            [promotionId]: map,
+          }));
+        }
       } catch (e) {
         if (!cancelled) setFeeGroupTotalsById({});
+      } finally {
+        if (!cancelled) setFeeGroupTotalsLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [editDialogOpen, editingItem?.promotion?.id]);
+  }, [editDialogOpen, editingItem?.promotion?.id, feeGroupTotalsCacheByPromotionId]);
 
   const filteredAdminStaffUsers = useMemo(() => {
     if (!approvalSearchText.trim()) return adminStaffUsers;
@@ -1012,7 +1095,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       return filtered;
     }
 
-    return editingItem?.feeGroup ? [editingItem.feeGroup] : base;
+    // Show full slab list immediately while totals are loading.
+    return base;
   }, [feeGroups, mappings, editingItem?.feeGroup, feeGroupTotalsById]);
 
   const feePromotionEditFormEqualsItem = useCallback(
@@ -1123,10 +1207,6 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           approvalType: pendingEditData.approvalType,
           approvalUserId: pendingEditData.approvalUserId ?? undefined,
         },
-      });
-      await queryClient.refetchQueries({
-        queryKey: feeGroupPromotionMappingKeys.lists(),
-        type: "active",
       });
       setEditDialogOpen(false);
       setEditingItem(null);
@@ -1318,7 +1398,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           )}
 
           {loading && shouldFetchMappings ? (
-            <div className="text-center py-8">Loading mappings...</div>
+            <DotSpinnerLoader />
           ) : (
             <div className="min-w-0 rounded-md border overflow-hidden">
               <Table
@@ -2078,7 +2158,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Slab Type</Label>
+                  <Label>
+                    Slab Type{" "}
+                    {feeGroupTotalsLoading ? (
+                      <span className="text-xs text-muted-foreground">(loading options...)</span>
+                    ) : null}
+                  </Label>
                   <Select
                     value={editForm.feeGroupId?.toString() ?? ""}
                     onValueChange={(v) => {
@@ -2107,6 +2192,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                       <SelectValue placeholder="Select slab type" />
                     </SelectTrigger>
                     <SelectContent>
+                      {feeGroupTotalsLoading && slabDropdownFeeGroups.length === 0 ? (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                          Loading slab options...
+                        </div>
+                      ) : null}
                       {slabDropdownFeeGroups.map((fg) => (
                         <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
                           <div className="grid w-full grid-cols-[1fr_auto] items-center gap-3">
@@ -2149,7 +2239,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                           <SelectValue placeholder="Select approver" />
                         </SelectTrigger>
                         <SelectContent>
-                          {adminStaffUsers.map((u) => (
+                          {adminStaffUsersLoading && adminStaffUsers.length === 0 ? (
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                              Loading approvers...
+                            </div>
+                          ) : null}
+                          {filteredAdminStaffUsers.map((u) => (
                             <SelectItem key={u.id} value={u.id?.toString() ?? ""}>
                               <div className="flex items-center gap-2">
                                 <span>{u.name}</span>
@@ -2315,53 +2410,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         )}
                       </TableCell>
                     </TableRow>
-                    <TableRow className="align-top">
-                      <TableCell className="font-medium text-muted-foreground">
-                        Approval type
-                      </TableCell>
-                      <TableCell>
-                        {confirmEditDiff.approvalChanged ? (
-                          <span className="inline-flex flex-wrap items-center gap-2">
-                            <span className="line-through opacity-60">
-                              <Badge
-                                variant="outline"
-                                className={
-                                  confirmEditDiff.prevApproval === "MANUAL"
-                                    ? "border-amber-300 bg-amber-50 text-amber-950 shadow-none dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-50"
-                                    : "border-sky-300 bg-sky-50 text-sky-950 shadow-none dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100"
-                                }
-                              >
-                                {confirmEditDiff.prevApproval}
-                              </Badge>
-                            </span>
-                            <span className="text-xs text-muted-foreground" aria-hidden>
-                              →
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={
-                                confirmEditDiff.nextApproval === "MANUAL"
-                                  ? "border-amber-300 bg-amber-50 text-amber-950 shadow-none dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-50"
-                                  : "border-sky-300 bg-sky-50 text-sky-950 shadow-none dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100"
-                              }
-                            >
-                              {confirmEditDiff.nextApproval}
-                            </Badge>
-                          </span>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className={
-                              confirmEditDiff.nextApproval === "MANUAL"
-                                ? "border-amber-300 bg-amber-50 text-amber-950 shadow-none dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-50"
-                                : "border-sky-300 bg-sky-50 text-sky-950 shadow-none dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100"
-                            }
-                          >
-                            {confirmEditDiff.nextApproval}
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                    {/* Approval type row intentionally hidden */}
                     <TableRow className="align-top">
                       <TableCell className="font-medium text-muted-foreground">
                         Approved by
@@ -2521,6 +2570,111 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <style>{`
+        .dot-spinner {
+          --uib-size: 2.8rem;
+          --uib-speed: 0.9s;
+          --uib-color: #183153;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          height: var(--uib-size);
+          width: var(--uib-size);
+        }
+
+        .dot-spinner__dot {
+          position: absolute;
+          top: 0;
+          left: 0;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          height: 100%;
+          width: 100%;
+        }
+
+        .dot-spinner__dot::before {
+          content: "";
+          height: 20%;
+          width: 20%;
+          border-radius: 50%;
+          background-color: var(--uib-color);
+          transform: scale(0);
+          opacity: 0.5;
+          animation: pulse0112 calc(var(--uib-speed) * 1.111) ease-in-out infinite;
+          box-shadow: 0 0 20px rgba(18, 31, 53, 0.3);
+        }
+
+        .dot-spinner__dot:nth-child(2) {
+          transform: rotate(45deg);
+        }
+
+        .dot-spinner__dot:nth-child(2)::before {
+          animation-delay: calc(var(--uib-speed) * -0.875);
+        }
+
+        .dot-spinner__dot:nth-child(3) {
+          transform: rotate(90deg);
+        }
+
+        .dot-spinner__dot:nth-child(3)::before {
+          animation-delay: calc(var(--uib-speed) * -0.75);
+        }
+
+        .dot-spinner__dot:nth-child(4) {
+          transform: rotate(135deg);
+        }
+
+        .dot-spinner__dot:nth-child(4)::before {
+          animation-delay: calc(var(--uib-speed) * -0.625);
+        }
+
+        .dot-spinner__dot:nth-child(5) {
+          transform: rotate(180deg);
+        }
+
+        .dot-spinner__dot:nth-child(5)::before {
+          animation-delay: calc(var(--uib-speed) * -0.5);
+        }
+
+        .dot-spinner__dot:nth-child(6) {
+          transform: rotate(225deg);
+        }
+
+        .dot-spinner__dot:nth-child(6)::before {
+          animation-delay: calc(var(--uib-speed) * -0.375);
+        }
+
+        .dot-spinner__dot:nth-child(7) {
+          transform: rotate(270deg);
+        }
+
+        .dot-spinner__dot:nth-child(7)::before {
+          animation-delay: calc(var(--uib-speed) * -0.25);
+        }
+
+        .dot-spinner__dot:nth-child(8) {
+          transform: rotate(315deg);
+        }
+
+        .dot-spinner__dot:nth-child(8)::before {
+          animation-delay: calc(var(--uib-speed) * -0.125);
+        }
+
+        @keyframes pulse0112 {
+          0%,
+          100% {
+            transform: scale(0);
+            opacity: 0.5;
+          }
+
+          50% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };

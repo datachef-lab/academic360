@@ -537,40 +537,9 @@ export const updateFeeGroupPromotionMapping = async (
     data.feeGroupId !== undefined && data.feeGroupId !== existing.feeGroupId;
 
   if (feeGroupChanged) {
-    // Import the calculateTotalPayableForFeeStudentMapping function from fee-structure service
-    const { calculateTotalPayableForFeeStudentMapping } =
-      await import("./fee-structure.service.js");
-
-    // Find all fee-student-mappings that use this fee-group-promotion-mapping
-    const relatedFeeStudentMappings = await db
-      .select()
-      .from(feeStudentMappingModel)
-      .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, id));
-
-    // Update each fee-student-mapping with recalculated totalPayable
-    for (const feeStudentMapping of relatedFeeStudentMappings) {
-      const newTotalPayable = await calculateTotalPayableForFeeStudentMapping(
-        feeStudentMapping.feeStructureId,
-        updated,
-      );
-
-      // Recalculate final totalPayable accounting for waived off amount
-      const waivedOffAmount = feeStudentMapping.isWaivedOff
-        ? feeStudentMapping.waivedOffAmount || 0
-        : 0;
-      const finalTotalPayable = Math.max(0, newTotalPayable - waivedOffAmount);
-
-      await db
-        .update(feeStudentMappingModel)
-        .set({
-          totalPayable: finalTotalPayable,
-          // New slab / fee group → challan format (e.g. category code) may differ; re-issue on next download
-          receiptNumber: null,
-          challanGeneratedAt: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
-    }
+    // Do not block API response on potentially large recalculation.
+    // Recalculation still runs, but in background.
+    void recalculateFeeStudentMappingsForPromotionMapping(id, updated);
   }
 
   const dto = await modelToDto(updated);
@@ -604,6 +573,152 @@ export const updateFeeGroupPromotionMapping = async (
 
   return dto;
 };
+
+async function recalculateFeeStudentMappingsForPromotionMapping(
+  mappingId: number,
+  updatedMapping: typeof feeGroupPromotionMappingModel.$inferSelect,
+): Promise<void> {
+  try {
+    const [updatedFeeGroup] = await db
+      .select({ feeSlabId: feeGroupModel.feeSlabId })
+      .from(feeGroupModel)
+      .where(eq(feeGroupModel.id, updatedMapping.feeGroupId));
+
+    if (!updatedFeeGroup?.feeSlabId) {
+      return;
+    }
+
+    const relatedFeeStudentMappings = await db
+      .select({
+        id: feeStudentMappingModel.id,
+        feeStructureId: feeStudentMappingModel.feeStructureId,
+        isWaivedOff: feeStudentMappingModel.isWaivedOff,
+        waivedOffAmount: feeStudentMappingModel.waivedOffAmount,
+      })
+      .from(feeStudentMappingModel)
+      .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, mappingId));
+
+    if (relatedFeeStudentMappings.length === 0) {
+      return;
+    }
+
+    const feeStructureIds = Array.from(
+      new Set(relatedFeeStudentMappings.map((m) => m.feeStructureId)),
+    );
+
+    const relevantComponents =
+      feeStructureIds.length > 0
+        ? await db
+            .select({
+              feeStructureId: feeStructureComponentModel.feeStructureId,
+              amount: feeStructureComponentModel.amount,
+            })
+            .from(feeStructureComponentModel)
+            .where(
+              and(
+                inArray(
+                  feeStructureComponentModel.feeStructureId,
+                  feeStructureIds,
+                ),
+                eq(
+                  feeStructureComponentModel.feeSlabId,
+                  updatedFeeGroup.feeSlabId,
+                ),
+              ),
+            )
+        : [];
+
+    const totalByFeeStructureId = new Map<number, number>();
+    for (const component of relevantComponents) {
+      totalByFeeStructureId.set(
+        component.feeStructureId,
+        (totalByFeeStructureId.get(component.feeStructureId) ?? 0) +
+          (component.amount || 0),
+      );
+    }
+
+    const chunkSize = 100;
+    for (let i = 0; i < relatedFeeStudentMappings.length; i += chunkSize) {
+      const chunk = relatedFeeStudentMappings.slice(i, i + chunkSize);
+      await Promise.all(
+        chunk.map(async (feeStudentMapping) => {
+          const baseTotal = Math.round(
+            totalByFeeStructureId.get(feeStudentMapping.feeStructureId) ?? 0,
+          );
+          const waivedOffAmount = feeStudentMapping.isWaivedOff
+            ? feeStudentMapping.waivedOffAmount || 0
+            : 0;
+          const finalTotalPayable = Math.max(0, baseTotal - waivedOffAmount);
+
+          await db
+            .update(feeStudentMappingModel)
+            .set({
+              totalPayable: finalTotalPayable,
+              // New slab / fee group -> challan format (e.g. category code) may differ; re-issue on next download
+              receiptNumber: null,
+              challanGeneratedAt: null,
+              updatedAt: new Date(),
+            })
+            .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
+        }),
+      );
+    }
+
+    // Re-emit update event once recalculation completes so clients refetch
+    // and reflect latest payable amounts without manual page refresh.
+    const refreshedMappings = await db
+      .select({
+        totalPayable: feeStudentMappingModel.totalPayable,
+        amountPaid: feeStudentMappingModel.amountPaid,
+        linkedPaymentStatus: paymentModel.status,
+      })
+      .from(feeStudentMappingModel)
+      .leftJoin(
+        paymentModel,
+        eq(paymentModel.id, feeStudentMappingModel.paymentId),
+      )
+      .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, mappingId));
+
+    const totalPayableAmount = refreshedMappings.reduce(
+      (sum, row) => sum + (row.totalPayable || 0),
+      0,
+    );
+    const amountToPay = refreshedMappings.reduce(
+      (sum, row) =>
+        sum + Math.max(0, (row.totalPayable || 0) - (row.amountPaid || 0)),
+      0,
+    );
+    const hasSuccessfulPayment = refreshedMappings.some(
+      (row) => row.linkedPaymentStatus === "SUCCESS",
+    );
+    const paymentStatus: "Paid" | "Pending" | "Unpaid" = hasSuccessfulPayment
+      ? "Paid"
+      : refreshedMappings.length === 0
+        ? "Unpaid"
+        : "Pending";
+    const saveBlockedForEdit = hasSuccessfulPayment;
+
+    const io = socketService.getIO();
+    if (io) {
+      io.emit("fee_group_promotion_mapping_updated", {
+        mappingId,
+        type: "recalculation_completed",
+        message:
+          "Student fee mapping recalculation completed after fee-group update",
+        timestamp: new Date().toISOString(),
+        paymentStatus,
+        amountToPay,
+        totalPayableAmount,
+        saveBlockedForEdit,
+      });
+    }
+  } catch (error) {
+    console.error(
+      `Failed async fee-student recalculation for feeGroupPromotionMapping ${mappingId}:`,
+      error,
+    );
+  }
+}
 
 export const deleteFeeGroupPromotionMapping = async (
   id: number,
