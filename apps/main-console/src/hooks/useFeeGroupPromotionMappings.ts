@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
 import {
   getAllFeeGroupPromotionMappings,
   createFeeGroupPromotionMapping,
@@ -79,12 +80,30 @@ export const useUpdateFeeGroupPromotionMapping = () => {
       const response = await updateFeeGroupPromotionMapping(id, data);
       return response.payload;
     },
-    onSuccess: (_data, variables) => {
-      // Invalidate and refetch mappings list
-      queryClient.invalidateQueries({
-        queryKey: feeGroupPromotionMappingKeys.lists(),
-      });
-      // Also invalidate the specific detail if needed
+    onSuccess: (data, variables) => {
+      // PUT returns modelToDto — it does not include list-only fields (totalPayableAmount, paymentStatus, …)
+      // that getAllFeeGroupPromotionMappings computes. A plain { ...m, ...dto } merge leaves stale amounts
+      // until refetch finishes, which feels like a "late" table update.
+      if (data && typeof (data as FeeGroupPromotionMappingDto).id === "number") {
+        const dto = data as FeeGroupPromotionMappingDto;
+        queryClient.setQueriesData<FeeGroupPromotionMappingDto[]>(
+          { queryKey: feeGroupPromotionMappingKeys.lists() },
+          (old) => {
+            if (!old?.length) return old;
+            return old.map((m) => {
+              if (m.id !== dto.id) return m;
+              return {
+                ...m,
+                ...dto,
+                paymentStatus: m.paymentStatus,
+                amountToPay: m.amountToPay,
+                totalPayableAmount: m.totalPayableAmount,
+                saveBlockedForEdit: m.saveBlockedForEdit,
+              };
+            });
+          },
+        );
+      }
       queryClient.invalidateQueries({
         queryKey: feeGroupPromotionMappingKeys.detail(variables.id),
       });

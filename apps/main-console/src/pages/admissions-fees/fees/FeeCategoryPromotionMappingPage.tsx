@@ -1,6 +1,15 @@
 // @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Link2, Trash2, Upload, Download, Loader2, Pencil } from "lucide-react";
+import {
+  Link2,
+  Trash2,
+  Upload,
+  Download,
+  Loader2,
+  Pencil,
+  GitCompare,
+  ArrowRight,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,6 +33,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -39,7 +49,9 @@ import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationM
 import { FeeGroupPromotionMappingDto, type FeeGroupDto } from "@repo/db/dtos/fees";
 import { toast } from "sonner";
 import { NewFeeGroupPromotionMapping, BulkUploadResult, BulkUploadRow } from "@/services/fees-api";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  feeGroupPromotionMappingKeys,
   useFeeGroupPromotionMappings,
   useCreateFeeGroupPromotionMapping,
   useUpdateFeeGroupPromotionMapping,
@@ -146,6 +158,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const hasSearch = !!searchText.trim();
   const shouldFetchMappings = hasFilters || hasSearch;
 
+  const queryClient = useQueryClient();
   const {
     data: mappings = [],
     isLoading: loading,
@@ -908,6 +921,56 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     return null;
   }, [editingItem?.totalPayableAmount, editingItem?.feeGroup?.id, feeGroupTotalsById]);
 
+  /** Rich slab line for confirm dialog: clear separators instead of a thin pipe character. */
+  const renderSlabSummaryEl = useCallback(
+    (
+      fg: FeeGroupDto | null | undefined,
+      preferredTotal?: number | null,
+      options?: { obsolete?: boolean },
+    ): React.ReactNode => {
+      if (!fg) {
+        return <span className="text-sm text-muted-foreground">—</span>;
+      }
+      const fromRow = preferredTotal != null && preferredTotal > 0 ? preferredTotal : null;
+      const fromMap =
+        fg.id != null && typeof feeGroupTotalsById[fg.id] === "number"
+          ? feeGroupTotalsById[fg.id]
+          : null;
+      const amt = fromRow ?? fromMap;
+      const amountStr =
+        amt != null && Number(amt) >= 0 ? `₹${Number(amt).toLocaleString("en-IN")}` : "—";
+      const obsolete = options?.obsolete;
+      return (
+        <span
+          className={
+            obsolete
+              ? "inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm line-through decoration-muted-foreground opacity-80"
+              : "inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+          }
+        >
+          <span className="font-semibold text-foreground">{fg.feeSlab?.name ?? "—"}</span>
+          <span
+            className="inline-block h-4 w-1 shrink-0 rounded-sm bg-violet-500/35 dark:bg-violet-400/40"
+            aria-hidden
+          />
+          <span className="rounded-md bg-violet-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-violet-900 ring-1 ring-violet-300/70 dark:bg-violet-950/70 dark:text-violet-100 dark:ring-violet-700">
+            {amountStr}
+          </span>
+          <span
+            className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+            aria-hidden
+          >
+            ·
+          </span>
+          <span className="rounded-md border border-muted-foreground/30 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground">
+            {fg.feeCategory?.name ?? "—"}
+          </span>
+        </span>
+      );
+    },
+    [feeGroupTotalsById],
+  );
+
   /** Fee groups allowed for this promotion: slabs present in fee structure (all categories). */
   const slabDropdownFeeGroups = useMemo((): FeeGroupDto[] => {
     const base: FeeGroupDto[] =
@@ -952,6 +1015,61 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     return editingItem?.feeGroup ? [editingItem.feeGroup] : base;
   }, [feeGroups, mappings, editingItem?.feeGroup, feeGroupTotalsById]);
 
+  const feePromotionEditFormEqualsItem = useCallback(
+    (item: FeeGroupPromotionMappingDto, form: typeof editForm) => {
+      const prevRemarks = (item.remarks ?? "").trim();
+      const nextRemarks = (form.remarks ?? "").trim();
+      return (
+        (item.feeGroup?.id ?? null) === (form.feeGroupId ?? null) &&
+        (item.approvalType ?? "SYSTEM") === form.approvalType &&
+        (item.approvalUserId ?? null) === (form.approvalUserId ?? null) &&
+        prevRemarks === nextRemarks
+      );
+    },
+    [],
+  );
+
+  /** When false, edit dialog shows Okay (close only); when true, shows Save → confirm dialog. */
+  const editFormHasChanges = useMemo(() => {
+    if (!editingItem || editingItem.saveBlockedForEdit) return false;
+    return !feePromotionEditFormEqualsItem(editingItem, editForm);
+  }, [editingItem, editForm, feePromotionEditFormEqualsItem]);
+
+  const confirmEditDiff = useMemo(() => {
+    if (!editingItem || !pendingEditData) return null;
+
+    const newFg = slabDropdownFeeGroups.find((fg) => fg.id === pendingEditData.feeGroupId);
+
+    const slabChanged = (editingItem.feeGroup?.id ?? null) !== (pendingEditData.feeGroupId ?? null);
+    const prevApproval = editingItem.approvalType ?? "SYSTEM";
+    const nextApproval = pendingEditData.approvalType;
+    const approvalChanged = prevApproval !== nextApproval;
+    const prevUserId = editingItem.approvalUserId ?? null;
+    const nextUserId = pendingEditData.approvalUserId ?? null;
+    const approvalUserChanged = prevUserId !== nextUserId;
+    const prevRemarks = (editingItem.remarks ?? "").trim();
+    const nextRemarks = (pendingEditData.remarks ?? "").trim();
+    const remarksChanged = prevRemarks !== nextRemarks;
+
+    const hasAnyChange = slabChanged || approvalChanged || approvalUserChanged || remarksChanged;
+
+    return {
+      slabChanged,
+      prevSlabFg: editingItem.feeGroup ?? null,
+      nextSlabFg: newFg ?? null,
+      approvalChanged,
+      prevApproval,
+      nextApproval,
+      approvalUserChanged,
+      prevUserId,
+      nextUserId,
+      remarksChanged,
+      prevRemarks,
+      nextRemarks,
+      hasAnyChange,
+    };
+  }, [editingItem, pendingEditData, slabDropdownFeeGroups]);
+
   const handleEditSave = async () => {
     if (!editingItem?.id || !editForm.feeGroupId) {
       toast.error("Please select a slab type");
@@ -969,6 +1087,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       return;
     }
 
+    if (feePromotionEditFormEqualsItem(editingItem, editForm)) {
+      return;
+    }
+
     // Store pending data and show confirmation dialog
     setPendingEditData(editForm);
     setShowConfirmDialog(true);
@@ -980,6 +1102,13 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     }
     if (pendingEditData.feeGroupId == null) {
       toast.error("Please select a slab type");
+      return;
+    }
+
+    if (feePromotionEditFormEqualsItem(editingItem, pendingEditData)) {
+      toast.info("No changes to save");
+      setShowConfirmDialog(false);
+      setPendingEditData(null);
       return;
     }
 
@@ -995,9 +1124,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           approvalUserId: pendingEditData.approvalUserId ?? undefined,
         },
       });
-      // Do not await refetch here: refetch can hang and leave "Confirming..." spinning forever.
-      // useUpdateFeeGroupPromotionMapping already invalidates this query on success.
-      void refetchMappings();
+      await queryClient.refetchQueries({
+        queryKey: feeGroupPromotionMappingKeys.lists(),
+        type: "active",
+      });
       setEditDialogOpen(false);
       setEditingItem(null);
       setShowConfirmDialog(false);
@@ -1648,12 +1778,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               <Button variant="ghost" onClick={handleClearFilters}>
                 Clear filters
               </Button>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowFilterModal(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => setShowFilterModal(false)}>Apply filters</Button>
-              </div>
+              <Button variant="outline" onClick={() => setShowFilterModal(false)}>
+                Close
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -2064,28 +2191,32 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                 <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleEditSave}
-                  disabled={
-                    savingEdit ||
-                    (() => {
-                      const selectedFg = slabDropdownFeeGroups.find(
-                        (fg) => fg.id === editForm.feeGroupId,
-                      );
-                      const slabName = (selectedFg?.feeSlab?.name ?? "").toLowerCase();
-                      return slabName !== "slab f" && !editForm.approvalUserId;
-                    })()
-                  }
-                >
-                  {savingEdit ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
+                {editFormHasChanges ? (
+                  <Button
+                    onClick={handleEditSave}
+                    disabled={
+                      savingEdit ||
+                      (() => {
+                        const selectedFg = slabDropdownFeeGroups.find(
+                          (fg) => fg.id === editForm.feeGroupId,
+                        );
+                        const slabName = (selectedFg?.feeSlab?.name ?? "").toLowerCase();
+                        return slabName !== "slab f" && !editForm.approvalUserId;
+                      })()
+                    }
+                  >
+                    {savingEdit ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save"
+                    )}
+                  </Button>
+                ) : (
+                  <Button onClick={() => setEditDialogOpen(false)}>Okay</Button>
+                )}
               </>
             )}
           </DialogFooter>
@@ -2115,108 +2246,257 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       />
 
       {/* Confirmation Dialog for Edit */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Changes</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-foreground">
-              Do you really want to update the <span className="font-semibold">slab type</span> or{" "}
-              <span className="font-semibold">approval details</span>?
-            </p>
-            {pendingEditData && (
-              <div className="space-y-3 bg-slate-50 p-3 rounded-md">
-                <div className="text-sm">
-                  <p className="text-muted-foreground">Changes to be made:</p>
-                  <ul className="list-disc list-inside space-y-2 mt-2 text-foreground">
-                    <li>
-                      <span className="font-medium">Slab Type:</span>{" "}
-                      {(() => {
-                        const newFg = slabDropdownFeeGroups.find(
-                          (fg) => fg.id === pendingEditData.feeGroupId,
-                        );
-                        return newFg?.feeSlab?.name ? (
-                          <div className="ml-4 mt-1">
-                            <div>
-                              {newFg.feeSlab.name}
-                              <span className="text-muted-foreground"> | </span>₹
-                              {Number(feeGroupTotalsById[newFg.id as number] ?? 0).toLocaleString(
-                                "en-IN",
+      <Dialog
+        open={showConfirmDialog}
+        onOpenChange={(open) => {
+          setShowConfirmDialog(open);
+          if (!open) setPendingEditData(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl gap-0 overflow-hidden border-0 p-0 shadow-lg sm:max-w-2xl">
+          <div className="bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-4 text-white sm:px-6">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
+                <GitCompare className="h-5 w-5 shrink-0 opacity-90" aria-hidden />
+                Confirm changes
+              </DialogTitle>
+              <DialogDescription className="text-sm text-violet-100">
+                Two-column summary of what will be saved. Unchanged fields show a single value;
+                changed fields show the previous value struck through, then the new value.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="max-h-[min(70vh,560px)] space-y-4 overflow-y-auto bg-background px-5 py-4 sm:px-6 sm:py-5">
+            {pendingEditData && editingItem && confirmEditDiff && (
+              <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="w-[160px] text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Field
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Value / changes
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="align-top">
+                      <TableCell className="font-medium text-muted-foreground">Slab type</TableCell>
+                      <TableCell className="text-sm leading-relaxed">
+                        {confirmEditDiff.slabChanged ? (
+                          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                            <div className="min-w-0 flex-1 rounded-lg border border-border bg-muted/25 p-3">
+                              {renderSlabSummaryEl(
+                                confirmEditDiff.prevSlabFg,
+                                editingItem.totalPayableAmount,
+                                { obsolete: true },
                               )}
-                              <span className="text-muted-foreground">
-                                {" "}
-                                ({newFg.feeCategory?.name})
-                              </span>
+                            </div>
+                            <div className="flex shrink-0 items-center justify-center py-1 sm:px-1">
+                              <ArrowRight
+                                className="h-5 w-5 text-violet-600 dark:text-violet-400"
+                                aria-hidden
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1 rounded-lg border border-violet-200 bg-violet-50/60 p-3 dark:border-violet-900/60 dark:bg-violet-950/35">
+                              {renderSlabSummaryEl(confirmEditDiff.nextSlabFg, null, {})}
                             </div>
                           </div>
                         ) : (
-                          "—"
-                        );
-                      })()}
-                    </li>
-                    <li>
-                      <span className="font-medium">Approval Type:</span>{" "}
-                      {pendingEditData.approvalType}
-                    </li>
-                    {pendingEditData.approvalType === "MANUAL" &&
-                      pendingEditData.approvalUserId && (
-                        <li>
-                          <span className="font-medium">Approved By:</span>
-                          {(() => {
-                            const user = adminStaffUsers.find(
-                              (u) => u.id === pendingEditData.approvalUserId,
-                            );
-                            return user ? (
-                              <div className="ml-4 mt-1 flex items-center gap-3 p-2 bg-white rounded border border-input">
+                          <div className="rounded-lg border border-border bg-muted/20 p-3">
+                            {renderSlabSummaryEl(
+                              confirmEditDiff.nextSlabFg,
+                              editingItem.totalPayableAmount,
+                              {},
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="font-medium text-muted-foreground">
+                        Approval type
+                      </TableCell>
+                      <TableCell>
+                        {confirmEditDiff.approvalChanged ? (
+                          <span className="inline-flex flex-wrap items-center gap-2">
+                            <span className="line-through opacity-60">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  confirmEditDiff.prevApproval === "MANUAL"
+                                    ? "border-amber-300 bg-amber-50 text-amber-950 shadow-none dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-50"
+                                    : "border-sky-300 bg-sky-50 text-sky-950 shadow-none dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100"
+                                }
+                              >
+                                {confirmEditDiff.prevApproval}
+                              </Badge>
+                            </span>
+                            <span className="text-xs text-muted-foreground" aria-hidden>
+                              →
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={
+                                confirmEditDiff.nextApproval === "MANUAL"
+                                  ? "border-amber-300 bg-amber-50 text-amber-950 shadow-none dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-50"
+                                  : "border-sky-300 bg-sky-50 text-sky-950 shadow-none dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100"
+                              }
+                            >
+                              {confirmEditDiff.nextApproval}
+                            </Badge>
+                          </span>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className={
+                              confirmEditDiff.nextApproval === "MANUAL"
+                                ? "border-amber-300 bg-amber-50 text-amber-950 shadow-none dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-50"
+                                : "border-sky-300 bg-sky-50 text-sky-950 shadow-none dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100"
+                            }
+                          >
+                            {confirmEditDiff.nextApproval}
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="font-medium text-muted-foreground">
+                        Approved by
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {(() => {
+                          const renderApproverRow = (
+                            userId: number | null,
+                            obsolete: boolean,
+                          ): React.ReactNode => {
+                            if (userId == null) return null;
+                            const u = adminStaffUsers.find((x) => x.id === userId);
+                            if (!u) {
+                              return (
+                                <div className="flex items-start gap-3">
+                                  <span
+                                    className={
+                                      obsolete
+                                        ? "line-through text-muted-foreground"
+                                        : "font-medium"
+                                    }
+                                  >
+                                    User #{userId}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="flex items-start gap-3">
                                 <UserAvatar
-                                  user={{ name: user.name, image: user.image ?? undefined }}
+                                  user={{ name: u.name, image: u.image ?? undefined }}
                                   size="sm"
-                                  className="rounded-full shrink-0"
+                                  className="shrink-0 rounded-full"
                                 />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-medium truncate">{user.name}</p>
-                                    {user.type && (
-                                      <Badge
-                                        variant="secondary"
-                                        className="text-[10px] px-1.5 py-0 h-4 shrink-0"
-                                      >
-                                        {user.type}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {user.email && (
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {user.email}
+                                <div className="min-w-0 flex-1">
+                                  <p
+                                    className={
+                                      obsolete
+                                        ? "font-medium leading-tight break-words line-through text-muted-foreground decoration-muted-foreground"
+                                        : "font-medium leading-tight break-words text-foreground"
+                                    }
+                                  >
+                                    {u.name}
+                                  </p>
+                                  {u.email ? (
+                                    <p
+                                      className={
+                                        obsolete
+                                          ? "text-xs break-all line-through text-muted-foreground decoration-muted-foreground"
+                                          : "text-xs break-all text-muted-foreground"
+                                      }
+                                    >
+                                      {u.email}
                                     </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          };
+
+                          if (confirmEditDiff.approvalUserChanged) {
+                            return (
+                              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                                <div className="min-w-0 flex-1 rounded-lg border border-border bg-muted/25 p-3">
+                                  {renderApproverRow(confirmEditDiff.prevUserId, true) ?? (
+                                    <span className="text-xs text-muted-foreground">
+                                      No previous approver
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex shrink-0 items-center justify-center py-1 sm:px-1">
+                                  <ArrowRight
+                                    className="h-5 w-5 text-violet-600 dark:text-violet-400"
+                                    aria-hidden
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1 rounded-lg border border-violet-200 bg-violet-50/60 p-3 dark:border-violet-900/60 dark:bg-violet-950/35">
+                                  {renderApproverRow(confirmEditDiff.nextUserId, false) ?? (
+                                    <span className="text-xs text-muted-foreground">
+                                      Not assigned
+                                    </span>
                                   )}
                                 </div>
                               </div>
-                            ) : (
-                              "—"
                             );
-                          })()}
-                        </li>
-                      )}
-                    {pendingEditData.remarks && (
-                      <li>
-                        <span className="font-medium">Remarks:</span>{" "}
-                        {pendingEditData.remarks.substring(0, 50)}
-                        {pendingEditData.remarks.length > 50 ? "..." : ""}
-                      </li>
-                    )}
-                  </ul>
-                </div>
+                          }
+                          if (confirmEditDiff.nextUserId) {
+                            return (
+                              <div className="rounded-lg border border-border bg-muted/20 p-3">
+                                {renderApproverRow(confirmEditDiff.nextUserId, false)}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="font-medium text-muted-foreground">Remarks</TableCell>
+                      <TableCell className="text-sm">
+                        {confirmEditDiff.remarksChanged ? (
+                          <div className="space-y-2">
+                            {confirmEditDiff.prevRemarks ? (
+                              <p className="line-through whitespace-pre-wrap break-words text-muted-foreground decoration-muted-foreground">
+                                {confirmEditDiff.prevRemarks}
+                              </p>
+                            ) : null}
+                            {confirmEditDiff.nextRemarks ? (
+                              <p className="whitespace-pre-wrap break-words font-medium text-foreground">
+                                {confirmEditDiff.nextRemarks}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : confirmEditDiff.nextRemarks ? (
+                          <p className="whitespace-pre-wrap break-words text-foreground">
+                            {confirmEditDiff.nextRemarks}
+                          </p>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              This action will update the fee group promotion mapping record.
+
+            <p className="border-t pt-3 text-xs text-muted-foreground">
+              Saving updates student's fee-group mapping and recalculates related student fee totals
+              when the slab changes.
             </p>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="flex-col-reverse gap-2 border-t bg-muted/20 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setShowConfirmDialog(false);
                 setPendingEditData(null);
@@ -2224,14 +2504,18 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirmEdit} disabled={savingEdit}>
+            <Button
+              className="w-full bg-violet-600 hover:bg-violet-700 sm:w-auto"
+              onClick={handleConfirmEdit}
+              disabled={savingEdit || !confirmEditDiff?.hasAnyChange}
+            >
               {savingEdit ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Confirming...
                 </>
               ) : (
-                "Yes, Update"
+                "Yes, update"
               )}
             </Button>
           </DialogFooter>

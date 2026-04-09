@@ -156,30 +156,41 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   const [activeSection, setActiveSection] = useState<"components" | "slabs">("components");
   const [lockedSlabIds, setLockedSlabIds] = useState<number[]>([]);
 
-  // Check for locked slabs (payment/challan activity) to disable slab rows
+  // Check for locked slabs (payment/challan activity) to disable amount edits on those rows only.
+  // Must clear when switching to create or closing the modal — stale ids would match slab ids and wrongly disable inputs.
   useEffect(() => {
+    if (!open) {
+      setLockedSlabIds([]);
+      return;
+    }
+    if (!feeStructure?.id) {
+      setLockedSlabIds([]);
+      return;
+    }
+    let cancelled = false;
     const checkLockedSlabs = async () => {
-      if (feeStructure?.id) {
-        try {
-          const res = await axiosInstance.get(
-            `/api/v1/fees/structure/${feeStructure.id}/locked-slabs`,
-          );
-          const slabIds = Array.isArray(res.data?.slabIds)
-            ? res.data.slabIds
-            : Array.isArray(res.data?.payload?.slabIds)
-              ? res.data.payload.slabIds
-              : [];
+      try {
+        const res = await axiosInstance.get(
+          `/api/v1/fees/structure/${feeStructure.id}/locked-slabs`,
+        );
+        const slabIds = Array.isArray(res.data?.slabIds)
+          ? res.data.slabIds
+          : Array.isArray(res.data?.payload?.slabIds)
+            ? res.data.payload.slabIds
+            : [];
+        if (!cancelled) {
           setLockedSlabIds(slabIds.filter((x: any) => typeof x === "number"));
-        } catch {
+        }
+      } catch {
+        if (!cancelled) {
           setLockedSlabIds([]);
         }
-      } else {
-        setLockedSlabIds([]);
       }
     };
-    if (open && feeStructure?.id) {
-      checkLockedSlabs();
-    }
+    void checkLockedSlabs();
+    return () => {
+      cancelled = true;
+    };
   }, [open, feeStructure?.id]);
 
   // Helper function to check if a concession slab has conflicts
@@ -741,7 +752,6 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
 
   const addSlab = (slabId?: number) => {
     if (!slabId) return;
-    if (!isCreateMode && lockedSlabIds.length > 0) return;
 
     const selectedSlab = feeConcessionSlabs.find((fcs) => fcs.id === slabId);
     if (!selectedSlab) return;
@@ -1678,7 +1688,6 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                   <div className="flex gap-2">
                     {activeSection === "slabs" &&
                       feeStructureRow.feeComponents.length > 0 &&
-                      (isCreateMode || lockedSlabIds.length === 0) &&
                       feeConcessionSlabs.some(
                         (fcs) =>
                           !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
