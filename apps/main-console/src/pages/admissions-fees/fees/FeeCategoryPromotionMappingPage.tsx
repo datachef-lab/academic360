@@ -71,6 +71,7 @@ import { useSocket } from "@/hooks/useSocket";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import type { ProgressUpdate } from "@/types/progress";
+import useDebounce from "@/components/Hooks/useDebounce";
 
 const DotSpinnerLoader: React.FC = () => (
   <div className="flex items-center justify-center py-8">
@@ -178,13 +179,20 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.feeCategory;
   const hasSearch = !!searchText.trim();
   const shouldFetchMappings = hasFilters || hasSearch;
+  const debouncedSearchText = useDebounce(searchText, 400);
+  // Avoid one full-list fetch per keystroke: wait until debounced value matches the input.
+  const searchStabilized = !hasSearch || debouncedSearchText === searchText;
+  const queryEnabled = shouldFetchMappings && searchStabilized;
+  const serverSearchForQuery = queryEnabled && hasSearch ? debouncedSearchText.trim() : undefined;
+  const searchPending = hasSearch && !searchStabilized;
   const queryClient = useQueryClient();
 
   const {
     data: mappings = [],
     isLoading: loading,
     refetch: refetchMappings,
-  } = useFeeGroupPromotionMappings(10000, shouldFetchMappings);
+  } = useFeeGroupPromotionMappings(10000, queryEnabled, serverSearchForQuery);
+  const tableLoading = loading || searchPending;
   const createMutation = useCreateFeeGroupPromotionMapping();
   const updateMutation = useUpdateFeeGroupPromotionMapping();
   const deleteMutation = useDeleteFeeGroupPromotionMapping();
@@ -1387,7 +1395,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             />
           </div>
 
-          {selectedIds.length > 0 && !loading && (
+          {selectedIds.length > 0 && !tableLoading && (
             <div className="mb-2 flex items-center justify-between text-sm text-gray-700">
               <span>
                 <span className="font-semibold">{selectedIds.length}</span> row
@@ -1397,7 +1405,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </div>
           )}
 
-          {loading && shouldFetchMappings ? (
+          {tableLoading && shouldFetchMappings ? (
             <DotSpinnerLoader />
           ) : (
             <div className="min-w-0 rounded-md border overflow-hidden">
@@ -1609,7 +1617,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           )}
 
           {/* Simple pagination controls */}
-          {!loading && filteredMappings.length > 0 && (
+          {!tableLoading && filteredMappings.length > 0 && (
             <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
               <div>
                 Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{" "}

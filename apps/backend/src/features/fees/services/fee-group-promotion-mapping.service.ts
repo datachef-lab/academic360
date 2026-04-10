@@ -21,7 +21,7 @@ import {
   studentModel,
   personalDetailsModel,
 } from "@repo/db/schemas/models/user";
-import { and, inArray, desc, eq } from "drizzle-orm";
+import { and, inArray, desc, eq, or, ilike, sql, not } from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import {
   feeStructureModel,
@@ -194,6 +194,272 @@ async function promotionToDto(
   };
 }
 
+type PromotionDtoExtended = PromotionDto & {
+  studentName?: string | null;
+  uid?: string | null;
+  religionName?: string | null;
+  categoryName?: string | null;
+  communityName?: string | null;
+  academicYearName?: string | null;
+};
+
+/**
+ * SQL filter aligned with the Student Fee Group Mapping search bar:
+ * student name, UID, rolls, program course, semester (class), shift, pay status,
+ * slab & fee category, religion & student category, and mapping id.
+ */
+function feeGroupMappingSearchWhere(term: string) {
+  const escaped = term
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+  const pattern = `%${escaped}%`;
+  const fullName = sql`trim(concat_ws(' ', ${personalDetailsModel.firstName}, ${personalDetailsModel.middleName}, ${personalDetailsModel.lastName}))`;
+
+  // Mirrors list API payment rules: Paid = any SUCCESS payment row; Unpaid = no FSM rows; else Pending.
+  const hasAnyFeeStudentMapping = sql`EXISTS (
+    SELECT 1 FROM ${feeStudentMappingModel}
+    WHERE ${feeStudentMappingModel.feeGroupPromotionMappingId} = ${feeGroupPromotionMappingModel.id}
+  )`;
+  const hasSuccessfulPayment = sql`EXISTS (
+    SELECT 1 FROM ${feeStudentMappingModel}
+    INNER JOIN ${paymentModel} ON ${paymentModel.id} = ${feeStudentMappingModel.paymentId}
+    WHERE ${feeStudentMappingModel.feeGroupPromotionMappingId} = ${feeGroupPromotionMappingModel.id}
+    AND ${paymentModel.status} = 'SUCCESS'
+  )`;
+  const pendingPaymentState = and(
+    hasAnyFeeStudentMapping,
+    not(hasSuccessfulPayment),
+  );
+
+  const textMatch = or(
+    eq(studentModel.uid, term),
+    ilike(studentModel.uid, pattern),
+    ilike(promotionModel.classRollNumber, pattern),
+    ilike(promotionModel.rollNumber, pattern),
+    ilike(promotionModel.rollNumberSI, pattern),
+    ilike(fullName, pattern),
+    ilike(classModel.name, pattern),
+    ilike(shiftModel.name, pattern),
+    ilike(programCourseModel.name, pattern),
+    ilike(programCourseModel.shortName, pattern),
+    ilike(feeCategoryModel.name, pattern),
+    ilike(feeSlabModel.name, pattern),
+    ilike(religionModel.name, pattern),
+    ilike(categoryModel.name, pattern),
+    sql`cast(${feeGroupPromotionMappingModel.id} as text) ilike ${pattern}`,
+  );
+
+  // Match UI labels "Paid" / "Pending" / "Unpaid" (substring-friendly, same as client includes()).
+  const payStatusMatch = or(
+    and(sql`(lower('paid') like lower(${pattern}))`, hasSuccessfulPayment),
+    and(sql`(lower('pending') like lower(${pattern}))`, pendingPaymentState),
+    and(
+      sql`(lower('unpaid') like lower(${pattern}))`,
+      not(hasAnyFeeStudentMapping),
+    ),
+  );
+
+  return or(textMatch, payStatusMatch);
+}
+
+/**
+ * Hydrates many promotions with a fixed set of batched queries (avoids N× round-trips per row).
+ */
+async function batchPromotionRowsToDtoMap(
+  promotions: (typeof promotionModel.$inferSelect)[],
+): Promise<Map<number, PromotionDtoExtended>> {
+  const out = new Map<number, PromotionDtoExtended>();
+  if (promotions.length === 0) return out;
+
+  const promotionStatusIds = [
+    ...new Set(promotions.map((p) => p.promotionStatusId)),
+  ];
+  const boardResultStatusIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.boardResultStatusId)
+        .filter((x): x is number => x != null),
+    ),
+  ];
+  const sessionIds = [...new Set(promotions.map((p) => p.sessionId))];
+  const classIds = [...new Set(promotions.map((p) => p.classId))];
+  const sectionIds = [
+    ...new Set(
+      promotions.map((p) => p.sectionId).filter((x): x is number => x != null),
+    ),
+  ];
+  const shiftIds = [...new Set(promotions.map((p) => p.shiftId))];
+  const programCourseIds = [
+    ...new Set(promotions.map((p) => p.programCourseId)),
+  ];
+  const studentIds = [...new Set(promotions.map((p) => p.studentId))];
+
+  const [
+    promStatuses,
+    boardStatuses,
+    sessions,
+    classes,
+    sections,
+    shifts,
+    studentRows,
+    programCourseDtos,
+  ] = await Promise.all([
+    db
+      .select()
+      .from(promotionStatusModel)
+      .where(inArray(promotionStatusModel.id, promotionStatusIds)),
+    boardResultStatusIds.length > 0
+      ? db
+          .select()
+          .from(boardResultStatusModel)
+          .where(inArray(boardResultStatusModel.id, boardResultStatusIds))
+      : Promise.resolve([] as (typeof boardResultStatusModel.$inferSelect)[]),
+    db.select().from(sessionModel).where(inArray(sessionModel.id, sessionIds)),
+    db.select().from(classModel).where(inArray(classModel.id, classIds)),
+    sectionIds.length > 0
+      ? db
+          .select()
+          .from(sectionModel)
+          .where(inArray(sectionModel.id, sectionIds))
+      : Promise.resolve([] as (typeof sectionModel.$inferSelect)[]),
+    db.select().from(shiftModel).where(inArray(shiftModel.id, shiftIds)),
+    db
+      .select({
+        studentId: studentModel.id,
+        uid: studentModel.uid,
+        community: studentModel.community,
+        firstName: personalDetailsModel.firstName,
+        middleName: personalDetailsModel.middleName,
+        lastName: personalDetailsModel.lastName,
+        religionName: religionModel.name,
+        categoryName: categoryModel.name,
+      })
+      .from(studentModel)
+      .leftJoin(
+        personalDetailsModel,
+        eq(personalDetailsModel.userId, studentModel.userId),
+      )
+      .leftJoin(
+        religionModel,
+        eq(religionModel.id, personalDetailsModel.religionId),
+      )
+      .leftJoin(
+        categoryModel,
+        eq(categoryModel.id, personalDetailsModel.categoryId),
+      )
+      .where(inArray(studentModel.id, studentIds)),
+    Promise.all(
+      programCourseIds.map((id) => programCourseService.findById(id)),
+    ),
+  ]);
+
+  const academicYearIds = [
+    ...new Set(
+      sessions
+        .map((s) => s.academicYearId)
+        .filter((x): x is number => x != null),
+    ),
+  ];
+  const academicYears =
+    academicYearIds.length > 0
+      ? await db
+          .select()
+          .from(academicYearModel)
+          .where(inArray(academicYearModel.id, academicYearIds))
+      : [];
+  const ayMap = new Map(academicYears.map((y) => [y.id, y]));
+
+  const promStatusMap = new Map(promStatuses.map((r) => [r.id, r]));
+  const boardStatusMap = new Map(boardStatuses.map((r) => [r.id, r]));
+  const sessionMap = new Map(
+    sessions.map((s) => {
+      const ay = s.academicYearId ? ayMap.get(s.academicYearId) : undefined;
+      return [s.id, { ...s, academicYear: ay ?? null }] as const;
+    }),
+  );
+  const classMap = new Map(classes.map((c) => [c.id, c]));
+  const sectionMap = new Map(sections.map((s) => [s.id, s]));
+  const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+  const studentDetailMap = new Map(studentRows.map((r) => [r.studentId, r]));
+
+  const programCourseMap = new Map<
+    number,
+    NonNullable<Awaited<ReturnType<typeof programCourseService.findById>>>
+  >();
+  programCourseIds.forEach((id, i) => {
+    const dto = programCourseDtos[i];
+    if (dto) programCourseMap.set(id, dto);
+  });
+
+  for (const promotion of promotions) {
+    const promStatus = promStatusMap.get(promotion.promotionStatusId);
+    const boardResStatus = promotion.boardResultStatusId
+      ? (boardStatusMap.get(promotion.boardResultStatusId) ?? null)
+      : null;
+    const sess = sessionMap.get(promotion.sessionId) ?? null;
+    const cls = classMap.get(promotion.classId) ?? null;
+    const sec = promotion.sectionId
+      ? (sectionMap.get(promotion.sectionId) ?? null)
+      : null;
+    const shf = shiftMap.get(promotion.shiftId) ?? null;
+    const progCourse = programCourseMap.get(promotion.programCourseId) ?? null;
+    const studentWithDetails =
+      studentDetailMap.get(promotion.studentId) ?? null;
+
+    if (!promStatus || !sess || !cls || !shf || !progCourse) {
+      continue;
+    }
+
+    const fullName = studentWithDetails
+      ? [
+          studentWithDetails.firstName,
+          studentWithDetails.middleName,
+          studentWithDetails.lastName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : null;
+
+    const dto: PromotionDtoExtended = {
+      id: promotion.id,
+      legacyHistoricalRecordId: promotion.legacyHistoricalRecordId ?? null,
+      studentId: promotion.studentId,
+      isAlumni: promotion.isAlumni,
+      dateOfJoining: promotion.dateOfJoining,
+      classRollNumber: promotion.classRollNumber,
+      rollNumber: promotion.rollNumber ?? null,
+      rollNumberSI: promotion.rollNumberSI ?? null,
+      examNumber: promotion.examNumber ?? null,
+      examSerialNumber: promotion.examSerialNumber ?? null,
+      startDate: promotion.startDate ?? null,
+      endDate: promotion.endDate ?? null,
+      remarks: promotion.remarks ?? null,
+      createdAt: promotion.createdAt ?? new Date(),
+      updatedAt: promotion.updatedAt ?? new Date(),
+      promotionStatus: promStatus,
+      boardResultStatus: boardResStatus!,
+      session: sess,
+      class: cls,
+      section: sec as PromotionDto["section"],
+      shift: shf,
+      programCourse: progCourse,
+      studentName: fullName,
+      uid: studentWithDetails?.uid ?? null,
+      religionName: studentWithDetails?.religionName ?? null,
+      categoryName: studentWithDetails?.categoryName ?? null,
+      communityName: studentWithDetails?.community ?? null,
+      academicYearName:
+        (sess as { academicYear?: { year?: string | null } | null })
+          ?.academicYear?.year ?? null,
+    };
+
+    out.set(promotion.id, dto);
+  }
+
+  return out;
+}
+
 /**
  * Converts a FeeGroupPromotionMapping model to FeeGroupPromotionMappingDto
  */
@@ -305,13 +571,65 @@ export const createFeeGroupPromotionMapping = async (
 
 export const getAllFeeGroupPromotionMappings = async (
   limit: number = 10000,
+  search?: string,
 ): Promise<FeeGroupPromotionMappingDto[]> => {
+  const trimmedSearch = search?.trim() ?? "";
+
+  const matchingMappingIdsSubquery = trimmedSearch
+    ? db
+        .select({ id: feeGroupPromotionMappingModel.id })
+        .from(feeGroupPromotionMappingModel)
+        .innerJoin(
+          promotionModel,
+          eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
+        )
+        .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+        .leftJoin(
+          personalDetailsModel,
+          eq(personalDetailsModel.userId, studentModel.userId),
+        )
+        .leftJoin(
+          religionModel,
+          eq(religionModel.id, personalDetailsModel.religionId),
+        )
+        .leftJoin(
+          categoryModel,
+          eq(categoryModel.id, personalDetailsModel.categoryId),
+        )
+        .innerJoin(classModel, eq(classModel.id, promotionModel.classId))
+        .innerJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+        .innerJoin(
+          programCourseModel,
+          eq(programCourseModel.id, promotionModel.programCourseId),
+        )
+        .innerJoin(
+          feeGroupModel,
+          eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+        )
+        .innerJoin(
+          feeCategoryModel,
+          eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+        )
+        .innerJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
+        .where(feeGroupMappingSearchWhere(trimmedSearch))
+        .groupBy(feeGroupPromotionMappingModel.id)
+    : null;
+
   // Order by id DESC to maintain consistent ordering (updated items stay in place)
-  const rows = await db
-    .select()
-    .from(feeGroupPromotionMappingModel)
-    .orderBy(desc(feeGroupPromotionMappingModel.id))
-    .limit(limit);
+  const rows = matchingMappingIdsSubquery
+    ? await db
+        .select()
+        .from(feeGroupPromotionMappingModel)
+        .where(
+          inArray(feeGroupPromotionMappingModel.id, matchingMappingIdsSubquery),
+        )
+        .orderBy(desc(feeGroupPromotionMappingModel.id))
+        .limit(limit)
+    : await db
+        .select()
+        .from(feeGroupPromotionMappingModel)
+        .orderBy(desc(feeGroupPromotionMappingModel.id))
+        .limit(limit);
 
   // Batch fetch fee groups and promotions to reduce queries
   const feeGroupIds = [...new Set(rows.map((r) => r.feeGroupId))];
@@ -356,15 +674,8 @@ export const getAllFeeGroupPromotionMappings = async (
   const feeCategoryMap = new Map(feeCategories.map((fc) => [fc.id, fc]));
   const feeSlabMap = new Map(feeSlabs.map((fs) => [fs.id, fs]));
 
-  // Batch fetch all promotion-related data
-  const promotionDtos = await Promise.all(
-    promotions.map((p) => promotionToDto(p)),
-  );
-  const promotionDtoMap = new Map(
-    promotionDtos
-      .filter((pd): pd is PromotionDto => pd !== null)
-      .map((pd) => [pd.id!, pd]),
-  );
+  // Batch-fetch promotion DTOs (single round of related-table queries per list call)
+  const promotionDtoMap = await batchPromotionRowsToDtoMap(promotions);
 
   // Batch fetch fee student mappings for payment status and amount to pay
   const mappingIds = rows
@@ -393,6 +704,23 @@ export const getAllFeeGroupPromotionMappings = async (
           )
       : [];
 
+  const feeStudentMappingsByMappingId = new Map<
+    number,
+    {
+      feeGroupPromotionMappingId: number | null;
+      totalPayable: number | null;
+      amountPaid: number | null;
+      linkedPaymentStatus: string | null;
+    }[]
+  >();
+  for (const fsm of feeStudentMappings) {
+    const mid = fsm.feeGroupPromotionMappingId;
+    if (mid == null) continue;
+    const list = feeStudentMappingsByMappingId.get(mid) ?? [];
+    list.push(fsm);
+    feeStudentMappingsByMappingId.set(mid, list);
+  }
+
   const paymentByMappingId = new Map<
     number,
     {
@@ -403,9 +731,7 @@ export const getAllFeeGroupPromotionMappings = async (
     }
   >();
   for (const mappingId of mappingIds) {
-    const related = feeStudentMappings.filter(
-      (fsm) => fsm.feeGroupPromotionMappingId === mappingId,
-    );
+    const related = feeStudentMappingsByMappingId.get(mappingId) ?? [];
     const totalPayableAmount = related.reduce(
       (sum, r) => sum + (r.totalPayable || 0),
       0,

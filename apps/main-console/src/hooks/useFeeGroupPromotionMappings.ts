@@ -24,12 +24,18 @@ export const feeGroupPromotionMappingKeys = {
  * Hook to fetch all fee group promotion mappings
  * @param limit - Max number of rows to fetch (default 10000)
  * @param enabled - If false, query won't run (e.g. until filters are applied)
+ * @param search - Optional server-side filter (UID, roll, name, etc.) to avoid loading the full list
  */
-export const useFeeGroupPromotionMappings = (limit: number = 10000, enabled: boolean = true) => {
+export const useFeeGroupPromotionMappings = (
+  limit: number = 10000,
+  enabled: boolean = true,
+  search?: string,
+) => {
+  const trimmedSearch = search?.trim() ?? "";
   return useQuery({
-    queryKey: [...feeGroupPromotionMappingKeys.lists(), { limit, enabled }],
+    queryKey: [...feeGroupPromotionMappingKeys.lists(), { limit, enabled, search: trimmedSearch }],
     queryFn: async () => {
-      const response = await getAllFeeGroupPromotionMappings(limit);
+      const response = await getAllFeeGroupPromotionMappings(limit, trimmedSearch || undefined);
       return response.payload || [];
     },
     enabled,
