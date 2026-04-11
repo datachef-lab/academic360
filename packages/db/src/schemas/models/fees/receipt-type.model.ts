@@ -21,11 +21,9 @@ export const receiptTypeModel = pgTable("receipt_types", {
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
     createdByUserId: integer("created_by_user_id_fk")
-        .references(() => userModel.id)
-        .notNull(),
+        .references(() => userModel.id),
     updatedByUserId: integer("updated_by_user_id_fk")
-        .references(() => userModel.id)
-        .notNull(),
+        .references(() => userModel.id),
 });
 
 export const createReceiptTypeSchema = createInsertSchema(receiptTypeModel);

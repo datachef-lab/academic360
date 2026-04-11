@@ -1,7 +1,5 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -9,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { getPromotionBuilders } from "@/services/promotion-logic.api";
@@ -18,16 +15,13 @@ import type { PromotionBuilderDto } from "@repo/db";
 import type { Affiliation, ClassT } from "@repo/db/schemas";
 import {
   ArrowRight,
-  CheckCircle2,
+  Check,
   CheckSquare,
   ChevronDown,
-  Circle,
   CircleSlash,
   Clock,
-  Download,
   Info,
   Plus,
-  RotateCcw,
   Star,
   X,
   Zap,
@@ -35,24 +29,48 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Visual theme — aligned to provided mockups (cream page, navy type, pastel tiles).
- * Data is loaded from GET /api/v1/batches/promotion-builders (see loadBuilders).
+ * Promotion rules UI. All builder rows come from the backend DB via
+ * GET /api/v1/batches/promotion-builders (see `loadBuilders` / `getPromotionBuilders`).
+ * Affiliations from `getAffiliations()`.
  */
-const theme = {
-  pageBg: "#FDFBF7",
-  panelBg: "#F9FAFB",
-  navy: "#1A2B48",
-  navyBtn: "#1E293B",
-  muted: "#64748B",
-  orange: "#F59E0B",
-  green: "#10B981",
-  purple: "#7C3AED",
-  pink: "#FDA4AF",
-  avatarOddBg: "#FFE8DC",
-  avatarOddFg: "#C2410C",
-  avatarEvenBg: "#DCFCE7",
-  avatarEvenFg: "#047857",
+const ui = {
+  bg: "#F0EEE9",
+  card: "#FFFFFF",
+  card2: "#F7F6F3",
+  card3: "#F2F0EB",
+  navy: "#1B2B4B",
+  navy2: "#2C3E63",
+  border: "#E0DDD6",
+  border2: "#D0CCC3",
+  text: "#1B2B4B",
+  text2: "#5A6478",
+  text3: "#9AA0AE",
+  amber: "#C8820A",
+  amberBg: "#FEF6E8",
+  amberMid: "#F5C164",
+  amberBorder: "#F0C97A",
+  teal: "#0A7F6A",
+  tealBg: "#E6F5F2",
+  tealMid: "#5ABFAD",
+  tealBorder: "#85CFC0",
+  green: "#1A7A4A",
+  greenBg: "#E8F5EE",
+  greenBorder: "#A0D8B8",
+  violet: "#5B3FC4",
+  violetBg: "#EEE9FC",
+  violetBorder: "#C4B4F4",
+  rose: "#A63060",
+  roseBg: "#FCF0F4",
+  roseBorder: "#EDB8CC",
+  red: "#C23B3B",
+  sky: "#1A6BB5",
+  skyBg: "#EBF3FC",
+  skyBorder: "#9EC8F0",
+  sh: "0 1px 3px rgba(27,43,75,.06),0 4px 14px rgba(27,43,75,.04)",
 } as const;
+
+const FONT_LINK =
+  "https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap";
 
 const ROMAN_BY_INDEX = [
   "",
@@ -85,7 +103,7 @@ const WORD_ROMAN_TO_SEM: Record<string, number> = {
   XII: 12,
 };
 
-const DEFAULT_ERP_BADGE = "CALCUTTA UNIVERSITY • ERP ADMIN";
+const DEFAULT_ERP_BADGE = "Calcutta University · ERP Admin";
 
 function semesterIndexFromName(name: string | undefined | null): number | null {
   if (!name) return null;
@@ -110,14 +128,12 @@ function toRomanNumeral(n: number): string {
   return ROMAN_BY_INDEX[n] ?? String(n);
 }
 
-/** Card title: "Semester 2" */
 function displaySemesterTitle(name: string | undefined | null): string {
   const n = semesterIndexFromName(name);
   if (n != null) return `Semester ${n}`;
   return name?.trim() || "—";
 }
 
-/** Chips: "Sem I" */
 function semShortLabel(className: string | undefined | null): string {
   const n = semesterIndexFromName(className);
   if (n != null) return `Sem ${toRomanNumeral(n)}`;
@@ -156,7 +172,73 @@ function isFailedPapersClause(name: string | undefined | null): boolean {
 
 type AffiliationFilter = "all" | number;
 
-const navyPrimaryBtn = "bg-[#1E293B] hover:bg-[#0f172a] text-white shadow-sm border-0";
+function trackPalette(sem: number | null): {
+  c: string;
+  bg: string;
+  bd: string;
+  mid: string;
+} {
+  if (sem == null || sem < 1) {
+    return { c: ui.text3, bg: ui.card2, bd: ui.border2, mid: ui.border2 };
+  }
+  return sem % 2 !== 0
+    ? { c: ui.amber, bg: ui.amberBg, bd: ui.amberBorder, mid: ui.amberMid }
+    : { c: ui.teal, bg: ui.tealBg, bd: ui.tealBorder, mid: ui.tealMid };
+}
+
+function SemesterBox({
+  sem,
+  size = 36,
+  className,
+}: {
+  sem: number | null;
+  size?: number;
+  className?: string;
+}) {
+  if (sem == null || sem < 1) {
+    return (
+      <div
+        className={cn(
+          "flex shrink-0 items-center justify-center rounded-lg border-[1.5px] text-sm font-bold",
+          className,
+        )}
+        style={{
+          width: size,
+          height: size,
+          fontFamily: "'Sora', sans-serif",
+          background: ui.card2,
+          borderColor: ui.border2,
+          color: ui.text3,
+        }}
+        aria-hidden
+      >
+        ?
+      </div>
+    );
+  }
+  const { c, bg, bd } = trackPalette(sem);
+  const label = ROMAN_BY_INDEX[sem] ?? "?";
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-lg border-[1.5px] font-bold",
+        className,
+      )}
+      style={{
+        width: size,
+        height: size,
+        fontFamily: "'Sora', sans-serif",
+        fontSize: Math.round(size * 0.34),
+        background: bg,
+        borderColor: bd,
+        color: c,
+      }}
+      aria-hidden
+    >
+      {label}
+    </div>
+  );
+}
 
 export default function PromotionBuilderPage() {
   const [builders, setBuilders] = React.useState<PromotionBuilderDto[]>([]);
@@ -164,6 +246,16 @@ export default function PromotionBuilderPage() {
   const [affiliationFilter, setAffiliationFilter] = React.useState<AffiliationFilter>("all");
   const [loading, setLoading] = React.useState(true);
   const [expandedId, setExpandedId] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    const id = "promotion-builder-fonts";
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = FONT_LINK;
+    document.head.appendChild(link);
+  }, []);
 
   const loadAffiliations = React.useCallback(async () => {
     try {
@@ -174,7 +266,6 @@ export default function PromotionBuilderPage() {
     }
   }, []);
 
-  /** Loads `PromotionBuilderDto[]` from backend (affiliation filter optional). */
   const loadBuilders = React.useCallback(async (filter: AffiliationFilter) => {
     setLoading(true);
     try {
@@ -218,188 +309,209 @@ export default function PromotionBuilderPage() {
     }
   };
 
-  const handleExportJson = () => {
-    const blob = new Blob([JSON.stringify(sorted, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `promotion-builders-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("JSON exported");
-  };
-
   return (
-    <div className="min-h-full font-sans antialiased" style={{ backgroundColor: theme.pageBg }}>
-      <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 space-y-3">
+    <div
+      className="min-h-full antialiased px-5 py-[26px] sm:px-6"
+      style={{
+        background: ui.bg,
+        fontFamily: "'DM Sans', system-ui, sans-serif",
+        color: ui.text,
+      }}
+    >
+      <div className="mx-auto w-full max-w-[900px] space-y-4">
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-3.5">
+          <div className="min-w-0">
             <div
-              className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide"
+              className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1"
               style={{
-                borderColor: `${theme.orange}44`,
-                backgroundColor: "#FFF7ED",
-                color: "#9A3412",
+                background: ui.amberBg,
+                borderColor: ui.amberBorder,
               }}
             >
-              <Clock className="h-3.5 w-3.5 opacity-80" strokeWidth={2.5} />
-              {erpBadgeLabel}
-            </div>
-            <div>
-              <h1
-                className="text-2xl sm:text-[1.65rem] font-bold tracking-tight"
-                style={{ color: theme.navy }}
+              <Clock className="h-2.5 w-2.5 shrink-0" strokeWidth={1} style={{ color: ui.amber }} />
+              <span
+                className="text-[10.5px] font-bold uppercase tracking-[0.07em]"
+                style={{ color: ui.amber, fontFamily: "'Sora', sans-serif" }}
               >
-                Student Promotion Logic Builder
-              </h1>
-              <p
-                className="text-sm mt-1.5 max-w-2xl leading-relaxed"
-                style={{ color: theme.muted }}
-              >
-                Configure semester-wise promotion rules based on{" "}
-                <span className="font-semibold text-gray-800">Form Fill-up Status</span>.
-              </p>
+                {erpBadgeLabel}
+              </span>
             </div>
+            <h1
+              className="text-[22px] font-extrabold leading-tight tracking-[-0.03em]"
+              style={{ color: ui.navy, fontFamily: "'Sora', sans-serif" }}
+            >
+              Student Promotion Logic Builder
+            </h1>
+            <p
+              className="mt-1.5 max-w-[500px] text-[13px] leading-[1.55]"
+              style={{ color: ui.text2 }}
+            >
+              Configure semester-wise promotion rules based on{" "}
+              <strong style={{ color: ui.navy2, fontWeight: 600 }}>Form Fill-up Status</strong>.
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <Button
+          <div className="flex shrink-0 items-center gap-2">
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={handleReset}
-              className="gap-2 border-gray-300 bg-white text-gray-800 shadow-sm"
+              className="rounded-lg border-[1.5px] px-4 py-2 text-[12.5px] font-semibold shadow-sm transition-colors hover:opacity-90"
+              style={{
+                borderColor: ui.border2,
+                background: ui.card,
+                color: ui.text2,
+                boxShadow: ui.sh,
+              }}
             >
-              <RotateCcw className="h-4 w-4" />
               Reset
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleExportJson}
-              disabled={!sorted.length}
-              className="gap-2 border-gray-300 bg-white text-gray-800 shadow-sm"
-            >
-              <Download className="h-4 w-4" />
-              Export JSON
-            </Button>
+            </button>
           </div>
         </div>
 
-        <Card className="border border-gray-200/90 shadow-[0_4px_24px_rgba(15,23,42,0.06)] overflow-hidden rounded-2xl bg-white">
-          <CardContent className="p-0">
-            <div className="px-5 sm:px-8 py-5 sm:py-6 border-b border-gray-100">
-              <div className="flex flex-col lg:flex-row lg:items-end gap-5 lg:justify-between lg:gap-8">
-                <div className="space-y-2 flex-1 min-w-0 max-w-xl">
-                  <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                    <Star
-                      className="h-3.5 w-3.5 shrink-0"
-                      style={{ color: theme.orange, fill: `${theme.orange}33` }}
-                    />
-                    Affiliated College
-                  </Label>
-                  <Select
-                    value={affiliationFilter === "all" ? "all" : String(affiliationFilter)}
-                    onValueChange={(v) => {
-                      setAffiliationFilter(v === "all" ? "all" : Number(v));
-                      setExpandedId(null);
-                    }}
-                  >
-                    <SelectTrigger className="h-11 w-full rounded-xl border-gray-200 bg-white">
-                      <SelectValue placeholder="Select affiliation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Affiliations</SelectItem>
-                      {affiliations.map((a) =>
-                        a.id != null ? (
-                          <SelectItem key={a.id} value={String(a.id)}>
-                            {a.name}
-                          </SelectItem>
-                        ) : null,
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-700">
-                  <span className="text-gray-400">Viewing:</span>
-                  <span className="font-medium text-gray-900">{viewingLabel}</span>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="px-5 sm:px-8 pt-4 pb-6 sm:pb-8"
-              style={{ backgroundColor: theme.panelBg }}
+        {/* Affiliation bar */}
+        <div
+          className="flex flex-wrap items-center gap-3 rounded-[10px] border-[1.5px] px-4 py-2.5"
+          style={{
+            borderColor: ui.border2,
+            background: ui.card,
+            boxShadow: ui.sh,
+          }}
+        >
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Star
+              className="h-3.5 w-3.5 shrink-0"
+              strokeWidth={1.1}
+              style={{ color: ui.amber, fill: ui.amberBg }}
+            />
+            <span
+              className="text-[11.5px] font-bold"
+              style={{ color: ui.text2, fontFamily: "'Sora', sans-serif" }}
             >
-              <Tabs defaultValue="rules" className="w-full">
-                <TabsList className="flex w-full max-w-md h-auto p-0 bg-transparent border-b border-gray-200/90 rounded-none gap-10">
-                  <TabsTrigger
-                    value="rules"
-                    className="rounded-none px-0 pb-2.5 pt-0 text-sm font-semibold text-gray-500 shadow-none border-0 border-b-[3px] border-transparent bg-transparent data-[state=active]:shadow-none data-[state=active]:bg-transparent data-[state=inactive]:text-gray-500 data-[state=active]:border-b-[#1A2B48] data-[state=active]:text-[#1A2B48]"
-                  >
-                    Promotion Rules
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="json"
-                    className="rounded-none px-0 pb-2.5 pt-0 text-sm font-semibold text-gray-500 shadow-none border-0 border-b-[3px] border-transparent bg-transparent data-[state=active]:shadow-none data-[state=active]:bg-transparent data-[state=inactive]:text-gray-500 data-[state=active]:border-b-[#1A2B48] data-[state=active]:text-[#1A2B48]"
-                  >
-                    JSON Output
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="rules" className="mt-5 outline-none space-y-4">
-                  {loading ? (
-                    <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-20 text-center">
-                      <p className="text-sm text-gray-500">Loading promotion rules…</p>
-                    </div>
-                  ) : sorted.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center px-4">
-                      <p className="text-sm font-medium text-gray-700">
-                        No promotion builders for this filter.
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2 max-w-sm mx-auto">
-                        Try another affiliation or confirm builders are seeded in the backend.
-                      </p>
-                    </div>
-                  ) : (
-                    sorted.map((b) => (
-                      <BuilderRuleCard
-                        key={b.id ?? JSON.stringify(b.targetClass)}
-                        builder={b}
-                        open={expandedId === b.id}
-                        onOpenChange={(o) => setExpandedId(o && b.id != null ? b.id : null)}
-                      />
-                    ))
-                  )}
-
-                  <div
-                    className="rounded-xl border px-4 py-3 flex gap-3 text-sm mt-5"
-                    style={{
-                      borderColor: "#E9D5FF",
-                      backgroundColor: "#FAF5FF",
-                      color: theme.navy,
-                    }}
-                  >
-                    <Info className="h-5 w-5 shrink-0 mt-0.5" style={{ color: theme.purple }} />
-                    <p className="leading-relaxed opacity-90">
-                      Rules are based on CU Form Fill-up Status = &quot;Form Filled&quot;. Semester
-                      I → II is always auto-promoted. All other rules are fully configurable per
-                      affiliation.
-                    </p>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="json" className="mt-5 outline-none">
-                  <pre className="text-xs bg-slate-950 text-slate-50 rounded-xl p-4 overflow-auto max-h-[min(70vh,560px)] font-mono border border-slate-800">
-                    {loading ? "…" : JSON.stringify(sorted, null, 2)}
-                  </pre>
-                </TabsContent>
-              </Tabs>
+              Affiliated College
+            </span>
+          </div>
+          <div className="relative min-w-[170px] max-w-[300px] flex-1">
+            <Select
+              value={affiliationFilter === "all" ? "all" : String(affiliationFilter)}
+              onValueChange={(v) => {
+                setAffiliationFilter(v === "all" ? "all" : Number(v));
+                setExpandedId(null);
+              }}
+            >
+              <SelectTrigger
+                className="h-9 w-full rounded-lg border-[1.5px] pr-9 text-[12.5px] font-semibold shadow-none"
+                style={{ borderColor: ui.border2, background: ui.card2, color: ui.navy }}
+              >
+                <SelectValue placeholder="Select affiliation" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Affiliations</SelectItem>
+                {affiliations.map((a) =>
+                  a.id != null ? (
+                    <SelectItem key={a.id} value={String(a.id)}>
+                      {a.name}
+                    </SelectItem>
+                  ) : null,
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          {affiliationFilter !== "all" && (
+            <div
+              className="flex items-center gap-1.5 rounded-md border px-2.5 py-1"
+              style={{ background: ui.amberBg, borderColor: ui.amberBorder }}
+            >
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ background: ui.amber }}
+              />
+              <span
+                className="text-[11.5px] font-semibold"
+                style={{ color: ui.amber, fontFamily: "'Sora', sans-serif" }}
+              >
+                {viewingLabel}
+              </span>
+              <button
+                type="button"
+                className="ml-0.5 p-0 text-[12px] opacity-70 hover:opacity-100"
+                style={{ color: ui.amber, background: "none", border: "none" }}
+                onClick={() => setAffiliationFilter("all")}
+                aria-label="Clear affiliation filter"
+              >
+                ✕
+              </button>
             </div>
-          </CardContent>
-        </Card>
+          )}
+          <div
+            className="ml-auto rounded-md border px-3 py-1.5"
+            style={{ background: ui.card2, borderColor: ui.border }}
+          >
+            <span className="text-[11px]" style={{ color: ui.text3 }}>
+              Viewing:{" "}
+            </span>
+            <span
+              className="text-[11px] font-bold"
+              style={{ color: ui.navy, fontFamily: "'Sora', sans-serif" }}
+            >
+              {viewingLabel}
+            </span>
+          </div>
+        </div>
+
+        {/* Rules from API */}
+        <div
+          className="overflow-hidden rounded-xl border-[1.5px]"
+          style={{ borderColor: ui.border2, boxShadow: ui.sh }}
+        >
+          <div style={{ background: ui.card }}>
+            {loading ? (
+              <div
+                className="border-b px-6 py-16 text-center text-sm"
+                style={{ borderColor: ui.border, color: ui.text3 }}
+              >
+                Loading promotion rules…
+              </div>
+            ) : sorted.length === 0 ? (
+              <div className="border-b px-6 py-14 text-center" style={{ borderColor: ui.border }}>
+                <p className="text-sm font-medium" style={{ color: ui.text }}>
+                  No promotion builders for this filter.
+                </p>
+                <p className="mx-auto mt-2 max-w-sm text-xs" style={{ color: ui.text3 }}>
+                  Try another affiliation or confirm promotion builders exist in the database.
+                </p>
+              </div>
+            ) : (
+              sorted.map((b) => (
+                <BuilderRuleCard
+                  key={b.id ?? JSON.stringify(b.targetClass)}
+                  builder={b}
+                  open={expandedId === b.id}
+                  onOpenChange={(o) => setExpandedId(o && b.id != null ? b.id : null)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Footnote */}
+        <div
+          className="flex items-start gap-2.5 rounded-lg border-[1.5px] px-4 py-3"
+          style={{ borderColor: ui.border, background: ui.card, boxShadow: ui.sh }}
+        >
+          <Info
+            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+            strokeWidth={1.1}
+            style={{ color: "#3D7FBF" }}
+          />
+          <p className="m-0 text-[11.5px] leading-[1.65]" style={{ color: ui.text2 }}>
+            Rules are based on{" "}
+            <strong style={{ color: ui.navy, fontWeight: 600 }}>
+              CU Form Fill-up Status = &quot;Form Filled&quot;
+            </strong>
+            . Semester I → II is always auto-promoted. All other rules are fully configurable per
+            affiliation.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -416,10 +528,10 @@ function BuilderRuleCard({
 }) {
   const tc = builder.targetClass as ClassT | undefined;
   const semIdx = semesterIndexFromName(tc?.name);
-  const romanInBadge = semIdx != null ? toRomanNumeral(semIdx) : "?";
   const track = inferTrack(tc);
   const isAuto = builder.logic === "AUTO_PROMOTE";
   const title = displaySemesterTitle(tc?.name);
+  const pal = trackPalette(semIdx);
 
   const summaryBadges = React.useMemo(() => {
     const chips: {
@@ -449,258 +561,417 @@ function BuilderRuleCard({
     return chips;
   }, [builder.rules]);
 
-  /** Even = teal/mint tile, Odd = peach/orange — matches reference rows */
-  const avatarStyle =
-    track === "ODD"
-      ? {
-          backgroundColor: "#FFEDD5",
-          color: "#C2410C",
-          borderColor: "rgba(251, 146, 60, 0.45)",
-        }
-      : track === "EVEN"
-        ? {
-            backgroundColor: "#CCFBF1",
-            color: "#0F766E",
-            borderColor: "rgba(45, 212, 191, 0.45)",
-          }
-        : {
-            backgroundColor: "#E5E7EB",
-            color: "#4B5563",
-            borderColor: "#D1D5DB",
-          };
-
-  const openAccent =
-    track === "ODD"
-      ? "border-[#FDBA74]/50 border-l-[6px] border-l-[#F59E0B] shadow-[inset_6px_0_0_0_rgba(245,158,11,0.12)]"
-      : track === "EVEN"
-        ? "border-[#6EE7B7]/50 border-l-[6px] border-l-[#10B981] shadow-[inset_6px_0_0_0_rgba(16,185,129,0.1)]"
-        : "border-violet-200 border-l-[6px] border-l-[#7C3AED]/80";
+  const notConfigured = !isAuto && summaryBadges.length === 0;
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
       <div
-        className={cn(
-          "rounded-2xl border bg-white shadow-[0_2px_12px_rgba(15,23,42,0.06)] transition-all",
-          open ? openAccent : "border-gray-200 hover:border-gray-300",
-        )}
+        className="border-b transition-colors last:border-b-0"
+        style={{ borderColor: ui.border }}
       >
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className={cn(
-              "w-full text-left px-3 py-3 min-[420px]:px-4 min-[420px]:py-3.5",
-              // Use min-[420px] (not sm:640px) so the 3-column row shows with sidebar open
-              "grid grid-cols-1 gap-3 min-[420px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[420px]:items-center min-[420px]:gap-4 min-[420px]:min-h-[4.25rem]",
-            )}
+            className="grid w-full cursor-pointer select-none items-center gap-3 border-0 bg-transparent px-[18px] py-3 text-left transition-colors hover:bg-[#F7F6F3] sm:grid-cols-[190px_minmax(0,1fr)_auto_40px]"
+            style={{
+              background: open ? `${pal.bg}22` : ui.card,
+              boxShadow: open ? `inset 3px 0 0 ${pal.c}` : undefined,
+            }}
           >
-            <div className="flex items-center gap-3 min-[420px]:gap-4 min-w-0">
-              <div
-                className="flex h-11 w-11 min-[420px]:h-12 min-[420px]:w-12 shrink-0 items-center justify-center rounded-lg text-sm font-bold border"
-                style={avatarStyle}
-                aria-hidden
-              >
-                {romanInBadge}
-              </div>
-              <div className="min-w-0 flex-1 min-[420px]:w-44 min-[420px]:flex-initial min-[420px]:shrink-0">
+            <div className="flex items-center gap-2.5">
+              <SemesterBox sem={semIdx} size={36} />
+              <div>
                 <div
-                  className="text-sm font-bold leading-tight truncate"
-                  style={{ color: theme.navy }}
+                  className="text-[13px] font-bold leading-tight tracking-[-0.01em]"
+                  style={{ color: ui.text, fontFamily: "'Sora', sans-serif" }}
                 >
                   {title}
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5 truncate">
+                <div className="mt-px text-[10.5px]" style={{ color: ui.text3 }}>
                   {track === "ODD" ? "Odd track" : track === "EVEN" ? "Even track" : "—"}
                 </div>
               </div>
             </div>
 
-            {open ? (
-              <div className="hidden min-[420px]:block min-w-0" aria-hidden />
-            ) : (
-              <div className="min-w-0 flex flex-col min-[420px]:flex-row min-[420px]:flex-wrap items-center justify-center gap-1.5 py-1 min-[420px]:py-0 border-t border-gray-100 min-[420px]:border-t-0 min-[420px]:px-2">
-                {isAuto ? (
-                  <p className="text-xs text-gray-500 italic w-full text-center min-[420px]:text-center">
-                    No conditions - auto promoted
-                  </p>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap items-center justify-center gap-1.5 w-full min-[420px]:w-auto">
+            <div className="min-w-0">
+              {isAuto ? (
+                <span className="text-[11.5px] italic" style={{ color: ui.text3 }}>
+                  No conditions — auto-promoted
+                </span>
+              ) : notConfigured ? (
+                <span
+                  className="inline-flex items-center gap-1 text-[12px]"
+                  style={{ color: ui.red }}
+                >
+                  ⚠ Not configured
+                </span>
+              ) : (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex flex-wrap gap-1">
+                    {summaryBadges
+                      .filter((c) => !c.isNoFails)
+                      .map((c) => (
+                        <span
+                          key={c.key}
+                          className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                          style={{
+                            fontFamily: "'Sora', sans-serif",
+                            ...(c.variant === "odd"
+                              ? {
+                                  background: ui.amberBg,
+                                  borderColor: ui.amberBorder,
+                                  color: ui.amber,
+                                }
+                              : c.variant === "even"
+                                ? {
+                                    background: ui.tealBg,
+                                    borderColor: ui.tealBorder,
+                                    color: ui.teal,
+                                  }
+                                : {
+                                    background: ui.roseBg,
+                                    borderColor: ui.roseBorder,
+                                    color: ui.rose,
+                                  }),
+                          }}
+                        >
+                          <span
+                            className="h-1 w-1 shrink-0 rounded-full"
+                            style={{ background: "currentColor" }}
+                          />
+                          {c.label}
+                        </span>
+                      ))}
+                  </div>
+                  {summaryBadges.some((c) => c.isNoFails) && (
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span
+                        className="rounded px-1.5 py-0.5 text-[10px] font-bold"
+                        style={{
+                          color: ui.rose,
+                          background: ui.roseBg,
+                          border: `1px solid ${ui.roseBorder}`,
+                        }}
+                      >
+                        No Fails
+                      </span>
                       {summaryBadges
-                        .filter((c) => !c.isNoFails)
+                        .filter((c) => c.isNoFails)
                         .map((c) => (
                           <span
                             key={c.key}
-                            className={cn(
-                              "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
-                              c.variant === "odd" &&
-                                "border-amber-200 bg-amber-50/90 text-amber-900",
-                              c.variant === "even" && "border-teal-200 bg-teal-50/90 text-teal-900",
-                              c.variant === "fail" && "border-rose-200 bg-rose-50 text-rose-900",
-                            )}
+                            className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                            style={{
+                              fontFamily: "'Sora', sans-serif",
+                              background: ui.roseBg,
+                              borderColor: ui.roseBorder,
+                              color: ui.rose,
+                            }}
                           >
-                            <span className="text-[10px] opacity-70 mr-0.5">•</span>
+                            <span className="h-1 w-1 shrink-0 rounded-full bg-current" />
                             {c.label}
                           </span>
                         ))}
                     </div>
-                    {summaryBadges.some((c) => c.isNoFails) && (
-                      <div className="flex flex-wrap items-center justify-center gap-1.5 w-full min-[420px]:w-auto">
-                        <span className="text-[11px] font-semibold text-rose-600">No Fails</span>
-                        {summaryBadges
-                          .filter((c) => c.isNoFails)
-                          .map((c) => (
-                            <span
-                              key={c.key}
-                              className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-900"
-                            >
-                              {c.label}
-                            </span>
-                          ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
 
-            <div className="flex items-center justify-between min-[420px]:justify-end gap-2 min-[420px]:gap-3 shrink-0 w-full min-[420px]:w-auto pt-1 border-t border-gray-100 min-[420px]:border-t-0 min-[420px]:pt-0">
+            <div>
               {isAuto ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-800">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                  Auto
+                <span
+                  className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap"
+                  style={{
+                    background: ui.greenBg,
+                    borderColor: ui.greenBorder,
+                    color: ui.green,
+                  }}
+                >
+                  ⚡ Auto
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-semibold text-violet-800">
-                  <Circle className="h-3.5 w-3.5 text-violet-600 fill-violet-200/50 shrink-0" />
-                  Conditional
+                <span
+                  className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap"
+                  style={{
+                    background: ui.violetBg,
+                    borderColor: ui.violetBorder,
+                    color: ui.violet,
+                  }}
+                >
+                  ⚙ Conditional
                 </span>
               )}
+            </div>
+
+            <div className="flex justify-center opacity-45 transition-opacity hover:opacity-100">
               <ChevronDown
-                className={cn(
-                  "h-5 w-5 text-gray-400 transition-transform shrink-0",
-                  open && "rotate-180",
-                )}
+                className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")}
+                strokeWidth={1.4}
+                style={{ color: ui.text2 }}
               />
             </div>
           </button>
         </CollapsibleTrigger>
 
-        <CollapsibleContent>
-          <div className="border-t border-gray-100 bg-white px-4 sm:px-5 pb-5 pt-4 space-y-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+        <CollapsibleContent className="clause-row-wrap data-[state=open]:animate-in data-[state=open]:fade-in-0">
+          <div
+            className="border-t bg-white"
+            style={{
+              borderColor: ui.border,
+              borderTopWidth: 3,
+              borderTopColor: pal.mid,
+            }}
+          >
+            {/* Logic strip */}
+            <div
+              className="flex flex-wrap items-center gap-2 border-b px-4 py-3"
+              style={{ borderColor: ui.border, background: ui.card2 }}
+            >
+              <span
+                className="mr-1 text-[10.5px] font-bold uppercase tracking-[0.06em]"
+                style={{ color: ui.text3, fontFamily: "'Sora', sans-serif" }}
+              >
                 Logic
-              </p>
-              <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+              </span>
+              <div
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] px-3 py-1.5 text-[12px] font-bold",
+                  isAuto ? "shadow-sm" : "",
+                )}
+                style={
+                  isAuto
+                    ? {
+                        borderColor: ui.green,
+                        background: ui.greenBg,
+                        color: ui.green,
+                        fontFamily: "'Sora', sans-serif",
+                      }
+                    : {
+                        borderColor: ui.greenBorder,
+                        background: "transparent",
+                        color: ui.text2,
+                        fontFamily: "'Sora', sans-serif",
+                      }
+                }
+              >
                 <span
-                  className={cn(
-                    "px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors",
-                    isAuto
-                      ? "bg-[#10B981] text-white shadow-sm"
-                      : "border-2 border-emerald-500/70 bg-white text-emerald-800",
-                  )}
+                  className="flex h-3.5 w-3.5 items-center justify-center rounded-full border-2"
+                  style={{
+                    borderColor: isAuto ? ui.green : ui.greenBorder,
+                    background: isAuto ? ui.green : "transparent",
+                  }}
                 >
-                  <Zap className="h-4 w-4" />
-                  Auto-Promote
+                  {isAuto ? <span className="h-[5px] w-[5px] rounded-full bg-white" /> : null}
                 </span>
+                ⚡ Auto-Promote
+              </div>
+              <div
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] px-3 py-1.5 text-[12px] font-bold",
+                  !isAuto ? "shadow-sm" : "",
+                )}
+                style={
+                  !isAuto
+                    ? {
+                        borderColor: ui.violet,
+                        background: ui.violetBg,
+                        color: ui.violet,
+                        fontFamily: "'Sora', sans-serif",
+                      }
+                    : {
+                        borderColor: ui.violetBorder,
+                        background: "transparent",
+                        color: ui.text2,
+                        fontFamily: "'Sora', sans-serif",
+                      }
+                }
+              >
                 <span
-                  className={cn(
-                    "px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors",
-                    !isAuto
-                      ? "bg-[#7C3AED] text-white shadow-sm"
-                      : "border-2 border-violet-500 bg-white text-violet-800",
-                  )}
+                  className="flex h-3.5 w-3.5 items-center justify-center rounded-full border-2"
+                  style={{
+                    borderColor: !isAuto ? ui.violet : ui.violetBorder,
+                    background: !isAuto ? ui.violet : "transparent",
+                  }}
                 >
-                  <Circle className="h-4 w-4 fill-current opacity-30" />
-                  Conditional
+                  {!isAuto ? <span className="h-[5px] w-[5px] rounded-full bg-white" /> : null}
                 </span>
+                ⚙ Conditional
               </div>
             </div>
 
             {isAuto ? (
-              <div className="rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] px-4 py-3.5 text-sm text-emerald-950 flex gap-3">
-                <Zap className="h-5 w-5 shrink-0 text-[#10B981] mt-0.5" />
-                <div>
-                  <span className="font-bold">Auto-Promotion Active</span>
-                  <span className="text-emerald-900/90">
-                    {" "}
-                    — No conditions required — student always advances to{" "}
-                    <span className="font-bold">{title}</span>.
-                  </span>
+              <div
+                className="space-y-0 border-b"
+                style={{ borderColor: ui.border, background: ui.greenBg }}
+              >
+                <div className="flex items-start gap-2.5 px-[18px] py-5">
+                  <div
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-[1.5px]"
+                    style={{ borderColor: ui.greenBorder, background: ui.greenBg }}
+                  >
+                    <Zap className="h-4 w-4" style={{ color: ui.green }} />
+                  </div>
+                  <div>
+                    <div
+                      className="text-[13px] font-bold"
+                      style={{ color: ui.green, fontFamily: "'Sora', sans-serif" }}
+                    >
+                      Auto-Promotion Active
+                    </div>
+                    <div className="mt-0.5 text-[11.5px]" style={{ color: ui.text2 }}>
+                      No conditions required — student always advances to {title}.
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className="flex justify-end gap-2 border-t px-4 py-3"
+                  style={{ borderColor: ui.border, background: ui.card2 }}
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="text-[12.5px] font-semibold"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled
+                    className="text-[12.5px] font-bold"
+                    style={{ background: ui.navy, color: "#fff", fontFamily: "'Sora', sans-serif" }}
+                  >
+                    Save Rule →
+                  </Button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
-                  <div className="grid grid-cols-[52px_1fr_88px_1fr_40px] gap-0 border-b border-gray-200 bg-gray-50">
-                    <div className="px-2 py-2.5 sm:px-3" />
-                    <div className="px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 sm:pl-0">
-                      COLUMN NAME
-                    </div>
-                    <div className="px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 border-l border-gray-200">
-                      OPERATOR
-                    </div>
-                    <div className="px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 border-l border-gray-200">
-                      VALUE
-                    </div>
-                    <div className="px-1 py-2.5 border-l border-gray-200" />
+              <div>
+                <div style={{ background: ui.card }}>
+                  {/* Table header */}
+                  <div
+                    className="grid grid-cols-[52px_1fr_1fr_1.4fr_34px] gap-0 border-b"
+                    style={{ background: ui.card3, borderColor: ui.border }}
+                  >
+                    <div className="px-3 py-2" />
+                    {["Column Name", "Operator", "Value"].map((h) => (
+                      <div
+                        key={h}
+                        className="border-l px-3 py-2 text-[10px] font-bold uppercase tracking-[0.07em]"
+                        style={{
+                          borderColor: ui.border,
+                          color: ui.text3,
+                          fontFamily: "'Sora', sans-serif",
+                        }}
+                      >
+                        {h}
+                      </div>
+                    ))}
+                    <div className="border-l px-1 py-2" style={{ borderColor: ui.border }} />
                   </div>
+
                   {(builder.rules ?? []).map((rule, idx) => {
                     const failClause = isFailedPapersClause(rule.promotionClause?.name);
                     return (
                       <div
                         key={rule.id ?? idx}
-                        className="grid grid-cols-1 sm:grid-cols-[52px_1fr_88px_1fr_40px] border-b border-gray-100 last:border-b-0"
+                        className="grid grid-cols-1 border-b last:border-b-0 sm:grid-cols-[52px_1fr_1fr_1.4fr_34px]"
+                        style={{ borderColor: ui.border }}
                       >
-                        <div className="hidden sm:flex items-start justify-center px-2 pt-3.5 text-xs font-semibold text-gray-400">
-                          {idx === 0 ? "If" : "And"}
+                        <div className="hidden items-start justify-center px-3 pt-3.5 sm:flex">
+                          <span
+                            className="text-xs font-semibold"
+                            style={{ color: ui.text3, fontFamily: "'Sora', sans-serif" }}
+                          >
+                            {idx === 0 ? "If" : "And"}
+                          </span>
                         </div>
-                        <div className="flex gap-2 px-3 py-3 sm:pl-0 min-w-0 border-b border-gray-100 sm:border-b-0">
-                          <span className="sm:hidden text-xs font-semibold text-gray-400 w-8 shrink-0 pt-1">
+                        <div className="flex min-w-0 gap-2 border-b px-3 py-3 sm:border-b-0 sm:pl-0">
+                          <span
+                            className="w-8 shrink-0 pt-1 text-xs font-semibold sm:hidden"
+                            style={{ color: ui.text3 }}
+                          >
                             {idx === 0 ? "If" : "And"}
                           </span>
                           <div
                             className={cn(
-                              "flex min-w-0 flex-1 items-start gap-2 rounded-lg px-3 py-2 shadow-sm",
-                              failClause
-                                ? "border border-rose-200 bg-rose-50/60"
-                                : "border border-emerald-200 bg-white",
+                              "flex min-w-0 flex-1 items-start gap-2 rounded-lg px-3 py-2",
+                              failClause ? "border" : "border",
                             )}
+                            style={
+                              failClause
+                                ? { borderColor: ui.roseBorder, background: `${ui.roseBg}99` }
+                                : { borderColor: ui.greenBorder, background: ui.card }
+                            }
                           >
                             {failClause ? (
                               <X
-                                className="h-4 w-4 shrink-0 mt-0.5 text-rose-600"
-                                strokeWidth={2.5}
+                                className="mt-0.5 h-4 w-4 shrink-0"
+                                strokeWidth={1}
+                                style={{ color: ui.rose }}
                               />
                             ) : (
                               <CheckSquare
-                                className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600"
-                                strokeWidth={2.5}
+                                className="mt-0.5 h-4 w-4 shrink-0"
+                                strokeWidth={1}
+                                style={{ color: ui.green }}
                               />
                             )}
                             <span
-                              className="text-sm font-semibold leading-snug break-words"
-                              style={{ color: theme.navy }}
+                              className="text-xs font-medium leading-snug break-words"
+                              style={{ color: ui.text }}
                             >
                               {rule.promotionClause?.name ?? "—"}
                             </span>
                           </div>
                         </div>
-                        <div className="px-3 py-2.5 sm:py-3 border-t sm:border-t-0 sm:border-l border-gray-200 flex items-center">
-                          <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm">
-                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
+                        <div
+                          className="flex items-center border-t border-l px-3 py-2.5 sm:border-t-0"
+                          style={{ borderColor: ui.border }}
+                        >
+                          <div
+                            className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11.5px]"
+                            style={{
+                              borderColor: ui.border2,
+                              background: ui.card2,
+                              color: ui.text2,
+                            }}
+                          >
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden>
+                              <circle cx="4" cy="4" r="3.2" stroke={ui.text3} strokeWidth="0.9" />
+                              <path
+                                d="M2.5 4h3M4 2.5v3"
+                                stroke={ui.text3}
+                                strokeWidth="0.9"
+                                strokeLinecap="round"
+                              />
+                            </svg>
                             {operatorLabel(rule.operator ?? "EQUALS")}
                           </div>
                         </div>
-                        <div className="px-3 py-2.5 sm:py-3 border-t sm:border-t-0 sm:border-l border-gray-200 flex flex-wrap gap-1.5 items-center sm:min-h-[3rem]">
-                          <div className="w-full rounded-lg border border-gray-200 bg-[#FAFAF9] p-2 shadow-inner flex flex-wrap gap-1.5 items-center min-h-[2.75rem]">
+                        <div
+                          className="min-w-0 border-t border-l px-3 py-2.5 sm:border-t-0"
+                          style={{ borderColor: ui.border }}
+                        >
+                          <div
+                            className="flex min-h-[2.75rem] flex-wrap items-center gap-1.5 rounded-lg border p-2 shadow-inner"
+                            style={{ borderColor: ui.border, background: "#FAFAF9" }}
+                          >
                             {failClause && (
-                              <span className="text-[11px] font-bold mr-1 text-[#BE123C]">
+                              <span
+                                className="mr-1 text-[11px] font-bold"
+                                style={{ color: "#BE123C" }}
+                              >
                                 No Fails
                               </span>
                             )}
                             {(rule.classes ?? []).length === 0 ? (
-                              <span className="text-sm text-gray-400">—</span>
+                              <span className="text-sm" style={{ color: ui.text3 }}>
+                                —
+                              </span>
                             ) : (
                               (rule.classes ?? []).map((row) => {
                                 const cls = row.class as ClassT | undefined;
@@ -709,14 +980,26 @@ function BuilderRuleCard({
                                 return (
                                   <span
                                     key={row.id ?? `${rule.id}-${cls?.id}`}
-                                    className={cn(
-                                      "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+                                    className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium"
+                                    style={
                                       op === "NONE_IN" || failClause
-                                        ? "border-[#FDA4AF] bg-[#FFF1F2] text-[#9F1239]"
+                                        ? {
+                                            borderColor: ui.roseBorder,
+                                            background: "#FFF1F2",
+                                            color: "#9F1239",
+                                          }
                                         : tr === "ODD"
-                                          ? "border-[#F59E0B]/55 bg-[#FFFBEB] text-[#92400E]"
-                                          : "border-[#10B981]/45 bg-[#ECFDF5] text-[#065F46]",
-                                    )}
+                                          ? {
+                                              borderColor: `${ui.amber}8c`,
+                                              background: "#FFFBEB",
+                                              color: "#92400E",
+                                            }
+                                          : {
+                                              borderColor: `${ui.teal}73`,
+                                              background: ui.tealBg,
+                                              color: "#065F46",
+                                            }
+                                    }
                                   >
                                     {op === "EQUALS"
                                       ? formFilledValueLabel(cls?.name)
@@ -727,10 +1010,14 @@ function BuilderRuleCard({
                             )}
                           </div>
                         </div>
-                        <div className="hidden sm:flex items-center justify-center border-t sm:border-t-0 sm:border-l border-gray-200 py-2">
+                        <div
+                          className="hidden items-center justify-center border-t border-l py-2 sm:flex"
+                          style={{ borderColor: ui.border }}
+                        >
                           <button
                             type="button"
-                            className="rounded-md p-1.5 text-gray-300 hover:text-gray-500 cursor-not-allowed"
+                            className="rounded-md p-1.5"
+                            style={{ color: ui.text3 }}
                             disabled
                             aria-label="Remove clause"
                           >
@@ -740,48 +1027,100 @@ function BuilderRuleCard({
                       </div>
                     );
                   })}
+
+                  <div className="border-b px-3.5 py-2.5" style={{ borderColor: ui.border }}>
+                    <button
+                      type="button"
+                      disabled
+                      className="inline-flex items-center gap-1.5 rounded-md border-[1.5px] border-dashed px-3.5 py-1.5 text-[12px] font-semibold"
+                      style={{
+                        borderColor: ui.border2,
+                        color: ui.text2,
+                        background: "transparent",
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add Clause
+                    </button>
+                  </div>
+
+                  {/* Then */}
+                  <div
+                    className="grid grid-cols-1 border-b sm:grid-cols-[52px_1fr]"
+                    style={{ borderColor: ui.border, background: ui.greenBg }}
+                  >
+                    <div className="flex items-center justify-center px-3 py-2.5">
+                      <span
+                        className="text-[11px] font-bold"
+                        style={{ color: ui.green, fontFamily: "'Sora', sans-serif" }}
+                      >
+                        Then
+                      </span>
+                    </div>
+                    <div
+                      className="flex items-center gap-2 border-t px-3 py-2.5 sm:border-t-0 sm:border-l"
+                      style={{ borderColor: ui.greenBorder }}
+                    >
+                      <span style={{ color: ui.text3 }}>→</span>
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold"
+                        style={{
+                          borderColor: ui.greenBorder,
+                          background: ui.greenBg,
+                          color: ui.green,
+                        }}
+                      >
+                        <Check className="h-3 w-3" strokeWidth={2} />
+                        Promote to {title}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Else */}
+                  <div className="grid grid-cols-1 sm:grid-cols-[52px_1fr]">
+                    <div className="flex items-center justify-center px-3 py-2.5">
+                      <span
+                        className="text-[11px] font-bold"
+                        style={{ color: ui.text3, fontFamily: "'Sora', sans-serif" }}
+                      >
+                        Else
+                      </span>
+                    </div>
+                    <div
+                      className="flex items-center gap-2 border-t px-3 py-2.5 sm:border-t-0 sm:border-l"
+                      style={{ borderColor: ui.border }}
+                    >
+                      <span style={{ color: ui.text3 }}>→</span>
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold"
+                        style={{ borderColor: ui.border2, background: ui.card2, color: ui.text3 }}
+                      >
+                        <CircleSlash className="h-3 w-3" />
+                        Hold — Do not promote
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-dashed border-gray-300 text-gray-500 hover:text-gray-700 bg-gray-50/50"
-                  disabled
+                <div
+                  className="flex justify-end gap-2 border-t px-4 py-3"
+                  style={{ borderColor: ui.border, background: ui.card2 }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Clause
-                </Button>
-
-                <div className="rounded-lg bg-[#ECFDF5] border border-[#A7F3D0] px-4 py-2.5 text-sm text-emerald-950 flex items-start gap-2">
-                  <CheckCircle2
-                    className="h-5 w-5 shrink-0 mt-0.5"
-                    style={{ color: theme.green }}
-                  />
-                  <div>
-                    <span className="font-bold">Then</span>
-                    <span className="text-emerald-800/90"> — </span>
-                    Promote to <span className="font-bold">{title}</span>
-                  </div>
-                </div>
-                <div className="rounded-lg bg-gray-100 border border-gray-200 px-4 py-2.5 text-sm text-gray-700 flex items-start gap-2">
-                  <CircleSlash className="h-5 w-5 shrink-0 text-gray-400 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Else</span>
-                    <span className="text-gray-500"> — </span>
-                    Hold — Do not promote
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button type="button" variant="ghost" size="sm">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="text-[12.5px] font-semibold"
+                  >
                     Cancel
                   </Button>
                   <Button
                     type="button"
                     size="sm"
-                    className={cn("gap-1 rounded-lg font-semibold", navyPrimaryBtn)}
                     disabled
+                    className="gap-1 text-[12.5px] font-bold"
+                    style={{ background: ui.navy, color: "#fff", fontFamily: "'Sora', sans-serif" }}
                   >
                     Save Rule
                     <ArrowRight className="h-4 w-4" />

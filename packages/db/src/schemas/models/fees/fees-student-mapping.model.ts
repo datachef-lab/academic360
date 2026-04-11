@@ -33,7 +33,7 @@ export const feeStudentMappingModel = pgTable("fee_student_mappings", {
         .references(() => userModel.id),
     lateFee: integer().notNull().default(0),
     totalPayable: integer().notNull().default(0),
-    amountPaid: integer().notNull().default(0),
+    amountPaid: integer(),
     // paymentStatus: paymentStatusEnum().notNull().default("PENDING").notNull(),
     // paymentMode: paymentModeEnum(),
     // transactionRef: text(),

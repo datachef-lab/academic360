@@ -31,6 +31,7 @@ import {
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { SearchStudentModal } from "./SearchStudentModal";
+import { NewAcademicSessionDialog } from "./NewAcademicSessionDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { useSettings } from "@/features/settings/hooks/use-settings";
@@ -141,6 +142,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, accessToken, isReady } = useAuth();
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
+  const [newSessionDialogOpen, setNewSessionDialogOpen] = React.useState(false);
   const { isMobile, setOpenMobile } = useSidebar();
 
   // Close mobile sidebar when route changes
@@ -295,13 +297,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {/* Academic Year Setup */}
                   {user?.email && !TEMP_USER_EMAILS.includes(user.email) && (
                     <div className="my-4 mb-6 border mx-2 rounded-l-md">
-                      <NavItem
-                        key={"Academic Year Setup"}
-                        icon={<Plus className="h-5 w-5" />}
-                        href={"/dashboard/academic-year-setup"}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewSessionDialogOpen(true);
+                          if (isMobile) setOpenMobile(false);
+                        }}
+                        className={cn(
+                          "w-full border border-transparent group flex items-center transition-all duration-150 px-6 py-1 hover:border-slate-50 text-sm font-medium relative rounded-l-md text-left",
+                          "text-white hover:bg-purple-700/80 hover:text-white",
+                        )}
                       >
-                        <span className="text">New Academic Session</span>
-                      </NavItem>
+                        <div className="flex items-center gap-3 w-full">
+                          <span className="h-5 w-5 text-white group-hover:text-white">
+                            <Plus className="h-5 w-5" />
+                          </span>
+                          <span className="text-inherit truncate">
+                            Academic session &amp; promotion
+                          </span>
+                        </div>
+                      </button>
                     </div>
                   )}
 
@@ -461,6 +476,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             setIsSearchActive(false);
           }
         }}
+      />
+
+      <NewAcademicSessionDialog
+        open={newSessionDialogOpen}
+        onOpenChange={setNewSessionDialogOpen}
       />
     </div>
   );

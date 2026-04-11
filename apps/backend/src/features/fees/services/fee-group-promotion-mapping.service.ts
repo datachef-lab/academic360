@@ -507,7 +507,7 @@ export const getFeeGroupPromotionMappingsByPromotionId = async (
 export const updateFeeGroupPromotionMapping = async (
   id: number,
   data: Partial<typeof createFeeGroupPromotionMappingSchema._type>,
-  userId: number,
+  userId?: number,
 ): Promise<FeeGroupPromotionMappingDto | null> => {
   // Get the existing mapping to check if feeGroupId is being changed
   const [existing] = await db
@@ -546,7 +546,7 @@ export const updateFeeGroupPromotionMapping = async (
 
   // Emit socket event for fee group promotion mapping update
   const io = socketService.getIO();
-  if (io && dto) {
+  if (io && dto && userId) {
     // Get user name for notification
     const user = await userService.findById(userId);
     const userName = user?.name || "Unknown User";
@@ -578,6 +578,7 @@ async function recalculateFeeStudentMappingsForPromotionMapping(
   mappingId: number,
   updatedMapping: typeof feeGroupPromotionMappingModel.$inferSelect,
 ): Promise<void> {
+  console.log("in recalculateFeeStudentMappingsForPromotionMapping()");
   try {
     const [updatedFeeGroup] = await db
       .select({ feeSlabId: feeGroupModel.feeSlabId })

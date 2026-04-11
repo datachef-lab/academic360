@@ -365,6 +365,7 @@ export const paymentGatewayEnum = pgEnum("payment_gateway", [
 export const paymentForTypeEnum = pgEnum("payment_for_type", [
     "ADMISSION_APPLICATION_FEE",
     "FEE",
+    "ADMISSION",
     "OTHER",
 ]);
 

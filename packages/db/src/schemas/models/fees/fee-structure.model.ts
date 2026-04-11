@@ -4,7 +4,7 @@ import { boolean, date,  integer, pgTable, serial, timestamp } from "drizzle-orm
 
 import { receiptTypeModel } from "@/schemas/models/fees";
 import {  programCourseModel } from "@/schemas/models/course-design";
-import { academicYearModel, classModel, shiftModel } from "@/schemas/models/academics";
+import { academicYearModel, classModel, sessionModel, shiftModel } from "@/schemas/models/academics";
 import { userModel } from "../user";
 
 export const feeStructureModel = pgTable("fee_structures", {
@@ -13,7 +13,7 @@ export const feeStructureModel = pgTable("fee_structures", {
         .references(() => receiptTypeModel.id)
         .notNull(),
 
-    closingDate: date(),
+    closingDate: timestamp({withTimezone: true}),
     academicYearId: integer("academic_year_id_fk")
         .references(() => academicYearModel.id)
         .notNull(),
@@ -26,6 +26,8 @@ export const feeStructureModel = pgTable("fee_structures", {
         .references(() => programCourseModel.id),
     advanceForClassId: integer("advance_for_class_id_fk")
         .references(() => classModel.id),
+    advanceForSessionId: integer("advance_for_session_id_fk")
+        .references(() => sessionModel.id),
     startDate: timestamp({withTimezone: true}),
     endDate: timestamp({withTimezone: true}),
     onlineStartDate: timestamp({withTimezone: true}),

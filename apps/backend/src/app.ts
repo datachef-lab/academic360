@@ -112,6 +112,7 @@ import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js"
 import {
   promotionBuilderRouter,
   promotionClauseRouter,
+  promotionRosterRouter,
 } from "@/features/batches/routes/index.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
@@ -540,6 +541,7 @@ app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
 app.use("/api/v1/fees/receipts", feeReceiptRouter);
 app.use("/api/v1/batches/promotion-clauses", promotionClauseRouter);
 app.use("/api/v1/batches/promotion-builders", promotionBuilderRouter);
+app.use("/api/v1/batches/promotion-roster", promotionRosterRouter);
 app.use("/api/v1/fees/receipt-types", receiptTypeRouter);
 app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/slabs", feeSlabRouter);
