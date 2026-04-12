@@ -57,7 +57,7 @@ import StaffAssignmentPage from "./pages/admissions-fees/admissions/[year]/workf
 import EligibilityPage from "./pages/admissions-fees/admissions/[year]/workflows/EligibilityPage";
 import MeritCriteriaPage from "./pages/admissions-fees/admissions/[year]/workflows/MeritCriteriaPage";
 import FeesSlabMappingPage from "./pages/admissions-fees/admissions/[year]/workflows/FeesSlabMappingPage";
-import BulkUploadPage from "./pages/BulkUpload";
+import { BulkDataUploadPage } from "@/features/bulk-upload";
 import Dashboard from "./features/dashboard/pages/dashboard";
 import LoginPage from "./features/auth/pages/login-page";
 import ResetPasswordPage from "./features/auth/pages/reset-password-page";
@@ -555,7 +555,7 @@ const router = createBrowserRouter(
         },
 
         { path: "profile", element: <UserProfilePage /> },
-        { path: "bulk-upload", element: <BulkUploadPage /> },
+        { path: "bulk-upload", element: <BulkDataUploadPage /> },
       ],
     },
     { path: "*", element: <NotFoundPage /> },

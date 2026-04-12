@@ -2512,6 +2512,7 @@ export async function checkExistingStudentUids(
 export async function updateStudentCuRollAndRegistration(
   rows: StudentCuRollRegRow[],
   progressUserId?: string,
+  options?: { dryRun?: boolean },
 ): Promise<{
   totalRows: number;
   uniqueUids: number;
@@ -2520,12 +2521,21 @@ export async function updateStudentCuRollAndRegistration(
   notFound: string[];
   duplicates: Array<{ uid: string; rowNumbers: number[] }>;
   errors: Array<{ rowNumber: number; uid: string; error: string }>;
+  /** One entry per Excel data row — used by bulk-upload UI to show file contents for valid rows */
+  fileRows: Array<{
+    rowNumber: number;
+    uid: string;
+    cuRegistrationNumber: string | null;
+    cuRollNumber: string | null;
+  }>;
+  dryRun?: boolean;
 }> {
   const errors: Array<{ rowNumber: number; uid: string; error: string }> = [];
   const skipped: Array<{ uid: string; reason: string }> = [];
   const notFound: string[] = [];
   const duplicates: Array<{ uid: string; rowNumbers: number[] }> = [];
   let updated = 0;
+  const dryRun = options?.dryRun === true;
 
   const emitProgress = (
     message: string,
@@ -2603,6 +2613,13 @@ export async function updateStudentCuRollAndRegistration(
       }
     }
 
+    const fileRows = rows.map((r) => ({
+      rowNumber: r.rowNumber,
+      uid: r.uid,
+      cuRegistrationNumber: r.cuRegistrationNumber,
+      cuRollNumber: r.cuRollNumber,
+    }));
+
     const normalizedUids = Array.from(byUid.keys());
     if (normalizedUids.length === 0) {
       emitProgress("No valid UID rows found.", 100, "completed", {
@@ -2618,6 +2635,8 @@ export async function updateStudentCuRollAndRegistration(
         notFound,
         duplicates,
         errors,
+        fileRows,
+        dryRun,
       };
     }
 
@@ -2704,10 +2723,12 @@ export async function updateStudentCuRollAndRegistration(
       }
 
       try {
-        await db
-          .update(studentModel)
-          .set(setObj)
-          .where(eq(studentModel.id, student.id));
+        if (!dryRun) {
+          await db
+            .update(studentModel)
+            .set(setObj)
+            .where(eq(studentModel.id, student.id));
+        }
         updated++;
       } catch (e: any) {
         errors.push({
@@ -2736,15 +2757,23 @@ export async function updateStudentCuRollAndRegistration(
       }
     }
 
-    emitProgress("CU Roll/Registration update completed.", 100, "completed", {
-      totalRows: rows.length,
-      uniqueUids: byUid.size,
-      updated,
-      notFound: notFound.length,
-      skipped: skipped.length,
-      duplicates: duplicates.length,
-      errors: errors.length,
-    });
+    emitProgress(
+      dryRun
+        ? "Dry run completed — no database changes were made."
+        : "CU Roll/Registration update completed.",
+      100,
+      "completed",
+      {
+        totalRows: rows.length,
+        uniqueUids: byUid.size,
+        updated,
+        notFound: notFound.length,
+        skipped: skipped.length,
+        duplicates: duplicates.length,
+        errors: errors.length,
+        dryRun,
+      },
+    );
 
     return {
       totalRows: rows.length,
@@ -2754,6 +2783,8 @@ export async function updateStudentCuRollAndRegistration(
       notFound,
       duplicates,
       errors,
+      fileRows,
+      dryRun,
     };
   } catch (e: any) {
     emitProgress(

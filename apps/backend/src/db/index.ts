@@ -101,7 +101,7 @@ export const connectToDatabase = async () => {
     loadDefaultPromotionData().catch((e) => {
       log.warn("Default promotion data load failed", { error: e });
     });
-    loadStudentFees();
+    // loadStudentFees();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();

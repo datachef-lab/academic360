@@ -2511,6 +2511,49 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Online Payment Card Scheme",
 ] as const;
 
+/** Display timestamps in IST (Asia/Kolkata); UTC instants from DB are converted correctly. */
+const IST_DATE_TIME: Intl.DateTimeFormatOptions = {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true,
+};
+
+const IST_DATE_ONLY: Intl.DateTimeFormatOptions = {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+};
+
+function formatInstantToIst(d: Date): string {
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-IN", IST_DATE_TIME);
+}
+
+/** ISO / SQL date[-time] strings (often UTC with `Z`) — parse then show in IST. */
+function tryParseDateStringToIst(s: string): string | null {
+  const t = s.trim();
+  if (t.length < 8) return null;
+  // yyyy-mm-dd… or ISO; avoid matching arbitrary text
+  if (!/^\d{4}-\d{2}-\d{2}/.test(t)) return null;
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return null;
+  const hasTime =
+    /[T ]\d/.test(t) ||
+    /\d{2}:\d{2}/.test(t) ||
+    t.endsWith("Z") ||
+    /[+-]\d{2}:?\d{2}$/.test(t);
+  if (hasTime) {
+    return d.toLocaleString("en-IN", IST_DATE_TIME);
+  }
+  return d.toLocaleDateString("en-IN", IST_DATE_ONLY);
+}
+
 function formatExcelCell(value: unknown): string | number {
   if (value === null || value === undefined) return "";
   if (typeof value === "bigint") {
@@ -2520,12 +2563,14 @@ function formatExcelCell(value: unknown): string | number {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "number") return value;
   if (value instanceof Date) {
-    return value.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    return formatInstantToIst(value);
   }
   if (typeof value === "object" && value !== null && "getTime" in value) {
-    return new Date(value as Date).toLocaleString("en-IN", {
-      timeZone: "Asia/Kolkata",
-    });
+    return formatInstantToIst(new Date(value as Date));
+  }
+  if (typeof value === "string") {
+    const asIst = tryParseDateStringToIst(value);
+    if (asIst !== null) return asIst;
   }
   return String(value);
 }

@@ -3,15 +3,14 @@ import { promotionModel } from "../batches";
 import { userModel } from "../user";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
+import { examFormFillupStatusEnum } from "@/schemas/enums";
 
 export const examFormFillupModel = pgTable("exam_form_fillup", {
     id: serial().primaryKey(),
     promotionId: integer("promotion_id_fk")
         .references(() => promotionModel.id)
         .notNull(),
-    formFilledByUserId: integer("form_filled_by_user_id_fk")
-        .references(() => userModel.id)
-        .notNull(),
+    status: examFormFillupStatusEnum().notNull().default("PENDING"),
     createdAt: timestamp({ withTimezone: true })
         .notNull()
         .defaultNow(),

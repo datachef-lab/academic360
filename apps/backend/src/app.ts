@@ -143,6 +143,7 @@ import {
   studentAcademicSubjectRouter,
 } from "@/features/admissions/index.js";
 import bulkUploadRouter from "@/features/common/routes/bulkUpload.routes.js";
+import bulkDataUploadsRouter from "@/features/bulk-data-uploads/routes/bulk-data-upload.route.js";
 import {
   affiliationRouter,
   cascadingDropdownsRouter,
@@ -554,6 +555,7 @@ app.use(
 );
 // app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 app.use("/api/v1/fees", feesRouter);
+app.use("/api/v1/bulk-data-uploads", bulkDataUploadsRouter);
 app.use("/api/v1/courses", courseRouter);
 // app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 app.use("/api/exams/floors", floorRouter);

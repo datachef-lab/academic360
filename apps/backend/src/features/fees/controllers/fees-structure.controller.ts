@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
+import { User } from "@repo/db/schemas";
+import { socketService } from "@/services/socketService.js";
 import * as feeStructureService from "../services/fee-structure.service.js";
 import {
   FeeStructure,
@@ -10,6 +12,11 @@ import { handleError } from "@/utils/handleError.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
+
+/** Socket `meta.operation` — must match main-console reports `handleDownload(..., op)` */
+const FEE_STRUCTURES_EXCEL_DOWNLOAD_OP = "fee_structures_excel_download";
+const FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP =
+  "fee_student_mappings_excel_download";
 
 function toDate(val: unknown): Date | null {
   if (!val) return null;
@@ -877,6 +884,7 @@ export const downloadFeeStructuresExcel = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  const progressUserId = (req.user as User)?.id?.toString();
   try {
     const raw = req.query.academicYearId;
     const academicYearId = Number(raw);
@@ -895,6 +903,34 @@ export const downloadFeeStructuresExcel = async (
           ),
         );
       return;
+    }
+
+    if (progressUserId) {
+      const startUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Starting fee structures export…",
+        5,
+        "started",
+        undefined,
+        undefined,
+        undefined,
+        { operation: FEE_STRUCTURES_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, startUpdate);
+    }
+
+    if (progressUserId) {
+      const midUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Building fee structures workbook…",
+        40,
+        "in_progress",
+        undefined,
+        undefined,
+        undefined,
+        { operation: FEE_STRUCTURES_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, midUpdate);
     }
 
     const { buffer, academicYearYear } =
@@ -909,6 +945,20 @@ export const downloadFeeStructuresExcel = async (
       .slice(0, 100);
     const fileName = `${sanitizedYear} fee-structures.xlsx`;
 
+    if (progressUserId) {
+      const doneUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Fee structures ready",
+        100,
+        "completed",
+        fileName,
+        undefined,
+        undefined,
+        { operation: FEE_STRUCTURES_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, doneUpdate);
+    }
+
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -919,6 +969,19 @@ export const downloadFeeStructuresExcel = async (
     );
     res.send(buf);
   } catch (error) {
+    if (progressUserId) {
+      const errUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Failed to export fee structures",
+        100,
+        "error",
+        undefined,
+        undefined,
+        error instanceof Error ? error.message : "Unknown error",
+        { operation: FEE_STRUCTURES_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, errUpdate);
+    }
     handleError(error, res, next);
   }
 };
@@ -928,6 +991,7 @@ export const downloadFeeStudentMappingsExcel = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  const progressUserId = (req.user as User)?.id?.toString();
   try {
     const raw = req.query.academicYearId;
     const academicYearId = Number(raw);
@@ -948,6 +1012,34 @@ export const downloadFeeStudentMappingsExcel = async (
       return;
     }
 
+    if (progressUserId) {
+      const startUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Starting fee–student mappings export…",
+        5,
+        "started",
+        undefined,
+        undefined,
+        undefined,
+        { operation: FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, startUpdate);
+    }
+
+    if (progressUserId) {
+      const midUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Building fee–student mappings workbook…",
+        40,
+        "in_progress",
+        undefined,
+        undefined,
+        undefined,
+        { operation: FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, midUpdate);
+    }
+
     const { buffer, academicYearYear } =
       await feeStructureService.downloadFeeStudentMappings(academicYearId);
 
@@ -960,6 +1052,20 @@ export const downloadFeeStudentMappingsExcel = async (
       .slice(0, 100);
     const fileName = `${sanitizedYear} fee-student-mappings.xlsx`;
 
+    if (progressUserId) {
+      const doneUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Fee–student mappings ready",
+        100,
+        "completed",
+        fileName,
+        undefined,
+        undefined,
+        { operation: FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, doneUpdate);
+    }
+
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -970,6 +1076,19 @@ export const downloadFeeStudentMappingsExcel = async (
     );
     res.send(buf);
   } catch (error) {
+    if (progressUserId) {
+      const errUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Failed to export fee–student mappings",
+        100,
+        "error",
+        undefined,
+        undefined,
+        error instanceof Error ? error.message : "Unknown error",
+        { operation: FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, errUpdate);
+    }
     handleError(error, res, next);
   }
 };

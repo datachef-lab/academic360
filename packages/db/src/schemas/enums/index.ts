@@ -431,3 +431,8 @@ export const feeGroupPromotionMappingApprovalTypeEnum = pgEnum("fee_group_promot
     "SYSTEM",
     "MANUAL"
 ]);
+
+export const examFormFillupStatusEnum = pgEnum("exam_form_fillup_status", [
+    "PENDING",
+    "COMPLETED",
+]);

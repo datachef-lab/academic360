@@ -1,3 +1,4 @@
+import axios from "axios";
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 import {
@@ -1092,3 +1093,75 @@ export const getFeesDesignAbstractLevel = async (academicYearId?: number, course
   );
   return response.data;
 };
+
+function parseFilenameFromContentDisposition(header: string | undefined): string | null {
+  if (!header) return null;
+  const m = /filename\*?=(?:UTF-8'')?["']?([^"';\\n]+)/i.exec(header);
+  return m?.[1] ? decodeURIComponent(m[1].replace(/"/g, "").trim()) : null;
+}
+
+async function downloadFeeStructureExcelBlob(
+  kind: "fee-structures" | "fee-student-mappings",
+  academicYearId: number,
+): Promise<{ blob: Blob; fileName: string }> {
+  try {
+    const res = await axiosInstance.get(`${BASE_PATH}/structure/download/${kind}`, {
+      params: { academicYearId },
+      responseType: "blob",
+      _skipGlobalErrorHandler: true,
+    } as Parameters<typeof axiosInstance.get>[1] & { _skipGlobalErrorHandler?: boolean });
+    const blob = res.data as Blob;
+    const fromHeader = parseFilenameFromContentDisposition(
+      res.headers["content-disposition"] as string | undefined,
+    );
+    const fileName =
+      fromHeader ??
+      (kind === "fee-structures" ? "fee-structures.xlsx" : "fee-student-mappings.xlsx");
+    return { blob, fileName };
+  } catch (e: unknown) {
+    if (axios.isAxiosError(e) && e.response?.data instanceof Blob) {
+      const text = await (e.response.data as Blob).text();
+      try {
+        const j = JSON.parse(text) as { message?: string };
+        throw new Error(j.message || "Download failed");
+      } catch (err) {
+        if (err instanceof SyntaxError) throw new Error("Download failed");
+        throw err;
+      }
+    }
+    throw e;
+  }
+}
+
+/** GET /api/v1/fees/structure/download/fee-structures — styled Excel per academic year */
+export async function downloadFeeStructuresExcelFile(academicYearId: number): Promise<void> {
+  const { blob, fileName } = await downloadFeeStructureExcelBlob("fee-structures", academicYearId);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** GET /api/v1/fees/structure/download/fee-student-mappings */
+export async function downloadFeeStudentMappingsExcelFile(academicYearId: number): Promise<void> {
+  const { blob, fileName } = await downloadFeeStructureExcelBlob(
+    "fee-student-mappings",
+    academicYearId,
+  );
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
