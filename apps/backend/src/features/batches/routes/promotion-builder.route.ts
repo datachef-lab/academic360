@@ -4,6 +4,7 @@ import {
   createPromotionBuilderHandler,
   deletePromotionBuilderHandler,
   getPromotionBuilderByIdHandler,
+  getPromotionBuilderByTargetHandler,
   getPromotionBuildersHandler,
   replacePromotionBuilderRulesHandler,
   updatePromotionBuilderHandler,
@@ -22,6 +23,7 @@ function asyncHandler(
 router.use(verifyJWT);
 
 router.get("/", asyncHandler(getPromotionBuildersHandler));
+router.get("/by-target", asyncHandler(getPromotionBuilderByTargetHandler));
 router.get("/:id", asyncHandler(getPromotionBuilderByIdHandler));
 router.post("/", asyncHandler(createPromotionBuilderHandler));
 router.put("/:id/rules", asyncHandler(replacePromotionBuilderRulesHandler));

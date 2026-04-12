@@ -80,7 +80,7 @@ export const defaultPromotionBuilderSeeds: PromotionBuilderSeed[] = [
       {
         clauseName: primaryPromotionClause.Form_Fill_Up_Status,
         operator: "EQUALS",
-        classRefs: [{ type: "SEMESTER", name: "Semester II" }],
+        classRefs: [{ type: "SEMESTER", name: "Semester I" }],
       },
     ],
   },

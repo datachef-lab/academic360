@@ -158,6 +158,28 @@ export async function findPromotionBuilderById(
   return rowToPromotionBuilderDto(row);
 }
 
+/** Active builder for this affiliation + target class (promotion “to” semester), if any. */
+export async function findActivePromotionBuilderByAffiliationAndTargetClass(
+  affiliationId: number,
+  targetClassId: number,
+): Promise<PromotionBuilderDto | null> {
+  const [row] = await db
+    .select()
+    .from(promotionBuilderModel)
+    .where(
+      and(
+        eq(promotionBuilderModel.affiliationId, affiliationId),
+        eq(promotionBuilderModel.targetClassId, targetClassId),
+        eq(promotionBuilderModel.isActive, true),
+      ),
+    )
+    .orderBy(asc(promotionBuilderModel.id))
+    .limit(1);
+
+  if (!row) return null;
+  return rowToPromotionBuilderDto(row);
+}
+
 export async function createPromotionBuilder(
   data: BuilderInsert,
   rules?: PromotionBuilderRuleInput[],

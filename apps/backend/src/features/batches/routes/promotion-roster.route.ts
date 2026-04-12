@@ -1,6 +1,10 @@
 import { verifyJWT } from "@/middlewares/index.js";
 import { Router, Request, Response, NextFunction } from "express";
-import { getPromotionRosterHandler } from "../controllers/promotion-roster.controller.js";
+import {
+  getPromotionRosterBucketCountsHandler,
+  getPromotionRosterHandler,
+  postBulkSemesterPromoteHandler,
+} from "../controllers/promotion-roster.controller.js";
 
 const router = Router();
 
@@ -15,5 +19,10 @@ function asyncHandler(
 router.use(verifyJWT);
 
 router.get("/", asyncHandler(getPromotionRosterHandler));
+router.get(
+  "/bucket-counts",
+  asyncHandler(getPromotionRosterBucketCountsHandler),
+);
+router.post("/promote", asyncHandler(postBulkSemesterPromoteHandler));
 
 export default router;

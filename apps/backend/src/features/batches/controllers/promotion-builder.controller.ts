@@ -18,6 +18,56 @@ const replaceRulesBodySchema = z.object({
   rules: z.array(ruleSchema),
 });
 
+export async function getPromotionBuilderByTargetHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const affiliationId = parseInt(String(req.query.affiliationId ?? ""), 10);
+    const targetClassId = parseInt(String(req.query.targetClassId ?? ""), 10);
+    if (
+      Number.isNaN(affiliationId) ||
+      affiliationId < 1 ||
+      Number.isNaN(targetClassId) ||
+      targetClassId < 1
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "affiliationId and targetClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const row =
+      await promotionBuilderService.findActivePromotionBuilderByAffiliationAndTargetClass(
+        affiliationId,
+        targetClassId,
+      );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          row,
+          row
+            ? "Promotion builder for target class"
+            : "No active promotion builder for this affiliation and target class",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
 export async function getPromotionBuildersHandler(
   req: Request,
   res: Response,

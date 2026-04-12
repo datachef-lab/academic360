@@ -15,6 +15,20 @@ export async function getPromotionBuilders(affiliationId?: number): Promise<Prom
   return Array.isArray(payload) ? payload : [];
 }
 
+/** Active builder for affiliation + target (“promoted to”) class — used to show semester rule lines in the roster. */
+export async function getPromotionBuilderByTarget(
+  affiliationId: number,
+  targetClassId: number,
+): Promise<PromotionBuilderDto | null> {
+  const res = await axiosInstance.get<ApiResponse<PromotionBuilderDto | null>>(
+    `${BASE}/promotion-builders/by-target`,
+    {
+      params: { affiliationId, targetClassId },
+    },
+  );
+  return res.data.payload ?? null;
+}
+
 export async function getPromotionClauses(opts?: {
   isActive?: boolean;
 }): Promise<PromotionClauseDto[]> {

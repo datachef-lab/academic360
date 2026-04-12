@@ -88,6 +88,7 @@ import PromotionClausesPage from "./features/academic-year-setup/pages/promotion
 import * as examManagementModule from "@/features/exam-management";
 import RealTimeTrackerPage from "./features/realtime-tracker/pages";
 import ReportsPage from "./features/reports/page";
+import PromoteStudentsPage from "./pages/PromoteStudentsPage";
 import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalCURegMarkingPage";
 import * as administrationModule from "./features/administration";
 // import * as resourceModule from "@/pages/resources";
@@ -117,6 +118,7 @@ const router = createBrowserRouter(
       ),
       children: [
         { path: "", element: <Dashboard /> },
+        { path: "promote-students", element: <PromoteStudentsPage /> },
         {
           path: "academic-year-setup",
           element: <Outlet />,
