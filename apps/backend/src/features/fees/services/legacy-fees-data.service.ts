@@ -39,8 +39,16 @@ import {
   UserT,
 } from "@repo/db/schemas";
 import { and, eq, ilike } from "drizzle-orm";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
 
 import { updateFeeGroupPromotionMapping } from "./fee-group-promotion-mapping.service";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
 type MasterDataType = {
   feeHeads: FeeHeadT[];
@@ -797,15 +805,6 @@ async function syncLegacyReceiptTypes() {
 
   return receiptTypes;
 }
-
-import dayjs from "dayjs/index.js";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
-import customParseFormat from "dayjs/plugin/customParseFormat.js";
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(customParseFormat);
 
 /** Only parse with Kolkata + DD/MM/YYYY … when the string actually looks like that (avoids misparsing ISO/other strings and prevents dayjs timezone from throwing RangeError on bad internals). */
 const LEGACY_KOLKATA_DATETIME =
