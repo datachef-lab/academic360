@@ -700,20 +700,20 @@ async function updateFeeStructure(
     }
 
     console.log("updateFeeStructure() | Save the fee-structure components");
-    const [savedFeeStructureComponent] = await db
-      .update(feeStructureComponentModel)
-      .set({
-        legacyFeeStructureId: legacyFeeStructureRows[0].legacyFeeStructureSubId,
-      })
-      .where(
-        and(
-          eq(feeStructureComponentModel.feeStructureId, savedFeeStructure.id!),
-          eq(feeStructureComponentModel.feeHeadId, feeHead!.id!),
-        ),
-      )
-      .returning();
+    // const [savedFeeStructureComponent] = await db
+    //   .update(feeStructureComponentModel)
+    //   .set({
+    //     legacyFeeStructureId: legacyFeeStructureRows[0].legacyFeeStructureSubId,
+    //   })
+    //   .where(
+    //     and(
+    //       eq(feeStructureComponentModel.feeStructureId, savedFeeStructure.id!),
+    //       eq(feeStructureComponentModel.feeHeadId, feeHead!.id!),
+    //     ),
+    //   )
+    //   .returning();
 
-    savedFeeStructureComponents.push(savedFeeStructureComponent);
+    // savedFeeStructureComponents.push(savedFeeStructureComponent);
   }
 
   return {
@@ -798,10 +798,10 @@ async function syncLegacyReceiptTypes() {
   return receiptTypes;
 }
 
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-import customParseFormat from "dayjs/plugin/customParseFormat";
+import dayjs from "dayjs/index.js";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
