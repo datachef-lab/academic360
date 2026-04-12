@@ -113,6 +113,7 @@ import {
   promotionBuilderRouter,
   promotionClauseRouter,
   promotionRosterRouter,
+  promotionStatusRouter,
 } from "@/features/batches/routes/index.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
@@ -543,6 +544,7 @@ app.use("/api/v1/fees/receipts", feeReceiptRouter);
 app.use("/api/v1/batches/promotion-clauses", promotionClauseRouter);
 app.use("/api/v1/batches/promotion-builders", promotionBuilderRouter);
 app.use("/api/v1/batches/promotion-roster", promotionRosterRouter);
+app.use("/api/v1/batches/promotion-statuses", promotionStatusRouter);
 app.use("/api/v1/fees/receipt-types", receiptTypeRouter);
 app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/slabs", feeSlabRouter);
@@ -913,6 +915,7 @@ app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
 app.use("/api/v1/fees/receipts", feeReceiptRouter);
 app.use("/api/v1/batches/promotion-clauses", promotionClauseRouter);
 app.use("/api/v1/batches/promotion-builders", promotionBuilderRouter);
+app.use("/api/v1/batches/promotion-statuses", promotionStatusRouter);
 app.use("/api/v1/fees/heads", feeHeadRouter);
 app.use("/api/v1/fees", feesRouter);
 

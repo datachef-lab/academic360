@@ -39,8 +39,10 @@ function getPageNumbers(current: number, last: number): (number | "ellipsis")[] 
   const sorted = [...set].sort((a, b) => a - b);
   const out: (number | "ellipsis")[] = [];
   for (let i = 0; i < sorted.length; i++) {
-    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push("ellipsis");
-    out.push(sorted[i]);
+    const cur = sorted[i]!;
+    const prev = sorted[i - 1];
+    if (i > 0 && prev !== undefined && cur - prev > 1) out.push("ellipsis");
+    out.push(cur);
   }
   return out;
 }

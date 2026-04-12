@@ -6,7 +6,7 @@ import {
 import { feeStudentMappingModel } from "@repo/db/schemas/models/fees";
 import { studentModel } from "@repo/db/schemas/models/user";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type {
   PaytmPCFDetailsRequest,
   PaytmPCFDetailsResponse,
@@ -929,19 +929,25 @@ export async function deletePayment(id: number) {
   return deleted.length > 0;
 }
 
-// Generate Unique Order ID
+const ORDER_ID_SUFFIX = "AS";
+const ORDER_ID_START = 1000;
+
 export async function generateOrderId() {
-  // 6-digit numeric orderId, unique across `payments.orderId`.
-  // Note: 6 digits gives only 1,000,000 combinations; we enforce uniqueness by DB check.
-  for (let attempt = 0; attempt < 25; attempt++) {
-    const n = Math.floor(Math.random() * 1_000_000);
-    const orderId = String(n).padStart(6, "0");
-    const [existing] = await db
-      .select({ id: paymentModel.id })
-      .from(paymentModel)
-      .where(eq(paymentModel.orderId, orderId))
-      .limit(1);
-    if (!existing) return orderId;
+  const [latest] = await db
+    .select({ orderId: paymentModel.orderId })
+    .from(paymentModel)
+    .where(sql`${paymentModel.orderId} LIKE '%${sql.raw(ORDER_ID_SUFFIX)}'`)
+    .orderBy(desc(paymentModel.id))
+    .limit(1);
+
+  let nextNum = ORDER_ID_START;
+  if (latest?.orderId) {
+    const numericPart = parseInt(
+      latest.orderId.replace(ORDER_ID_SUFFIX, ""),
+      10,
+    );
+    if (!isNaN(numericPart)) nextNum = numericPart + 1;
   }
-  throw new Error("Failed to generate unique 6-digit orderId");
+
+  return `${nextNum}${ORDER_ID_SUFFIX}`;
 }

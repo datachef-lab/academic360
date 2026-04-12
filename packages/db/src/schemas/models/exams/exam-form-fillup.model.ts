@@ -1,6 +1,6 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { promotionModel } from "../batches";
-import { userModel } from "../user";
+
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { examFormFillupStatusEnum } from "@/schemas/enums";

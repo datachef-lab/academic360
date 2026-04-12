@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, date,  integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { receiptTypeModel } from "@/schemas/models/fees";
 import {  programCourseModel } from "@/schemas/models/course-design";

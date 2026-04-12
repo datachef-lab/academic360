@@ -85,6 +85,7 @@ import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/
 import StudentPromotionLogicMaster from "./features/academic-year-setup/layouts/student-promotion-logic-master";
 import PromotionBuilderPage from "./features/academic-year-setup/pages/promotion-builder-page";
 import PromotionClausesPage from "./features/academic-year-setup/pages/promotion-clauses-page";
+import AppearTypePage from "./features/academic-year-setup/pages/appear-type-page";
 import * as examManagementModule from "@/features/exam-management";
 import RealTimeTrackerPage from "./features/realtime-tracker/pages";
 import ReportsPage from "./features/reports/page";
@@ -192,6 +193,7 @@ const router = createBrowserRouter(
                 { path: "", element: <PromotionBuilderPage /> },
                 { path: "classes", element: <courseSubjectModule.ClassesPage /> },
                 { path: "promotion-clauses", element: <PromotionClausesPage /> },
+                { path: "appear-types", element: <AppearTypePage /> },
               ],
             },
           ],

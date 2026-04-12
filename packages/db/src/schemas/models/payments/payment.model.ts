@@ -18,7 +18,7 @@ export const paymentModel = pgTable("payments", {
     paymentMode: paymentModeEnum().notNull(),
     paymentGatewayVendor: varchar({ length: 255 }),
     paymentOption: paymentOnlineOptions(),
-    orderId: varchar({ length: 1000 }),
+    orderId: varchar({ length: 1000 }).unique(),
 
     // Merchant Details
     mid: varchar(),

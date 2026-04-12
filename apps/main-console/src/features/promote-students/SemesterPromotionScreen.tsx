@@ -881,8 +881,6 @@ export function SemesterPromotionScreen() {
     return toClassObj?.name ?? "Target class";
   }, [toSemSeq, toClassObj]);
 
-  const selectedYearLabel = academicYears.find((y) => y.id === academicYearId)?.year ?? "";
-
   const exportCsv = () => {
     if (!roster?.content.length) {
       toast.message("No rows to export.");
