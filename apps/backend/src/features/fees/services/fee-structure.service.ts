@@ -89,6 +89,7 @@ import {
   classModel,
   shiftModel,
   sessionModel,
+  sectionModel,
 } from "@repo/db/schemas/models/academics";
 import {
   affiliationModel,
@@ -106,7 +107,9 @@ import {
   or,
   asc,
   aliasedTable,
+  sql,
 } from "drizzle-orm";
+import ExcelJS from "exceljs";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as academicYearService from "@/features/academics/services/academic-year.service.js";
 import * as classService from "@/features/academics/services/class.service.js";
@@ -2433,28 +2436,200 @@ export const checkUniqueFeeStructureAmounts = async (
   };
 };
 
-export async function downloadFeeStructures(academicYearId: number) {
-  const advanceClass = aliasedTable(classModel, "advance_class");
+const FEE_STRUCTURE_DOWNLOAD_COLUMNS = [
+  "id",
+  "Affiliation",
+  "Regulation",
+  "Academic Year",
+  "Program Course",
+  "Semester",
+  "Shift",
+  "Receipt Type",
+  "Number of Installments (Count)",
+  "Is Published?",
+  "Total Amount Configured (Per Fee Structure)",
+  "Fee Slab",
+  "Fee Category",
+  "Fee Head (Or Components)",
+  "Amount Configured (For Fee Head)",
+  "Remarks",
+  "Closing Date",
+  "Start Date",
+  "End Date",
+  "Online Start Date",
+  "Online End Date",
+  "Advance For Program Course",
+  "Advance For Semester",
+  "Fee Structure Created By",
+  "Created At",
+  "Fee Structure Last Updated By",
+  "Last Updated At",
+] as const;
 
-  await db
+const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
+  "Fee-Student Mapping Id",
+  "Student",
+  "UID",
+  "Academic Year",
+  "Program Course",
+  "Class / Semester",
+  "Shift",
+  "Section",
+  "Receipt Type",
+  "Payment Configuration",
+  "Total Amount To Pay",
+  "Late Fee Amount Added",
+  "Payment Context",
+  "Paid Amount",
+  "Payment Status",
+  "Paid Timestamp",
+  "Payment Mode",
+  "Receipt / Challan Number",
+  "Receipt / Challan Generated At",
+  "Total Amount Configured (Per Fee Structure)",
+  "Fee Slab",
+  "Fee Category",
+  "Approval Type",
+  "Approved By",
+  "Fee Head (or Components)",
+  "Amount Configured (For Fee Heads / Components)",
+  "Is Waived-Off Given?",
+  "Waived-Off Amount",
+  "Waived-Off Reason",
+  "Waived-Off Date",
+  "Waived-Off Approved By",
+  "Fee Structure Last Updated At",
+  "Fee Structure Created By",
+  "Fee Structure Last Updated By",
+  "Online Payment Gateway Vendor",
+  "Online Payment Option",
+  "Online Payment Order Id",
+  "Online Payment Transaction Id",
+  "Online Payment Bank Transaction Id",
+  "Online Payment Transaction Type",
+  "Online Payment Transaction Gateway Name",
+  "Online Payment Card Scheme",
+] as const;
+
+function formatExcelCell(value: unknown): string | number {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "bigint") {
+    const n = Number(value);
+    return Number.isSafeInteger(n) ? n : String(value);
+  }
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") return value;
+  if (value instanceof Date) {
+    return value.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  }
+  if (typeof value === "object" && value !== null && "getTime" in value) {
+    return new Date(value as Date).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+    });
+  }
+  return String(value);
+}
+
+async function buildStyledFeeExportExcelBuffer(
+  sheetName: string,
+  columnHeaders: readonly string[],
+  rows: Record<string, unknown>[],
+): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName);
+
+  sheet.columns = columnHeaders.map((header) => ({
+    header,
+    key: header,
+    width: 22,
+  }));
+
+  for (const raw of rows) {
+    const row: Record<string, unknown> = {};
+    for (const h of columnHeaders) {
+      row[h] = formatExcelCell(raw[h]);
+    }
+    sheet.addRow(row);
+  }
+
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, size: 12 };
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFD3D3D3" },
+  };
+
+  headerRow.eachCell((cell) => {
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+}
+
+export async function downloadFeeStructures(academicYearId: number): Promise<{
+  buffer: Buffer;
+  academicYearYear: string;
+}> {
+  const advanceClass = aliasedTable(classModel, "advance_class");
+  const advanceProgramCourse = aliasedTable(
+    programCourseModel,
+    "advance_program_course",
+  );
+  const createdFeeStructureByUser = aliasedTable(userModel, "cr_fs_user");
+  const lastUpdateFeeStructureByUser = aliasedTable(userModel, "up_fs_user");
+
+  const rows = await db
     .select({
       id: feeStructureModel.id,
-      affiliation: affiliationModel.name,
-      regulation: regulationTypeModel.name,
-      academicYear: academicYearModel.year,
-      programCourse: programCourseModel.name,
-      receipt: receiptTypeModel.name,
-      closingDate: feeStructureModel.closingDate,
-      semester: classModel.name,
-      shift: shiftModel.name,
 
-      advanceForSemester: advanceClass.name,
-      startDate: feeStructureModel.startDate,
-      endDate: feeStructureModel.endDate,
-      onlineStartDate: feeStructureModel.onlineStartDate,
-      onlineEndDate: feeStructureModel.onlineEndDate,
-      numberOfInstallments: feeStructureModel.numberOfInstallments,
-      isPublished: feeStructureModel.isPublished,
+      // Batch Details
+      Affiliation: affiliationModel.name,
+      Regulation: regulationTypeModel.name,
+      "Academic Year": academicYearModel.year,
+      "Program Course": programCourseModel.name,
+      Semester: classModel.name,
+      Shift: shiftModel.name,
+
+      // Fee Structure Meta
+      "Receipt Type": receiptTypeModel.name,
+      "Number of Installments (Count)": feeStructureModel.numberOfInstallments,
+      "Is Published?": feeStructureModel.isPublished,
+
+      // Total Amount (Window Function)
+      "Total Amount Configured (Per Fee Structure)": sql<number>`SUM(${feeStructureComponentModel.amount}) OVER (PARTITION BY ${feeStructureModel.id}, ${feeSlabModel.id})`,
+
+      // Fee Components
+      "Fee Slab": feeSlabModel.name,
+      "Fee Category": feeCategoryModel.name,
+      "Fee Head (Or Components)": feeHeadModel.name,
+      "Amount Configured (For Fee Head)": feeStructureComponentModel.amount,
+      Remarks: feeStructureComponentModel.remarks,
+
+      // Time Period
+      "Closing Date": feeStructureModel.closingDate,
+      "Start Date": feeStructureModel.startDate,
+      "End Date": feeStructureModel.endDate,
+      "Online Start Date": feeStructureModel.onlineStartDate,
+      "Online End Date": feeStructureModel.onlineEndDate,
+
+      // Advance Configurations
+      "Advance For Program Course": advanceProgramCourse.name,
+      "Advance For Semester": advanceClass.name,
+
+      // User Details
+      "Fee Structure Created By": createdFeeStructureByUser.name,
+      "Created At": feeStructureModel.createdAt,
+      "Fee Structure Last Updated By": lastUpdateFeeStructureByUser.name,
+      "Last Updated At": feeStructureModel.updatedAt,
     })
     .from(feeStructureModel)
     .leftJoin(
@@ -2484,8 +2659,262 @@ export async function downloadFeeStructures(academicYearId: number) {
       eq(advanceClass.id, feeStructureModel.advanceForClassId),
     )
     .leftJoin(
+      advanceProgramCourse,
+      eq(advanceProgramCourse.id, feeStructureModel.advanceForProgramCourseId),
+    )
+    .leftJoin(
+      createdFeeStructureByUser,
+      eq(createdFeeStructureByUser.id, feeStructureModel.createdByUserId),
+    )
+    .leftJoin(
+      lastUpdateFeeStructureByUser,
+      eq(lastUpdateFeeStructureByUser.id, feeStructureModel.updatedByUserId),
+    )
+    .leftJoin(
       feeStructureComponentModel,
       eq(feeStructureComponentModel.feeStructureId, feeStructureModel.id),
     )
-    .where(eq(academicYearModel.id, academicYearId));
+    .leftJoin(
+      feeHeadModel,
+      eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
+    )
+    .leftJoin(
+      feeSlabModel,
+      eq(feeSlabModel.id, feeStructureComponentModel.feeSlabId),
+    )
+    .leftJoin(feeGroupModel, eq(feeGroupModel.feeSlabId, feeSlabModel.id))
+    .leftJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+    )
+    .where(eq(feeStructureModel.academicYearId, academicYearId)) // ✅ filter on FK, not joined table
+    .orderBy(feeStructureModel.id, feeStructureComponentModel.id);
+
+  const academicYear =
+    await academicYearService.findAcademicYearById(academicYearId);
+  const academicYearYear =
+    academicYear?.year != null
+      ? String(academicYear.year)
+      : String(academicYearId);
+
+  const buffer = await buildStyledFeeExportExcelBuffer(
+    "Fee Structures",
+    FEE_STRUCTURE_DOWNLOAD_COLUMNS,
+    rows as Record<string, unknown>[],
+  );
+
+  return { buffer, academicYearYear };
+}
+
+export async function downloadFeeStudentMappings(
+  academicYearId: number,
+): Promise<{
+  buffer: Buffer;
+  academicYearYear: string;
+}> {
+  const stdUser = aliasedTable(userModel, "std_user");
+  const crFsUser = aliasedTable(userModel, "cr_fs_user");
+  const upFsUser = aliasedTable(userModel, "up_fs_user");
+  const fgpmUser = aliasedTable(userModel, "fgpm_user");
+  const waivedOffUser = aliasedTable(userModel, "waived_off_user");
+  const advanceClass = aliasedTable(classModel, "advance_class");
+  const advanceProgramCourse = aliasedTable(
+    programCourseModel,
+    "advance_program_course",
+  );
+
+  const rows = await db
+    .select({
+      // Fee-Student Mapping Id
+      "Fee-Student Mapping Id": feeStudentMappingModel.id,
+
+      // Student Details
+      Student: stdUser.name,
+      UID: studentModel.uid,
+
+      // Batch Details
+      "Academic Year": academicYearModel.year,
+      "Program Course": programCourseModel.name,
+      "Class / Semester": classModel.name,
+      Shift: shiftModel.name,
+      Section: sectionModel.name,
+
+      // Fee Structure Meta
+      "Receipt Type": receiptTypeModel.name,
+      "Payment Configuration": feeStudentMappingModel.type,
+
+      // Fee-Student Mapping Details
+      "Total Amount To Pay": feeStudentMappingModel.totalPayable,
+      "Late Fee Amount Added": feeStudentMappingModel.lateFee,
+
+      // Payment Summary
+      "Payment Context": paymentModel.context,
+      "Paid Amount": paymentModel.amount,
+      "Payment Status": paymentModel.status,
+      "Paid Timestamp": paymentModel.txnDate,
+      "Payment Mode": paymentModel.paymentMode,
+      "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
+      "Receipt / Challan Generated At":
+        feeStudentMappingModel.challanGeneratedAt,
+
+      // Fee Structure Config (Window Function)
+      "Total Amount Configured (Per Fee Structure)": sql<number>`SUM(${feeStructureComponentModel.amount}) OVER (
+          PARTITION BY ${feeStructureModel.id}, ${feeSlabModel.id}, ${feeStudentMappingModel.id}
+        )`,
+
+      // Fee Structure Components
+      "Fee Slab": feeSlabModel.name,
+      "Fee Category": feeCategoryModel.name,
+      "Approval Type": feeGroupPromotionMappingModel.approvalType,
+      "Approved By": fgpmUser.name,
+      "Fee Head (or Components)": feeHeadModel.name,
+      "Amount Configured (For Fee Heads / Components)":
+        feeStructureComponentModel.amount,
+
+      // Waived-Off Details
+      "Is Waived-Off Given?": sql<string>`CASE WHEN ${feeStudentMappingModel.isWaivedOff} = true THEN 'Yes' ELSE 'No' END`,
+      "Waived-Off Amount": feeStudentMappingModel.waivedOffAmount,
+      "Waived-Off Reason": feeStudentMappingModel.waivedOffReason,
+      "Waived-Off Date": feeStudentMappingModel.waivedOffDate,
+      "Waived-Off Approved By": waivedOffUser.name,
+
+      // Fee Structure User Details
+      "Fee Structure Last Updated At": feeStructureModel.updatedAt,
+      "Fee Structure Created By": crFsUser.name,
+      "Fee Structure Last Updated By": upFsUser.name,
+
+      // Online Payment Details
+      "Online Payment Gateway Vendor": paymentModel.paymentGatewayVendor,
+      "Online Payment Option": paymentModel.paymentOption,
+      "Online Payment Order Id": paymentModel.orderId,
+      "Online Payment Transaction Id": paymentModel.txnId,
+      "Online Payment Bank Transaction Id": paymentModel.bankTxnId,
+      "Online Payment Transaction Type": paymentModel.txnType,
+      "Online Payment Transaction Gateway Name": paymentModel.txnGatewayName,
+      "Online Payment Card Scheme": paymentModel.cardScheme,
+    })
+    .from(feeStudentMappingModel)
+
+    // Student & User
+    .leftJoin(
+      studentModel,
+      eq(studentModel.id, feeStudentMappingModel.studentId),
+    )
+    .leftJoin(stdUser, eq(stdUser.id, studentModel.userId))
+
+    // Batch (via promotions)
+    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, sessionModel.academicYearId),
+    )
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, promotionModel.programCourseId),
+    )
+    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+    .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
+
+    // Fee Group Promotion Mapping (conditional join)
+    .leftJoin(
+      feeGroupPromotionMappingModel,
+      and(
+        eq(
+          feeGroupPromotionMappingModel.id,
+          feeStudentMappingModel.feeGroupPromotionMappingId,
+        ),
+        eq(feeGroupPromotionMappingModel.promotionId, promotionModel.id),
+      ),
+    )
+    .leftJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .leftJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
+    .leftJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+    )
+    .leftJoin(
+      fgpmUser,
+      eq(fgpmUser.id, feeGroupPromotionMappingModel.approvalUserId),
+    )
+
+    // Fee Structure (conditional join matching batch)
+    .leftJoin(
+      feeStructureModel,
+      and(
+        eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+        eq(feeStructureModel.academicYearId, academicYearModel.id),
+        eq(feeStructureModel.programCourseId, programCourseModel.id),
+        eq(feeStructureModel.classId, classModel.id),
+        eq(feeStructureModel.shiftId, shiftModel.id),
+      ),
+    )
+    .leftJoin(
+      receiptTypeModel,
+      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    .leftJoin(
+      advanceProgramCourse,
+      eq(advanceProgramCourse.id, feeStructureModel.advanceForProgramCourseId),
+    )
+    .leftJoin(
+      advanceClass,
+      eq(advanceClass.id, feeStructureModel.advanceForClassId),
+    )
+    .leftJoin(crFsUser, eq(crFsUser.id, feeStructureModel.createdByUserId))
+    .leftJoin(upFsUser, eq(upFsUser.id, feeStructureModel.updatedByUserId))
+
+    // Fee Structure Components (conditional join matching slab)
+    .leftJoin(
+      feeStructureComponentModel,
+      and(
+        eq(feeStructureComponentModel.feeStructureId, feeStructureModel.id),
+        eq(feeStructureComponentModel.feeSlabId, feeSlabModel.id),
+      ),
+    )
+    .leftJoin(
+      feeHeadModel,
+      eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
+    )
+
+    // Waived-Off User
+    .leftJoin(
+      waivedOffUser,
+      eq(waivedOffUser.id, feeStudentMappingModel.waivedOffByUserId),
+    )
+
+    // Payment
+    .leftJoin(
+      paymentModel,
+      and(
+        eq(paymentModel.id, feeStudentMappingModel.paymentId),
+        eq(paymentModel.userId, stdUser.id),
+      ),
+    )
+
+    .where(eq(academicYearModel.id, academicYearId))
+    .orderBy(
+      feeStructureModel.id,
+      studentModel.uid,
+      feeStructureComponentModel.id,
+    );
+
+  const academicYear =
+    await academicYearService.findAcademicYearById(academicYearId);
+  const academicYearYear =
+    academicYear?.year != null
+      ? String(academicYear.year)
+      : String(academicYearId);
+
+  const buffer = await buildStyledFeeExportExcelBuffer(
+    "Fee Student Mappings",
+    FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS,
+    rows as Record<string, unknown>[],
+  );
+
+  return { buffer, academicYearYear };
 }

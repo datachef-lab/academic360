@@ -7,6 +7,7 @@ import {
 } from "@repo/db/schemas/models/fees";
 import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
 import { handleError } from "@/utils/handleError.js";
+import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 
@@ -866,6 +867,108 @@ export const checkUniqueFeeStructureAmounts = async (
             : "Fee structure amounts have conflicts",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const downloadFeeStructuresExcel = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const raw = req.query.academicYearId;
+    const academicYearId = Number(raw);
+    if (
+      raw === undefined ||
+      raw === "" ||
+      Number.isNaN(academicYearId) ||
+      academicYearId < 1
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            "academicYearId query parameter is required and must be a positive number",
+          ),
+        );
+      return;
+    }
+
+    const { buffer, academicYearYear } =
+      await feeStructureService.downloadFeeStructures(academicYearId);
+
+    const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+
+    const sanitizedYear = (academicYearYear || "academic-year")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const fileName = `${sanitizedYear} fee-structures.xlsx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName.replace(/"/g, "%22")}"`,
+    );
+    res.send(buf);
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const downloadFeeStudentMappingsExcel = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const raw = req.query.academicYearId;
+    const academicYearId = Number(raw);
+    if (
+      raw === undefined ||
+      raw === "" ||
+      Number.isNaN(academicYearId) ||
+      academicYearId < 1
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            "academicYearId query parameter is required and must be a positive number",
+          ),
+        );
+      return;
+    }
+
+    const { buffer, academicYearYear } =
+      await feeStructureService.downloadFeeStudentMappings(academicYearId);
+
+    const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+
+    const sanitizedYear = (academicYearYear || "academic-year")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const fileName = `${sanitizedYear} fee-student-mappings.xlsx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName.replace(/"/g, "%22")}"`,
+    );
+    res.send(buf);
   } catch (error) {
     handleError(error, res, next);
   }
