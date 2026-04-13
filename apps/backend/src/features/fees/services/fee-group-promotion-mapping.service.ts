@@ -50,7 +50,7 @@ async function promotionToDto(
   if (!promotion) return null;
 
   const [
-    promStatus,
+    // promStatus,
     boardResStatus,
     sess,
     cls,
@@ -59,11 +59,6 @@ async function promotionToDto(
     progCourse,
     studentWithDetails,
   ] = await Promise.all([
-    db
-      .select()
-      .from(promotionStatusModel)
-      .where(eq(promotionStatusModel.id, promotion.promotionStatusId))
-      .then((r) => r[0] ?? null),
     promotion.boardResultStatusId
       ? db
           .select()
@@ -137,7 +132,7 @@ async function promotionToDto(
   ]);
 
   // Section can be optional; allow promotions without a section.
-  if (!promStatus || !sess || !cls || !shf || !progCourse) {
+  if (!sess || !cls || !shf || !progCourse) {
     return null;
   }
 
@@ -167,7 +162,7 @@ async function promotionToDto(
     remarks: promotion.remarks ?? null,
     createdAt: promotion.createdAt ?? new Date(),
     updatedAt: promotion.updatedAt ?? new Date(),
-    promotionStatus: promStatus,
+    // promotionStatus: promStatus,
     boardResultStatus: boardResStatus!,
     session: sess,
     class: cls,

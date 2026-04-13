@@ -1,14 +1,12 @@
 import { db } from "@/db/index.js";
 import {
+  admissionCourseDetailsModel,
+  admissionProgramCourseModel,
   affiliationModel,
   classModel,
   examFormFillupModel,
   programCourseModel,
-  promotionBuilderClauseClassMappingModel,
-  promotionBuilderClauseMappingModel,
   promotionBuilderModel,
-  promotionClauseClassMappingModel,
-  promotionClauseModel,
   promotionModel,
   regulationTypeModel,
   sessionModel,
@@ -31,7 +29,8 @@ import {
   type SQL,
 } from "drizzle-orm";
 
-import { primaryPromotionClause } from "../default-promotion-clause-data.js";
+import { precomputeBuilderPolicy } from "./promotion-builder-policy.service.js";
+import type { PrecomputedBuilderPolicy } from "./promotion-builder-policy.service.js";
 
 export type PromotionRosterBucket =
   | "all"
@@ -126,119 +125,6 @@ const sqlInactive = sql`(
 
 const sqlPromoted = sql`${pTo.id} IS NOT NULL`;
 
-// ---------------------------------------------------------------------------
-// Pre-computed builder policy — replaces per-row correlated subqueries
-// ---------------------------------------------------------------------------
-
-type ConditionalBuilderReqs = {
-  requiredClassIds: number[];
-  requiresSourceFormFillup: boolean;
-};
-
-type PrecomputedBuilderPolicy = {
-  allBuilderAffIds: number[];
-  autoPromoteAffIds: number[];
-  conditionalReqs: Map<number, ConditionalBuilderReqs>;
-};
-
-/**
- * Fetches builder configuration for the given target class in a few small queries
- * (typically 2-4 rows total). The result drives a flat CASE expression instead of
- * the old deeply-nested correlated subqueries that ran per row.
- */
-async function precomputeBuilderPolicy(
-  toClassId: number,
-): Promise<PrecomputedBuilderPolicy> {
-  const formClause = primaryPromotionClause.Form_Fill_Up_Status;
-
-  const builders = await db
-    .select({
-      id: promotionBuilderModel.id,
-      affiliationId: promotionBuilderModel.affiliationId,
-      logic: promotionBuilderModel.logic,
-    })
-    .from(promotionBuilderModel)
-    .where(
-      and(
-        eq(promotionBuilderModel.targetClassId, toClassId),
-        eq(promotionBuilderModel.isActive, true),
-      ),
-    );
-
-  const allBuilderAffIds = [...new Set(builders.map((b) => b.affiliationId))];
-  const autoPromoteAffIds = [
-    ...new Set(
-      builders
-        .filter((b) => b.logic === "AUTO_PROMOTE")
-        .map((b) => b.affiliationId),
-    ),
-  ];
-
-  const conditionalReqs = new Map<number, ConditionalBuilderReqs>();
-  const conditionalBuilders = builders.filter(
-    (b) =>
-      b.logic === "CONDITIONAL" && !autoPromoteAffIds.includes(b.affiliationId),
-  );
-
-  for (const cb of conditionalBuilders) {
-    if (conditionalReqs.has(cb.affiliationId)) continue;
-
-    const rules = await db
-      .select({
-        ruleId: promotionBuilderClauseMappingModel.id,
-        clauseName: promotionClauseModel.name,
-        operator: promotionBuilderClauseMappingModel.operator,
-      })
-      .from(promotionBuilderClauseMappingModel)
-      .innerJoin(
-        promotionClauseModel,
-        eq(
-          promotionClauseModel.id,
-          promotionBuilderClauseMappingModel.promotionClauseId,
-        ),
-      )
-      .where(eq(promotionBuilderClauseMappingModel.promotionBuilderId, cb.id));
-
-    const classIds: number[] = [];
-    let sourceRequired = false;
-
-    for (const rule of rules) {
-      if (rule.clauseName !== formClause || rule.operator !== "EQUALS")
-        continue;
-
-      const classMappings = await db
-        .select({ classId: promotionClauseClassMappingModel.classId })
-        .from(promotionBuilderClauseClassMappingModel)
-        .innerJoin(
-          promotionClauseClassMappingModel,
-          eq(
-            promotionClauseClassMappingModel.id,
-            promotionBuilderClauseClassMappingModel.promotionClauseClassId,
-          ),
-        )
-        .where(
-          eq(
-            promotionBuilderClauseClassMappingModel.promotionBuilderClauseId,
-            rule.ruleId,
-          ),
-        );
-
-      if (classMappings.length > 0) {
-        for (const cm of classMappings) classIds.push(cm.classId);
-      } else {
-        sourceRequired = true;
-      }
-    }
-
-    conditionalReqs.set(cb.affiliationId, {
-      requiredClassIds: [...new Set(classIds)],
-      requiresSourceFormFillup: sourceRequired,
-    });
-  }
-
-  return { allBuilderAffIds, autoPromoteAffIds, conditionalReqs };
-}
-
 /**
  * SQL expression → TRUE when the student passes the promotion builder policy.
  * Uses pre-fetched builder config so the only per-row work is a simple
@@ -264,15 +150,19 @@ function sqlPolicyPass(policy: PrecomputedBuilderPolicy): SQL {
 
       checks.push(
         sql`(
-          SELECT count(DISTINCT ${promotionModel.classId})::int
-          FROM ${promotionModel}
-          INNER JOIN ${examFormFillupModel}
-            ON ${examFormFillupModel.promotionId} = ${promotionModel.id}
-          WHERE ${promotionModel.studentId} = ${pFrom.studentId}
-            AND ${promotionModel.programCourseId} = ${pFrom.programCourseId}
-            AND ${promotionModel.shiftId} = ${pFrom.shiftId}
-            AND ${promotionModel.classId} IN (${inList})
+          SELECT count(DISTINCT ${examFormFillupModel.classId})::int
+          FROM ${examFormFillupModel}
+          WHERE ${examFormFillupModel.studentId} = ${pFrom.studentId}
+            AND ${examFormFillupModel.programCourseId} = ${pFrom.programCourseId}
+            AND ${examFormFillupModel.classId} IN (${inList})
             AND ${examFormFillupModel.status} = 'COMPLETED'
+            AND EXISTS (
+              SELECT 1 FROM ${promotionModel}
+              WHERE ${promotionModel.studentId} = ${examFormFillupModel.studentId}
+                AND ${promotionModel.programCourseId} = ${examFormFillupModel.programCourseId}
+                AND ${promotionModel.classId} = ${examFormFillupModel.classId}
+                AND ${promotionModel.shiftId} = ${pFrom.shiftId}
+            )
         ) = ${reqCount}`,
       );
     }
@@ -281,7 +171,7 @@ function sqlPolicyPass(policy: PrecomputedBuilderPolicy): SQL {
       checks.push(
         sql`EXISTS (
           SELECT 1 FROM ${examFormFillupModel}
-          WHERE ${examFormFillupModel.promotionId} = ${pFrom.id}
+          WHERE ${examFormFillupModel.id} = ${pFrom.examFormFillupId}
             AND ${examFormFillupModel.status} = 'COMPLETED'
         )`,
       );
@@ -630,7 +520,10 @@ export type BulkSemesterPromoteParams = Pick<
 export type BulkSemesterPromoteSkipped = { studentId: number; reason: string };
 
 export type BulkSemesterPromoteResult = {
+  /** New `promotions` rows inserted. */
   created: number;
+  /** Existing rows for the same student + target session + target class updated in place. */
+  updated: number;
   skipped: BulkSemesterPromoteSkipped[];
 };
 
@@ -675,7 +568,7 @@ export async function bulkPromoteSemesterStudents(
   ];
 
   if (uniqueIds.length === 0) {
-    return { created: 0, skipped: [] };
+    return { created: 0, updated: 0, skipped: [] };
   }
 
   emitSemesterPromotionProgress(
@@ -727,6 +620,7 @@ export async function bulkPromoteSemesterStudents(
     );
     return {
       created: 0,
+      updated: 0,
       skipped: uniqueIds.map((studentId) => ({
         studentId,
         reason: "Target session not found for this academic year.",
@@ -734,7 +628,7 @@ export async function bulkPromoteSemesterStudents(
     };
   }
 
-  const joiningDate = joiningDateFromSession(toSessionRow.from!);
+  const sessionJoiningFallback = joiningDateFromSession(toSessionRow.from!);
 
   const whereBulk = and(base, inArray(studentModel.id, uniqueIds));
 
@@ -742,20 +636,33 @@ export async function bulkPromoteSemesterStudents(
     .select({
       studentId: studentModel.id,
       bucket: rowBucketExpr(policy),
-      programCourseId: pFrom.programCourseId,
+      /** Canonical program course: admission chain, else `students.program_course_id`. */
+      programCourseId: sql<number>`coalesce(${admissionProgramCourseModel.programCourseId}, ${studentModel.programCourseId})`,
       shiftId: pFrom.shiftId,
       sectionId: pFrom.sectionId,
       classRollNumber: pFrom.classRollNumber,
-      rollNumber: pFrom.rollNumber,
-      rollNumberSI: pFrom.rollNumberSI,
-      examNumber: pFrom.examNumber,
-      examSerialNumber: pFrom.examSerialNumber,
-      promotionStatusId: pFrom.promotionStatusId,
-      boardResultStatusId: pFrom.boardResultStatusId,
+      examFormFillupId: pFrom.examFormFillupId,
+      /** Prefer `exam_form_fillup.created_at` linked from source promotion; else target session start. */
+      examFillupCreatedAt: examFormFillupModel.createdAt,
     })
     .from(pFrom)
     .innerJoin(studentModel, eq(studentModel.id, pFrom.studentId))
+    .leftJoin(
+      admissionCourseDetailsModel,
+      eq(admissionCourseDetailsModel.id, studentModel.admissionCourseDetailsId),
+    )
+    .leftJoin(
+      admissionProgramCourseModel,
+      eq(
+        admissionProgramCourseModel.id,
+        admissionCourseDetailsModel.admissionProgramCourseId,
+      ),
+    )
     .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      examFormFillupModel,
+      eq(examFormFillupModel.id, pFrom.examFormFillupId),
+    )
     .innerJoin(
       programCourseModel,
       eq(programCourseModel.id, pFrom.programCourseId),
@@ -823,40 +730,89 @@ export async function bulkPromoteSemesterStudents(
       "No eligible students to promote.",
       100,
       "completed",
-      { created: 0, skippedCount: skipped.length },
+      { created: 0, updated: 0, skippedCount: skipped.length },
     );
-    return { created: 0, skipped };
+    return { created: 0, updated: 0, skipped };
   }
 
   emitSemesterPromotionProgress(
     progressUserId,
-    `Creating ${toInsert.length} promotion record(s)…`,
+    `Saving ${toInsert.length} promotion record(s) (insert or update)…`,
     55,
     "in_progress",
-    { creating: toInsert.length },
+    { upserting: toInsert.length },
   );
+
+  const promotionPayload = (
+    r: (typeof toInsert)[number],
+  ): Omit<
+    typeof promotionModel.$inferInsert,
+    "id" | "createdAt" | "updatedAt"
+  > => ({
+    studentId: r.studentId,
+    programCourseId: r.programCourseId!,
+    sessionId: params.toSessionId,
+    shiftId: r.shiftId!,
+    classId: params.toClassId,
+    sectionId: r.sectionId,
+    dateOfJoining: r.examFillupCreatedAt ?? sessionJoiningFallback,
+    classRollNumber: r.classRollNumber!,
+    examFormFillupId: r.examFormFillupId,
+  });
+
+  let created = 0;
+  let updated = 0;
 
   try {
     await db.transaction(async (tx) => {
-      await tx.insert(promotionModel).values(
-        toInsert.map((r) => ({
-          studentId: r.studentId,
-          programCourseId: r.programCourseId!,
-          sessionId: params.toSessionId,
-          shiftId: r.shiftId!,
-          classId: params.toClassId,
-          sectionId: r.sectionId,
-          dateOfJoining: joiningDate,
-          classRollNumber: r.classRollNumber!,
-          rollNumber: r.rollNumber,
-          rollNumberSI: r.rollNumberSI,
-          examNumber: r.examNumber,
-          examSerialNumber: r.examSerialNumber,
-          promotionStatusId: r.promotionStatusId!,
-          boardResultStatusId: r.boardResultStatusId,
-          isAlumni: false,
-        })),
+      const targetStudentIds = [...new Set(toInsert.map((r) => r.studentId))];
+
+      const existing = await tx
+        .select({
+          id: promotionModel.id,
+          studentId: promotionModel.studentId,
+        })
+        .from(promotionModel)
+        .where(
+          and(
+            eq(promotionModel.sessionId, params.toSessionId),
+            eq(promotionModel.classId, params.toClassId),
+            inArray(promotionModel.studentId, targetStudentIds),
+          ),
+        )
+        .orderBy(desc(promotionModel.id));
+
+      const promotionIdByStudent = new Map<number, number>();
+      for (const row of existing) {
+        if (row.studentId != null && !promotionIdByStudent.has(row.studentId)) {
+          promotionIdByStudent.set(row.studentId, row.id!);
+        }
+      }
+
+      const toCreate = toInsert.filter(
+        (r) => !promotionIdByStudent.has(r.studentId),
       );
+      const toUpsert = toInsert.filter((r) =>
+        promotionIdByStudent.has(r.studentId),
+      );
+
+      if (toCreate.length > 0) {
+        await tx.insert(promotionModel).values(toCreate.map(promotionPayload));
+        created = toCreate.length;
+      }
+
+      const now = new Date();
+      for (const r of toUpsert) {
+        const id = promotionIdByStudent.get(r.studentId)!;
+        await tx
+          .update(promotionModel)
+          .set({
+            ...promotionPayload(r),
+            updatedAt: now,
+          })
+          .where(eq(promotionModel.id, id));
+        updated++;
+      }
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -872,11 +828,11 @@ export async function bulkPromoteSemesterStudents(
 
   emitSemesterPromotionProgress(
     progressUserId,
-    `Promoted ${toInsert.length} student(s).`,
+    `Done: ${created} inserted, ${updated} updated.`,
     100,
     "completed",
-    { created: toInsert.length, skippedCount: skipped.length },
+    { created, updated, skippedCount: skipped.length },
   );
 
-  return { created: toInsert.length, skipped };
+  return { created, updated, skipped };
 }

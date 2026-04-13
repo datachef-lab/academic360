@@ -2447,7 +2447,6 @@ const FEE_STRUCTURE_DOWNLOAD_COLUMNS = [
   "Receipt Type",
   "Number of Installments (Count)",
   "Is Published?",
-  "Total Amount Configured (Per Fee Structure)",
   "Fee Slab",
   "Fee Category",
   "Fee Head (Or Components)",
@@ -2477,27 +2476,36 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Section",
   "Receipt Type",
   "Payment Configuration",
-  "Total Amount To Pay",
-  "Late Fee Amount Added",
-  "Payment Context",
-  "Paid Amount",
-  "Payment Status",
-  "Paid Timestamp",
-  "Payment Mode",
-  "Receipt / Challan Number",
-  "Receipt / Challan Generated At",
-  "Total Amount Configured (Per Fee Structure)",
   "Fee Slab",
   "Fee Category",
   "Approval Type",
   "Approved By",
   "Fee Head (or Components)",
   "Amount Configured (For Fee Heads / Components)",
-  "Is Waived-Off Given?",
+  "Total Amount Configured (Per Fee Structure)",
+  "Late Fee Amount",
+  "Gross Payable (Fees + Late Fee)",
   "Waived-Off Amount",
+  "Total Amount To Pay",
+  "Paid Amount",
+  "Payment Context",
+  "Payment Status",
+  "Paid Timestamp",
+  "Payment Mode",
+  "Is Manual Payment Recorded?",
+  "Payment Recorded By",
+  "Payment Internal Remarks",
+  "Receipt / Challan Number",
+  "Receipt / Challan Generated At",
+  "Is Waived-Off Given?",
   "Waived-Off Reason",
   "Waived-Off Date",
   "Waived-Off Approved By",
+  "Closing Date",
+  "Start Date",
+  "End Date",
+  "Online Start Date",
+  "Online End Date",
   "Fee Structure Last Updated At",
   "Fee Structure Created By",
   "Fee Structure Last Updated By",
@@ -2510,6 +2518,21 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Online Payment Transaction Gateway Name",
   "Online Payment Card Scheme",
 ] as const;
+
+/** Light column fills for Excel (ARGB with alpha FF). Each amount column gets a distinct pastel. */
+const FEE_STRUCTURE_AMOUNT_COLUMN_FILLS: Record<string, string> = {
+  "Amount Configured (For Fee Head)": "FFE3F2FD",
+};
+
+const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
+  "Total Amount Configured (Per Fee Structure)": "FFFFF3E0",
+  "Gross Payable (Fees + Late Fee)": "FFE8F5E9",
+  "Total Amount To Pay": "FFE3F2FD",
+  "Late Fee Amount": "FFFFF9C4",
+  "Paid Amount": "FFC8E6C9",
+  "Amount Configured (For Fee Heads / Components)": "FFF3E5F5",
+  "Waived-Off Amount": "FFFFCDD2",
+};
 
 /** Display timestamps in IST (Asia/Kolkata); UTC instants from DB are converted correctly. */
 const IST_DATE_TIME: Intl.DateTimeFormatOptions = {
@@ -2575,48 +2598,142 @@ function formatExcelCell(value: unknown): string | number {
   return String(value);
 }
 
+type FeeExportXlsxWriteOptions = {
+  /** Default true. Set false for large sheets (skips sharedStrings.xml build). */
+  useSharedStrings?: boolean;
+  /** STORE = no deflate; much faster writes, slightly larger file. */
+  zipCompression?: "DEFLATE" | "STORE";
+};
+
+type FeeExportExcelBufferOptions = FeeExportXlsxWriteOptions & {
+  /** Header text → ARGB (e.g. FFE8F5E9). Tints that column for row 1 (header) and all data rows. */
+  columnLightFillsByHeader?: Record<string, string>;
+};
+
+const EXCEL_THIN_BORDER = {
+  top: { style: "thin" as const },
+  left: { style: "thin" as const },
+  bottom: { style: "thin" as const },
+  right: { style: "thin" as const },
+};
+
+const EXCEL_COL_WIDTH_MAX = 90;
+const EXCEL_COL_WIDTH_MIN = 8;
+const EXCEL_COL_WIDTH_PAD = 2;
+/** Header row height in points (Excel); extra vertical space for wrapped titles. */
+const EXCEL_HEADER_ROW_HEIGHT_PT = 36;
+
+/** Single-pass column width computation (avoids per-column full scan). */
+function computeExcelColumnWidths(
+  columnHeaders: readonly string[],
+  formatted: Record<string, string | number>[],
+): number[] {
+  const maxLens = new Array<number>(columnHeaders.length);
+  for (let c = 0; c < columnHeaders.length; c++) {
+    maxLens[c] = columnHeaders[c].length;
+  }
+  for (const row of formatted) {
+    for (let c = 0; c < columnHeaders.length; c++) {
+      const v = row[columnHeaders[c]];
+      const len = v === "" || v == null ? 0 : String(v).length;
+      if (len > maxLens[c]) maxLens[c] = len;
+    }
+  }
+  for (let c = 0; c < maxLens.length; c++) {
+    const w = maxLens[c] + EXCEL_COL_WIDTH_PAD;
+    maxLens[c] = Math.min(
+      Math.max(w, EXCEL_COL_WIDTH_MIN),
+      EXCEL_COL_WIDTH_MAX,
+    );
+  }
+  return maxLens;
+}
+
 async function buildStyledFeeExportExcelBuffer(
   sheetName: string,
   columnHeaders: readonly string[],
   rows: Record<string, unknown>[],
+  options?: FeeExportExcelBufferOptions,
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(sheetName);
 
-  sheet.columns = columnHeaders.map((header) => ({
-    header,
-    key: header,
-    width: 22,
-  }));
-
-  for (const raw of rows) {
-    const row: Record<string, unknown> = {};
-    for (const h of columnHeaders) {
+  const n = rows.length;
+  const formatted: Record<string, string | number>[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const raw = rows[i];
+    const row: Record<string, string | number> = {};
+    for (let c = 0; c < columnHeaders.length; c++) {
+      const h = columnHeaders[c];
       row[h] = formatExcelCell(raw[h]);
     }
-    sheet.addRow(row);
+    formatted[i] = row;
   }
 
-  const headerRow = sheet.getRow(1);
-  headerRow.font = { bold: true, size: 12 };
-  headerRow.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFD3D3D3" },
-  };
+  const widths = computeExcelColumnWidths(columnHeaders, formatted);
 
-  headerRow.eachCell((cell) => {
-    cell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" },
-    };
-  });
+  sheet.columns = columnHeaders.map((header, i) => ({
+    header,
+    key: header,
+    width: widths[i],
+  }));
+
+  sheet.addRows(formatted);
+
+  const fills = options?.columnLightFillsByHeader;
+  const lastRow = sheet.rowCount;
+
+  // --- Style header row (row 1) ---
+  if (lastRow >= 1) {
+    const headerRow = sheet.getRow(1);
+    headerRow.height = EXCEL_HEADER_ROW_HEIGHT_PT;
+    for (let c = 1; c <= columnHeaders.length; c++) {
+      const header = columnHeaders[c - 1]!;
+      const argb = fills?.[header];
+      const cell = headerRow.getCell(c);
+      cell.font = { bold: true, size: 12 };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: argb ?? "FFD3D3D3" },
+      };
+      cell.border = EXCEL_THIN_BORDER;
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "left",
+        wrapText: true,
+      };
+    }
+  }
+
+  // --- Tint only the filled amount columns in body rows (skip unfilled columns entirely) ---
+  if (fills && lastRow > 1) {
+    const filledCols: { colIdx: number; argb: string }[] = [];
+    for (let c = 0; c < columnHeaders.length; c++) {
+      const argb = fills[columnHeaders[c]];
+      if (argb) filledCols.push({ colIdx: c + 1, argb });
+    }
+    if (filledCols.length > 0) {
+      for (let r = 2; r <= lastRow; r++) {
+        const row = sheet.getRow(r);
+        for (const { colIdx, argb } of filledCols) {
+          const cell = row.getCell(colIdx);
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb } };
+          cell.border = EXCEL_THIN_BORDER;
+        }
+      }
+    }
+  }
 
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 
-  const buffer = await workbook.xlsx.writeBuffer();
+  const useSharedStrings = options?.useSharedStrings ?? true;
+  const buffer = await workbook.xlsx.writeBuffer({
+    useSharedStrings,
+    ...(options?.zipCompression != null
+      ? { zip: { compression: options.zipCompression } }
+      : {}),
+  });
   return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 }
 
@@ -2648,9 +2765,6 @@ export async function downloadFeeStructures(academicYearId: number): Promise<{
       "Receipt Type": receiptTypeModel.name,
       "Number of Installments (Count)": feeStructureModel.numberOfInstallments,
       "Is Published?": feeStructureModel.isPublished,
-
-      // Total Amount (Window Function)
-      "Total Amount Configured (Per Fee Structure)": sql<number>`SUM(${feeStructureComponentModel.amount}) OVER (PARTITION BY ${feeStructureModel.id}, ${feeSlabModel.id})`,
 
       // Fee Components
       "Fee Slab": feeSlabModel.name,
@@ -2746,6 +2860,7 @@ export async function downloadFeeStructures(academicYearId: number): Promise<{
     "Fee Structures",
     FEE_STRUCTURE_DOWNLOAD_COLUMNS,
     rows as Record<string, unknown>[],
+    { columnLightFillsByHeader: FEE_STRUCTURE_AMOUNT_COLUMN_FILLS },
   );
 
   return { buffer, academicYearYear };
@@ -2762,13 +2877,27 @@ export async function downloadFeeStudentMappings(
   const upFsUser = aliasedTable(userModel, "up_fs_user");
   const fgpmUser = aliasedTable(userModel, "fgpm_user");
   const waivedOffUser = aliasedTable(userModel, "waived_off_user");
-  const advanceClass = aliasedTable(classModel, "advance_class");
-  const advanceProgramCourse = aliasedTable(
-    programCourseModel,
-    "advance_program_course",
+  const paymentRecordedByUser = aliasedTable(
+    userModel,
+    "payment_recorded_by_user",
   );
+  /** Pre-aggregate slab totals once (replaces per-row window SUM). */
+  const feeSlabTotalsSq = db
+    .select({
+      feeStructureId: feeStructureComponentModel.feeStructureId,
+      feeSlabId: feeStructureComponentModel.feeSlabId,
+      slabTotal: sql<number>`sum(${feeStructureComponentModel.amount})`.as(
+        "slab_total",
+      ),
+    })
+    .from(feeStructureComponentModel)
+    .groupBy(
+      feeStructureComponentModel.feeStructureId,
+      feeStructureComponentModel.feeSlabId,
+    )
+    .as("fee_slab_totals");
 
-  const rows = await db
+  const rowsPromise = db
     .select({
       // Fee-Student Mapping Id
       "Fee-Student Mapping Id": feeStudentMappingModel.id,
@@ -2787,27 +2916,6 @@ export async function downloadFeeStudentMappings(
       // Fee Structure Meta
       "Receipt Type": receiptTypeModel.name,
       "Payment Configuration": feeStudentMappingModel.type,
-
-      // Fee-Student Mapping Details
-      "Total Amount To Pay": feeStudentMappingModel.totalPayable,
-      "Late Fee Amount Added": feeStudentMappingModel.lateFee,
-
-      // Payment Summary
-      "Payment Context": paymentModel.context,
-      "Paid Amount": paymentModel.amount,
-      "Payment Status": paymentModel.status,
-      "Paid Timestamp": paymentModel.txnDate,
-      "Payment Mode": paymentModel.paymentMode,
-      "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
-      "Receipt / Challan Generated At":
-        feeStudentMappingModel.challanGeneratedAt,
-
-      // Fee Structure Config (Window Function)
-      "Total Amount Configured (Per Fee Structure)": sql<number>`SUM(${feeStructureComponentModel.amount}) OVER (
-          PARTITION BY ${feeStructureModel.id}, ${feeSlabModel.id}, ${feeStudentMappingModel.id}
-        )`,
-
-      // Fee Structure Components
       "Fee Slab": feeSlabModel.name,
       "Fee Category": feeCategoryModel.name,
       "Approval Type": feeGroupPromotionMappingModel.approvalType,
@@ -2815,13 +2923,41 @@ export async function downloadFeeStudentMappings(
       "Fee Head (or Components)": feeHeadModel.name,
       "Amount Configured (For Fee Heads / Components)":
         feeStructureComponentModel.amount,
+      "Total Amount Configured (Per Fee Structure)": feeSlabTotalsSq.slabTotal,
+      "Late Fee Amount": feeStudentMappingModel.lateFee,
 
-      // Waived-Off Details
-      "Is Waived-Off Given?": sql<string>`CASE WHEN ${feeStudentMappingModel.isWaivedOff} = true THEN 'Yes' ELSE 'No' END`,
+      // Gross = Σ fee_structure_components for slab + late fee (before waive-off)
+      "Gross Payable (Fees + Late Fee)": sql<number>`(
+        coalesce(${feeSlabTotalsSq.slabTotal}, 0::double precision)
+        + coalesce(${feeStudentMappingModel.lateFee}::double precision, 0::double precision)
+      )`,
       "Waived-Off Amount": feeStudentMappingModel.waivedOffAmount,
+      "Total Amount To Pay": feeStudentMappingModel.totalPayable,
+
+      // Payment Summary
+      "Paid Amount": paymentModel.amount,
+      "Payment Context": paymentModel.context,
+      "Payment Status": paymentModel.status,
+      "Paid Timestamp": paymentModel.txnDate,
+      "Payment Mode": paymentModel.paymentMode,
+      "Is Manual Payment Recorded?": sql<string>`CASE WHEN ${paymentModel.isManualEntry} = true THEN 'Yes' ELSE 'No' END`,
+      "Payment Recorded By": paymentRecordedByUser.name,
+      "Payment Internal Remarks": paymentModel.internalRemarks,
+      "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
+      "Receipt / Challan Generated At":
+        feeStudentMappingModel.challanGeneratedAt,
+
+      "Is Waived-Off Given?": sql<string>`CASE WHEN ${feeStudentMappingModel.isWaivedOff} = true THEN 'Yes' ELSE 'No' END`,
       "Waived-Off Reason": feeStudentMappingModel.waivedOffReason,
       "Waived-Off Date": feeStudentMappingModel.waivedOffDate,
       "Waived-Off Approved By": waivedOffUser.name,
+
+      // Fee structure time period (same as fee-structure export)
+      "Closing Date": feeStructureModel.closingDate,
+      "Start Date": feeStructureModel.startDate,
+      "End Date": feeStructureModel.endDate,
+      "Online Start Date": feeStructureModel.onlineStartDate,
+      "Online End Date": feeStructureModel.onlineEndDate,
 
       // Fee Structure User Details
       "Fee Structure Last Updated At": feeStructureModel.updatedAt,
@@ -2839,20 +2975,29 @@ export async function downloadFeeStudentMappings(
       "Online Payment Card Scheme": paymentModel.cardScheme,
     })
     .from(feeStudentMappingModel)
-
-    // Student & User
-    .leftJoin(
+    .innerJoin(
       studentModel,
       eq(studentModel.id, feeStudentMappingModel.studentId),
     )
-    .leftJoin(stdUser, eq(stdUser.id, studentModel.userId))
-
-    // Batch (via promotions)
-    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
-    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .leftJoin(
+    .innerJoin(stdUser, eq(stdUser.id, studentModel.userId))
+    .innerJoin(
+      feeGroupPromotionMappingModel,
+      eq(
+        feeGroupPromotionMappingModel.id,
+        feeStudentMappingModel.feeGroupPromotionMappingId,
+      ),
+    )
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
+    )
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .innerJoin(
       academicYearModel,
-      eq(academicYearModel.id, sessionModel.academicYearId),
+      and(
+        eq(academicYearModel.id, sessionModel.academicYearId),
+        eq(academicYearModel.id, academicYearId),
+      ),
     )
     .leftJoin(
       programCourseModel,
@@ -2861,23 +3006,24 @@ export async function downloadFeeStudentMappings(
     .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
     .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
     .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
-
-    // Fee Group Promotion Mapping (conditional join)
-    .leftJoin(
-      feeGroupPromotionMappingModel,
+    .innerJoin(
+      feeStructureModel,
       and(
-        eq(
-          feeGroupPromotionMappingModel.id,
-          feeStudentMappingModel.feeGroupPromotionMappingId,
-        ),
-        eq(feeGroupPromotionMappingModel.promotionId, promotionModel.id),
+        eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+        eq(feeStructureModel.academicYearId, academicYearId),
       ),
     )
     .leftJoin(
+      receiptTypeModel,
+      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    .leftJoin(crFsUser, eq(crFsUser.id, feeStructureModel.createdByUserId))
+    .leftJoin(upFsUser, eq(upFsUser.id, feeStructureModel.updatedByUserId))
+    .innerJoin(
       feeGroupModel,
       eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
     )
-    .leftJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
+    .innerJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
     .leftJoin(
       feeCategoryModel,
       eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
@@ -2886,34 +3032,13 @@ export async function downloadFeeStudentMappings(
       fgpmUser,
       eq(fgpmUser.id, feeGroupPromotionMappingModel.approvalUserId),
     )
-
-    // Fee Structure (conditional join matching batch)
     .leftJoin(
-      feeStructureModel,
+      feeSlabTotalsSq,
       and(
-        eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
-        eq(feeStructureModel.academicYearId, academicYearModel.id),
-        eq(feeStructureModel.programCourseId, programCourseModel.id),
-        eq(feeStructureModel.classId, classModel.id),
-        eq(feeStructureModel.shiftId, shiftModel.id),
+        eq(feeSlabTotalsSq.feeStructureId, feeStructureModel.id),
+        eq(feeSlabTotalsSq.feeSlabId, feeSlabModel.id),
       ),
     )
-    .leftJoin(
-      receiptTypeModel,
-      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
-    )
-    .leftJoin(
-      advanceProgramCourse,
-      eq(advanceProgramCourse.id, feeStructureModel.advanceForProgramCourseId),
-    )
-    .leftJoin(
-      advanceClass,
-      eq(advanceClass.id, feeStructureModel.advanceForClassId),
-    )
-    .leftJoin(crFsUser, eq(crFsUser.id, feeStructureModel.createdByUserId))
-    .leftJoin(upFsUser, eq(upFsUser.id, feeStructureModel.updatedByUserId))
-
-    // Fee Structure Components (conditional join matching slab)
     .leftJoin(
       feeStructureComponentModel,
       and(
@@ -2925,31 +3050,27 @@ export async function downloadFeeStudentMappings(
       feeHeadModel,
       eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
     )
-
-    // Waived-Off User
     .leftJoin(
       waivedOffUser,
       eq(waivedOffUser.id, feeStudentMappingModel.waivedOffByUserId),
     )
-
-    // Payment
     .leftJoin(
       paymentModel,
-      and(
-        eq(paymentModel.id, feeStudentMappingModel.paymentId),
-        eq(paymentModel.userId, stdUser.id),
-      ),
+      eq(paymentModel.id, feeStudentMappingModel.paymentId),
     )
-
-    .where(eq(academicYearModel.id, academicYearId))
+    .leftJoin(
+      paymentRecordedByUser,
+      eq(paymentRecordedByUser.id, paymentModel.recordedBy),
+    )
     .orderBy(
-      feeStructureModel.id,
-      studentModel.uid,
-      feeStructureComponentModel.id,
+      asc(feeStudentMappingModel.id),
+      asc(feeStructureComponentModel.id),
     );
 
-  const academicYear =
-    await academicYearService.findAcademicYearById(academicYearId);
+  const [rows, academicYear] = await Promise.all([
+    rowsPromise,
+    academicYearService.findAcademicYearById(academicYearId),
+  ]);
   const academicYearYear =
     academicYear?.year != null
       ? String(academicYear.year)
@@ -2959,6 +3080,11 @@ export async function downloadFeeStudentMappings(
     "Fee Student Mappings",
     FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS,
     rows as Record<string, unknown>[],
+    {
+      useSharedStrings: false,
+      zipCompression: "STORE",
+      columnLightFillsByHeader: FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS,
+    },
   );
 
   return { buffer, academicYearYear };

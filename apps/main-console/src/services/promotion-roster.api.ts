@@ -134,6 +134,7 @@ export async function getPromotionRosterBucketCounts(params: {
 
 export type BulkSemesterPromoteResult = {
   created: number;
+  updated: number;
   skipped: { studentId: number; reason: string }[];
 };
 

@@ -983,13 +983,8 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
 
   let currentPromotion = null;
   if (latestPromotion) {
-    const [promStatus, boardResStatus, sess, cls, sec, shf, progCourse] =
-      await Promise.all([
-        db
-          .select()
-          .from(promotionStatusModel)
-          .where(eq(promotionStatusModel.id, latestPromotion.promotionStatusId))
-          .then((r) => r[0] ?? null),
+    const [boardResStatus, sess, cls, sec, shf, progCourse] = await Promise.all(
+      [
         latestPromotion.boardResultStatusId
           ? db
               .select()
@@ -1040,9 +1035,10 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
           .then((r) => r[0] ?? null),
         // Use service for ProgramCourse to build ProgramCourseDto
         programCourseService.findById(latestPromotion.programCourseId),
-      ]);
+      ],
+    );
 
-    if (promStatus && sess && cls && sec && shf && progCourse) {
+    if (sess && cls && sec && shf && progCourse) {
       currentPromotion = {
         id: latestPromotion.id,
         legacyHistoricalRecordId:
@@ -1060,7 +1056,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
         rollNumberSI: latestPromotion.rollNumberSI ?? null,
         examNumber: latestPromotion.examNumber ?? null,
         examSerialNumber: latestPromotion.examSerialNumber ?? null,
-        promotionStatusId: latestPromotion.promotionStatusId,
+        // promotionStatusId: latestPromotion.promotionStatusId,
         boardResultStatusId: latestPromotion.boardResultStatusId ?? null,
         startDate: latestPromotion.startDate ?? null,
         endDate: latestPromotion.endDate ?? null,
@@ -1068,7 +1064,6 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
         createdAt: latestPromotion.createdAt ?? new Date(),
         updatedAt: latestPromotion.updatedAt ?? new Date(),
         // Expanded relations per PromotionDto
-        promotionStatus: promStatus,
         boardResultStatus: boardResStatus!,
         session: sess,
         class: cls,

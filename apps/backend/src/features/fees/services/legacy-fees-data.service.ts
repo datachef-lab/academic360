@@ -683,7 +683,7 @@ async function updateFeeStructure(
         legacyFeeStructureRows[0].last_online_from_date,
       ),
       onlineEndDate: formatDate(legacyFeeStructureRows[0].last_online_to_date),
-      numberOfInstallments: legacyFeeStructureRows[0].installment_number,
+      numberOfInstallments: 0,
     })
     .where(eq(feeStructureModel.id, feeStructure.id!))
     .returning();

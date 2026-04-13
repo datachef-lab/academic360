@@ -6,6 +6,7 @@ import { promotionStatusModel } from "./promotion-status.model";
 import { boardResultStatusModel } from "../resources";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
+import { examFormFillupModel } from "../exams";
 
 
 export const promotionModel = pgTable("promotions", {
@@ -39,9 +40,11 @@ export const promotionModel = pgTable("promotions", {
     examNumber: varchar("exam_number"),
     examSerialNumber: varchar("exam_serial_number"),
     isExamFormSubmitted: boolean("is_exam_form_submitted").default(false),
-    promotionStatusId: integer("promotion_status_id_fk")
-        .references(() => promotionStatusModel.id)
-        .notNull(),
+    // promotionStatusId: integer("promotion_status_id_fk")
+    //     .references(() => promotionStatusModel.id)
+    //     .notNull(),
+    examFormFillupId: integer("exam_form_fillup_id_fk")
+        .references(() => examFormFillupModel.id),
     boardResultStatusId: integer("board_result_status_id_fk")
         .references(() => boardResultStatusModel.id),
     startDate: timestamp("start_date"),

@@ -52,95 +52,82 @@ async function promotionToDto(
 ): Promise<PromotionDto | null> {
   if (!promotion) return null;
 
-  const [
-    promStatus,
-    boardResStatus,
-    sess,
-    cls,
-    sec,
-    shf,
-    progCourse,
-    studentWithDetails,
-  ] = await Promise.all([
-    db
-      .select()
-      .from(promotionStatusModel)
-      .where(eq(promotionStatusModel.id, promotion.promotionStatusId))
-      .then((r) => r[0] ?? null),
-    promotion.boardResultStatusId
-      ? db
-          .select()
-          .from(boardResultStatusModel)
-          .where(eq(boardResultStatusModel.id, promotion.boardResultStatusId))
-          .then((r) => r[0] ?? null)
-      : Promise.resolve(null),
-    db
-      .select()
-      .from(sessionModel)
-      .where(eq(sessionModel.id, promotion.sessionId))
-      .then(async (r) => {
-        const session = r[0] ?? null;
-        if (session && session.academicYearId) {
-          const [academicYear] = await db
+  const [boardResStatus, sess, cls, sec, shf, progCourse, studentWithDetails] =
+    await Promise.all([
+      promotion.boardResultStatusId
+        ? db
             .select()
-            .from(academicYearModel)
-            .where(eq(academicYearModel.id, session.academicYearId));
+            .from(boardResultStatusModel)
+            .where(eq(boardResultStatusModel.id, promotion.boardResultStatusId))
+            .then((r) => r[0] ?? null)
+        : Promise.resolve(null),
+      db
+        .select()
+        .from(sessionModel)
+        .where(eq(sessionModel.id, promotion.sessionId))
+        .then(async (r) => {
+          const session = r[0] ?? null;
+          if (session && session.academicYearId) {
+            const [academicYear] = await db
+              .select()
+              .from(academicYearModel)
+              .where(eq(academicYearModel.id, session.academicYearId));
 
-          return {
-            ...session,
-            academicYear: academicYear || null,
-          };
-        }
-        return session;
-      }),
-    db
-      .select()
-      .from(classModel)
-      .where(eq(classModel.id, promotion.classId))
-      .then((r) => r[0] ?? null),
-    promotion.sectionId
-      ? db
-          .select()
-          .from(sectionModel)
-          .where(eq(sectionModel.id, promotion.sectionId))
-          .then((r) => r[0] ?? null)
-      : Promise.resolve(null),
-    db
-      .select()
-      .from(shiftModel)
-      .where(eq(shiftModel.id, promotion.shiftId))
-      .then((r) => r[0] ?? null),
-    programCourseService.findById(promotion.programCourseId),
-    // Student + personal details (for name, UID, religion, category, community)
-    db
-      .select({
-        uid: studentModel.uid,
-        community: studentModel.community,
-        firstName: personalDetailsModel.firstName,
-        middleName: personalDetailsModel.middleName,
-        lastName: personalDetailsModel.lastName,
-        religionName: religionModel.name,
-        categoryName: categoryModel.name,
-      })
-      .from(studentModel)
-      .leftJoin(
-        personalDetailsModel,
-        eq(personalDetailsModel.userId, studentModel.userId),
-      )
-      .leftJoin(
-        religionModel,
-        eq(religionModel.id, personalDetailsModel.religionId),
-      )
-      .leftJoin(
-        categoryModel,
-        eq(categoryModel.id, personalDetailsModel.categoryId),
-      )
-      .where(eq(studentModel.id, promotion.studentId))
-      .then((r) => r[0] ?? null),
-  ]);
+            return {
+              ...session,
+              academicYear: academicYear || null,
+            };
+          }
+          return session;
+        }),
+      db
+        .select()
+        .from(classModel)
+        .where(eq(classModel.id, promotion.classId))
+        .then((r) => r[0] ?? null),
+      promotion.sectionId
+        ? db
+            .select()
+            .from(sectionModel)
+            .where(eq(sectionModel.id, promotion.sectionId))
+            .then((r) => r[0] ?? null)
+        : Promise.resolve(null),
+      db
+        .select()
+        .from(shiftModel)
+        .where(eq(shiftModel.id, promotion.shiftId))
+        .then((r) => r[0] ?? null),
+      programCourseService.findById(promotion.programCourseId),
+      // Student + personal details (for name, UID, religion, category, community)
+      db
+        .select({
+          uid: studentModel.uid,
+          community: studentModel.community,
+          firstName: personalDetailsModel.firstName,
+          middleName: personalDetailsModel.middleName,
+          lastName: personalDetailsModel.lastName,
+          religionName: religionModel.name,
+          categoryName: categoryModel.name,
+        })
+        .from(studentModel)
+        .leftJoin(
+          personalDetailsModel,
+          eq(personalDetailsModel.userId, studentModel.userId),
+        )
+        .leftJoin(
+          religionModel,
+          eq(religionModel.id, personalDetailsModel.religionId),
+        )
+        .leftJoin(
+          categoryModel,
+          eq(categoryModel.id, personalDetailsModel.categoryId),
+        )
+        .where(eq(studentModel.id, promotion.studentId))
+        .then((r) => r[0] ?? null),
+    ]);
 
   // Section can be optional; allow promotions without a section.
-  if (!promStatus || !sess || !cls || !shf || !progCourse) {
+  if (!sess || !cls || !shf || !progCourse) {
     return null;
   }
 
@@ -170,7 +157,7 @@ async function promotionToDto(
     remarks: promotion.remarks ?? null,
     createdAt: promotion.createdAt ?? new Date(),
     updatedAt: promotion.updatedAt ?? new Date(),
-    promotionStatus: promStatus,
+    // promotionStatus: promStatus,
     boardResultStatus: boardResStatus!,
     session: sess,
     class: cls,

@@ -107,7 +107,15 @@ export async function fetchBulkExportRows(params: {
     };
   }
 
-  /** Only promotions that already have an `exam_form_fillup` row (`exam_form_fillup.id` / `promotion_id_fk` is set). No synthetic rows. */
+  /** Rows from `exam_form_fillup` for the session and eligible program courses (optionally filtered by class). */
+  const fillupFilters = [
+    eq(examFormFillupModel.sessionId, sessionId),
+    inArray(examFormFillupModel.programCourseId, eligibleProgramCourseIds),
+  ];
+  if (classId != null) {
+    fillupFilters.push(eq(examFormFillupModel.classId, classId));
+  }
+
   const data = await db
     .select({
       reg: studentModel.registrationNumber,
@@ -115,17 +123,13 @@ export async function fetchBulkExportRows(params: {
       appearType: promotionStatusModel.name,
       fillupStatus: examFormFillupModel.status,
     })
-    .from(promotionModel)
-    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .from(examFormFillupModel)
+    .innerJoin(studentModel, eq(studentModel.id, examFormFillupModel.studentId))
     .innerJoin(
       promotionStatusModel,
-      eq(promotionStatusModel.id, promotionModel.promotionStatusId),
+      eq(promotionStatusModel.id, examFormFillupModel.appearTypeId),
     )
-    .innerJoin(
-      examFormFillupModel,
-      eq(examFormFillupModel.promotionId, promotionModel.id),
-    )
-    .where(and(...promoFilters))
+    .where(and(...fillupFilters))
     .orderBy(asc(studentModel.uid));
 
   const rows = data.map((r) => [

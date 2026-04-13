@@ -12,7 +12,13 @@ import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-
 import { programCourseModel } from "@repo/db/schemas/models/course-design/program-course.model.js";
 import { sessionModel } from "@repo/db/schemas/models/academics/session.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
+import { admissionCourseDetailsModel } from "@repo/db/schemas/models/admissions/adm-course-details.model.js";
+import { admissionProgramCourseModel } from "@repo/db/schemas/models/admissions/admission-program-course.model.js";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import {
+  precomputeBuilderPolicy,
+  validateExamFormFillupBulkAgainstBuilder,
+} from "@/features/batches/services/promotion-builder-policy.service.js";
 import { z } from "zod";
 
 /**
@@ -300,6 +306,8 @@ export async function bulkUploadExamFormFillup(
     };
   }
 
+  const builderPolicy = await precomputeBuilderPolicy(classId);
+
   const result: ExamFormFillupBulkUploadResult = {
     summary: { total: rows.length, successful: 0, failed: 0 },
     errors: [],
@@ -354,11 +362,65 @@ export async function bulkUploadExamFormFillup(
 
       const student = studentMatches[0];
 
-      /**
-       * `promotions` (see `@repo/db` promotionModel): one row ties student → program course → session → class → promotion status.
-       * Resolve using: (1) program course id ∈ courses for affiliation+regulation, (2) class id from context,
-       * (3) student id from CU Reg/Roll, plus session and Appear Type (promotion_status) for this academic year.
-       */
+      const fromAdmission = await db
+        .select({
+          programCourseId: admissionProgramCourseModel.programCourseId,
+          fallbackPc: studentModel.programCourseId,
+        })
+        .from(studentModel)
+        .leftJoin(
+          admissionCourseDetailsModel,
+          eq(
+            admissionCourseDetailsModel.id,
+            studentModel.admissionCourseDetailsId,
+          ),
+        )
+        .leftJoin(
+          admissionProgramCourseModel,
+          eq(
+            admissionProgramCourseModel.id,
+            admissionCourseDetailsModel.admissionProgramCourseId,
+          ),
+        )
+        .where(eq(studentModel.id, student.id))
+        .limit(1);
+
+      let programCourseId =
+        fromAdmission[0]?.programCourseId ?? fromAdmission[0]?.fallbackPc;
+      if (programCourseId == null) {
+        throw new Error(
+          "Student has no program course (admission course details chain or student.program_course_id).",
+        );
+      }
+      if (!eligibleProgramCourseIds.includes(programCourseId)) {
+        throw new Error(
+          "Student’s program course does not match the selected affiliation and regulation.",
+        );
+      }
+
+      const [pcMeta] = await db
+        .select({ affiliationId: programCourseModel.affiliationId })
+        .from(programCourseModel)
+        .where(eq(programCourseModel.id, programCourseId))
+        .limit(1);
+      if (!pcMeta || pcMeta.affiliationId !== affiliationId) {
+        throw new Error(
+          "Student’s program course affiliation does not match this upload context.",
+        );
+      }
+
+      const ruleCheck = await validateExamFormFillupBulkAgainstBuilder(
+        builderPolicy,
+        {
+          affiliationId,
+          studentId: student.id!,
+          programCourseId,
+        },
+      );
+      if (!ruleCheck.ok) {
+        throw new Error(ruleCheck.reason);
+      }
+
       const promotions = await db
         .select({ id: promotionModel.id })
         .from(promotionModel)
@@ -367,20 +429,19 @@ export async function bulkUploadExamFormFillup(
             eq(promotionModel.studentId, student.id),
             eq(promotionModel.sessionId, sessionId),
             eq(promotionModel.classId, classId),
-            eq(promotionModel.promotionStatusId, promoStatus.id),
-            inArray(promotionModel.programCourseId, eligibleProgramCourseIds),
+            eq(promotionModel.programCourseId, programCourseId),
           ),
         )
         .limit(2);
 
       if (promotions.length === 0) {
         throw new Error(
-          `No promotion found for this student (CU Reg/Roll), selected class, session, Appear Type "${promoStatus.name}", and a program course under the selected affiliation and regulation.`,
+          `No promotion found for this student (CU Reg/Roll), selected class, session, and resolved program course from admission.`,
         );
       }
       if (promotions.length > 1) {
         throw new Error(
-          "Multiple promotions match the same student, session, class, appear type, and eligible program course; check for duplicate promotion rows.",
+          "Multiple promotion rows match the same student, session, class, and program course; check for duplicate promotions.",
         );
       }
 
@@ -390,7 +451,15 @@ export async function bulkUploadExamFormFillup(
       const existing = await db
         .select({ id: examFormFillupModel.id })
         .from(examFormFillupModel)
-        .where(eq(examFormFillupModel.promotionId, promotionId))
+        .where(
+          and(
+            eq(examFormFillupModel.studentId, student.id),
+            eq(examFormFillupModel.sessionId, sessionId),
+            eq(examFormFillupModel.programCourseId, programCourseId),
+            eq(examFormFillupModel.classId, classId),
+            eq(examFormFillupModel.appearTypeId, promoStatus.id),
+          ),
+        )
         .limit(1);
 
       let examFormFillupId: number;
@@ -411,11 +480,29 @@ export async function bulkUploadExamFormFillup(
         const [inserted] = await db
           .insert(examFormFillupModel)
           .values({
-            promotionId,
+            studentId: student.id!,
+            sessionId,
+            programCourseId,
+            classId,
+            appearTypeId: promoStatus.id,
             status: fillupStatus,
           })
           .returning({ id: examFormFillupModel.id });
         examFormFillupId = inserted!.id;
+      }
+
+      if (!dryRun) {
+        await db
+          .update(promotionModel)
+          .set({
+            examFormFillupId,
+            isExamFormSubmitted: fillupStatus === "COMPLETED",
+            ...(fillupStatus === "COMPLETED"
+              ? { examFormSubmissionTimeStamp: new Date() }
+              : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(promotionModel.id, promotionId));
       }
 
       result.success.push({

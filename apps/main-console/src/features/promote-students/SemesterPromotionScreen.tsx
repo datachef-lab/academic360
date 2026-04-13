@@ -775,14 +775,18 @@ export function SemesterPromotionScreen() {
         shiftId: shiftId ? Number(shiftId) : undefined,
         studentIds: [...selectedStudentIds],
       });
+      const promoteSummary =
+        result.updated > 0
+          ? `${result.created} new, ${result.updated} updated`
+          : `${result.created}`;
       setCurrentProgressUpdate({
         id: `semester_promo_${Date.now()}`,
         userId,
         type: "export_progress",
         message:
           result.skipped.length > 0
-            ? `Promoted ${result.created} student(s); ${result.skipped.length} skipped.`
-            : `Promoted ${result.created} student(s).`,
+            ? `Promoted ${promoteSummary} student(s); ${result.skipped.length} skipped.`
+            : `Promoted ${promoteSummary} student(s).`,
         progress: 100,
         status: "completed",
         createdAt: new Date(),
@@ -790,10 +794,10 @@ export function SemesterPromotionScreen() {
       });
       if (result.skipped.length > 0) {
         toast.message(
-          `Promoted ${result.created}; ${result.skipped.length} skipped (not eligible, inactive, or already promoted).`,
+          `Promoted ${promoteSummary}; ${result.skipped.length} skipped (not eligible, inactive, or already promoted).`,
         );
       } else {
-        toast.success(`Promoted ${result.created} student(s).`);
+        toast.success(`Promoted ${promoteSummary} student(s).`);
       }
       setSelectedStudentIds(new Set());
       await fetchRoster();
