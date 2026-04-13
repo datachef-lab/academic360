@@ -21,6 +21,14 @@ import { toast } from "sonner";
 import type { Affiliation, ProgramCourse, PromotionBuilderDto, RegulationType } from "@repo/db";
 import type { AcademicYear } from "@repo/db/schemas";
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -649,6 +657,8 @@ export function SemesterPromotionScreen() {
   > | null>(null);
   const [bucketCountsLoading, setBucketCountsLoading] = useState(false);
 
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
   const [promoteProgressOpen, setPromoteProgressOpen] = useState(false);
   const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
   const [progressOperation, setProgressOperation] = useState<string | null>(null);
@@ -1025,6 +1035,47 @@ export function SemesterPromotionScreen() {
     if (toSemSeq > 0) return `Semester ${sequenceToRoman(toSemSeq)}`;
     return toClassObj?.name ?? "Target class";
   }, [toSemSeq, toClassObj]);
+
+  const fromSessionObj = useMemo(
+    () => sessions.find((s) => s.id != null && String(s.id) === fromSessionId),
+    [sessions, fromSessionId],
+  );
+  const toSessionObj = useMemo(
+    () => sessions.find((s) => s.id != null && String(s.id) === toSessionId),
+    [sessions, toSessionId],
+  );
+
+  const confirmBreakdown = useMemo(() => {
+    if (!roster)
+      return {
+        shiftColumns: [] as string[],
+        rows: [] as { programCourse: string; byCols: number[]; total: number }[],
+      };
+    const selectedRows = roster.content.filter((r) => selectedStudentIds.has(r.studentId));
+    const pcMap = new Map<string, Map<string, number>>();
+
+    for (const r of selectedRows) {
+      const pc = r.programCourseName ?? "—";
+      const sh = r.shiftName || "—";
+      if (!pcMap.has(pc)) pcMap.set(pc, new Map());
+      const inner = pcMap.get(pc)!;
+      inner.set(sh, (inner.get(sh) ?? 0) + 1);
+    }
+
+    const shiftColumns =
+      shifts.length > 0
+        ? shifts.map((s) => s.name)
+        : [...new Set(selectedRows.map((r) => r.shiftName || "—"))].sort();
+
+    const rows = [...pcMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([pc, inner]) => {
+        const byCols = shiftColumns.map((sh) => inner.get(sh) ?? 0);
+        return { programCourse: pc, byCols, total: byCols.reduce((s, n) => s + n, 0) };
+      });
+
+    return { shiftColumns, rows };
+  }, [roster, selectedStudentIds, shifts]);
 
   const exportCsv = () => {
     if (!roster?.content.length) {
@@ -1636,7 +1687,7 @@ export function SemesterPromotionScreen() {
         )}
       </div>
 
-      {selectedStudentIds.size > 0 ? (
+      {selectedStudentIds.size > 0 && !confirmDialogOpen ? (
         <div className="sp-sel-bar">
           <div className="flex items-center gap-2.5">
             <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--sp-amber-bd)]" />
@@ -1660,13 +1711,138 @@ export function SemesterPromotionScreen() {
               size="sm"
               disabled={promoting || rosterLoading}
               className="bg-[var(--sp-green)] font-sans text-[12px] font-bold text-white hover:bg-[var(--sp-green-dk)]"
-              onClick={() => void handleBulkPromote()}
+              onClick={() => setConfirmDialogOpen(true)}
             >
               {promoting ? "Promoting…" : "Promote selected →"}
             </Button>
           </div>
         </div>
       ) : null}
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Semester Promotion</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-muted/40 px-4 py-3">
+                  <div className="min-w-0 text-center">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      From
+                    </div>
+                    <div className="mt-0.5 text-sm font-semibold text-foreground">
+                      {fromClassObj?.name ?? "—"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {fromSessionObj?.name ?? "—"}
+                    </div>
+                  </div>
+                  <ArrowRight
+                    className="h-5 w-5 shrink-0 text-muted-foreground"
+                    strokeWidth={1.8}
+                  />
+                  <div className="min-w-0 text-center">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      To
+                    </div>
+                    <div className="mt-0.5 text-sm font-semibold text-foreground">
+                      {toClassObj?.name ?? "—"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{toSessionObj?.name ?? "—"}</div>
+                  </div>
+                  <div className="ml-auto rounded-md bg-primary/10 px-2.5 py-1 text-xs font-bold tabular-nums text-primary">
+                    {selectedStudentIds.size} student{selectedStudentIds.size === 1 ? "" : "s"}
+                  </div>
+                </div>
+
+                {confirmBreakdown.rows.length > 0 && (
+                  <div className="overflow-hidden rounded-lg border border-[hsl(var(--border))]">
+                    <div className="max-h-[260px] overflow-auto">
+                      <table className="w-full text-left text-[13px]">
+                        <thead className="sticky top-0 bg-muted text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <tr>
+                            <th className="whitespace-nowrap px-3 py-2">Sr.</th>
+                            <th className="whitespace-nowrap px-3 py-2">Program Course</th>
+                            {confirmBreakdown.shiftColumns.map((sh) => (
+                              <th key={sh} className="whitespace-nowrap px-3 py-2 text-center">
+                                {sh}
+                              </th>
+                            ))}
+                            <th className="whitespace-nowrap px-3 py-2 text-center">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {confirmBreakdown.rows.map((row, idx) => (
+                            <tr
+                              key={row.programCourse}
+                              className={cn(idx % 2 === 0 ? "bg-background" : "bg-muted/30")}
+                            >
+                              <td className="px-3 py-1.5 tabular-nums text-muted-foreground">
+                                {idx + 1}
+                              </td>
+                              <td
+                                className="max-w-[200px] truncate px-3 py-1.5 font-medium"
+                                title={row.programCourse}
+                              >
+                                {row.programCourse}
+                              </td>
+                              {row.byCols.map((n, ci) => (
+                                <td
+                                  key={confirmBreakdown.shiftColumns[ci]}
+                                  className="px-3 py-1.5 text-center tabular-nums"
+                                >
+                                  {n || "–"}
+                                </td>
+                              ))}
+                              <td className="px-3 py-1.5 text-center font-semibold tabular-nums">
+                                {row.total}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr className="border-t bg-muted font-semibold">
+                            <td className="px-3 py-1.5" />
+                            <td className="px-3 py-1.5">Grand Total</td>
+                            {confirmBreakdown.shiftColumns.map((sh, ci) => (
+                              <td key={sh} className="px-3 py-1.5 text-center tabular-nums">
+                                {confirmBreakdown.rows.reduce((s, r) => s + r.byCols[ci]!, 0) ||
+                                  "–"}
+                              </td>
+                            ))}
+                            <td className="px-3 py-1.5 text-center tabular-nums">
+                              {confirmBreakdown.rows.reduce((s, r) => s + r.total, 0)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDialogOpen(false)}
+              disabled={promoting}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={promoting || rosterLoading}
+              className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+              onClick={() => {
+                setConfirmDialogOpen(false);
+                void handleBulkPromote();
+              }}
+            >
+              {promoting
+                ? "Promoting…"
+                : `Promote ${selectedStudentIds.size} student${selectedStudentIds.size === 1 ? "" : "s"} →`}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ExportProgressDialog
         isOpen={promoteProgressOpen}
