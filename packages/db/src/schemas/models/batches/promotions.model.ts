@@ -2,7 +2,6 @@ import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "dri
 import { studentModel } from "../user";
 import { programCourseModel } from "../course-design";
 import { classModel, sectionModel, sessionModel, shiftModel } from "../academics";
-import { promotionStatusModel } from "./promotion-status.model";
 import { boardResultStatusModel } from "../resources";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
