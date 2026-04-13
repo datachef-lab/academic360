@@ -6,7 +6,7 @@ const BASE = "/api/v1/batches/promotion-roster";
 /** Same value as backend `SEMESTER_PROMOTION_SOCKET_OP` — use to filter socket `progress_update` events. */
 export const SEMESTER_PROMOTION_SOCKET_OP = "semester_promotion";
 
-export type PromotionRosterBucket = "all" | "eligible" | "ineligible" | "inactive" | "promoted";
+export type PromotionRosterBucket = "all" | "eligible" | "ineligible" | "suspended" | "promoted";
 
 export type PromotionRosterSort = "uid" | "rollNumber" | "registrationNumber";
 
@@ -24,7 +24,7 @@ export type PromotionRosterRow = {
   shiftName: string;
   fromClassName: string;
   toClassName: string;
-  bucket: "eligible" | "ineligible" | "inactive" | "promoted";
+  bucket: "eligible" | "ineligible" | "suspended" | "promoted";
 };
 
 export type PromotionRosterResponse = {
@@ -37,7 +37,7 @@ export type PromotionRosterResponse = {
     all: number;
     eligible: number;
     ineligible: number;
-    inactive: number;
+    suspended: number;
     promoted: number;
   } | null;
 };
@@ -48,10 +48,10 @@ export async function getPromotionRoster(params: {
   fromClassId: number;
   toSessionId: number;
   toClassId: number;
-  affiliationId?: number;
-  regulationTypeId?: number;
-  programCourseId?: number;
-  shiftId?: number;
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  programCourseIds?: number[];
+  shiftIds?: number[];
   bucket?: PromotionRosterBucket;
   sortBy?: PromotionRosterSort;
   sortDir?: "asc" | "desc";
@@ -68,10 +68,10 @@ export async function getPromotionRoster(params: {
       fromClassId: params.fromClassId,
       toSessionId: params.toSessionId,
       toClassId: params.toClassId,
-      affiliationId: params.affiliationId,
-      regulationTypeId: params.regulationTypeId,
-      programCourseId: params.programCourseId,
-      shiftId: params.shiftId,
+      affiliationId: params.affiliationIds?.join(",") || undefined,
+      regulationTypeId: params.regulationTypeIds?.join(",") || undefined,
+      programCourseId: params.programCourseIds?.join(",") || undefined,
+      shiftId: params.shiftIds?.join(",") || undefined,
       bucket: params.bucket ?? "all",
       sortBy: params.sortBy ?? "uid",
       sortDir: params.sortDir ?? "asc",
@@ -92,7 +92,7 @@ export type PromotionRosterBucketCounts = {
   all: number;
   eligible: number;
   ineligible: number;
-  inactive: number;
+  suspended: number;
   promoted: number;
 };
 
@@ -102,10 +102,10 @@ export async function getPromotionRosterBucketCounts(params: {
   fromClassId: number;
   toSessionId: number;
   toClassId: number;
-  affiliationId?: number;
-  regulationTypeId?: number;
-  programCourseId?: number;
-  shiftId?: number;
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  programCourseIds?: number[];
+  shiftIds?: number[];
   q?: string;
 }): Promise<PromotionRosterBucketCounts> {
   const res = await axiosInstance.get<ApiResponse<PromotionRosterBucketCounts>>(
@@ -117,10 +117,10 @@ export async function getPromotionRosterBucketCounts(params: {
         fromClassId: params.fromClassId,
         toSessionId: params.toSessionId,
         toClassId: params.toClassId,
-        affiliationId: params.affiliationId,
-        regulationTypeId: params.regulationTypeId,
-        programCourseId: params.programCourseId,
-        shiftId: params.shiftId,
+        affiliationId: params.affiliationIds?.join(",") || undefined,
+        regulationTypeId: params.regulationTypeIds?.join(",") || undefined,
+        programCourseId: params.programCourseIds?.join(",") || undefined,
+        shiftId: params.shiftIds?.join(",") || undefined,
         q: params.q,
       },
     },
@@ -144,16 +144,19 @@ export async function bulkPromoteSemesterStudents(body: {
   fromClassId: number;
   toSessionId: number;
   toClassId: number;
-  affiliationId?: number;
-  regulationTypeId?: number;
-  programCourseId?: number;
-  shiftId?: number;
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  programCourseIds?: number[];
+  shiftIds?: number[];
   studentIds: number[];
 }): Promise<BulkSemesterPromoteResult> {
-  const res = await axiosInstance.post<ApiResponse<BulkSemesterPromoteResult>>(
-    `${BASE}/promote`,
-    body,
-  );
+  const res = await axiosInstance.post<ApiResponse<BulkSemesterPromoteResult>>(`${BASE}/promote`, {
+    ...body,
+    affiliationId: body.affiliationIds?.join(",") || undefined,
+    regulationTypeId: body.regulationTypeIds?.join(",") || undefined,
+    programCourseId: body.programCourseIds?.join(",") || undefined,
+    shiftId: body.shiftIds?.join(",") || undefined,
+  });
   const p = res.data.payload;
   if (p == null) {
     throw new Error("No bulk promote payload");

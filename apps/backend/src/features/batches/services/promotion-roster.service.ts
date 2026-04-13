@@ -36,7 +36,7 @@ export type PromotionRosterBucket =
   | "all"
   | "eligible"
   | "ineligible"
-  | "inactive"
+  | "suspended"
   | "promoted";
 
 export type PromotionRosterSort = "uid" | "rollNumber" | "registrationNumber";
@@ -47,10 +47,10 @@ export type PromotionRosterParams = {
   fromClassId: number;
   toSessionId: number;
   toClassId: number;
-  affiliationId?: number;
-  regulationTypeId?: number;
-  programCourseId?: number;
-  shiftId?: number;
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  programCourseIds?: number[];
+  shiftIds?: number[];
   bucket: PromotionRosterBucket;
   sortBy: PromotionRosterSort;
   sortDir: "asc" | "desc";
@@ -86,20 +86,38 @@ function baseFilters(params: PromotionRosterParams): SQL | undefined {
     eq(pFrom.sessionId, params.fromSessionId),
     eq(pFrom.classId, params.fromClassId),
     eq(sessionModel.academicYearId, params.academicYearId),
+    sql`NOT (${sqlTrulyInactive})`,
   ];
-  if (params.affiliationId != null) {
-    parts.push(eq(programCourseModel.affiliationId, params.affiliationId));
-  }
-  if (params.regulationTypeId != null) {
+  if (params.affiliationIds?.length) {
     parts.push(
-      eq(programCourseModel.regulationTypeId, params.regulationTypeId),
+      params.affiliationIds.length === 1
+        ? eq(programCourseModel.affiliationId, params.affiliationIds[0]!)
+        : inArray(programCourseModel.affiliationId, params.affiliationIds),
     );
   }
-  if (params.programCourseId != null) {
-    parts.push(eq(pFrom.programCourseId, params.programCourseId));
+  if (params.regulationTypeIds?.length) {
+    parts.push(
+      params.regulationTypeIds.length === 1
+        ? eq(programCourseModel.regulationTypeId, params.regulationTypeIds[0]!)
+        : inArray(
+            programCourseModel.regulationTypeId,
+            params.regulationTypeIds,
+          ),
+    );
   }
-  if (params.shiftId != null) {
-    parts.push(eq(pFrom.shiftId, params.shiftId));
+  if (params.programCourseIds?.length) {
+    parts.push(
+      params.programCourseIds.length === 1
+        ? eq(pFrom.programCourseId, params.programCourseIds[0]!)
+        : inArray(pFrom.programCourseId, params.programCourseIds),
+    );
+  }
+  if (params.shiftIds?.length) {
+    parts.push(
+      params.shiftIds.length === 1
+        ? eq(pFrom.shiftId, params.shiftIds[0]!)
+        : inArray(pFrom.shiftId, params.shiftIds),
+    );
   }
   const term = params.q?.trim();
   if (term) {
@@ -116,11 +134,16 @@ function baseFilters(params: PromotionRosterParams): SQL | undefined {
   return and(...parts);
 }
 
-/** Inactive / suspended — not eligible for promotion workflow in this step. */
-const sqlInactive = sql`(
-  COALESCE(${userModel.isSuspended}, false) = true
-  OR COALESCE(${studentModel.active}, true) = false
-  OR COALESCE(${userModel.isActive}, true) = false
+/** Suspended account — shown in roster but not eligible for direct promotion. */
+const sqlSuspended = sql`(COALESCE(${userModel.isSuspended}, false) = true)`;
+
+/** Truly inactive (deactivated, NOT suspended) — excluded from the roster entirely. */
+const sqlTrulyInactive = sql`(
+  COALESCE(${userModel.isSuspended}, false) = false
+  AND (
+    COALESCE(${studentModel.active}, true) = false
+    OR COALESCE(${userModel.isActive}, true) = false
+  )
 )`;
 
 const sqlPromoted = sql`${pTo.id} IS NOT NULL`;
@@ -207,12 +230,12 @@ function bucketPredicate(
       return undefined;
     case "promoted":
       return sqlPromoted;
-    case "inactive":
-      return sql`(${sqlInactive}) AND NOT (${sqlPromoted})`;
+    case "suspended":
+      return sql`(${sqlSuspended}) AND NOT (${sqlPromoted})`;
     case "ineligible":
-      return sql`NOT (${sqlPromoted}) AND NOT (${sqlInactive}) AND (${sqlPolicyIneligible(policy)})`;
+      return sql`NOT (${sqlPromoted}) AND NOT (${sqlSuspended}) AND (${sqlPolicyIneligible(policy)})`;
     case "eligible":
-      return sql`NOT (${sqlPromoted}) AND NOT (${sqlInactive}) AND NOT (${sqlPolicyIneligible(policy)})`;
+      return sql`NOT (${sqlPromoted}) AND NOT (${sqlSuspended}) AND NOT (${sqlPolicyIneligible(policy)})`;
     default:
       return undefined;
   }
@@ -232,14 +255,14 @@ export type PromotionRosterRow = {
   shiftName: string;
   fromClassName: string;
   toClassName: string;
-  bucket: "eligible" | "ineligible" | "inactive" | "promoted";
+  bucket: "eligible" | "ineligible" | "suspended" | "promoted";
 };
 
 function rowBucketExpr(policy: PrecomputedBuilderPolicy) {
   return sql<PromotionRosterRow["bucket"]>`
     CASE
       WHEN ${sqlPromoted} THEN 'promoted'
-      WHEN ${sqlInactive} THEN 'inactive'
+      WHEN ${sqlSuspended} THEN 'suspended'
       WHEN ${sqlPolicyIneligible(policy)} THEN 'ineligible'
       ELSE 'eligible'
     END
@@ -254,10 +277,10 @@ export type PromotionRosterScopeParams = Pick<
   | "fromClassId"
   | "toSessionId"
   | "toClassId"
-  | "affiliationId"
-  | "regulationTypeId"
-  | "programCourseId"
-  | "shiftId"
+  | "affiliationIds"
+  | "regulationTypeIds"
+  | "programCourseIds"
+  | "shiftIds"
   | "q"
 >;
 
@@ -265,7 +288,7 @@ export type PromotionRosterBucketCounts = {
   all: number;
   eligible: number;
   ineligible: number;
-  inactive: number;
+  suspended: number;
   promoted: number;
 };
 
@@ -293,13 +316,13 @@ export async function getPromotionRosterBucketCounts(
     .select({
       allCount: count(),
       eligible: sql<number>`cast(coalesce(sum(case
-          when not (${sqlPromoted}) and not (${sqlInactive}) and not (${policyInel}) then 1
+          when not (${sqlPromoted}) and not (${sqlSuspended}) and not (${policyInel}) then 1
           else 0 end), 0) as int)`,
       ineligible: sql<number>`cast(coalesce(sum(case
-          when not (${sqlPromoted}) and not (${sqlInactive}) and (${policyInel}) then 1
+          when not (${sqlPromoted}) and not (${sqlSuspended}) and (${policyInel}) then 1
           else 0 end), 0) as int)`,
-      inactive: sql<number>`cast(coalesce(sum(case
-          when (${sqlInactive}) and not (${sqlPromoted}) then 1
+      suspended: sql<number>`cast(coalesce(sum(case
+          when (${sqlSuspended}) and not (${sqlPromoted}) then 1
           else 0 end), 0) as int)`,
       promoted: sql<number>`cast(coalesce(sum(case
           when (${sqlPromoted}) then 1
@@ -330,7 +353,7 @@ export async function getPromotionRosterBucketCounts(
     all: Number(agg?.allCount ?? 0),
     eligible: agg?.eligible ?? 0,
     ineligible: agg?.ineligible ?? 0,
-    inactive: agg?.inactive ?? 0,
+    suspended: agg?.suspended ?? 0,
     promoted: agg?.promoted ?? 0,
   };
 }
@@ -413,13 +436,13 @@ export async function getPromotionRosterPage(
           .select({
             allCount: count(),
             eligible: sql<number>`cast(coalesce(sum(case
-          when not (${sqlPromoted}) and not (${sqlInactive}) and not (${policyInel}) then 1
+          when not (${sqlPromoted}) and not (${sqlSuspended}) and not (${policyInel}) then 1
           else 0 end), 0) as int)`,
             ineligible: sql<number>`cast(coalesce(sum(case
-          when not (${sqlPromoted}) and not (${sqlInactive}) and (${policyInel}) then 1
+          when not (${sqlPromoted}) and not (${sqlSuspended}) and (${policyInel}) then 1
           else 0 end), 0) as int)`,
-            inactive: sql<number>`cast(coalesce(sum(case
-          when (${sqlInactive}) and not (${sqlPromoted}) then 1
+            suspended: sql<number>`cast(coalesce(sum(case
+          when (${sqlSuspended}) and not (${sqlPromoted}) then 1
           else 0 end), 0) as int)`,
             promoted: sql<number>`cast(coalesce(sum(case
           when (${sqlPromoted}) then 1
@@ -494,7 +517,7 @@ export async function getPromotionRosterPage(
             all: Number(agg.allCount ?? 0),
             eligible: agg.eligible ?? 0,
             ineligible: agg.ineligible ?? 0,
-            inactive: agg.inactive ?? 0,
+            suspended: agg.suspended ?? 0,
             promoted: agg.promoted ?? 0,
           }
         : null,
@@ -511,10 +534,10 @@ export type BulkSemesterPromoteParams = Pick<
   | "fromClassId"
   | "toSessionId"
   | "toClassId"
-  | "affiliationId"
-  | "regulationTypeId"
-  | "programCourseId"
-  | "shiftId"
+  | "affiliationIds"
+  | "regulationTypeIds"
+  | "programCourseIds"
+  | "shiftIds"
 > & { studentIds: number[] };
 
 export type BulkSemesterPromoteSkipped = { studentId: number; reason: string };
@@ -585,10 +608,10 @@ export async function bulkPromoteSemesterStudents(
     fromClassId: params.fromClassId,
     toSessionId: params.toSessionId,
     toClassId: params.toClassId,
-    affiliationId: params.affiliationId,
-    regulationTypeId: params.regulationTypeId,
-    programCourseId: params.programCourseId,
-    shiftId: params.shiftId,
+    affiliationIds: params.affiliationIds,
+    regulationTypeIds: params.regulationTypeIds,
+    programCourseIds: params.programCourseIds,
+    shiftIds: params.shiftIds,
     bucket: "all",
     sortBy: "uid",
     sortDir: "asc",
@@ -715,8 +738,8 @@ export async function bulkPromoteSemesterStudents(
       const reason =
         row.bucket === "promoted"
           ? "Already promoted to the target session and class."
-          : row.bucket === "inactive"
-            ? "Student account is inactive or suspended."
+          : row.bucket === "suspended"
+            ? "Student account is suspended."
             : "Promotion rules are not satisfied for this target.";
       skipped.push({ studentId: sid, reason });
       continue;

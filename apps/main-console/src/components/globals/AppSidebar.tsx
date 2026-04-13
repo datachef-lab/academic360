@@ -79,6 +79,7 @@ const data = {
   navMain: [
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
+    { title: "Promote Students", url: "/dashboard/promote-students", icon: GraduationCap },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
     {
       title: "Admit Card Distributions",
@@ -293,35 +294,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <div className="h-full flex flex-col justify-between ">
               <div className="">
                 <div className="flex flex-col h-full justify-between ">
-                  {/* Academic Year Setup */}
-                  {user?.email && !TEMP_USER_EMAILS.includes(user.email) && (
-                    <div className="my-4 mb-6 mx-2">
-                      <Link
-                        to="/dashboard/promote-students"
-                        onClick={() => {
-                          if (isMobile) setOpenMobile(false);
-                        }}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-lg border-2 px-4 py-2.5 text-sm transition-all duration-150",
-                          currentPath === "/dashboard/promote-students"
-                            ? "border-transparent bg-white font-semibold text-purple-600 shadow-lg"
-                            : "border-white font-medium text-white hover:bg-purple-700/80 hover:text-white",
-                        )}
-                      >
-                        <GraduationCap
-                          className={cn(
-                            "h-5 w-5 shrink-0",
-                            currentPath === "/dashboard/promote-students"
-                              ? "text-purple-600"
-                              : "text-white",
-                          )}
-                          aria-hidden
-                        />
-                        <span className="truncate">Promote Students</span>
-                      </Link>
-                    </div>
-                  )}
-
                   {/* Dashboard Link */}
                   <div className="mb-2">
                     {data.navDash.map((item) => (

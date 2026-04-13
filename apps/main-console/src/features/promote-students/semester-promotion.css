@@ -290,6 +290,12 @@
   border: 1px solid var(--sp-rose-bd);
 }
 
+.sp-scope .sp-pro-badge.sp-pro-b-suspended {
+  background: var(--sp-orange-bg);
+  color: var(--sp-orange);
+  border: 1px solid var(--sp-orange-bd);
+}
+
 .sp-scope .sp-pro-badge.sp-pro-b-promoted {
   background: var(--sp-navy);
   color: #fff;

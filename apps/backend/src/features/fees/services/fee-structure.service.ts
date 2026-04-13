@@ -126,10 +126,11 @@ type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
 
 /**
  * Ensures default fee-group-promotion-mapping and fee-student-mapping
- * entries exist for all active students matching the given fee structure.
+ * entries exist for all students matching the given fee structure
+ * (regardless of active/inactive/suspended/cancelled status).
  *
  * Business rules:
- * - Find all promotions (active students) for:
+ * - Find all promotions for:
  *   - same academic year (via session -> academicYear)
  *   - same class, program course, shift as the fee structure
  * - For each promotion:
@@ -241,7 +242,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
 
   emitProgress("Finding matching students...", 20, "in_progress");
 
-  // Find promotions (active students) matching this fee structure context
+  // Find all promotions matching this fee structure context (all students regardless of status)
   const promotions = await db
     .select({
       id: promotionModel.id,
@@ -249,15 +250,12 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
     })
     .from(promotionModel)
     .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
     .where(
       and(
         eq(sessionModel.academicYearId, feeStructure.academicYearId),
         eq(promotionModel.classId, feeStructure.classId),
         eq(promotionModel.programCourseId, feeStructure.programCourseId),
         eq(promotionModel.shiftId, feeStructure.shiftId),
-        eq(userModel.isActive, true),
       ),
     );
 
@@ -2452,11 +2450,6 @@ const FEE_STRUCTURE_DOWNLOAD_COLUMNS = [
   "Fee Head (Or Components)",
   "Amount Configured (For Fee Head)",
   "Remarks",
-  "Closing Date",
-  "Start Date",
-  "End Date",
-  "Online Start Date",
-  "Online End Date",
   "Advance For Program Course",
   "Advance For Semester",
   "Fee Structure Created By",
@@ -2469,6 +2462,7 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Fee-Student Mapping Id",
   "Student",
   "UID",
+  "Student Status",
   "Academic Year",
   "Program Course",
   "Class / Semester",
@@ -2483,8 +2477,6 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Fee Head (or Components)",
   "Amount Configured (For Fee Heads / Components)",
   "Total Amount Configured (Per Fee Structure)",
-  "Late Fee Amount",
-  "Gross Payable (Fees + Late Fee)",
   "Waived-Off Amount",
   "Total Amount To Pay",
   "Paid Amount",
@@ -2501,22 +2493,9 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Waived-Off Reason",
   "Waived-Off Date",
   "Waived-Off Approved By",
-  "Closing Date",
-  "Start Date",
-  "End Date",
-  "Online Start Date",
-  "Online End Date",
-  "Fee Structure Last Updated At",
-  "Fee Structure Created By",
-  "Fee Structure Last Updated By",
   "Online Payment Gateway Vendor",
   "Online Payment Option",
   "Online Payment Order Id",
-  "Online Payment Transaction Id",
-  "Online Payment Bank Transaction Id",
-  "Online Payment Transaction Type",
-  "Online Payment Transaction Gateway Name",
-  "Online Payment Card Scheme",
 ] as const;
 
 /** Light column fills for Excel (ARGB with alpha FF). Each amount column gets a distinct pastel. */
@@ -2526,9 +2505,7 @@ const FEE_STRUCTURE_AMOUNT_COLUMN_FILLS: Record<string, string> = {
 
 const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
   "Total Amount Configured (Per Fee Structure)": "FFFFF3E0",
-  "Gross Payable (Fees + Late Fee)": "FFE8F5E9",
   "Total Amount To Pay": "FFE3F2FD",
-  "Late Fee Amount": "FFFFF9C4",
   "Paid Amount": "FFC8E6C9",
   "Amount Configured (For Fee Heads / Components)": "FFF3E5F5",
   "Waived-Off Amount": "FFFFCDD2",
@@ -2737,7 +2714,10 @@ async function buildStyledFeeExportExcelBuffer(
   return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 }
 
-export async function downloadFeeStructures(academicYearId: number): Promise<{
+export async function downloadFeeStructures(
+  academicYearId: number,
+  classId?: number,
+): Promise<{
   buffer: Buffer;
   academicYearYear: string;
 }> {
@@ -2772,13 +2752,6 @@ export async function downloadFeeStructures(academicYearId: number): Promise<{
       "Fee Head (Or Components)": feeHeadModel.name,
       "Amount Configured (For Fee Head)": feeStructureComponentModel.amount,
       Remarks: feeStructureComponentModel.remarks,
-
-      // Time Period
-      "Closing Date": feeStructureModel.closingDate,
-      "Start Date": feeStructureModel.startDate,
-      "End Date": feeStructureModel.endDate,
-      "Online Start Date": feeStructureModel.onlineStartDate,
-      "Online End Date": feeStructureModel.onlineEndDate,
 
       // Advance Configurations
       "Advance For Program Course": advanceProgramCourse.name,
@@ -2846,7 +2819,14 @@ export async function downloadFeeStructures(academicYearId: number): Promise<{
       feeCategoryModel,
       eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
     )
-    .where(eq(feeStructureModel.academicYearId, academicYearId)) // ✅ filter on FK, not joined table
+    .where(
+      classId
+        ? and(
+            eq(feeStructureModel.academicYearId, academicYearId),
+            eq(feeStructureModel.classId, classId),
+          )
+        : eq(feeStructureModel.academicYearId, academicYearId),
+    )
     .orderBy(feeStructureModel.id, feeStructureComponentModel.id);
 
   const academicYear =
@@ -2868,13 +2848,12 @@ export async function downloadFeeStructures(academicYearId: number): Promise<{
 
 export async function downloadFeeStudentMappings(
   academicYearId: number,
+  classId?: number,
 ): Promise<{
   buffer: Buffer;
   academicYearYear: string;
 }> {
   const stdUser = aliasedTable(userModel, "std_user");
-  const crFsUser = aliasedTable(userModel, "cr_fs_user");
-  const upFsUser = aliasedTable(userModel, "up_fs_user");
   const fgpmUser = aliasedTable(userModel, "fgpm_user");
   const waivedOffUser = aliasedTable(userModel, "waived_off_user");
   const paymentRecordedByUser = aliasedTable(
@@ -2905,6 +2884,12 @@ export async function downloadFeeStudentMappings(
       // Student Details
       Student: stdUser.name,
       UID: studentModel.uid,
+      "Student Status": sql<string>`CASE
+        WHEN COALESCE(${studentModel.hasCancelledAdmission}, false) = true THEN 'Cancelled Admission'
+        WHEN COALESCE(${stdUser.isSuspended}, false) = true THEN 'Suspended'
+        WHEN COALESCE(${stdUser.isActive}, true) = false OR COALESCE(${studentModel.active}, true) = false THEN 'Inactive'
+        ELSE 'Active'
+      END`,
 
       // Batch Details
       "Academic Year": academicYearModel.year,
@@ -2924,20 +2909,13 @@ export async function downloadFeeStudentMappings(
       "Amount Configured (For Fee Heads / Components)":
         feeStructureComponentModel.amount,
       "Total Amount Configured (Per Fee Structure)": feeSlabTotalsSq.slabTotal,
-      "Late Fee Amount": feeStudentMappingModel.lateFee,
-
-      // Gross = Σ fee_structure_components for slab + late fee (before waive-off)
-      "Gross Payable (Fees + Late Fee)": sql<number>`(
-        coalesce(${feeSlabTotalsSq.slabTotal}, 0::double precision)
-        + coalesce(${feeStudentMappingModel.lateFee}::double precision, 0::double precision)
-      )`,
       "Waived-Off Amount": feeStudentMappingModel.waivedOffAmount,
       "Total Amount To Pay": feeStudentMappingModel.totalPayable,
 
       // Payment Summary
       "Paid Amount": paymentModel.amount,
       "Payment Context": paymentModel.context,
-      "Payment Status": paymentModel.status,
+      "Payment Status": sql<string>`CASE WHEN ${paymentModel.status} = 'SUCCESS' THEN 'Paid' ELSE 'Pending' END`,
       "Paid Timestamp": paymentModel.txnDate,
       "Payment Mode": paymentModel.paymentMode,
       "Is Manual Payment Recorded?": sql<string>`CASE WHEN ${paymentModel.isManualEntry} = true THEN 'Yes' ELSE 'No' END`,
@@ -2952,27 +2930,10 @@ export async function downloadFeeStudentMappings(
       "Waived-Off Date": feeStudentMappingModel.waivedOffDate,
       "Waived-Off Approved By": waivedOffUser.name,
 
-      // Fee structure time period (same as fee-structure export)
-      "Closing Date": feeStructureModel.closingDate,
-      "Start Date": feeStructureModel.startDate,
-      "End Date": feeStructureModel.endDate,
-      "Online Start Date": feeStructureModel.onlineStartDate,
-      "Online End Date": feeStructureModel.onlineEndDate,
-
-      // Fee Structure User Details
-      "Fee Structure Last Updated At": feeStructureModel.updatedAt,
-      "Fee Structure Created By": crFsUser.name,
-      "Fee Structure Last Updated By": upFsUser.name,
-
       // Online Payment Details
       "Online Payment Gateway Vendor": paymentModel.paymentGatewayVendor,
       "Online Payment Option": paymentModel.paymentOption,
       "Online Payment Order Id": paymentModel.orderId,
-      "Online Payment Transaction Id": paymentModel.txnId,
-      "Online Payment Bank Transaction Id": paymentModel.bankTxnId,
-      "Online Payment Transaction Type": paymentModel.txnType,
-      "Online Payment Transaction Gateway Name": paymentModel.txnGatewayName,
-      "Online Payment Card Scheme": paymentModel.cardScheme,
     })
     .from(feeStudentMappingModel)
     .innerJoin(
@@ -3008,17 +2969,21 @@ export async function downloadFeeStudentMappings(
     .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
     .innerJoin(
       feeStructureModel,
-      and(
-        eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
-        eq(feeStructureModel.academicYearId, academicYearId),
-      ),
+      classId
+        ? and(
+            eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+            eq(feeStructureModel.academicYearId, academicYearId),
+            eq(feeStructureModel.classId, classId),
+          )
+        : and(
+            eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+            eq(feeStructureModel.academicYearId, academicYearId),
+          ),
     )
     .leftJoin(
       receiptTypeModel,
       eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
     )
-    .leftJoin(crFsUser, eq(crFsUser.id, feeStructureModel.createdByUserId))
-    .leftJoin(upFsUser, eq(upFsUser.id, feeStructureModel.updatedByUserId))
     .innerJoin(
       feeGroupModel,
       eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
@@ -3077,7 +3042,7 @@ export async function downloadFeeStudentMappings(
       : String(academicYearId);
 
   const buffer = await buildStyledFeeExportExcelBuffer(
-    "Fee Student Mappings",
+    "Fee Student Mapping & Payment",
     FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS,
     rows as Record<string, unknown>[],
     {

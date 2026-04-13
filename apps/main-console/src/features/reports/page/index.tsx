@@ -18,7 +18,6 @@ import {
   Upload,
   AlertTriangle,
   Copy,
-  IndianRupee,
   ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,10 +36,6 @@ import {
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { getRegulationTypes } from "@/services/course-design.api";
 import type { RegulationType } from "@repo/db/index";
-import {
-  downloadFeeStructuresExcelFile,
-  downloadFeeStudentMappingsExcelFile,
-} from "@/services/fees-api";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import * as XLSX from "xlsx";
 import {
@@ -842,24 +837,6 @@ export default function ReportsPage() {
     }
   };
 
-  const downloadFeeStructuresReport = async () => {
-    if (!selectedAcademicYearId) {
-      throw new Error("Please select an academic year (use the global academic year selector).");
-    }
-    await downloadFeeStructuresExcelFile(Number(selectedAcademicYearId));
-    setIsExporting(false);
-    toast.success("Fee structures Excel downloaded.");
-  };
-
-  const downloadFeeStudentMappingsReport = async () => {
-    if (!selectedAcademicYearId) {
-      throw new Error("Please select an academic year (use the global academic year selector).");
-    }
-    await downloadFeeStudentMappingsExcelFile(Number(selectedAcademicYearId));
-    setIsExporting(false);
-    toast.success("Fee student mappings Excel downloaded.");
-  };
-
   const reports: ReportItem[] = [
     {
       id: "import-students-excel",
@@ -989,38 +966,6 @@ export default function ReportsPage() {
       downloadFunction: () =>
         handleDownload("exam-form-submission-report", downloadPromotionStudentsReport),
       requiresAcademicYear: false,
-      requiresRegulation: false,
-    },
-    {
-      id: "fee-structures-excel",
-      domains: ["FEES", "ADMISSION_PHASE"],
-      name: "Fee Structures (Excel)",
-      description:
-        "Download configured fee structures, slabs, components, and amounts for the selected academic year.",
-      icon: <IndianRupee className="h-5 w-5 text-emerald-600" />,
-      downloadFunction: () =>
-        handleDownload(
-          "fee-structures-excel",
-          downloadFeeStructuresReport,
-          "fee_structures_excel_download",
-        ),
-      requiresAcademicYear: true,
-      requiresRegulation: false,
-    },
-    {
-      id: "fee-student-mappings-excel",
-      domains: ["FEES", "ADMISSION_PHASE"],
-      name: "Fee Student Mappings (Excel)",
-      description:
-        "Download fee–student mappings, payments, and component lines for the selected academic year.",
-      icon: <IndianRupee className="h-5 w-5 text-amber-700" />,
-      downloadFunction: () =>
-        handleDownload(
-          "fee-student-mappings-excel",
-          downloadFeeStudentMappingsReport,
-          "fee_student_mappings_excel_download",
-        ),
-      requiresAcademicYear: true,
       requiresRegulation: false,
     },
   ];

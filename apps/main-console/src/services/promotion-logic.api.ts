@@ -4,6 +4,8 @@ import type { PromotionBuilderDto, PromotionClauseDto } from "@repo/db";
 
 const BASE = "/api/v1/batches";
 
+// ── Promotion Builders ──
+
 export async function getPromotionBuilders(affiliationId?: number): Promise<PromotionBuilderDto[]> {
   const res = await axiosInstance.get<ApiResponse<PromotionBuilderDto[]>>(
     `${BASE}/promotion-builders`,
@@ -15,7 +17,6 @@ export async function getPromotionBuilders(affiliationId?: number): Promise<Prom
   return Array.isArray(payload) ? payload : [];
 }
 
-/** Active builder for affiliation + target (“promoted to”) class — used to show semester rule lines in the roster. */
 export async function getPromotionBuilderByTarget(
   affiliationId: number,
   targetClassId: number,
@@ -29,6 +30,58 @@ export async function getPromotionBuilderByTarget(
   return res.data.payload ?? null;
 }
 
+export type PromotionBuilderRulePayload = {
+  promotionClauseId: number;
+  operator: "EQUALS" | "NONE_IN";
+  classIds: number[];
+};
+
+export async function createPromotionBuilder(data: {
+  affiliationId: number;
+  targetClassId: number;
+  logic: "AUTO_PROMOTE" | "CONDITIONAL";
+  isActive?: boolean;
+  rules?: PromotionBuilderRulePayload[];
+}): Promise<PromotionBuilderDto> {
+  const res = await axiosInstance.post<ApiResponse<PromotionBuilderDto>>(
+    `${BASE}/promotion-builders`,
+    data,
+  );
+  return res.data.payload;
+}
+
+export async function updatePromotionBuilder(
+  id: number,
+  data: {
+    logic?: "AUTO_PROMOTE" | "CONDITIONAL";
+    isActive?: boolean;
+    rules?: PromotionBuilderRulePayload[];
+  },
+): Promise<PromotionBuilderDto> {
+  const res = await axiosInstance.put<ApiResponse<PromotionBuilderDto>>(
+    `${BASE}/promotion-builders/${id}`,
+    data,
+  );
+  return res.data.payload;
+}
+
+export async function replacePromotionBuilderRules(
+  id: number,
+  rules: PromotionBuilderRulePayload[],
+): Promise<PromotionBuilderDto> {
+  const res = await axiosInstance.put<ApiResponse<PromotionBuilderDto>>(
+    `${BASE}/promotion-builders/${id}/rules`,
+    { rules },
+  );
+  return res.data.payload;
+}
+
+export async function deletePromotionBuilder(id: number): Promise<void> {
+  await axiosInstance.delete(`${BASE}/promotion-builders/${id}`);
+}
+
+// ── Promotion Clauses ──
+
 export async function getPromotionClauses(opts?: {
   isActive?: boolean;
 }): Promise<PromotionClauseDto[]> {
@@ -39,4 +92,51 @@ export async function getPromotionClauses(opts?: {
     },
   );
   return res.data.payload ?? [];
+}
+
+export async function createPromotionClause(data: {
+  name: string;
+  description?: string;
+  color?: string;
+  bgColor?: string;
+  isActive?: boolean;
+}): Promise<PromotionClauseDto> {
+  const res = await axiosInstance.post<ApiResponse<PromotionClauseDto>>(
+    `${BASE}/promotion-clauses`,
+    data,
+  );
+  return res.data.payload;
+}
+
+export async function updatePromotionClause(
+  id: number,
+  data: {
+    name?: string;
+    description?: string;
+    color?: string;
+    bgColor?: string;
+    isActive?: boolean;
+    classIds?: number[];
+  },
+): Promise<PromotionClauseDto> {
+  const res = await axiosInstance.put<ApiResponse<PromotionClauseDto>>(
+    `${BASE}/promotion-clauses/${id}`,
+    data,
+  );
+  return res.data.payload;
+}
+
+export async function replacePromotionClauseClassMappings(
+  id: number,
+  classIds: number[],
+): Promise<PromotionClauseDto> {
+  const res = await axiosInstance.put<ApiResponse<PromotionClauseDto>>(
+    `${BASE}/promotion-clauses/${id}/class-mappings`,
+    { classIds },
+  );
+  return res.data.payload;
+}
+
+export async function deletePromotionClause(id: number): Promise<void> {
+  await axiosInstance.delete(`${BASE}/promotion-clauses/${id}`);
 }

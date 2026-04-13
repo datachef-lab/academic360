@@ -8,19 +8,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { getPromotionBuilders } from "@/services/promotion-logic.api";
+import {
+  getPromotionBuilders,
+  getPromotionClauses,
+  updatePromotionBuilder,
+} from "@/services/promotion-logic.api";
+import type { PromotionBuilderRulePayload } from "@/services/promotion-logic.api";
 import { getAffiliations } from "@/services/course-design.api";
-import type { PromotionBuilderDto } from "@repo/db";
+import { fetchAllClasses } from "@/services/classes.api";
+import type { ClassRow } from "@/services/classes.api";
+import type { PromotionBuilderDto, PromotionClauseDto } from "@repo/db";
 import type { Affiliation, ClassT } from "@repo/db/schemas";
 import {
   ArrowRight,
   Check,
   CheckSquare,
   ChevronDown,
+  ChevronsUpDown,
   CircleSlash,
   Clock,
   Info,
+  Loader2,
   Plus,
   Star,
   X,
@@ -28,11 +39,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * Promotion rules UI. All builder rows come from the backend DB via
- * GET /api/v1/batches/promotion-builders (see `loadBuilders` / `getPromotionBuilders`).
- * Affiliations from `getAffiliations()`.
- */
 const ui = {
   bg: "#F0EEE9",
   card: "#FFFFFF",
@@ -108,19 +114,16 @@ const DEFAULT_ERP_BADGE = "Calcutta University · ERP Admin";
 function semesterIndexFromName(name: string | undefined | null): number | null {
   if (!name) return null;
   const s = name.trim();
-
   const digit = /semester\s*(\d+)/i.exec(s);
   if (digit?.[1]) {
     const n = parseInt(digit[1], 10);
     return Number.isFinite(n) ? n : null;
   }
-
   const word = /semester\s+([ivxlcdm]+)/i.exec(s);
   if (word?.[1]) {
     const n = WORD_ROMAN_TO_SEM[word[1].toUpperCase()];
     return n ?? null;
   }
-
   return null;
 }
 
@@ -152,18 +155,13 @@ function sortBuilders(rows: PromotionBuilderDto[]): PromotionBuilderDto[] {
   });
 }
 
-function inferTrack(tc: ClassT | undefined): "ODD" | "EVEN" | null {
+function inferTrack(tc: ClassT | ClassRow | undefined): "ODD" | "EVEN" | null {
   if (!tc) return null;
-  if (tc.track === "ODD" || tc.track === "EVEN") return tc.track;
+  const t = (tc as ClassT).track;
+  if (t === "ODD" || t === "EVEN") return t;
   const n = semesterIndexFromName(tc.name);
   if (n == null) return null;
   return n % 2 === 1 ? "ODD" : "EVEN";
-}
-
-function operatorLabel(op: string): string {
-  if (op === "NONE_IN") return "none in";
-  if (op === "EQUALS") return "equals";
-  return op.toLowerCase();
 }
 
 function isFailedPapersClause(name: string | undefined | null): boolean {
@@ -172,12 +170,7 @@ function isFailedPapersClause(name: string | undefined | null): boolean {
 
 type AffiliationFilter = "all" | number;
 
-function trackPalette(sem: number | null): {
-  c: string;
-  bg: string;
-  bd: string;
-  mid: string;
-} {
+function trackPalette(sem: number | null) {
   if (sem == null || sem < 1) {
     return { c: ui.text3, bg: ui.card2, bd: ui.border2, mid: ui.border2 };
   }
@@ -240,12 +233,42 @@ function SemesterBox({
   );
 }
 
+// ── Draft rule type for local editing state ──
+
+type DraftRule = {
+  key: string;
+  clauseId: number | null;
+  operator: "EQUALS" | "NONE_IN";
+  classIds: number[];
+};
+
+let _draftKeyCounter = 0;
+function nextDraftKey() {
+  return `dk_${++_draftKeyCounter}`;
+}
+
+function builderToRules(builder: PromotionBuilderDto): DraftRule[] {
+  return (builder.rules ?? []).map((r) => ({
+    key: nextDraftKey(),
+    clauseId: r.promotionClause?.id ?? null,
+    operator: (r.operator as "EQUALS" | "NONE_IN") ?? "EQUALS",
+    classIds: (r.classes ?? [])
+      .map((c) => (c.class as ClassT)?.id)
+      .filter((id): id is number => id != null),
+  }));
+}
+
+// ── Page ──
+
 export default function PromotionBuilderPage() {
   const [builders, setBuilders] = React.useState<PromotionBuilderDto[]>([]);
   const [affiliations, setAffiliations] = React.useState<Affiliation[]>([]);
   const [affiliationFilter, setAffiliationFilter] = React.useState<AffiliationFilter>("all");
   const [loading, setLoading] = React.useState(true);
   const [expandedId, setExpandedId] = React.useState<number | null>(null);
+
+  const [allClauses, setAllClauses] = React.useState<PromotionClauseDto[]>([]);
+  const [allClasses, setAllClasses] = React.useState<ClassRow[]>([]);
 
   React.useEffect(() => {
     const id = "promotion-builder-fonts";
@@ -281,9 +304,23 @@ export default function PromotionBuilderPage() {
     }
   }, []);
 
+  const loadRefData = React.useCallback(async () => {
+    try {
+      const [clauses, classes] = await Promise.all([
+        getPromotionClauses({ isActive: true }),
+        fetchAllClasses(),
+      ]);
+      setAllClauses(Array.isArray(clauses) ? clauses : []);
+      setAllClasses(Array.isArray(classes) ? classes : []);
+    } catch {
+      toast.error("Failed to load reference data");
+    }
+  }, []);
+
   React.useEffect(() => {
     void loadAffiliations();
-  }, [loadAffiliations]);
+    void loadRefData();
+  }, [loadAffiliations, loadRefData]);
 
   React.useEffect(() => {
     void loadBuilders(affiliationFilter);
@@ -309,14 +346,14 @@ export default function PromotionBuilderPage() {
     }
   };
 
+  const handleSaved = () => {
+    void loadBuilders(affiliationFilter);
+  };
+
   return (
     <div
       className="min-h-full antialiased px-5 py-[26px] sm:px-6"
-      style={{
-        background: ui.bg,
-        fontFamily: "'DM Sans', system-ui, sans-serif",
-        color: ui.text,
-      }}
+      style={{ background: ui.bg, fontFamily: "'DM Sans', system-ui, sans-serif", color: ui.text }}
     >
       <div className="mx-auto w-full max-w-[900px] space-y-4">
         {/* Header */}
@@ -324,10 +361,7 @@ export default function PromotionBuilderPage() {
           <div className="min-w-0">
             <div
               className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1"
-              style={{
-                background: ui.amberBg,
-                borderColor: ui.amberBorder,
-              }}
+              style={{ background: ui.amberBg, borderColor: ui.amberBorder }}
             >
               <Clock className="h-2.5 w-2.5 shrink-0" strokeWidth={1} style={{ color: ui.amber }} />
               <span
@@ -371,11 +405,7 @@ export default function PromotionBuilderPage() {
         {/* Affiliation bar */}
         <div
           className="flex flex-wrap items-center gap-3 rounded-[10px] border-[1.5px] px-4 py-2.5"
-          style={{
-            borderColor: ui.border2,
-            background: ui.card,
-            boxShadow: ui.sh,
-          }}
+          style={{ borderColor: ui.border2, background: ui.card, boxShadow: ui.sh }}
         >
           <div className="flex shrink-0 items-center gap-1.5">
             <Star
@@ -487,6 +517,9 @@ export default function PromotionBuilderPage() {
                   builder={b}
                   open={expandedId === b.id}
                   onOpenChange={(o) => setExpandedId(o && b.id != null ? b.id : null)}
+                  allClauses={allClauses}
+                  allClasses={allClasses}
+                  onSaved={handleSaved}
                 />
               ))
             )}
@@ -517,22 +550,110 @@ export default function PromotionBuilderPage() {
   );
 }
 
+// ── Builder Rule Card (editable) ──
+
 function BuilderRuleCard({
   builder,
   open,
   onOpenChange,
+  allClauses,
+  allClasses,
+  onSaved,
 }: {
   builder: PromotionBuilderDto;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  allClauses: PromotionClauseDto[];
+  allClasses: ClassRow[];
+  onSaved: () => void;
 }) {
   const tc = builder.targetClass as ClassT | undefined;
   const semIdx = semesterIndexFromName(tc?.name);
   const track = inferTrack(tc);
-  const isAuto = builder.logic === "AUTO_PROMOTE";
   const title = displaySemesterTitle(tc?.name);
   const pal = trackPalette(semIdx);
 
+  // Draft editing state - initialized from builder when opening
+  const [draftLogic, setDraftLogic] = React.useState<"AUTO_PROMOTE" | "CONDITIONAL">(
+    builder.logic as "AUTO_PROMOTE" | "CONDITIONAL",
+  );
+  const [draftRules, setDraftRules] = React.useState<DraftRule[]>(() => builderToRules(builder));
+  const [saving, setSaving] = React.useState(false);
+
+  // Reset draft when builder data changes (after save / external reload)
+  React.useEffect(() => {
+    setDraftLogic(builder.logic as "AUTO_PROMOTE" | "CONDITIONAL");
+    setDraftRules(builderToRules(builder));
+  }, [builder]);
+
+  const isAuto = draftLogic === "AUTO_PROMOTE";
+
+  // Dirty check
+  const serverLogic = builder.logic as string;
+  const isDirty = React.useMemo(() => {
+    if (draftLogic !== serverLogic) return true;
+    const serverRules = builderToRules(builder);
+    if (draftRules.length !== serverRules.length) return true;
+    for (let i = 0; i < draftRules.length; i++) {
+      const d = draftRules[i]!;
+      const s = serverRules[i]!;
+      if (d.clauseId !== s.clauseId || d.operator !== s.operator) return true;
+      const dIds = [...d.classIds].sort();
+      const sIds = [...s.classIds].sort();
+      if (dIds.length !== sIds.length || dIds.some((v, j) => v !== sIds[j])) return true;
+    }
+    return false;
+  }, [draftLogic, draftRules, serverLogic, builder]);
+
+  const handleCancel = () => {
+    setDraftLogic(builder.logic as "AUTO_PROMOTE" | "CONDITIONAL");
+    setDraftRules(builderToRules(builder));
+  };
+
+  const handleSave = async () => {
+    if (builder.id == null) return;
+    setSaving(true);
+    try {
+      const rules: PromotionBuilderRulePayload[] = isAuto
+        ? []
+        : draftRules
+            .filter((r) => r.clauseId != null)
+            .map((r) => ({
+              promotionClauseId: r.clauseId!,
+              operator: r.operator,
+              classIds: r.classIds,
+            }));
+
+      await updatePromotionBuilder(builder.id, {
+        logic: draftLogic,
+        rules,
+      });
+      toast.success(`${title} rule saved`);
+      onSaved();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to save";
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addClause = () => {
+    setDraftRules((prev) => [
+      ...prev,
+      { key: nextDraftKey(), clauseId: null, operator: "EQUALS", classIds: [] },
+    ]);
+  };
+
+  const removeClause = (key: string) => {
+    setDraftRules((prev) => prev.filter((r) => r.key !== key));
+  };
+
+  const updateRule = (key: string, patch: Partial<DraftRule>) => {
+    setDraftRules((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  };
+
+  // Summary badges for collapsed view (from server data, not draft)
   const summaryBadges = React.useMemo(() => {
     const chips: {
       key: string;
@@ -561,7 +682,8 @@ function BuilderRuleCard({
     return chips;
   }, [builder.rules]);
 
-  const notConfigured = !isAuto && summaryBadges.length === 0;
+  const serverIsAuto = builder.logic === "AUTO_PROMOTE";
+  const notConfigured = !serverIsAuto && summaryBadges.length === 0;
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
@@ -594,7 +716,7 @@ function BuilderRuleCard({
             </div>
 
             <div className="min-w-0">
-              {isAuto ? (
+              {serverIsAuto ? (
                 <span className="text-[11.5px] italic" style={{ color: ui.text3 }}>
                   No conditions — auto-promoted
                 </span>
@@ -679,14 +801,10 @@ function BuilderRuleCard({
             </div>
 
             <div>
-              {isAuto ? (
+              {serverIsAuto ? (
                 <span
                   className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap"
-                  style={{
-                    background: ui.greenBg,
-                    borderColor: ui.greenBorder,
-                    color: ui.green,
-                  }}
+                  style={{ background: ui.greenBg, borderColor: ui.greenBorder, color: ui.green }}
                 >
                   ⚡ Auto
                 </span>
@@ -717,13 +835,9 @@ function BuilderRuleCard({
         <CollapsibleContent className="clause-row-wrap data-[state=open]:animate-in data-[state=open]:fade-in-0">
           <div
             className="border-t bg-white"
-            style={{
-              borderColor: ui.border,
-              borderTopWidth: 3,
-              borderTopColor: pal.mid,
-            }}
+            style={{ borderColor: ui.border, borderTopWidth: 3, borderTopColor: pal.mid }}
           >
-            {/* Logic strip */}
+            {/* Logic toggle strip */}
             <div
               className="flex flex-wrap items-center gap-2 border-b px-4 py-3"
               style={{ borderColor: ui.border, background: ui.card2 }}
@@ -734,10 +848,12 @@ function BuilderRuleCard({
               >
                 Logic
               </span>
-              <div
+              <button
+                type="button"
+                onClick={() => setDraftLogic("AUTO_PROMOTE")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] px-3 py-1.5 text-[12px] font-bold",
-                  isAuto ? "shadow-sm" : "",
+                  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] px-3 py-1.5 text-[12px] font-bold transition-all",
+                  isAuto ? "shadow-sm" : "cursor-pointer hover:opacity-80",
                 )}
                 style={
                   isAuto
@@ -765,11 +881,13 @@ function BuilderRuleCard({
                   {isAuto ? <span className="h-[5px] w-[5px] rounded-full bg-white" /> : null}
                 </span>
                 ⚡ Auto-Promote
-              </div>
-              <div
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraftLogic("CONDITIONAL")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] px-3 py-1.5 text-[12px] font-bold",
-                  !isAuto ? "shadow-sm" : "",
+                  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] px-3 py-1.5 text-[12px] font-bold transition-all",
+                  !isAuto ? "shadow-sm" : "cursor-pointer hover:opacity-80",
                 )}
                 style={
                   !isAuto
@@ -797,7 +915,7 @@ function BuilderRuleCard({
                   {!isAuto ? <span className="h-[5px] w-[5px] rounded-full bg-white" /> : null}
                 </span>
                 ⚙ Conditional
-              </div>
+              </button>
             </div>
 
             {isAuto ? (
@@ -824,29 +942,12 @@ function BuilderRuleCard({
                     </div>
                   </div>
                 </div>
-                <div
-                  className="flex justify-end gap-2 border-t px-4 py-3"
-                  style={{ borderColor: ui.border, background: ui.card2 }}
-                >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="text-[12.5px] font-semibold"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled
-                    className="text-[12.5px] font-bold"
-                    style={{ background: ui.navy, color: "#fff", fontFamily: "'Sora', sans-serif" }}
-                  >
-                    Save Rule →
-                  </Button>
-                </div>
+                <SaveCancelBar
+                  isDirty={isDirty}
+                  saving={saving}
+                  onCancel={handleCancel}
+                  onSave={handleSave}
+                />
               </div>
             ) : (
               <div>
@@ -873,14 +974,16 @@ function BuilderRuleCard({
                     <div className="border-l px-1 py-2" style={{ borderColor: ui.border }} />
                   </div>
 
-                  {(builder.rules ?? []).map((rule, idx) => {
-                    const failClause = isFailedPapersClause(rule.promotionClause?.name);
+                  {draftRules.map((rule, idx) => {
+                    const clauseObj = allClauses.find((c) => c.id === rule.clauseId);
+                    const failClause = isFailedPapersClause(clauseObj?.name);
                     return (
                       <div
-                        key={rule.id ?? idx}
+                        key={rule.key}
                         className="grid grid-cols-1 border-b last:border-b-0 sm:grid-cols-[52px_1fr_1fr_1.4fr_34px]"
                         style={{ borderColor: ui.border }}
                       >
+                        {/* If / And label */}
                         <div className="hidden items-start justify-center px-3 pt-3.5 sm:flex">
                           <span
                             className="text-xs font-semibold"
@@ -889,6 +992,8 @@ function BuilderRuleCard({
                             {idx === 0 ? "If" : "And"}
                           </span>
                         </div>
+
+                        {/* Clause picker */}
                         <div className="flex min-w-0 gap-2 border-b px-3 py-3 sm:border-b-0 sm:pl-0">
                           <span
                             className="w-8 shrink-0 pt-1 text-xs font-semibold sm:hidden"
@@ -896,129 +1001,108 @@ function BuilderRuleCard({
                           >
                             {idx === 0 ? "If" : "And"}
                           </span>
-                          <div
-                            className={cn(
-                              "flex min-w-0 flex-1 items-start gap-2 rounded-lg px-3 py-2",
-                              failClause ? "border" : "border",
-                            )}
-                            style={
-                              failClause
-                                ? { borderColor: ui.roseBorder, background: `${ui.roseBg}99` }
-                                : { borderColor: ui.greenBorder, background: ui.card }
-                            }
-                          >
-                            {failClause ? (
-                              <X
-                                className="mt-0.5 h-4 w-4 shrink-0"
-                                strokeWidth={1}
-                                style={{ color: ui.rose }}
-                              />
-                            ) : (
-                              <CheckSquare
-                                className="mt-0.5 h-4 w-4 shrink-0"
-                                strokeWidth={1}
-                                style={{ color: ui.green }}
-                              />
-                            )}
-                            <span
-                              className="text-xs font-medium leading-snug break-words"
-                              style={{ color: ui.text }}
+                          <div className="min-w-0 flex-1">
+                            <Select
+                              value={rule.clauseId != null ? String(rule.clauseId) : ""}
+                              onValueChange={(v) => updateRule(rule.key, { clauseId: Number(v) })}
                             >
-                              {rule.promotionClause?.name ?? "—"}
-                            </span>
+                              <SelectTrigger
+                                className={cn(
+                                  "h-auto min-h-[36px] w-full rounded-lg border px-3 py-2 text-xs font-medium",
+                                  failClause
+                                    ? "border-rose-300 bg-rose-50/60"
+                                    : "border-green-200 bg-white",
+                                )}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {clauseObj ? (
+                                    <>
+                                      {failClause ? (
+                                        <X
+                                          className="h-4 w-4 shrink-0"
+                                          strokeWidth={1}
+                                          style={{ color: ui.rose }}
+                                        />
+                                      ) : (
+                                        <CheckSquare
+                                          className="h-4 w-4 shrink-0"
+                                          strokeWidth={1}
+                                          style={{ color: ui.green }}
+                                        />
+                                      )}
+                                      <span className="text-left leading-snug break-words">
+                                        {clauseObj.name}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span style={{ color: ui.text3 }}>Select clause…</span>
+                                  )}
+                                </div>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {allClauses.map((c) => (
+                                  <SelectItem key={c.id} value={String(c.id)}>
+                                    {c.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
+
+                        {/* Operator picker */}
                         <div
                           className="flex items-center border-t border-l px-3 py-2.5 sm:border-t-0"
                           style={{ borderColor: ui.border }}
                         >
-                          <div
-                            className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11.5px]"
-                            style={{
-                              borderColor: ui.border2,
-                              background: ui.card2,
-                              color: ui.text2,
-                            }}
+                          <Select
+                            value={rule.operator}
+                            onValueChange={(v) =>
+                              updateRule(rule.key, { operator: v as "EQUALS" | "NONE_IN" })
+                            }
                           >
-                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden>
-                              <circle cx="4" cy="4" r="3.2" stroke={ui.text3} strokeWidth="0.9" />
-                              <path
-                                d="M2.5 4h3M4 2.5v3"
-                                stroke={ui.text3}
-                                strokeWidth="0.9"
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                            {operatorLabel(rule.operator ?? "EQUALS")}
-                          </div>
+                            <SelectTrigger
+                              className="h-auto rounded-md border px-2.5 py-1 text-[11.5px]"
+                              style={{
+                                borderColor: ui.border2,
+                                background: ui.card2,
+                                color: ui.text2,
+                                minWidth: 90,
+                              }}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="EQUALS">equals</SelectItem>
+                              <SelectItem value="NONE_IN">none in</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
+
+                        {/* Class multi-select */}
                         <div
                           className="min-w-0 border-t border-l px-3 py-2.5 sm:border-t-0"
                           style={{ borderColor: ui.border }}
                         >
-                          <div
-                            className="flex min-h-[2.75rem] flex-wrap items-center gap-1.5 rounded-lg border p-2 shadow-inner"
-                            style={{ borderColor: ui.border, background: "#FAFAF9" }}
-                          >
-                            {failClause && (
-                              <span
-                                className="mr-1 text-[11px] font-bold"
-                                style={{ color: "#BE123C" }}
-                              >
-                                No Fails
-                              </span>
-                            )}
-                            {(rule.classes ?? []).length === 0 ? (
-                              <span className="text-sm" style={{ color: ui.text3 }}>
-                                —
-                              </span>
-                            ) : (
-                              (rule.classes ?? []).map((row) => {
-                                const cls = row.class as ClassT | undefined;
-                                const op = rule.operator ?? "EQUALS";
-                                const tr = inferTrack(cls);
-                                return (
-                                  <span
-                                    key={row.id ?? `${rule.id}-${cls?.id}`}
-                                    className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium"
-                                    style={
-                                      op === "NONE_IN" || failClause
-                                        ? {
-                                            borderColor: ui.roseBorder,
-                                            background: "#FFF1F2",
-                                            color: "#9F1239",
-                                          }
-                                        : tr === "ODD"
-                                          ? {
-                                              borderColor: `${ui.amber}8c`,
-                                              background: "#FFFBEB",
-                                              color: "#92400E",
-                                            }
-                                          : {
-                                              borderColor: `${ui.teal}73`,
-                                              background: ui.tealBg,
-                                              color: "#065F46",
-                                            }
-                                    }
-                                  >
-                                    {op === "EQUALS"
-                                      ? formFilledValueLabel(cls?.name)
-                                      : semShortLabel(cls?.name)}
-                                  </span>
-                                );
-                              })
-                            )}
-                          </div>
+                          <ClassMultiSelect
+                            allClasses={allClasses}
+                            selectedIds={rule.classIds}
+                            onChange={(ids) => updateRule(rule.key, { classIds: ids })}
+                            operator={rule.operator}
+                            isFailClause={failClause}
+                          />
                         </div>
+
+                        {/* Remove button */}
                         <div
                           className="hidden items-center justify-center border-t border-l py-2 sm:flex"
                           style={{ borderColor: ui.border }}
                         >
                           <button
                             type="button"
-                            className="rounded-md p-1.5"
+                            className="rounded-md p-1.5 transition-colors hover:bg-red-50 hover:text-red-500"
                             style={{ color: ui.text3 }}
-                            disabled
+                            onClick={() => removeClause(rule.key)}
                             aria-label="Remove clause"
                           >
                             <X className="h-4 w-4" />
@@ -1028,11 +1112,12 @@ function BuilderRuleCard({
                     );
                   })}
 
+                  {/* Add Clause */}
                   <div className="border-b px-3.5 py-2.5" style={{ borderColor: ui.border }}>
                     <button
                       type="button"
-                      disabled
-                      className="inline-flex items-center gap-1.5 rounded-md border-[1.5px] border-dashed px-3.5 py-1.5 text-[12px] font-semibold"
+                      onClick={addClause}
+                      className="inline-flex items-center gap-1.5 rounded-md border-[1.5px] border-dashed px-3.5 py-1.5 text-[12px] font-semibold transition-colors hover:border-violet-400 hover:bg-violet-50 hover:text-violet-700"
                       style={{
                         borderColor: ui.border2,
                         color: ui.text2,
@@ -1102,35 +1187,167 @@ function BuilderRuleCard({
                   </div>
                 </div>
 
-                <div
-                  className="flex justify-end gap-2 border-t px-4 py-3"
-                  style={{ borderColor: ui.border, background: ui.card2 }}
-                >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="text-[12.5px] font-semibold"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled
-                    className="gap-1 text-[12.5px] font-bold"
-                    style={{ background: ui.navy, color: "#fff", fontFamily: "'Sora', sans-serif" }}
-                  >
-                    Save Rule
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                <SaveCancelBar
+                  isDirty={isDirty}
+                  saving={saving}
+                  onCancel={handleCancel}
+                  onSave={handleSave}
+                />
               </div>
             )}
           </div>
         </CollapsibleContent>
       </div>
     </Collapsible>
+  );
+}
+
+// ── Save / Cancel bar ──
+
+function SaveCancelBar({
+  isDirty,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  isDirty: boolean;
+  saving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <div
+      className="flex items-center justify-end gap-2 border-t px-4 py-3"
+      style={{ borderColor: ui.border, background: ui.card2 }}
+    >
+      {isDirty && (
+        <span className="mr-auto text-[11px] font-medium" style={{ color: ui.amber }}>
+          Unsaved changes
+        </span>
+      )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={!isDirty || saving}
+        onClick={onCancel}
+        className="text-[12.5px] font-semibold"
+      >
+        Cancel
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        disabled={!isDirty || saving}
+        onClick={onSave}
+        className="gap-1 text-[12.5px] font-bold"
+        style={{
+          background: isDirty ? ui.navy : undefined,
+          color: isDirty ? "#fff" : undefined,
+          fontFamily: "'Sora', sans-serif",
+        }}
+      >
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+        Save Rule
+      </Button>
+    </div>
+  );
+}
+
+// ── Class multi-select (popover + checkboxes) ──
+
+function ClassMultiSelect({
+  allClasses,
+  selectedIds,
+  onChange,
+  operator,
+  isFailClause,
+}: {
+  allClasses: ClassRow[];
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+  operator: string;
+  isFailClause: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const selectedSet = React.useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  const toggle = (id: number) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange([...next]);
+  };
+
+  const sorted = React.useMemo(
+    () =>
+      [...allClasses].sort((a, b) => {
+        const sa = a.sequence ?? semesterIndexFromName(a.name) ?? 9999;
+        const sb = b.sequence ?? semesterIndexFromName(b.name) ?? 9999;
+        return sa - sb;
+      }),
+    [allClasses],
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex min-h-[2.75rem] w-full flex-wrap items-center gap-1.5 rounded-lg border p-2 text-left shadow-inner transition-colors hover:border-gray-400"
+          style={{ borderColor: ui.border, background: "#FAFAF9" }}
+        >
+          {isFailClause && selectedIds.length > 0 && (
+            <span className="mr-1 text-[11px] font-bold" style={{ color: "#BE123C" }}>
+              No Fails
+            </span>
+          )}
+          {selectedIds.length === 0 ? (
+            <span className="flex items-center gap-1.5 text-[11.5px]" style={{ color: ui.text3 }}>
+              <ChevronsUpDown className="h-3 w-3" />
+              Select classes…
+            </span>
+          ) : (
+            selectedIds.map((id) => {
+              const cls = allClasses.find((c) => c.id === id);
+              const tr = inferTrack(cls);
+              return (
+                <span
+                  key={id}
+                  className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium"
+                  style={
+                    operator === "NONE_IN" || isFailClause
+                      ? { borderColor: ui.roseBorder, background: "#FFF1F2", color: "#9F1239" }
+                      : tr === "ODD"
+                        ? { borderColor: `${ui.amber}8c`, background: "#FFFBEB", color: "#92400E" }
+                        : { borderColor: `${ui.teal}73`, background: ui.tealBg, color: "#065F46" }
+                  }
+                >
+                  {operator === "EQUALS"
+                    ? formFilledValueLabel(cls?.name)
+                    : semShortLabel(cls?.name)}
+                </span>
+              );
+            })
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-0" align="start">
+        <div className="max-h-[240px] overflow-y-auto p-2">
+          {sorted.map((cls) => (
+            <label
+              key={cls.id}
+              className="flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors hover:bg-gray-50"
+            >
+              <Checkbox checked={selectedSet.has(cls.id)} onCheckedChange={() => toggle(cls.id)} />
+              <span className="leading-tight">{cls.name}</span>
+            </label>
+          ))}
+          {sorted.length === 0 && (
+            <p className="px-2 py-4 text-center text-xs text-gray-400">No classes available</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

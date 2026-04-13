@@ -186,7 +186,7 @@ async function fetchFeeReceiptJoinRow(
  * Finds all existing receipt numbers starting with the UID, extracts the numeric part,
  * and returns the next incremented number (zero-padded to 2 digits).
  */
-async function getNextReceiptNumberForUid(uid: string): Promise<string> {
+export async function getNextReceiptNumberForUid(uid: string): Promise<string> {
   try {
     // Find all existing receipt numbers for this UID (format: uid/NN)
     const { rows } = await db.execute(sql`

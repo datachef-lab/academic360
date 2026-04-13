@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle,
   ArrowRight,
   Ban,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
+  ChevronsUpDown,
   Download,
   FileSpreadsheet,
   Loader2,
@@ -14,6 +15,7 @@ import {
   Search,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Affiliation, ProgramCourse, PromotionBuilderDto, RegulationType } from "@repo/db";
@@ -22,6 +24,7 @@ import type { AcademicYear } from "@repo/db/schemas";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -162,8 +165,8 @@ function StatusPill({ bucket }: { bucket: PromotionRosterRow["bucket"] }) {
       ? { label: "Eligible", prefix: "✓ " }
       : bucket === "ineligible"
         ? { label: "Not eligible", prefix: "✕ " }
-        : bucket === "inactive"
-          ? { label: "Inactive / suspended", prefix: "× " }
+        : bucket === "suspended"
+          ? { label: "Suspended", prefix: "⏸ " }
           : { label: "Promoted", prefix: "✓ " };
   return (
     <span
@@ -171,7 +174,7 @@ function StatusPill({ bucket }: { bucket: PromotionRosterRow["bucket"] }) {
         "sp-pro-badge",
         bucket === "eligible" && "sp-pro-b-eligible",
         bucket === "ineligible" && "sp-pro-b-ineligible",
-        bucket === "inactive" && "sp-pro-b-inactive",
+        bucket === "suspended" && "sp-pro-b-suspended",
         bucket === "promoted" && "sp-pro-b-promoted",
       )}
     >
@@ -192,7 +195,7 @@ function PromotionRowExpand({
 }) {
   const okEligible = row.bucket === "eligible";
   const failIneligible = row.bucket === "ineligible";
-  const failInactive = row.bucket === "inactive";
+  const isSuspended = row.bucket === "suspended";
   const isPromoted = row.bucket === "promoted";
 
   const [builder, setBuilder] = useState<PromotionBuilderDto | null | undefined>(undefined);
@@ -223,8 +226,8 @@ function PromotionRowExpand({
     </div>
   ) : isPromoted ? (
     <div className="sp-ep-head-badge sp-ep-head-badge--promoted">✓ Promoted</div>
-  ) : failInactive ? (
-    <div className="sp-ep-head-badge sp-ep-head-badge--inactive">Action required</div>
+  ) : isSuspended ? (
+    <div className="sp-ep-head-badge sp-ep-head-badge--ineligible">⏸ Suspended</div>
   ) : (
     <div className="sp-ep-head-badge sp-ep-head-badge--ineligible">✕ Not eligible</div>
   );
@@ -236,23 +239,7 @@ function PromotionRowExpand({
           <div className="sp-ep-section-title min-w-0 flex-1">
             Promotion conditions — {targetTitle}
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            {expansionHeaderBadge}
-            {failInactive ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-[var(--sp-orange-bd)] text-[11px] font-semibold text-[var(--sp-orange)]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toast.message("Suspension override is not wired to an API yet.");
-                }}
-              >
-                Request override
-              </Button>
-            ) : null}
-          </div>
+          <div className="flex shrink-0 flex-col items-end gap-2">{expansionHeaderBadge}</div>
         </div>
 
         <div className="mb-2 mt-1.5">
@@ -287,13 +274,12 @@ function PromotionRowExpand({
                       key={sr.key}
                       className={cn(
                         "sp-ep-sem-accord",
-                        failIneligible && "sp-ep-sem-accord--fail",
+                        (failIneligible || isSuspended) && "sp-ep-sem-accord--fail",
                         (okEligible || isPromoted) && "sp-ep-sem-accord--ok",
-                        failInactive && "sp-ep-sem-accord--inactive",
                       )}
                     >
                       <span className="shrink-0 text-[13px] leading-none" aria-hidden>
-                        {failIneligible ? "✕" : failInactive ? "⊘" : "✓"}
+                        {failIneligible || isSuspended ? "✕" : "✓"}
                       </span>
                       <span className="sp-ep-sem-accord-icon" aria-hidden>
                         <Pause className="h-3.5 w-3.5" strokeWidth={2.25} />
@@ -307,13 +293,9 @@ function PromotionRowExpand({
                         <span className="sp-ep-sem-accord-pill sp-ep-sem-accord-pill--filled">
                           ✓ Filled
                         </span>
-                      ) : failIneligible ? (
+                      ) : failIneligible || isSuspended ? (
                         <span className="sp-ep-sem-accord-pill sp-ep-sem-accord-pill--not-met">
                           ✕ Not met
-                        </span>
-                      ) : failInactive ? (
-                        <span className="sp-ep-sem-accord-pill sp-ep-sem-accord-pill--suspended">
-                          ⊘ N/A
                         </span>
                       ) : null}
                     </div>
@@ -454,6 +436,180 @@ function PromotionRosterPager({
   );
 }
 
+type FilterOption = { value: number; label: string };
+
+function MultiFilterSelect({
+  options,
+  selected,
+  onChange,
+  placeholder,
+  className,
+}: {
+  options: FilterOption[];
+  selected: number[];
+  onChange: (ids: number[]) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, search]);
+
+  const selectedLabels = useMemo(() => {
+    const map = new Map(options.map((o) => [o.value, o.label]));
+    return selected.map((id) => map.get(id) ?? String(id));
+  }, [options, selected]);
+
+  const toggle = (id: number) => {
+    onChange(selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id]);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "sp-pro-select-trigger flex h-auto min-h-[38px] w-full items-center gap-1.5 rounded-md border bg-[var(--sp-surface)] px-3 py-1.5 text-left text-[13px] shadow-sm transition-colors hover:bg-[var(--sp-surface2)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--sp-navy2)] focus-visible:ring-offset-0",
+            "border-[var(--sp-border)]",
+            className,
+          )}
+        >
+          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+            {selected.length === 0 ? (
+              <span className="text-[var(--sp-muted)]">{placeholder}</span>
+            ) : selected.length <= 2 ? (
+              selectedLabels.map((l, i) => (
+                <span
+                  key={selected[i]}
+                  className="inline-flex max-w-[140px] items-center gap-0.5 truncate rounded-md border border-purple-300 bg-purple-50 px-1.5 py-0.5 text-[11px] font-semibold text-purple-800"
+                >
+                  <span className="truncate">{l}</span>
+                  <X
+                    className="h-3 w-3 shrink-0 cursor-pointer text-purple-500 hover:text-purple-800"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggle(selected[i]!);
+                    }}
+                  />
+                </span>
+              ))
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-md border border-purple-300 bg-purple-50 px-1.5 py-0.5 text-[11px] font-semibold text-purple-800">
+                {selected.length} selected
+              </span>
+            )}
+          </span>
+          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[260px] p-0"
+        align="start"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }}
+      >
+        <div className="border-b px-2 py-1.5">
+          <input
+            ref={inputRef}
+            className="w-full bg-transparent text-[13px] placeholder:text-muted-foreground outline-none"
+            placeholder="Search…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="max-h-[220px] overflow-auto p-1">
+          {filtered.length === 0 && (
+            <div className="py-3 text-center text-xs text-muted-foreground">No results</div>
+          )}
+          {filtered.length > 0 &&
+            (() => {
+              const allFilteredSelected = filtered.every((o) => selected.includes(o.value));
+              return (
+                <>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] font-medium hover:bg-accent",
+                      allFilteredSelected && "bg-accent/50",
+                    )}
+                    onClick={() => {
+                      if (allFilteredSelected) {
+                        const removeSet = new Set(filtered.map((o) => o.value));
+                        onChange(selected.filter((v) => !removeSet.has(v)));
+                      } else {
+                        const merged = new Set([...selected, ...filtered.map((o) => o.value)]);
+                        onChange([...merged]);
+                      }
+                    }}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border-[1.5px]",
+                        allFilteredSelected
+                          ? "border-purple-700 bg-purple-700 text-white"
+                          : "border-gray-400 bg-white",
+                      )}
+                    >
+                      {allFilteredSelected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                    </div>
+                    <span>Select all</span>
+                  </button>
+                  <div className="my-1 border-b" />
+                </>
+              );
+            })()}
+          {filtered.map((opt) => {
+            const checked = selected.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] hover:bg-accent",
+                  checked && "bg-accent/50 font-medium",
+                )}
+                onClick={() => toggle(opt.value)}
+              >
+                <div
+                  className={cn(
+                    "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border-[1.5px]",
+                    checked
+                      ? "border-purple-700 bg-purple-700 text-white"
+                      : "border-gray-400 bg-white",
+                  )}
+                >
+                  {checked && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                </div>
+                <span className="min-w-0 truncate">{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        {selected.length > 0 && (
+          <div className="border-t px-2 py-1.5">
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => onChange([])}
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function SemesterPromotionScreen() {
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [academicYearId, setAcademicYearId] = useState<number | null>(null);
@@ -465,10 +621,10 @@ export function SemesterPromotionScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
 
-  const [affiliationId, setAffiliationId] = useState("");
-  const [regulationId, setRegulationId] = useState("");
-  const [programCourseId, setProgramCourseId] = useState("");
-  const [shiftId, setShiftId] = useState("");
+  const [affiliationIds, setAffiliationIds] = useState<number[]>([]);
+  const [regulationIds, setRegulationIds] = useState<number[]>([]);
+  const [programCourseIds, setProgramCourseIds] = useState<number[]>([]);
+  const [shiftIds, setShiftIds] = useState<number[]>([]);
 
   const [fromSessionId, setFromSessionId] = useState("");
   const [toSessionId, setToSessionId] = useState("");
@@ -572,11 +728,7 @@ export function SemesterPromotionScreen() {
     })();
   }, [academicYearId]);
 
-  useEffect(() => {
-    const first = sessions[0];
-    if (!first?.id) return;
-    if (!fromSessionId) setFromSessionId(String(first.id));
-  }, [sessions, fromSessionId]);
+  // No auto-selection — user must pick filters manually
 
   const activeToSessions = useMemo(() => sessions.filter(isSessionActive), [sessions]);
 
@@ -585,14 +737,9 @@ export function SemesterPromotionScreen() {
       setToSessionId("");
       return;
     }
-    const first = activeToSessions[0];
-    if (!first?.id) return;
-    if (!toSessionId) {
-      setToSessionId(String(first.id));
-      return;
-    }
+    if (!toSessionId) return;
     const ok = activeToSessions.some((s) => s.id != null && String(s.id) === toSessionId);
-    if (!ok) setToSessionId(String(first.id));
+    if (!ok) setToSessionId("");
   }, [activeToSessions, toSessionId]);
 
   const semClasses = useMemo(() => classes.filter((c) => c.type === "SEMESTER"), [classes]);
@@ -634,17 +781,9 @@ export function SemesterPromotionScreen() {
     setSelectedStudentIds(new Set());
   }, [page, bucket, fromClassId, toClassId, fromSessionId, toSessionId, debouncedQ]);
 
-  useEffect(() => {
-    if (!fromClassId && semClasses[0]?.id) setFromClassId(String(semClasses[0].id));
-  }, [semClasses, fromClassId]);
+  // No auto-selection of fromClassId — user must pick
 
-  useEffect(() => {
-    if (!fromClassId || semClasses.length === 0) return;
-    const from = semClasses.find((c) => String(c.id) === fromClassId);
-    if (!from) return;
-    const next = semClasses.find((c) => classSeq(c) === classSeq(from) + 1);
-    if (next?.id && !toClassId) setToClassId(String(next.id));
-  }, [fromClassId, semClasses, toClassId]);
+  // No auto-selection of toClassId — user must pick
 
   const canQuery =
     academicYearId != null &&
@@ -668,10 +807,10 @@ export function SemesterPromotionScreen() {
         toSessionId: Number(toSessionId),
         fromClassId: Number(fromClassId),
         toClassId: Number(toClassId),
-        affiliationId: affiliationId ? Number(affiliationId) : undefined,
-        regulationTypeId: regulationId ? Number(regulationId) : undefined,
-        programCourseId: programCourseId ? Number(programCourseId) : undefined,
-        shiftId: shiftId ? Number(shiftId) : undefined,
+        affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
+        regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
+        programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+        shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
         bucket,
         sortBy,
         sortDir: "asc",
@@ -689,7 +828,7 @@ export function SemesterPromotionScreen() {
     }
   }, [
     academicYearId,
-    affiliationId,
+    affiliationIds,
     bucket,
     canQuery,
     debouncedQ,
@@ -697,9 +836,9 @@ export function SemesterPromotionScreen() {
     fromSessionId,
     page,
     pageSize,
-    programCourseId,
-    regulationId,
-    shiftId,
+    programCourseIds,
+    regulationIds,
+    shiftIds,
     sortBy,
     toClassId,
     toSessionId,
@@ -725,10 +864,10 @@ export function SemesterPromotionScreen() {
           fromClassId: Number(fromClassId),
           toSessionId: Number(toSessionId),
           toClassId: Number(toClassId),
-          affiliationId: affiliationId ? Number(affiliationId) : undefined,
-          regulationTypeId: regulationId ? Number(regulationId) : undefined,
-          programCourseId: programCourseId ? Number(programCourseId) : undefined,
-          shiftId: shiftId ? Number(shiftId) : undefined,
+          affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
+          regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
+          programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+          shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
           q: debouncedQ || undefined,
         });
         if (!cancelled) setBucketCounts(c);
@@ -744,14 +883,14 @@ export function SemesterPromotionScreen() {
     };
   }, [
     academicYearId,
-    affiliationId,
+    affiliationIds,
     canQuery,
     debouncedQ,
     fromClassId,
     fromSessionId,
-    programCourseId,
-    regulationId,
-    shiftId,
+    programCourseIds,
+    regulationIds,
+    shiftIds,
     toClassId,
     toSessionId,
   ]);
@@ -769,10 +908,10 @@ export function SemesterPromotionScreen() {
         fromClassId: Number(fromClassId),
         toSessionId: Number(toSessionId),
         toClassId: Number(toClassId),
-        affiliationId: affiliationId ? Number(affiliationId) : undefined,
-        regulationTypeId: regulationId ? Number(regulationId) : undefined,
-        programCourseId: programCourseId ? Number(programCourseId) : undefined,
-        shiftId: shiftId ? Number(shiftId) : undefined,
+        affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
+        regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
+        programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+        shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
         studentIds: [...selectedStudentIds],
       });
       const promoteSummary =
@@ -794,7 +933,7 @@ export function SemesterPromotionScreen() {
       });
       if (result.skipped.length > 0) {
         toast.message(
-          `Promoted ${promoteSummary}; ${result.skipped.length} skipped (not eligible, inactive, or already promoted).`,
+          `Promoted ${promoteSummary}; ${result.skipped.length} skipped (not eligible or already promoted).`,
         );
       } else {
         toast.success(`Promoted ${promoteSummary} student(s).`);
@@ -808,10 +947,10 @@ export function SemesterPromotionScreen() {
           fromClassId: Number(fromClassId),
           toSessionId: Number(toSessionId),
           toClassId: Number(toClassId),
-          affiliationId: affiliationId ? Number(affiliationId) : undefined,
-          regulationTypeId: regulationId ? Number(regulationId) : undefined,
-          programCourseId: programCourseId ? Number(programCourseId) : undefined,
-          shiftId: shiftId ? Number(shiftId) : undefined,
+          affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
+          regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
+          programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+          shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
           q: debouncedQ || undefined,
         });
         setBucketCounts(c);
@@ -838,16 +977,16 @@ export function SemesterPromotionScreen() {
     }
   }, [
     academicYearId,
-    affiliationId,
+    affiliationIds,
     canQuery,
     debouncedQ,
     fetchRoster,
     fromClassId,
     fromSessionId,
-    programCourseId,
-    regulationId,
+    programCourseIds,
+    regulationIds,
     selectedStudentIds,
-    shiftId,
+    shiftIds,
     toClassId,
     toSessionId,
     userId,
@@ -855,18 +994,20 @@ export function SemesterPromotionScreen() {
 
   const filteredProgramCourses = useMemo(() => {
     return programCourses.filter((pc) => {
-      if (affiliationId && String(pc.affiliationId) !== affiliationId) return false;
-      if (regulationId && String(pc.regulationTypeId) !== regulationId) return false;
+      if (affiliationIds.length > 0 && !affiliationIds.includes(pc.affiliationId as number))
+        return false;
+      if (regulationIds.length > 0 && !regulationIds.includes(pc.regulationTypeId as number))
+        return false;
       return true;
     });
-  }, [programCourses, affiliationId, regulationId]);
+  }, [programCourses, affiliationIds, regulationIds]);
 
   const counts = bucketCounts ??
     roster?.counts ?? {
       all: 0,
       eligible: 0,
       ineligible: 0,
-      inactive: 0,
+      suspended: 0,
       promoted: 0,
     };
 
@@ -961,9 +1102,8 @@ export function SemesterPromotionScreen() {
           <div className="min-w-0 flex-1">
             <h1 className="sp-page-title">Semester Promotion</h1>
             <p className="sp-page-sub">
-              Configure filters and promotion range. Counts and the table load from the server.
-              Eligibility follows the promotion builder (AUTO_PROMOTE vs CONDITIONAL); inactive
-              includes suspended or inactive accounts.
+              Select filters and promotion range to load the roster. Eligibility follows the
+              promotion builder (AUTO_PROMOTE vs CONDITIONAL).
             </p>
           </div>
           <div className="sp-field w-full min-w-[200px] max-w-[280px]">
@@ -1013,96 +1153,39 @@ export function SemesterPromotionScreen() {
                 <div className="sp-pro-step1-row">
                   <span className="sp-step-label shrink-0">Step 1</span>
                   <div className="sp-pro-filter">
-                    <Select
-                      value={affiliationId || "__none__"}
-                      onValueChange={(v) => setAffiliationId(v === "__none__" ? "" : v)}
-                    >
-                      <SelectTrigger
-                        className={cn(
-                          selectPro,
-                          "w-full border-[var(--sp-border)] bg-[var(--sp-surface)]",
-                        )}
-                      >
-                        <SelectValue placeholder="Affiliation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Any affiliation</SelectItem>
-                        {affiliations.map((a) => (
-                          <SelectItem key={a.id} value={String(a.id)}>
-                            {a.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiFilterSelect
+                      placeholder="Affiliation"
+                      options={affiliations.map((a) => ({ value: a.id as number, label: a.name }))}
+                      selected={affiliationIds}
+                      onChange={setAffiliationIds}
+                    />
                   </div>
                   <div className="sp-pro-filter">
-                    <Select
-                      value={regulationId || "__none__"}
-                      onValueChange={(v) => setRegulationId(v === "__none__" ? "" : v)}
-                    >
-                      <SelectTrigger
-                        className={cn(
-                          selectPro,
-                          "w-full border-[var(--sp-border)] bg-[var(--sp-surface)]",
-                        )}
-                      >
-                        <SelectValue placeholder="Regulation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Any regulation</SelectItem>
-                        {regulations.map((r) => (
-                          <SelectItem key={r.id} value={String(r.id)}>
-                            {r.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiFilterSelect
+                      placeholder="Regulation"
+                      options={regulations.map((r) => ({ value: r.id as number, label: r.name }))}
+                      selected={regulationIds}
+                      onChange={setRegulationIds}
+                    />
                   </div>
                   <div className="sp-pro-filter">
-                    <Select
-                      value={programCourseId || "__none__"}
-                      onValueChange={(v) => setProgramCourseId(v === "__none__" ? "" : v)}
-                    >
-                      <SelectTrigger
-                        className={cn(
-                          selectPro,
-                          "w-full border-[var(--sp-border)] bg-[var(--sp-surface)]",
-                        )}
-                      >
-                        <SelectValue placeholder="Program course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Any program</SelectItem>
-                        {filteredProgramCourses.map((pc) => (
-                          <SelectItem key={pc.id} value={String(pc.id)}>
-                            {pc.name ?? pc.shortName ?? `#${pc.id}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiFilterSelect
+                      placeholder="Program course"
+                      options={filteredProgramCourses.map((pc) => ({
+                        value: pc.id as number,
+                        label: pc.name ?? pc.shortName ?? `#${pc.id}`,
+                      }))}
+                      selected={programCourseIds}
+                      onChange={setProgramCourseIds}
+                    />
                   </div>
                   <div className="sp-pro-filter">
-                    <Select
-                      value={shiftId || "__none__"}
-                      onValueChange={(v) => setShiftId(v === "__none__" ? "" : v)}
-                    >
-                      <SelectTrigger
-                        className={cn(
-                          selectPro,
-                          "w-full border-[var(--sp-border)] bg-[var(--sp-surface)]",
-                        )}
-                      >
-                        <SelectValue placeholder="Shift" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Any shift</SelectItem>
-                        {shifts.map((s) => (
-                          <SelectItem key={s.id} value={String(s.id)}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiFilterSelect
+                      placeholder="Shift"
+                      options={shifts.map((s) => ({ value: s.id as number, label: s.name }))}
+                      selected={shiftIds}
+                      onChange={setShiftIds}
+                    />
                   </div>
                   <div className="sp-pro-filter">
                     <Select
@@ -1291,10 +1374,10 @@ export function SemesterPromotionScreen() {
                         cls: "sp-dc-ineligible",
                       },
                       {
-                        k: "inactive",
-                        label: "Inactive / suspended",
-                        n: counts.inactive,
-                        Icon: AlertCircle,
+                        k: "suspended",
+                        label: "Suspended",
+                        n: counts.suspended,
+                        Icon: Pause,
                         cls: "sp-dc-suspended",
                       },
                       {
@@ -1484,22 +1567,6 @@ export function SemesterPromotionScreen() {
                                 </div>
                                 <div className="sp-t-cell flex min-w-0 flex-wrap items-center gap-2">
                                   <StatusPill bucket={r.bucket} />
-                                  {r.bucket === "inactive" ? (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-7 border-[var(--sp-orange-bd)] px-2 text-[11px] font-bold text-[var(--sp-orange)]"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        toast.message(
-                                          "Suspension override is not wired to an API yet.",
-                                        );
-                                      }}
-                                    >
-                                      Override
-                                    </Button>
-                                  ) : null}
                                 </div>
                                 <div className="sp-t-cell flex justify-center !pr-0">
                                   <ChevronDown
@@ -1557,11 +1624,11 @@ export function SemesterPromotionScreen() {
               <div className="sp-placeholder-card">
                 <div className="mb-2 text-2xl">📋</div>
                 <div className="mb-1 font-sans text-[13.5px] font-bold text-[var(--sp-ink2)]">
-                  Configure promotion range
+                  Select filters &amp; promotion range
                 </div>
                 <div className="text-xs text-[var(--sp-muted)]">
-                  Select source and target sessions and semesters. Source and target classes must
-                  differ.
+                  Pick source and target sessions and semesters above to load the roster. Source and
+                  target classes must differ.
                 </div>
               </div>
             )}

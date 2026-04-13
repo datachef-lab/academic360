@@ -9,6 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Download, Clock, IndianRupee, Info } from "lucide-react";
 import { toast } from "sonner";
@@ -21,8 +28,10 @@ import {
   downloadFeeStructuresExcelFile,
   downloadFeeStudentMappingsExcelFile,
 } from "@/services/fees-api";
+import { getAllClasses } from "@/services/classes.service";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { cn } from "@/lib/utils";
+import { Class } from "@/types/academics/class";
 
 type FeeReportRow = {
   id: string;
@@ -68,6 +77,10 @@ export default function FeesReportsPage() {
   const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
   const [currentOperation, setCurrentOperation] = useState<string | null>(null);
 
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>("");
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>("__all__");
+
   const { user } = useAuth();
   const userId = (user?.id ?? "").toString();
 
@@ -79,14 +92,19 @@ export default function FeesReportsPage() {
     }
   }, [availableAcademicYears.length, loadAcademicYears]);
 
-  const selectedAcademicYear = useMemo(
-    () =>
-      availableAcademicYears.find((year) => year.isCurrentYear) ||
-      availableAcademicYears[0] ||
-      null,
-    [availableAcademicYears],
-  );
-  const selectedAcademicYearId = selectedAcademicYear?.id?.toString() || "";
+  useEffect(() => {
+    if (availableAcademicYears.length > 0 && !selectedAcademicYearId) {
+      const current = availableAcademicYears.find((y) => y.isCurrentYear);
+      const fallback = current || availableAcademicYears[0];
+      if (fallback?.id) setSelectedAcademicYearId(String(fallback.id));
+    }
+  }, [availableAcademicYears, selectedAcademicYearId]);
+
+  useEffect(() => {
+    void getAllClasses()
+      .then(setClasses)
+      .catch(() => setClasses([]));
+  }, []);
 
   const handleProgressUpdate = useCallback(
     (data: ProgressUpdate) => {
@@ -106,23 +124,43 @@ export default function FeesReportsPage() {
     onProgressUpdate: handleProgressUpdate,
   });
 
+  const classIdNum =
+    selectedClassId && selectedClassId !== "__all__" ? Number(selectedClassId) : undefined;
+  const selectedYearLabel = availableAcademicYears.find(
+    (y) => String(y.id) === selectedAcademicYearId,
+  )?.year;
+  const selectedClassLabel =
+    selectedClassId && selectedClassId !== "__all__"
+      ? classes.find((c) => String(c.id) === selectedClassId)?.name
+      : undefined;
+
   const downloadFeeStructuresReport = useCallback(async () => {
     if (!selectedAcademicYearId) {
-      throw new Error("Please select an academic year (use the global academic year selector).");
+      throw new Error("Please select an academic year.");
     }
-    await downloadFeeStructuresExcelFile(Number(selectedAcademicYearId));
+    const yearLabel = selectedYearLabel || selectedAcademicYearId;
+    await downloadFeeStructuresExcelFile(
+      Number(selectedAcademicYearId),
+      classIdNum,
+      `Fee Structures (${yearLabel}).xlsx`,
+    );
     setIsExporting(false);
-    toast.success("Fee structures Excel downloaded.");
-  }, [selectedAcademicYearId]);
+    toast.success("Fee Structures Excel downloaded.");
+  }, [selectedAcademicYearId, classIdNum, selectedYearLabel]);
 
   const downloadFeeStudentMappingsReport = useCallback(async () => {
     if (!selectedAcademicYearId) {
-      throw new Error("Please select an academic year (use the global academic year selector).");
+      throw new Error("Please select an academic year.");
     }
-    await downloadFeeStudentMappingsExcelFile(Number(selectedAcademicYearId));
+    const yearLabel = selectedYearLabel || selectedAcademicYearId;
+    await downloadFeeStudentMappingsExcelFile(
+      Number(selectedAcademicYearId),
+      classIdNum,
+      `Fee Student Mapping & Payments (${yearLabel}).xlsx`,
+    );
     setIsExporting(false);
-    toast.success("Fee student mappings Excel downloaded.");
-  }, [selectedAcademicYearId]);
+    toast.success("Fee Student Mapping & Payments Excel downloaded.");
+  }, [selectedAcademicYearId, classIdNum, selectedYearLabel]);
 
   const feeReports: FeeReportRow[] = useMemo(
     () => [
@@ -138,7 +176,7 @@ export default function FeesReportsPage() {
       },
       {
         id: "fee-student-mappings-excel",
-        name: "Fee Student Mappings (Excel)",
+        name: "Fee Student Mapping & Payments (Excel)",
         description:
           "Download fee–student mappings, payments, and component lines for the selected academic year.",
         domains: ["FEES", "ADMISSION_PHASE"],
@@ -192,15 +230,57 @@ export default function FeesReportsPage() {
     <div className="w-full min-w-0 max-w-full box-border px-4 py-4 sm:px-6 sm:py-6">
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2 w-full">Fees Reports</h1>
       <p className="text-sm sm:text-base text-slate-600 mb-4 w-full max-w-none">
-        Export fee configuration and student fee data for the selected academic year.
+        Export fee configuration and student fee data. Select an academic year and optionally a
+        semester to filter.
       </p>
+
+      <div className="flex flex-wrap items-end gap-4 mb-5">
+        <div className="flex flex-col gap-1.5 min-w-[200px]">
+          <label className="text-xs font-semibold text-slate-600">Academic Year</label>
+          <Select value={selectedAcademicYearId} onValueChange={setSelectedAcademicYearId}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Select academic year" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableAcademicYears.map((y) => (
+                <SelectItem key={y.id} value={String(y.id)}>
+                  {y.year}
+                  {y.isCurrentYear ? " (Current)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5 min-w-[200px]">
+          <label className="text-xs font-semibold text-slate-600">
+            Semester / Class <span className="font-normal text-slate-400">(optional)</span>
+          </label>
+          <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="All semesters" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All semesters</SelectItem>
+              {classes
+                .filter((c) => !c.disabled)
+                .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
+                .map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {!selectedAcademicYearId && (
         <Alert className="mb-4 border-amber-200 bg-amber-50">
           <Info className="h-4 w-4 text-amber-800" />
           <AlertTitle className="text-amber-900">Academic year required</AlertTitle>
           <AlertDescription className="text-amber-900/90">
-            Choose an academic year from the global selector in the header before downloading.
+            Please select an academic year before downloading any report.
           </AlertDescription>
         </Alert>
       )}
@@ -212,17 +292,17 @@ export default function FeesReportsPage() {
               <TableHead className="w-[6%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
                 Sr. No.
               </TableHead>
-              <TableHead className="w-[18%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
                 Domain
               </TableHead>
               <TableHead className="w-[18%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
                 Report
               </TableHead>
-              <TableHead className="w-[34%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+              <TableHead className="w-[32%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
                 Description
               </TableHead>
-              <TableHead className="w-[10%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
-                Filters
+              <TableHead className="w-[16%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+                Filters Applied
               </TableHead>
               <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
                 Actions
@@ -261,7 +341,27 @@ export default function FeesReportsPage() {
                   {report.description}
                 </TableCell>
                 <TableCell className="border border-slate-200 py-3 px-2 sm:px-4">
-                  <span className="text-xs text-slate-400">—</span>
+                  <div className="flex flex-col gap-1">
+                    {selectedYearLabel && (
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap"
+                      >
+                        {selectedYearLabel}
+                      </Badge>
+                    )}
+                    {selectedClassLabel && (
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] bg-violet-50 text-violet-700 border-violet-200 whitespace-nowrap"
+                      >
+                        {selectedClassLabel}
+                      </Badge>
+                    )}
+                    {!selectedYearLabel && !selectedClassLabel && (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="border border-slate-200 py-3 px-2 sm:px-4">
                   <Button

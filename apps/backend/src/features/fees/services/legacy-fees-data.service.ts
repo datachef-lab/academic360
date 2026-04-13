@@ -11,6 +11,7 @@ import {
   AcademicYearT,
   classModel,
   ClassT,
+  feeCategoryModel,
   feeGroupModel,
   feeGroupPromotionMappingModel,
   FeeGroupPromotionMappingT,
@@ -45,6 +46,7 @@ import timezone from "dayjs/plugin/timezone.js";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 
 import { updateFeeGroupPromotionMapping } from "./fee-group-promotion-mapping.service";
+import { getNextReceiptNumberForUid } from "./fee-student-mapping.service";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -374,6 +376,7 @@ async function syncFeeStudentMapping(
       feeStudentMapping: feeStudentMappingModel,
       user: userModel,
       feeGroupPromotionMapping: feeGroupPromotionMappingModel,
+      feeCategoryCode: feeCategoryModel.code,
     })
     .from(feeStudentMappingModel)
     .leftJoin(
@@ -397,12 +400,14 @@ async function syncFeeStudentMapping(
       eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
     )
     .leftJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
+    .leftJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+    )
     .where(
       and(
         eq(studentModel.uid, studentUid),
         eq(feeStructureModel.id, feeStructureId),
-        // eq(feeStudentMappingModel.totalPayable, totalAmount),
-        // ilike(feeSlabModel.name, feeSlab.trim()),
       ),
     );
 
@@ -411,6 +416,7 @@ async function syncFeeStudentMapping(
   let user = tmpResult[0]?.user ?? undefined;
   let feeGroupPromotionMapping =
     tmpResult[0]?.feeGroupPromotionMapping ?? undefined;
+  const feeCategoryCode = tmpResult[0]?.feeCategoryCode ?? null;
 
   console.log(
     feeStructureId,
@@ -492,13 +498,22 @@ async function syncFeeStudentMapping(
     paymentId = savedPayment?.id!;
   }
 
+  // If challan number is not provided, generate one like receipt download does (uid/NN or uid/NN-categoryCode)
+  let finalReceiptNumber = challanNumber;
+  if (!finalReceiptNumber) {
+    const nextNum = await getNextReceiptNumberForUid(studentUid);
+    finalReceiptNumber = feeCategoryCode
+      ? `${studentUid}/${nextNum}-${feeCategoryCode}`
+      : `${studentUid}/${nextNum}`;
+  }
+
   // Update the fee-student mapping fields
   await db
     .update(feeStudentMappingModel)
     .set({
       amountPaid: amountPaid ? feeStudentMapping.totalPayable : null,
-      challanGeneratedAt: formatDate(txnDate),
-      receiptNumber: challanNumber,
+      challanGeneratedAt: formatDate(txnDate) ?? new Date(),
+      receiptNumber: finalReceiptNumber,
       paymentId,
     })
     .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!))
@@ -775,6 +790,7 @@ async function syncLegacyReceiptTypes() {
 
   const receiptTypes: ReceiptTypeT[] = [];
   for (const { id, ...row } of legacyReceiptTypes) {
+    if (row.name.trim() == "Regular Enrolment") continue;
     const [existingReceiptType] = await db
       .select()
       .from(receiptTypeModel)

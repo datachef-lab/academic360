@@ -919,6 +919,20 @@ export const downloadFeeStructuresExcel = async (
       socketService.sendProgressUpdate(progressUserId, startUpdate);
     }
 
+    const rawClassId = req.query.classId;
+    const classId =
+      rawClassId !== undefined && rawClassId !== ""
+        ? Number(rawClassId)
+        : undefined;
+    if (classId !== undefined && (Number.isNaN(classId) || classId < 1)) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "classId must be a positive number if provided"),
+        );
+      return;
+    }
+
     if (progressUserId) {
       const midUpdate = socketService.createExportProgressUpdate(
         progressUserId,
@@ -934,7 +948,7 @@ export const downloadFeeStructuresExcel = async (
     }
 
     const { buffer, academicYearYear } =
-      await feeStructureService.downloadFeeStructures(academicYearId);
+      await feeStructureService.downloadFeeStructures(academicYearId, classId);
 
     const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 
@@ -1026,6 +1040,20 @@ export const downloadFeeStudentMappingsExcel = async (
       socketService.sendProgressUpdate(progressUserId, startUpdate);
     }
 
+    const rawClassId = req.query.classId;
+    const classId =
+      rawClassId !== undefined && rawClassId !== ""
+        ? Number(rawClassId)
+        : undefined;
+    if (classId !== undefined && (Number.isNaN(classId) || classId < 1)) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "classId must be a positive number if provided"),
+        );
+      return;
+    }
+
     if (progressUserId) {
       const midUpdate = socketService.createExportProgressUpdate(
         progressUserId,
@@ -1041,7 +1069,10 @@ export const downloadFeeStudentMappingsExcel = async (
     }
 
     const { buffer, academicYearYear } =
-      await feeStructureService.downloadFeeStudentMappings(academicYearId);
+      await feeStructureService.downloadFeeStudentMappings(
+        academicYearId,
+        classId,
+      );
 
     const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 
@@ -1050,7 +1081,7 @@ export const downloadFeeStudentMappingsExcel = async (
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 100);
-    const fileName = `${sanitizedYear} fee-student-mappings.xlsx`;
+    const fileName = `Fee Student Mapping & Payments (${sanitizedYear}).xlsx`;
 
     if (progressUserId) {
       const doneUpdate = socketService.createExportProgressUpdate(
@@ -1070,9 +1101,10 @@ export const downloadFeeStudentMappingsExcel = async (
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
+    const safeFileName = fileName.replace(/[^\w\s\-().&]/g, "_");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${fileName.replace(/"/g, "%22")}"`,
+      `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
     );
     res.send(buf);
   } catch (error) {

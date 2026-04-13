@@ -20,6 +20,15 @@ function optPositiveInt(v: unknown): number | undefined {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
+function optPositiveIntArray(v: unknown): number[] | undefined {
+  if (v == null || v === "") return undefined;
+  const raw = Array.isArray(v) ? v : String(v).split(",");
+  const nums = raw
+    .map((x) => parseInt(String(x).trim(), 10))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return nums.length > 0 ? nums : undefined;
+}
+
 export async function getPromotionRosterHandler(
   req: Request,
   res: Response,
@@ -57,7 +66,7 @@ export async function getPromotionRosterHandler(
       "all",
       "eligible",
       "ineligible",
-      "inactive",
+      "suspended",
       "promoted",
     ];
     if (!allowed.includes(bucket)) {
@@ -91,10 +100,10 @@ export async function getPromotionRosterHandler(
       fromClassId,
       toSessionId,
       toClassId,
-      affiliationId: optPositiveInt(q.affiliationId),
-      regulationTypeId: optPositiveInt(q.regulationTypeId),
-      programCourseId: optPositiveInt(q.programCourseId),
-      shiftId: optPositiveInt(q.shiftId),
+      affiliationIds: optPositiveIntArray(q.affiliationId),
+      regulationTypeIds: optPositiveIntArray(q.regulationTypeId),
+      programCourseIds: optPositiveIntArray(q.programCourseId),
+      shiftIds: optPositiveIntArray(q.shiftId),
       bucket,
       sortBy,
       sortDir,
@@ -149,10 +158,10 @@ export async function getPromotionRosterBucketCountsHandler(
       fromClassId,
       toSessionId,
       toClassId,
-      affiliationId: optPositiveInt(q.affiliationId),
-      regulationTypeId: optPositiveInt(q.regulationTypeId),
-      programCourseId: optPositiveInt(q.programCourseId),
-      shiftId: optPositiveInt(q.shiftId),
+      affiliationIds: optPositiveIntArray(q.affiliationId),
+      regulationTypeIds: optPositiveIntArray(q.regulationTypeId),
+      programCourseIds: optPositiveIntArray(q.programCourseId),
+      shiftIds: optPositiveIntArray(q.shiftId),
       q: typeof q.q === "string" ? q.q : undefined,
     });
 
@@ -242,10 +251,10 @@ export async function postBulkSemesterPromoteHandler(
         fromClassId,
         toSessionId,
         toClassId,
-        affiliationId: optPositiveInt(body.affiliationId),
-        regulationTypeId: optPositiveInt(body.regulationTypeId),
-        programCourseId: optPositiveInt(body.programCourseId),
-        shiftId: optPositiveInt(body.shiftId),
+        affiliationIds: optPositiveIntArray(body.affiliationId),
+        regulationTypeIds: optPositiveIntArray(body.regulationTypeId),
+        programCourseIds: optPositiveIntArray(body.programCourseId),
+        shiftIds: optPositiveIntArray(body.shiftId),
         studentIds,
       },
       { progressUserId },

@@ -1,6 +1,6 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { useLocation } from "react-router-dom";
-import { FileText, Library, Tag, Workflow } from "lucide-react";
+import { Tag, Workflow } from "lucide-react";
 import { Outlet } from "react-router-dom";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
@@ -15,16 +15,16 @@ const nestedHomeLinks = [
 ];
 
 const masterLinks = [
-  {
-    title: "Classes",
-    url: `${BASE}/classes`,
-    icon: Library,
-  },
-  {
-    title: "Promotion Clauses",
-    url: `${BASE}/promotion-clauses`,
-    icon: FileText,
-  },
+  // {
+  //   title: "Classes",
+  //   url: `${BASE}/classes`,
+  //   icon: Library,
+  // },
+  // {
+  //   title: "Promotion Clauses",
+  //   url: `${BASE}/promotion-clauses`,
+  //   icon: FileText,
+  // },
   {
     title: "Appear Types",
     url: `${BASE}/appear-types`,
