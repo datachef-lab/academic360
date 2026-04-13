@@ -269,9 +269,9 @@ function DownloadModule() {
         { label: "Affiliation", val: affiliations.find((x) => x.value === affiliationId)?.label },
         { label: "Regulation", val: regulations.find((x) => x.value === regulationTypeId)?.label },
         { label: "Academic Year", val: years.find((x) => x.value === academicYearId)?.label },
-        { label: "Category", val: selCat?.label ?? dlCat },
+        { label: "Data Category", val: selCat?.label ?? dlCat },
         ...(classId
-          ? [{ label: "Semester", val: classes.find((x) => x.value === classId)?.label }]
+          ? [{ label: "Semester / Class", val: classes.find((x) => x.value === classId)?.label }]
           : []),
       ].filter((x) => x.val),
     [
@@ -350,7 +350,7 @@ function DownloadModule() {
             light="#ede9fe"
           />
           <SelectKey
-            label="Semester (optional)"
+            label="Semester / Class (optional)"
             icon={BookOpen}
             options={classes}
             value={classId}

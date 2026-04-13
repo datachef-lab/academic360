@@ -539,7 +539,7 @@ export default function PromotionBuilderPage() {
           <p className="m-0 text-[11.5px] leading-[1.65]" style={{ color: ui.text2 }}>
             Rules are based on{" "}
             <strong style={{ color: ui.navy, fontWeight: 600 }}>
-              CU Form Fill-up Status = &quot;Form Filled&quot;
+              CU Form Fill-up Status = &quot;Completed&quot;
             </strong>
             . Semester I → II is always auto-promoted. All other rules are fully configurable per
             affiliation.

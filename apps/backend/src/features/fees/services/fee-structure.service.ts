@@ -2496,6 +2496,7 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Online Payment Gateway Vendor",
   "Online Payment Option",
   "Online Payment Order Id",
+  "Online Payment Transaction Id",
 ] as const;
 
 /** Light column fills for Excel (ARGB with alpha FF). Each amount column gets a distinct pastel. */
@@ -2885,10 +2886,12 @@ export async function downloadFeeStudentMappings(
       Student: stdUser.name,
       UID: studentModel.uid,
       "Student Status": sql<string>`CASE
-        WHEN COALESCE(${studentModel.hasCancelledAdmission}, false) = true THEN 'Cancelled Admission'
-        WHEN COALESCE(${stdUser.isSuspended}, false) = true THEN 'Suspended'
-        WHEN COALESCE(${stdUser.isActive}, true) = false OR COALESCE(${studentModel.active}, true) = false THEN 'Inactive'
-        ELSE 'Active'
+        WHEN COALESCE(${stdUser.isActive}, true) = true
+          AND COALESCE(${studentModel.active}, true) = true
+          AND COALESCE(${stdUser.isSuspended}, false) = false
+          AND COALESCE(${studentModel.hasCancelledAdmission}, false) = false
+        THEN 'Active'
+        ELSE 'Inactive'
       END`,
 
       // Batch Details
@@ -2934,6 +2937,7 @@ export async function downloadFeeStudentMappings(
       "Online Payment Gateway Vendor": paymentModel.paymentGatewayVendor,
       "Online Payment Option": paymentModel.paymentOption,
       "Online Payment Order Id": paymentModel.orderId,
+      "Online Payment Transaction Id": paymentModel.txnId,
     })
     .from(feeStudentMappingModel)
     .innerJoin(
