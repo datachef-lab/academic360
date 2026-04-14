@@ -431,7 +431,7 @@ export default function CareerProgressionPage() {
 
       await axiosInstance.post(
         `/api/academics/career-progression-forms/student/${student.id}/current/submit`,
-        { certificates },
+        { certificates, academicYearId: cpData.academicYear.id },
       );
 
       await Swal.fire({

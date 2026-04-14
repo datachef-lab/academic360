@@ -18,7 +18,7 @@ import {
   receiptTypeModel,
   feeCategoryModel,
 } from "@repo/db/schemas";
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
 import { socketService } from "@/services/socketService.js";
 import * as feeStructureService from "./fee-structure.service.js";
@@ -355,7 +355,8 @@ export const getFeeStudentMappingsByStudentId = async (
   const rows = await db
     .select()
     .from(feeStudentMappingModel)
-    .where(eq(feeStudentMappingModel.studentId, studentId));
+    .where(eq(feeStudentMappingModel.studentId, studentId))
+    .orderBy(asc(feeStudentMappingModel.id));
 
   const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
   return dtos.filter((dto): dto is FeeStudentMappingDto => dto !== null);

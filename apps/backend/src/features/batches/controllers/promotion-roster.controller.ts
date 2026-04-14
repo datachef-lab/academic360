@@ -3,6 +3,7 @@ import { ApiResponse, handleError } from "@/utils/index.js";
 import type { User } from "@repo/db/schemas";
 import {
   bulkPromoteSemesterStudents,
+  checkFeeStructuresForTarget,
   getPromotionRosterBucketCounts,
   getPromotionRosterPage,
   type PromotionRosterBucket,
@@ -265,6 +266,45 @@ export async function postBulkSemesterPromoteHandler(
       .json(
         new ApiResponse(200, "SUCCESS", result, "Semester promotion completed"),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function getFeeStructureCheckHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if ([academicYearId, toClassId].some((n) => !Number.isFinite(n) || n < 1)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const data = await checkFeeStructuresForTarget(
+      academicYearId,
+      toClassId,
+      optPositiveIntArray(q.programCourseId),
+      optPositiveIntArray(q.shiftId),
+    );
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Fee structure check"));
   } catch (error) {
     handleError(error, res, next);
   }

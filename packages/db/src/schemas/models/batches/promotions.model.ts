@@ -31,8 +31,7 @@ export const promotionModel = pgTable("promotions", {
     isAlumni: boolean("is_alumni")
         .notNull()
         .default(false),
-    dateOfJoining: timestamp("date_of_joining")
-        .notNull(),
+    dateOfJoining: timestamp("date_of_joining"),
     classRollNumber: varchar("class_roll_number").notNull(),
     rollNumber: varchar("roll_number"),
     rollNumberSI: varchar("roll_number_si"),

@@ -138,6 +138,28 @@ export type BulkSemesterPromoteResult = {
   skipped: { studentId: number; reason: string }[];
 };
 
+export async function checkFeeStructuresForTarget(params: {
+  academicYearId: number;
+  toClassId: number;
+  programCourseIds?: number[];
+  shiftIds?: number[];
+}): Promise<{ exists: boolean; count: number }> {
+  const res = await axiosInstance.get<ApiResponse<{ exists: boolean; count: number }>>(
+    `${BASE}/fee-structure-check`,
+    {
+      params: {
+        academicYearId: params.academicYearId,
+        toClassId: params.toClassId,
+        programCourseId: params.programCourseIds?.join(",") || undefined,
+        shiftId: params.shiftIds?.join(",") || undefined,
+      },
+    },
+  );
+  const p = res.data.payload;
+  if (p == null) return { exists: false, count: 0 };
+  return p;
+}
+
 export async function bulkPromoteSemesterStudents(body: {
   academicYearId: number;
   fromSessionId: number;

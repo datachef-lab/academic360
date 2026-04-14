@@ -6,7 +6,7 @@ import {
 import { feeStudentMappingModel } from "@repo/db/schemas/models/fees";
 import { studentModel } from "@repo/db/schemas/models/user";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type {
   PaytmPCFDetailsRequest,
   PaytmPCFDetailsResponse,
@@ -339,39 +339,89 @@ export async function createFeePayment(payment: {
   remarks?: string;
 }) {
   const amountNum = Number(payment.amount);
-  let resolvedUserId: number | null = null;
-  if (payment.studentId) {
-    const [student] = await db
-      .select({ userId: studentModel.userId })
-      .from(studentModel)
-      .where(eq(studentModel.id, payment.studentId));
-    if (student?.userId) resolvedUserId = student.userId;
-  }
-  const [newPayment] = await db
-    .insert(paymentModel)
-    .values({
-      userId: resolvedUserId ?? undefined,
-      context: "FEE",
-      amount: Number.isFinite(amountNum) ? amountNum : 0,
-      paymentMode: "ONLINE",
-      paymentGatewayVendor: payment.gatewayName ?? "PAYTM",
-      orderId: payment.orderId,
-      status: "PENDING",
-      remarks: payment.remarks ?? null,
-      gatewayResponse: {
-        meta: { feeStudentMappingId: payment.feeStudentMappingId },
-      } satisfies GatewayResponseShape,
-    })
-    .returning();
 
-  if (newPayment?.id) {
-    await db
-      .update(feeStudentMappingModel)
-      .set({ paymentId: newPayment.id })
-      .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId));
-  }
+  return await db.transaction(async (tx) => {
+    // Lock the fee-student-mapping row to prevent concurrent payment initiation
+    const [mapping] = await tx
+      .select({
+        id: feeStudentMappingModel.id,
+        paymentId: feeStudentMappingModel.paymentId,
+      })
+      .from(feeStudentMappingModel)
+      .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId))
+      .for("update");
 
-  return newPayment;
+    if (!mapping) {
+      throw new Error(
+        `Fee student mapping ${payment.feeStudentMappingId} not found`,
+      );
+    }
+
+    // If a PENDING online payment already exists for this mapping, reuse the same row but
+    // sync orderId / amount / remarks to this initiation — the handler always generates a
+    // fresh orderId for Paytm; returning the old row without updating caused callbacks to
+    // reference an order id that was never stored (404 Payment not found).
+    if (mapping.paymentId) {
+      const [existingPayment] = await tx
+        .select()
+        .from(paymentModel)
+        .where(eq(paymentModel.id, mapping.paymentId));
+
+      if (existingPayment?.status === "PENDING" && existingPayment.orderId) {
+        const [updated] = await tx
+          .update(paymentModel)
+          .set({
+            orderId: payment.orderId,
+            amount: Number.isFinite(amountNum) ? amountNum : 0,
+            remarks: payment.remarks ?? null,
+          })
+          .where(eq(paymentModel.id, existingPayment.id))
+          .returning();
+        return updated ?? existingPayment;
+      }
+      // If existing payment is SUCCESS, block re-initiation
+      if (existingPayment?.status === "SUCCESS") {
+        throw new Error(
+          `Payment already completed for fee mapping ${payment.feeStudentMappingId}`,
+        );
+      }
+    }
+
+    let resolvedUserId: number | null = null;
+    if (payment.studentId) {
+      const [student] = await tx
+        .select({ userId: studentModel.userId })
+        .from(studentModel)
+        .where(eq(studentModel.id, payment.studentId));
+      if (student?.userId) resolvedUserId = student.userId;
+    }
+
+    const [newPayment] = await tx
+      .insert(paymentModel)
+      .values({
+        userId: resolvedUserId ?? undefined,
+        context: "FEE",
+        amount: Number.isFinite(amountNum) ? amountNum : 0,
+        paymentMode: "ONLINE",
+        paymentGatewayVendor: payment.gatewayName ?? "PAYTM",
+        orderId: payment.orderId,
+        status: "PENDING",
+        remarks: payment.remarks ?? null,
+        gatewayResponse: {
+          meta: { feeStudentMappingId: payment.feeStudentMappingId },
+        } satisfies GatewayResponseShape,
+      })
+      .returning();
+
+    if (newPayment?.id) {
+      await tx
+        .update(feeStudentMappingModel)
+        .set({ paymentId: newPayment.id })
+        .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId));
+    }
+
+    return newPayment;
+  });
 }
 
 export async function attachPaytmTxnTokenToPayment(params: {
@@ -449,7 +499,8 @@ export async function findPaymentsByApplicationFormId(
     );
 }
 
-// UPDATE payment on success/failure
+// UPDATE payment on success/failure — uses a transaction with row-level lock
+// to prevent duplicate callbacks from double-crediting amountPaid.
 export async function updatePaymentByOrderId(
   orderId: string,
   updates: {
@@ -474,94 +525,109 @@ export async function updatePaymentByOrderId(
     gatewayResponse?: object;
   },
 ) {
-  const [existingPayment] = await db
-    .select()
-    .from(paymentModel)
-    .where(eq(paymentModel.orderId, orderId));
+  return await db.transaction(async (tx) => {
+    // SELECT FOR UPDATE: blocks concurrent callbacks for the same orderId
+    const [existingPayment] = await tx
+      .select()
+      .from(paymentModel)
+      .where(eq(paymentModel.orderId, orderId))
+      .for("update");
 
-  if (!existingPayment) {
-    throw new Error(`Payment not found for orderId: ${orderId}`);
-  }
-
-  if (
-    existingPayment.txnId &&
-    updates.transactionId &&
-    existingPayment.txnId === updates.transactionId
-  ) {
-    console.log(
-      `Duplicate payment callback detected for orderId: ${orderId}, skipping update`,
-    );
-    return existingPayment;
-  }
-
-  const mergedGateway = mergeGatewayResponse(
-    existingPayment.gatewayResponse,
-    updates.gatewayResponse,
-  ) as GatewayResponseShape | null;
-
-  const txnDateStr =
-    formatTxnDate(updates.txnDate) ??
-    (existingPayment.txnDate as string | undefined) ??
-    null;
-
-  const [updated] = await db
-    .update(paymentModel)
-    .set(
-      omitUndefined({
-        status: updates.status,
-        txnId: updates.transactionId ?? existingPayment.txnId ?? undefined,
-        bankTxnId: updates.bankTxnId ?? existingPayment.bankTxnId ?? undefined,
-        txnDate: txnDateStr ?? undefined,
-        mid: updates.mid ?? undefined,
-        txnAmount: updates.txnAmount ?? undefined,
-        bankName: updates.bankName ?? undefined,
-        txnGatewayName: updates.txnGatewayName ?? undefined,
-        txnPaymentMode: updates.txnPaymentMode ?? undefined,
-        paymentOption:
-          updates.paymentOption ??
-          mapTxnPaymentModeToPaymentOption(updates.txnPaymentMode) ??
-          undefined,
-        checksumHash: updates.checksumHash ?? undefined,
-        cardScheme: updates.cardScheme ?? undefined,
-        gatewayResponse: mergedGateway ?? undefined,
-      }),
-    )
-    .where(eq(paymentModel.orderId, orderId))
-    .returning();
-
-  const meta = parseGatewayMeta(updated ?? null);
-
-  if (
-    updated?.context === "ADMISSION_APPLICATION_FEE" &&
-    meta.applicationFormId
-  ) {
-    if (updates.status === "SUCCESS") {
-      await db
-        .update(applicationFormModel)
-        .set({ formStatus: "PAYMENT_SUCCESS" })
-        .where(eq(applicationFormModel.id, meta.applicationFormId));
+    if (!existingPayment) {
+      throw new Error(`Payment not found for orderId: ${orderId}`);
     }
-  }
 
-  if (
-    updated?.context === "FEE" &&
-    updates.status === "SUCCESS" &&
-    updated.id
-  ) {
-    try {
-      const [mapping] = await db
+    // Idempotency: skip if already processed with same txnId
+    if (
+      existingPayment.txnId &&
+      updates.transactionId &&
+      existingPayment.txnId === updates.transactionId
+    ) {
+      console.log(
+        `Duplicate payment callback detected for orderId: ${orderId}, skipping update`,
+      );
+      return existingPayment;
+    }
+
+    // Idempotency: skip if payment already in a terminal state matching the update
+    if (existingPayment.status === "SUCCESS" && updates.status === "SUCCESS") {
+      console.log(
+        `Payment ${orderId} already SUCCESS, skipping duplicate SUCCESS callback`,
+      );
+      return existingPayment;
+    }
+
+    const mergedGateway = mergeGatewayResponse(
+      existingPayment.gatewayResponse,
+      updates.gatewayResponse,
+    ) as GatewayResponseShape | null;
+
+    const txnDateStr =
+      formatTxnDate(updates.txnDate) ??
+      (existingPayment.txnDate as string | undefined) ??
+      null;
+
+    const [updated] = await tx
+      .update(paymentModel)
+      .set(
+        omitUndefined({
+          status: updates.status,
+          txnId: updates.transactionId ?? existingPayment.txnId ?? undefined,
+          bankTxnId:
+            updates.bankTxnId ?? existingPayment.bankTxnId ?? undefined,
+          txnDate: txnDateStr ?? undefined,
+          mid: updates.mid ?? undefined,
+          txnAmount: updates.txnAmount ?? undefined,
+          bankName: updates.bankName ?? undefined,
+          txnGatewayName: updates.txnGatewayName ?? undefined,
+          txnPaymentMode: updates.txnPaymentMode ?? undefined,
+          paymentOption:
+            updates.paymentOption ??
+            mapTxnPaymentModeToPaymentOption(updates.txnPaymentMode) ??
+            undefined,
+          checksumHash: updates.checksumHash ?? undefined,
+          cardScheme: updates.cardScheme ?? undefined,
+          gatewayResponse: mergedGateway ?? undefined,
+        }),
+      )
+      .where(eq(paymentModel.orderId, orderId))
+      .returning();
+
+    const meta = parseGatewayMeta(updated ?? null);
+
+    if (
+      updated?.context === "ADMISSION_APPLICATION_FEE" &&
+      meta.applicationFormId
+    ) {
+      if (updates.status === "SUCCESS") {
+        await tx
+          .update(applicationFormModel)
+          .set({ formStatus: "PAYMENT_SUCCESS" })
+          .where(eq(applicationFormModel.id, meta.applicationFormId));
+      }
+    }
+
+    if (
+      updated?.context === "FEE" &&
+      updates.status === "SUCCESS" &&
+      updated.id
+    ) {
+      // Lock the fee mapping row too to prevent double-credit
+      const [mapping] = await tx
         .select()
         .from(feeStudentMappingModel)
-        .where(eq(feeStudentMappingModel.paymentId, updated.id));
+        .where(eq(feeStudentMappingModel.paymentId, updated.id))
+        .for("update");
 
       const target =
         mapping ??
         (meta.feeStudentMappingId
           ? (
-              await db
+              await tx
                 .select()
                 .from(feeStudentMappingModel)
                 .where(eq(feeStudentMappingModel.id, meta.feeStudentMappingId))
+                .for("update")
             )[0]
           : undefined);
 
@@ -569,8 +635,7 @@ export async function updatePaymentByOrderId(
         const amountPaid = Number(updated.amount);
         const existingPaid = target.amountPaid ?? 0;
         const newTotalPaid = existingPaid + amountPaid;
-        const totalPayable = target.totalPayable ?? 0;
-        await db
+        await tx
           .update(feeStudentMappingModel)
           .set({
             amountPaid: newTotalPaid,
@@ -578,12 +643,10 @@ export async function updatePaymentByOrderId(
           })
           .where(eq(feeStudentMappingModel.id, target.id));
       }
-    } catch {
-      // non-blocking
     }
-  }
 
-  return updated ?? null;
+    return updated ?? null;
+  });
 }
 
 function mapBinBodyToPaymentColumns(
@@ -929,25 +992,33 @@ export async function deletePayment(id: number) {
   return deleted.length > 0;
 }
 
-const ORDER_ID_SUFFIX = "AS";
-const ORDER_ID_START = 1000;
+const ORDER_ID_PREFIX = "AS";
 
-export async function generateOrderId() {
-  const [latest] = await db
-    .select({ orderId: paymentModel.orderId })
-    .from(paymentModel)
-    .where(sql`${paymentModel.orderId} LIKE '%${sql.raw(ORDER_ID_SUFFIX)}'`)
-    .orderBy(desc(paymentModel.id))
-    .limit(1);
-
-  let nextNum = ORDER_ID_START;
-  if (latest?.orderId) {
-    const numericPart = parseInt(
-      latest.orderId.replace(ORDER_ID_SUFFIX, ""),
-      10,
+/**
+ * Generates order IDs: AS1000, AS1001, AS1002, … using a DB sequence (concurrency-safe).
+ * Falls back to AS + timestamp + random suffix if the sequence is unavailable.
+ *
+ * The UNIQUE constraint on `payments.order_id` is the ultimate safety net.
+ */
+export async function generateOrderId(): Promise<string> {
+  try {
+    await db.execute(
+      sql`CREATE SEQUENCE IF NOT EXISTS payment_order_id_seq START WITH 1000 INCREMENT BY 1`,
     );
-    if (!isNaN(numericPart)) nextNum = numericPart + 1;
+    const result = await db.execute(
+      sql`SELECT nextval('payment_order_id_seq') as nextval`,
+    );
+    const row = (result as unknown as { rows: Record<string, unknown>[] })
+      ?.rows?.[0];
+    const nextNum = parseInt(String(row?.nextval), 10);
+    if (Number.isFinite(nextNum)) {
+      return `${ORDER_ID_PREFIX}${nextNum}`;
+    }
+  } catch {
+    // Sequence unavailable — fall through to safe fallback
   }
 
-  return `${nextNum}${ORDER_ID_SUFFIX}`;
+  const ts = Date.now();
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `${ORDER_ID_PREFIX}${ts}${rand}`;
 }

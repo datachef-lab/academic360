@@ -30,8 +30,9 @@ import { paytmConfig, isPaytmConfigured } from "../config/paytm.config.js";
 
 const require = createRequire(import.meta.url);
 const PaytmChecksum = require("paytmchecksum") as {
+  /** PG callbacks: pass flat key/value object (not JSON.stringify). Library sorts keys and joins values with `|`. */
   verifySignature: (
-    body: string,
+    body: string | Record<string, string>,
     merchantKey: string,
     signature: string,
   ) => boolean;
@@ -396,6 +397,8 @@ export const confirmPaymentHandler = async (
       return;
     }
 
+    // Server-side verification: query Paytm for the real transaction status
+    // instead of trusting the client-submitted status fields.
     const payment = await findPaymentByOrderId(orderId);
     if (!payment) {
       res
@@ -404,26 +407,41 @@ export const confirmPaymentHandler = async (
       return;
     }
 
-    if (status === "TXN_SUCCESS") {
+    // Verify from gateway directly rather than trusting client body
+    const gatewayResult = await getPaytmPaymentStatus(orderId);
+    const verifiedStatus = gatewayResult?.success
+      ? gatewayResult.status
+      : undefined;
+    const verifiedTxnId = gatewayResult?.txnId;
+
+    const effectiveStatus = verifiedStatus ?? status;
+
+    if (effectiveStatus === "TXN_SUCCESS" || verifiedStatus === "TXN_SUCCESS") {
       await updatePaymentByOrderId(orderId, {
         status: "SUCCESS",
-        transactionId: txnId,
-        bankTxnId,
-        txnDate: txnDate ? new Date(txnDate) : undefined,
+        transactionId: verifiedTxnId ?? txnId,
+        bankTxnId: gatewayResult?.bankTxnId ?? bankTxnId,
+        txnDate: gatewayResult?.txnDate
+          ? new Date(gatewayResult.txnDate)
+          : txnDate
+            ? new Date(txnDate)
+            : undefined,
         mid,
-        txnAmount,
+        txnAmount: gatewayResult?.amount ?? txnAmount,
         bankName,
         txnGatewayName,
         txnPaymentMode,
         checksumHash,
         cardScheme,
-        gatewayResponse: { paytm: { callback: body } },
+        gatewayResponse: {
+          paytm: { confirm: body, gatewayVerify: gatewayResult },
+        },
       });
-    } else if (status === "TXN_FAILURE") {
+    } else if (effectiveStatus === "TXN_FAILURE") {
       await updatePaymentByOrderId(orderId, {
         status: "FAILED",
-        transactionId: txnId,
-        bankTxnId,
+        transactionId: verifiedTxnId ?? txnId,
+        bankTxnId: gatewayResult?.bankTxnId ?? bankTxnId,
         txnDate: txnDate ? new Date(txnDate) : undefined,
         mid,
         txnAmount,
@@ -432,7 +450,9 @@ export const confirmPaymentHandler = async (
         txnPaymentMode,
         checksumHash,
         cardScheme,
-        gatewayResponse: { paytm: { callback: body } },
+        gatewayResponse: {
+          paytm: { confirm: body, gatewayVerify: gatewayResult },
+        },
       });
     }
 
@@ -442,7 +462,7 @@ export const confirmPaymentHandler = async (
         new ApiResponse(
           200,
           "SUCCESS",
-          { orderId, status },
+          { orderId, status: effectiveStatus },
           "Payment confirmed",
         ),
       );
@@ -475,7 +495,6 @@ export const paymentCallbackHandler = async (
     const bankName = body.BANKNAME ?? body.bankName;
     const txnGatewayName = body.GATEWAYNAME ?? body.gatewayName;
     const txnPaymentMode = body.PAYMENTMODE ?? body.paymentMode;
-    console.log(body);
     console.info("[Paytm callback] received", {
       orderId,
       status,
@@ -488,6 +507,27 @@ export const paymentCallbackHandler = async (
         .status(400)
         .json(new ApiResponse(400, "ERROR", null, "ORDERID is required"));
       return;
+    }
+
+    // Verify Paytm checksum (PG posts flat fields; paytmchecksum hashes sorted keys → values joined by "|", not JSON)
+    if (isPaytmConfigured() && checksumHash) {
+      const bodyForVerify: Record<string, string> = {};
+      for (const [k, raw] of Object.entries(body)) {
+        if (k === "CHECKSUMHASH" || k === "checksumHash") continue;
+        bodyForVerify[k] = raw == null ? "" : String(raw);
+      }
+      const isValid = PaytmChecksum.verifySignature(
+        bodyForVerify,
+        paytmConfig.merchantKey,
+        checksumHash,
+      );
+      if (!isValid) {
+        console.warn("[Paytm callback] Invalid checksum for orderId:", orderId);
+        res
+          .status(400)
+          .json(new ApiResponse(400, "ERROR", null, "Invalid checksum"));
+        return;
+      }
     }
 
     const payment = await findPaymentByOrderId(orderId);

@@ -55,7 +55,7 @@ export type FeeMapping = {
     id: number;
     receiptType: { name: string };
     class: { name: string };
-    academicYear: { year: string };
+    academicYear: { id: number; year: string };
     programCourse: { name: string };
   };
 };
@@ -233,9 +233,18 @@ export default function EnrollmentFeesPage() {
     checkCp();
   }, [student?.id, cpFormVersion]);
 
+  const careerProgressionTemplateUrl = (studentId: number, academicYearId?: number) => {
+    const base = `/api/academics/career-progression-forms/student/${studentId}/current`;
+    if (academicYearId != null && Number.isFinite(academicYearId)) {
+      return `${base}?academicYearId=${academicYearId}`;
+    }
+    return base;
+  };
+
   useEffect(() => {
     if (handledPaymentRedirectRef.current) return;
-    if (!student?.id) return;
+    const studentId = student?.id;
+    if (studentId == null || studentId < 1) return;
 
     const params = new URLSearchParams(window.location.search);
     const payment = params.get("payment");
@@ -275,7 +284,7 @@ export default function EnrollmentFeesPage() {
     const verifyAndShow = async () => {
       try {
         const { data: mapData } = await axiosInstance.get<ApiResponse<FeeMapping[]>>(
-          `/api/v1/fees/student-mappings/student/${student.id}`,
+          `/api/v1/fees/student-mappings/student/${studentId}`,
         );
         const freshMappings = Array.isArray(mapData?.payload) ? mapData.payload : [];
         setMappings(freshMappings);
@@ -316,9 +325,13 @@ export default function EnrollmentFeesPage() {
           setPaymentMode(urlResult === "success" ? "online" : null);
         }
 
+        const ayId = feeCtx
+          ? freshMappings.find((m) => m.id === feeCtx.feeStudentMappingId)?.feeStructure
+              ?.academicYear?.id
+          : undefined;
         axiosInstance
           .get<ApiResponse<CareerProgressionTemplatePayload>>(
-            `/api/academics/career-progression-forms/student/${student.id}/current`,
+            careerProgressionTemplateUrl(studentId, ayId),
           )
           .then(({ data }) => {
             setCpData(data?.payload ?? null);
@@ -371,6 +384,7 @@ export default function EnrollmentFeesPage() {
       id: selected.id,
       feeStructureId: selected.feeStructureId,
       total: Number(selected.totalPayable || 0),
+      academicYearId: selected.feeStructure?.academicYear?.id,
     });
   }, [mappings, openedFromQuery]);
 
@@ -401,6 +415,10 @@ export default function EnrollmentFeesPage() {
             ? `Installment ${m.feeStructureInstallment?.sequence ?? ""}`.trim()
             : "Full payment"),
         feeStructureId: m.feeStructure?.id,
+        academicYearId:
+          typeof m.feeStructure?.academicYear?.id === "number"
+            ? m.feeStructure.academicYear.id
+            : undefined,
       })),
     [mappings],
   );
@@ -453,6 +471,8 @@ export default function EnrollmentFeesPage() {
     total: number;
     isPaid?: boolean;
     academicYear?: string;
+    /** Fee structure's academic year — CP template/existence is scoped to this year. */
+    academicYearId?: number;
   }) => {
     setSelectedClassName(
       mappings.find((m) => m.feeStructureId === fee.feeStructureId)?.feeStructure?.class?.name ||
@@ -480,7 +500,7 @@ export default function EnrollmentFeesPage() {
       setCpError(null);
       axiosInstance
         .get<ApiResponse<CareerProgressionTemplatePayload>>(
-          `/api/academics/career-progression-forms/student/${student.id}/current`,
+          careerProgressionTemplateUrl(student.id, fee.academicYearId),
         )
         .then(({ data }) => {
           setCpData(data?.payload ?? null);
@@ -512,7 +532,7 @@ export default function EnrollmentFeesPage() {
     window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
     try {
       const { data } = await axiosInstance.get<ApiResponse<CareerProgressionTemplatePayload>>(
-        `/api/academics/career-progression-forms/student/${student.id}/current`,
+        careerProgressionTemplateUrl(student.id, fee.academicYearId),
       );
       setCpData(data?.payload ?? null);
       setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
@@ -646,7 +666,7 @@ export default function EnrollmentFeesPage() {
 
       await axiosInstance.post(
         `/api/academics/career-progression-forms/student/${student.id}/current/submit`,
-        { certificates },
+        { certificates, academicYearId: cpData.academicYear.id },
       );
 
       setHasExistingCpForm(true);
@@ -821,6 +841,7 @@ export default function EnrollmentFeesPage() {
                           total: fee.total,
                           isPaid: fee.isPaid,
                           academicYear: fee.academicYear,
+                          academicYearId: fee.academicYearId,
                         })
                       }
                       className="bg-indigo-700 w-full hover:bg-indigo-800"

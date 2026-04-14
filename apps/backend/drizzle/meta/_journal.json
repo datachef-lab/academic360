@@ -883,6 +883,13 @@
       "when": 1776046068380,
       "tag": "0125_amazing_photon",
       "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "7",
+      "when": 1776147555542,
+      "tag": "0126_outgoing_bishop",
+      "breakpoints": true
     }
   ]
 }

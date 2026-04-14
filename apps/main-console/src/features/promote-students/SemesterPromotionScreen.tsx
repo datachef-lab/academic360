@@ -50,6 +50,7 @@ import {
 } from "@/services/course-design.api";
 import {
   bulkPromoteSemesterStudents,
+  checkFeeStructuresForTarget,
   getPromotionRoster,
   getPromotionRosterBucketCounts,
   SEMESTER_PROMOTION_SOCKET_OP,
@@ -658,6 +659,11 @@ export function SemesterPromotionScreen() {
   const [bucketCountsLoading, setBucketCountsLoading] = useState(false);
 
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [feeStructureCheck, setFeeStructureCheck] = useState<{
+    exists: boolean;
+    count: number;
+  } | null>(null);
+  const [feeStructureCheckLoading, setFeeStructureCheckLoading] = useState(false);
 
   const [promoteProgressOpen, setPromoteProgressOpen] = useState(false);
   const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
@@ -669,9 +675,9 @@ export function SemesterPromotionScreen() {
 
   const handleProgressUpdate = useCallback(
     (data: ProgressUpdate) => {
-      if (progressOperation && data?.meta?.operation && data.meta.operation !== progressOperation) {
-        return;
-      }
+      if (!progressOperation || !data?.meta?.operation) return;
+      const op = data.meta.operation as string;
+      if (op !== progressOperation && op !== "fee_structure_mapping") return;
       setCurrentProgressUpdate(data);
     },
     [progressOperation],
@@ -681,6 +687,33 @@ export function SemesterPromotionScreen() {
     userId,
     onProgressUpdate: handleProgressUpdate,
   });
+
+  useEffect(() => {
+    if (!confirmDialogOpen || !academicYearId || !toClassId) {
+      setFeeStructureCheck(null);
+      return;
+    }
+    let cancelled = false;
+    setFeeStructureCheckLoading(true);
+    checkFeeStructuresForTarget({
+      academicYearId,
+      toClassId: Number(toClassId),
+      programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+      shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
+    })
+      .then((data) => {
+        if (!cancelled) setFeeStructureCheck(data);
+      })
+      .catch(() => {
+        if (!cancelled) setFeeStructureCheck(null);
+      })
+      .finally(() => {
+        if (!cancelled) setFeeStructureCheckLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmDialogOpen, academicYearId, toClassId, programCourseIds, shiftIds]);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQ(q.trim()), 400);
@@ -1024,12 +1057,14 @@ export function SemesterPromotionScreen() {
   const startIndex = roster ? (roster.page - 1) * roster.pageSize : 0;
   const endIndex = roster ? startIndex + roster.content.length : 0;
 
-  const eligibleOnPage = useMemo(
-    () => roster?.content.filter((r) => r.bucket === "eligible") ?? [],
+  /** Eligible and suspended rows can be selected; admins may promote suspended students when chosen explicitly. */
+  const selectableOnPage = useMemo(
+    () => roster?.content.filter((r) => r.bucket === "eligible" || r.bucket === "suspended") ?? [],
     [roster],
   );
-  const allEligibleChecked =
-    eligibleOnPage.length > 0 && eligibleOnPage.every((r) => selectedStudentIds.has(r.studentId));
+  const allSelectableChecked =
+    selectableOnPage.length > 0 &&
+    selectableOnPage.every((r) => selectedStudentIds.has(r.studentId));
 
   const expandPanelTitle = useMemo(() => {
     if (toSemSeq > 0) return `Semester ${sequenceToRoman(toSemSeq)}`;
@@ -1488,19 +1523,19 @@ export function SemesterPromotionScreen() {
                           onKeyDown={(e) => e.stopPropagation()}
                         >
                           <Checkbox
-                            checked={allEligibleChecked}
-                            disabled={rosterLoading || eligibleOnPage.length === 0}
+                            checked={allSelectableChecked}
+                            disabled={rosterLoading || selectableOnPage.length === 0}
                             className="border-[var(--sp-navy)] data-[state=checked]:bg-[var(--sp-navy)]"
                             onCheckedChange={(c) => {
                               const on = c === true;
                               setSelectedStudentIds((prev) => {
                                 const next = new Set(prev);
-                                if (on) eligibleOnPage.forEach((row) => next.add(row.studentId));
-                                else eligibleOnPage.forEach((row) => next.delete(row.studentId));
+                                if (on) selectableOnPage.forEach((row) => next.add(row.studentId));
+                                else selectableOnPage.forEach((row) => next.delete(row.studentId));
                                 return next;
                               });
                             }}
-                            aria-label="Select all eligible on this page"
+                            aria-label="Select all eligible and suspended students on this page"
                           />
                         </div>
                         <div className="leading-snug">Student / Reg No.</div>
@@ -1554,7 +1589,7 @@ export function SemesterPromotionScreen() {
                                   className="sp-t-cell flex items-center !pl-0"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  {r.bucket === "eligible" ? (
+                                  {r.bucket === "eligible" || r.bucket === "suspended" ? (
                                     <Checkbox
                                       checked={selectedStudentIds.has(r.studentId)}
                                       className="border-[var(--sp-navy)] data-[state=checked]:bg-[var(--sp-navy)]"
@@ -1817,6 +1852,41 @@ export function SemesterPromotionScreen() {
                     </div>
                   </div>
                 )}
+
+                <div
+                  className={cn(
+                    "flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm",
+                    feeStructureCheckLoading
+                      ? "border-[hsl(var(--border))] bg-muted/40 text-muted-foreground"
+                      : feeStructureCheck?.exists
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                        : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+                  )}
+                >
+                  {feeStructureCheckLoading ? (
+                    <>
+                      <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+                      <span>Checking fee structures…</span>
+                    </>
+                  ) : feeStructureCheck?.exists ? (
+                    <>
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>
+                        <strong>{feeStructureCheck.count}</strong> fee structure
+                        {feeStructureCheck.count === 1 ? "" : "s"} found for the target semester.
+                        Fee mappings will be automatically created for promoted students.
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>
+                        No fee structures found for the target semester. Fee mapping will be
+                        skipped.
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

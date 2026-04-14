@@ -769,6 +769,7 @@ export default function StudentPage() {
                   activeTab={activeTab!}
                   studentId={Number(data?.id ?? 0)}
                   userId={Number(data?.userId ?? 0)}
+                  studentUid={data?.uid ?? null}
                   personalEmail={data?.personalEmail ?? null}
                 />
               </div>

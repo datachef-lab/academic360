@@ -31,6 +31,8 @@ import {
 
 import { precomputeBuilderPolicy } from "./promotion-builder-policy.service.js";
 import type { PrecomputedBuilderPolicy } from "./promotion-builder-policy.service.js";
+import { feeStructureModel } from "@repo/db/schemas/models/fees";
+import { ensureDefaultFeeStudentMappingsForFeeStructure } from "@/features/fees/services/fee-structure.service.js";
 
 export type PromotionRosterBucket =
   | "all"
@@ -571,15 +573,10 @@ function emitSemesterPromotionProgress(
   socketService.sendProgressUpdate(progressUserId, update);
 }
 
-function joiningDateFromSession(from: Date | string): Date {
-  if (from instanceof Date) return from;
-  const d = new Date(from);
-  return Number.isNaN(d.getTime()) ? new Date() : d;
-}
-
 /**
- * Creates `promotions` rows for eligible students (same program course, shift, section roll data
- * as source promotion) for the target session and class.
+ * Creates `promotions` rows for eligible students, and for suspended students when their ids are
+ * included in the request (explicit admin selection). Same program course, shift, section roll
+ * data as source promotion for the target session and class.
  */
 export async function bulkPromoteSemesterStudents(
   params: BulkSemesterPromoteParams,
@@ -624,7 +621,7 @@ export async function bulkPromoteSemesterStudents(
   const policy = await precomputeBuilderPolicy(params.toClassId);
 
   const [toSessionRow] = await db
-    .select({ from: sessionModel.from })
+    .select({ id: sessionModel.id })
     .from(sessionModel)
     .where(
       and(
@@ -651,8 +648,6 @@ export async function bulkPromoteSemesterStudents(
     };
   }
 
-  const sessionJoiningFallback = joiningDateFromSession(toSessionRow.from!);
-
   const whereBulk = and(base, inArray(studentModel.id, uniqueIds));
 
   const candidateRows = await db
@@ -665,8 +660,6 @@ export async function bulkPromoteSemesterStudents(
       sectionId: pFrom.sectionId,
       classRollNumber: pFrom.classRollNumber,
       examFormFillupId: pFrom.examFormFillupId,
-      /** Prefer `exam_form_fillup.created_at` linked from source promotion; else target session start. */
-      examFillupCreatedAt: examFormFillupModel.createdAt,
     })
     .from(pFrom)
     .innerJoin(studentModel, eq(studentModel.id, pFrom.studentId))
@@ -682,10 +675,6 @@ export async function bulkPromoteSemesterStudents(
       ),
     )
     .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      examFormFillupModel,
-      eq(examFormFillupModel.id, pFrom.examFormFillupId),
-    )
     .innerJoin(
       programCourseModel,
       eq(programCourseModel.id, pFrom.programCourseId),
@@ -734,16 +723,21 @@ export async function bulkPromoteSemesterStudents(
       });
       continue;
     }
-    if (row.bucket !== "eligible") {
-      const reason =
-        row.bucket === "promoted"
-          ? "Already promoted to the target session and class."
-          : row.bucket === "suspended"
-            ? "Student account is suspended."
-            : "Promotion rules are not satisfied for this target.";
-      skipped.push({ studentId: sid, reason });
+    if (row.bucket === "promoted") {
+      skipped.push({
+        studentId: sid,
+        reason: "Already promoted to the target session and class.",
+      });
       continue;
     }
+    if (row.bucket === "ineligible") {
+      skipped.push({
+        studentId: sid,
+        reason: "Promotion rules are not satisfied for this target.",
+      });
+      continue;
+    }
+    // `eligible` or `suspended` — roster selection is explicit; allow promoting suspended when chosen.
     toInsert.push(row);
   }
 
@@ -778,7 +772,8 @@ export async function bulkPromoteSemesterStudents(
     shiftId: r.shiftId!,
     classId: params.toClassId,
     sectionId: r.sectionId,
-    dateOfJoining: r.examFillupCreatedAt ?? sessionJoiningFallback,
+    /** Unset until product defines a rule; DB column must allow null (migrate separately). */
+    dateOfJoining: null,
     classRollNumber: r.classRollNumber!,
     examFormFillupId: r.examFormFillupId,
   });
@@ -851,6 +846,84 @@ export async function bulkPromoteSemesterStudents(
 
   emitSemesterPromotionProgress(
     progressUserId,
+    `Promotion done: ${created} inserted, ${updated} updated. Mapping fee structures…`,
+    80,
+    "in_progress",
+    { created, updated, skippedCount: skipped.length },
+  );
+
+  // After promotion, map fee structures for the target class scoped to the
+  // actual (programCourseId, shiftId) combos of the promoted students.
+  try {
+    const promotedPcIds = [...new Set(toInsert.map((r) => r.programCourseId!))];
+    const promotedShiftIds = [...new Set(toInsert.map((r) => r.shiftId!))];
+
+    const feeStructureFilters: SQL[] = [
+      eq(feeStructureModel.academicYearId, params.academicYearId),
+      eq(feeStructureModel.classId, params.toClassId),
+    ];
+    if (promotedPcIds.length === 1) {
+      feeStructureFilters.push(
+        eq(feeStructureModel.programCourseId, promotedPcIds[0]!),
+      );
+    } else if (promotedPcIds.length > 1) {
+      feeStructureFilters.push(
+        inArray(feeStructureModel.programCourseId, promotedPcIds),
+      );
+    }
+    if (promotedShiftIds.length === 1) {
+      feeStructureFilters.push(
+        eq(feeStructureModel.shiftId, promotedShiftIds[0]!),
+      );
+    } else if (promotedShiftIds.length > 1) {
+      feeStructureFilters.push(
+        inArray(feeStructureModel.shiftId, promotedShiftIds),
+      );
+    }
+
+    const matchingFeeStructures = await db
+      .select()
+      .from(feeStructureModel)
+      .where(and(...feeStructureFilters));
+
+    if (matchingFeeStructures.length > 0) {
+      emitSemesterPromotionProgress(
+        progressUserId,
+        `Found ${matchingFeeStructures.length} fee structure(s). Mapping students…`,
+        85,
+        "in_progress",
+        { feeStructureCount: matchingFeeStructures.length },
+      );
+
+      for (const fs of matchingFeeStructures) {
+        await ensureDefaultFeeStudentMappingsForFeeStructure(
+          fs,
+          undefined,
+          progressUserId,
+        );
+      }
+    } else {
+      emitSemesterPromotionProgress(
+        progressUserId,
+        "No fee structures found for target semester. Skipping fee mapping.",
+        90,
+        "in_progress",
+      );
+    }
+  } catch (feeErr) {
+    const msg = feeErr instanceof Error ? feeErr.message : String(feeErr);
+    console.error("[SemesterPromotion] Fee structure mapping failed:", msg);
+    emitSemesterPromotionProgress(
+      progressUserId,
+      `Fee structure mapping failed: ${msg}`,
+      95,
+      "in_progress",
+      { feeError: msg },
+    );
+  }
+
+  emitSemesterPromotionProgress(
+    progressUserId,
     `Done: ${created} inserted, ${updated} updated.`,
     100,
     "completed",
@@ -858,4 +931,37 @@ export async function bulkPromoteSemesterStudents(
   );
 
   return { created, updated, skipped };
+}
+
+/**
+ * Checks whether any fee structures exist for the given academicYear + class
+ * (optionally scoped to programCourseIds / shiftIds) so the UI can inform
+ * the user before promotion.
+ */
+export async function checkFeeStructuresForTarget(
+  academicYearId: number,
+  toClassId: number,
+  programCourseIds?: number[],
+  shiftIds?: number[],
+): Promise<{ exists: boolean; count: number }> {
+  const filters: SQL[] = [
+    eq(feeStructureModel.academicYearId, academicYearId),
+    eq(feeStructureModel.classId, toClassId),
+  ];
+  if (programCourseIds?.length === 1) {
+    filters.push(eq(feeStructureModel.programCourseId, programCourseIds[0]!));
+  } else if (programCourseIds && programCourseIds.length > 1) {
+    filters.push(inArray(feeStructureModel.programCourseId, programCourseIds));
+  }
+  if (shiftIds?.length === 1) {
+    filters.push(eq(feeStructureModel.shiftId, shiftIds[0]!));
+  } else if (shiftIds && shiftIds.length > 1) {
+    filters.push(inArray(feeStructureModel.shiftId, shiftIds));
+  }
+
+  const rows = await db
+    .select({ id: feeStructureModel.id })
+    .from(feeStructureModel)
+    .where(and(...filters));
+  return { exists: rows.length > 0, count: rows.length };
 }

@@ -121,6 +121,7 @@ import * as feeSlabService from "./fee-slab.service.js";
 import { studentModel, userModel } from "@repo/db/index.js";
 import { socketService } from "@/services/socketService.js";
 import * as userService from "@/features/user/services/user.service.js";
+import { copyCareerProgressionFormsForAcademicYearMigration } from "@/features/academics/services/career-progression-form.service.js";
 
 type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
 
@@ -146,10 +147,12 @@ type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
  *
  * This function is idempotent for a given fee structure and set of promotions.
  */
-async function ensureDefaultFeeStudentMappingsForFeeStructure(
+export async function ensureDefaultFeeStudentMappingsForFeeStructure(
   feeStructure: typeof feeStructureModel.$inferSelect,
-  userId: number,
+  userId?: number,
   progressUserId?: string,
+  /** When set and different from the fee structure's current academic year, copy career-progression form data from this year for affected students. */
+  previousAcademicYearId?: number | null,
 ): Promise<void> {
   const emitProgress = (
     message: string,
@@ -558,6 +561,26 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
       totalPayable,
     });
     await emitFeeStudentMappingUpdated(promotion.studentId);
+  }
+
+  if (
+    previousAcademicYearId != null &&
+    feeStructure.academicYearId != null &&
+    previousAcademicYearId !== feeStructure.academicYearId &&
+    promotions.length > 0
+  ) {
+    try {
+      await copyCareerProgressionFormsForAcademicYearMigration(
+        previousAcademicYearId,
+        feeStructure.academicYearId,
+        promotions.map((p) => p.studentId),
+      );
+    } catch (err) {
+      console.error(
+        "ensureDefaultFeeStudentMappingsForFeeStructure: career progression migration failed (fee mappings were still applied):",
+        err,
+      );
+    }
   }
 
   emitProgress(
@@ -1464,6 +1487,7 @@ export async function updateFeeStructureByDto(
     updatedFeeStructure,
     userId,
     progressUserId,
+    existingFeeStructure.academicYearId,
   );
 
   emitUpdateProgress("Fee structure updated successfully.", 100, "completed");
@@ -1526,6 +1550,11 @@ export const updateFeeStructure = async (
     );
   }
 
+  const [beforeUpdate] = await db
+    .select()
+    .from(feeStructureModel)
+    .where(eq(feeStructureModel.id, id));
+
   const [updated] = await db
     .update(feeStructureModel)
     .set({
@@ -1541,6 +1570,7 @@ export const updateFeeStructure = async (
     updated,
     userId,
     userId.toString(),
+    beforeUpdate?.academicYearId,
   );
 
   const dto = await modelToDto(updated);
@@ -2494,7 +2524,6 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Waived-Off Date",
   "Waived-Off Approved By",
   "Online Payment Gateway Vendor",
-  "Online Payment Option",
   "Online Payment Order Id",
   "Online Payment Transaction Id",
 ] as const;
@@ -2935,7 +2964,6 @@ export async function downloadFeeStudentMappings(
 
       // Online Payment Details
       "Online Payment Gateway Vendor": paymentModel.paymentGatewayVendor,
-      "Online Payment Option": paymentModel.paymentOption,
       "Online Payment Order Id": paymentModel.orderId,
       "Online Payment Transaction Id": paymentModel.txnId,
     })

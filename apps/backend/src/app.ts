@@ -23,6 +23,7 @@ import { policeStationModel } from "@repo/db/schemas/models/user/police-station.
 import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model.js";
 
 import { generateToken } from "./utils/index.js";
+import userStatusOverviewRouter from "@/features/user/routes/user-status-overview.routes.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import {
   academicYearRouter,
@@ -407,7 +408,7 @@ app.use(
 
 app.use("/api/users", userRouter);
 
-// app.use("/api/user-statuses", userStatusMappingRouter);
+app.use("/api/user-statuses", userStatusOverviewRouter);
 
 // User status master endpoints
 app.use("/api/administration/user-status-masters", userStatusMasterRouter);

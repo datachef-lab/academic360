@@ -309,3 +309,81 @@ export async function submitCareerProgressionFormForCurrentYear(
 
   return careerProgressionFormRowToDto(form);
 }
+
+/**
+ * When a fee structure's academic year changes, copy career progression submissions from
+ * `fromAcademicYearId` to `toAcademicYearId` for the given students (same certificate/field
+ * data). Uses {@link submitCareerProgressionFormForCurrentYear} so the target year is upserted.
+ * Skips students with no source form or no certificate rows with field data.
+ */
+export async function copyCareerProgressionFormsForAcademicYearMigration(
+  fromAcademicYearId: number,
+  toAcademicYearId: number,
+  studentIds: number[],
+): Promise<void> {
+  if (fromAcademicYearId === toAcademicYearId || studentIds.length === 0) {
+    return;
+  }
+
+  const unique = [...new Set(studentIds)];
+
+  for (const studentId of unique) {
+    const [sourceForm] = await db
+      .select()
+      .from(careerProgressionFormModel)
+      .where(
+        and(
+          eq(careerProgressionFormModel.studentId, studentId),
+          eq(careerProgressionFormModel.academicYearId, fromAcademicYearId),
+        ),
+      )
+      .limit(1);
+
+    if (!sourceForm) continue;
+
+    const sourceCerts = await db
+      .select()
+      .from(careerProgressionFormCertificateModel)
+      .where(
+        eq(
+          careerProgressionFormCertificateModel.careerProgressionFormId,
+          sourceForm.id,
+        ),
+      );
+
+    if (sourceCerts.length === 0) continue;
+
+    const certificates: CareerProgressionSubmitPayload["certificates"] = [];
+
+    for (const cert of sourceCerts) {
+      const fieldRows = await db
+        .select()
+        .from(careerProgressionFormFieldModel)
+        .where(
+          eq(
+            careerProgressionFormFieldModel.careerProgressionFormCertificateId,
+            cert.id,
+          ),
+        );
+
+      if (fieldRows.length === 0) continue;
+
+      certificates.push({
+        certificateMasterId: cert.certificateMasterId,
+        fields: fieldRows.map((f) => ({
+          certificateFieldMasterId: f.certificateFieldMasterId,
+          certificateFieldOptionMasterId: f.certificateFieldOptionMasterId,
+          value: f.value,
+        })),
+      });
+    }
+
+    if (certificates.length === 0) continue;
+
+    await submitCareerProgressionFormForCurrentYear({
+      studentId,
+      academicYearId: toAcademicYearId,
+      certificates,
+    });
+  }
+}

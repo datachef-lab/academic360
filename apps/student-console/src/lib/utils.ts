@@ -37,12 +37,21 @@ export interface PaginatedResponse<T> {
   totalSubjectCount?: number;
 }
 
+/** Words that are only Roman numerals (e.g. semester "II", "III") must stay all-caps. */
+const ROMAN_NUMERAL_WORD = /^[IVXLCDM]+$/i;
+
 export function toSentenceCase(str: string): string {
   let result = str
     .replace(/_/g, " ") // Replace underscores with spaces
     .replace(/([a-z])([A-Z])/g, "$1 $2") // Add space before capital letters
     .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .filter((w) => w.length > 0)
+    .map((word) => {
+      if (ROMAN_NUMERAL_WORD.test(word)) {
+        return word.toUpperCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
     .join(" ");
 
   // Remove "Student" prefix from registration and roll number headers

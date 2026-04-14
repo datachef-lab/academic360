@@ -46,7 +46,7 @@ import timezone from "dayjs/plugin/timezone.js";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 
 import { updateFeeGroupPromotionMapping } from "./fee-group-promotion-mapping.service";
-import { getNextReceiptNumberForUid } from "./fee-student-mapping.service";
+import { ensureDefaultFeeStudentMappingsForFeeStructure } from "./fee-structure.service";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -66,7 +66,15 @@ interface ErrorRow extends LegacyStudentFeeMappingRow {
 }
 let errorArr: ErrorRow[] = [];
 
+async function doSyncAllFeeStructureMapping() {
+  const feeStructures = await db.select().from(feeStructureModel);
+  for (const feeStructure of feeStructures) {
+    await ensureDefaultFeeStudentMappingsForFeeStructure(feeStructure);
+  }
+}
+
 export async function loadStudentFees() {
+  await doSyncAllFeeStructureMapping();
   errorArr = [];
 
   const academicYears = await db.select().from(academicYearModel);
@@ -498,13 +506,14 @@ async function syncFeeStudentMapping(
     paymentId = savedPayment?.id!;
   }
 
-  // If challan number is not provided, generate one like receipt download does (uid/NN or uid/NN-categoryCode)
+  // Legacy import: when challan is missing, persist `uid/01` or `uid/01-{feeCategoryCode}` (trimmed).
   let finalReceiptNumber = challanNumber;
   if (!finalReceiptNumber) {
-    const nextNum = await getNextReceiptNumberForUid(studentUid);
-    finalReceiptNumber = feeCategoryCode
-      ? `${studentUid}/${nextNum}-${feeCategoryCode}`
-      : `${studentUid}/${nextNum}`;
+    const receiptSeq = "01";
+    const code = feeCategoryCode?.trim();
+    finalReceiptNumber = code
+      ? `${studentUid}/${receiptSeq}-${code}`
+      : `${studentUid}/${receiptSeq}`;
   }
 
   // Update the fee-student mapping fields

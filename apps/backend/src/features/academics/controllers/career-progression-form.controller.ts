@@ -2,7 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import { createCareerProgressionFormSchema } from "@repo/db/schemas";
 import { ApiResponse, handleError } from "@/utils/index.js";
 import * as careerProgressionFormService from "../services/career-progression-form.service.js";
-import { findCurrentAcademicYear } from "../services/academic-year.service.js";
+import {
+  findAcademicYearById,
+  findCurrentAcademicYear,
+} from "../services/academic-year.service.js";
 import { db } from "@/db/index.js";
 import { careerProgressionFormModel } from "@repo/db/schemas";
 import { and, eq } from "drizzle-orm";
@@ -247,7 +250,17 @@ export async function getCareerProgressionTemplateForStudentCurrentYearHandler(
       return;
     }
 
-    const ay = await findCurrentAcademicYear();
+    const ayParam = req.query.academicYearId;
+    let ay: Awaited<ReturnType<typeof findAcademicYearById>> = null;
+    if (ayParam != null && String(ayParam).trim() !== "") {
+      const parsed = parseInt(String(ayParam), 10);
+      if (!Number.isNaN(parsed)) {
+        ay = await findAcademicYearById(parsed);
+      }
+    }
+    if (!ay) {
+      ay = await findCurrentAcademicYear();
+    }
     if (!ay) {
       res
         .status(404)
@@ -316,14 +329,26 @@ export async function submitCareerProgressionForStudentCurrentYearHandler(
       return;
     }
 
-    const ay = await findCurrentAcademicYear();
-    if (!ay?.id) {
-      res
-        .status(404)
-        .json(
-          new ApiResponse(404, "NOT_FOUND", null, "No current academic year"),
-        );
-      return;
+    const bodyAy = req.body?.academicYearId;
+    let targetAcademicYearId: number | undefined;
+    if (bodyAy != null && String(bodyAy).trim() !== "") {
+      const parsed = parseInt(String(bodyAy), 10);
+      if (!Number.isNaN(parsed)) {
+        const y = await findAcademicYearById(parsed);
+        if (y?.id != null) targetAcademicYearId = Number(y.id);
+      }
+    }
+    if (targetAcademicYearId == null) {
+      const ay = await findCurrentAcademicYear();
+      if (!ay?.id) {
+        res
+          .status(404)
+          .json(
+            new ApiResponse(404, "NOT_FOUND", null, "No current academic year"),
+          );
+        return;
+      }
+      targetAcademicYearId = Number(ay.id);
     }
 
     const certificates = Array.isArray(req.body?.certificates)
@@ -334,7 +359,7 @@ export async function submitCareerProgressionForStudentCurrentYearHandler(
       await careerProgressionFormService.submitCareerProgressionFormForCurrentYear(
         {
           studentId,
-          academicYearId: Number(ay.id),
+          academicYearId: targetAcademicYearId,
           certificates,
         },
       );
