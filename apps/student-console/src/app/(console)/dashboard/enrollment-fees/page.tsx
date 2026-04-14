@@ -814,7 +814,7 @@ export default function EnrollmentFeesPage() {
                 <CardHeader className="relative pb-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <CardTitle className="line-clamp-1 text-[22px] font-bold leading-none text-slate-900">
+                      <CardTitle className="line-clamp-1 text-[20px] font-bold leading-none text-slate-900">
                         Fees for {toSentenceCase(fee.className)}
                       </CardTitle>
                       <p className="text-sm">Academic Year {fee.academicYear}</p>

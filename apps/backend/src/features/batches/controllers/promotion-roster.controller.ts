@@ -3,6 +3,7 @@ import { ApiResponse, handleError } from "@/utils/index.js";
 import type { User } from "@repo/db/schemas";
 import {
   bulkPromoteSemesterStudents,
+  checkCourseDesignForTarget,
   checkFeeStructuresForTarget,
   getPromotionRosterBucketCounts,
   getPromotionRosterPage,
@@ -305,6 +306,46 @@ export async function getFeeStructureCheckHandler(
     res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", data, "Fee structure check"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function getCourseDesignCheckHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if ([academicYearId, toClassId].some((n) => !Number.isFinite(n) || n < 1)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const data = await checkCourseDesignForTarget(
+      academicYearId,
+      toClassId,
+      optPositiveIntArray(q.programCourseId),
+      optPositiveIntArray(q.affiliationId),
+      optPositiveIntArray(q.regulationTypeId),
+    );
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Course design check"));
   } catch (error) {
     handleError(error, res, next);
   }

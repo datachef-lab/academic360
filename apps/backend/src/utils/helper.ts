@@ -588,3 +588,18 @@ export function toSentenceCase(str: string): string {
 
   return result;
 }
+
+/**
+ * Like {@link toSentenceCase}, but if the name ends with a Roman numeral
+ * (e.g. "SEMESTER II"), only the text before that suffix is sentence-cased;
+ * the Roman part stays uppercase (avoids "Semester Ii").
+ */
+export function toSentenceCasePreservingTrailingRoman(str: string): string {
+  const trimmed = str.trim();
+  const match = trimmed.match(/^(.+?)(\s+)([IVXLCDM]+)$/i);
+  if (!match) {
+    return toSentenceCase(trimmed);
+  }
+  const [, prefix, space, roman] = match;
+  return `${toSentenceCase(prefix)}${space}${roman.toUpperCase()}`;
+}

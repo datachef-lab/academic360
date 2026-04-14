@@ -1,6 +1,7 @@
 import { verifyJWT } from "@/middlewares/index.js";
 import { Router, Request, Response, NextFunction } from "express";
 import {
+  getCourseDesignCheckHandler,
   getFeeStructureCheckHandler,
   getPromotionRosterBucketCountsHandler,
   getPromotionRosterHandler,
@@ -26,5 +27,6 @@ router.get(
 );
 router.post("/promote", asyncHandler(postBulkSemesterPromoteHandler));
 router.get("/fee-structure-check", asyncHandler(getFeeStructureCheckHandler));
+router.get("/course-design-check", asyncHandler(getCourseDesignCheckHandler));
 
 export default router;

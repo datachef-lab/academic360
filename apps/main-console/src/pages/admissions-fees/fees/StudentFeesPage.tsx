@@ -566,7 +566,15 @@ const StudentFeesPage: React.FC = () => {
             {selectedStudent && (
               <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Student Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Student Name
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedStudent.name?.trim() || "-"}
+                    </p>
+                  </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">UID</p>
                     <p className="text-sm font-medium text-gray-900">

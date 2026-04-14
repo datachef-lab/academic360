@@ -30,6 +30,7 @@ import {
 import { precomputeBuilderPolicy } from "./promotion-builder-policy.service.js";
 import type { PrecomputedBuilderPolicy } from "./promotion-builder-policy.service.js";
 import { feeStructureModel } from "@repo/db/schemas/models/fees";
+import { paperModel } from "@repo/db/schemas";
 import { ensureDefaultFeeStudentMappingsForFeeStructure } from "@/features/fees/services/fee-structure.service.js";
 
 export type PromotionRosterBucket =
@@ -954,6 +955,46 @@ export async function checkFeeStructuresForTarget(
   const rows = await db
     .select({ id: feeStructureModel.id })
     .from(feeStructureModel)
+    .where(and(...filters));
+  return { exists: rows.length > 0, count: rows.length };
+}
+
+/**
+ * Checks whether any papers (course-design rows) exist for the target academic
+ * year + class, optionally scoped to program courses and affiliation/regulation
+ * filters aligned with the promotion roster.
+ */
+export async function checkCourseDesignForTarget(
+  academicYearId: number,
+  toClassId: number,
+  programCourseIds?: number[],
+  affiliationIds?: number[],
+  regulationTypeIds?: number[],
+): Promise<{ exists: boolean; count: number }> {
+  const filters: SQL[] = [
+    eq(paperModel.academicYearId, academicYearId),
+    eq(paperModel.classId, toClassId),
+    eq(paperModel.isActive, true),
+  ];
+  if (programCourseIds?.length === 1) {
+    filters.push(eq(paperModel.programCourseId, programCourseIds[0]!));
+  } else if (programCourseIds && programCourseIds.length > 1) {
+    filters.push(inArray(paperModel.programCourseId, programCourseIds));
+  }
+  if (affiliationIds?.length === 1) {
+    filters.push(eq(paperModel.affiliationId, affiliationIds[0]!));
+  } else if (affiliationIds && affiliationIds.length > 1) {
+    filters.push(inArray(paperModel.affiliationId, affiliationIds));
+  }
+  if (regulationTypeIds?.length === 1) {
+    filters.push(eq(paperModel.regulationTypeId, regulationTypeIds[0]!));
+  } else if (regulationTypeIds && regulationTypeIds.length > 1) {
+    filters.push(inArray(paperModel.regulationTypeId, regulationTypeIds));
+  }
+
+  const rows = await db
+    .select({ id: paperModel.id })
+    .from(paperModel)
     .where(and(...filters));
   return { exists: rows.length > 0, count: rows.length };
 }

@@ -30,7 +30,7 @@ import { pdfGenerationService } from "@/services/pdf-generation.service.js";
 import {
   formatIndianNumber,
   numberToWords,
-  toSentenceCase,
+  toSentenceCasePreservingTrailingRoman,
 } from "@/utils/helper.js";
 
 /**
@@ -538,7 +538,7 @@ async function generateFeeReceiptInternal(params: {
       feeCategoryCode: feeCategoryCode,
     });
 
-  const semesterName = toSentenceCase(classRecord.name);
+  const semesterName = toSentenceCasePreservingTrailingRoman(classRecord.name);
 
   const components = await db
     .select()

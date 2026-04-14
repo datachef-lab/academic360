@@ -50,6 +50,7 @@ import {
 } from "@/services/course-design.api";
 import {
   bulkPromoteSemesterStudents,
+  checkCourseDesignForTarget,
   checkFeeStructuresForTarget,
   getPromotionRoster,
   getPromotionRosterBucketCounts,
@@ -663,7 +664,11 @@ export function SemesterPromotionScreen() {
     exists: boolean;
     count: number;
   } | null>(null);
-  const [feeStructureCheckLoading, setFeeStructureCheckLoading] = useState(false);
+  const [courseDesignCheck, setCourseDesignCheck] = useState<{
+    exists: boolean;
+    count: number;
+  } | null>(null);
+  const [confirmPreChecksLoading, setConfirmPreChecksLoading] = useState(false);
 
   const [promoteProgressOpen, setPromoteProgressOpen] = useState(false);
   const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
@@ -691,29 +696,59 @@ export function SemesterPromotionScreen() {
   useEffect(() => {
     if (!confirmDialogOpen || !academicYearId || !toClassId) {
       setFeeStructureCheck(null);
+      setCourseDesignCheck(null);
       return;
     }
     let cancelled = false;
-    setFeeStructureCheckLoading(true);
-    checkFeeStructuresForTarget({
-      academicYearId,
-      toClassId: Number(toClassId),
-      programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
-      shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
-    })
-      .then((data) => {
-        if (!cancelled) setFeeStructureCheck(data);
+    setConfirmPreChecksLoading(true);
+    const toClassIdNum = Number(toClassId);
+    const programFilter = programCourseIds.length > 0 ? programCourseIds : undefined;
+    const shiftFilter = shiftIds.length > 0 ? shiftIds : undefined;
+    const affiliationFilter = affiliationIds.length > 0 ? affiliationIds : undefined;
+    const regulationFilter = regulationIds.length > 0 ? regulationIds : undefined;
+
+    Promise.all([
+      checkFeeStructuresForTarget({
+        academicYearId,
+        toClassId: toClassIdNum,
+        programCourseIds: programFilter,
+        shiftIds: shiftFilter,
+      }),
+      checkCourseDesignForTarget({
+        academicYearId,
+        toClassId: toClassIdNum,
+        programCourseIds: programFilter,
+        affiliationIds: affiliationFilter,
+        regulationTypeIds: regulationFilter,
+      }),
+    ])
+      .then(([fee, design]) => {
+        if (!cancelled) {
+          setFeeStructureCheck(fee);
+          setCourseDesignCheck(design);
+        }
       })
       .catch(() => {
-        if (!cancelled) setFeeStructureCheck(null);
+        if (!cancelled) {
+          setFeeStructureCheck(null);
+          setCourseDesignCheck(null);
+        }
       })
       .finally(() => {
-        if (!cancelled) setFeeStructureCheckLoading(false);
+        if (!cancelled) setConfirmPreChecksLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [confirmDialogOpen, academicYearId, toClassId, programCourseIds, shiftIds]);
+  }, [
+    confirmDialogOpen,
+    academicYearId,
+    toClassId,
+    programCourseIds,
+    shiftIds,
+    affiliationIds,
+    regulationIds,
+  ]);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQ(q.trim()), 400);
@@ -1853,40 +1888,71 @@ export function SemesterPromotionScreen() {
                   </div>
                 )}
 
-                <div
-                  className={cn(
-                    "flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm",
-                    feeStructureCheckLoading
-                      ? "border-[hsl(var(--border))] bg-muted/40 text-muted-foreground"
-                      : feeStructureCheck?.exists
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                        : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
-                  )}
-                >
-                  {feeStructureCheckLoading ? (
-                    <>
-                      <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
-                      <span>Checking fee structures…</span>
-                    </>
-                  ) : feeStructureCheck?.exists ? (
-                    <>
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>
-                        <strong>{feeStructureCheck.count}</strong> fee structure
-                        {feeStructureCheck.count === 1 ? "" : "s"} found for the target semester.
-                        Fee mappings will be automatically created for promoted students.
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Ban className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>
-                        No fee structures found for the target semester. Fee mapping will be
-                        skipped.
-                      </span>
-                    </>
-                  )}
-                </div>
+                {confirmPreChecksLoading ? (
+                  <div className="flex items-start gap-2.5 rounded-lg border border-[hsl(var(--border))] bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                    <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+                    <span>Checking fee structures and course design…</span>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className={cn(
+                        "flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm",
+                        feeStructureCheck?.exists
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                          : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+                      )}
+                    >
+                      {feeStructureCheck?.exists ? (
+                        <>
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>
+                            <strong>{feeStructureCheck.count}</strong> fee structure
+                            {feeStructureCheck.count === 1 ? "" : "s"} found for the target
+                            semester. Fee mappings will be automatically created for promoted
+                            students.
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>
+                            No fee structures found for the target semester. Fee mapping will be
+                            skipped.
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <div
+                      className={cn(
+                        "flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm",
+                        courseDesignCheck?.exists
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                          : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+                      )}
+                    >
+                      {courseDesignCheck?.exists ? (
+                        <>
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>
+                            <strong>{courseDesignCheck.count}</strong> paper
+                            {courseDesignCheck.count === 1 ? "" : "s"} in course design for the
+                            target semester (academic year and class).
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>
+                            No course design (papers) found for the target semester. Confirm
+                            curriculum is configured before promoting; otherwise subject selection
+                            and related flows may be incomplete even when fees carry forward.
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -160,6 +160,30 @@ export async function checkFeeStructuresForTarget(params: {
   return p;
 }
 
+export async function checkCourseDesignForTarget(params: {
+  academicYearId: number;
+  toClassId: number;
+  programCourseIds?: number[];
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+}): Promise<{ exists: boolean; count: number }> {
+  const res = await axiosInstance.get<ApiResponse<{ exists: boolean; count: number }>>(
+    `${BASE}/course-design-check`,
+    {
+      params: {
+        academicYearId: params.academicYearId,
+        toClassId: params.toClassId,
+        programCourseId: params.programCourseIds?.join(",") || undefined,
+        affiliationId: params.affiliationIds?.join(",") || undefined,
+        regulationTypeId: params.regulationTypeIds?.join(",") || undefined,
+      },
+    },
+  );
+  const p = res.data.payload;
+  if (p == null) return { exists: false, count: 0 };
+  return p;
+}
+
 export async function bulkPromoteSemesterStudents(body: {
   academicYearId: number;
   fromSessionId: number;
