@@ -1,7 +1,5 @@
 import { db } from "@/db/index.js";
 import {
-  admissionCourseDetailsModel,
-  admissionProgramCourseModel,
   affiliationModel,
   classModel,
   examFormFillupModel,
@@ -654,8 +652,11 @@ export async function bulkPromoteSemesterStudents(
     .select({
       studentId: studentModel.id,
       bucket: rowBucketExpr(policy),
-      /** Canonical program course: admission chain, else `students.program_course_id`. */
-      programCourseId: sql<number>`coalesce(${admissionProgramCourseModel.programCourseId}, ${studentModel.programCourseId})`,
+      /**
+       * Must match the source promotion's program course so the new promotion row aligns with
+       * fee structures and the promotion roster (fee mapping keys on program_course_id + shift).
+       */
+      programCourseId: pFrom.programCourseId,
       shiftId: pFrom.shiftId,
       sectionId: pFrom.sectionId,
       classRollNumber: pFrom.classRollNumber,
@@ -663,17 +664,6 @@ export async function bulkPromoteSemesterStudents(
     })
     .from(pFrom)
     .innerJoin(studentModel, eq(studentModel.id, pFrom.studentId))
-    .leftJoin(
-      admissionCourseDetailsModel,
-      eq(admissionCourseDetailsModel.id, studentModel.admissionCourseDetailsId),
-    )
-    .leftJoin(
-      admissionProgramCourseModel,
-      eq(
-        admissionProgramCourseModel.id,
-        admissionCourseDetailsModel.admissionProgramCourseId,
-      ),
-    )
     .innerJoin(userModel, eq(userModel.id, studentModel.userId))
     .innerJoin(
       programCourseModel,
@@ -765,18 +755,20 @@ export async function bulkPromoteSemesterStudents(
   ): Omit<
     typeof promotionModel.$inferInsert,
     "id" | "createdAt" | "updatedAt"
-  > => ({
-    studentId: r.studentId,
-    programCourseId: r.programCourseId!,
-    sessionId: params.toSessionId,
-    shiftId: r.shiftId!,
-    classId: params.toClassId,
-    sectionId: r.sectionId,
-    /** Unset until product defines a rule; DB column must allow null (migrate separately). */
-    dateOfJoining: null,
-    classRollNumber: r.classRollNumber!,
-    examFormFillupId: r.examFormFillupId,
-  });
+  > =>
+    ({
+      studentId: r.studentId,
+      programCourseId: r.programCourseId!,
+      sessionId: params.toSessionId,
+      shiftId: r.shiftId!,
+      classId: params.toClassId,
+      sectionId: r.sectionId,
+      classRollNumber: r.classRollNumber!,
+      examFormFillupId: r.examFormFillupId,
+    }) as Omit<
+      typeof promotionModel.$inferInsert,
+      "id" | "createdAt" | "updatedAt"
+    >;
 
   let created = 0;
   let updated = 0;

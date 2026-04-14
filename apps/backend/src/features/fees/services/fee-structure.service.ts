@@ -101,6 +101,7 @@ import { paymentModel } from "@repo/db/schemas/models/payments";
 import {
   and,
   eq,
+  ne,
   count,
   desc,
   inArray,
@@ -341,123 +342,117 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
 
         feeGroupPromotionMappingId = createdMapping.id!;
       } else {
-        // For other semesters, we will take the fee-group mapping from the previous session of the same student provided that the linked fee-group has carry forward enabled.
-        const [{ promotions: previousPromotion }] = await db
-          .select()
+        // Prefer carrying forward the prior fee-group mapping when validity rules allow;
+        // otherwise create a General fee-group mapping (never skip the student).
+        let carriedFgpId: number | null = null;
+
+        const [prevPromoRow] = await db
+          .select({ id: promotionModel.id })
           .from(promotionModel)
-          .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-          .where(and(eq(promotionModel.studentId, promotion.studentId)))
-          .orderBy(desc(sessionModel.name));
-
-        if (!previousPromotion) continue; // If there is no previous promotion, we cannot carry forward, so we skip creating the mapping for this student.
-
-        const [previousFeeGroupPromotionMapping] = await db
-          .select()
-          .from(feeGroupPromotionMappingModel)
           .where(
             and(
-              eq(
-                feeGroupPromotionMappingModel.promotionId,
-                previousPromotion.id,
-              ),
+              eq(promotionModel.studentId, promotion.studentId),
+              ne(promotionModel.id, promotion.id),
             ),
-          );
+          )
+          .orderBy(desc(promotionModel.id))
+          .limit(1);
 
-        if (!previousFeeGroupPromotionMapping) continue; // If there is no previous mapping, we skip creating the mapping for this student.
-
-        // Check if the fee group linked to the previous mapping has carry forward enabled
-        const [previousFeeGroup] = await db
-          .select()
-          .from(feeGroupModel)
-          .where(
-            eq(feeGroupModel.id, previousFeeGroupPromotionMapping.feeGroupId),
-          );
-
-        let shouldFeeGroupCarryForwarded: boolean = false;
-        console.log(shouldFeeGroupCarryForwarded);
-
-        if (!previousFeeGroup) {
-          shouldFeeGroupCarryForwarded = false;
-        } else if (
-          previousFeeGroup &&
-          previousFeeGroup.validityType === "ACADEMIC_YEAR"
-        ) {
-          const [{ academic_years: previousAcademicYear }] = await db
+        if (prevPromoRow?.id != null) {
+          const [previousFeeGroupPromotionMapping] = await db
             .select()
-            .from(academicYearModel)
-            .leftJoin(
-              sessionModel,
-              eq(sessionModel.academicYearId, academicYearModel.id),
-            )
-            .leftJoin(
-              promotionModel,
-              eq(promotionModel.sessionId, sessionModel.id),
-            )
-            .where(eq(promotionModel.id, previousPromotion.id));
-
-          if (!previousAcademicYear) {
-            throw new Error(
-              `Academic year not found for previous promotion ${previousPromotion.id}`,
+            .from(feeGroupPromotionMappingModel)
+            .where(
+              eq(feeGroupPromotionMappingModel.promotionId, prevPromoRow.id),
             );
-          }
 
-          if (previousAcademicYear.id === feeStructure.academicYearId) {
-            shouldFeeGroupCarryForwarded = true;
-          } else {
-            shouldFeeGroupCarryForwarded = false;
-          }
-        } else if (
-          previousFeeGroup &&
-          previousFeeGroup.validityType === "PROGRAM_COURSE"
-        ) {
-          const [{ academic_years: registrationAcademicYear }] = await db
-            .select()
-            .from(promotionModel)
-            .leftJoin(
-              studentModel,
-              eq(studentModel.id, promotionModel.studentId),
-            )
-            .leftJoin(
-              sessionModel,
-              eq(sessionModel.id, promotionModel.sessionId),
-            )
-            .leftJoin(
-              academicYearModel,
-              eq(academicYearModel.id, sessionModel.academicYearId),
-            )
-            .where(eq(studentModel.id, promotion.studentId))
-            .orderBy(asc(sessionModel.name));
+          if (previousFeeGroupPromotionMapping) {
+            const [previousFeeGroup] = await db
+              .select()
+              .from(feeGroupModel)
+              .where(
+                eq(
+                  feeGroupModel.id,
+                  previousFeeGroupPromotionMapping.feeGroupId,
+                ),
+              );
 
-          if (!registrationAcademicYear) {
-            throw new Error(
-              `Academic year not found for student ${promotion.studentId} registration`,
-            );
-          }
+            let shouldFeeGroupCarryForwarded = false;
 
-          const registrationYear = registrationAcademicYear.year
-            .split("-")[0]
-            .trim();
-          const currentYear = foundAcademicYear.year.split("-")[0].trim();
+            if (previousFeeGroup) {
+              if (previousFeeGroup.validityType === "ACADEMIC_YEAR") {
+                const [{ academic_years: previousAcademicYear }] = await db
+                  .select()
+                  .from(academicYearModel)
+                  .leftJoin(
+                    sessionModel,
+                    eq(sessionModel.academicYearId, academicYearModel.id),
+                  )
+                  .leftJoin(
+                    promotionModel,
+                    eq(promotionModel.sessionId, sessionModel.id),
+                  )
+                  .where(eq(promotionModel.id, prevPromoRow.id));
 
-          if (registrationYear + foundProgramCourse.duration <= currentYear) {
-            shouldFeeGroupCarryForwarded = true;
-          } else {
-            shouldFeeGroupCarryForwarded = false;
+                if (
+                  previousAcademicYear &&
+                  previousAcademicYear.id === feeStructure.academicYearId
+                ) {
+                  shouldFeeGroupCarryForwarded = true;
+                }
+              } else if (previousFeeGroup.validityType === "PROGRAM_COURSE") {
+                const [{ academic_years: registrationAcademicYear }] = await db
+                  .select()
+                  .from(promotionModel)
+                  .leftJoin(
+                    studentModel,
+                    eq(studentModel.id, promotionModel.studentId),
+                  )
+                  .leftJoin(
+                    sessionModel,
+                    eq(sessionModel.id, promotionModel.sessionId),
+                  )
+                  .leftJoin(
+                    academicYearModel,
+                    eq(academicYearModel.id, sessionModel.academicYearId),
+                  )
+                  .where(eq(studentModel.id, promotion.studentId))
+                  .orderBy(asc(sessionModel.name));
+
+                if (registrationAcademicYear && foundProgramCourse) {
+                  const regPart = registrationAcademicYear.year
+                    .split("-")[0]
+                    .trim();
+                  const currPart = foundAcademicYear.year.split("-")[0].trim();
+                  const regY = parseInt(regPart, 10);
+                  const currY = parseInt(currPart, 10);
+                  const dur = foundProgramCourse.duration;
+                  if (
+                    Number.isFinite(regY) &&
+                    Number.isFinite(currY) &&
+                    Number.isFinite(dur) &&
+                    regY + dur <= currY
+                  ) {
+                    shouldFeeGroupCarryForwarded = true;
+                  }
+                }
+              } else if (previousFeeGroup.validityType === "SEMESTER") {
+                shouldFeeGroupCarryForwarded = false;
+              } else {
+                console.warn(
+                  `ensureDefaultFeeStudentMappingsForFeeStructure: unknown fee group validityType ${String(previousFeeGroup.validityType)} for fee group ${previousFeeGroup.id}`,
+                );
+              }
+            }
+
+            if (shouldFeeGroupCarryForwarded) {
+              carriedFgpId = previousFeeGroupPromotionMapping.id!;
+            }
           }
-        } else if (
-          previousFeeGroup &&
-          previousFeeGroup.validityType === "SEMESTER"
-        ) {
-          shouldFeeGroupCarryForwarded = false; // Semester-wise fee groups are not carried forward as the fees are different for each semester.
-        } else {
-          throw new Error(
-            `Invalid validity type for fee group ${previousFeeGroup.id}`,
-          );
         }
-        console.log(shouldFeeGroupCarryForwarded);
 
-        if (shouldFeeGroupCarryForwarded) {
-          feeGroupPromotionMappingId = previousFeeGroupPromotionMapping.id!;
+        if (carriedFgpId != null) {
+          feeGroupPromotionMappingId = carriedFgpId;
         } else {
           const [createdMapping] = await db
             .insert(feeGroupPromotionMappingModel)
