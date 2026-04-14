@@ -456,7 +456,20 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
             }
 
             if (shouldFeeGroupCarryForwarded) {
-              carriedFgpId = previousFeeGroupPromotionMapping.id!;
+              // Must NOT reuse previousFeeGroupPromotionMapping.id: that row is tied to the *prior*
+              // semester's promotion_id. Fee-student-mappings must point at an FGP row whose
+              // promotion_id is *this* target promotion (correct semester linkage).
+              const [createdCarried] = await db
+                .insert(feeGroupPromotionMappingModel)
+                .values({
+                  feeGroupId: previousFeeGroupPromotionMapping.feeGroupId,
+                  promotionId: promotion.id,
+                  approvalType: "SYSTEM",
+                })
+                .returning();
+              if (createdCarried?.id != null) {
+                carriedFgpId = createdCarried.id;
+              }
             }
           }
         }
