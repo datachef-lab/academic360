@@ -380,6 +380,12 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
             let shouldFeeGroupCarryForwarded = false;
 
             if (previousFeeGroup) {
+              // Validity rules for carrying forward the *previous* fee group to this promotion:
+              // - ACADEMIC_YEAR: only while still in the same academic year as the prior mapping
+              //   (same AY as this fee structure / target promotion).
+              // - PROGRAM_COURSE: for the whole program window from admission start year through
+              //   (registration year + duration) inclusive — carry while current A.Y. start year is in range.
+              // - SEMESTER: never carried (per-semester fee group).
               if (previousFeeGroup.validityType === "ACADEMIC_YEAR") {
                 const [{ academic_years: previousAcademicYear }] = await db
                   .select()
@@ -427,12 +433,16 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
                   const regY = parseInt(regPart, 10);
                   const currY = parseInt(currPart, 10);
                   const dur = foundProgramCourse.duration;
-                  if (
+                  // Inclusive window: admission start year … admission start + duration (calendar start years).
+                  const lastCoveredYear = regY + dur;
+                  const inProgramCourseWindow =
                     Number.isFinite(regY) &&
                     Number.isFinite(currY) &&
                     Number.isFinite(dur) &&
-                    regY + dur <= currY
-                  ) {
+                    dur >= 0 &&
+                    currY >= regY &&
+                    currY <= lastCoveredYear;
+                  if (inProgramCourseWindow) {
                     shouldFeeGroupCarryForwarded = true;
                   }
                 }
