@@ -459,12 +459,20 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
               // Must NOT reuse previousFeeGroupPromotionMapping.id: that row is tied to the *prior*
               // semester's promotion_id. Fee-student-mappings must point at an FGP row whose
               // promotion_id is *this* target promotion (correct semester linkage).
+              const prevFgp = previousFeeGroupPromotionMapping;
+              const hasPrevApproval =
+                prevFgp.approvalUserId != null && prevFgp.approvalUserId > 0;
               const [createdCarried] = await db
                 .insert(feeGroupPromotionMappingModel)
                 .values({
-                  feeGroupId: previousFeeGroupPromotionMapping.feeGroupId,
+                  feeGroupId: prevFgp.feeGroupId,
                   promotionId: promotion.id,
-                  approvalType: "SYSTEM",
+                  approvalType: hasPrevApproval
+                    ? prevFgp.approvalType
+                    : "SYSTEM",
+                  ...(hasPrevApproval
+                    ? { approvalUserId: prevFgp.approvalUserId }
+                    : {}),
                 })
                 .returning();
               if (createdCarried?.id != null) {
