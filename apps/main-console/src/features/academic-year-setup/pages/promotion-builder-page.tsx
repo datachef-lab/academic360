@@ -144,7 +144,7 @@ function semShortLabel(className: string | undefined | null): string {
 }
 
 function formFilledValueLabel(className: string | undefined | null): string {
-  return `${semShortLabel(className)} — Form Filled`;
+  return `${semShortLabel(className)} — Completed`;
 }
 
 function sortBuilders(rows: PromotionBuilderDto[]): PromotionBuilderDto[] {
