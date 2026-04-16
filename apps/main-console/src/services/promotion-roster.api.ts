@@ -132,6 +132,123 @@ export async function getPromotionRosterBucketCounts(params: {
   return p;
 }
 
+export type PromotionSelectableShiftBreakdown = {
+  shiftColumns: string[];
+  rows: { programCourse: string; byCols: number[]; total: number }[];
+  totalSelectable: number;
+};
+
+/** Program × shift counts for all eligible + suspended students in scope (all pages). */
+export async function getPromotionSelectableShiftBreakdown(params: {
+  academicYearId: number;
+  fromSessionId: number;
+  fromClassId: number;
+  toSessionId: number;
+  toClassId: number;
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  programCourseIds?: number[];
+  shiftIds?: number[];
+  q?: string;
+}): Promise<PromotionSelectableShiftBreakdown> {
+  const res = await axiosInstance.get<ApiResponse<PromotionSelectableShiftBreakdown>>(
+    `${BASE}/selectable-shift-breakdown`,
+    {
+      params: {
+        academicYearId: params.academicYearId,
+        fromSessionId: params.fromSessionId,
+        fromClassId: params.fromClassId,
+        toSessionId: params.toSessionId,
+        toClassId: params.toClassId,
+        affiliationId: params.affiliationIds?.join(",") || undefined,
+        regulationTypeId: params.regulationTypeIds?.join(",") || undefined,
+        programCourseId: params.programCourseIds?.join(",") || undefined,
+        shiftId: params.shiftIds?.join(",") || undefined,
+        q: params.q,
+      },
+    },
+  );
+  const p = res.data.payload;
+  if (p == null) {
+    throw new Error("No selectable shift breakdown payload");
+  }
+  return p;
+}
+
+/** Same pivot as {@link getPromotionSelectableShiftBreakdown} for an explicit id list (e.g. current selection). */
+export async function getPromotionShiftBreakdownForStudentIds(body: {
+  academicYearId: number;
+  fromSessionId: number;
+  fromClassId: number;
+  toSessionId: number;
+  toClassId: number;
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  programCourseIds?: number[];
+  shiftIds?: number[];
+  q?: string;
+  studentIds: number[];
+}): Promise<PromotionSelectableShiftBreakdown> {
+  const res = await axiosInstance.post<ApiResponse<PromotionSelectableShiftBreakdown>>(
+    `${BASE}/shift-breakdown-for-selection`,
+    {
+      academicYearId: body.academicYearId,
+      fromSessionId: body.fromSessionId,
+      fromClassId: body.fromClassId,
+      toSessionId: body.toSessionId,
+      toClassId: body.toClassId,
+      affiliationId: body.affiliationIds?.join(",") || undefined,
+      regulationTypeId: body.regulationTypeIds?.join(",") || undefined,
+      programCourseId: body.programCourseIds?.join(",") || undefined,
+      shiftId: body.shiftIds?.join(",") || undefined,
+      q: body.q,
+      studentIds: body.studentIds,
+    },
+  );
+  const p = res.data.payload;
+  if (p == null) {
+    throw new Error("No shift breakdown for selection payload");
+  }
+  return p;
+}
+
+/** Every student id that can be checkbox-selected (eligible + suspended) for the roster scope. */
+export async function getSelectablePromotionStudentIds(params: {
+  academicYearId: number;
+  fromSessionId: number;
+  fromClassId: number;
+  toSessionId: number;
+  toClassId: number;
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  programCourseIds?: number[];
+  shiftIds?: number[];
+  q?: string;
+}): Promise<number[]> {
+  const res = await axiosInstance.get<ApiResponse<{ studentIds: number[] }>>(
+    `${BASE}/selectable-student-ids`,
+    {
+      params: {
+        academicYearId: params.academicYearId,
+        fromSessionId: params.fromSessionId,
+        fromClassId: params.fromClassId,
+        toSessionId: params.toSessionId,
+        toClassId: params.toClassId,
+        affiliationId: params.affiliationIds?.join(",") || undefined,
+        regulationTypeId: params.regulationTypeIds?.join(",") || undefined,
+        programCourseId: params.programCourseIds?.join(",") || undefined,
+        shiftId: params.shiftIds?.join(",") || undefined,
+        q: params.q,
+      },
+    },
+  );
+  const p = res.data.payload;
+  if (p == null || !Array.isArray(p.studentIds)) {
+    throw new Error("No selectable student ids payload");
+  }
+  return p.studentIds;
+}
+
 export type BulkSemesterPromoteResult = {
   created: number;
   updated: number;
@@ -194,7 +311,12 @@ export async function bulkPromoteSemesterStudents(body: {
   regulationTypeIds?: number[];
   programCourseIds?: number[];
   shiftIds?: number[];
+  /** Required unless `promoteAllEligibleInScope` is true. */
   studentIds: number[];
+  /** Search string — must match roster table when resolving “promote all eligible”. */
+  q?: string;
+  /** Promote every eligible student matching current filters + `q` (not only the current page). */
+  promoteAllEligibleInScope?: boolean;
 }): Promise<BulkSemesterPromoteResult> {
   const res = await axiosInstance.post<ApiResponse<BulkSemesterPromoteResult>>(`${BASE}/promote`, {
     ...body,

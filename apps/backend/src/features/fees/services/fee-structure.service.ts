@@ -2505,6 +2505,7 @@ const FEE_STRUCTURE_DOWNLOAD_COLUMNS = [
   "Fee Category",
   "Fee Head (Or Components)",
   "Amount Configured (For Fee Head)",
+  "Total Amount Configured (Per Fee Slab)",
   "Remarks",
   "Advance For Program Course",
   "Advance For Semester",
@@ -2557,7 +2558,22 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
 /** Light column fills for Excel (ARGB with alpha FF). Each amount column gets a distinct pastel. */
 const FEE_STRUCTURE_AMOUNT_COLUMN_FILLS: Record<string, string> = {
   "Amount Configured (For Fee Head)": "FFE3F2FD",
+  "Total Amount Configured (Per Fee Slab)": "FFFFF3E0",
 };
+
+/** Headers whose values are formatted as INR for Excel (₹ + Indian grouping; UTF-8 safe in XLSX). */
+const FEE_STRUCTURE_INR_AMOUNT_HEADERS = [
+  "Amount Configured (For Fee Head)",
+  "Total Amount Configured (Per Fee Slab)",
+] as const;
+
+const FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS = [
+  "Amount Configured (For Fee Heads / Components)",
+  "Total Amount Configured (Per Fee Structure)",
+  "Waived-Off Amount",
+  "Total Amount To Pay",
+  "Paid Amount",
+] as const;
 
 const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
   "Total Amount Configured (Per Fee Structure)": "FFFFF3E0",
@@ -2610,6 +2626,32 @@ function tryParseDateStringToIst(s: string): string | null {
   return d.toLocaleDateString("en-IN", IST_DATE_ONLY);
 }
 
+/**
+ * INR for spreadsheet exports: Unicode ₹ (U+20B9) + `en-IN` grouping (lakhs/crores).
+ * Stored as plain UTF-8 text so mobile Excel, WPS, Word, Google Sheets all display it when fonts support ₹;
+ * if a viewer lacks the glyph, it may show a box — "Rs." is not used here per product preference for ₹.
+ */
+function formatInrMoneyForExcel(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "bigint") {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    return formatInrMoneyForExcel(n);
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return "";
+    const hasDecimals = Math.abs(value % 1) > 1e-9;
+    const formatted = value.toLocaleString("en-IN", {
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: 2,
+    });
+    return `\u20B9 ${formatted}`;
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  return formatInrMoneyForExcel(n);
+}
+
 function formatExcelCell(value: unknown): string | number {
   if (value === null || value === undefined) return "";
   if (typeof value === "bigint") {
@@ -2641,6 +2683,8 @@ type FeeExportXlsxWriteOptions = {
 type FeeExportExcelBufferOptions = FeeExportXlsxWriteOptions & {
   /** Header text → ARGB (e.g. FFE8F5E9). Tints that column for row 1 (header) and all data rows. */
   columnLightFillsByHeader?: Record<string, string>;
+  /** Column headers whose numeric amounts are exported as formatted INR strings (₹ + commas per en-IN). */
+  inrFormattedAmountHeaders?: readonly string[];
 };
 
 const EXCEL_THIN_BORDER = {
@@ -2691,6 +2735,11 @@ async function buildStyledFeeExportExcelBuffer(
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(sheetName);
 
+  const inrHeaders =
+    options?.inrFormattedAmountHeaders != null
+      ? new Set(options.inrFormattedAmountHeaders)
+      : null;
+
   const n = rows.length;
   const formatted: Record<string, string | number>[] = new Array(n);
   for (let i = 0; i < n; i++) {
@@ -2698,7 +2747,10 @@ async function buildStyledFeeExportExcelBuffer(
     const row: Record<string, string | number> = {};
     for (let c = 0; c < columnHeaders.length; c++) {
       const h = columnHeaders[c];
-      row[h] = formatExcelCell(raw[h]);
+      row[h] =
+        inrHeaders?.has(h) === true
+          ? formatInrMoneyForExcel(raw[h])
+          : formatExcelCell(raw[h]);
     }
     formatted[i] = row;
   }
@@ -2785,6 +2837,22 @@ export async function downloadFeeStructures(
   const createdFeeStructureByUser = aliasedTable(userModel, "cr_fs_user");
   const lastUpdateFeeStructureByUser = aliasedTable(userModel, "up_fs_user");
 
+  /** Sum of component amounts per fee structure + slab (same grain as downloadFeeStudentMappings). */
+  const feeSlabTotalsSq = db
+    .select({
+      feeStructureId: feeStructureComponentModel.feeStructureId,
+      feeSlabId: feeStructureComponentModel.feeSlabId,
+      slabTotal: sql<number>`sum(${feeStructureComponentModel.amount})`.as(
+        "slab_total",
+      ),
+    })
+    .from(feeStructureComponentModel)
+    .groupBy(
+      feeStructureComponentModel.feeStructureId,
+      feeStructureComponentModel.feeSlabId,
+    )
+    .as("fee_structure_slab_totals");
+
   const rows = await db
     .select({
       id: feeStructureModel.id,
@@ -2807,6 +2875,7 @@ export async function downloadFeeStructures(
       "Fee Category": feeCategoryModel.name,
       "Fee Head (Or Components)": feeHeadModel.name,
       "Amount Configured (For Fee Head)": feeStructureComponentModel.amount,
+      "Total Amount Configured (Per Fee Slab)": feeSlabTotalsSq.slabTotal,
       Remarks: feeStructureComponentModel.remarks,
 
       // Advance Configurations
@@ -2870,6 +2939,13 @@ export async function downloadFeeStructures(
       feeSlabModel,
       eq(feeSlabModel.id, feeStructureComponentModel.feeSlabId),
     )
+    .leftJoin(
+      feeSlabTotalsSq,
+      and(
+        eq(feeSlabTotalsSq.feeStructureId, feeStructureModel.id),
+        eq(feeSlabTotalsSq.feeSlabId, feeSlabModel.id),
+      ),
+    )
     .leftJoin(feeGroupModel, eq(feeGroupModel.feeSlabId, feeSlabModel.id))
     .leftJoin(
       feeCategoryModel,
@@ -2896,7 +2972,10 @@ export async function downloadFeeStructures(
     "Fee Structures",
     FEE_STRUCTURE_DOWNLOAD_COLUMNS,
     rows as Record<string, unknown>[],
-    { columnLightFillsByHeader: FEE_STRUCTURE_AMOUNT_COLUMN_FILLS },
+    {
+      columnLightFillsByHeader: FEE_STRUCTURE_AMOUNT_COLUMN_FILLS,
+      inrFormattedAmountHeaders: FEE_STRUCTURE_INR_AMOUNT_HEADERS,
+    },
   );
 
   return { buffer, academicYearYear };
@@ -3133,6 +3212,7 @@ export async function downloadFeeStudentMappings(
       useSharedStrings: false,
       zipCompression: "STORE",
       columnLightFillsByHeader: FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS,
+      inrFormattedAmountHeaders: FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS,
     },
   );
 

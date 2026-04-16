@@ -5,7 +5,10 @@ import {
   getFeeStructureCheckHandler,
   getPromotionRosterBucketCountsHandler,
   getPromotionRosterHandler,
+  getPromotionSelectableShiftBreakdownHandler,
+  getSelectablePromotionStudentIdsHandler,
   postBulkSemesterPromoteHandler,
+  postPromotionShiftBreakdownForSelectionHandler,
 } from "../controllers/promotion-roster.controller.js";
 
 const router = Router();
@@ -24,6 +27,18 @@ router.get("/", asyncHandler(getPromotionRosterHandler));
 router.get(
   "/bucket-counts",
   asyncHandler(getPromotionRosterBucketCountsHandler),
+);
+router.get(
+  "/selectable-student-ids",
+  asyncHandler(getSelectablePromotionStudentIdsHandler),
+);
+router.get(
+  "/selectable-shift-breakdown",
+  asyncHandler(getPromotionSelectableShiftBreakdownHandler),
+);
+router.post(
+  "/shift-breakdown-for-selection",
+  asyncHandler(postPromotionShiftBreakdownForSelectionHandler),
 );
 router.post("/promote", asyncHandler(postBulkSemesterPromoteHandler));
 router.get("/fee-structure-check", asyncHandler(getFeeStructureCheckHandler));

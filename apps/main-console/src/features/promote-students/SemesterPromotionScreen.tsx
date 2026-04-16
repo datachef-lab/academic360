@@ -54,6 +54,9 @@ import {
   checkFeeStructuresForTarget,
   getPromotionRoster,
   getPromotionRosterBucketCounts,
+  getPromotionSelectableShiftBreakdown,
+  getPromotionShiftBreakdownForStudentIds,
+  getSelectablePromotionStudentIds,
   SEMESTER_PROMOTION_SOCKET_OP,
   type PromotionRosterBucket,
   type PromotionRosterRow,
@@ -105,6 +108,109 @@ function sequenceToRoman(seq: number | undefined | null): string {
   if (seq == null || seq < 1) return "—";
   if (seq <= ROMAN_SEM.length) return ROMAN_SEM[seq - 1]!;
   return String(seq);
+}
+
+type ShiftBreakdownTableModel = {
+  shiftColumns: string[];
+  rows: { programCourse: string; byCols: number[]; total: number }[];
+};
+
+function PromotionShiftBreakdownTable({
+  breakdown,
+  loading,
+  maxHeightClass = "max-h-[260px]",
+}: {
+  breakdown: ShiftBreakdownTableModel;
+  loading?: boolean;
+  maxHeightClass?: string;
+}) {
+  if (loading && breakdown.rows.length === 0) {
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-muted/30 py-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+        <span>Loading program × shift breakdown…</span>
+      </div>
+    );
+  }
+  if (breakdown.rows.length === 0) return null;
+  return (
+    <div className="relative overflow-hidden rounded-lg border border-[hsl(var(--border))]">
+      {loading ? (
+        <div className="absolute inset-0 z-[1] flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : null}
+      <div className={cn(maxHeightClass, "overflow-auto")}>
+        <table className="w-full border-collapse border border-[hsl(var(--border))] text-left text-[13px]">
+          <thead className="sticky top-0 z-[1] bg-muted text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <tr>
+              <th className="whitespace-nowrap border border-[hsl(var(--border))] px-3 py-2">
+                Sr.
+              </th>
+              <th className="whitespace-nowrap border border-[hsl(var(--border))] px-3 py-2">
+                Program Course
+              </th>
+              {breakdown.shiftColumns.map((sh) => (
+                <th
+                  key={sh}
+                  className="whitespace-nowrap border border-[hsl(var(--border))] px-3 py-2 text-center"
+                >
+                  {sh}
+                </th>
+              ))}
+              <th className="whitespace-nowrap border border-[hsl(var(--border))] px-3 py-2 text-center">
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {breakdown.rows.map((row, idx) => (
+              <tr
+                key={row.programCourse}
+                className={cn(idx % 2 === 0 ? "bg-background" : "bg-muted/30")}
+              >
+                <td className="border border-[hsl(var(--border))] px-3 py-1.5 tabular-nums text-muted-foreground">
+                  {idx + 1}
+                </td>
+                <td
+                  className="max-w-[200px] truncate border border-[hsl(var(--border))] px-3 py-1.5 font-medium"
+                  title={row.programCourse}
+                >
+                  {row.programCourse}
+                </td>
+                {row.byCols.map((n, ci) => (
+                  <td
+                    key={breakdown.shiftColumns[ci]}
+                    className="border border-[hsl(var(--border))] px-3 py-1.5 text-center tabular-nums"
+                  >
+                    {n || "–"}
+                  </td>
+                ))}
+                <td className="border border-[hsl(var(--border))] px-3 py-1.5 text-center font-semibold tabular-nums">
+                  {row.total}
+                </td>
+              </tr>
+            ))}
+            <tr className="bg-muted font-semibold">
+              <td className="border border-[hsl(var(--border))] px-3 py-1.5" />
+              <td className="border border-[hsl(var(--border))] px-3 py-1.5">Grand Total</td>
+              {breakdown.shiftColumns.map((sh, ci) => (
+                <td
+                  key={sh}
+                  className="border border-[hsl(var(--border))] px-3 py-1.5 text-center tabular-nums"
+                >
+                  {breakdown.rows.reduce((s, r) => s + r.byCols[ci]!, 0) || "–"}
+                </td>
+              ))}
+              <td className="border border-[hsl(var(--border))] px-3 py-1.5 text-center tabular-nums">
+                {breakdown.rows.reduce((s, r) => s + r.total, 0)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function SemesterBox({ seq, size = 24 }: { seq: number | undefined | null; size?: number }) {
@@ -620,6 +726,9 @@ function MultiFilterSelect({
   );
 }
 
+/** Shared shell for “select all in scope” and “confirm promote selection” (same layout as one dialog). */
+type PromotionModal = "closed" | "selectAllScope" | "confirmPromotion";
+
 export function SemesterPromotionScreen() {
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [academicYearId, setAcademicYearId] = useState<number | null>(null);
@@ -659,7 +768,17 @@ export function SemesterPromotionScreen() {
   > | null>(null);
   const [bucketCountsLoading, setBucketCountsLoading] = useState(false);
 
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [promotionModal, setPromotionModal] = useState<PromotionModal>("closed");
+  const [confirmPromoteAllOpen, setConfirmPromoteAllOpen] = useState(false);
+  const [loadingSelectableIds, setLoadingSelectableIds] = useState(false);
+  const [selectAllScopeBreakdown, setSelectAllScopeBreakdown] = useState<
+    (ShiftBreakdownTableModel & { totalSelectable: number }) | null
+  >(null);
+  const [selectAllScopeBreakdownLoading, setSelectAllScopeBreakdownLoading] = useState(false);
+  const [promoteConfirmBreakdown, setPromoteConfirmBreakdown] = useState<
+    (ShiftBreakdownTableModel & { totalSelectable: number }) | null
+  >(null);
+  const [promoteConfirmBreakdownLoading, setPromoteConfirmBreakdownLoading] = useState(false);
   const [feeStructureCheck, setFeeStructureCheck] = useState<{
     exists: boolean;
     count: number;
@@ -693,8 +812,14 @@ export function SemesterPromotionScreen() {
     onProgressUpdate: handleProgressUpdate,
   });
 
+  const promotionModalOpen = promotionModal !== "closed";
+
   useEffect(() => {
-    if (!confirmDialogOpen || !academicYearId || !toClassId) {
+    if (
+      (promotionModal !== "selectAllScope" && promotionModal !== "confirmPromotion") ||
+      !academicYearId ||
+      !toClassId
+    ) {
       setFeeStructureCheck(null);
       setCourseDesignCheck(null);
       return;
@@ -741,7 +866,7 @@ export function SemesterPromotionScreen() {
       cancelled = true;
     };
   }, [
-    confirmDialogOpen,
+    promotionModal,
     academicYearId,
     toClassId,
     programCourseIds,
@@ -872,6 +997,120 @@ export function SemesterPromotionScreen() {
     !!toClassId &&
     Number(fromClassId) !== Number(toClassId);
 
+  useEffect(() => {
+    if (promotionModal !== "selectAllScope" || !canQuery || academicYearId == null) {
+      setSelectAllScopeBreakdown(null);
+      setSelectAllScopeBreakdownLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSelectAllScopeBreakdownLoading(true);
+    getPromotionSelectableShiftBreakdown({
+      academicYearId,
+      fromSessionId: Number(fromSessionId),
+      fromClassId: Number(fromClassId),
+      toSessionId: Number(toSessionId),
+      toClassId: Number(toClassId),
+      affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
+      regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
+      programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+      shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
+      q: debouncedQ || undefined,
+    })
+      .then((d) => {
+        if (!cancelled) {
+          setSelectAllScopeBreakdown({
+            shiftColumns: d.shiftColumns,
+            rows: d.rows,
+            totalSelectable: d.totalSelectable,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSelectAllScopeBreakdown(null);
+      })
+      .finally(() => {
+        if (!cancelled) setSelectAllScopeBreakdownLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    promotionModal,
+    canQuery,
+    academicYearId,
+    fromSessionId,
+    fromClassId,
+    toSessionId,
+    toClassId,
+    affiliationIds,
+    regulationIds,
+    programCourseIds,
+    shiftIds,
+    debouncedQ,
+  ]);
+
+  useEffect(() => {
+    if (promotionModal !== "confirmPromotion" || !canQuery || academicYearId == null) {
+      setPromoteConfirmBreakdown(null);
+      setPromoteConfirmBreakdownLoading(false);
+      return;
+    }
+    const ids = [...selectedStudentIds];
+    if (ids.length === 0) {
+      setPromoteConfirmBreakdown(null);
+      setPromoteConfirmBreakdownLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPromoteConfirmBreakdownLoading(true);
+    getPromotionShiftBreakdownForStudentIds({
+      academicYearId,
+      fromSessionId: Number(fromSessionId),
+      fromClassId: Number(fromClassId),
+      toSessionId: Number(toSessionId),
+      toClassId: Number(toClassId),
+      affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
+      regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
+      programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+      shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
+      q: debouncedQ || undefined,
+      studentIds: ids,
+    })
+      .then((d) => {
+        if (!cancelled) {
+          setPromoteConfirmBreakdown({
+            shiftColumns: d.shiftColumns,
+            rows: d.rows,
+            totalSelectable: d.totalSelectable,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPromoteConfirmBreakdown(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPromoteConfirmBreakdownLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    promotionModal,
+    canQuery,
+    academicYearId,
+    fromSessionId,
+    fromClassId,
+    toSessionId,
+    toClassId,
+    affiliationIds,
+    regulationIds,
+    programCourseIds,
+    shiftIds,
+    debouncedQ,
+    selectedStudentIds,
+  ]);
+
   const fetchRoster = useCallback(async () => {
     if (!canQuery || !academicYearId) {
       setRoster(null);
@@ -973,53 +1212,20 @@ export function SemesterPromotionScreen() {
     toSessionId,
   ]);
 
-  const handleBulkPromote = useCallback(async () => {
-    if (!canQuery || !academicYearId || selectedStudentIds.size === 0) return;
-    setPromoteProgressOpen(true);
-    setCurrentProgressUpdate(null);
-    setProgressOperation(SEMESTER_PROMOTION_SOCKET_OP);
-    setPromoting(true);
-    try {
-      const result = await bulkPromoteSemesterStudents({
-        academicYearId,
-        fromSessionId: Number(fromSessionId),
-        fromClassId: Number(fromClassId),
-        toSessionId: Number(toSessionId),
-        toClassId: Number(toClassId),
-        affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
-        regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
-        programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
-        shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
-        studentIds: [...selectedStudentIds],
-      });
-      const promoteSummary =
-        result.updated > 0
-          ? `${result.created} new, ${result.updated} updated`
-          : `${result.created}`;
-      setCurrentProgressUpdate({
-        id: `semester_promo_${Date.now()}`,
-        userId,
-        type: "export_progress",
-        message:
-          result.skipped.length > 0
-            ? `Promoted ${promoteSummary} student(s); ${result.skipped.length} skipped.`
-            : `Promoted ${promoteSummary} student(s).`,
-        progress: 100,
-        status: "completed",
-        createdAt: new Date(),
-        meta: { operation: SEMESTER_PROMOTION_SOCKET_OP },
-      });
-      if (result.skipped.length > 0) {
-        toast.message(
-          `Promoted ${promoteSummary}; ${result.skipped.length} skipped (not eligible or already promoted).`,
-        );
-      } else {
-        toast.success(`Promoted ${promoteSummary} student(s).`);
+  const runSemesterPromotion = useCallback(
+    async (opts: { mode: "selected" } | { mode: "allEligible" }) => {
+      if (!canQuery || !academicYearId) return;
+      if (opts.mode === "selected" && selectedStudentIds.size === 0) return;
+      if (opts.mode === "allEligible") {
+        const n = bucketCounts?.eligible ?? 0;
+        if (n < 1) return;
       }
-      setSelectedStudentIds(new Set());
-      await fetchRoster();
+      setPromoteProgressOpen(true);
+      setCurrentProgressUpdate(null);
+      setProgressOperation(SEMESTER_PROMOTION_SOCKET_OP);
+      setPromoting(true);
       try {
-        const c = await getPromotionRosterBucketCounts({
+        const result = await bulkPromoteSemesterStudents({
           academicYearId,
           fromSessionId: Number(fromSessionId),
           fromClassId: Number(fromClassId),
@@ -1030,45 +1236,93 @@ export function SemesterPromotionScreen() {
           programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
           shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
           q: debouncedQ || undefined,
+          studentIds: opts.mode === "selected" ? [...selectedStudentIds] : [],
+          promoteAllEligibleInScope: opts.mode === "allEligible",
         });
-        setBucketCounts(c);
-      } catch (err) {
-        console.error(err);
+        const promoteSummary =
+          result.updated > 0
+            ? `${result.created} new, ${result.updated} updated`
+            : `${result.created}`;
+        setCurrentProgressUpdate({
+          id: `semester_promo_${Date.now()}`,
+          userId,
+          type: "export_progress",
+          message:
+            result.skipped.length > 0
+              ? `Promoted ${promoteSummary} student(s); ${result.skipped.length} skipped.`
+              : `Promoted ${promoteSummary} student(s).`,
+          progress: 100,
+          status: "completed",
+          createdAt: new Date(),
+          meta: { operation: SEMESTER_PROMOTION_SOCKET_OP },
+        });
+        if (result.skipped.length > 0) {
+          toast.message(
+            `Promoted ${promoteSummary}; ${result.skipped.length} skipped (not eligible or already promoted).`,
+          );
+        } else {
+          toast.success(`Promoted ${promoteSummary} student(s).`);
+        }
+        setSelectedStudentIds(new Set());
+        await fetchRoster();
+        try {
+          const c = await getPromotionRosterBucketCounts({
+            academicYearId,
+            fromSessionId: Number(fromSessionId),
+            fromClassId: Number(fromClassId),
+            toSessionId: Number(toSessionId),
+            toClassId: Number(toClassId),
+            affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
+            regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
+            programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+            shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
+            q: debouncedQ || undefined,
+          });
+          setBucketCounts(c);
+        } catch (err) {
+          console.error(err);
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error(e instanceof Error ? e.message : "Promotion failed.");
+        setCurrentProgressUpdate({
+          id: `semester_promo_err_${Date.now()}`,
+          userId,
+          type: "export_progress",
+          message: e instanceof Error ? e.message : "Promotion failed.",
+          progress: 100,
+          status: "error",
+          error: e instanceof Error ? e.message : "Promotion failed.",
+          createdAt: new Date(),
+          meta: { operation: SEMESTER_PROMOTION_SOCKET_OP },
+        });
+      } finally {
+        setPromoting(false);
+        setProgressOperation(null);
       }
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "Promotion failed.");
-      setCurrentProgressUpdate({
-        id: `semester_promo_err_${Date.now()}`,
-        userId,
-        type: "export_progress",
-        message: e instanceof Error ? e.message : "Promotion failed.",
-        progress: 100,
-        status: "error",
-        error: e instanceof Error ? e.message : "Promotion failed.",
-        createdAt: new Date(),
-        meta: { operation: SEMESTER_PROMOTION_SOCKET_OP },
-      });
-    } finally {
-      setPromoting(false);
-      setProgressOperation(null);
-    }
-  }, [
-    academicYearId,
-    affiliationIds,
-    canQuery,
-    debouncedQ,
-    fetchRoster,
-    fromClassId,
-    fromSessionId,
-    programCourseIds,
-    regulationIds,
-    selectedStudentIds,
-    shiftIds,
-    toClassId,
-    toSessionId,
-    userId,
-  ]);
+    },
+    [
+      academicYearId,
+      affiliationIds,
+      bucketCounts?.eligible,
+      canQuery,
+      debouncedQ,
+      fetchRoster,
+      fromClassId,
+      fromSessionId,
+      programCourseIds,
+      regulationIds,
+      selectedStudentIds,
+      shiftIds,
+      toClassId,
+      toSessionId,
+      userId,
+    ],
+  );
+
+  const handleBulkPromote = useCallback(async () => {
+    await runSemesterPromotion({ mode: "selected" });
+  }, [runSemesterPromotion]);
 
   const filteredProgramCourses = useMemo(() => {
     return programCourses.filter((pc) => {
@@ -1101,6 +1355,49 @@ export function SemesterPromotionScreen() {
     selectableOnPage.length > 0 &&
     selectableOnPage.every((r) => selectedStudentIds.has(r.studentId));
 
+  const selectableScopeEstimate = (bucketCounts?.eligible ?? 0) + (bucketCounts?.suspended ?? 0);
+
+  const applySelectAllMatchingScope = useCallback(async () => {
+    if (!canQuery || !academicYearId) return;
+    setPromotionModal("closed");
+    setLoadingSelectableIds(true);
+    try {
+      const ids = await getSelectablePromotionStudentIds({
+        academicYearId,
+        fromSessionId: Number(fromSessionId),
+        fromClassId: Number(fromClassId),
+        toSessionId: Number(toSessionId),
+        toClassId: Number(toClassId),
+        affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
+        regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
+        programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
+        shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
+        q: debouncedQ || undefined,
+      });
+      setSelectedStudentIds(new Set(ids));
+      toast.success(
+        `Selected ${ids.length.toLocaleString()} student${ids.length === 1 ? "" : "s"} for promotion.`,
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Could not load selection.");
+    } finally {
+      setLoadingSelectableIds(false);
+    }
+  }, [
+    academicYearId,
+    affiliationIds,
+    canQuery,
+    debouncedQ,
+    fromClassId,
+    fromSessionId,
+    programCourseIds,
+    regulationIds,
+    shiftIds,
+    toClassId,
+    toSessionId,
+  ]);
+
   const expandPanelTitle = useMemo(() => {
     if (toSemSeq > 0) return `Semester ${sequenceToRoman(toSemSeq)}`;
     return toClassObj?.name ?? "Target class";
@@ -1115,37 +1412,10 @@ export function SemesterPromotionScreen() {
     [sessions, toSessionId],
   );
 
-  const confirmBreakdown = useMemo(() => {
-    if (!roster)
-      return {
-        shiftColumns: [] as string[],
-        rows: [] as { programCourse: string; byCols: number[]; total: number }[],
-      };
-    const selectedRows = roster.content.filter((r) => selectedStudentIds.has(r.studentId));
-    const pcMap = new Map<string, Map<string, number>>();
-
-    for (const r of selectedRows) {
-      const pc = r.programCourseName ?? "—";
-      const sh = r.shiftName || "—";
-      if (!pcMap.has(pc)) pcMap.set(pc, new Map());
-      const inner = pcMap.get(pc)!;
-      inner.set(sh, (inner.get(sh) ?? 0) + 1);
-    }
-
-    const shiftColumns =
-      shifts.length > 0
-        ? shifts.map((s) => s.name)
-        : [...new Set(selectedRows.map((r) => r.shiftName || "—"))].sort();
-
-    const rows = [...pcMap.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([pc, inner]) => {
-        const byCols = shiftColumns.map((sh) => inner.get(sh) ?? 0);
-        return { programCourse: pc, byCols, total: byCols.reduce((s, n) => s + n, 0) };
-      });
-
-    return { shiftColumns, rows };
-  }, [roster, selectedStudentIds, shifts]);
+  const promoteBreakdownView: ShiftBreakdownTableModel = promoteConfirmBreakdown ?? {
+    shiftColumns: [],
+    rows: [],
+  };
 
   const exportCsv = () => {
     if (!roster?.content.length) {
@@ -1536,24 +1806,40 @@ export function SemesterPromotionScreen() {
                 </div>
 
                 <div className="sp-table-container">
-                  <div className="border-b border-[var(--sp-border)] bg-[var(--sp-surface2)] px-3 py-2 text-[11.5px] text-[var(--sp-muted)]">
-                    {rosterLoading ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Loading roster…
-                      </span>
-                    ) : (
-                      <span className="tabular-nums">
-                        {roster && roster.totalElements > 0
-                          ? `${roster.totalElements.toLocaleString()} record${roster.totalElements === 1 ? "" : "s"} in this view`
-                          : "—"}
-                      </span>
-                    )}
+                  <div className="flex flex-col gap-2 border-b border-[var(--sp-border)] bg-[var(--sp-surface2)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <div className="min-w-0 text-[11.5px] text-[var(--sp-muted)]">
+                      {rosterLoading ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Loading roster…
+                        </span>
+                      ) : (
+                        <span className="tabular-nums">
+                          {roster && roster.totalElements > 0
+                            ? `${roster.totalElements.toLocaleString()} record${roster.totalElements === 1 ? "" : "s"} in this view`
+                            : "—"}
+                        </span>
+                      )}
+                    </div>
+                    {!rosterLoading && roster && roster.totalElements > 0 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          bucketCountsLoading || loadingSelectableIds || selectableScopeEstimate < 1
+                        }
+                        className="h-8 shrink-0 gap-1.5 border-[var(--sp-border)] font-sans text-[11.5px] font-semibold text-[var(--sp-navy)] hover:bg-[var(--sp-surface)]"
+                        onClick={() => setPromotionModal("selectAllScope")}
+                      >
+                        {loadingSelectableIds ? "Loading…" : "Select all for promotion (all pages)"}
+                      </Button>
+                    ) : null}
                   </div>
                   <div className="relative max-h-[min(520px,60vh)] touch-pan-x overflow-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
                     <div className="w-full min-w-[1080px]">
                       <div className="sp-t-header sticky top-0 z-10 shadow-sm">
                         <div
-                          className="flex items-center !pl-0"
+                          className="flex items-center"
                           onClick={(e) => e.stopPropagation()}
                           onKeyDown={(e) => e.stopPropagation()}
                         >
@@ -1576,8 +1862,8 @@ export function SemesterPromotionScreen() {
                         <div className="leading-snug">Student / Reg No.</div>
                         <div className="leading-snug">UId / Roll Number</div>
                         <div>Affiliation</div>
-                        <div>Regulation</div>
-                        <div>Program course</div>
+                        <div className="leading-snug">Regulation</div>
+                        <div className="leading-snug">Program course</div>
                         <div>Shift</div>
                         <div className="leading-snug">Current → Next</div>
                         <div className="text-[var(--sp-navy)]">Status</div>
@@ -1621,7 +1907,7 @@ export function SemesterPromotionScreen() {
                                 }}
                               >
                                 <div
-                                  className="sp-t-cell flex items-center !pl-0"
+                                  className="sp-t-cell flex items-center"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {r.bucket === "eligible" || r.bucket === "suspended" ? (
@@ -1650,7 +1936,7 @@ export function SemesterPromotionScreen() {
                                   <div className="font-sans font-bold leading-tight text-[var(--sp-navy)]">
                                     {r.studentName}
                                   </div>
-                                  <div className="mt-0.5 font-mono text-[10.5px] text-[var(--sp-muted)]">
+                                  <div className="mt-0.5 font-mono text-[10.5px] leading-snug text-[var(--sp-muted)]">
                                     {r.registrationNumber ?? "—"}
                                   </div>
                                 </div>
@@ -1660,22 +1946,13 @@ export function SemesterPromotionScreen() {
                                     {r.rollNumber ?? "—"}
                                   </div>
                                 </div>
-                                <div
-                                  className="sp-t-cell min-w-0 truncate text-[13px]"
-                                  title={r.affiliationName ?? ""}
-                                >
+                                <div className="sp-t-cell min-w-0 whitespace-normal break-words text-[13px]">
                                   {r.affiliationName ?? "—"}
                                 </div>
-                                <div
-                                  className="sp-t-cell min-w-0 truncate text-[13px]"
-                                  title={r.regulationName ?? ""}
-                                >
+                                <div className="sp-t-cell min-w-0 whitespace-normal break-words text-[13px]">
                                   {r.regulationName ?? "—"}
                                 </div>
-                                <div
-                                  className="sp-t-cell min-w-0 truncate"
-                                  title={r.programCourseName ?? ""}
-                                >
+                                <div className="sp-t-cell min-w-0 whitespace-normal break-words text-[13px]">
                                   {r.programCourseName ?? "—"}
                                 </div>
                                 <div className="sp-t-cell">{r.shiftName}</div>
@@ -1686,10 +1963,10 @@ export function SemesterPromotionScreen() {
                                   </span>
                                   <SemesterBox seq={toSemSeq} size={26} />
                                 </div>
-                                <div className="sp-t-cell flex min-w-0 flex-wrap items-center justify-start gap-1.5">
+                                <div className="sp-t-cell flex min-w-0 w-full flex-wrap items-center justify-start gap-1.5">
                                   <StatusPill bucket={r.bucket} />
                                 </div>
-                                <div className="sp-t-cell flex justify-center !pr-0">
+                                <div className="sp-t-cell flex justify-center">
                                   <ChevronDown
                                     className={cn(
                                       "h-[13px] w-[13px] shrink-0 text-[var(--sp-ink2)] opacity-50 transition-transform duration-200",
@@ -1728,6 +2005,23 @@ export function SemesterPromotionScreen() {
                         }}
                       />
                       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--sp-border)] px-4 py-3">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={
+                            promoting ||
+                            rosterLoading ||
+                            bucketCountsLoading ||
+                            (bucketCounts?.eligible ?? 0) < 1
+                          }
+                          className="bg-[var(--sp-navy)] font-sans text-[12px] font-semibold text-white hover:opacity-95"
+                          onClick={() => setConfirmPromoteAllOpen(true)}
+                        >
+                          Promote all eligible
+                          {bucketCounts != null && !bucketCountsLoading
+                            ? ` (${bucketCounts.eligible.toLocaleString()})`
+                            : ""}
+                        </Button>
                         <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
                           <Download className="h-4 w-4" />
                           Export CSV
@@ -1757,7 +2051,7 @@ export function SemesterPromotionScreen() {
         )}
       </div>
 
-      {selectedStudentIds.size > 0 && !confirmDialogOpen ? (
+      {selectedStudentIds.size > 0 && !promotionModalOpen && !confirmPromoteAllOpen ? (
         <div className="sp-sel-bar">
           <div className="flex items-center gap-2.5">
             <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--sp-amber-bd)]" />
@@ -1781,7 +2075,7 @@ export function SemesterPromotionScreen() {
               size="sm"
               disabled={promoting || rosterLoading}
               className="bg-[var(--sp-green)] font-sans text-[12px] font-bold text-white hover:bg-[var(--sp-green-dk)]"
-              onClick={() => setConfirmDialogOpen(true)}
+              onClick={() => setPromotionModal("confirmPromotion")}
             >
               {promoting ? "Promoting…" : "Promote selected →"}
             </Button>
@@ -1789,10 +2083,57 @@ export function SemesterPromotionScreen() {
         </div>
       ) : null}
 
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent className="max-w-2xl">
+      <AlertDialog open={confirmPromoteAllOpen} onOpenChange={setConfirmPromoteAllOpen}>
+        <AlertDialogContent className="max-w-lg bg-background text-foreground">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Semester Promotion</AlertDialogTitle>
+            <AlertDialogTitle>Promote all eligible students?</AlertDialogTitle>
+            <AlertDialogDescription className="text-left text-sm leading-relaxed">
+              This will promote every student who is <strong>eligible</strong> for the target
+              semester under your current filters and search — including rows that are not on this
+              page. Suspended accounts are not included unless you select them manually per row.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmPromoteAllOpen(false)}
+              disabled={promoting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={promoting || rosterLoading || (bucketCounts?.eligible ?? 0) < 1}
+              className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+              onClick={() => {
+                setConfirmPromoteAllOpen(false);
+                void runSemesterPromotion({ mode: "allEligible" });
+              }}
+            >
+              {promoting
+                ? "Promoting…"
+                : `Promote ${(bucketCounts?.eligible ?? 0).toLocaleString()} eligible →`}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={promotionModal !== "closed"}
+        onOpenChange={(open) => {
+          if (!open) setPromotionModal("closed");
+        }}
+      >
+        <AlertDialogContent className="flex max-h-[min(92vh,56rem)] max-w-3xl flex-col gap-0 overflow-hidden bg-background p-0 text-foreground shadow-lg">
+          <AlertDialogHeader className="shrink-0 space-y-0 px-6 pt-6 text-left">
+            <AlertDialogTitle>
+              {promotionModal === "selectAllScope"
+                ? "Select all students for promotion?"
+                : "Confirm Semester Promotion"}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-2">
             <AlertDialogDescription asChild>
               <div className="space-y-4">
                 <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-muted/40 px-4 py-3">
@@ -1821,72 +2162,36 @@ export function SemesterPromotionScreen() {
                     <div className="text-xs text-muted-foreground">{toSessionObj?.name ?? "—"}</div>
                   </div>
                   <div className="ml-auto rounded-md bg-primary/10 px-2.5 py-1 text-xs font-bold tabular-nums text-primary">
-                    {selectedStudentIds.size} student{selectedStudentIds.size === 1 ? "" : "s"}
+                    {promotionModal === "selectAllScope"
+                      ? (selectAllScopeBreakdown?.totalSelectable ?? selectableScopeEstimate)
+                      : selectedStudentIds.size}{" "}
+                    student
+                    {(promotionModal === "selectAllScope"
+                      ? (selectAllScopeBreakdown?.totalSelectable ?? selectableScopeEstimate)
+                      : selectedStudentIds.size) === 1
+                      ? ""
+                      : "s"}
                   </div>
                 </div>
 
-                {confirmBreakdown.rows.length > 0 && (
-                  <div className="overflow-hidden rounded-lg border border-[hsl(var(--border))]">
-                    <div className="max-h-[260px] overflow-auto">
-                      <table className="w-full text-left text-[13px]">
-                        <thead className="sticky top-0 bg-muted text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          <tr>
-                            <th className="whitespace-nowrap px-3 py-2">Sr.</th>
-                            <th className="whitespace-nowrap px-3 py-2">Program Course</th>
-                            {confirmBreakdown.shiftColumns.map((sh) => (
-                              <th key={sh} className="whitespace-nowrap px-3 py-2 text-center">
-                                {sh}
-                              </th>
-                            ))}
-                            <th className="whitespace-nowrap px-3 py-2 text-center">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {confirmBreakdown.rows.map((row, idx) => (
-                            <tr
-                              key={row.programCourse}
-                              className={cn(idx % 2 === 0 ? "bg-background" : "bg-muted/30")}
-                            >
-                              <td className="px-3 py-1.5 tabular-nums text-muted-foreground">
-                                {idx + 1}
-                              </td>
-                              <td
-                                className="max-w-[200px] truncate px-3 py-1.5 font-medium"
-                                title={row.programCourse}
-                              >
-                                {row.programCourse}
-                              </td>
-                              {row.byCols.map((n, ci) => (
-                                <td
-                                  key={confirmBreakdown.shiftColumns[ci]}
-                                  className="px-3 py-1.5 text-center tabular-nums"
-                                >
-                                  {n || "–"}
-                                </td>
-                              ))}
-                              <td className="px-3 py-1.5 text-center font-semibold tabular-nums">
-                                {row.total}
-                              </td>
-                            </tr>
-                          ))}
-                          <tr className="border-t bg-muted font-semibold">
-                            <td className="px-3 py-1.5" />
-                            <td className="px-3 py-1.5">Grand Total</td>
-                            {confirmBreakdown.shiftColumns.map((sh, ci) => (
-                              <td key={sh} className="px-3 py-1.5 text-center tabular-nums">
-                                {confirmBreakdown.rows.reduce((s, r) => s + r.byCols[ci]!, 0) ||
-                                  "–"}
-                              </td>
-                            ))}
-                            <td className="px-3 py-1.5 text-center tabular-nums">
-                              {confirmBreakdown.rows.reduce((s, r) => s + r.total, 0)}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                {promotionModal === "selectAllScope" ? (
+                  <div className="space-y-2 text-left text-sm leading-relaxed text-muted-foreground">
+                    <p>
+                      This will select every <strong className="text-foreground">eligible</strong>{" "}
+                      and <strong className="text-foreground">suspended</strong> student that
+                      matches your current filters and search — including rows that are{" "}
+                      <strong className="text-foreground">not on this page</strong>.
+                    </p>
+                    <p className="tabular-nums">
+                      About{" "}
+                      <strong className="text-foreground">
+                        {selectableScopeEstimate.toLocaleString()}
+                      </strong>{" "}
+                      student{selectableScopeEstimate === 1 ? "" : "s"} (eligible + suspended from
+                      totals). The exact list is loaded when you confirm.
+                    </p>
                   </div>
-                )}
+                ) : null}
 
                 {confirmPreChecksLoading ? (
                   <div className="flex items-start gap-2.5 rounded-lg border border-[hsl(var(--border))] bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -1894,7 +2199,10 @@ export function SemesterPromotionScreen() {
                     <span>Checking fee structures and course design…</span>
                   </div>
                 ) : (
-                  <>
+                  <div className="space-y-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Fee &amp; course design (target semester)
+                    </div>
                     <div
                       className={cn(
                         "flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm",
@@ -1935,47 +2243,97 @@ export function SemesterPromotionScreen() {
                         <>
                           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                           <span>
-                            <strong>{courseDesignCheck.count}</strong> paper
-                            {courseDesignCheck.count === 1 ? "" : "s"} in course design for the
-                            target semester (academic year and class).
+                            Course design for the selected target semester exists. The linked
+                            subjects will be carried forward for all promoted students.
                           </span>
                         </>
                       ) : (
                         <>
                           <Ban className="mt-0.5 h-4 w-4 shrink-0" />
                           <span>
-                            No course design (papers) found for the target semester. Confirm
-                            curriculum is configured before promoting; otherwise subject selection
-                            and related flows may be incomplete even when fees carry forward.
+                            Course design for the selected target semester does not exist. Subject
+                            linking and carry-forward cannot proceed until the course design is
+                            created.
                           </span>
                         </>
                       )}
                     </div>
-                  </>
+                  </div>
+                )}
+
+                {(promotionModal === "selectAllScope"
+                  ? selectAllScopeBreakdownLoading ||
+                    (selectAllScopeBreakdown != null && selectAllScopeBreakdown.rows.length > 0)
+                  : promoteConfirmBreakdownLoading || promoteBreakdownView.rows.length > 0) && (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Breakdown by program course and shift
+                    </div>
+                    <PromotionShiftBreakdownTable
+                      breakdown={
+                        promotionModal === "selectAllScope"
+                          ? (selectAllScopeBreakdown ?? { shiftColumns: [], rows: [] })
+                          : promoteBreakdownView
+                      }
+                      loading={
+                        promotionModal === "selectAllScope"
+                          ? selectAllScopeBreakdownLoading
+                          : promoteConfirmBreakdownLoading
+                      }
+                      maxHeightClass={
+                        promotionModal === "selectAllScope" ? "max-h-[220px]" : "max-h-[260px]"
+                      }
+                    />
+                    {promotionModal === "selectAllScope" &&
+                    selectAllScopeBreakdown != null &&
+                    selectAllScopeBreakdown.totalSelectable > 0 &&
+                    selectAllScopeBreakdown.totalSelectable !== selectableScopeEstimate ? (
+                      <p className="text-xs tabular-nums text-muted-foreground">
+                        Server count:{" "}
+                        <strong className="text-foreground">
+                          {selectAllScopeBreakdown.totalSelectable.toLocaleString()}
+                        </strong>{" "}
+                        selectable (totals above are cached; use this breakdown as the live check).
+                      </p>
+                    ) : null}
+                  </div>
                 )}
               </div>
             </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
+          </div>
+          <AlertDialogFooter className="shrink-0 gap-2 border-t border-[hsl(var(--border))] bg-background px-6 py-4 sm:gap-3">
             <Button
+              type="button"
               variant="outline"
-              onClick={() => setConfirmDialogOpen(false)}
-              disabled={promoting}
+              onClick={() => setPromotionModal("closed")}
+              disabled={promotionModal === "selectAllScope" ? loadingSelectableIds : promoting}
             >
               Cancel
             </Button>
-            <Button
-              disabled={promoting || rosterLoading}
-              className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
-              onClick={() => {
-                setConfirmDialogOpen(false);
-                void handleBulkPromote();
-              }}
-            >
-              {promoting
-                ? "Promoting…"
-                : `Promote ${selectedStudentIds.size} student${selectedStudentIds.size === 1 ? "" : "s"} →`}
-            </Button>
+            {promotionModal === "selectAllScope" ? (
+              <Button
+                type="button"
+                disabled={loadingSelectableIds || selectableScopeEstimate < 1}
+                className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+                onClick={() => void applySelectAllMatchingScope()}
+              >
+                {loadingSelectableIds ? "Loading…" : "Confirm selection"}
+              </Button>
+            ) : promotionModal === "confirmPromotion" ? (
+              <Button
+                type="button"
+                disabled={promoting || rosterLoading}
+                className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+                onClick={() => {
+                  setPromotionModal("closed");
+                  void handleBulkPromote();
+                }}
+              >
+                {promoting
+                  ? "Promoting…"
+                  : `Promote ${selectedStudentIds.size} student${selectedStudentIds.size === 1 ? "" : "s"} →`}
+              </Button>
+            ) : null}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

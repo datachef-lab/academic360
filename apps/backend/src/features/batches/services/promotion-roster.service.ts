@@ -33,6 +33,9 @@ import { feeStructureModel } from "@repo/db/schemas/models/fees";
 import { paperModel } from "@repo/db/schemas";
 import { ensureDefaultFeeStudentMappingsForFeeStructure } from "@/features/fees/services/fee-structure.service.js";
 
+/** Must match `SEMESTER_PROMOTION_SOCKET_OP` in `apps/main-console/src/services/promotion-roster.api.ts`. */
+const SEMESTER_PROMOTION_SOCKET_OP = "semester_promotion";
+
 export type PromotionRosterBucket =
   | "all"
   | "eligible"
@@ -525,8 +528,223 @@ export async function getPromotionRosterPage(
   };
 }
 
-/** Matches `meta.operation` on socket progress updates for semester bulk promote. */
-export const SEMESTER_PROMOTION_SOCKET_OP = "semester_promotion";
+/**
+ * All student IDs that can be checkbox-selected for promotion: **eligible** or **suspended**,
+ * matching the same roster scope as the table (filters + search). Not limited to the current page.
+ */
+export async function getSelectablePromotionStudentIds(
+  params: PromotionRosterScopeParams,
+): Promise<number[]> {
+  const baseParams: PromotionRosterParams = {
+    ...params,
+    bucket: "all",
+    sortBy: "uid",
+    sortDir: "asc",
+    page: 1,
+    pageSize: 20,
+  };
+  const base = baseFilters(baseParams)!;
+  const policy = await precomputeBuilderPolicy(params.toClassId);
+  const eligiblePred = bucketPredicate("eligible", policy);
+  const suspendedPred = bucketPredicate("suspended", policy);
+  if (!eligiblePred || !suspendedPred) {
+    return [];
+  }
+  const whereSelectable = and(base, or(eligiblePred, suspendedPred));
+
+  const rows = await db
+    .select({ studentId: studentModel.id })
+    .from(pFrom)
+    .innerJoin(studentModel, eq(studentModel.id, pFrom.studentId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .innerJoin(
+      programCourseModel,
+      eq(programCourseModel.id, pFrom.programCourseId),
+    )
+    .innerJoin(shiftModel, eq(shiftModel.id, pFrom.shiftId))
+    .innerJoin(sessionModel, eq(sessionModel.id, pFrom.sessionId))
+    .innerJoin(classFrom, eq(classFrom.id, pFrom.classId))
+    .innerJoin(classTo, eq(classTo.id, params.toClassId))
+    .leftJoin(
+      pTo,
+      and(
+        eq(pTo.studentId, pFrom.studentId),
+        eq(pTo.sessionId, params.toSessionId),
+        eq(pTo.classId, params.toClassId),
+      ),
+    )
+    .where(whereSelectable);
+
+  return [
+    ...new Set(
+      rows.map((r) => r.studentId).filter((id): id is number => id != null),
+    ),
+  ];
+}
+
+export type PromotionSelectableShiftBreakdown = {
+  shiftColumns: string[];
+  rows: { programCourse: string; byCols: number[]; total: number }[];
+  totalSelectable: number;
+};
+
+function pivotShiftBreakdown(
+  aggRows: {
+    programCourse: string | null;
+    shiftName: string | null;
+    cnt: number;
+  }[],
+): PromotionSelectableShiftBreakdown {
+  const shiftSet = new Set<string>();
+  for (const r of aggRows) {
+    shiftSet.add(r.shiftName?.trim() ? String(r.shiftName) : "—");
+  }
+  const shiftColumns = [...shiftSet].sort((a, b) => a.localeCompare(b));
+
+  const pcMap = new Map<string, Map<string, number>>();
+  for (const r of aggRows) {
+    const pc = r.programCourse?.trim() ? String(r.programCourse) : "—";
+    const sh = r.shiftName?.trim() ? String(r.shiftName) : "—";
+    if (!pcMap.has(pc)) pcMap.set(pc, new Map());
+    const inner = pcMap.get(pc)!;
+    inner.set(sh, (inner.get(sh) ?? 0) + Number(r.cnt ?? 0));
+  }
+
+  const rows = [...pcMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([pc, inner]) => {
+      const byCols = shiftColumns.map((sh) => inner.get(sh) ?? 0);
+      return {
+        programCourse: pc,
+        byCols,
+        total: byCols.reduce((s, n) => s + n, 0),
+      };
+    });
+
+  const totalSelectable = rows.reduce((s, r) => s + r.total, 0);
+  return { shiftColumns, rows, totalSelectable };
+}
+
+/** Program × shift counts for every eligible + suspended row in the roster scope (all pages). */
+export async function getPromotionSelectableShiftBreakdown(
+  params: PromotionRosterScopeParams,
+): Promise<PromotionSelectableShiftBreakdown> {
+  const baseParams: PromotionRosterParams = {
+    ...params,
+    bucket: "all",
+    sortBy: "uid",
+    sortDir: "asc",
+    page: 1,
+    pageSize: 20,
+  };
+  const base = baseFilters(baseParams)!;
+  const policy = await precomputeBuilderPolicy(params.toClassId);
+  const eligiblePred = bucketPredicate("eligible", policy);
+  const suspendedPred = bucketPredicate("suspended", policy);
+  if (!eligiblePred || !suspendedPred) {
+    return { shiftColumns: [], rows: [], totalSelectable: 0 };
+  }
+  const whereSelectable = and(base, or(eligiblePred, suspendedPred));
+
+  const aggRows = await db
+    .select({
+      programCourse: programCourseModel.name,
+      shiftName: shiftModel.name,
+      cnt: sql<number>`cast(count(*) as int)`,
+    })
+    .from(pFrom)
+    .innerJoin(studentModel, eq(studentModel.id, pFrom.studentId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .innerJoin(
+      programCourseModel,
+      eq(programCourseModel.id, pFrom.programCourseId),
+    )
+    .innerJoin(shiftModel, eq(shiftModel.id, pFrom.shiftId))
+    .innerJoin(sessionModel, eq(sessionModel.id, pFrom.sessionId))
+    .innerJoin(classFrom, eq(classFrom.id, pFrom.classId))
+    .innerJoin(classTo, eq(classTo.id, params.toClassId))
+    .leftJoin(
+      pTo,
+      and(
+        eq(pTo.studentId, pFrom.studentId),
+        eq(pTo.sessionId, params.toSessionId),
+        eq(pTo.classId, params.toClassId),
+      ),
+    )
+    .where(whereSelectable)
+    .groupBy(
+      programCourseModel.id,
+      programCourseModel.name,
+      shiftModel.id,
+      shiftModel.name,
+    );
+
+  return pivotShiftBreakdown(aggRows);
+}
+
+/** Same pivot as {@link getPromotionSelectableShiftBreakdown} but restricted to `studentIds` (e.g. current selection). */
+export async function getPromotionShiftBreakdownForStudentIds(
+  params: PromotionRosterScopeParams & { studentIds: number[] },
+): Promise<PromotionSelectableShiftBreakdown> {
+  if (params.studentIds.length === 0) {
+    return { shiftColumns: [], rows: [], totalSelectable: 0 };
+  }
+  const baseParams: PromotionRosterParams = {
+    ...params,
+    bucket: "all",
+    sortBy: "uid",
+    sortDir: "asc",
+    page: 1,
+    pageSize: 20,
+  };
+  const base = baseFilters(baseParams)!;
+  const policy = await precomputeBuilderPolicy(params.toClassId);
+  const eligiblePred = bucketPredicate("eligible", policy);
+  const suspendedPred = bucketPredicate("suspended", policy);
+  if (!eligiblePred || !suspendedPred) {
+    return { shiftColumns: [], rows: [], totalSelectable: 0 };
+  }
+  const whereSelectable = and(
+    base,
+    or(eligiblePred, suspendedPred),
+    inArray(studentModel.id, params.studentIds),
+  );
+
+  const aggRows = await db
+    .select({
+      programCourse: programCourseModel.name,
+      shiftName: shiftModel.name,
+      cnt: sql<number>`cast(count(*) as int)`,
+    })
+    .from(pFrom)
+    .innerJoin(studentModel, eq(studentModel.id, pFrom.studentId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .innerJoin(
+      programCourseModel,
+      eq(programCourseModel.id, pFrom.programCourseId),
+    )
+    .innerJoin(shiftModel, eq(shiftModel.id, pFrom.shiftId))
+    .innerJoin(sessionModel, eq(sessionModel.id, pFrom.sessionId))
+    .innerJoin(classFrom, eq(classFrom.id, pFrom.classId))
+    .innerJoin(classTo, eq(classTo.id, params.toClassId))
+    .leftJoin(
+      pTo,
+      and(
+        eq(pTo.studentId, pFrom.studentId),
+        eq(pTo.sessionId, params.toSessionId),
+        eq(pTo.classId, params.toClassId),
+      ),
+    )
+    .where(whereSelectable)
+    .groupBy(
+      programCourseModel.id,
+      programCourseModel.name,
+      shiftModel.id,
+      shiftModel.name,
+    );
+
+  return pivotShiftBreakdown(aggRows);
+}
 
 export type BulkSemesterPromoteParams = Pick<
   PromotionRosterParams,
@@ -539,7 +757,15 @@ export type BulkSemesterPromoteParams = Pick<
   | "regulationTypeIds"
   | "programCourseIds"
   | "shiftIds"
-> & { studentIds: number[] };
+  | "q"
+> & {
+  studentIds: number[];
+  /**
+   * When true, promotes every **eligible** student in the roster scope (same filters + search as
+   * the table). Ignores `studentIds`. Suspended rows still require explicit selection.
+   */
+  promoteAllEligibleInScope?: boolean;
+};
 
 export type BulkSemesterPromoteSkipped = { studentId: number; reason: string };
 
@@ -582,21 +808,19 @@ export async function bulkPromoteSemesterStudents(
   options?: { progressUserId?: string },
 ): Promise<BulkSemesterPromoteResult> {
   const progressUserId = options?.progressUserId;
-  const uniqueIds = [
-    ...new Set(params.studentIds.filter((n) => Number.isFinite(n) && n > 0)),
-  ];
+  const promoteAll = params.promoteAllEligibleInScope === true;
 
-  if (uniqueIds.length === 0) {
+  const uniqueIds = promoteAll
+    ? []
+    : [
+        ...new Set(
+          params.studentIds.filter((n) => Number.isFinite(n) && n > 0),
+        ),
+      ];
+
+  if (!promoteAll && uniqueIds.length === 0) {
     return { created: 0, updated: 0, skipped: [] };
   }
-
-  emitSemesterPromotionProgress(
-    progressUserId,
-    "Starting semester promotion…",
-    2,
-    "started",
-    { total: uniqueIds.length },
-  );
 
   const baseParams: PromotionRosterParams = {
     academicYearId: params.academicYearId,
@@ -613,7 +837,7 @@ export async function bulkPromoteSemesterStudents(
     sortDir: "asc",
     page: 1,
     pageSize: 20,
-    q: undefined,
+    q: params.q?.trim() || undefined,
   };
   const base = baseFilters(baseParams)!;
 
@@ -640,14 +864,20 @@ export async function bulkPromoteSemesterStudents(
     return {
       created: 0,
       updated: 0,
-      skipped: uniqueIds.map((studentId) => ({
-        studentId,
-        reason: "Target session not found for this academic year.",
-      })),
+      skipped: promoteAll
+        ? []
+        : uniqueIds.map((studentId) => ({
+            studentId,
+            reason: "Target session not found for this academic year.",
+          })),
     };
   }
 
-  const whereBulk = and(base, inArray(studentModel.id, uniqueIds));
+  const eligibleBucket = bucketPredicate("eligible", policy);
+  const whereCandidates =
+    promoteAll && eligibleBucket
+      ? and(base, eligibleBucket)
+      : and(base, inArray(studentModel.id, uniqueIds));
 
   const candidateRows = await db
     .select({
@@ -690,7 +920,21 @@ export async function bulkPromoteSemesterStudents(
         eq(pTo.classId, params.toClassId),
       ),
     )
-    .where(whereBulk);
+    .where(whereCandidates);
+
+  const iterationIds = promoteAll
+    ? [...new Set(candidateRows.map((r) => r.studentId))]
+    : uniqueIds;
+
+  emitSemesterPromotionProgress(
+    progressUserId,
+    promoteAll
+      ? `Starting promotion for ${iterationIds.length} eligible student(s) matching current filters…`
+      : "Starting semester promotion…",
+    2,
+    "started",
+    { total: iterationIds.length },
+  );
 
   emitSemesterPromotionProgress(
     progressUserId,
@@ -705,7 +949,7 @@ export async function bulkPromoteSemesterStudents(
   const skipped: BulkSemesterPromoteSkipped[] = [];
   const toInsert: (typeof candidateRows)[number][] = [];
 
-  for (const sid of uniqueIds) {
+  for (const sid of iterationIds) {
     const row = byStudent.get(sid);
     if (!row) {
       skipped.push({

@@ -7,6 +7,9 @@ import {
   checkFeeStructuresForTarget,
   getPromotionRosterBucketCounts,
   getPromotionRosterPage,
+  getPromotionSelectableShiftBreakdown,
+  getPromotionShiftBreakdownForStudentIds,
+  getSelectablePromotionStudentIds,
   type PromotionRosterBucket,
   type PromotionRosterSort,
 } from "../services/promotion-roster.service.js";
@@ -177,7 +180,66 @@ export async function getPromotionRosterBucketCountsHandler(
   }
 }
 
-export async function postBulkSemesterPromoteHandler(
+export async function getPromotionSelectableShiftBreakdownHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const fromSessionId = parseIntQ(q.fromSessionId, NaN);
+    const fromClassId = parseIntQ(q.fromClassId, NaN);
+    const toSessionId = parseIntQ(q.toSessionId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const data = await getPromotionSelectableShiftBreakdown({
+      academicYearId,
+      fromSessionId,
+      fromClassId,
+      toSessionId,
+      toClassId,
+      affiliationIds: optPositiveIntArray(q.affiliationId),
+      regulationTypeIds: optPositiveIntArray(q.regulationTypeId),
+      programCourseIds: optPositiveIntArray(q.programCourseId),
+      shiftIds: optPositiveIntArray(q.shiftId),
+      q: typeof q.q === "string" ? q.q : undefined,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          data,
+          "Selectable promotion shift breakdown",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function postPromotionShiftBreakdownForSelectionHandler(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -217,7 +279,7 @@ export async function postBulkSemesterPromoteHandler(
             400,
             "BAD_REQUEST",
             null,
-            "studentIds must be a non-empty array of student ids",
+            "studentIds must be a non-empty array",
           ),
         );
       return;
@@ -241,6 +303,169 @@ export async function postBulkSemesterPromoteHandler(
       return;
     }
 
+    const q = typeof body.q === "string" ? body.q : undefined;
+
+    const data = await getPromotionShiftBreakdownForStudentIds({
+      academicYearId,
+      fromSessionId,
+      fromClassId,
+      toSessionId,
+      toClassId,
+      affiliationIds: optPositiveIntArray(body.affiliationId),
+      regulationTypeIds: optPositiveIntArray(body.regulationTypeId),
+      programCourseIds: optPositiveIntArray(body.programCourseId),
+      shiftIds: optPositiveIntArray(body.shiftId),
+      q,
+      studentIds,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          data,
+          "Promotion shift breakdown for selection",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function getSelectablePromotionStudentIdsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const fromSessionId = parseIntQ(q.fromSessionId, NaN);
+    const fromClassId = parseIntQ(q.fromClassId, NaN);
+    const toSessionId = parseIntQ(q.toSessionId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const studentIds = await getSelectablePromotionStudentIds({
+      academicYearId,
+      fromSessionId,
+      fromClassId,
+      toSessionId,
+      toClassId,
+      affiliationIds: optPositiveIntArray(q.affiliationId),
+      regulationTypeIds: optPositiveIntArray(q.regulationTypeId),
+      programCourseIds: optPositiveIntArray(q.programCourseId),
+      shiftIds: optPositiveIntArray(q.shiftId),
+      q: typeof q.q === "string" ? q.q : undefined,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { studentIds },
+          "Selectable promotion student ids",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function postBulkSemesterPromoteHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const academicYearId = parseIntQ(body.academicYearId, NaN);
+    const fromSessionId = parseIntQ(body.fromSessionId, NaN);
+    const fromClassId = parseIntQ(body.fromClassId, NaN);
+    const toSessionId = parseIntQ(body.toSessionId, NaN);
+    const toClassId = parseIntQ(body.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const promoteAllEligibleInScope = body.promoteAllEligibleInScope === true;
+    const q = typeof body.q === "string" ? body.q : undefined;
+
+    const rawIds = body.studentIds;
+    let studentIds: number[] = [];
+
+    if (promoteAllEligibleInScope) {
+      studentIds = [];
+    } else {
+      if (!Array.isArray(rawIds) || rawIds.length === 0) {
+        res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "BAD_REQUEST",
+              null,
+              "studentIds must be a non-empty array of student ids (or set promoteAllEligibleInScope to true)",
+            ),
+          );
+        return;
+      }
+
+      studentIds = rawIds
+        .map((x) => parseInt(String(x), 10))
+        .filter((n) => Number.isFinite(n) && n > 0);
+
+      if (studentIds.length === 0) {
+        res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "BAD_REQUEST",
+              null,
+              "studentIds must contain at least one valid positive integer",
+            ),
+          );
+        return;
+      }
+    }
+
     const progressUserId =
       (req.user as User | undefined)?.id != null
         ? String((req.user as User).id)
@@ -257,7 +482,9 @@ export async function postBulkSemesterPromoteHandler(
         regulationTypeIds: optPositiveIntArray(body.regulationTypeId),
         programCourseIds: optPositiveIntArray(body.programCourseId),
         shiftIds: optPositiveIntArray(body.shiftId),
+        q,
         studentIds,
+        promoteAllEligibleInScope,
       },
       { progressUserId },
     );

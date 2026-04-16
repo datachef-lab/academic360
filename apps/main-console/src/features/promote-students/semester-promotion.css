@@ -1,4 +1,5 @@
 /* Scoped semester promotion UI — tokens + layout from prototype */
+/* Avoid putting `.sp-scope` on portaled modals (e.g. Radix Dialog): it sets background:transparent and max-width:none and can hide or break the panel. */
 .sp-scope {
   --sp-ink: #0e1c36;
   --sp-ink2: #2d3f60;
@@ -293,6 +294,8 @@
   border-radius: 999px;
   white-space: nowrap;
   font-family: "Sora", sans-serif;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .sp-scope .sp-pro-badge.sp-pro-b-eligible {
@@ -625,86 +628,59 @@
   overflow: hidden;
 }
 
-/* Checkbox | Student/Reg | UId/Roll | Affiliation | Regulation | Program | Shift | Sem → Sem | Status | Chevron */
+/*
+ * Checkbox | Student | UID | Affiliation | Regulation (narrow) | Program | Shift (narrow) |
+ * Current→Next | Status (wider) | Chevron
+ */
 .sp-scope .sp-t-header,
 .sp-scope .sp-t-row {
   display: grid;
+  width: 100%;
   grid-template-columns:
     36px
-    minmax(150px, 1.05fr)
-    minmax(170px, 220px)
-    minmax(96px, 128px)
-    minmax(64px, 88px)
-    minmax(160px, 1.35fr)
-    minmax(104px, 132px)
-    minmax(140px, 168px)
-    minmax(112px, 148px)
-    46px;
-  align-items: center;
-  padding: 0 14px;
-  column-gap: 4px;
+    minmax(0, 1fr)
+    minmax(0, 1fr)
+    minmax(0, 1.05fr)
+    minmax(6.75rem, 0.62fr)
+    minmax(0, 1.1fr)
+    minmax(0, 0.5fr)
+    minmax(0, 0.68fr)
+    minmax(7.5rem, 0.62fr)
+    40px;
+  padding: 0 12px;
+  column-gap: 0;
 }
 
-/* Status + chevron stay visible when the grid scrolls horizontally */
-.sp-scope .sp-t-header > div:nth-child(9),
-.sp-scope .sp-t-row > .sp-t-cell:nth-child(9) {
-  position: sticky;
-  right: 46px;
-  z-index: 2;
-  min-width: 112px;
-  max-width: 160px;
-  padding-left: 8px;
-  background: var(--sp-surface);
-  box-shadow: -4px 0 12px -6px rgba(14, 28, 54, 0.07);
+.sp-scope .sp-t-header {
+  align-items: start;
 }
 
-.sp-scope .sp-t-header > div:nth-child(10),
-.sp-scope .sp-t-row > .sp-t-cell:nth-child(10) {
-  position: sticky;
-  right: 0;
-  z-index: 3;
-  background: var(--sp-surface);
-  box-shadow: -4px 0 12px -6px rgba(14, 28, 54, 0.07);
-}
-
+.sp-scope .sp-t-header > div:first-child,
 .sp-scope .sp-t-header > div:nth-child(9),
 .sp-scope .sp-t-header > div:nth-child(10) {
-  z-index: 4;
-  background: var(--sp-surface2);
-  box-shadow: -4px 0 12px -6px rgba(14, 28, 54, 0.08);
+  align-self: center;
 }
 
-.sp-scope .sp-t-row.sp-expanded > .sp-t-cell:nth-child(9),
-.sp-scope .sp-t-row.sp-expanded > .sp-t-cell:nth-child(10) {
-  background: var(--sp-surface2);
-}
-
-.sp-scope .sp-t-row:hover > .sp-t-cell:nth-child(9),
-.sp-scope .sp-t-row:hover > .sp-t-cell:nth-child(10) {
-  background: #fafaf9;
-}
-
-.sp-scope .sp-t-row.sp-expanded:hover > .sp-t-cell:nth-child(9),
-.sp-scope .sp-t-row.sp-expanded:hover > .sp-t-cell:nth-child(10) {
-  background: var(--sp-surface2);
-}
-
-.sp-scope .sp-t-header > div:nth-child(8),
-.sp-scope .sp-t-row > .sp-t-cell:nth-child(8) {
-  padding-right: 6px;
+.sp-scope .sp-t-row {
+  align-items: stretch;
 }
 
 @media (max-width: 760px) {
   .sp-scope .sp-t-header,
   .sp-scope .sp-t-row {
-    grid-template-columns: 36px 120px 168px 88px 72px minmax(110px, 1fr) 96px 128px 108px 40px;
-  }
-
-  .sp-scope .sp-t-header > div:nth-child(9),
-  .sp-scope .sp-t-row > .sp-t-cell:nth-child(9) {
-    right: 40px;
-    min-width: 100px;
-    max-width: 120px;
+    grid-template-columns:
+      36px
+      minmax(0, 1fr)
+      minmax(0, 1fr)
+      minmax(0, 1.05fr)
+      minmax(6.75rem, 0.62fr)
+      minmax(0, 1.1fr)
+      minmax(0, 0.5fr)
+      minmax(0, 0.68fr)
+      minmax(7.5rem, 0.62fr)
+      40px;
+    column-gap: 0;
+    padding: 0 10px;
   }
 }
 
@@ -821,13 +797,27 @@
 }
 
 .sp-scope .sp-t-header div {
-  padding: 10px 0 10px 8px;
+  padding: 10px 8px;
   font-size: 10.5px;
   font-weight: 700;
   color: var(--sp-muted);
-  letter-spacing: 0.07em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   font-family: "Sora", sans-serif;
+  white-space: normal;
+  overflow: visible;
+  word-break: break-word;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.sp-scope .sp-t-header > div:not(:first-child) {
+  border-left: 1px solid var(--sp-border);
+}
+
+.sp-scope .sp-t-header > div:first-child {
+  padding-left: 0;
+  padding-right: 4px;
 }
 
 .sp-scope .sp-t-row-wrap {
@@ -853,9 +843,27 @@
 }
 
 .sp-scope .sp-t-cell {
-  padding: 13px 0 13px 8px;
+  min-width: 0;
+  padding: 10px 8px;
   font-size: 13px;
   color: var(--sp-ink2);
+  border-left: 1px solid var(--sp-border);
+}
+
+/* Status column: nowrap badges must not paint over the previous column’s border. */
+.sp-scope .sp-t-header > div:nth-child(9),
+.sp-scope .sp-t-row > .sp-t-cell:nth-child(9) {
+  overflow: hidden;
+}
+
+.sp-scope .sp-t-row > .sp-t-cell:first-child {
+  border-left: none;
+  padding-left: 0;
+  padding-right: 4px;
+}
+
+.sp-scope .sp-t-row > .sp-t-cell:last-child {
+  padding-right: 8px;
 }
 
 .sp-scope .sp-expand-panel {
