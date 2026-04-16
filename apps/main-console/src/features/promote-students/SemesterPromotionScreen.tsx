@@ -1217,7 +1217,7 @@ export function SemesterPromotionScreen() {
     "sp-pro-select-trigger h-auto min-h-[38px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--sp-navy2)] focus-visible:ring-offset-0";
 
   return (
-    <div className="sp-scope w-full min-w-0">
+    <div className="sp-scope w-full min-w-0 max-w-full">
       <div className="sp-pro-main">
         <div className="sp-page-header">
           <div className="min-w-0 flex-1">
@@ -1549,8 +1549,8 @@ export function SemesterPromotionScreen() {
                       </span>
                     )}
                   </div>
-                  <div className="relative max-h-[min(520px,60vh)] overflow-auto">
-                    <div className="w-full min-w-[1360px]">
+                  <div className="relative max-h-[min(520px,60vh)] touch-pan-x overflow-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
+                    <div className="w-full min-w-[1080px]">
                       <div className="sp-t-header sticky top-0 z-10 shadow-sm">
                         <div
                           className="flex items-center !pl-0"
@@ -1686,7 +1686,7 @@ export function SemesterPromotionScreen() {
                                   </span>
                                   <SemesterBox seq={toSemSeq} size={26} />
                                 </div>
-                                <div className="sp-t-cell flex min-w-0 flex-wrap items-center gap-2">
+                                <div className="sp-t-cell flex min-w-0 flex-wrap items-center justify-start gap-1.5">
                                   <StatusPill bucket={r.bucket} />
                                 </div>
                                 <div className="sp-t-cell flex justify-center !pr-0">

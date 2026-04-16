@@ -5,6 +5,7 @@ import {
 } from "@repo/db/schemas/models/payments";
 import { feeStudentMappingModel } from "@repo/db/schemas/models/fees";
 import { studentModel } from "@repo/db/schemas/models/user";
+import { issueFeeStudentMappingReceiptIfMissing } from "@/features/fees/services/fee-student-mapping.service.js";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { and, eq, sql } from "drizzle-orm";
 import type {
@@ -93,6 +94,44 @@ function previewJson(value: unknown, maxLen = 2000): string {
     return s.length > maxLen ? `${s.slice(0, maxLen)}…` : s;
   } catch {
     return String(value);
+  }
+}
+
+/** Student fee / challan payments (Paytm uses ADMISSION; legacy rows may use FEE). */
+export function isFeeStudentMappingPaymentContext(
+  ctx: string | null | undefined,
+): boolean {
+  return ctx === "FEE" || ctx === "ADMISSION";
+}
+
+async function ensureFeeReceiptAfterSuccessfulFeePayment(
+  payment:
+    | {
+        id: number;
+        context: string | null;
+        status: string | null;
+      }
+    | null
+    | undefined,
+): Promise<void> {
+  if (
+    !payment?.id ||
+    !isFeeStudentMappingPaymentContext(payment.context) ||
+    payment.status !== "SUCCESS"
+  ) {
+    return;
+  }
+  try {
+    const [mapRow] = await db
+      .select({ id: feeStudentMappingModel.id })
+      .from(feeStudentMappingModel)
+      .where(eq(feeStudentMappingModel.paymentId, payment.id))
+      .limit(1);
+    if (mapRow) {
+      await issueFeeStudentMappingReceiptIfMissing(mapRow.id);
+    }
+  } catch (e) {
+    console.error("[FEE] ensureFeeReceiptAfterSuccessfulFeePayment failed", e);
   }
 }
 
@@ -400,7 +439,7 @@ export async function createFeePayment(payment: {
       .insert(paymentModel)
       .values({
         userId: resolvedUserId ?? undefined,
-        context: "FEE",
+        context: "ADMISSION",
         amount: Number.isFinite(amountNum) ? amountNum : 0,
         paymentMode: "ONLINE",
         paymentGatewayVendor: payment.gatewayName ?? "PAYTM",
@@ -525,7 +564,7 @@ export async function updatePaymentByOrderId(
     gatewayResponse?: object;
   },
 ) {
-  return await db.transaction(async (tx) => {
+  const updatedPayment = await db.transaction(async (tx) => {
     // SELECT FOR UPDATE: blocks concurrent callbacks for the same orderId
     const [existingPayment] = await tx
       .select()
@@ -608,7 +647,7 @@ export async function updatePaymentByOrderId(
     }
 
     if (
-      updated?.context === "FEE" &&
+      isFeeStudentMappingPaymentContext(updated?.context ?? null) &&
       updates.status === "SUCCESS" &&
       updated.id
     ) {
@@ -647,6 +686,10 @@ export async function updatePaymentByOrderId(
 
     return updated ?? null;
   });
+
+  await ensureFeeReceiptAfterSuccessfulFeePayment(updatedPayment);
+
+  return updatedPayment;
 }
 
 function mapBinBodyToPaymentColumns(
@@ -764,7 +807,7 @@ export async function enrichPaymentWithPaytmDetails(
     skipSettlement: !!options.skipSettlement,
   });
 
-  const payment = await findPaymentByOrderId(trimmed);
+  let payment = await findPaymentByOrderId(trimmed);
   if (!payment?.id) {
     return {
       success: false,
@@ -786,6 +829,36 @@ export async function enrichPaymentWithPaytmDetails(
         resultCode: ts.data.resultInfo?.resultCode,
         response: previewJson(ts.data),
       });
+
+      const resultStatus = ts.data.resultInfo?.resultStatus;
+      const normalized =
+        typeof resultStatus === "string"
+          ? resultStatus.trim().toUpperCase()
+          : "";
+      if (normalized === "TXN_SUCCESS" && payment.status !== "SUCCESS") {
+        const txnDateRaw = ts.data.txnDate;
+        await updatePaymentByOrderId(trimmed, {
+          status: "SUCCESS",
+          transactionId: ts.data.txnId ?? undefined,
+          bankTxnId: ts.data.bankTxnId,
+          txnDate:
+            txnDateRaw != null && String(txnDateRaw).trim() !== ""
+              ? new Date(String(txnDateRaw))
+              : undefined,
+          mid: ts.data.mid,
+          txnAmount: ts.data.txnAmount,
+          bankName: ts.data.bankName,
+          txnGatewayName: ts.data.gatewayName,
+          txnPaymentMode: ts.data.paymentMode,
+          gatewayResponse: {
+            paytm: { promoteSuccessFromTxnStatus: true },
+          },
+        });
+        const reloaded = await findPaymentByOrderId(trimmed);
+        if (reloaded) {
+          payment = reloaded;
+        }
+      }
     } else if (ts.error) {
       paytmSnapshot.transactionStatusError = ts.error;
       logPaytmEnrich("error", "transactionStatus.error", {
@@ -968,6 +1041,9 @@ export async function enrichPaymentWithPaytmDetails(
     Object.keys(columnPatch).length === 0 &&
     Object.keys(paytmSnapshot).length === 0
   ) {
+    await ensureFeeReceiptAfterSuccessfulFeePayment(
+      await findPaymentByOrderId(trimmed),
+    );
     return { success: true };
   }
 
@@ -978,6 +1054,10 @@ export async function enrichPaymentWithPaytmDetails(
       gatewayResponse: nextGateway,
     })
     .where(eq(paymentModel.orderId, trimmed));
+
+  await ensureFeeReceiptAfterSuccessfulFeePayment(
+    await findPaymentByOrderId(trimmed),
+  );
 
   return { success: true };
 }
@@ -995,30 +1075,44 @@ export async function deletePayment(id: number) {
 const ORDER_ID_PREFIX = "AS";
 
 /**
- * Generates order IDs: AS1000, AS1001, AS1002, … using a DB sequence (concurrency-safe).
- * Falls back to AS + timestamp + random suffix if the sequence is unavailable.
- *
- * The UNIQUE constraint on `payments.order_id` is the ultimate safety net.
+ * Generates order IDs strictly as: AS1000, AS1001, AS1002, ...
+ * Uses a DB sequence and first syncs it with the current max numeric AS order id
+ * stored in `payments.order_id` to avoid reusing old ids after resets/restores.
  */
 export async function generateOrderId(): Promise<string> {
-  try {
-    await db.execute(
-      sql`CREATE SEQUENCE IF NOT EXISTS payment_order_id_seq START WITH 1000 INCREMENT BY 1`,
-    );
-    const result = await db.execute(
-      sql`SELECT nextval('payment_order_id_seq') as nextval`,
-    );
-    const row = (result as unknown as { rows: Record<string, unknown>[] })
-      ?.rows?.[0];
-    const nextNum = parseInt(String(row?.nextval), 10);
-    if (Number.isFinite(nextNum)) {
-      return `${ORDER_ID_PREFIX}${nextNum}`;
-    }
-  } catch {
-    // Sequence unavailable — fall through to safe fallback
+  await db.execute(
+    sql`CREATE SEQUENCE IF NOT EXISTS payment_order_id_seq START WITH 1000 INCREMENT BY 1`,
+  );
+
+  // Ensure sequence continues after the highest existing AS<number> order id.
+  await db.execute(sql`
+    SELECT setval(
+      'payment_order_id_seq',
+      GREATEST(
+        COALESCE((SELECT last_value::bigint FROM payment_order_id_seq), 999),
+        COALESCE((
+          SELECT MAX((regexp_match(order_id, '^AS([0-9]+)$'))[1]::bigint)
+          FROM payments
+          WHERE order_id ~ '^AS[0-9]+$'
+        ), 999)
+      ),
+      true
+    )
+  `);
+
+  const result = await db.execute(
+    sql`SELECT nextval('payment_order_id_seq') as nextval`,
+  );
+  const row = (result as unknown as { rows: Record<string, unknown>[] })
+    ?.rows?.[0];
+  const nextNum = Number.parseInt(String(row?.nextval), 10);
+  if (!Number.isFinite(nextNum)) {
+    throw new Error("Failed to generate numeric payment order id");
   }
 
-  const ts = Date.now();
-  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `${ORDER_ID_PREFIX}${ts}${rand}`;
+  console.log(
+    "[PAYMENT_SERVICE] Generated order id:",
+    `${ORDER_ID_PREFIX}${nextNum}`,
+  );
+  return `${ORDER_ID_PREFIX}${nextNum}`;
 }

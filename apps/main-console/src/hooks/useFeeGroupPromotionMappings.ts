@@ -33,8 +33,10 @@ export const useFeeGroupPromotionMappings = (limit: number = 10000, enabled: boo
       return response.payload || [];
     },
     enabled,
-    staleTime: 0, // Always refetch to ensure we get full dataset (limit may have changed)
-    cacheTime: 5 * 60 * 1000, // Keep in cache for 5 minutes (React Query v4)
+    /** List endpoint is heavy; batching on backend + short stale window keeps UI snappy. */
+    staleTime: 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
 

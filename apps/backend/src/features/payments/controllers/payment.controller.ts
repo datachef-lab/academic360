@@ -14,6 +14,7 @@ import {
   findPaymentInfoByApplicationFormId,
   generateOrderId,
   updatePaymentByOrderId,
+  isFeeStudentMappingPaymentContext,
 } from "../services/payment.service.js";
 import {
   createPaytmTxnToken,
@@ -27,6 +28,12 @@ import {
 } from "../services/payment-downtime.service.js";
 import { findApplicationFormModelById } from "@/features/admissions/services/application-form.service.js";
 import { paytmConfig, isPaytmConfigured } from "../config/paytm.config.js";
+
+function normalizePaytmTxnStatus(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase();
+}
 
 const require = createRequire(import.meta.url);
 const PaytmChecksum = require("paytmchecksum") as {
@@ -415,8 +422,10 @@ export const confirmPaymentHandler = async (
     const verifiedTxnId = gatewayResult?.txnId;
 
     const effectiveStatus = verifiedStatus ?? status;
+    const effNorm = normalizePaytmTxnStatus(effectiveStatus);
+    const verNorm = normalizePaytmTxnStatus(verifiedStatus);
 
-    if (effectiveStatus === "TXN_SUCCESS" || verifiedStatus === "TXN_SUCCESS") {
+    if (effNorm === "TXN_SUCCESS" || verNorm === "TXN_SUCCESS") {
       await updatePaymentByOrderId(orderId, {
         status: "SUCCESS",
         transactionId: verifiedTxnId ?? txnId,
@@ -437,7 +446,7 @@ export const confirmPaymentHandler = async (
           paytm: { confirm: body, gatewayVerify: gatewayResult },
         },
       });
-    } else if (effectiveStatus === "TXN_FAILURE") {
+    } else if (effNorm === "TXN_FAILURE") {
       await updatePaymentByOrderId(orderId, {
         status: "FAILED",
         transactionId: verifiedTxnId ?? txnId,
@@ -538,9 +547,10 @@ export const paymentCallbackHandler = async (
       return;
     }
 
+    const normalizedCallbackStatus = normalizePaytmTxnStatus(status);
     try {
       // Update base status columns from callback.
-      if (status === "TXN_SUCCESS") {
+      if (normalizedCallbackStatus === "TXN_SUCCESS") {
         await updatePaymentByOrderId(orderId, {
           status: "SUCCESS",
           transactionId: txnId,
@@ -555,7 +565,7 @@ export const paymentCallbackHandler = async (
           cardScheme,
           gatewayResponse: { paytm: { callback: body } },
         });
-      } else if (status === "TXN_FAILURE") {
+      } else if (normalizedCallbackStatus === "TXN_FAILURE") {
         await updatePaymentByOrderId(orderId, {
           status: "FAILED",
           transactionId: txnId,
@@ -628,7 +638,8 @@ export const paymentCallbackHandler = async (
     const frontendUrl = resolvedReturnUrl
       ? new URL(resolvedReturnUrl).origin
       : fallbackUrl;
-    const paymentResult = status === "TXN_SUCCESS" ? "success" : "failed";
+    const paymentResult =
+      normalizedCallbackStatus === "TXN_SUCCESS" ? "success" : "failed";
     const respMsg =
       body.RESPMSG ??
       body.respMsg ??
@@ -648,17 +659,18 @@ export const paymentCallbackHandler = async (
     let studentIdForRedirect: number | null = null;
 
     // For fees: attach student context for UI refresh after redirect.
-    const feeStudentMappingId =
-      payment.context === "FEE"
-        ? Number(
-            (
-              payment.gatewayResponse as
-                | { meta?: { feeStudentMappingId?: number | string } }
-                | null
-                | undefined
-            )?.meta?.feeStudentMappingId ?? 0,
-          ) || null
-        : null;
+    const feeStudentMappingId = isFeeStudentMappingPaymentContext(
+      payment.context,
+    )
+      ? Number(
+          (
+            payment.gatewayResponse as
+              | { meta?: { feeStudentMappingId?: number | string } }
+              | null
+              | undefined
+          )?.meta?.feeStudentMappingId ?? 0,
+        ) || null
+      : null;
     if (feeStudentMappingId) {
       try {
         const [mapping] = await db

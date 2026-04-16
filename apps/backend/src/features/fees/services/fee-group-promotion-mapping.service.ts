@@ -189,6 +189,212 @@ async function promotionToDto(
   };
 }
 
+type PromotionRow = typeof promotionModel.$inferSelect;
+
+/**
+ * Batch version of promotionToDto — avoids N×(6–8) DB round-trips when loading lists.
+ */
+async function promotionsToDtoBatch(
+  promotions: PromotionRow[],
+): Promise<Map<number, PromotionDto>> {
+  const map = new Map<number, PromotionDto>();
+  if (promotions.length === 0) return map;
+
+  const boardIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.boardResultStatusId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const sessionIds = [...new Set(promotions.map((p) => p.sessionId))];
+  const classIds = [...new Set(promotions.map((p) => p.classId))];
+  const sectionIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.sectionId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const shiftIds = [...new Set(promotions.map((p) => p.shiftId))];
+  const programCourseIds = [
+    ...new Set(promotions.map((p) => p.programCourseId)),
+  ];
+  const studentIds = [...new Set(promotions.map((p) => p.studentId))];
+
+  const [
+    boardRows,
+    sessionRows,
+    classRows,
+    sectionRows,
+    shiftRows,
+    studentDetailRows,
+  ] = await Promise.all([
+    boardIds.length
+      ? db
+          .select()
+          .from(boardResultStatusModel)
+          .where(inArray(boardResultStatusModel.id, boardIds))
+      : Promise.resolve([]),
+    sessionIds.length
+      ? db
+          .select()
+          .from(sessionModel)
+          .where(inArray(sessionModel.id, sessionIds))
+      : Promise.resolve([]),
+    classIds.length
+      ? db.select().from(classModel).where(inArray(classModel.id, classIds))
+      : Promise.resolve([]),
+    sectionIds.length
+      ? db
+          .select()
+          .from(sectionModel)
+          .where(inArray(sectionModel.id, sectionIds))
+      : Promise.resolve([]),
+    shiftIds.length
+      ? db.select().from(shiftModel).where(inArray(shiftModel.id, shiftIds))
+      : Promise.resolve([]),
+    studentIds.length
+      ? db
+          .select({
+            studentId: studentModel.id,
+            uid: studentModel.uid,
+            community: studentModel.community,
+            firstName: personalDetailsModel.firstName,
+            middleName: personalDetailsModel.middleName,
+            lastName: personalDetailsModel.lastName,
+            religionName: religionModel.name,
+            categoryName: categoryModel.name,
+          })
+          .from(studentModel)
+          .leftJoin(
+            personalDetailsModel,
+            eq(personalDetailsModel.userId, studentModel.userId),
+          )
+          .leftJoin(
+            religionModel,
+            eq(religionModel.id, personalDetailsModel.religionId),
+          )
+          .leftJoin(
+            categoryModel,
+            eq(categoryModel.id, personalDetailsModel.categoryId),
+          )
+          .where(inArray(studentModel.id, studentIds))
+      : Promise.resolve([]),
+  ]);
+
+  const programCourseDtos =
+    programCourseIds.length > 0
+      ? await Promise.all(
+          programCourseIds.map((id) => programCourseService.findById(id)),
+        )
+      : [];
+
+  const ayIds = [
+    ...new Set(
+      sessionRows
+        .map((s) => s.academicYearId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const academicYearRows =
+    ayIds.length > 0
+      ? await db
+          .select()
+          .from(academicYearModel)
+          .where(inArray(academicYearModel.id, ayIds))
+      : [];
+  const ayMap = new Map(academicYearRows.map((ay) => [ay.id, ay]));
+
+  const boardMap = new Map(boardRows.map((b) => [b.id, b]));
+  const sessionMap = new Map(
+    sessionRows.map((s) => {
+      const ay = s.academicYearId
+        ? (ayMap.get(s.academicYearId) ?? null)
+        : null;
+      return [s.id, { ...s, academicYear: ay }] as const;
+    }),
+  );
+  const classMap = new Map(classRows.map((c) => [c.id, c]));
+  const sectionMap = new Map(sectionRows.map((s) => [s.id, s]));
+  const shiftMap = new Map(shiftRows.map((s) => [s.id, s]));
+  const pcMap = new Map(
+    programCourseDtos
+      .filter((pc): pc is NonNullable<typeof pc> => pc != null)
+      .map((pc) => [pc.id, pc] as const),
+  );
+  const studentMap = new Map(
+    studentDetailRows.map((r) => [r.studentId, r] as const),
+  );
+
+  for (const promotion of promotions) {
+    const boardResStatus = promotion.boardResultStatusId
+      ? (boardMap.get(promotion.boardResultStatusId) ?? null)
+      : null;
+    const sess = sessionMap.get(promotion.sessionId) ?? null;
+    const cls = classMap.get(promotion.classId) ?? null;
+    const sec = promotion.sectionId
+      ? (sectionMap.get(promotion.sectionId) ?? null)
+      : null;
+    const shf = shiftMap.get(promotion.shiftId) ?? null;
+    const progCourse = pcMap.get(promotion.programCourseId) ?? null;
+    const studentWithDetails = studentMap.get(promotion.studentId) ?? null;
+
+    if (!sess || !cls || !shf || !progCourse) continue;
+
+    const fullName = studentWithDetails
+      ? [
+          studentWithDetails.firstName,
+          studentWithDetails.middleName,
+          studentWithDetails.lastName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : null;
+
+    map.set(promotion.id, {
+      id: promotion.id,
+      legacyHistoricalRecordId: promotion.legacyHistoricalRecordId ?? null,
+      studentId: promotion.studentId,
+      isAlumni: promotion.isAlumni,
+      dateOfJoining: promotion.dateOfJoining,
+      classRollNumber: promotion.classRollNumber,
+      rollNumber: promotion.rollNumber ?? null,
+      rollNumberSI: promotion.rollNumberSI ?? null,
+      examNumber: promotion.examNumber ?? null,
+      examSerialNumber: promotion.examSerialNumber ?? null,
+      startDate: promotion.startDate ?? null,
+      endDate: promotion.endDate ?? null,
+      remarks: promotion.remarks ?? null,
+      createdAt: promotion.createdAt ?? new Date(),
+      updatedAt: promotion.updatedAt ?? new Date(),
+      boardResultStatus: boardResStatus!,
+      session: sess,
+      class: cls,
+      section: sec,
+      shift: shf,
+      programCourse: progCourse,
+      studentName: fullName,
+      uid: studentWithDetails?.uid ?? null,
+      religionName: studentWithDetails?.religionName ?? null,
+      categoryName: studentWithDetails?.categoryName ?? null,
+      communityName: studentWithDetails?.community ?? null,
+      academicYearName:
+        (sess as { academicYear?: { year?: string } | null }).academicYear
+          ?.year ?? null,
+    } as PromotionDto & {
+      studentName?: string | null;
+      uid?: string | null;
+      religionName?: string | null;
+      categoryName?: string | null;
+      communityName?: string | null;
+      academicYearName?: string | null;
+    });
+  }
+
+  return map as Map<number, PromotionDto>;
+}
+
 /**
  * Converts a FeeGroupPromotionMapping model to FeeGroupPromotionMappingDto
  */
@@ -351,15 +557,8 @@ export const getAllFeeGroupPromotionMappings = async (
   const feeCategoryMap = new Map(feeCategories.map((fc) => [fc.id, fc]));
   const feeSlabMap = new Map(feeSlabs.map((fs) => [fs.id, fs]));
 
-  // Batch fetch all promotion-related data
-  const promotionDtos = await Promise.all(
-    promotions.map((p) => promotionToDto(p)),
-  );
-  const promotionDtoMap = new Map(
-    promotionDtos
-      .filter((pd): pd is PromotionDto => pd !== null)
-      .map((pd) => [pd.id!, pd]),
-  );
+  // Batch fetch all promotion-related data (single batched round-trip set vs N×promotionToDto)
+  const promotionDtoMap = await promotionsToDtoBatch(promotions);
 
   // Batch fetch fee student mappings for payment status and amount to pay
   const mappingIds = rows
@@ -397,10 +596,16 @@ export const getAllFeeGroupPromotionMappings = async (
       saveBlockedForEdit: boolean;
     }
   >();
+  const relatedByFgpmId = new Map<number, typeof feeStudentMappings>();
+  for (const fsm of feeStudentMappings) {
+    const mid = fsm.feeGroupPromotionMappingId;
+    if (mid == null) continue;
+    const list = relatedByFgpmId.get(mid);
+    if (list) list.push(fsm);
+    else relatedByFgpmId.set(mid, [fsm]);
+  }
   for (const mappingId of mappingIds) {
-    const related = feeStudentMappings.filter(
-      (fsm) => fsm.feeGroupPromotionMappingId === mappingId,
-    );
+    const related = relatedByFgpmId.get(mappingId) ?? [];
     const totalPayableAmount = related.reduce(
       (sum, r) => sum + (r.totalPayable || 0),
       0,

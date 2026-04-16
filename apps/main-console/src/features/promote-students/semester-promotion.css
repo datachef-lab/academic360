@@ -53,12 +53,20 @@
 .sp-scope .sp-pro-main {
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   margin-left: auto;
   margin-right: auto;
   padding: 24px 16px 120px;
   background: var(--sp-bg);
   border-radius: var(--sp-r-lg);
   box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .sp-scope .sp-pro-main {
+    padding: 16px 12px 100px;
+    border-radius: var(--sp-r);
+  }
 }
 
 @media (min-width: 1280px) {
@@ -94,6 +102,21 @@
 .sp-scope .sp-pro-step1-row > .sp-pro-search {
   flex: 1.25 1 200px;
   min-width: 180px;
+}
+
+@media (max-width: 640px) {
+  .sp-scope .sp-pro-step1-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sp-scope .sp-pro-step1-row > .sp-step-label {
+    margin-bottom: 2px;
+  }
+
+  .sp-scope .sp-pro-step1-row > .sp-pro-search {
+    min-width: 0;
+  }
 }
 
 /* Step 2 — from | arrow | to (sample `grid-template-columns: 1fr 48px 1fr`) */
@@ -331,16 +354,25 @@
 
 .sp-scope .sp-ufc {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   background: var(--sp-surface);
   border: 1.5px solid var(--sp-border);
   border-radius: var(--sp-r-lg);
   box-shadow: var(--sp-sh);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
   margin-bottom: 16px;
 }
 
 .sp-scope .sp-ufc-section {
   padding: 14px 20px;
+}
+
+@media (max-width: 640px) {
+  .sp-scope .sp-ufc-section {
+    padding: 12px 12px;
+  }
 }
 
 .sp-scope .sp-ufc-divider {
@@ -448,14 +480,24 @@
 .sp-scope .sp-datacards {
   display: grid;
   width: 100%;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 520px) {
   .sp-scope .sp-datacards {
-    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  }
+
+  .sp-scope .sp-dc {
+    padding: 14px 12px 12px;
+  }
+
+  .sp-scope .sp-dc-count {
+    font-size: 26px;
   }
 }
 
@@ -574,6 +616,8 @@
 
 .sp-scope .sp-table-container {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   background: var(--sp-surface);
   border: 1.5px solid var(--sp-border2);
   border-radius: var(--sp-r-lg);
@@ -587,17 +631,18 @@
   display: grid;
   grid-template-columns:
     36px
-    minmax(160px, 1.15fr)
-    minmax(240px, 300px)
-    minmax(112px, 140px)
-    minmax(112px, 140px)
-    minmax(180px, 1.45fr)
-    minmax(88px, 108px)
-    minmax(188px, 220px)
-    minmax(168px, 200px)
+    minmax(150px, 1.05fr)
+    minmax(170px, 220px)
+    minmax(96px, 128px)
+    minmax(64px, 88px)
+    minmax(160px, 1.35fr)
+    minmax(104px, 132px)
+    minmax(140px, 168px)
+    minmax(112px, 148px)
     46px;
   align-items: center;
   padding: 0 14px;
+  column-gap: 4px;
 }
 
 /* Status + chevron stay visible when the grid scrolls horizontally */
@@ -606,9 +651,11 @@
   position: sticky;
   right: 46px;
   z-index: 2;
-  min-width: 168px;
+  min-width: 112px;
+  max-width: 160px;
+  padding-left: 8px;
   background: var(--sp-surface);
-  box-shadow: -6px 0 10px -4px rgba(14, 28, 54, 0.08);
+  box-shadow: -4px 0 12px -6px rgba(14, 28, 54, 0.07);
 }
 
 .sp-scope .sp-t-header > div:nth-child(10),
@@ -617,14 +664,14 @@
   right: 0;
   z-index: 3;
   background: var(--sp-surface);
-  box-shadow: -6px 0 10px -4px rgba(14, 28, 54, 0.08);
+  box-shadow: -4px 0 12px -6px rgba(14, 28, 54, 0.07);
 }
 
 .sp-scope .sp-t-header > div:nth-child(9),
 .sp-scope .sp-t-header > div:nth-child(10) {
   z-index: 4;
   background: var(--sp-surface2);
-  box-shadow: -6px 0 10px -4px rgba(14, 28, 54, 0.1);
+  box-shadow: -4px 0 12px -6px rgba(14, 28, 54, 0.08);
 }
 
 .sp-scope .sp-t-row.sp-expanded > .sp-t-cell:nth-child(9),
@@ -642,16 +689,22 @@
   background: var(--sp-surface2);
 }
 
+.sp-scope .sp-t-header > div:nth-child(8),
+.sp-scope .sp-t-row > .sp-t-cell:nth-child(8) {
+  padding-right: 6px;
+}
+
 @media (max-width: 760px) {
   .sp-scope .sp-t-header,
   .sp-scope .sp-t-row {
-    grid-template-columns: 36px 132px 200px 96px 96px minmax(120px, 1fr) 80px 150px 140px 40px;
+    grid-template-columns: 36px 120px 168px 88px 72px minmax(110px, 1fr) 96px 128px 108px 40px;
   }
 
   .sp-scope .sp-t-header > div:nth-child(9),
   .sp-scope .sp-t-row > .sp-t-cell:nth-child(9) {
     right: 40px;
-    min-width: 132px;
+    min-width: 100px;
+    max-width: 120px;
   }
 }
 

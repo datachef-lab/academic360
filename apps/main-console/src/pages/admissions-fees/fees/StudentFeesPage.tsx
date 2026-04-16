@@ -55,16 +55,13 @@ import { openFeeReceiptPdfInNewTab } from "@/services/fee-student-mapping.servic
 
 const DISPLAY_TZ = "Asia/Kolkata";
 
-/** API uses SUCCESS (aligned with payments.status); show PAID in the UI. */
-function paymentStatusLabel(status: string | undefined): string {
-  const s = (status || "PENDING").toUpperCase();
-  if (s === "SUCCESS" || s === "COMPLETED") return "PAID";
-  return s;
+function isFeeMappingPaid(status: string | undefined): boolean {
+  const s = (status || "").trim().toUpperCase();
+  return s === "SUCCESS" || s === "COMPLETED" || s === "DONE" || s === "PAID";
 }
 
-function isFeeMappingPaid(status: string | undefined): boolean {
-  const s = (status || "").toUpperCase();
-  return s === "SUCCESS" || s === "COMPLETED";
+function paymentStatusLabel(status: string | undefined): "Paid" | "Pending" {
+  return isFeeMappingPaid(status) ? "Paid" : "Pending";
 }
 
 /**
@@ -729,11 +726,7 @@ const StudentFeesPage: React.FC = () => {
                               className={
                                 isFeeMappingPaid(paymentStatus)
                                   ? "bg-green-100 text-green-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
-                                  : paymentStatus === "PENDING"
-                                    ? "bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
-                                    : paymentStatus === "FAILED"
-                                      ? "bg-red-100 text-red-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
-                                      : "bg-gray-100 text-gray-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
+                                  : "bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs px-1.5 whitespace-normal text-center leading-tight max-w-full"
                               }
                             >
                               {paymentStatusLabel(paymentStatus)}
@@ -916,11 +909,7 @@ const StudentFeesPage: React.FC = () => {
                           className={
                             isFeeMappingPaid(selectedSummaryItem.paymentStatus)
                               ? "bg-green-100 text-green-800"
-                              : selectedSummaryItem.paymentStatus === "PENDING"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : selectedSummaryItem.paymentStatus === "FAILED"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-800"
+                              : "bg-yellow-100 text-yellow-800"
                           }
                         >
                           {paymentStatusLabel(selectedSummaryItem.paymentStatus)}
@@ -997,11 +986,7 @@ const StudentFeesPage: React.FC = () => {
                       className={
                         isFeeMappingPaid(selectedSummaryItem.paymentStatus)
                           ? "bg-green-100 text-green-800"
-                          : selectedSummaryItem.paymentStatus === "PENDING"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : selectedSummaryItem.paymentStatus === "FAILED"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-gray-100 text-gray-800"
+                          : "bg-yellow-100 text-yellow-800"
                       }
                     >
                       {paymentStatusLabel(selectedSummaryItem.paymentStatus)}

@@ -57,6 +57,56 @@ export function normalizeReceiptLookupKey(input: string): string {
  * First-time receipt download: assigns receipt_number and challan_generated_at.
  * If receipt_number exists but challan_generated_at is missing (legacy), sets timestamp once.
  */
+/**
+ * After a fee payment succeeds (including online): assign receipt/challan number and
+ * `challan_generated_at` if missing — same as first PDF download, but automatic.
+ * Idempotent; safe to call on duplicate callbacks.
+ */
+export async function issueFeeStudentMappingReceiptIfMissing(
+  feeStudentMappingId: number,
+): Promise<void> {
+  const [row] = await db
+    .select({
+      mappingId: feeStudentMappingModel.id,
+      receiptNumber: feeStudentMappingModel.receiptNumber,
+      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      uid: studentModel.uid,
+      feeCategoryCode: feeCategoryModel.code,
+    })
+    .from(feeStudentMappingModel)
+    .innerJoin(
+      studentModel,
+      eq(studentModel.id, feeStudentMappingModel.studentId),
+    )
+    .innerJoin(
+      feeGroupPromotionMappingModel,
+      eq(
+        feeGroupPromotionMappingModel.id,
+        feeStudentMappingModel.feeGroupPromotionMappingId,
+      ),
+    )
+    .innerJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .leftJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+    )
+    .where(eq(feeStudentMappingModel.id, feeStudentMappingId))
+    .limit(1);
+
+  if (!row) return;
+
+  await persistReceiptIssuanceIfNeeded({
+    mappingId: row.mappingId,
+    existingReceiptNumber: row.receiptNumber,
+    existingChallanGeneratedAt: row.challanGeneratedAt,
+    studentUid: row.uid,
+    feeCategoryCode: row.feeCategoryCode,
+  });
+}
+
 async function persistReceiptIssuanceIfNeeded(params: {
   mappingId: number;
   existingReceiptNumber: string | null | undefined;
@@ -188,30 +238,30 @@ async function fetchFeeReceiptJoinRow(
  */
 export async function getNextReceiptNumberForUid(uid: string): Promise<string> {
   try {
-    // Find all existing receipt numbers for this UID (format: uid/NN)
+    const escapedUid = uid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    // Find all existing receipt numbers for this UID.
+    // Supports both legacy format: uid/NN
+    // and current format: uid/NN-CODE
     const { rows } = await db.execute(sql`
       SELECT receipt_number
       FROM public.fee_student_mappings
-      WHERE receipt_number ~ ${`^${uid}/\\d+$`}
-      ORDER BY receipt_number DESC
-      LIMIT 1
+      WHERE receipt_number ~ ${`^${escapedUid}/\\d+([-/].*)?$`}
     `);
 
-    if (rows && rows.length > 0) {
-      const lastReceiptNumber = (rows[0] as any)?.receipt_number;
-      if (lastReceiptNumber && typeof lastReceiptNumber === "string") {
-        // Extract number from "uid/NN" format
-        const parts = lastReceiptNumber.split("/");
-        const numPart = parts[1];
-        if (numPart && /^\d+$/.test(numPart)) {
-          const nextNum = parseInt(numPart, 10) + 1;
-          return String(nextNum).padStart(2, "0");
-        }
+    let maxNum = 0;
+    for (const row of rows ?? []) {
+      const rn = (row as { receipt_number?: unknown })?.receipt_number;
+      if (typeof rn !== "string") continue;
+      const m = rn.match(new RegExp(`^${escapedUid}/(\\d+)`));
+      if (!m) continue;
+      const n = Number.parseInt(m[1], 10);
+      if (Number.isFinite(n) && n > maxNum) {
+        maxNum = n;
       }
     }
 
-    // Default to "01" if no existing receipt number found
-    return "01";
+    return String(maxNum + 1).padStart(2, "0");
   } catch (error) {
     console.warn(
       `[FEE_SERVICE] Error getting next receipt number for UID ${uid}:`,

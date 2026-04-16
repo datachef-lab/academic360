@@ -2973,8 +2973,34 @@ export async function downloadFeeStudentMappings(
       // Payment Summary
       "Paid Amount": paymentModel.amount,
       "Payment Context": paymentModel.context,
-      "Payment Status": sql<string>`CASE WHEN ${paymentModel.status} = 'SUCCESS' THEN 'Paid' ELSE 'Pending' END`,
-      "Paid Timestamp": paymentModel.txnDate,
+      // Cast enum `payments.status` to text before COALESCE with '' — PG rejects COALESCE(enum, text).
+      "Payment Status": sql<string>`CASE
+        WHEN UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
+          'SUCCESS', 'COMPLETED', 'DONE', 'PAID', 'TXN_SUCCESS'
+        )
+        THEN 'Paid'
+        WHEN NULLIF(TRIM(COALESCE(${paymentModel.txnId}::text, '')), '') IS NOT NULL
+          AND NULLIF(TRIM(COALESCE(${paymentModel.txnDate}::text, '')), '') IS NOT NULL
+          AND COALESCE(${feeStudentMappingModel.amountPaid}, 0)
+            >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
+          AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
+        THEN 'Paid'
+        ELSE 'Pending'
+      END`,
+      // Only show a paid time when we treat the row as paid (same rules as Payment Status).
+      "Paid Timestamp": sql<string | null>`CASE
+        WHEN UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
+          'SUCCESS', 'COMPLETED', 'DONE', 'PAID', 'TXN_SUCCESS'
+        )
+          THEN ${paymentModel.txnDate}
+        WHEN NULLIF(TRIM(COALESCE(${paymentModel.txnId}::text, '')), '') IS NOT NULL
+          AND NULLIF(TRIM(COALESCE(${paymentModel.txnDate}::text, '')), '') IS NOT NULL
+          AND COALESCE(${feeStudentMappingModel.amountPaid}, 0)
+            >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
+          AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
+          THEN ${paymentModel.txnDate}
+        ELSE NULL
+      END`,
       "Payment Mode": paymentModel.paymentMode,
       "Is Manual Payment Recorded?": sql<string>`CASE WHEN ${paymentModel.isManualEntry} = true THEN 'Yes' ELSE 'No' END`,
       "Payment Recorded By": paymentRecordedByUser.name,

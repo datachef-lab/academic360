@@ -5,7 +5,7 @@ import { studentModel } from "@repo/db/schemas/models/user";
 import { userModel } from "@repo/db/schemas/models/user/user.model";
 import { familyModel } from "@repo/db/schemas/models/user";
 import { personModel } from "@repo/db/schemas/models/user/person.model";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { getFeeStudentMappingById } from "@/features/fees/services/fee-student-mapping.service.js";
 import { findPaymentByOrderId } from "./payment.service.js";
 
@@ -478,7 +478,10 @@ export async function markOnlineFeePaymentSuccessManual(params: {
         ...(vendor ? { paymentGatewayVendor: vendor } : {}),
       })
       .where(
-        and(eq(paymentModel.id, payment.id), eq(paymentModel.context, "FEE")),
+        and(
+          eq(paymentModel.id, payment.id),
+          inArray(paymentModel.context, ["FEE", "ADMISSION"]),
+        ),
       );
 
     const [mapping] = await tx

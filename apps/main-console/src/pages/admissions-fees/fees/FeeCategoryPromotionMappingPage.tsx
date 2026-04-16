@@ -87,6 +87,50 @@ const DotSpinnerLoader: React.FC = () => (
   </div>
 );
 
+function isPaymentStatusPaid(status: string | undefined): boolean {
+  const s = (status || "").trim().toUpperCase();
+  return s === "SUCCESS" || s === "COMPLETED" || s === "DONE" || s === "PAID";
+}
+
+function paymentStatusLabel(status: string | undefined): "Paid" | "Pending" {
+  return isPaymentStatusPaid(status) ? "Paid" : "Pending";
+}
+
+/** Roman numerals I–X only (semester labels); longer tokens checked first. */
+const ROMAN_SEM_VALUE: Record<string, number> = {
+  I: 1,
+  II: 2,
+  III: 3,
+  IV: 4,
+  V: 5,
+  VI: 6,
+  VII: 7,
+  VIII: 8,
+  IX: 9,
+  X: 10,
+};
+const ROMAN_SEM_SCAN_ORDER = ["VIII", "VII", "III", "VI", "IV", "IX", "II", "V", "I", "X"] as const;
+
+function parseSemesterOrdinalFromClassName(name: string | undefined | null): number {
+  if (!name || !String(name).trim()) return 10_000;
+  const upper = String(name).toUpperCase();
+  for (const tok of ROMAN_SEM_SCAN_ORDER) {
+    if (new RegExp(`\\b${tok}\\b`).test(upper)) {
+      return ROMAN_SEM_VALUE[tok] ?? 10_000;
+    }
+  }
+  const digit = String(name).match(/(\d+)/);
+  if (digit) return parseInt(digit[1], 10);
+  return 10_000 + upper.localeCompare("");
+}
+
+function semesterClassSortKey(mapping: FeeGroupPromotionMappingDto): number {
+  const promo: any = mapping.promotion || {};
+  const seq = promo.class?.sequence;
+  if (typeof seq === "number" && Number.isFinite(seq)) return seq;
+  return parseSemesterOrdinalFromClassName(promo.class?.name);
+}
+
 const FeeGroupPromotionMappingPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -469,77 +513,101 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     return counts;
   }, [mappings]);
 
-  const matchesFilters = (mapping: FeeGroupPromotionMappingDto) => {
-    const promo: any = mapping.promotion || {};
-    const academicYearName = promo.academicYearName || promo.session?.name || "";
-    const semesterName = promo.class?.name || "";
-    const programCourseName = promo.programCourse?.name || "";
-    const shiftName = promo.shift?.name || promo.shiftName || "";
-    const religionName = promo.religionName || "";
-    const categoryName = promo.categoryName || "";
-    const communityName = promo.communityName || promo.community || "";
-
-    if (filters.academicYear && academicYearName !== filters.academicYear) return false;
-    if (filters.semesterOrClass && semesterName !== filters.semesterOrClass) return false;
-    if (filters.programCourse && programCourseName !== filters.programCourse) return false;
-    if (filters.shift && shiftName !== filters.shift) return false;
-    if (filters.religion && religionName !== filters.religion) return false;
-    if (filters.category && categoryName !== filters.category) return false;
-    if (filters.community && communityName !== filters.community) return false;
-    if (
-      filters.feeCategory &&
-      mapping.feeGroup?.feeCategory?.name !== filters.feeCategory &&
-      mapping.feeCategory?.name !== filters.feeCategory
-    )
-      return false;
-
-    return true;
-  };
-
-  // Filter mappings based on search text and selected filters
-  const filteredMappings =
-    mappings?.filter((mapping) => {
-      if (!searchText.trim()) {
-        return matchesFilters(mapping);
-      }
-
-      const searchLower = searchText.toLowerCase();
+  const matchesFilters = useCallback(
+    (mapping: FeeGroupPromotionMappingDto) => {
       const promo: any = mapping.promotion || {};
-      const studentName = (promo.studentName || promo.name || "").toLowerCase();
-      const uid = (promo.uid || promo.studentUid || "").toLowerCase();
-      const classRollNumber = (promo.classRollNumber || "").toLowerCase();
-      const rollNumber = (promo.rollNumber || "").toLowerCase();
-      const programCourseName = (promo.programCourse?.name || "").toLowerCase();
-      const semesterName = (promo.class?.name || "").toLowerCase();
-      const shiftName = (promo.shift?.name || "").toLowerCase();
-      const categoryName = (promo.categoryName || "").toLowerCase();
-      const religionName = (promo.religionName || "").toLowerCase();
-      const feeCategoryName = (
-        mapping.feeGroup?.feeCategory?.name ||
-        mapping.feeCategory?.name ||
-        ""
+      const academicYearName = promo.academicYearName || promo.session?.name || "";
+      const semesterName = promo.class?.name || "";
+      const programCourseName = promo.programCourse?.name || "";
+      const shiftName = promo.shift?.name || promo.shiftName || "";
+      const religionName = promo.religionName || "";
+      const categoryName = promo.categoryName || "";
+      const communityName = promo.communityName || promo.community || "";
+
+      if (filters.academicYear && academicYearName !== filters.academicYear) return false;
+      if (filters.semesterOrClass && semesterName !== filters.semesterOrClass) return false;
+      if (filters.programCourse && programCourseName !== filters.programCourse) return false;
+      if (filters.shift && shiftName !== filters.shift) return false;
+      if (filters.religion && religionName !== filters.religion) return false;
+      if (filters.category && categoryName !== filters.category) return false;
+      if (filters.community && communityName !== filters.community) return false;
+      if (
+        filters.feeCategory &&
+        mapping.feeGroup?.feeCategory?.name !== filters.feeCategory &&
+        mapping.feeCategory?.name !== filters.feeCategory
+      )
+        return false;
+
+      return true;
+    },
+    [filters],
+  );
+
+  // Filter mappings, then sort ascending by semester/class (sequence or parsed ordinal)
+  const filteredMappings = useMemo(() => {
+    const list =
+      mappings?.filter((mapping) => {
+        if (!searchText.trim()) {
+          return matchesFilters(mapping);
+        }
+
+        const searchLower = searchText.toLowerCase();
+        const promo: any = mapping.promotion || {};
+        const studentName = (promo.studentName || promo.name || "").toLowerCase();
+        const uid = (promo.uid || promo.studentUid || "").toLowerCase();
+        const classRollNumber = (promo.classRollNumber || "").toLowerCase();
+        const rollNumber = (promo.rollNumber || "").toLowerCase();
+        const programCourseName = (promo.programCourse?.name || "").toLowerCase();
+        const semesterName = (promo.class?.name || "").toLowerCase();
+        const shiftName = (promo.shift?.name || "").toLowerCase();
+        const categoryName = (promo.categoryName || "").toLowerCase();
+        const religionName = (promo.religionName || "").toLowerCase();
+        const feeCategoryName = (
+          mapping.feeGroup?.feeCategory?.name ||
+          mapping.feeCategory?.name ||
+          ""
+        ).toLowerCase();
+        const feeSlabName = (mapping.feeGroup?.feeSlab?.name || "").toLowerCase();
+        const paymentStatus = (mapping.paymentStatus || "").toLowerCase();
+        const mappingId = mapping.id?.toString() || "";
+
+        const matchesSearch =
+          studentName.includes(searchLower) ||
+          uid.includes(searchLower) ||
+          classRollNumber.includes(searchLower) ||
+          rollNumber.includes(searchLower) ||
+          programCourseName.includes(searchLower) ||
+          semesterName.includes(searchLower) ||
+          shiftName.includes(searchLower) ||
+          categoryName.includes(searchLower) ||
+          religionName.includes(searchLower) ||
+          feeCategoryName.includes(searchLower) ||
+          feeSlabName.includes(searchLower) ||
+          paymentStatus.includes(searchLower) ||
+          mappingId.includes(searchText);
+
+        return matchesSearch && matchesFilters(mapping);
+      }) ?? [];
+
+    return [...list].sort((a, b) => {
+      const da = semesterClassSortKey(a);
+      const db = semesterClassSortKey(b);
+      if (da !== db) return da - db;
+      const na = String(
+        (a.promotion as { studentName?: string; name?: string } | undefined)?.studentName ||
+          (a.promotion as { name?: string } | undefined)?.name ||
+          "",
       ).toLowerCase();
-      const feeSlabName = (mapping.feeGroup?.feeSlab?.name || "").toLowerCase();
-      const paymentStatus = (mapping.paymentStatus || "").toLowerCase();
-      const mappingId = mapping.id?.toString() || "";
-
-      const matchesSearch =
-        studentName.includes(searchLower) ||
-        uid.includes(searchLower) ||
-        classRollNumber.includes(searchLower) ||
-        rollNumber.includes(searchLower) ||
-        programCourseName.includes(searchLower) ||
-        semesterName.includes(searchLower) ||
-        shiftName.includes(searchLower) ||
-        categoryName.includes(searchLower) ||
-        religionName.includes(searchLower) ||
-        feeCategoryName.includes(searchLower) ||
-        feeSlabName.includes(searchLower) ||
-        paymentStatus.includes(searchLower) ||
-        mappingId.includes(searchText);
-
-      return matchesSearch && matchesFilters(mapping);
-    }) || [];
+      const nb = String(
+        (b.promotion as { studentName?: string; name?: string } | undefined)?.studentName ||
+          (b.promotion as { name?: string } | undefined)?.name ||
+          "",
+      ).toLowerCase();
+      const c = na.localeCompare(nb);
+      if (c !== 0) return c;
+      return (a.id ?? 0) - (b.id ?? 0);
+    });
+  }, [mappings, searchText, matchesFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filteredMappings.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -1400,10 +1468,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           {loading && shouldFetchMappings ? (
             <DotSpinnerLoader />
           ) : (
-            <div className="min-w-0 rounded-md border overflow-hidden">
+            <div className="min-w-0 rounded-md border overflow-x-auto">
               <Table
-                containerClassName="overflow-x-hidden max-w-full"
-                className="border-0 rounded-none text-[11px] sm:text-sm table-fixed w-full [&_th]:!h-auto [&_th]:!px-1.5 [&_th]:!py-2 sm:[&_th]:!px-2.5 [&_tbody_td]:!px-1.5 [&_tbody_td]:!py-2 sm:[&_tbody_td]:!px-2.5"
+                containerClassName="max-w-full overflow-x-auto"
+                className="border-0 rounded-none text-[11px] sm:text-sm w-full min-w-[880px] table-auto [&_th]:!h-auto [&_th]:!px-1.5 [&_th]:!py-2 sm:[&_th]:!px-2.5 [&_tbody_td]:!px-1.5 [&_tbody_td]:!py-2 sm:[&_tbody_td]:!px-2.5 [&_tbody_td]:align-top"
               >
                 <TableHeader>
                   <TableRow>
@@ -1415,17 +1483,23 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                       />
                     </TableHead>
                     <TableHead className="w-8 min-w-0 text-center">#</TableHead>
-                    <TableHead className="min-w-0 w-[18%]">Student</TableHead>
-                    <TableHead className="min-w-0 w-[14%] leading-tight">
+                    <TableHead className="min-w-[120px] max-w-[220px]">Student</TableHead>
+                    <TableHead className="min-w-[96px] max-w-[180px] leading-tight">
                       <span className="hidden sm:inline">Program</span>
                       <span className="sm:hidden">Prog.</span>
                     </TableHead>
-                    <TableHead className="text-center min-w-0 w-[9%]">Sem.</TableHead>
-                    <TableHead className="min-w-0 w-[8%]">Shift</TableHead>
-                    <TableHead className="min-w-0 w-[10%] leading-tight">Pay status</TableHead>
-                    <TableHead className="min-w-0 w-[9%]">Amt</TableHead>
-                    <TableHead className="min-w-0 w-[16%] leading-tight">Slab</TableHead>
-                    <TableHead className="min-w-0 w-[8%] text-right pr-1">Act.</TableHead>
+                    <TableHead className="text-center w-[4.5%] min-w-[38px] max-w-[48px] px-0.5">
+                      Sem.
+                    </TableHead>
+                    <TableHead className="min-w-[104px] w-[14%]">Shift</TableHead>
+                    <TableHead className="min-w-[76px] w-[10%] leading-tight whitespace-normal">
+                      Pay status
+                    </TableHead>
+                    <TableHead className="min-w-[72px] w-[9%]">Amt</TableHead>
+                    <TableHead className="min-w-[140px] w-[18%] leading-tight whitespace-normal">
+                      Slab
+                    </TableHead>
+                    <TableHead className="min-w-[72px] w-[8%] text-right pr-1">Act.</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1457,7 +1531,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                       const semesterName =
                         semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
                       const shiftName = promo.shift?.name || "-";
-                      const paymentStatus = mapping.paymentStatus ?? "Pending";
+                      const paymentStatus = paymentStatusLabel(mapping.paymentStatus);
                       const amountToPay = mapping.amountToPay ?? 0;
                       const totalPayableAmt = mapping.totalPayableAmount ?? 0;
                       const displayAmount = totalPayableAmt > 0 ? totalPayableAmt : amountToPay;
@@ -1494,11 +1568,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="min-w-0">
+                          <TableCell className="min-w-0 align-top">
                             {programCourseName !== "-" ? (
                               <Badge
                                 variant="outline"
-                                className="text-[10px] sm:text-xs border-blue-300 text-blue-700 bg-blue-50 whitespace-normal text-left leading-tight max-w-full block"
+                                className="inline-flex max-w-full whitespace-normal text-left text-[10px] leading-tight sm:text-xs border-blue-300 bg-blue-50 text-blue-700"
                               >
                                 {programCourseName}
                               </Badge>
@@ -1506,11 +1580,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-center min-w-0">
+                          <TableCell className="min-w-0 max-w-[3rem] px-0.5 text-center align-top">
                             {semesterName !== "-" ? (
                               <Badge
                                 variant="outline"
-                                className="text-[10px] sm:text-xs border-orange-300 text-orange-700 bg-orange-50 whitespace-normal leading-tight max-w-full"
+                                className="inline-flex max-w-full justify-center whitespace-nowrap px-1 text-[10px] leading-tight sm:text-xs border-orange-300 bg-orange-50 text-orange-700"
                               >
                                 {semesterName}
                               </Badge>
@@ -1518,11 +1592,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="min-w-0">
+                          <TableCell className="min-w-[5.5rem] align-top">
                             {shiftName !== "-" ? (
                               <Badge
                                 variant="outline"
-                                className="text-[10px] sm:text-xs border-emerald-300 text-emerald-700 bg-emerald-50 whitespace-normal leading-tight max-w-full"
+                                className="inline-flex max-w-full whitespace-normal text-[10px] leading-tight sm:text-xs border-emerald-300 bg-emerald-50 text-emerald-700"
                               >
                                 {shiftName}
                               </Badge>
@@ -1530,37 +1604,35 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="min-w-0">
+                          <TableCell className="min-w-0 align-top">
                             <Badge
                               className={
                                 paymentStatus === "Paid"
-                                  ? "bg-green-100 text-green-800 border-green-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal"
-                                  : paymentStatus === "Pending"
-                                    ? "bg-yellow-100 text-yellow-800 border-yellow-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal"
-                                    : "bg-red-100 text-red-800 border-red-300 text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-normal"
+                                  ? "inline-flex max-w-full whitespace-normal border border-green-300 bg-green-100 px-1.5 py-0.5 text-[10px] text-green-800 sm:text-xs"
+                                  : "inline-flex max-w-full whitespace-normal border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[10px] text-yellow-800 sm:text-xs"
                               }
                             >
                               {paymentStatus}
                             </Badge>
                           </TableCell>
-                          <TableCell className="min-w-0 tabular-nums">
+                          <TableCell className="min-w-0 tabular-nums align-top">
                             <span className="font-semibold text-gray-900 text-[11px] sm:text-sm">
                               ₹{displayAmount.toLocaleString("en-IN")}
                             </span>
                           </TableCell>
-                          <TableCell className="min-w-0">
+                          <TableCell className="min-w-0 align-top">
                             {mapping.feeGroup?.feeCategory?.name &&
                             mapping.feeGroup?.feeSlab?.name ? (
-                              <div className="flex flex-col gap-0.5 min-w-0">
+                              <div className="flex min-w-0 flex-wrap content-start gap-1">
                                 <Badge
                                   variant="outline"
-                                  className="text-[10px] sm:text-xs border-pink-300 text-pink-700 bg-pink-50 whitespace-normal leading-tight w-full justify-start"
+                                  className="inline-flex max-w-full shrink-0 basis-auto whitespace-normal text-[10px] leading-tight sm:text-xs border-pink-300 bg-pink-50 text-pink-700"
                                 >
                                   {mapping.feeGroup.feeSlab.name}
                                 </Badge>
                                 <Badge
                                   variant="outline"
-                                  className="text-[10px] sm:text-xs border-purple-300 text-purple-700 bg-purple-50 whitespace-normal leading-tight w-full justify-start"
+                                  className="inline-flex min-w-0 max-w-full shrink whitespace-normal text-[10px] leading-tight sm:text-xs border-purple-300 bg-purple-50 text-purple-700"
                                 >
                                   {mapping.feeGroup.feeCategory.name}
                                 </Badge>
@@ -1569,7 +1641,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                               // Fallback for old structure if feeGroup is not available
                               <Badge
                                 variant="outline"
-                                className="text-[10px] sm:text-xs border-purple-300 text-purple-700 bg-purple-50 whitespace-normal leading-tight max-w-full"
+                                className="inline-flex max-w-full whitespace-normal text-[10px] leading-tight sm:text-xs border-purple-300 bg-purple-50 text-purple-700"
                               >
                                 {mapping.feeCategory.name}
                               </Badge>

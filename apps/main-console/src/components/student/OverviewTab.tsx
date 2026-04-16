@@ -34,8 +34,8 @@ function formatSemesterBadgeLabel(name: string | undefined | null): string {
 }
 
 function isFeeMappingPaidUi(status: string | undefined): boolean {
-  const s = (status || "").toUpperCase();
-  return s === "SUCCESS" || s === "COMPLETED";
+  const s = (status || "").trim().toUpperCase();
+  return s === "SUCCESS" || s === "COMPLETED" || s === "DONE" || s === "PAID";
 }
 
 function parseMappingDate(value: string | Date | null | undefined): Date | null {
