@@ -104,7 +104,7 @@ export function isFeeStudentMappingPaymentContext(
   return ctx === "FEE" || ctx === "ADMISSION";
 }
 
-async function ensureFeeReceiptAfterSuccessfulFeePayment(
+export async function ensureFeeReceiptAfterSuccessfulFeePayment(
   payment:
     | {
         id: number;

@@ -7,7 +7,11 @@ import { familyModel } from "@repo/db/schemas/models/user";
 import { personModel } from "@repo/db/schemas/models/user/person.model";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { getFeeStudentMappingById } from "@/features/fees/services/fee-student-mapping.service.js";
-import { findPaymentByOrderId } from "./payment.service.js";
+import {
+  ensureFeeReceiptAfterSuccessfulFeePayment,
+  findPaymentByOrderId,
+} from "./payment.service.js";
+import { sendFeeReceiptEmailForPaymentId } from "./fee-receipt-notification.service.js";
 
 function normalizeReceiptNumber(input: string): string {
   return String(input || "")
@@ -317,6 +321,17 @@ export async function receiveCashFeePayment(params: {
     receiptNumber,
   });
   if (!reloaded.success) return reloaded;
+
+  const paymentId = reloaded.data.paymentEntry?.id;
+  if (paymentId) {
+    await ensureFeeReceiptAfterSuccessfulFeePayment({
+      id: paymentId,
+      context: "FEE",
+      status: "SUCCESS",
+    });
+    await sendFeeReceiptEmailForPaymentId(paymentId);
+  }
+
   return { success: true, data: reloaded.data };
 }
 
@@ -504,5 +519,13 @@ export async function markOnlineFeePaymentSuccessManual(params: {
 
   const reloaded = await loadFeePaymentMarkingByOrderId({ orderId });
   if (!reloaded.success) return reloaded;
+
+  await ensureFeeReceiptAfterSuccessfulFeePayment({
+    id: payment.id,
+    context: payment.context,
+    status: "SUCCESS",
+  });
+  await sendFeeReceiptEmailForPaymentId(payment.id);
+
   return { success: true, data: reloaded.data };
 }

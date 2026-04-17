@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <% 
+    /* dtoTemplateData === notificationEvent.templateData from enqueue (same as extractedTemplateData in worker) */
+    const c = (typeof content !== 'undefined' && content && content.dtoTemplateData && typeof content.dtoTemplateData === 'object')
+      ? content.dtoTemplateData
+      : ((typeof content !== 'undefined' && content) ? content : {});
+  %>
+  <title><%= (c && c.subject) ? c.subject : 'Fee Payment Confirmation – BESC' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      vertical-align: middle;
+    }
+
+    body {
+      /* background-color: #0d1117; */
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(16px, 4vw, 40px) clamp(12px, 3vw, 16px);
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ── Outer card ── */
+    .card {
+      background: #ffffff;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+    }
+
+    /* ── Header band ── */
+    .header {
+      background: #0a2240;
+      padding: clamp(24px, 5vw, 36px) clamp(18px, 5vw, 48px) clamp(22px, 4vw, 32px);
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 220px; height: 220px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: -40px;
+      width: 280px; height: 280px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .college-badge {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .badge-icon {
+      width: 44px;
+      height: 44px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.06);
+      overflow: hidden;
+    }
+    .college-logo-img {
+      width: 100%;
+      height: 100%;
+      max-width: 44px;
+      max-height: 44px;
+      object-fit: contain;
+      display: block;
+      border-radius: 50%;
+    }
+
+    .college-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1.3;
+    }
+
+    .header-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(22px, 5vw, 28px);
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+    .header-title span {
+      color: #6ec6f5;
+    }
+
+    /* ── Gold accent stripe ── */
+    .accent-stripe {
+      height: 4px;
+      background: linear-gradient(90deg, #b8973a 0%, #e2c46d 50%, #b8973a 100%);
+    }
+
+    /* ── Body ── */
+    .body {
+      padding: clamp(24px, 5vw, 40px) clamp(18px, 5vw, 48px);
+      background: #fafaf8;
+    }
+
+    .greeting {
+      font-size: clamp(14px, 3.5vw, 15px);
+      color: #374151;
+      margin-bottom: 20px;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+    .greeting strong {
+      font-weight: 500;
+      color: #111827;
+    }
+
+    /* ── Success tick ── */
+    .success-block {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .tick-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #16a34a;
+      flex-shrink: 0;
+      display: inline-block;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 40px;
+      text-align: center;
+      color: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+      vertical-align: middle;
+    }
+    .success-text {
+      min-width: 0;
+      flex: 1 1 200px;
+      font-size: 14px;
+      color: #15803d;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .success-text span {
+      display: block;
+      font-size: 12px;
+      font-weight: 400;
+      color: #166534;
+      margin-top: 8px;
+    }
+
+    /* ── Challan info box ── */
+    .info-box {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+    }
+    .info-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .challan-number {
+      font-family: Verdana, Geneva, Tahoma, sans-serif;
+      font-size: clamp(16px, 4.5vw, 22px);
+      font-weight: 700;
+      color: #0a2240;
+      letter-spacing: 0.02em;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .divider {
+      height: 1px;
+      background: #f3f4f6;
+      margin: 16px 0;
+    }
+    .meta-row {
+      display: table;
+      width: 100%;
+      font-size: 12px;
+      color: #6b7280;
+      table-layout: fixed;
+    }
+    .meta-row .meta-label {
+      display: table-cell;
+      width: 42%;
+      vertical-align: top;
+      padding: 4px 12px 4px 0;
+      color: #6b7280;
+    }
+    .meta-row .meta-value {
+      display: table-cell;
+      vertical-align: top;
+      padding: 4px 0;
+      text-align: right;
+      color: #374151;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    /* ── CTA Button ── */
+    .cta-wrap {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: #0a2240;
+      color: #ffffff !important;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 16px 40px;
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .cta-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .cta-btn:hover { background: #0f2f56; }
+
+    .cta-sub {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    /* ── Note ── */
+    .note {
+      background: #fffbeb;
+      border-left: 3px solid #b8973a;
+      padding: 14px 18px;
+      border-radius: 0 6px 6px 0;
+      font-size: 12px;
+      color: #78350f;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      background: #0a2240;
+      padding: clamp(18px, 4vw, 24px) clamp(18px, 5vw, 48px);
+      text-align: center;
+    }
+    .regards {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.8;
+    }
+    .regards strong {
+      display: block;
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+      font-size: 13px;
+    }
+    .footer-rule {
+      width: 40px;
+      height: 1px;
+      background: rgba(255,255,255,0.15);
+      margin: 12px auto;
+    }
+    .footer-college {
+      font-family: 'Playfair Display', serif;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ── Dark preview wrapper label ── */
+    .preview-label {
+      text-align: center;
+      color: rgba(255,255,255,0.3);
+      font-size: clamp(10px, 2.5vw, 11px);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: clamp(12px, 3vw, 20px);
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    @media screen and (max-width: 600px) {
+      .college-name {
+        font-size: 12px;
+      }
+      .info-box {
+        padding: 16px 18px;
+      }
+      .success-block {
+        padding: 16px 18px;
+      }
+    }
+
+    @media screen and (max-width: 480px) {
+      .college-badge {
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .badge-icon {
+        width: 40px;
+        height: 40px;
+      }
+      .college-logo-img {
+        max-width: 40px;
+        max-height: 40px;
+      }
+      .meta-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+      }
+      .meta-row strong {
+        text-align: left;
+      }
+      .cta-btn {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        padding: 14px 20px;
+        font-size: 12px;
+        letter-spacing: 0.06em;
+      }
+      .card {
+        border-radius: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+<%
+  const displayName = c.name ? String(c.name).trim() : 'Student';
+  const logoUrl = c.collegeLogoUrl ? String(c.collegeLogoUrl) : 'https://besc.academic360.app/api/api/v1/settings/file/4';
+  const challanRef = c.receiptNumber ? String(c.receiptNumber).trim() : '';
+  const challanDisplay = challanRef || '—';
+  const pdfFromPayload = c.paidChallanPdfUrl ? String(c.paidChallanPdfUrl).trim() : '';
+  /* Fallback PDF link if backend merge dropped paidChallanPdfUrl but challan is present */
+  const pdfUrlFallbackBase = 'https://besc.academic360.app';
+  const pdfUrl =
+    pdfFromPayload ||
+    (challanRef
+      ? pdfUrlFallbackBase +
+        '/api/v1/fees/receipts?challanNumber=' +
+        encodeURIComponent(challanRef)
+      : '#');
+%>
+  <div class="wrapper">
+
+    <div class="card">
+
+      <!-- Header -->
+      <div class="header">
+        <div class="college-badge">
+          <div class="badge-icon">
+            <img
+              class="college-logo-img"
+              src="<%- logoUrl %>"
+              alt="The Bhawanipur Education Society College, Kolkata — official emblem"
+              width="44"
+              height="44"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+          <div class="college-name" style="margin-left: 12px;">
+            Bhawanipur Education Society College<br/>
+            <span style="font-weight:300; font-size:11px; letter-spacing:0.04em; opacity:0.6;">System Control Room</span>
+          </div>
+        </div>
+        <div class="header-title">
+          Fee Payment<br/><span>Confirmed ✓</span>
+        </div>
+      </div>
+
+      <!-- Gold stripe -->
+      <div class="accent-stripe"></div>
+
+      <!-- Body -->
+      <div class="body">
+
+        <p class="greeting">
+          Dear <strong><%= displayName %></strong>,<br/><br/>
+          We are pleased to inform you that your fee payment has been successfully received and recorded in our system. Your challan has been updated accordingly.
+        </p>
+
+        <!-- Success indicator -->
+        <div class="success-block" style="padding-top: 16px;">
+          <div class="tick-circle" role="img" aria-label="Success">&#10003;</div>
+          <div class="success-text" style="margin-left: 12px;">
+            Payment Successfully Received
+            <span>Your account has been updated. No further action is required.</span>
+          </div>
+        </div>
+
+        <!-- Challan info -->
+        <div class="info-box">
+          <div class="info-label">Challan Reference</div>
+          <div class="challan-number"><%= challanDisplay %></div>
+          <div class="divider"></div>
+          <div class="meta-row">
+            <span class="meta-label">Status</span>
+            <span class="meta-value" style="color:#16a34a;font-weight:600;">&#10003; Paid</span>
+          </div>
+        </div>
+
+        <!-- CTA: paid challan PDF -->
+        <div class="cta-wrap">
+          <a href="<%- pdfUrl %>" class="cta-btn" target="_blank" rel="noopener noreferrer">Download Your Paid Challan (PDF)</a>
+          <p class="cta-sub">Opens your official fee receipt PDF for this challan.</p>
+        </div>
+
+        <p class="greeting" style="margin-bottom:0; padding-top: 30px;">
+          Warm regards,<br/>
+          <strong>System Control Room</strong>
+        </p>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="regards">
+          <strong>The Bhawanipur Education Society College</strong>
+          5, B.L. Saha Road, Kolkata – 700 026, West Bengal
+        </div>
+        <div class="footer-rule"></div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

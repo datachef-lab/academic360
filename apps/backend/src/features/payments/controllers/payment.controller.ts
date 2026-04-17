@@ -3,7 +3,11 @@ import { createRequire } from "module";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import type { PaytmDowntimeWebhookPayload } from "@repo/db/dtos/payments";
-import { feeStudentMappingModel, studentModel } from "@repo/db/schemas";
+import {
+  feeStudentMappingModel,
+  studentModel,
+  userModel,
+} from "@repo/db/schemas";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
@@ -28,6 +32,7 @@ import {
 } from "../services/payment-downtime.service.js";
 import { findApplicationFormModelById } from "@/features/admissions/services/application-form.service.js";
 import { paytmConfig, isPaytmConfigured } from "../config/paytm.config.js";
+import { sendFeeReceiptEmailForPaymentId } from "../services/fee-receipt-notification.service.js";
 
 function normalizePaytmTxnStatus(value: unknown): string {
   return String(value ?? "")
@@ -551,7 +556,7 @@ export const paymentCallbackHandler = async (
     try {
       // Update base status columns from callback.
       if (normalizedCallbackStatus === "TXN_SUCCESS") {
-        await updatePaymentByOrderId(orderId, {
+        const updatedPayment = await updatePaymentByOrderId(orderId, {
           status: "SUCCESS",
           transactionId: txnId,
           bankTxnId,
@@ -565,6 +570,10 @@ export const paymentCallbackHandler = async (
           cardScheme,
           gatewayResponse: { paytm: { callback: body } },
         });
+
+        if (updatedPayment?.id) {
+          await sendFeeReceiptEmailForPaymentId(updatedPayment.id);
+        }
       } else if (normalizedCallbackStatus === "TXN_FAILURE") {
         await updatePaymentByOrderId(orderId, {
           status: "FAILED",
