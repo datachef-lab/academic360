@@ -952,10 +952,20 @@ const ProgramCoursesPage = () => {
                           {pc.streamId ? (streamsLookup[pc.streamId] ?? "-") : "-"}
                         </TableCell>
                         <TableCell>
-                          <div>{pc.name}</div>
+                          <div className="truncate" title={pc.name ?? undefined}>
+                            {pc.name}
+                          </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            Duration: {pc.duration} year{pc.duration > 1 ? "s" : ""} | Sems:{" "}
-                            {pc.totalSemesters}
+                            {[
+                              typeof pc.duration === "number"
+                                ? `${pc.duration} year${pc.duration !== 1 ? "s" : ""}`
+                                : null,
+                              typeof pc.totalSemesters === "number"
+                                ? `${pc.totalSemesters} semester${pc.totalSemesters !== 1 ? "s" : ""}`
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ") || "—"}
                           </div>
                         </TableCell>
                         <TableCell>
