@@ -1034,13 +1034,22 @@ export default function EnrollmentFeesPage() {
                         </p>
                         <div className="rounded-xl border bg-white">
                           <div className="rounded-t-xl bg-indigo-800 px-5 py-4 text-white">
-                            <span className="font-semibold">
-                              Fee Summary (Fees for {toSentenceCase(selectedClassName || "")})
-                            </span>
-                            <span className="mx-2">·</span>
-                            <span>
-                              Academic Year {selectedAcademicYear || cpData?.academicYear?.year}
-                            </span>
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="min-w-0">
+                                <span className="font-semibold">
+                                  Fee Summary (Fees for {toSentenceCase(selectedClassName || "")})
+                                </span>
+                                <span className="mx-2">·</span>
+                                <span>
+                                  Academic Year {selectedAcademicYear || cpData?.academicYear?.year}
+                                </span>
+                              </div>
+                              <span className="shrink-0 text-sm font-medium text-indigo-100">
+                                <span className="flex flex-col leading-tight text-right">
+                                  <span>UID: {student?.uid || "—"}</span>
+                                </span>
+                              </span>
+                            </div>
                           </div>
                           <div className="px-5 py-4">
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">

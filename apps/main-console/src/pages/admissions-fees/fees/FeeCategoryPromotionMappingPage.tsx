@@ -1124,6 +1124,32 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
   /** Fee groups allowed for this promotion: slabs present in fee structure (all categories). */
   const slabDropdownFeeGroups = useMemo((): FeeGroupDto[] => {
+    const isFullFeeOption = (fg: FeeGroupDto): boolean => {
+      const slabName = (fg.feeSlab?.name ?? "").trim().toLowerCase();
+      const categoryName = (fg.feeCategory?.name ?? "").trim().toLowerCase();
+      return (
+        slabName === "slab f" ||
+        slabName.includes("full fee") ||
+        categoryName === "full fee" ||
+        categoryName === "full fees"
+      );
+    };
+
+    const sortWithFullFeeFirst = (a: FeeGroupDto, b: FeeGroupDto): number => {
+      const aIsFullFee = isFullFeeOption(a);
+      const bIsFullFee = isFullFeeOption(b);
+      if (aIsFullFee !== bIsFullFee) {
+        return aIsFullFee ? -1 : 1;
+      }
+
+      const slab = (a.feeSlab?.name ?? "").localeCompare(b.feeSlab?.name ?? "", undefined, {
+        numeric: true,
+      });
+      if (slab !== 0) return slab;
+
+      return (a.feeCategory?.name ?? "").localeCompare(b.feeCategory?.name ?? "");
+    };
+
     const base: FeeGroupDto[] =
       feeGroups && feeGroups.length > 0
         ? feeGroups
@@ -1153,18 +1179,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       if (editingItem?.feeGroup?.id && !filtered.some((g) => g.id === editingItem.feeGroup?.id)) {
         filtered = [editingItem.feeGroup, ...filtered];
       }
-      filtered.sort((a, b) => {
-        const slab = (a.feeSlab?.name ?? "").localeCompare(b.feeSlab?.name ?? "", undefined, {
-          numeric: true,
-        });
-        if (slab !== 0) return slab;
-        return (a.feeCategory?.name ?? "").localeCompare(b.feeCategory?.name ?? "");
-      });
+      filtered.sort(sortWithFullFeeFirst);
       return filtered;
     }
 
     // Show full slab list immediately while totals are loading.
-    return base;
+    return [...base].sort(sortWithFullFeeFirst);
   }, [feeGroups, mappings, editingItem?.feeGroup, feeGroupTotalsById]);
 
   const feePromotionEditFormEqualsItem = useCallback(
