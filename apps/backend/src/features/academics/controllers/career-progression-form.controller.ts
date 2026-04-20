@@ -36,9 +36,68 @@ export async function getAllCareerProgressionFormsHandler(
       }
     }
 
+    let academicYearId: number | undefined;
+    const ayRaw = req.query.academicYearId;
+    if (ayRaw != null && String(ayRaw).trim() !== "") {
+      const p = parseInt(String(ayRaw), 10);
+      if (!Number.isNaN(p)) {
+        academicYearId = p;
+      }
+    }
+
+    const pageRaw = req.query.page;
+    const pageSizeRaw = req.query.pageSize;
+    const usePagination =
+      pageRaw != null &&
+      String(pageRaw).trim() !== "" &&
+      pageSizeRaw != null &&
+      String(pageSizeRaw).trim() !== "";
+
+    if (usePagination) {
+      const page = Math.max(1, parseInt(String(pageRaw), 10));
+      const pageSize = Math.min(
+        100,
+        Math.max(1, parseInt(String(pageSizeRaw), 10)),
+      );
+      if (Number.isNaN(page) || Number.isNaN(pageSize)) {
+        res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "BAD_REQUEST",
+              null,
+              "Invalid page or pageSize query parameter",
+            ),
+          );
+        return;
+      }
+
+      const result =
+        await careerProgressionFormService.findCareerProgressionFormsPaginated({
+          page,
+          pageSize,
+          studentId,
+          academicYearId,
+        });
+
+      res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            "SUCCESS",
+            result,
+            "Career progression forms fetched (paginated)",
+          ),
+        );
+      return;
+    }
+
     const rows =
       await careerProgressionFormService.findAllCareerProgressionForms(
         studentId,
+        academicYearId,
       );
     res
       .status(200)

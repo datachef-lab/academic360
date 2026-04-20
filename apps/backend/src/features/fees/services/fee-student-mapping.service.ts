@@ -54,6 +54,19 @@ export function normalizeReceiptLookupKey(input: string): string {
 }
 
 /**
+ * Challan / receipt number: `{studentUid}/{NN}` or, when the fee category has a code,
+ * `{studentUid}/{NN}-{feeCategoryCode}`.
+ */
+function buildChallanNumber(
+  studentUid: string,
+  paddedSeq: string,
+  feeCategoryCode: string | null,
+): string {
+  const base = `${studentUid}/${paddedSeq}`;
+  return feeCategoryCode ? `${base}-${feeCategoryCode}` : base;
+}
+
+/**
  * First-time receipt download: assigns receipt_number and challan_generated_at.
  * If receipt_number exists but challan_generated_at is missing (legacy), sets timestamp once.
  */
@@ -114,7 +127,7 @@ async function persistReceiptIssuanceIfNeeded(params: {
   studentUid: string;
   feeCategoryCode: string | null | undefined;
 }): Promise<{ challanNumber: string; challanGeneratedAt: Date }> {
-  const { mappingId, studentUid, feeCategoryCode } = params;
+  const { mappingId, studentUid } = params;
   const existingRn = params.existingReceiptNumber?.trim() || "";
 
   if (existingRn) {
@@ -131,9 +144,12 @@ async function persistReceiptIssuanceIfNeeded(params: {
   }
 
   const nextReceiptNum = await getNextReceiptNumberForUid(studentUid);
-  const challanNumber = feeCategoryCode
-    ? `${studentUid}/${nextReceiptNum}-${feeCategoryCode}`
-    : `${studentUid}/${nextReceiptNum}`;
+  const code = (params.feeCategoryCode ?? "").trim();
+  const challanNumber = buildChallanNumber(
+    studentUid,
+    nextReceiptNum,
+    code.length > 0 ? code : null,
+  );
   const now = new Date();
   await db
     .update(feeStudentMappingModel)
@@ -232,17 +248,13 @@ async function fetchFeeReceiptJoinRow(
 }
 
 /**
- * Gets the next receipt number for a given student UID.
- * Finds all existing receipt numbers starting with the UID, extracts the numeric part,
- * and returns the next incremented number (zero-padded to 2 digits).
+ * Gets the next receipt sequence (NN) for a given student UID.
+ * Inspects existing numbers of the form `uid/NN` or `uid/NN-{suffix}`.
  */
 export async function getNextReceiptNumberForUid(uid: string): Promise<string> {
   try {
     const escapedUid = uid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    // Find all existing receipt numbers for this UID.
-    // Supports both legacy format: uid/NN
-    // and current format: uid/NN-CODE
     const { rows } = await db.execute(sql`
       SELECT receipt_number
       FROM public.fee_student_mappings

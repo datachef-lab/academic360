@@ -708,7 +708,15 @@ export default function EnrollmentFeesPage() {
       }
       const origin = base.replace(/\/$/, "");
       const path = pathWithQuery.startsWith("/") ? pathWithQuery : `/${pathWithQuery}`;
-      window.open(`${origin}${path}`, "_blank", "noopener,noreferrer");
+      const pdfUrl = `${origin}${path}`;
+      // Student Console Simulation embeds this app in an iframe; `window.open` from a nested
+      // frame is often blocked. Main console listens for OPEN_PDF_IN_NEW_TAB (see student-console-simulation.tsx).
+      const inIframe = typeof window !== "undefined" && window.self !== window.top;
+      if (inIframe && window.parent) {
+        window.parent.postMessage({ type: "OPEN_PDF_IN_NEW_TAB", url: pdfUrl }, "*");
+      } else {
+        window.open(pdfUrl, "_blank", "noopener,noreferrer");
+      }
     } catch (error) {
       console.error(error);
       setPaymentMsg("Failed to generate fee challan. Please try again.");
