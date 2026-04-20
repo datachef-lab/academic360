@@ -326,7 +326,7 @@ export async function receiveCashFeePayment(params: {
   if (paymentId) {
     await ensureFeeReceiptAfterSuccessfulFeePayment({
       id: paymentId,
-      context: "FEE",
+      context: "ADMISSION",
       status: "SUCCESS",
     });
     await sendFeeReceiptEmailForPaymentId(paymentId);
@@ -495,7 +495,7 @@ export async function markOnlineFeePaymentSuccessManual(params: {
       .where(
         and(
           eq(paymentModel.id, payment.id),
-          inArray(paymentModel.context, ["FEE", "ADMISSION"]),
+          inArray(paymentModel.context, ["ADMISSION"]),
         ),
       );
 
