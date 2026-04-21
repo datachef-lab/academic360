@@ -317,7 +317,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {/* Masters Section */}
                   <div className=" ">
                     <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                      Masters
+                      Modules
                     </h3>
                     <div className="space-y-1">
                       {data.navMain
