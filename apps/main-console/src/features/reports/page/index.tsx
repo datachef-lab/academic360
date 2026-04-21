@@ -1,4 +1,12 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,14 +22,14 @@ import {
   FileText,
   Users,
   Clock,
+  ChevronDown,
+  Filter,
   FileImage,
   Upload,
   AlertTriangle,
   Copy,
-  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ExportService } from "@/services/exportService";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useSocket } from "@/hooks/useSocket";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
@@ -34,18 +42,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import { getRegulationTypes } from "@/services/course-design.api";
-import type { RegulationType } from "@repo/db/index";
+import {
+  getRegulationTypes,
+  getAffiliations,
+  getProgramCourses,
+} from "@/services/course-design.api";
+import type { RegulationType, Affiliation, ProgramCourse } from "@repo/db/index";
+import { getAllClasses } from "@/services/classes.service";
+import type { Class } from "@/types/academics/class";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import MultiSelectDropdown from "@/components/ui/MultiSelect";
+import { ExportService, type ReportExportQueryFilters } from "@/services/exportService";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import * as XLSX from "xlsx";
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -65,12 +91,16 @@ interface ReportItem {
   domains?: string[];
   name: string;
   description: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   downloadFunction: () => Promise<void>;
   requiresAcademicYear?: boolean;
   requiresRegulation?: boolean;
   actionType?: "download" | "upload";
   uploadOperation?: string;
+  /** Excel includes a Semester (class) column */
+  includesSemesterInExport?: boolean;
+  /** When true, row uses Export filters dialog (academic year + optional narrowers). */
+  usesToolbarExportFilters?: boolean;
 }
 
 function getReportDomains(report: ReportItem): string[] {
@@ -106,6 +136,8 @@ function domainBadgeClassName(domain: string): string {
       return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200";
     case "FEES":
       return "bg-emerald-50 text-emerald-800 border-emerald-200";
+    case "ENROLMENT":
+      return "bg-violet-50 text-violet-800 border-violet-200";
     default:
       return "bg-blue-50 text-blue-700 border-blue-200";
   }
@@ -120,20 +152,30 @@ export default function ReportsPage() {
   const [existingUidsDialogOpen, setExistingUidsDialogOpen] = useState(false);
   const [existingUids, setExistingUids] = useState<string[]>([]);
   const [cuRollRegValidationDialogOpen, setCuRollRegValidationDialogOpen] = useState(false);
-  const [cuRollRegValidationMessage, setCuRollRegValidationMessage] = useState<string>("");
+  const [cuRollRegValidationMessage, setCuRollRegValidationMessage] = useState("");
   const [cuRollRegMissingHeaders, setCuRollRegMissingHeaders] = useState<string[]>([]);
 
   const cuRollRegFileInputRef = useRef<HTMLInputElement | null>(null);
   const importStudentsFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Use existing academic year hook
-  const { availableAcademicYears, loadAcademicYears } = useAcademicYear();
+  const { availableAcademicYears, loadAcademicYears, currentAcademicYear } = useAcademicYear();
 
   // Dropdown states
   const [regulationTypes, setRegulationTypes] = useState<RegulationType[]>([]);
-  const [selectedRegulationType, setSelectedRegulationType] = useState<string>("");
   /** Empty = show all reports (no domain filter). */
   const [domainFilter, setDomainFilter] = useState<string[]>([]);
+
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
+  const [programCourses, setProgramCourses] = useState<ProgramCourse[]>([]);
+  const [classesList, setClassesList] = useState<Class[]>([]);
+  /** Academic year id used for all exports (toolbar). */
+  const [exportAcademicYearId, setExportAcademicYearId] = useState("");
+  const [filterRegulationIds, setFilterRegulationIds] = useState<number[]>([]);
+  const [filterAffiliationIds, setFilterAffiliationIds] = useState<number[]>([]);
+  const [filterProgramCourseIds, setFilterProgramCourseIds] = useState<number[]>([]);
+  const [filterClassIds, setFilterClassIds] = useState<number[]>([]);
 
   // Authenticated user id for scoping socket room
   const { user } = useAuth();
@@ -178,13 +220,20 @@ export default function ReportsPage() {
 
         // Fetch regulation types using existing course-design API service
         const regulationTypesData = await getRegulationTypes();
-        setRegulationTypes(Array.isArray(regulationTypesData) ? regulationTypesData : []);
-
-        // Set default to first active regulation type
-        const activeRegulation = regulationTypesData.find((type: RegulationType) => type.isActive);
-        if (activeRegulation) {
-          setSelectedRegulationType(activeRegulation.shortName || activeRegulation.name);
+        const regulationList = Array.isArray(regulationTypesData) ? regulationTypesData : [];
+        setRegulationTypes(regulationList);
+        const activeRegulation = regulationList.find((type: RegulationType) => type.isActive);
+        if (activeRegulation?.id != null) {
+          setFilterRegulationIds((prev) =>
+            prev.length > 0 ? prev : [activeRegulation.id as number],
+          );
         }
+
+        const [affData, pcData] = await Promise.all([getAffiliations(), getProgramCourses()]);
+        setAffiliations(Array.isArray(affData) ? affData : []);
+        setProgramCourses(Array.isArray(pcData) ? pcData : []);
+        const cls = await getAllClasses();
+        setClassesList(Array.isArray(cls) ? cls : []);
       } catch (error) {
         console.error("Error fetching dropdown data:", error);
         toast.error("Failed to load dropdown data");
@@ -202,6 +251,49 @@ export default function ReportsPage() {
     [availableAcademicYears],
   );
   const selectedAcademicYearId = selectedAcademicYear?.id?.toString() || "";
+  const effectiveAcademicYearId = exportAcademicYearId.trim() || selectedAcademicYearId;
+
+  const academicYearForToolbarExport = useMemo(
+    () =>
+      availableAcademicYears.find((y) => String(y.id) === effectiveAcademicYearId) ||
+      selectedAcademicYear,
+    [availableAcademicYears, effectiveAcademicYearId, selectedAcademicYear],
+  );
+
+  const buildReportFilters = useCallback((): ReportExportQueryFilters => {
+    const ay = Number(effectiveAcademicYearId);
+    return {
+      academicYearId: Number.isFinite(ay) ? ay : undefined,
+      regulationTypeIds: filterRegulationIds.length ? filterRegulationIds : undefined,
+      affiliationIds: filterAffiliationIds.length ? filterAffiliationIds : undefined,
+      programCourseIds: filterProgramCourseIds.length ? filterProgramCourseIds : undefined,
+      classIds: filterClassIds.length ? filterClassIds : undefined,
+    };
+  }, [
+    effectiveAcademicYearId,
+    filterRegulationIds,
+    filterAffiliationIds,
+    filterProgramCourseIds,
+    filterClassIds,
+  ]);
+
+  const cuZipRegulationShortName = useMemo(() => {
+    if (filterRegulationIds.length !== 1) return "";
+    const rt = regulationTypes.find((r) => r.id === filterRegulationIds[0]);
+    return (rt?.shortName || rt?.name || "").trim();
+  }, [filterRegulationIds, regulationTypes]);
+
+  useEffect(() => {
+    if (exportAcademicYearId.trim()) return;
+    const sliceId = currentAcademicYear?.id;
+    if (sliceId != null) {
+      setExportAcademicYearId(String(sliceId));
+      return;
+    }
+    if (selectedAcademicYearId) {
+      setExportAcademicYearId(selectedAcademicYearId);
+    }
+  }, [currentAcademicYear?.id, selectedAcademicYearId, exportAcademicYearId]);
 
   const handleDownload = async (
     reportId: string,
@@ -349,7 +441,7 @@ export default function ReportsPage() {
       const roll = String(row[rollIdx] ?? "").trim();
       const reg = String(row[regIdx] ?? "").trim();
 
-      if (!uid && !roll && !reg) continue; // skip empty row
+      if (!uid && !roll && !reg) continue;
 
       if (!uid) return { ok: false, message: `Row ${r + 1}: UID is required.` };
       if (!roll) return { ok: false, message: `Row ${r + 1}: CU Roll Number is required.` };
@@ -437,7 +529,6 @@ export default function ReportsPage() {
       return;
     }
 
-    // Socket will continue sending progress updates; keep UI open.
     setCurrentProgressUpdate((prev) => ({
       ...(prev || {
         id: `export_${Date.now()}`,
@@ -468,12 +559,8 @@ export default function ReportsPage() {
     toast.success("Student import completed.");
   };
 
-  const handleExcelFileSelected = async (
-    reportId: string,
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleExcelFileSelected = async (reportId: string, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    // allow selecting the same file again
     e.target.value = "";
     if (!file) return;
 
@@ -525,8 +612,173 @@ export default function ReportsPage() {
     }
   };
 
+  const downloadStudentDetailedReport = async () => {
+    if (!effectiveAcademicYearId) {
+      toast.error("Please select an academic year");
+      return;
+    }
+    setCurrentProgressUpdate({
+      id: `export_${Date.now()}`,
+      userId,
+      type: "export_progress",
+      message: "Exporting Student Detailed Report...",
+      progress: 25,
+      status: "in_progress",
+      createdAt: new Date(),
+    });
+
+    const result = await ExportService.exportStudentDetailedReport(Number(effectiveAcademicYearId));
+
+    if (result.success && result.data) {
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId,
+        type: "export_progress",
+        message: "Student Detailed Report downloaded successfully!",
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+      toast.success("Student Detailed Report downloaded successfully!");
+    } else {
+      throw new Error(result.message || "Export failed");
+    }
+  };
+
+  const downloadStudentAcademicSubjectsReport = async () => {
+    if (!effectiveAcademicYearId) {
+      toast.error("Please select an academic year");
+      return;
+    }
+    setCurrentProgressUpdate({
+      id: `export_${Date.now()}`,
+      userId,
+      type: "export_progress",
+      message: "Exporting Student Academic Subjects Report...",
+      progress: 25,
+      status: "in_progress",
+      createdAt: new Date(),
+    });
+
+    const result = await ExportService.exportStudentAcademicSubjectsReport(
+      Number(effectiveAcademicYearId),
+    );
+
+    if (result.success && result.data) {
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId,
+        type: "export_progress",
+        message: "Student Academic Subjects Report downloaded successfully!",
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+      toast.success("Student Academic Subjects Report downloaded successfully!");
+    } else {
+      throw new Error(result.message || "Export failed");
+    }
+  };
+
+  const downloadStudentImagesReport = async () => {
+    if (!effectiveAcademicYearId) {
+      toast.error("Please select an academic year");
+      return;
+    }
+    setCurrentProgressUpdate({
+      id: `export_${Date.now()}`,
+      userId,
+      type: "export_progress",
+      message: "Exporting Student Images Report...",
+      progress: 25,
+      status: "in_progress",
+      createdAt: new Date(),
+    });
+
+    const result = await ExportService.downloadStudentImages(Number(effectiveAcademicYearId));
+
+    if (result.success && result.data) {
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId,
+        type: "export_progress",
+        message: "Student Images Report downloaded successfully!",
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+      toast.success("Student Images Report downloaded successfully!");
+    } else {
+      throw new Error(result.message || "Export failed");
+    }
+  };
+
+  const downloadCuRegistrationDocuments = async (
+    downloadType: "combined" | "pdfs" | "documents",
+  ) => {
+    if (!effectiveAcademicYearId) {
+      toast.error("Please select an academic year in Export filters");
+      return;
+    }
+    if (filterRegulationIds.length !== 1 || !cuZipRegulationShortName) {
+      toast.error(
+        "CU Registration ZIP downloads need exactly one regulation selected in Export filters.",
+      );
+      return;
+    }
+
+    const yearMatch = academicYearForToolbarExport?.year?.match(/^(\d{4})/);
+    const year = yearMatch?.[1] ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+
+    const sessionId = `download-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    setCurrentProgressUpdate({
+      id: sessionId,
+      userId,
+      type: "download_progress",
+      message: `Starting CU Registration ${downloadType} documents download...`,
+      progress: 0,
+      status: "started",
+      createdAt: new Date(),
+    });
+
+    const result = await ExportService.downloadCuRegistrationDocuments(
+      year,
+      cuZipRegulationShortName,
+      downloadType,
+      sessionId,
+    );
+
+    if (result.success && result.data) {
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+      setCurrentProgressUpdate({
+        id: sessionId,
+        userId,
+        type: "download_progress",
+        message: `CU Registration ${downloadType} documents downloaded successfully!`,
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+      toast.success(`CU Registration ${downloadType} documents downloaded successfully!`);
+    } else {
+      throw new Error(result.message || "Download failed");
+    }
+  };
+
   const downloadSubjectSelectionReport = async () => {
-    if (!selectedAcademicYearId) {
+    if (!effectiveAcademicYearId) {
       toast.error("Please select an academic year");
       return;
     }
@@ -541,7 +793,15 @@ export default function ReportsPage() {
       createdAt: new Date(),
     });
 
-    const result = await ExportService.exportStudentSubjectSelections(1);
+    const ayNum = Number(effectiveAcademicYearId);
+    const metaId = await ExportService.getFirstSubjectSelectionMetaIdForAcademicYear(ayNum);
+    if (metaId == null) {
+      throw new Error(
+        "No subject selection configuration found for this academic year. Cannot export.",
+      );
+    }
+
+    const result = await ExportService.exportStudentSubjectSelections(metaId, buildReportFilters());
 
     if (result.success && result.data) {
       // Trigger download
@@ -567,7 +827,7 @@ export default function ReportsPage() {
   };
 
   const downloadCuRegistrationReport = async () => {
-    if (!selectedAcademicYearId) {
+    if (!effectiveAcademicYearId) {
       toast.error("Please select an academic year");
       return;
     }
@@ -583,8 +843,14 @@ export default function ReportsPage() {
       createdAt: new Date(),
     });
 
-    const academicYearIdNumber = Number(selectedAcademicYearId);
-    const result = await ExportService.exportCuRegistrationCorrections(academicYearIdNumber);
+    const academicYearIdNumber = Number(effectiveAcademicYearId);
+    const f = buildReportFilters();
+    const result = await ExportService.exportCuRegistrationCorrections(academicYearIdNumber, {
+      programCourseIds: f.programCourseIds,
+      affiliationIds: f.affiliationIds,
+      regulationTypeIds: f.regulationTypeIds,
+      classIds: f.classIds,
+    });
 
     if (result.success && result.data) {
       // Trigger download
@@ -609,124 +875,44 @@ export default function ReportsPage() {
     }
   };
 
-  const downloadCuRegistrationDocuments = async (
-    downloadType: "combined" | "pdfs" | "documents",
-  ) => {
-    // Validate selections
-    if (!selectedAcademicYearId || !selectedRegulationType) {
-      toast.error("Please select both Academic Year and Regulation Type");
+  const downloadEnrolmentMasterReport = async () => {
+    if (!effectiveAcademicYearId) {
+      toast.error("Please select an academic year");
       return;
     }
-
-    // Extract year from academic year string (e.g., "2025-2026" -> 2025)
-    const yearMatch = selectedAcademicYear?.year?.match(/^(\d{4})/);
-    const year = yearMatch?.[1] ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
-
-    // Generate a unique session ID for socket progress tracking
-    const sessionId = `download-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    // Update progress for CU registration documents download (Socket.IO will handle live updates)
     setCurrentProgressUpdate({
-      id: sessionId,
-      userId: userId,
-      type: "download_progress", // Changed back to download_progress for Socket.IO
-      message: `Starting CU Registration ${downloadType} documents download...`,
-      progress: 0,
-      status: "started",
+      id: `export_${Date.now()}`,
+      userId,
+      type: "export_progress",
+      message: "Exporting Enrolment Master Report...",
+      progress: 25,
+      status: "in_progress",
       createdAt: new Date(),
     });
-
-    const result = await ExportService.downloadCuRegistrationDocuments(
-      year,
-      selectedRegulationType || "CCF", // Fallback to CCF if not selected
-      downloadType,
-      sessionId, // Pass session ID for Socket.IO tracking
+    const f = buildReportFilters();
+    const result = await ExportService.exportEnrolmentMasterReport(
+      Number(effectiveAcademicYearId),
+      {
+        programCourseIds: f.programCourseIds,
+        affiliationIds: f.affiliationIds,
+        regulationTypeIds: f.regulationTypeIds,
+        classIds: f.classIds,
+      },
     );
-
-    if (result.success && result.data) {
-      // Trigger download
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-
-      // Update progress to completed state (this might be overridden by socket updates, but good fallback)
-      setCurrentProgressUpdate({
-        id: sessionId,
-        userId: userId,
-        type: "download_progress",
-        message: `CU Registration ${downloadType} documents downloaded successfully!`,
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-
-      toast.success(`CU Registration ${downloadType} documents downloaded successfully!`);
-    } else {
-      throw new Error(result.message || "Download failed");
-    }
-  };
-
-  const downloadStudentDetailedReport = async () => {
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId: userId,
-      type: "export_progress",
-      message: "Exporting Student Detailed Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
-    });
-
-    const academicYearIdNumber = Number(selectedAcademicYearId);
-    const result = await ExportService.exportStudentDetailedReport(academicYearIdNumber);
-
     if (result.success && result.data) {
       ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
-        userId: userId,
+        userId,
         type: "export_progress",
-        message: "Student Detailed Report downloaded successfully!",
+        message: "Enrolment Master Report downloaded successfully!",
         progress: 100,
         status: "completed",
         fileName: result.data?.fileName,
         downloadUrl: result.data?.downloadUrl,
         createdAt: new Date(),
       });
-      toast.success("Student Detailed Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
-  };
-
-  const downloadStudentAcademicSubjectsReport = async () => {
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId: userId,
-      type: "export_progress",
-      message: "Exporting Student Academic Subjects Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
-    });
-
-    const academicYearIdNumber = Number(selectedAcademicYearId);
-    const result = await ExportService.exportStudentAcademicSubjectsReport(academicYearIdNumber);
-
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId: userId,
-        type: "export_progress",
-        message: "Student Academic Subjects Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success("Student Academic Subjects Report downloaded successfully!");
+      toast.success("Enrolment Master Report downloaded successfully!");
     } else {
       throw new Error(result.message || "Export failed");
     }
@@ -743,8 +929,14 @@ export default function ReportsPage() {
       createdAt: new Date(),
     });
 
-    // Optional: pass filters (sessionId, classId) here in the future
-    const result = await ExportService.exportPromotionStudentsReport();
+    const f = buildReportFilters();
+    const result = await ExportService.exportPromotionStudentsReport({
+      academicYearId: f.academicYearId,
+      programCourseIds: f.programCourseIds,
+      affiliationIds: f.affiliationIds,
+      regulationTypeIds: f.regulationTypeIds,
+      classIds: f.classIds,
+    });
 
     if (result.success && result.data) {
       ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
@@ -766,7 +958,7 @@ export default function ReportsPage() {
   };
 
   const downloadStudentUniversitySubjectsReport = async () => {
-    if (!selectedAcademicYearId) {
+    if (!effectiveAcademicYearId) {
       toast.error("Please select an academic year");
       return;
     }
@@ -781,8 +973,15 @@ export default function ReportsPage() {
       createdAt: new Date(),
     });
 
+    const f = buildReportFilters();
     const result = await ExportService.exportStudentSubjectsInventory(
-      Number(selectedAcademicYearId),
+      Number(effectiveAcademicYearId),
+      {
+        programCourseIds: f.programCourseIds,
+        affiliationIds: f.affiliationIds,
+        regulationTypeIds: f.regulationTypeIds,
+        classIds: f.classIds,
+      },
     );
 
     if (result.success && result.data) {
@@ -804,39 +1003,6 @@ export default function ReportsPage() {
     }
   };
 
-  const downloadStudentImagesReport = async () => {
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId: userId,
-      type: "export_progress",
-      message: "Exporting Student Images Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
-    });
-
-    const academicYearIdNumber = Number(selectedAcademicYearId);
-    const result = await ExportService.downloadStudentImages(academicYearIdNumber);
-
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId: userId,
-        type: "export_progress",
-        message: "Student Images Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success("Student Images Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
-  };
-
   const reports: ReportItem[] = [
     {
       id: "import-students-excel",
@@ -848,7 +1014,6 @@ export default function ReportsPage() {
         importStudentsFileInputRef.current?.click();
       },
       requiresAcademicYear: false,
-      requiresRegulation: false,
       actionType: "upload",
       uploadOperation: "student_import_legacy_students",
     },
@@ -861,7 +1026,6 @@ export default function ReportsPage() {
       downloadFunction: () =>
         handleDownload("student-detailed-report", downloadStudentDetailedReport),
       requiresAcademicYear: true,
-      requiresRegulation: false,
     },
     {
       id: "student-images",
@@ -871,7 +1035,6 @@ export default function ReportsPage() {
       icon: <Users className="h-5 w-5 text-green-600" />,
       downloadFunction: () => handleDownload("student-images", downloadStudentImagesReport),
       requiresAcademicYear: true,
-      requiresRegulation: false,
     },
     {
       id: "student-academic-subjects-report",
@@ -882,22 +1045,21 @@ export default function ReportsPage() {
       downloadFunction: () =>
         handleDownload("student-academic-subjects-report", downloadStudentAcademicSubjectsReport),
       requiresAcademicYear: true,
-      requiresRegulation: false,
     },
-
     {
       id: "subject-selection",
-      domain: "SUBJECT_SELECTION_PHASE",
+      domain: "ENROLMENT",
       name: "Subject Selection Report",
       description: "Export all student subject selections with details and statistics",
       icon: <Users className="h-5 w-5 text-blue-600" />,
       downloadFunction: () => handleDownload("subject-selection", downloadSubjectSelectionReport),
       requiresAcademicYear: true,
-      requiresRegulation: false,
+      includesSemesterInExport: true,
+      usesToolbarExportFilters: true,
     },
     {
       id: "student-university-subjects-report",
-      domain: "SUBJECT_SELECTION_PHASE",
+      domain: "ENROLMENT",
       name: "Student University Subjects Report",
       description: "Download university subject inventory per student for selected academic year",
       icon: <Users className="h-5 w-5 text-cyan-600" />,
@@ -907,7 +1069,21 @@ export default function ReportsPage() {
           downloadStudentUniversitySubjectsReport,
         ),
       requiresAcademicYear: true,
-      requiresRegulation: false,
+      includesSemesterInExport: true,
+      usesToolbarExportFilters: true,
+    },
+    {
+      id: "enrolment-master-report",
+      domain: "ENROLMENT",
+      name: "Enrolment Master Report",
+      description:
+        "Student profile, CU numbers, papers from subject-paper mapping, and contact fields",
+      icon: <FileText className="h-5 w-5 text-violet-600" />,
+      downloadFunction: () =>
+        handleDownload("enrolment-master-report", downloadEnrolmentMasterReport),
+      requiresAcademicYear: true,
+      includesSemesterInExport: true,
+      usesToolbarExportFilters: true,
     },
     {
       id: "cu-registration",
@@ -916,8 +1092,9 @@ export default function ReportsPage() {
       description: "Export all CU registration correction requests and their current status",
       icon: <FileText className="h-5 w-5 text-purple-600" />,
       downloadFunction: () => handleDownload("cu-registration", downloadCuRegistrationReport),
-      requiresAcademicYear: false,
-      requiresRegulation: false,
+      requiresAcademicYear: true,
+      includesSemesterInExport: true,
+      usesToolbarExportFilters: true,
     },
     {
       id: "cu-registration-pdfs",
@@ -953,7 +1130,6 @@ export default function ReportsPage() {
         cuRollRegFileInputRef.current?.click();
       },
       requiresAcademicYear: false,
-      requiresRegulation: false,
       actionType: "upload",
       uploadOperation: "student_cu_roll_reg_update",
     },
@@ -966,7 +1142,8 @@ export default function ReportsPage() {
       downloadFunction: () =>
         handleDownload("exam-form-submission-report", downloadPromotionStudentsReport),
       requiresAcademicYear: false,
-      requiresRegulation: false,
+      includesSemesterInExport: true,
+      usesToolbarExportFilters: true,
     },
   ];
 
@@ -992,9 +1169,85 @@ export default function ReportsPage() {
     );
   };
 
+  const activeExportFilterCount =
+    filterRegulationIds.length +
+    filterAffiliationIds.length +
+    filterProgramCourseIds.length +
+    filterClassIds.length;
+
+  const semesterClasses = useMemo(
+    () =>
+      [...classesList]
+        .filter((c) => c.type === "SEMESTER" && c.disabled !== true)
+        .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)),
+    [classesList],
+  );
+
+  const regulationFilterOptions = useMemo(
+    () =>
+      regulationTypes
+        .filter((rt) => rt.id != null)
+        .map((rt) => ({
+          label: rt.shortName || rt.name,
+          value: String(rt.id),
+        })),
+    [regulationTypes],
+  );
+
+  const affiliationFilterOptions = useMemo(
+    () =>
+      affiliations
+        .filter((a) => a.id != null)
+        .map((a) => ({ label: a.name ?? `Affiliation ${a.id}`, value: String(a.id) })),
+    [affiliations],
+  );
+
+  const programCourseFilterOptions = useMemo(() => {
+    let list = programCourses.filter((pc) => pc.id != null);
+
+    if (filterAffiliationIds.length > 0) {
+      const aff = new Set(filterAffiliationIds);
+      list = list.filter((pc) => pc.affiliationId != null && aff.has(pc.affiliationId));
+    }
+    if (filterRegulationIds.length > 0) {
+      const reg = new Set(filterRegulationIds);
+      list = list.filter((pc) => pc.regulationTypeId != null && reg.has(pc.regulationTypeId));
+    }
+
+    return [...list]
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      .map((pc) => ({
+        label: pc.name || pc.shortName || String(pc.id),
+        value: String(pc.id),
+      }));
+  }, [programCourses, filterAffiliationIds, filterRegulationIds]);
+
+  useEffect(() => {
+    const allowed = new Set(
+      programCourseFilterOptions.map((o) => Number(o.value)).filter((n) => Number.isFinite(n)),
+    );
+    setFilterProgramCourseIds((prev) => {
+      const next = prev.filter((id) => allowed.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [programCourseFilterOptions]);
+
+  const semesterClassFilterOptions = useMemo(
+    () =>
+      semesterClasses
+        .filter((c) => c.id != null)
+        .map((c) => ({ label: c.name, value: String(c.id) })),
+    [semesterClasses],
+  );
+
+  const parseIdStrings = (values: string[]) =>
+    values.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+
+  const cuZipRegulationReady =
+    filterRegulationIds.length === 1 && Boolean(cuZipRegulationShortName);
+
   return (
     <div className="p-3 sm:p-6">
-      {/* Hidden file inputs for Excel uploads */}
       <input
         ref={cuRollRegFileInputRef}
         type="file"
@@ -1010,16 +1263,16 @@ export default function ReportsPage() {
         onChange={(e) => handleExcelFileSelected("import-students-excel", e)}
       />
 
-      {/* Page Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:gap-4 gap-3 flex-1 min-w-0 w-full">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Reports</h1>
-            <p className="text-sm sm:text-base text-slate-600 mt-2">
-              Download various reports and analytics
-            </p>
-          </div>
-          <div className="w-full pr-10 sm:w-auto sm:min-w-[220px] lg:max-w-[300px] flex-shrink-0">
+      <div className="mb-4 sm:mb-6 space-y-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Reports</h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-2">
+            Download various reports and analytics
+          </p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row lg:flex-wrap gap-3 lg:items-end">
+          <div className="w-full sm:w-auto sm:min-w-[220px]">
             <span className="text-xs font-medium text-slate-600 mb-1.5 block">Domain</span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1069,32 +1322,138 @@ export default function ReportsPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+            <DialogTrigger asChild>
+              <Button type="button" variant="outline" className="w-full sm:w-auto gap-2">
+                <Filter className="h-4 w-4 shrink-0" />
+                <span>Export filters</span>
+                {activeExportFilterCount > 0 ? (
+                  <Badge variant="secondary" className="rounded-full px-2 font-normal">
+                    {activeExportFilterCount}
+                  </Badge>
+                ) : null}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Export filters</DialogTitle>
+                <DialogDescription className="text-left text-slate-600">
+                  Optional narrowers for supported downloads (Enrolment exports, CU corrections,
+                  exam form). For CU Registration PDFs / Documents ZIP, pick exactly one regulation
+                  here.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-800">Academic year</Label>
+                  <Select value={exportAcademicYearId} onValueChange={setExportAcademicYearId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableAcademicYears.map((y) => (
+                        <SelectItem key={y.id} value={String(y.id)}>
+                          {y.year}
+                          {currentAcademicYear?.id === y.id ? " (current)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-800">Regulation</Label>
+                  <MultiSelectDropdown
+                    placeholder="All regulations"
+                    options={regulationFilterOptions}
+                    selectedOptions={filterRegulationIds.map(String)}
+                    onChange={(s) => setFilterRegulationIds(parseIdStrings(s))}
+                    contentClassName="min-w-[280px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-800">Affiliation</Label>
+                  <MultiSelectDropdown
+                    placeholder="All affiliations"
+                    options={affiliationFilterOptions}
+                    selectedOptions={filterAffiliationIds.map(String)}
+                    onChange={(s) => setFilterAffiliationIds(parseIdStrings(s))}
+                    contentClassName="min-w-[280px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-800">Program course</Label>
+                  <p className="text-[11px] text-slate-500">
+                    List follows affiliation and regulation above (leave those empty for all
+                    courses).
+                  </p>
+                  <MultiSelectDropdown
+                    placeholder="All program courses"
+                    options={programCourseFilterOptions}
+                    selectedOptions={filterProgramCourseIds.map(String)}
+                    onChange={(s) => setFilterProgramCourseIds(parseIdStrings(s))}
+                    contentClassName="min-w-[280px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-800">Semester (class)</Label>
+                  <MultiSelectDropdown
+                    placeholder="All semesters"
+                    options={semesterClassFilterOptions}
+                    selectedOptions={filterClassIds.map(String)}
+                    onChange={(s) => setFilterClassIds(parseIdStrings(s))}
+                    contentClassName="min-w-[280px]"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0 flex-col sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setFilterRegulationIds([]);
+                    setFilterAffiliationIds([]);
+                    setFilterProgramCourseIds([]);
+                    setFilterClassIds([]);
+                  }}
+                >
+                  Clear narrowers
+                </Button>
+                <Button type="button" onClick={() => setFilterDialogOpen(false)}>
+                  Done
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
       {/* Reports Table — scroll body; header stays visible */}
       <Table
-        className="w-full min-w-[900px] border-separate border-spacing-0"
+        className="w-full min-w-[720px] border-separate border-spacing-0"
         containerClassName="w-full max-h-[min(72vh,calc(100vh-10rem))] overflow-auto rounded-md border border-slate-200 shadow-sm"
       >
         <TableHeader className="sticky top-0 z-20 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]">
           <TableRow className="border-b border-slate-200 bg-slate-100 hover:bg-slate-100">
-            <TableHead className="w-[6%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+            <TableHead className="w-[5%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
               Sr. No.
             </TableHead>
-            <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+            <TableHead className="w-[18%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
               Domain
             </TableHead>
-            <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+            <TableHead className="w-[18%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
               Report
             </TableHead>
-            <TableHead className="w-[23%] sm:w-80 lg:w-[360px] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+            <TableHead className="w-[28%] sm:w-72 lg:w-[380px] border border-slate-200 text-xs sm:text-sm bg-slate-100">
               Description
             </TableHead>
-            <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
-              Filters
-            </TableHead>
-            <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+            <TableHead className="w-[18%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
               Actions
             </TableHead>
           </TableRow>
@@ -1103,10 +1462,10 @@ export default function ReportsPage() {
           {filteredReports.map((report, index) => {
             return (
               <TableRow key={report.id} className="hover:bg-slate-50">
-                <TableCell className="w-[6%] font-medium border border-slate-200 text-xs sm:text-sm py-3 sm:py-4 px-2 sm:px-4">
+                <TableCell className="w-[5%] font-medium border border-slate-200 text-xs sm:text-sm py-3 sm:py-4 px-2 sm:px-4">
                   {index + 1}
                 </TableCell>
-                <TableCell className="w-[23%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 min-w-0">
+                <TableCell className="w-[18%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 min-w-0">
                   <div className="flex flex-wrap gap-1.5">
                     {getReportDomains(report).map((domain) => (
                       <Badge
@@ -1120,7 +1479,7 @@ export default function ReportsPage() {
                     ))}
                   </div>
                 </TableCell>
-                <TableCell className="w-[23%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                <TableCell className="w-[18%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="flex-shrink-0">{report.icon}</div>
                     <div className="min-w-0">
@@ -1130,41 +1489,16 @@ export default function ReportsPage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="w-[23%] text-slate-600 border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm whitespace-normal break-words">
+                <TableCell className="w-[28%] text-slate-600 border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm whitespace-normal break-words">
                   {report.description}
                 </TableCell>
-                <TableCell className="w-[14%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
-                  {report.requiresRegulation ? (
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <Select
-                          value={selectedRegulationType}
-                          onValueChange={setSelectedRegulationType}
-                        >
-                          <SelectTrigger className="w-full h-8 text-xs">
-                            <SelectValue placeholder="Select Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {regulationTypes.map((type) => (
-                              <SelectItem key={type.id} value={type.shortName || type.name}>
-                                {type.shortName || type.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-400">-</span>
-                  )}
-                </TableCell>
-                <TableCell className="w-[14%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                <TableCell className="w-[18%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
                   <Button
                     onClick={report.downloadFunction}
                     disabled={
                       isExporting ||
-                      (report.requiresAcademicYear && !selectedAcademicYearId) ||
-                      (report.requiresRegulation && !selectedRegulationType)
+                      (report.requiresAcademicYear && !effectiveAcademicYearId) ||
+                      (report.requiresRegulation && !cuZipRegulationReady)
                     }
                     className="flex items-center gap-1 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm disabled:opacity-50 w-full sm:w-auto flex-shrink-0"
                     size="sm"
@@ -1175,21 +1509,17 @@ export default function ReportsPage() {
                         <span className="hidden sm:inline">Downloading...</span>
                         <span className="sm:hidden">...</span>
                       </>
+                    ) : report.actionType === "upload" ? (
+                      <>
+                        <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Upload</span>
+                        <span className="sm:hidden">Upload</span>
+                      </>
                     ) : (
                       <>
-                        {report.actionType === "upload" ? (
-                          <>
-                            <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span className="hidden sm:inline">Upload</span>
-                            <span className="sm:hidden">Upload</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span className="hidden sm:inline">Download</span>
-                            <span className="sm:hidden">Download</span>
-                          </>
-                        )}
+                        <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Download</span>
+                        <span className="sm:hidden">Download</span>
                       </>
                     )}
                   </Button>
@@ -1211,7 +1541,6 @@ export default function ReportsPage() {
         progressUpdate={currentProgressUpdate}
       />
 
-      {/* CU Roll/Reg Validation Dialog (missing headers) */}
       <AlertDialog
         open={cuRollRegValidationDialogOpen}
         onOpenChange={setCuRollRegValidationDialogOpen}
@@ -1289,7 +1618,6 @@ export default function ReportsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Existing UID Warning Dialog (Import/Add Students) */}
       <AlertDialog open={existingUidsDialogOpen} onOpenChange={setExistingUidsDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

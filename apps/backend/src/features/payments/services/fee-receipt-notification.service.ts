@@ -176,29 +176,36 @@ export async function sendFeeReceiptEmailForPaymentId(
     : "";
   const challanGeneratedAtLabel = formatChallanDate(row.challanGeneratedAt);
 
-  await enqueueNotification({
-    userId: row.userId,
-    variant: "EMAIL",
-    type: "FEE",
-    message: "Fee Receipt",
-    notificationMasterId: master.id,
-    notificationEvent: {
-      subject,
-      templateData: {
+  try {
+    await enqueueNotification({
+      userId: row.userId,
+      variant: "EMAIL",
+      type: "FEE",
+      message: "Fee Receipt",
+      notificationMasterId: master.id,
+      notificationEvent: {
         subject,
-        name: row.name ?? "",
-        email: row.email ?? "",
-        phone: row.phone ?? "",
-        receiptNumber,
-        receiptType: row.receiptType ?? "",
-        academicYear: row.academicYear ?? "",
-        className: sentenceCaseSemesterWord(row.className),
-        challanGeneratedAt: challanGeneratedAtIso,
-        challanGeneratedAtLabel,
-        paidChallanPdfUrl,
-        collegeLogoUrl: DEFAULT_COLLEGE_LOGO_URL,
-        institutionShort: "BESC",
+        templateData: {
+          subject,
+          name: row.name ?? "",
+          email: row.email ?? "",
+          phone: row.phone ?? "",
+          receiptNumber,
+          receiptType: row.receiptType ?? "",
+          academicYear: row.academicYear ?? "",
+          className: sentenceCaseSemesterWord(row.className),
+          challanGeneratedAt: challanGeneratedAtIso,
+          challanGeneratedAtLabel,
+          paidChallanPdfUrl,
+          collegeLogoUrl: DEFAULT_COLLEGE_LOGO_URL,
+          institutionShort: "BESC",
+        },
       },
-    },
-  });
+    });
+  } catch (err) {
+    console.error(
+      "[fee-receipt] Failed to enqueue receipt email (payment saved; notify service may be down)",
+      { paymentId, err },
+    );
+  }
 }

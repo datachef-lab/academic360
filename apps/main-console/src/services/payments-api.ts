@@ -114,7 +114,7 @@ export async function loadFeePaymentMarkingOnline(
 export async function markFeePaymentOnlineSuccess(data: {
   orderId: string;
   remarks?: string;
-  /** ISO date (e.g. from date input) — stored as payment txn date and mapping receipt date */
+  /** Calendar date only `yyyy-mm-dd` (date input) — stored as payment txnDate, no time */
   paymentDateIso?: string;
   transactionId?: string;
   paymentGatewayVendor?: string;

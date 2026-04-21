@@ -20,6 +20,7 @@ import {
   usesInternshipWorkRowLayout,
 } from "@/lib/career-progression-form-utils";
 import { axiosInstance } from "@/lib/utils";
+import { isFirstSemesterClassName } from "@/lib/semester-class-utils";
 import { useStudent } from "@/providers/student-provider";
 import { Plus, Sparkles, Trash2 } from "lucide-react";
 
@@ -177,13 +178,40 @@ export default function CareerProgressionPage() {
   useEffect(() => {
     const load = async () => {
       if (!student?.id) return;
+      const currentClassName = (
+        student as { currentPromotion?: { class?: { name?: string | null } | null } | null }
+      )?.currentPromotion?.class?.name;
+
+      if (isFirstSemesterClassName(currentClassName)) {
+        setLoading(false);
+        await Swal.fire({
+          icon: "info",
+          title: "Not available yet",
+          text: "Career progression is available from Semester 2 onward. Semester 1 students use Enrolment & Fees for payments only.",
+        });
+        router.replace("/dashboard/enrollment-fees");
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
         const { data } = await axiosInstance.get<ApiResponse<CareerProgressionTemplatePayload>>(
           `/api/academics/career-progression-forms/student/${student.id}/current`,
         );
-        setCpData(data?.payload ?? null);
+        const payload = data?.payload ?? null;
+        if (payload && !payload.hasExistingForms) {
+          setCpData(payload);
+          setLoading(false);
+          await Swal.fire({
+            icon: "info",
+            title: "Use Enrolment & Fees first",
+            text: "Submit your career progression form once from Enrolment & Fees before opening this page.",
+          });
+          router.replace("/dashboard/enrollment-fees");
+          return;
+        }
+        setCpData(payload);
       } catch (e) {
         console.error(e);
         setError("Failed to load career progression form");
@@ -192,7 +220,12 @@ export default function CareerProgressionPage() {
       }
     };
     load();
-  }, [student?.id]);
+  }, [
+    student?.id,
+    (student as { currentPromotion?: { class?: { name?: string | null } | null } | null } | null)
+      ?.currentPromotion?.class?.name,
+    router,
+  ]);
 
   useEffect(() => {
     if (!cpData || cpData.hasExistingForms) return;

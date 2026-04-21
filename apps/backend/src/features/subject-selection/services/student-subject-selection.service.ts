@@ -34,6 +34,8 @@ import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 import { socketService } from "@/services/socketService.js";
 import { enqueueNotification } from "@/services/notificationClient.js";
+import type { ReportExportFilters } from "@/utils/report-export-filters.js";
+import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 import {
   getNotificationMasterIdByName,
   getNotificationMasterIdByNameAndVariant,
@@ -2120,23 +2122,102 @@ export async function getSubjectSelectionMetaForStudent(
   };
 }
 
+const STUDENT_SUBJECTS_FINAL_SELECT_FULL = `SELECT
+    student_id,
+    uid,
+    user_name,
+    registration_year,
+    COALESCE(promotion_academic_year, '') AS promotion_academic_year,
+    program_course,
+    affiliation,
+    regulation,
+    semester,
+    subject,
+    subject_type,
+    COALESCE(selection_label::text, '') AS selection_label,
+    COALESCE(selection_version::text, '') AS selection_version,
+    paper_id,
+    paper_type,
+    paper,
+    paper_code,
+    is_optional,
+    auto_assign,
+    is_active,
+    COALESCE(subject_grouping_main_id::text, '') AS subject_grouping_main_id,
+    COALESCE(subject_grouping_name, '') AS subject_grouping_name,
+    COALESCE(subject_grouping_code, '') AS subject_grouping_code,
+    promotion_id
+FROM (
+  SELECT * FROM mandatory
+  UNION ALL
+  SELECT * FROM optional
+) final`;
+
+/** Enrolment master: papers scoped to a promotion in the report year (promotion_id + class match). */
+const STUDENT_SUBJECTS_FINAL_SELECT_PAPER = `SELECT promotion_id, student_id, paper, paper_code
+FROM (
+  SELECT * FROM mandatory
+  UNION ALL
+  SELECT * FROM optional
+) final
+WHERE promotion_id IS NOT NULL
+  AND NULLIF(TRIM(COALESCE(promotion_academic_year, '')), '') IS NOT NULL`;
+
 const STUDENT_SUBJECTS_EXPORT_SQL = `
-WITH latest_promotions AS (
-  SELECT DISTINCT ON (pr.student_id_fk)
-         pr.student_id_fk,
-         pr.program_course_id_fk,
-         pr.session_id_fk,
-         pr.class_id_fk AS current_class_id,
-         pr.section_id_fk
+WITH students_in_report_year AS (
+  SELECT DISTINCT pr.student_id_fk AS student_id
   FROM promotions pr
-  WHERE pr.is_alumni = FALSE
-  ORDER BY pr.student_id_fk,
-           pr.start_date DESC NULLS LAST,
-           pr.created_at DESC
+  JOIN sessions sess_lp ON sess_lp.id = pr.session_id_fk
+  WHERE pr.is_alumni IS NOT TRUE
+    AND sess_lp.academic_id_fk = $1
 ),
+student_paper_years AS (
+  SELECT DISTINCT pr.student_id_fk AS student_id, sess.academic_id_fk AS academic_year_id
+  FROM promotions pr
+  JOIN sessions sess ON sess.id = pr.session_id_fk
+  WHERE pr.is_alumni IS NOT TRUE
+    AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
+    AND sess.academic_id_fk = $1
+),
+student_program_in_year AS (
+  SELECT DISTINCT pr.student_id_fk AS student_id, pr.program_course_id_fk
+  FROM promotions pr
+  JOIN sessions sess ON sess.id = pr.session_id_fk
+  WHERE pr.is_alumni IS NOT TRUE
+    AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
+    AND sess.academic_id_fk = $1
+),
+
+student_registration_year AS (
+  SELECT
+         std.id AS student_id,
+         LEFT(ay.year, 4) AS registration_year
+  FROM students std
+  JOIN application_forms af ON af.id = std.application_form_id_fk
+  JOIN admissions adm ON adm.id = af.admission_id_fk
+  JOIN sessions sess ON sess.id = adm.session_id_fk
+  JOIN academic_years ay ON ay.id = sess.academic_id_fk
+),
+
+student_promotions_by_class AS (
+  SELECT
+         pr.id AS promotion_id,
+         pr.student_id_fk AS student_id,
+         pr.class_id_fk,
+         pr.session_id_fk,
+         ay.year AS promotion_academic_year
+  FROM promotions pr
+  JOIN sessions sess ON sess.id = pr.session_id_fk
+  JOIN academic_years ay ON ay.id = sess.academic_id_fk
+  WHERE pr.is_alumni IS NOT TRUE
+    AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
+    AND sess.academic_id_fk = $1
+),
+
 latest_student_selections AS (
   SELECT id,
          student_id_fk,
+         session_id_fk,
          subject_id_fk,
          subject_selection_meta_id_fk,
          version
@@ -2144,7 +2225,9 @@ latest_student_selections AS (
     SELECT sss.*,
            ROW_NUMBER() OVER (
              PARTITION BY sss.student_id_fk,
-                          sss.subject_selection_meta_id_fk
+                          sss.session_id_fk,
+                          sss.subject_selection_meta_id_fk,
+                          sss.subject_id_fk
              ORDER BY sss.version DESC,
                       sss.updated_at DESC NULLS LAST,
                       sss.created_at DESC,
@@ -2155,133 +2238,298 @@ latest_student_selections AS (
   ) ranked
   WHERE rn = 1
 ),
+
 mandatory AS (
   SELECT
-      std.id  AS student_id,
-      std.uid,
-      u.name  AS user_name,
-      ay.year AS academic_year,
-      pc.name AS program_course,
-      aff.name AS affiliation,
-      reg.name AS regulation,
-      cl.name AS semester,
-      cl.id   AS class_id_for_order,
-      COALESCE(sbj.code, sbj.name) AS subject,
-      COALESCE(sbt.code, sbt.name) AS subject_type,
-      NULL::text    AS selection_label,
-      NULL::integer AS selection_id_for_order,
-      NULL::integer AS selection_version,
-      p.id   AS paper_id,
+      std.id                              AS student_id,
+      std.uid                             AS uid,
+      u.name                              AS user_name,
+      ay.year                             AS academic_year,
+      sry.registration_year               AS registration_year,
+      spbc.promotion_academic_year        AS promotion_academic_year,
+      pc.name                             AS program_course,
+      aff.name                            AS affiliation,
+      reg.name                            AS regulation,
+      cl.name                             AS semester,
+      cl.id                               AS class_id_for_order,
+      COALESCE(sbj.code, sbj.name)        AS subject,
+      COALESCE(sbt.code, sbt.name)        AS subject_type,
+      NULL::text                          AS selection_label,
+      NULL::integer                       AS selection_id_for_order,
+      NULL::integer                       AS selection_version,
+      p.id                                AS paper_id,
       CASE
         WHEN p.is_optional = FALSE AND p.auto_assign = FALSE THEN 'Mandatory'
         WHEN p.is_optional = FALSE AND p.auto_assign = TRUE  THEN 'Not possible'
         WHEN p.is_optional = TRUE  AND p.auto_assign = FALSE THEN 'Elective'
         ELSE 'Elective & Auto-Assign'
-      END AS paper_type,
-      p.name  AS paper,
-      p.code  AS paper_code,
+      END                                 AS paper_type,
+      p.name                              AS paper,
+      p.code                              AS paper_code,
       CASE WHEN p.is_optional THEN 'Yes' ELSE 'No' END AS is_optional,
       CASE WHEN p.auto_assign THEN 'Yes' ELSE 'No' END AS auto_assign,
-      CASE WHEN p.is_active   THEN 'Yes' ELSE 'No' END AS is_active
+      CASE WHEN p.is_active   THEN 'Yes' ELSE 'No' END AS is_active,
+      NULL::integer                       AS subject_grouping_main_id,
+      NULL::text                          AS subject_grouping_name,
+      NULL::text                          AS subject_grouping_code,
+      spbc.promotion_id                   AS promotion_id
   FROM students std
-  JOIN users u              ON u.id = std.user_id_fk AND u.is_active = TRUE
-  JOIN latest_promotions pr ON pr.student_id_fk = std.id
-  JOIN program_courses pc   ON pc.id = pr.program_course_id_fk
-  LEFT JOIN affiliations     aff ON aff.id = pc.affiliation_id_fk
+  JOIN users u ON u.id = std.user_id_fk
+  JOIN student_program_in_year spy ON spy.student_id = std.id
+  JOIN program_courses pc ON pc.id = spy.program_course_id_fk
+  LEFT JOIN affiliations aff ON aff.id = pc.affiliation_id_fk
   LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
-  JOIN sessions sess        ON sess.id = pr.session_id_fk
-  JOIN academic_years ay    ON ay.id = sess.academic_id_fk
-  JOIN papers p             ON p.academic_year_id_fk = ay.id
-                            AND p.programe_course_id_fk = pc.id
-  JOIN classes cl           ON cl.id = p.class_id_fk
-  JOIN subjects sbj         ON sbj.id = p.subject_id_fk
-  JOIN subject_types sbt    ON sbt.id = p.subject_type_id_fk
+  LEFT JOIN student_registration_year sry ON sry.student_id = std.id
+  JOIN papers p ON p.programe_course_id_fk = pc.id
+               AND EXISTS (
+                 SELECT 1 FROM student_paper_years spy_y
+                 WHERE spy_y.student_id = std.id
+                   AND spy_y.academic_year_id = p.academic_year_id_fk
+               )
+  JOIN academic_years ay ON ay.id = p.academic_year_id_fk
+  LEFT JOIN student_promotions_by_class spbc
+       ON spbc.student_id = std.id
+      AND spbc.class_id_fk = p.class_id_fk
+  JOIN classes cl ON cl.id = p.class_id_fk
+  JOIN subjects sbj ON sbj.id = p.subject_id_fk
+  JOIN subject_types sbt ON sbt.id = p.subject_type_id_fk
   WHERE p.is_optional = FALSE
-    AND ay.id = $1
+    __EXTRA_FILTER_MAND__
 ),
-optional AS (
+
+optional_direct AS (
   SELECT
-      std.id  AS student_id,
-      std.uid,
-      u.name  AS user_name,
-      ay.year AS academic_year,
-      pc.name AS program_course,
-      aff.name AS affiliation,
-      reg.name AS regulation,
-      cl.name AS semester,
-      cl.id   AS class_id_for_order,
-      COALESCE(sbj.code, sbj.name) AS subject,
-      COALESCE(sbt.code, sbt.name) AS subject_type,
-      ssm.label AS selection_label,
-      lss.id   AS selection_id_for_order,
-      lss.version AS selection_version,
-      p.id   AS paper_id,
+      std.id                              AS student_id,
+      std.uid                             AS uid,
+      u.name                              AS user_name,
+      ay.year                             AS academic_year,
+      sry.registration_year               AS registration_year,
+      spbc.promotion_academic_year        AS promotion_academic_year,
+      pc.name                             AS program_course,
+      aff.name                            AS affiliation,
+      reg.name                            AS regulation,
+      cl.name                             AS semester,
+      cl.id                               AS class_id_for_order,
+      COALESCE(sbj.code, sbj.name)        AS subject,
+      COALESCE(sbt.code, sbt.name)        AS subject_type,
+      ssm.label                           AS selection_label,
+      lss.id                              AS selection_id_for_order,
+      lss.version                         AS selection_version,
+      p.id                                AS paper_id,
       CASE
         WHEN p.is_optional = FALSE AND p.auto_assign = FALSE THEN 'Mandatory'
         WHEN p.is_optional = FALSE AND p.auto_assign = TRUE  THEN 'Not possible'
         WHEN p.is_optional = TRUE  AND p.auto_assign = FALSE THEN 'Elective'
         ELSE 'Elective & Auto-Assign'
-      END AS paper_type,
-      p.name  AS paper,
-      p.code  AS paper_code,
+      END                                 AS paper_type,
+      p.name                              AS paper,
+      p.code                              AS paper_code,
       CASE WHEN p.is_optional THEN 'Yes' ELSE 'No' END AS is_optional,
       CASE WHEN p.auto_assign THEN 'Yes' ELSE 'No' END AS auto_assign,
-      CASE WHEN p.is_active   THEN 'Yes' ELSE 'No' END AS is_active
+      CASE WHEN p.is_active   THEN 'Yes' ELSE 'No' END AS is_active,
+      NULL::integer                       AS subject_grouping_main_id,
+      NULL::text                          AS subject_grouping_name,
+      NULL::text                          AS subject_grouping_code,
+      spbc.promotion_id                   AS promotion_id
   FROM students std
-  JOIN users u              ON u.id = std.user_id_fk AND u.is_active = TRUE
-  JOIN latest_promotions pr ON pr.student_id_fk = std.id
-  JOIN program_courses pc   ON pc.id = pr.program_course_id_fk
-  LEFT JOIN affiliations     aff ON aff.id = pc.affiliation_id_fk
+  JOIN users u ON u.id = std.user_id_fk
+  JOIN student_program_in_year spy ON spy.student_id = std.id
+  JOIN program_courses pc ON pc.id = spy.program_course_id_fk
+  LEFT JOIN affiliations aff ON aff.id = pc.affiliation_id_fk
   LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
-  JOIN sessions sess        ON sess.id = pr.session_id_fk
-  JOIN academic_years ay    ON ay.id = sess.academic_id_fk
-  JOIN papers p             ON p.academic_year_id_fk = ay.id
-                            AND p.programe_course_id_fk = pc.id
-  JOIN classes cl           ON cl.id = p.class_id_fk
-  JOIN subjects sbj         ON sbj.id = p.subject_id_fk
-  JOIN subject_types sbt    ON sbt.id = p.subject_type_id_fk
-  JOIN subject_selection_meta ssm
-                            ON ssm.subject_type_id_fk = sbt.id
+  LEFT JOIN student_registration_year sry ON sry.student_id = std.id
+  JOIN papers p ON p.programe_course_id_fk = pc.id
+               AND EXISTS (
+                 SELECT 1 FROM student_paper_years spy_y
+                 WHERE spy_y.student_id = std.id
+                   AND spy_y.academic_year_id = p.academic_year_id_fk
+               )
+  JOIN academic_years ay ON ay.id = p.academic_year_id_fk
+  JOIN classes cl ON cl.id = p.class_id_fk
+  LEFT JOIN student_promotions_by_class spbc
+       ON spbc.student_id = std.id
+      AND spbc.class_id_fk = cl.id
+  JOIN subjects sbj ON sbj.id = p.subject_id_fk
+  JOIN subject_types sbt ON sbt.id = p.subject_type_id_fk
+  JOIN subject_selection_meta ssm ON ssm.subject_type_id_fk = sbt.id
   JOIN subject_selection_meta_classes ssmc
-                            ON ssmc.subject_selection_meta_id_fk = ssm.id
-                           AND ssmc.class_id_fk = cl.id
+       ON ssmc.subject_selection_meta_id_fk = ssm.id AND ssmc.class_id_fk = cl.id
   JOIN latest_student_selections lss
-                            ON lss.student_id_fk = std.id
-                           AND lss.subject_selection_meta_id_fk = ssm.id
-                           AND lss.subject_id_fk = p.subject_id_fk
+       ON lss.student_id_fk = std.id
+      AND lss.session_id_fk = spbc.session_id_fk
+      AND lss.subject_selection_meta_id_fk = ssm.id
+      AND lss.subject_id_fk = p.subject_id_fk
   WHERE p.is_optional = TRUE
-    AND ay.id = $1
+    __EXTRA_FILTER_OPTD__
+),
+
+optional_grouped AS (
+  SELECT
+      std.id                              AS student_id,
+      std.uid                             AS uid,
+      u.name                              AS user_name,
+      ay.year                             AS academic_year,
+      sry.registration_year               AS registration_year,
+      spbc.promotion_academic_year        AS promotion_academic_year,
+      pc.name                             AS program_course,
+      aff.name                            AS affiliation,
+      reg.name                            AS regulation,
+      cl_all.name                         AS semester,
+      cl_all.id                           AS class_id_for_order,
+      COALESCE(sbj_all.code, sbj_all.name) AS subject,
+      COALESCE(sbt.code, sbt.name)        AS subject_type,
+      ssm.label                           AS selection_label,
+      lss.id                              AS selection_id_for_order,
+      lss.version                         AS selection_version,
+      p_all.id                            AS paper_id,
+      CASE
+        WHEN p_all.is_optional = FALSE AND p_all.auto_assign = FALSE THEN 'Mandatory'
+        WHEN p_all.is_optional = FALSE AND p_all.auto_assign = TRUE  THEN 'Not possible'
+        WHEN p_all.is_optional = TRUE  AND p_all.auto_assign = FALSE THEN 'Elective'
+        ELSE 'Elective & Auto-Assign'
+      END                                 AS paper_type,
+      p_all.name                          AS paper,
+      p_all.code                          AS paper_code,
+      CASE WHEN p_all.is_optional THEN 'Yes' ELSE 'No' END AS is_optional,
+      CASE WHEN p_all.auto_assign THEN 'Yes' ELSE 'No' END AS auto_assign,
+      CASE WHEN p_all.is_active   THEN 'Yes' ELSE 'No' END AS is_active,
+      sgm.id                              AS subject_grouping_main_id,
+      sgm.name                            AS subject_grouping_name,
+      sgm.code                            AS subject_grouping_code,
+      spbc.promotion_id                   AS promotion_id
+  FROM students std
+  JOIN users u ON u.id = std.user_id_fk
+  JOIN student_program_in_year spy ON spy.student_id = std.id
+  JOIN program_courses pc ON pc.id = spy.program_course_id_fk
+  LEFT JOIN affiliations aff ON aff.id = pc.affiliation_id_fk
+  LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
+  LEFT JOIN student_registration_year sry ON sry.student_id = std.id
+  JOIN papers p_sel ON p_sel.programe_course_id_fk = pc.id
+                   AND p_sel.is_optional = TRUE
+                   AND EXISTS (
+                     SELECT 1 FROM student_paper_years spy_y
+                     WHERE spy_y.student_id = std.id
+                       AND spy_y.academic_year_id = p_sel.academic_year_id_fk
+                   )
+  JOIN academic_years ay ON ay.id = p_sel.academic_year_id_fk
+  JOIN classes cl_sel ON cl_sel.id = p_sel.class_id_fk
+  LEFT JOIN student_promotions_by_class spbc_sel
+       ON spbc_sel.student_id = std.id
+      AND spbc_sel.class_id_fk = cl_sel.id
+  JOIN subjects sbj_sel ON sbj_sel.id = p_sel.subject_id_fk
+  JOIN subject_types sbt ON sbt.id = p_sel.subject_type_id_fk
+  JOIN subject_selection_meta ssm ON ssm.subject_type_id_fk = sbt.id
+  JOIN subject_selection_meta_classes ssmc
+       ON ssmc.subject_selection_meta_id_fk = ssm.id AND ssmc.class_id_fk = cl_sel.id
+  JOIN latest_student_selections lss
+       ON lss.student_id_fk = std.id
+      AND lss.session_id_fk = spbc_sel.session_id_fk
+      AND lss.subject_selection_meta_id_fk = ssm.id
+      AND lss.subject_id_fk = p_sel.subject_id_fk
+  JOIN subject_grouping_main sgm
+       ON sgm.academic_year_id_fk = ay.id
+      AND sgm.subject_type_id_fk = sbt.id
+      AND sgm.is_active = TRUE
+  JOIN subject_grouping_program_courses sgpc
+       ON sgpc.subject_grouping_main_id_fk = sgm.id
+      AND sgpc.program_course_id_fk = pc.id
+  JOIN subject_grouping_subjects sgs_selected
+       ON sgs_selected.subject_grouping_main_id_fk = sgm.id
+      AND sgs_selected.subject_id_fk = p_sel.subject_id_fk
+  JOIN subject_grouping_subjects sgs_all
+       ON sgs_all.subject_grouping_main_id_fk = sgm.id
+  JOIN subjects sbj_all ON sbj_all.id = sgs_all.subject_id_fk
+  JOIN papers p_all ON p_all.academic_year_id_fk = ay.id
+                   AND p_all.programe_course_id_fk = pc.id
+                   AND p_all.subject_id_fk = sbj_all.id
+  JOIN classes cl_all ON cl_all.id = p_all.class_id_fk
+  LEFT JOIN student_promotions_by_class spbc
+       ON spbc.student_id = std.id
+      AND spbc.class_id_fk = cl_all.id
+  WHERE p_all.is_optional = TRUE
+    __EXTRA_FILTER_OPTG__
+),
+
+optional AS (
+  SELECT DISTINCT ON (student_id, paper_id, promotion_id)
+         student_id, uid, user_name, academic_year, registration_year, promotion_academic_year,
+         program_course, affiliation, regulation, semester, class_id_for_order,
+         subject, subject_type, selection_label, selection_id_for_order, selection_version,
+         paper_id, paper_type, paper, paper_code, is_optional, auto_assign, is_active,
+         subject_grouping_main_id, subject_grouping_name, subject_grouping_code, promotion_id
+  FROM (
+    SELECT *, 1 AS priority FROM optional_grouped
+    UNION ALL
+    SELECT *, 2 AS priority FROM optional_direct
+  ) combined
+  ORDER BY student_id, paper_id, promotion_id NULLS LAST, priority
 )
-SELECT
-    student_id,
-    uid,
-    user_name,
-    academic_year,
-    program_course,
-    affiliation,
-    regulation,
-    semester,
-    subject,
-    subject_type,
-    selection_label,
-    selection_version,
-    paper_id,
-    paper_type,
-    paper,
-    paper_code,
-    is_optional,
-    auto_assign,
-    is_active
-FROM (
-  SELECT * FROM mandatory
-  UNION ALL
-  SELECT * FROM optional
-) q
-ORDER BY q.uid,
-         q.class_id_for_order,
-         q.selection_id_for_order NULLS FIRST,
-         q.paper_code;
+__STUDENT_SUBJECTS_FINAL_SELECT__
+/*__SUBJECTS_EXPORT_ORDER__*/
+ORDER BY uid,
+         class_id_for_order,
+         selection_id_for_order NULLS FIRST,
+         paper_code;
 `;
+
+const STUDENT_SUBJECTS_EXPORT_SQL_FULL = STUDENT_SUBJECTS_EXPORT_SQL.replace(
+  "__STUDENT_SUBJECTS_FINAL_SELECT__",
+  STUDENT_SUBJECTS_FINAL_SELECT_FULL,
+).replace("/*__SUBJECTS_EXPORT_ORDER__*/", "");
+
+/** Same CTEs + filters; only student_id, paper, paper_code when promotion year exists (enrolment). */
+const STUDENT_SUBJECTS_PAPER_ROWS_SQL_TEMPLATE =
+  STUDENT_SUBJECTS_EXPORT_SQL.replace(
+    "__STUDENT_SUBJECTS_FINAL_SELECT__",
+    STUDENT_SUBJECTS_FINAL_SELECT_PAPER,
+  ).replace(/\/\*__SUBJECTS_EXPORT_ORDER__\*\/\s*ORDER BY[\s\S]*$/m, "");
+
+export function buildStudentSubjectsExportSql(
+  academicYearId: number,
+  filters: ReportExportFilters = {},
+  mode: "full" | "paperRows" = "full",
+): { text: string; values: unknown[] } {
+  const values: unknown[] = [academicYearId];
+  let idx = 2;
+  const baseParts: string[] = [];
+  if (filters.programCourseIds?.length) {
+    baseParts.push(`AND pc.id = ANY($${idx}::int[])`);
+    values.push(filters.programCourseIds);
+    idx++;
+  }
+  if (filters.affiliationIds?.length) {
+    baseParts.push(`AND aff.id IS NOT NULL AND aff.id = ANY($${idx}::int[])`);
+    values.push(filters.affiliationIds);
+    idx++;
+  }
+  if (filters.regulationTypeIds?.length) {
+    baseParts.push(`AND reg.id IS NOT NULL AND reg.id = ANY($${idx}::int[])`);
+    values.push(filters.regulationTypeIds);
+    idx++;
+  }
+  const baseExtra = baseParts.length ? `\n    ${baseParts.join("\n    ")}` : "";
+  let classCl = "";
+  let classClAll = "";
+  if (filters.classIds?.length) {
+    const p = idx;
+    values.push(filters.classIds);
+    idx++;
+    classCl = `\n    AND cl.id = ANY($${p}::int[])`;
+    classClAll = `\n    AND cl_all.id = ANY($${p}::int[])`;
+  }
+  const extraMand = baseExtra + classCl || "";
+  const extraOptD = baseExtra + classCl || "";
+  const extraOptG = baseExtra + classClAll || "";
+  const base =
+    mode === "full"
+      ? STUDENT_SUBJECTS_EXPORT_SQL_FULL
+      : STUDENT_SUBJECTS_PAPER_ROWS_SQL_TEMPLATE;
+  const text = base
+    .replace(/__EXTRA_FILTER_MAND__/g, extraMand)
+    .replace(/__EXTRA_FILTER_OPTD__/g, extraOptD)
+    .replace(/__EXTRA_FILTER_OPTG__/g, extraOptG);
+  return { text, values };
+}
 
 // Helper function to convert camelCase/snake_case to sentence case
 function toSentenceCase(str: string): string {
@@ -2344,15 +2592,18 @@ function calculateColumnWidth(header: string, allData?: any[]): number {
 
 export async function exportStudentSubjectsReport(
   academicYearId: number,
+  filters: ReportExportFilters = {},
 ): Promise<Buffer> {
-  const trimmedQuery = STUDENT_SUBJECTS_EXPORT_SQL.trim();
+  const { text: trimmedQuery, values: queryValues } =
+    buildStudentSubjectsExportSql(academicYearId, filters, "full");
   console.log(
     "[SUBJECTS-EXPORT] Running student subjects export",
     academicYearId,
+    filters,
   );
 
   try {
-    const { rows } = await pool.query(trimmedQuery, [academicYearId]);
+    const { rows } = await pool.query(trimmedQuery, queryValues);
     console.log(
       `[SUBJECTS-EXPORT] Retrieved ${rows.length} rows for academic year ${academicYearId}`,
     );
@@ -2365,7 +2616,11 @@ export async function exportStudentSubjectsReport(
       sheet.addRow({ message: "No data available" });
     } else {
       // Transform rows: convert booleans to Yes/No and nulls to empty strings
-      const transformedRows = rows.map((row) => transformRowForExcel(row));
+      const transformedRows = rows.map((row) => {
+        const t = transformRowForExcel(row) as Record<string, unknown>;
+        const { promotion_id: _omitPromotionId, ...rest } = t;
+        return rest;
+      });
 
       // Define columns from first row keys with sentence case headers
       const headers = Object.keys(transformedRows[0]);
@@ -2403,41 +2658,7 @@ export async function exportStudentSubjectsReport(
         }
       });
 
-      // Style header row
-      const headerRow = sheet.getRow(1);
-      headerRow.font = { bold: true, size: 12 };
-      headerRow.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFD3D3D3" }, // Grey background
-      };
-      headerRow.alignment = { vertical: "middle", horizontal: "left" };
-      headerRow.height = 20;
-      headerRow.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-      });
-
-      // Add borders to all cells
-      sheet.eachRow((row, rowNumber) => {
-        if (rowNumber > 1) {
-          row.eachCell((cell) => {
-            cell.border = {
-              top: { style: "thin", color: { argb: "FFD3D3D3" } },
-              left: { style: "thin", color: { argb: "FFD3D3D3" } },
-              bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-              right: { style: "thin", color: { argb: "FFD3D3D3" } },
-            };
-          });
-        }
-      });
-
-      // Freeze header row
-      sheet.views = [{ state: "frozen", ySplit: 1 }];
+      applyStandardExcelReportTableStyling(sheet);
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -3577,6 +3798,7 @@ export async function debugMinor3Conditions() {
 export async function exportStudentSubjectSelections(
   subjectSelectionMetaId: number,
   userId?: string,
+  filters: ReportExportFilters = {},
 ) {
   console.log(
     `Starting export for subject selection meta ID: ${subjectSelectionMetaId}`,
@@ -3708,7 +3930,7 @@ export async function exportStudentSubjectSelections(
   );
 
   // Get student details with user info and promotions
-  const studentsWithDetails = await db
+  let studentsWithDetails = await db
     .select({
       studentId: studentModel.id,
       uid: studentModel.uid,
@@ -3723,6 +3945,11 @@ export async function exportStudentSubjectSelections(
       sessionId: promotionModel.sessionId,
       sessionName: sessionModel.name,
       programCourseName: programCourseModel.name,
+      programCourseId: programCourseModel.id,
+      programAffiliationId: programCourseModel.affiliationId,
+      programRegulationTypeId: programCourseModel.regulationTypeId,
+      promotionClassId: promotionModel.classId,
+      semesterName: classModel.name,
     })
     .from(studentModel)
     .innerJoin(userModel, eq(studentModel.userId, userModel.id))
@@ -3733,7 +3960,36 @@ export async function exportStudentSubjectSelections(
       programCourseModel,
       eq(promotionModel.programCourseId, programCourseModel.id),
     )
+    .leftJoin(classModel, eq(promotionModel.classId, classModel.id))
     .where(inArray(studentModel.id, studentIds));
+
+  if (filters.programCourseIds?.length) {
+    const allow = new Set(filters.programCourseIds);
+    studentsWithDetails = studentsWithDetails.filter(
+      (s) => s.programCourseId != null && allow.has(s.programCourseId),
+    );
+  }
+  if (filters.affiliationIds?.length) {
+    const allow = new Set(filters.affiliationIds);
+    studentsWithDetails = studentsWithDetails.filter(
+      (s) =>
+        s.programAffiliationId != null && allow.has(s.programAffiliationId),
+    );
+  }
+  if (filters.regulationTypeIds?.length) {
+    const allow = new Set(filters.regulationTypeIds);
+    studentsWithDetails = studentsWithDetails.filter(
+      (s) =>
+        s.programRegulationTypeId != null &&
+        allow.has(s.programRegulationTypeId),
+    );
+  }
+  if (filters.classIds?.length) {
+    const allow = new Set(filters.classIds);
+    studentsWithDetails = studentsWithDetails.filter(
+      (s) => s.promotionClassId != null && allow.has(s.promotionClassId),
+    );
+  }
 
   // We'll compute subjectIds after loading allSelectionsForYear
   // we'll declare 'subjects' after we have subjectIds computed
@@ -3845,6 +4101,7 @@ export async function exportStudentSubjectSelections(
       Name: studentDetail.userName || "",
       Session: studentDetail.sessionName || "",
       "Program-Course": studentDetail.programCourseName || "",
+      Semester: studentDetail.semesterName || "",
       "Class Roll No.":
         studentDetail.studentClassRoll || studentDetail.rollNumber || "",
       Section: studentDetail.sectionName || "",
@@ -4007,41 +4264,7 @@ export async function exportStudentSubjectSelections(
       }
     });
 
-    // Style header row
-    const headerRow = sheet.getRow(1);
-    headerRow.font = { bold: true, size: 12 };
-    headerRow.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFD3D3D3" }, // Grey background
-    };
-    headerRow.alignment = { vertical: "middle", horizontal: "left" };
-    headerRow.height = 20;
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    // Add borders to all cells
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: "thin", color: { argb: "FFD3D3D3" } },
-            left: { style: "thin", color: { argb: "FFD3D3D3" } },
-            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-            right: { style: "thin", color: { argb: "FFD3D3D3" } },
-          };
-        });
-      }
-    });
-
-    // Freeze header row
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    applyStandardExcelReportTableStyling(sheet);
   }
 
   // Generate buffer

@@ -426,14 +426,14 @@ async function syncFeeStudentMapping(
     tmpResult[0]?.feeGroupPromotionMapping ?? undefined;
   const feeCategoryCode = tmpResult[0]?.feeCategoryCode ?? null;
 
-  console.log(
-    feeStructureId,
-    feeStudentMapping,
-    user,
-    feeGroupPromotionMapping,
-    feeSlab,
-    studentUid,
-  );
+  // console.log(
+  //   feeStructureId,
+  //   feeStudentMapping,
+  //   user,
+  //   feeGroupPromotionMapping,
+  //   feeSlab,
+  //   studentUid,
+  // );
   if (!tmpResult[0]?.feeStudentMapping) {
     console.log("feeStudentMapping not found");
     // throw Error("feeStudentMapping not found");
@@ -444,7 +444,7 @@ async function syncFeeStudentMapping(
   //     tmpResult[0]?.feeGroupPromotionMapping ?? undefined;
 
   //   feeStudentMapping = tmpResult[0]!.feeStudentMapping;
-  console.log("Saving feeStudentMapping!", feeSlab);
+  // console.log("Saving feeStudentMapping!", feeSlab);
 
   // Update the slabs, if changed
   if (feeSlab.trim() != "Slab F") {
@@ -455,14 +455,14 @@ async function syncFeeStudentMapping(
       .where(ilike(feeSlabModel.name, feeSlab.trim()));
 
     if (!tmpFg[0]?.feeGroup) {
-      console.log("Fee Group / Slab - Not Found!", feeSlab.trim());
+      // console.log("Fee Group / Slab - Not Found!", feeSlab.trim());
       await captureErrorRows("Fee Group / Slab - Not Found!", studentRows);
       return;
       // throw Error("Fee Group - Not Found!"); // TODO
     }
 
-    console.log("Fee Slab Provided:", feeSlab);
-    console.log(tmpFg);
+    // console.log("Fee Slab Provided:", feeSlab);
+    // console.log(tmpFg);
     const [{ feeGroup }] = tmpFg;
 
     await updateFeeGroupPromotionMapping(
@@ -476,10 +476,10 @@ async function syncFeeStudentMapping(
     );
   }
 
-  console.log(feeStudentMapping);
+  // console.log(feeStudentMapping);
 
   if (!feeStudentMapping) {
-    console.log("feeStudentMapping - Not Found!", feeSlab.trim());
+    // console.log("feeStudentMapping - Not Found!", feeSlab.trim());
     await captureErrorRows("Fee-Student Mapping - Not Found!", studentRows);
     return;
   }
@@ -646,17 +646,17 @@ async function syncLegacyFeeStructure(
       ),
     );
 
-  console.log(
-    `result[0].legacyReceiptTypeId: ${result[0].legacyReceiptTypeId}`,
-  );
-  console.log(`result[0].legacySessionId: ${result[0].legacySessionId}`);
-  console.log(`result[0].course.trim(): ${result[0].course.trim()}`);
-  console.log(`result[0].legacyShiftId: ${result[0].legacyShiftId}`);
-  console.log(`tmpResult:`, tmpResult);
+  // console.log(
+  //   `result[0].legacyReceiptTypeId: ${result[0].legacyReceiptTypeId}`,
+  // );
+  // console.log(`result[0].legacySessionId: ${result[0].legacySessionId}`);
+  // console.log(`result[0].course.trim(): ${result[0].course.trim()}`);
+  // console.log(`result[0].legacyShiftId: ${result[0].legacyShiftId}`);
+  // console.log(`tmpResult:`, tmpResult);
 
   if (tmpResult[0]?.feeStructure) {
     const [{ feeStructure }] = tmpResult;
-    console.log("syncLegacyFeeStructure() | Update the fields");
+    // console.log("syncLegacyFeeStructure() | Update the fields");
     // Update the fields
     return await updateFeeStructure(
       studentRows,
@@ -665,9 +665,9 @@ async function syncLegacyFeeStructure(
       masterData,
     );
   } else {
-    console.log(
-      "syncLegacyFeeStructure() | Fee Structure - Not Found!, capturing entries",
-    );
+    // console.log(
+    //   "syncLegacyFeeStructure() | Fee Structure - Not Found!, capturing entries",
+    // );
     await captureErrorRows("Fee Structure - Not Found!", studentRows);
     return null;
   }
@@ -679,10 +679,10 @@ async function updateFeeStructure(
   legacyFeeStructureRows: LegacyFeeStructureRow[],
   masterData: MasterDataType,
 ) {
-  console.log(
-    "updateFeeStructure() | Update the fee structure fields",
-    feeStructure,
-  );
+  // console.log(
+  //   "updateFeeStructure() | Update the fee structure fields",
+  //   feeStructure,
+  // );
   // Update the fee structure fields
   const [savedFeeStructure] = await db
     .update(feeStructureModel)
@@ -712,7 +712,7 @@ async function updateFeeStructure(
     .where(eq(feeStructureModel.id, feeStructure.id!))
     .returning();
 
-  console.log("updateFeeStructure() | Update the fee-structure-components");
+  // console.log("updateFeeStructure() | Update the fee-structure-components");
   // Update the fee-structure-components
   const savedFeeStructureComponents: FeeStructureComponentT[] = [];
   for (const row of legacyFeeStructureRows) {
@@ -721,9 +721,9 @@ async function updateFeeStructure(
     );
 
     if (!feeHead) {
-      console.log(
-        "updateFeeStructure() | Fee Head Not Found!, capturing the entries",
-      );
+      // console.log(
+      //   "updateFeeStructure() | Fee Head Not Found!, capturing the entries",
+      // );
       await captureErrorRows(
         `Fee Head Not Found: ${row.fee_head}`,
         studentRows,
@@ -731,7 +731,7 @@ async function updateFeeStructure(
       continue;
     }
 
-    console.log("updateFeeStructure() | Save the fee-structure components");
+    // console.log("updateFeeStructure() | Save the fee-structure components");
     // const [savedFeeStructureComponent] = await db
     //   .update(feeStructureComponentModel)
     //   .set({

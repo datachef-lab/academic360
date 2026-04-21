@@ -43,6 +43,7 @@ import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model"
 import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model";
 import { StudentType } from "@/types/user/student.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
+import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 import { degreeModel } from "@repo/db/schemas/models/resources";
 import { marksheetModel } from "@repo/db/schemas/models/academics";
 
@@ -1596,41 +1597,7 @@ export async function exportStudentDetailedReport(academicYearId: number) {
       }
     });
 
-    // Style header row
-    const headerRow = sheet.getRow(1);
-    headerRow.font = { bold: true, size: 12 };
-    headerRow.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFD3D3D3" }, // Grey background
-    };
-    headerRow.alignment = { vertical: "middle", horizontal: "left" };
-    headerRow.height = 20;
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    // Add borders to all cells
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: "thin", color: { argb: "FFD3D3D3" } },
-            left: { style: "thin", color: { argb: "FFD3D3D3" } },
-            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-            right: { style: "thin", color: { argb: "FFD3D3D3" } },
-          };
-        });
-      }
-    });
-
-    // Freeze header row
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    applyStandardExcelReportTableStyling(sheet);
   } else {
     sheet.columns = [{ header: "message", key: "message", width: 20 }];
     sheet.addRow({ message: "No data available" });
@@ -1776,41 +1743,7 @@ export async function exportStudentAcademicSubjectsReport(
       }
     });
 
-    // Style header row
-    const headerRow = sheet.getRow(1);
-    headerRow.font = { bold: true, size: 12 };
-    headerRow.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFD3D3D3" }, // Grey background
-    };
-    headerRow.alignment = { vertical: "middle", horizontal: "left" };
-    headerRow.height = 20;
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    // Add borders to all cells
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: "thin", color: { argb: "FFD3D3D3" } },
-            left: { style: "thin", color: { argb: "FFD3D3D3" } },
-            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-            right: { style: "thin", color: { argb: "FFD3D3D3" } },
-          };
-        });
-      }
-    });
-
-    // Freeze header row
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    applyStandardExcelReportTableStyling(sheet);
   } else {
     sheet.columns = [{ header: "message", key: "message", width: 20 }];
     sheet.addRow({ message: "No data available" });

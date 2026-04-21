@@ -112,10 +112,11 @@ export default function FeePaymentMarkingPage() {
   //   : paymentEntry?.updatedAt
   //     ? new Date(paymentEntry.updatedAt)
   //     : null;
-  /** Editable marking fields only when fee mapping is pending and payment is not already SUCCESS */
+  /** Lock only when this challan is already paid or the linked payment row is SUCCESS (e.g. FAILED must stay editable so staff can record cash / mark online success). */
   const paymentEntryStatus = paymentEntry?.status?.toUpperCase() ?? "";
   const isPaymentSuccess = paymentEntryStatus === "SUCCESS";
-  const canEditMarkingFields = paymentStatus === "PENDING" && !isPaymentSuccess;
+  const isMappingPaid = paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED";
+  const canEditMarkingFields = !isMappingPaid && !isPaymentSuccess;
   const isMarkingFormLocked = !canEditMarkingFields;
 
   /** Use the browser's local timezone so the time matches the user's system clock (API sends UTC via ISO strings). */
@@ -147,6 +148,18 @@ export default function FeePaymentMarkingPage() {
 
   const displayGatewayVendor = paymentEntry?.paymentGatewayVendor?.trim() || ONLINE_GATEWAY_PAYTM;
 
+  /** Mapping may be FAILED after gateway callback; badge shows PENDING for staff workflow. */
+  const statusBadgeLabel =
+    paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED"
+      ? "PAID"
+      : paymentStatus === "FAILED"
+        ? "PENDING"
+        : paymentStatus;
+  const statusBadgeClassName =
+    paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED"
+      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+      : "bg-amber-100 text-amber-900 border-amber-200";
+
   const academicLine = `${academicYear} · ${className}`;
 
   useEffect(() => {
@@ -170,10 +183,9 @@ export default function FeePaymentMarkingPage() {
           "Please verify challan details before recording. This action cannot be reversed.",
         confirmText: "Receive cash payment",
         doConfirm: async () => {
-          const receiptDateIso = new Date(`${paymentDate}T00:00:00Z`).toISOString();
           const res = await receiveFeePaymentCash({
             receiptNumber: cashReceiptNumber,
-            receiptDateIso,
+            receiptDateIso: paymentDate,
             remarks: cashRemarks.trim() || undefined,
           });
           setRecord(res.payload ?? null);
@@ -181,17 +193,23 @@ export default function FeePaymentMarkingPage() {
         },
       };
     }
+    const vendorName = record.paymentEntry?.paymentGatewayVendor?.trim() || ONLINE_GATEWAY_PAYTM;
+    const gatewayMarkedFailed = record.paymentEntry?.status?.trim().toUpperCase() === "FAILED";
+    const onlineDetail =
+      "This will mark the payment as SUCCESS and manual. Please verify order ID and transaction reference before proceeding.";
     return {
-      title: "Confirm online marking",
-      description:
-        "This will mark the payment as SUCCESS and manual. Please verify order ID and transaction reference before proceeding.",
+      title: gatewayMarkedFailed
+        ? "Confirm overwriting failed gateway status"
+        : "Confirm online marking",
+      description: gatewayMarkedFailed
+        ? `This order was marked as failed by ${vendorName}. Marking it successful will overwrite that status in your records. ${onlineDetail}`
+        : onlineDetail,
       confirmText: "Update online payment",
       doConfirm: async () => {
-        const paymentDateIso = new Date(`${paymentDate}T00:00:00Z`).toISOString();
         const res = await markFeePaymentOnlineSuccess({
           orderId: onlineOrderId,
           remarks: onlineRemarks.trim() || undefined,
-          paymentDateIso,
+          paymentDateIso: paymentDate,
           transactionId: onlineTransactionId.trim() || undefined,
           paymentGatewayVendor: ONLINE_GATEWAY_PAYTM,
         });
@@ -210,12 +228,16 @@ export default function FeePaymentMarkingPage() {
     onlineTransactionId,
   ]);
 
-  function requestMainConfirm() {
+  function openConfirmAfterDateChecks() {
     if (isPaymentDateFuture(paymentDate)) {
       setFutureDateConfirmOpen(true);
       return;
     }
     setConfirmOpen(true);
+  }
+
+  function requestMainConfirm() {
+    openConfirmAfterDateChecks();
   }
 
   function clearLoadedRecord() {
@@ -416,19 +438,7 @@ export default function FeePaymentMarkingPage() {
                 Student record
               </CardTitle>
               <div className="flex items-center gap-2">
-                <Badge
-                  className={
-                    paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED"
-                      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                      : paymentStatus === "FAILED"
-                        ? "bg-red-100 text-red-800 border-red-200"
-                        : "bg-amber-100 text-amber-900 border-amber-200"
-                  }
-                >
-                  {paymentStatus === "SUCCESS" || paymentStatus === "COMPLETED"
-                    ? "PAID"
-                    : paymentStatus}
-                </Badge>
+                <Badge className={statusBadgeClassName}>{statusBadgeLabel}</Badge>
                 <Button
                   type="button"
                   variant="outline"

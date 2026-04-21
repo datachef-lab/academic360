@@ -16,6 +16,8 @@ import { academicYearModel } from "@repo/db/index.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { socketService } from "@/services/socketService.js";
+import { parseReportExportFilters } from "@/utils/report-export-filters.js";
+import { exportEnrolmentMasterReportBuffer } from "../services/enrolment-master-export.service.js";
 
 export const createStudent = async (
   req: Request,
@@ -664,6 +666,43 @@ export const exportStudentAcademicSubjectsReportController = async (
       "[STUDENT-EXPORT] Failed to export student academic subjects report",
       error,
     );
+    handleError(error, res, next);
+  }
+};
+
+export const exportEnrolmentMasterReportController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { academicYearId } = req.query;
+    if (!academicYearId) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "academicYearId query parameter is required"));
+    }
+    const academicYearIdNumber = Number(academicYearId);
+    if (Number.isNaN(academicYearIdNumber)) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "Invalid academicYearId parameter"));
+    }
+    const buffer = await exportEnrolmentMasterReportBuffer(
+      academicYearIdNumber,
+      parseReportExportFilters(req.query as Record<string, unknown>),
+    );
+    const fileName = `enrolment-master-${academicYearIdNumber}-${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Length", buffer.length);
+    res.status(200).send(buffer);
+  } catch (error) {
     handleError(error, res, next);
   }
 };

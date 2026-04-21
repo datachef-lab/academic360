@@ -13,6 +13,7 @@ import { and, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import XLSX from "xlsx";
 import ExcelJS from "exceljs";
+import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling";
 
 export async function findPromotionByStudentIdAndClassId(
   studentId: number,
@@ -141,11 +142,30 @@ export async function notifyExamForm(
 //     return "DROPPED_OUT";
 //   };
 
+function sqlIntIn(column: string, ids?: number[]) {
+  const clean = ids?.filter((n) => Number.isInteger(n) && n > 0) ?? [];
+  if (!clean.length) return sql``;
+  return sql.raw(` AND ${column} IN (${clean.join(",")})`);
+}
+
 export async function exportPromotionStudentsReport(params: {
   sessionId?: number;
   classId?: number;
+  academicYearId?: number;
+  programCourseIds?: number[];
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  classIds?: number[];
 }) {
-  const { sessionId, classId } = params;
+  const {
+    sessionId,
+    classId,
+    academicYearId,
+    programCourseIds,
+    affiliationIds,
+    regulationTypeIds,
+    classIds,
+  } = params;
 
   const { rows } = await db.execute(sql`
   SELECT 
@@ -191,6 +211,8 @@ pr.is_exam_form_submitted AS "is_exam_form_submitted?",
   LEFT JOIN promotions pr ON pr.student_id_fk = std.id
   JOIN users u ON u.id = std.user_id_fk
   LEFT JOIN program_courses pc ON pc.id = pr.program_course_id_fk
+  LEFT JOIN affiliations aff ON aff.id = pc.affiliation_id_fk
+  LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
   LEFT JOIN classes cls ON cls.id = pr.class_id_fk
   LEFT JOIN sections sec ON sec.id = pr.section_id_fk
   LEFT JOIN shifts sh ON sh.id = pr.shift_id_fk
@@ -200,7 +222,12 @@ pr.is_exam_form_submitted AS "is_exam_form_submitted?",
 
   WHERE 1=1
   ${sessionId ? sql` AND pr.session_id_fk = ${sessionId}` : sql``}
-  ${classId ? sql` AND pr.class_id_fk = ${classId}` : sql``}
+  ${classId && !classIds?.length ? sql` AND pr.class_id_fk = ${classId}` : sql``}
+  ${academicYearId ? sql` AND ay.id = ${academicYearId}` : sql``}
+  ${sqlIntIn("pc.id", programCourseIds)}
+  ${sqlIntIn("pc.affiliation_id_fk", affiliationIds)}
+  ${sqlIntIn("pc.regulation_type_id_fk", regulationTypeIds)}
+  ${sqlIntIn("pr.class_id_fk", classIds)}
   ORDER BY pr.exam_form_submission_time_stamp
 `);
 
@@ -248,41 +275,7 @@ pr.is_exam_form_submitted AS "is_exam_form_submitted?",
       }
     });
 
-    // Style header row
-    const headerRow = sheet.getRow(1);
-    headerRow.font = { bold: true, size: 12 };
-    headerRow.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFD3D3D3" }, // Grey background
-    };
-    headerRow.alignment = { vertical: "middle", horizontal: "left" };
-    headerRow.height = 20;
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    // Add borders to all cells
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: "thin", color: { argb: "FFD3D3D3" } },
-            left: { style: "thin", color: { argb: "FFD3D3D3" } },
-            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-            right: { style: "thin", color: { argb: "FFD3D3D3" } },
-          };
-        });
-      }
-    });
-
-    // Freeze header row
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    applyStandardExcelReportTableStyling(sheet);
   } else {
     sheet.columns = [{ header: "message", key: "message", width: 20 }];
     sheet.addRow({ message: "No data available" });

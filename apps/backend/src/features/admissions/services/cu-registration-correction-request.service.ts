@@ -41,6 +41,7 @@ import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
 import { enqueueNotification } from "@/services/notificationClient.js";
 import { socketService } from "@/services/socketService.js";
 import { getMisTableData } from "@/features/subject-selection/services/student-subject-selection.service.js";
+import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 import { AdmRegFormService } from "./adm-reg-form.service.js";
 import {
   nationalityModel,
@@ -58,7 +59,10 @@ import {
   programCourseModel,
   regulationTypeModel,
   specializationModel,
+  affiliationModel,
 } from "@repo/db/schemas/models/course-design";
+import { classModel } from "@repo/db/schemas/models/academics/class.model";
+import type { ReportExportFilters } from "@/utils/report-export-filters.js";
 import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions";
 import ExcelJS from "exceljs";
 import { getCuRegPdfPathDynamic } from "./cu-registration-document-path.service.js";
@@ -2931,6 +2935,7 @@ interface CuRegistrationExportData {
   physicalRegistrationDoneAt: string;
   physicalRegistrationDoneByUserName: string;
   admissionRollNumber: string;
+  semester: string;
 
   // Personal Info (from UI)
   fullName: string;
@@ -3057,6 +3062,7 @@ function calculateColumnWidth(header: string, allData?: any[]): number {
 // Export service function
 export const exportCuRegistrationCorrectionRequests = async (
   academicYearId: number,
+  filters: ReportExportFilters = {},
 ): Promise<Buffer> => {
   try {
     console.log(
@@ -3123,6 +3129,7 @@ export const exportCuRegistrationCorrectionRequests = async (
 
         // Program course name
         programCourseName: programCourseModel.name,
+        semesterName: classModel.name,
 
         // Admission academic info
         admissionRollNumber: admissionAcademicInfoModel.rollNumber,
@@ -3166,6 +3173,10 @@ export const exportCuRegistrationCorrectionRequests = async (
         eq(studentModel.programCourseId, programCourseModel.id),
       )
       .leftJoin(
+        affiliationModel,
+        eq(programCourseModel.affiliationId, affiliationModel.id),
+      )
+      .leftJoin(
         admissionAcademicInfoModel,
         eq(studentModel.id, admissionAcademicInfoModel.studentId),
       )
@@ -3182,7 +3193,33 @@ export const exportCuRegistrationCorrectionRequests = async (
       .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id))
       .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
       .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-      .where(eq(sessionModel.academicYearId, academicYearId));
+      .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+      .where(
+        (() => {
+          const baseCond = eq(sessionModel.academicYearId, academicYearId);
+          const extras = [];
+          if (filters.programCourseIds?.length) {
+            extras.push(
+              inArray(programCourseModel.id, filters.programCourseIds),
+            );
+          }
+          if (filters.affiliationIds?.length) {
+            extras.push(inArray(affiliationModel.id, filters.affiliationIds));
+          }
+          if (filters.regulationTypeIds?.length) {
+            extras.push(
+              inArray(
+                programCourseModel.regulationTypeId,
+                filters.regulationTypeIds,
+              ),
+            );
+          }
+          if (filters.classIds?.length) {
+            extras.push(inArray(classModel.id, filters.classIds));
+          }
+          return extras.length ? and(baseCond, ...extras) : baseCond;
+        })(),
+      );
 
     console.log(
       `🔍 [CU-REG-EXPORT] Found ${correctionRequests.length} correction requests`,
@@ -3351,6 +3388,7 @@ export const exportCuRegistrationCorrectionRequests = async (
             ? userMap.get(request.physicalRegistrationDoneBy) || ""
             : "",
           admissionRollNumber: request.admissionRollNumber || "",
+          semester: request.semesterName || "",
 
           // Personal Info
           fullName: request.userName || "",
@@ -3437,20 +3475,12 @@ export const exportCuRegistrationCorrectionRequests = async (
     let highlightedCount = 0;
 
     if (correctionHeaders.length > 0) {
-      // Add header row with styling
+      // Add header row with styling (display labels in sentence case; keys stay camelCase for row data)
       correctionSheet.columns = correctionHeaders.map((header) => ({
-        header: header,
+        header: toSentenceCase(header),
         key: header,
         width: 20,
       }));
-
-      // Style the header row
-      correctionSheet.getRow(1).font = { bold: true };
-      correctionSheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFE0E0E0" },
-      };
 
       // Find column indices for fields that need highlighting
       const genderColIndex = correctionHeaders.indexOf("gender") + 1; // ExcelJS uses 1-based indexing
@@ -3507,6 +3537,8 @@ export const exportCuRegistrationCorrectionRequests = async (
           highlightedCount++;
         }
       });
+
+      applyStandardExcelReportTableStyling(correctionSheet);
     } else {
       correctionSheet.addRow(["No data available"]);
     }
@@ -3698,7 +3730,7 @@ export const exportCuRegistrationCorrectionRequests = async (
                   nl.code AS nationality_code, nl.name AS nationality_name,
                   dc.code AS disability_code,
                   promo.date_of_joining, promo.shift_id_fk AS shift_id,
-                  promo.class_id_fk AS class_id, promo.promotion_status_id_fk,
+                  promo.class_id_fk AS class_id,
                   sh.name AS shift_name,
                   sess.id AS session_id, sess.name AS session_name,
                   ay.year AS session_year,
@@ -3721,7 +3753,8 @@ export const exportCuRegistrationCorrectionRequests = async (
               LEFT JOIN shifts sh ON sh.id = promo.shift_id_fk
               LEFT JOIN sessions sess ON sess.id = promo.session_id_fk
               LEFT JOIN academic_years ay ON ay.id = sess.academic_id_fk
-              LEFT JOIN promotion_status ps ON ps.id = promo.promotion_status_id_fk
+              LEFT JOIN exam_form_fillup eff ON eff.id = promo.exam_form_fillup_id_fk
+              LEFT JOIN promotion_status ps ON ps.id = eff.appear_type_id_fk
               LEFT JOIN academic_info_selected aai ON aai.student_id_fk = std.id
               LEFT JOIN boards bd ON bd.id = aai.board_id_fk
               LEFT JOIN program_courses pc ON pc.id = std.program_course_id_fk
@@ -4198,41 +4231,7 @@ export const exportCuRegistrationCorrectionRequests = async (
         }
       });
 
-      // Style header row
-      const headerRow = cuRegWorksheet.getRow(1);
-      headerRow.font = { bold: true, size: 12 };
-      headerRow.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFD3D3D3" }, // Grey background
-      };
-      headerRow.alignment = { vertical: "middle", horizontal: "left" };
-      headerRow.height = 20;
-      headerRow.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-      });
-
-      // Add borders to all cells
-      cuRegWorksheet.eachRow((row, rowNumber) => {
-        if (rowNumber > 1) {
-          row.eachCell((cell) => {
-            cell.border = {
-              top: { style: "thin", color: { argb: "FFD3D3D3" } },
-              left: { style: "thin", color: { argb: "FFD3D3D3" } },
-              bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-              right: { style: "thin", color: { argb: "FFD3D3D3" } },
-            };
-          });
-        }
-      });
-
-      // Freeze header row
-      cuRegWorksheet.views = [{ state: "frozen", ySplit: 1 }];
+      applyStandardExcelReportTableStyling(cuRegWorksheet);
     } else {
       cuRegWorksheet.addRow(["No data available"]);
     }

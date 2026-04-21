@@ -226,7 +226,9 @@ export async function receiveCashFeePayment(params: {
   | { success: false; error: string }
 > {
   const receiptNumber = normalizeReceiptNumber(params.receiptNumber);
-  const receiptDateIso = String(params.receiptDateIso || "").trim();
+  const receiptDateIso = String(params.receiptDateIso || "")
+    .trim()
+    .slice(0, 10);
   if (!receiptNumber)
     return { success: false, error: "receiptNumber is required" };
   if (!receiptDateIso)
@@ -257,56 +259,43 @@ export async function receiveCashFeePayment(params: {
   const amountToRecord = Number.isFinite(totalPayable) ? totalPayable : 0;
 
   await db.transaction(async (tx) => {
-    // Ensure userId for payment.
     const [student] = await tx
       .select({ userId: studentModel.userId })
       .from(studentModel)
       .where(eq(studentModel.id, row.studentId));
 
-    const existingPaymentId = row.paymentId ?? null;
-    let paymentId = existingPaymentId;
+    const priorPaymentId = row.paymentId ?? null;
 
-    if (existingPaymentId) {
-      await tx
-        .update(paymentModel)
-        .set({
-          userId: student?.userId ?? undefined,
-          context: "FEE",
-          amount: amountToRecord,
-          paymentMode: "CASH",
-          txnDate: params.receiptDateIso,
-          paymentGatewayVendor: null,
-          paymentOption: null,
-          status: "SUCCESS",
-          isManualEntry: true,
-          recordedBy: params.recordedByUserId,
-          remarks: params.remarks ?? null,
-        })
-        .where(eq(paymentModel.id, existingPaymentId));
-    } else {
-      const [created] = await tx
-        .insert(paymentModel)
-        .values({
-          userId: student?.userId ?? undefined,
-          context: "FEE",
-          amount: amountToRecord,
-          paymentMode: "CASH",
-          paymentGatewayVendor: null,
-          paymentOption: null,
-          status: "SUCCESS",
-          orderId: null,
-          isManualEntry: true,
-          txnDate: params.receiptDateIso,
-          recordedBy: params.recordedByUserId,
-          remarks: params.remarks ?? null,
-          gatewayResponse: {
-            meta: { feeStudentMappingId: row.id },
-            cash: { receiptNumber, receiptDateIso },
+    // Cash marking always creates a new payment row (e.g. failed online attempt stays in DB);
+    // the mapping points at this new SUCCESS payment.
+    const [created] = await tx
+      .insert(paymentModel)
+      .values({
+        userId: student?.userId ?? undefined,
+        context: "FEE",
+        amount: amountToRecord,
+        paymentMode: "CASH",
+        paymentGatewayVendor: null,
+        paymentOption: null,
+        status: "SUCCESS",
+        orderId: null,
+        isManualEntry: true,
+        txnDate: receiptDateIso,
+        recordedBy: params.recordedByUserId,
+        remarks: params.remarks ?? null,
+        gatewayResponse: {
+          meta: {
+            feeStudentMappingId: row.id,
+            ...(priorPaymentId
+              ? { priorChallanPaymentId: priorPaymentId }
+              : {}),
           },
-        })
-        .returning();
-      paymentId = created?.id ?? null;
-    }
+          cash: { receiptNumber, receiptDateIso },
+        },
+      })
+      .returning();
+
+    const paymentId = created?.id ?? null;
 
     await tx
       .update(feeStudentMappingModel)
@@ -473,10 +462,28 @@ export async function markOnlineFeePaymentSuccessManual(params: {
   const payment = await findPaymentByOrderId(orderId);
   if (!payment?.id) return { success: false, error: "Payment not found" };
 
-  // Date-only default avoids UTC-midnight strings that display as confusing local midnights in UIs.
-  const paymentDateIso =
-    String(params.paymentDateIso || "").trim() ||
-    new Date().toISOString().slice(0, 10);
+  const orderPaymentStatus = String(payment.status ?? "")
+    .trim()
+    .toUpperCase();
+  if (orderPaymentStatus === "SUCCESS") {
+    return {
+      success: false,
+      error: "This payment is already marked successful",
+    };
+  }
+  // Same Paytm order row is updated for PENDING or FAILED; do not insert a second row (orderId is unique).
+  if (orderPaymentStatus !== "PENDING" && orderPaymentStatus !== "FAILED") {
+    return {
+      success: false,
+      error: `Online payment cannot be marked from status "${payment.status}". Only pending or failed orders can be updated.`,
+    };
+  }
+
+  // Store calendar date only (yyyy-mm-dd); never a full ISO instant (avoids 05:30-style display in IST).
+  const paymentDateOnly =
+    String(params.paymentDateIso || "")
+      .trim()
+      .slice(0, 10) || new Date().toISOString().slice(0, 10);
   const txnIdTrimmed = String(params.transactionId || "").trim();
 
   await db.transaction(async (tx) => {
@@ -488,7 +495,7 @@ export async function markOnlineFeePaymentSuccessManual(params: {
         isManualEntry: true,
         recordedBy: params.recordedByUserId,
         remarks: params.remarks ?? payment.remarks ?? null,
-        txnDate: paymentDateIso,
+        txnDate: paymentDateOnly,
         ...(txnIdTrimmed ? { txnId: txnIdTrimmed } : {}),
         ...(vendor ? { paymentGatewayVendor: vendor } : {}),
       })

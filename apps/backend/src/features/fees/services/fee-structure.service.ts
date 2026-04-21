@@ -91,6 +91,7 @@ import {
   sessionModel,
   sectionModel,
 } from "@repo/db/schemas/models/academics";
+import { careerProgressionFormModel } from "@repo/db/schemas";
 import {
   affiliationModel,
   programCourseModel,
@@ -108,6 +109,7 @@ import {
   or,
   asc,
   aliasedTable,
+  min,
   sql,
 } from "drizzle-orm";
 import ExcelJS from "exceljs";
@@ -2525,6 +2527,7 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Class / Semester",
   "Shift",
   "Section",
+  "Career Progression Form Filled?",
   "Receipt Type",
   "Fee Slab",
   "Fee Category",
@@ -2995,6 +2998,20 @@ export async function downloadFeeStudentMappings(
     )
     .as("fee_slab_totals");
 
+  /** At most one row per (student, academic year) for stable join onto fee mapping rows. */
+  const cpFormByStudentYearSq = db
+    .select({
+      studentId: careerProgressionFormModel.studentId,
+      ayId: careerProgressionFormModel.academicYearId,
+      cpFormId: min(careerProgressionFormModel.id).as("cp_form_id"),
+    })
+    .from(careerProgressionFormModel)
+    .groupBy(
+      careerProgressionFormModel.studentId,
+      careerProgressionFormModel.academicYearId,
+    )
+    .as("cp_form_by_student_year");
+
   /** True when export treats the row as Paid (same as Payment Status = 'Paid'). */
   const feeStudentMappingExportIsPaid = sql`(
     UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
@@ -3032,6 +3049,10 @@ export async function downloadFeeStudentMappings(
       "Class / Semester": classModel.name,
       Shift: shiftModel.name,
       Section: sectionModel.name,
+      "Career Progression Form Filled?": sql<string>`CASE
+        WHEN ${cpFormByStudentYearSq.cpFormId} IS NOT NULL THEN 'Yes'
+        ELSE 'No'
+      END`,
 
       // Fee Structure Meta
       "Receipt Type": receiptTypeModel.name,
@@ -3058,30 +3079,27 @@ export async function downloadFeeStudentMappings(
         ELSE NULL
       END`,
       "Payment Mode": sql<string | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.paymentMode}::text
+        WHEN ${paymentModel.paymentMode} IS NOT NULL THEN ${paymentModel.paymentMode}::text
+        WHEN ${feeStudentMappingModel.receiptNumber} IS NOT NULL
+          AND ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL THEN 'CASH'
         ELSE NULL
       END`,
       "Payment Internal Remarks": paymentModel.internalRemarks,
-      "Receipt / Challan Number": sql<string | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN ${feeStudentMappingModel.receiptNumber}
-        ELSE NULL
-      END`,
-      "Receipt / Challan Generated At": sql<Date | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN ${feeStudentMappingModel.challanGeneratedAt}
-        ELSE NULL
-      END`,
+      "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
+      "Receipt / Challan Generated At":
+        feeStudentMappingModel.challanGeneratedAt,
 
       // Online Payment Details (blank when Pending)
       "Online Payment Gateway Vendor": sql<string | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.paymentGatewayVendor}::text
+        WHEN ${paymentModel.paymentGatewayVendor} IS NOT NULL THEN ${paymentModel.paymentGatewayVendor}::text
         ELSE NULL
       END`,
       "Online Payment Order Id": sql<string | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.orderId}::text
+        WHEN ${paymentModel.orderId} IS NOT NULL THEN ${paymentModel.orderId}::text
         ELSE NULL
       END`,
       "Online Payment Transaction Id": sql<string | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.txnId}::text
+        WHEN ${paymentModel.txnId} IS NOT NULL THEN ${paymentModel.txnId}::text
         ELSE NULL
       END`,
     })
@@ -3117,6 +3135,13 @@ export async function downloadFeeStudentMappings(
     .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
     .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
     .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
+    .leftJoin(
+      cpFormByStudentYearSq,
+      and(
+        eq(cpFormByStudentYearSq.studentId, studentModel.id),
+        eq(cpFormByStudentYearSq.ayId, academicYearId),
+      ),
+    )
     .innerJoin(
       feeStructureModel,
       classId

@@ -36,6 +36,7 @@ import { ExamDto } from "@/dtos";
 import { useAuth } from "@/hooks/use-auth";
 import { useCollegeSettings } from "@/hooks/use-college-settings";
 import { axiosInstance } from "@/lib/utils";
+import { isFirstSemesterClassName } from "@/lib/semester-class-utils";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
 import { FeeMapping } from "@/app/(console)/dashboard/enrollment-fees/page";
 
@@ -155,19 +156,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         `/api/academics/career-progression-forms/student/${student.id}/current`,
       )
       .then(async ({ data }) => {
-        setHasCareerProgressionForm(Boolean(data?.payload?.hasExistingForms));
-        const mappings = await fetchMappings();
-        const isPaid = mappings?.some(
-          (m) => m.paymentStatus === "COMPLETED" || m.paymentStatus === "SUCCESS",
-        );
-        if (Boolean(data?.payload?.hasExistingForms) || isPaid) {
-          setHasCareerProgressionForm(true);
-        } else {
-          setHasCareerProgressionForm(false);
-        }
+        const hasSubmittedCp = Boolean(data?.payload?.hasExistingForms);
+        const currentClassName = (student as { currentPromotion?: { class?: { name?: string } } })
+          ?.currentPromotion?.class?.name;
+        const showCpNav = !isFirstSemesterClassName(currentClassName) && hasSubmittedCp;
+        setHasCareerProgressionForm(showCpNav);
+        await fetchMappings();
       })
       .catch(() => setHasCareerProgressionForm(false));
-  }, [student?.id]);
+  }, [
+    student?.id,
+    (student as { currentPromotion?: { class?: { name?: string | null } | null } | null } | null)
+      ?.currentPromotion?.class?.name,
+  ]);
 
   React.useEffect(() => {
     refreshCpFormStatus();

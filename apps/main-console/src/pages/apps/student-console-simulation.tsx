@@ -29,9 +29,22 @@ export default function StudentConsoleSimulation() {
   // Listen for messages from student console iframe requesting admin token
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Verify origin for security
-      const studentConsoleOrigin = STUDENT_CONSOLE_BASE_URL.replace(/^https?:\/\//, "");
-      if (!event.origin.includes(studentConsoleOrigin) && !event.origin.includes("localhost")) {
+      const iframeWin = iframeRef.current?.contentWindow;
+      const fromOurIframe = iframeWin != null && event.source === iframeWin;
+
+      let envStudentOrigin: string | null = null;
+      try {
+        envStudentOrigin = new URL(STUDENT_CONSOLE_BASE_URL).origin;
+      } catch {
+        /* ignore */
+      }
+
+      const originAllowed =
+        fromOurIframe ||
+        (envStudentOrigin != null && event.origin === envStudentOrigin) ||
+        /localhost|127\.0\.0\.1/.test(event.origin);
+
+      if (!originAllowed) {
         return;
       }
 
@@ -311,7 +324,7 @@ export default function StudentConsoleSimulation() {
           className="w-full h-full border-0"
           title="Student Console Simulation"
           allow="camera; microphone; geolocation; fullscreen"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
         />
       </div>
     </div>

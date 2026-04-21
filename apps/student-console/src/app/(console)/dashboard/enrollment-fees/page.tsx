@@ -19,6 +19,7 @@ import {
   usesInternshipWorkRowLayout,
 } from "@/lib/career-progression-form-utils";
 import { axiosInstance, toSentenceCase } from "@/lib/utils";
+import { isFirstSemesterClassName } from "@/lib/semester-class-utils";
 import { useStudent } from "@/providers/student-provider";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
 import {
@@ -474,10 +475,9 @@ export default function EnrollmentFeesPage() {
     /** Fee structure's academic year — CP template/existence is scoped to this year. */
     academicYearId?: number;
   }) => {
-    setSelectedClassName(
-      mappings.find((m) => m.feeStructureId === fee.feeStructureId)?.feeStructure?.class?.name ||
-        null,
-    );
+    const mappingRow = mappings.find((m) => m.id === fee.id);
+    const feeClassName = mappingRow?.feeStructure?.class?.name ?? null;
+    setSelectedClassName(feeClassName);
     if (!student?.id) return;
     setSelectedFee({
       feeStudentMappingId: fee.id,
@@ -486,6 +486,30 @@ export default function EnrollmentFeesPage() {
     });
 
     if (fee.academicYear) setSelectedAcademicYear(fee.academicYear);
+
+    /** Semester 1: no career progression — open fee payment only. */
+    if (!fee.isPaid && isFirstSemesterClassName(feeClassName)) {
+      setCpOpen(true);
+      setCpLoading(false);
+      setCpError(null);
+      setCpData(null);
+      setStage("payment");
+      setPaymentMode(null);
+      setPaymentMsg(null);
+      setPaymentResult(null);
+      setRowsByMaster({});
+      setQuestionByField({});
+      window.sessionStorage.setItem(
+        FEE_CTX_KEY,
+        JSON.stringify({
+          feeStudentMappingId: fee.id,
+          feeStructureId: fee.feeStructureId,
+          totalPayable: fee.total,
+        }),
+      );
+      return;
+    }
+
     setCpOpen(true);
 
     if (fee.isPaid) {
@@ -712,8 +736,16 @@ export default function EnrollmentFeesPage() {
       // Student Console Simulation embeds this app in an iframe; `window.open` from a nested
       // frame is often blocked. Main console listens for OPEN_PDF_IN_NEW_TAB (see student-console-simulation.tsx).
       const inIframe = typeof window !== "undefined" && window.self !== window.top;
-      if (inIframe && window.parent) {
-        window.parent.postMessage({ type: "OPEN_PDF_IN_NEW_TAB", url: pdfUrl }, "*");
+      if (inIframe) {
+        const payload = { type: "OPEN_PDF_IN_NEW_TAB" as const, url: pdfUrl };
+        try {
+          const target = window.top ?? window.parent;
+          if (target && target !== window.self) {
+            target.postMessage(payload, "*");
+          }
+        } catch {
+          /* ignore */
+        }
       } else {
         window.open(pdfUrl, "_blank", "noopener,noreferrer");
       }
@@ -970,17 +1002,25 @@ export default function EnrollmentFeesPage() {
 
                         <div className="rounded-xl border bg-white overflow-hidden">
                           <div className="rounded-t-xl bg-emerald-800 px-5 py-4 text-white">
-                            <span className="font-semibold">Fee Summary</span>
-                            {selectedAcademicYear || cpData?.academicYear?.year ? (
-                              <>
-                                <span className="mx-2">·</span>
-                                <span>
-                                  Academic Year {selectedAcademicYear || cpData?.academicYear?.year}
-                                </span>
-                                <span className="mx-2">·</span>
-                                <span>{toSentenceCase(selectedClassName || "")}</span>
-                              </>
-                            ) : null}
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="min-w-0 text-sm font-semibold sm:text-base">
+                                <span className="font-semibold">Fee Summary</span>
+                                {selectedAcademicYear || cpData?.academicYear?.year ? (
+                                  <>
+                                    <span className="mx-2">·</span>
+                                    <span>
+                                      Academic Year{" "}
+                                      {selectedAcademicYear || cpData?.academicYear?.year}
+                                    </span>
+                                    <span className="mx-2">·</span>
+                                    <span>{toSentenceCase(selectedClassName || "")}</span>
+                                  </>
+                                ) : null}
+                              </div>
+                              <span className="shrink-0 text-right text-sm font-medium text-emerald-100">
+                                UID: {student?.uid || "—"}
+                              </span>
+                            </div>
                           </div>
                           <div className="px-5 py-4">
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -1043,19 +1083,22 @@ export default function EnrollmentFeesPage() {
                         <div className="rounded-xl border bg-white">
                           <div className="rounded-t-xl bg-indigo-800 px-5 py-4 text-white">
                             <div className="flex items-center justify-between gap-4">
-                              <div className="min-w-0">
-                                <span className="font-semibold">
-                                  Fee Summary (Fees for {toSentenceCase(selectedClassName || "")})
-                                </span>
-                                <span className="mx-2">·</span>
-                                <span>
-                                  Academic Year {selectedAcademicYear || cpData?.academicYear?.year}
-                                </span>
+                              <div className="min-w-0 text-sm font-semibold sm:text-base">
+                                <span className="font-semibold">Fee Summary</span>
+                                {selectedAcademicYear || cpData?.academicYear?.year ? (
+                                  <>
+                                    <span className="mx-2">·</span>
+                                    <span>
+                                      Academic Year{" "}
+                                      {selectedAcademicYear || cpData?.academicYear?.year}
+                                    </span>
+                                    <span className="mx-2">·</span>
+                                    <span>{toSentenceCase(selectedClassName || "")}</span>
+                                  </>
+                                ) : null}
                               </div>
-                              <span className="shrink-0 text-sm font-medium text-indigo-100">
-                                <span className="flex flex-col leading-tight text-right">
-                                  <span>UID: {student?.uid || "—"}</span>
-                                </span>
+                              <span className="shrink-0 text-right text-sm font-medium text-indigo-100">
+                                UID: {student?.uid || "—"}
                               </span>
                             </div>
                           </div>
