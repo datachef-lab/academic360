@@ -1072,7 +1072,7 @@ export async function deletePayment(id: number) {
   return deleted.length > 0;
 }
 
-const ORDER_ID_PREFIX = "AS";
+const ORDER_ID_PREFIX = "ap";
 
 /**
  * Generates order IDs strictly as: AS1000, AS1001, AS1002, ...

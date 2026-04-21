@@ -5,15 +5,119 @@ import {
   careerProgressionFormFieldModel,
   careerProgressionFormModel,
   certificateMasterModel,
+  classModel,
   createCareerProgressionFormSchema,
+  programCourseModel,
+  promotionModel,
+  sectionModel,
+  sessionModel,
+  shiftModel,
   studentModel,
+  userModel,
 } from "@repo/db/schemas";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type {
   CareerProgressionFormCertificateDto,
   CareerProgressionFormDto,
 } from "@repo/db/dtos/academics";
 import { findCareerProgressionFormFieldsByCertificateId } from "./career-progression-form-field.service.js";
+
+function computeCareerExportStudentStatus(student: {
+  active: boolean | null;
+  alumni: boolean | null;
+  hasCancelledAdmission: boolean | null;
+}): string {
+  if (student.hasCancelledAdmission) return "Cancelled admission";
+  if (student.alumni) return "Alumni";
+  if (student.active === false) return "Inactive";
+  return "Active";
+}
+
+async function loadPlacementForCareerExport(
+  studentId: number,
+  academicYearId: number,
+  fallbackProgramCourseId: number | null,
+): Promise<{
+  programCourse: string;
+  semester: string;
+  shift: string;
+  section: string;
+}> {
+  const promotionForYear = await db
+    .select({ p: promotionModel })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .where(
+      and(
+        eq(promotionModel.studentId, studentId),
+        eq(sessionModel.academicYearId, academicYearId),
+      ),
+    )
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
+
+  let promo = promotionForYear[0]?.p;
+  if (!promo) {
+    const [latest] = await db
+      .select()
+      .from(promotionModel)
+      .where(eq(promotionModel.studentId, studentId))
+      .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+      .limit(1);
+    promo = latest;
+  }
+
+  if (promo) {
+    const [pc, cls, shf] = await Promise.all([
+      db
+        .select()
+        .from(programCourseModel)
+        .where(eq(programCourseModel.id, promo.programCourseId))
+        .then((r) => r[0] ?? null),
+      db
+        .select()
+        .from(classModel)
+        .where(eq(classModel.id, promo.classId))
+        .then((r) => r[0] ?? null),
+      db
+        .select()
+        .from(shiftModel)
+        .where(eq(shiftModel.id, promo.shiftId))
+        .then((r) => r[0] ?? null),
+    ]);
+
+    let sec: typeof sectionModel.$inferSelect | null = null;
+    if (promo.sectionId != null) {
+      const [s] = await db
+        .select()
+        .from(sectionModel)
+        .where(eq(sectionModel.id, promo.sectionId));
+      sec = s ?? null;
+    }
+
+    return {
+      programCourse: pc?.name ?? "",
+      semester: (cls?.shortName ?? cls?.name ?? "").trim(),
+      shift: (shf?.name ?? "").trim(),
+      section: (sec?.name ?? "").trim(),
+    };
+  }
+
+  if (fallbackProgramCourseId != null) {
+    const [pc] = await db
+      .select()
+      .from(programCourseModel)
+      .where(eq(programCourseModel.id, fallbackProgramCourseId));
+    return {
+      programCourse: pc?.name ?? "",
+      semester: "",
+      shift: "",
+      section: "",
+    };
+  }
+
+  return { programCourse: "", semester: "", shift: "", section: "" };
+}
 
 export type CareerProgressionSubmitPayload = {
   studentId: number;
@@ -81,23 +185,201 @@ export async function careerProgressionFormRowToDto(
 
 export async function findAllCareerProgressionForms(
   studentId?: number,
+  academicYearId?: number,
 ): Promise<CareerProgressionFormDto[]> {
-  const rows =
-    studentId != null
-      ? await db
-          .select()
-          .from(careerProgressionFormModel)
-          .where(eq(careerProgressionFormModel.studentId, studentId))
-          .orderBy(asc(careerProgressionFormModel.id))
-      : await db
-          .select()
-          .from(careerProgressionFormModel)
-          .orderBy(asc(careerProgressionFormModel.id));
+  const conditions = [];
+  if (studentId != null) {
+    conditions.push(eq(careerProgressionFormModel.studentId, studentId));
+  }
+  if (academicYearId != null) {
+    conditions.push(
+      eq(careerProgressionFormModel.academicYearId, academicYearId),
+    );
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const rows = whereClause
+    ? await db
+        .select()
+        .from(careerProgressionFormModel)
+        .where(whereClause)
+        .orderBy(asc(careerProgressionFormModel.id))
+    : await db
+        .select()
+        .from(careerProgressionFormModel)
+        .orderBy(asc(careerProgressionFormModel.id));
 
   const dtos: Array<CareerProgressionFormDto | null> = await Promise.all(
     rows.map((r) => careerProgressionFormRowToDto(r)),
   );
-  return dtos.filter((d): d is CareerProgressionFormDto => d !== null);
+  const list = dtos.filter((d): d is CareerProgressionFormDto => d !== null);
+
+  if (list.length === 0) return list;
+
+  const studentIds = [...new Set(list.map((d) => d.studentId))];
+  const studentRows = await db
+    .select({
+      id: studentModel.id,
+      uid: studentModel.uid,
+      name: userModel.name,
+      registrationNumber: studentModel.registrationNumber,
+      rollNumber: studentModel.rollNumber,
+      active: studentModel.active,
+      alumni: studentModel.alumni,
+      hasCancelledAdmission: studentModel.hasCancelledAdmission,
+      programCourseId: studentModel.programCourseId,
+    })
+    .from(studentModel)
+    .innerJoin(userModel, eq(studentModel.userId, userModel.id))
+    .where(inArray(studentModel.id, studentIds));
+
+  const byStudentId = new Map(studentRows.map((s) => [s.id, s]));
+
+  const uniquePairs = Array.from(
+    new Map(
+      list.map((f) => {
+        const ayId = f.academicYear.id;
+        return [`${f.studentId}_${ayId ?? ""}`, f] as const;
+      }),
+    ).values(),
+  ).filter((f) => f.academicYear.id != null);
+
+  const placementCache = new Map<
+    string,
+    Awaited<ReturnType<typeof loadPlacementForCareerExport>>
+  >();
+  await Promise.all(
+    uniquePairs.map(async (f) => {
+      const ayId = f.academicYear.id as number;
+      const base = byStudentId.get(f.studentId);
+      const key = `${f.studentId}_${ayId}`;
+      placementCache.set(
+        key,
+        await loadPlacementForCareerExport(
+          f.studentId,
+          ayId,
+          base?.programCourseId ?? null,
+        ),
+      );
+    }),
+  );
+
+  return list.map((d) => {
+    const base = byStudentId.get(d.studentId);
+    if (!base) return d;
+    const ayId = d.academicYear.id;
+    if (ayId == null) {
+      return {
+        ...d,
+        student: {
+          uid: base.uid,
+          name: base.name,
+          registrationNumber: base.registrationNumber,
+          rollNumber: base.rollNumber,
+          programCourse: "",
+          semester: "",
+          shift: "",
+          section: "",
+          studentStatus: computeCareerExportStudentStatus(base),
+        },
+      };
+    }
+    const place = placementCache.get(`${d.studentId}_${ayId}`)!;
+    return {
+      ...d,
+      student: {
+        uid: base.uid,
+        name: base.name,
+        registrationNumber: base.registrationNumber,
+        rollNumber: base.rollNumber,
+        programCourse: place.programCourse,
+        semester: place.semester,
+        shift: place.shift,
+        section: place.section,
+        studentStatus: computeCareerExportStudentStatus(base),
+      },
+    };
+  });
+}
+
+export type CareerProgressionFormListItem = {
+  id: number;
+  studentId: number;
+  studentUid: string;
+  studentName: string;
+  academicYear: typeof academicYearModel.$inferSelect;
+  updatedAt: Date;
+};
+
+export async function findCareerProgressionFormsPaginated(params: {
+  page: number;
+  pageSize: number;
+  studentId?: number;
+  academicYearId?: number;
+}): Promise<{
+  items: CareerProgressionFormListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const { page, pageSize, studentId, academicYearId } = params;
+  const offset = (page - 1) * pageSize;
+
+  const conditions = [];
+  if (studentId != null) {
+    conditions.push(eq(careerProgressionFormModel.studentId, studentId));
+  }
+  if (academicYearId != null) {
+    conditions.push(
+      eq(careerProgressionFormModel.academicYearId, academicYearId),
+    );
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const countQuery = db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(careerProgressionFormModel);
+  const [countRow] = whereClause
+    ? await countQuery.where(whereClause)
+    : await countQuery;
+
+  const total = countRow?.count ?? 0;
+
+  const baseList = db
+    .select({
+      id: careerProgressionFormModel.id,
+      studentId: careerProgressionFormModel.studentId,
+      updatedAt: careerProgressionFormModel.updatedAt,
+      academicYear: academicYearModel,
+      studentUid: studentModel.uid,
+      studentName: userModel.name,
+    })
+    .from(careerProgressionFormModel)
+    .innerJoin(
+      studentModel,
+      eq(careerProgressionFormModel.studentId, studentModel.id),
+    )
+    .innerJoin(userModel, eq(studentModel.userId, userModel.id))
+    .innerJoin(
+      academicYearModel,
+      eq(careerProgressionFormModel.academicYearId, academicYearModel.id),
+    );
+
+  const rows = await (whereClause ? baseList.where(whereClause) : baseList)
+    .orderBy(desc(careerProgressionFormModel.updatedAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  const items: CareerProgressionFormListItem[] = rows.map((r) => ({
+    id: r.id,
+    studentId: r.studentId,
+    studentUid: r.studentUid,
+    studentName: r.studentName,
+    academicYear: r.academicYear,
+    updatedAt: r.updatedAt,
+  }));
+
+  return { items, total, page, pageSize };
 }
 
 export async function findCareerProgressionFormById(

@@ -27,6 +27,7 @@ import {
   FileText,
   BookOpen,
   Layers,
+  TrendingUp,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -96,6 +97,7 @@ const data = {
     { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
     { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
     { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
+    { title: "Career Progression", url: "/dashboard/career-progression", icon: TrendingUp },
     { title: "Bulk Data Upload", url: "/dashboard/bulk-upload", icon: Layers },
     {
       title: "Student Console Simulation",

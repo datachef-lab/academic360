@@ -38,6 +38,8 @@ import {
   careerProgressionFormFieldRouter,
   careerProgressionFormRouter,
   certificateFieldMasterRouter,
+  certificateFieldOptionMasterRouter,
+  certificateMasterRouter,
 } from "@/features/academics/routes/index.js";
 import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -428,9 +430,16 @@ app.use(
 
 app.use("/api/academics/career-progression-forms", careerProgressionFormRouter);
 
+app.use("/api/academics/certificate-masters", certificateMasterRouter);
+
 app.use(
   "/api/academics/certificate-field-masters",
   certificateFieldMasterRouter,
+);
+
+app.use(
+  "/api/academics/certificate-field-option-masters",
+  certificateFieldOptionMasterRouter,
 );
 
 app.use("/api/personal-details", personalDetailsRouter);

@@ -2526,7 +2526,6 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Shift",
   "Section",
   "Receipt Type",
-  "Payment Configuration",
   "Fee Slab",
   "Fee Category",
   "Approval Type",
@@ -2534,22 +2533,14 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Fee Head (or Components)",
   "Amount Configured (For Fee Heads / Components)",
   "Total Amount Configured (Per Fee Structure)",
-  "Waived-Off Amount",
   "Total Amount To Pay",
   "Paid Amount",
-  "Payment Context",
   "Payment Status",
   "Paid Timestamp",
   "Payment Mode",
-  "Is Manual Payment Recorded?",
-  "Payment Recorded By",
   "Payment Internal Remarks",
   "Receipt / Challan Number",
   "Receipt / Challan Generated At",
-  "Is Waived-Off Given?",
-  "Waived-Off Reason",
-  "Waived-Off Date",
-  "Waived-Off Approved By",
   "Online Payment Gateway Vendor",
   "Online Payment Order Id",
   "Online Payment Transaction Id",
@@ -2570,7 +2561,6 @@ const FEE_STRUCTURE_INR_AMOUNT_HEADERS = [
 const FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS = [
   "Amount Configured (For Fee Heads / Components)",
   "Total Amount Configured (Per Fee Structure)",
-  "Waived-Off Amount",
   "Total Amount To Pay",
   "Paid Amount",
 ] as const;
@@ -2580,7 +2570,6 @@ const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
   "Total Amount To Pay": "FFE3F2FD",
   "Paid Amount": "FFC8E6C9",
   "Amount Configured (For Fee Heads / Components)": "FFF3E5F5",
-  "Waived-Off Amount": "FFFFCDD2",
 };
 
 /** Display timestamps in IST (Asia/Kolkata); UTC instants from DB are converted correctly. */
@@ -2990,11 +2979,6 @@ export async function downloadFeeStudentMappings(
 }> {
   const stdUser = aliasedTable(userModel, "std_user");
   const fgpmUser = aliasedTable(userModel, "fgpm_user");
-  const waivedOffUser = aliasedTable(userModel, "waived_off_user");
-  const paymentRecordedByUser = aliasedTable(
-    userModel,
-    "payment_recorded_by_user",
-  );
   /** Pre-aggregate slab totals once (replaces per-row window SUM). */
   const feeSlabTotalsSq = db
     .select({
@@ -3010,6 +2994,20 @@ export async function downloadFeeStudentMappings(
       feeStructureComponentModel.feeSlabId,
     )
     .as("fee_slab_totals");
+
+  /** True when export treats the row as Paid (same as Payment Status = 'Paid'). */
+  const feeStudentMappingExportIsPaid = sql`(
+    UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
+      'SUCCESS', 'COMPLETED', 'DONE', 'PAID', 'TXN_SUCCESS'
+    )
+    OR (
+      NULLIF(TRIM(COALESCE(${paymentModel.txnId}::text, '')), '') IS NOT NULL
+      AND NULLIF(TRIM(COALESCE(${paymentModel.txnDate}::text, '')), '') IS NOT NULL
+      AND COALESCE(${feeStudentMappingModel.amountPaid}, 0)
+        >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
+      AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
+    )
+  )`;
 
   const rowsPromise = db
     .select({
@@ -3037,7 +3035,6 @@ export async function downloadFeeStudentMappings(
 
       // Fee Structure Meta
       "Receipt Type": receiptTypeModel.name,
-      "Payment Configuration": feeStudentMappingModel.type,
       "Fee Slab": feeSlabModel.name,
       "Fee Category": feeCategoryModel.name,
       "Approval Type": feeGroupPromotionMappingModel.approvalType,
@@ -3046,57 +3043,47 @@ export async function downloadFeeStudentMappings(
       "Amount Configured (For Fee Heads / Components)":
         feeStructureComponentModel.amount,
       "Total Amount Configured (Per Fee Structure)": feeSlabTotalsSq.slabTotal,
-      "Waived-Off Amount": feeStudentMappingModel.waivedOffAmount,
       "Total Amount To Pay": feeStudentMappingModel.totalPayable,
 
-      // Payment Summary
-      "Paid Amount": paymentModel.amount,
-      "Payment Context": paymentModel.context,
-      // Cast enum `payments.status` to text before COALESCE with '' — PG rejects COALESCE(enum, text).
-      "Payment Status": sql<string>`CASE
-        WHEN UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
-          'SUCCESS', 'COMPLETED', 'DONE', 'PAID', 'TXN_SUCCESS'
-        )
-        THEN 'Paid'
-        WHEN NULLIF(TRIM(COALESCE(${paymentModel.txnId}::text, '')), '') IS NOT NULL
-          AND NULLIF(TRIM(COALESCE(${paymentModel.txnDate}::text, '')), '') IS NOT NULL
-          AND COALESCE(${feeStudentMappingModel.amountPaid}, 0)
-            >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
-          AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
-        THEN 'Paid'
-        ELSE 'Pending'
-      END`,
-      // Only show a paid time when we treat the row as paid (same rules as Payment Status).
-      "Paid Timestamp": sql<string | null>`CASE
-        WHEN UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
-          'SUCCESS', 'COMPLETED', 'DONE', 'PAID', 'TXN_SUCCESS'
-        )
-          THEN ${paymentModel.txnDate}
-        WHEN NULLIF(TRIM(COALESCE(${paymentModel.txnId}::text, '')), '') IS NOT NULL
-          AND NULLIF(TRIM(COALESCE(${paymentModel.txnDate}::text, '')), '') IS NOT NULL
-          AND COALESCE(${feeStudentMappingModel.amountPaid}, 0)
-            >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
-          AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
-          THEN ${paymentModel.txnDate}
+      // Payment Summary — amounts / status / payment & receipt fields only when export is Paid.
+      "Paid Amount": sql<number | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.amount}
         ELSE NULL
       END`,
-      "Payment Mode": paymentModel.paymentMode,
-      "Is Manual Payment Recorded?": sql<string>`CASE WHEN ${paymentModel.isManualEntry} = true THEN 'Yes' ELSE 'No' END`,
-      "Payment Recorded By": paymentRecordedByUser.name,
+      "Payment Status": sql<string>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN 'Paid' ELSE 'Pending'
+      END`,
+      "Paid Timestamp": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.txnDate}
+        ELSE NULL
+      END`,
+      "Payment Mode": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.paymentMode}::text
+        ELSE NULL
+      END`,
       "Payment Internal Remarks": paymentModel.internalRemarks,
-      "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
-      "Receipt / Challan Generated At":
-        feeStudentMappingModel.challanGeneratedAt,
+      "Receipt / Challan Number": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${feeStudentMappingModel.receiptNumber}
+        ELSE NULL
+      END`,
+      "Receipt / Challan Generated At": sql<Date | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${feeStudentMappingModel.challanGeneratedAt}
+        ELSE NULL
+      END`,
 
-      "Is Waived-Off Given?": sql<string>`CASE WHEN ${feeStudentMappingModel.isWaivedOff} = true THEN 'Yes' ELSE 'No' END`,
-      "Waived-Off Reason": feeStudentMappingModel.waivedOffReason,
-      "Waived-Off Date": feeStudentMappingModel.waivedOffDate,
-      "Waived-Off Approved By": waivedOffUser.name,
-
-      // Online Payment Details
-      "Online Payment Gateway Vendor": paymentModel.paymentGatewayVendor,
-      "Online Payment Order Id": paymentModel.orderId,
-      "Online Payment Transaction Id": paymentModel.txnId,
+      // Online Payment Details (blank when Pending)
+      "Online Payment Gateway Vendor": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.paymentGatewayVendor}::text
+        ELSE NULL
+      END`,
+      "Online Payment Order Id": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.orderId}::text
+        ELSE NULL
+      END`,
+      "Online Payment Transaction Id": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.txnId}::text
+        ELSE NULL
+      END`,
     })
     .from(feeStudentMappingModel)
     .innerJoin(
@@ -3179,16 +3166,8 @@ export async function downloadFeeStudentMappings(
       eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
     )
     .leftJoin(
-      waivedOffUser,
-      eq(waivedOffUser.id, feeStudentMappingModel.waivedOffByUserId),
-    )
-    .leftJoin(
       paymentModel,
       eq(paymentModel.id, feeStudentMappingModel.paymentId),
-    )
-    .leftJoin(
-      paymentRecordedByUser,
-      eq(paymentRecordedByUser.id, paymentModel.recordedBy),
     )
     .orderBy(
       asc(feeStudentMappingModel.id),
