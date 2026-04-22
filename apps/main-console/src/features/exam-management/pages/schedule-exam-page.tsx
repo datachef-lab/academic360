@@ -298,6 +298,12 @@ export default function ScheduleExamPage() {
   const [examGroupMode, setExamGroupMode] = useState<"new" | "existing">("new");
   const [newGroupName, setNewGroupName] = useState<string>("");
   const [selectedExistingGroupId, setSelectedExistingGroupId] = useState<number | null>(null);
+  const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(
+    undefined,
+  );
+  const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(
+    undefined,
+  );
 
   // Room and student selection moved to allot-exam-page
   // Excel file upload moved to allot-exam-page
@@ -1260,6 +1266,9 @@ export default function ScheduleExamPage() {
   // Student count query - fetch count based on selected filters
   // Show breakdown as soon as class, program courses, and shifts are selected
   // Papers are still needed for the count, but schedules don't need to be complete
+  const selectedExamCommencementDate =
+    examGroupMode === "new" ? formatDateWithoutTimezone(newGroupCommencementDate) : undefined;
+
   const canFetchStudentCount =
     selectedAcademicYearId &&
     semester &&
@@ -1276,6 +1285,7 @@ export default function ScheduleExamPage() {
       selectedProgramCourses,
       selectedShifts,
       selectedSubjectPapers.map((sp) => sp.paperId).sort(),
+      selectedExamCommencementDate,
     ],
     async () => {
       // Enable query as soon as class, program courses, and shifts are selected
@@ -1318,6 +1328,7 @@ export default function ScheduleExamPage() {
             academicYearIds: [selectedAcademicYearId],
             combinations,
             gender: null,
+            examCommencementDate: selectedExamCommencementDate,
           },
           null, // No Excel file
         );
@@ -1353,7 +1364,8 @@ export default function ScheduleExamPage() {
         !!selectedAcademicYearId &&
         !!semester &&
         selectedProgramCourses.length > 0 &&
-        selectedShifts.length > 0,
+        selectedShifts.length > 0 &&
+        !!selectedExamCommencementDate,
       staleTime: 30000, // Cache for 30 seconds
       refetchOnWindowFocus: false, // Don't refetch on window focus
     },
@@ -1362,7 +1374,7 @@ export default function ScheduleExamPage() {
   const totalStudentCount = studentCountData?.total ?? 0;
   const studentCountBreakdown = studentCountData?.breakdown ?? [];
 
-  const formatDateWithoutTimezone = (value: Date | null | undefined) => {
+  function formatDateWithoutTimezone(value: Date | string | null | undefined) {
     if (!value) return undefined;
     const d = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(d.getTime())) return undefined;
@@ -1370,7 +1382,7 @@ export default function ScheduleExamPage() {
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
-  };
+  }
 
   const assignExamMutation = useMutation({
     mutationFn: async () => {
@@ -1640,14 +1652,6 @@ export default function ScheduleExamPage() {
       setNewGroupName(generateDefaultGroupName());
     }
   }, [examGroupMode, generateDefaultGroupName]);
-
-  // Update DatePicker state type
-  const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(
-    undefined,
-  );
-  const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(
-    undefined,
-  );
 
   // Auto-fetch existing exam groups when "Select Existing Group" tab is active
   const shouldFetchExistingGroups = !!(

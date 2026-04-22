@@ -2539,7 +2539,7 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Total Amount To Pay",
   "Paid Amount",
   "Payment Status",
-  "Paid Timestamp",
+  "Paid Date",
   "Payment Mode",
   "Payment Internal Remarks",
   "Receipt / Challan Number",
@@ -3074,8 +3074,9 @@ export async function downloadFeeStudentMappings(
       "Payment Status": sql<string>`CASE
         WHEN ${feeStudentMappingExportIsPaid} THEN 'Paid' ELSE 'Pending'
       END`,
-      "Paid Timestamp": sql<string | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.txnDate}
+      "Paid Date": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid}
+          THEN TO_CHAR(${paymentModel.txnDate}::date, 'DD/MM/YYYY')
         ELSE NULL
       END`,
       "Payment Mode": sql<string | null>`CASE

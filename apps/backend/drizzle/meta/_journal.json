@@ -890,6 +890,13 @@
       "when": 1776147555542,
       "tag": "0126_outgoing_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 127,
+      "version": "7",
+      "when": 1776853585565,
+      "tag": "0127_chilly_microchip",
+      "breakpoints": true
     }
   ]
 }

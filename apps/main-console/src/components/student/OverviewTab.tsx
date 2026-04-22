@@ -44,6 +44,13 @@ function parseMappingDate(value: string | Date | null | undefined): Date | null 
   return Number.isFinite(d.getTime()) ? d : null;
 }
 
+function formatDateDdMmYyyy(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  const d = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB");
+}
+
 type FeeOverviewHeadline = "Pending" | "Paid latest" | "Upcoming latest";
 
 function feeMappingSemesterLabel(m: FeeStudentMappingDto): string {
@@ -180,6 +187,8 @@ interface PromotionRow {
   sessionId: number;
   classId: number;
   dateOfJoining?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   remarks?: string | null;
   academicYear?: { id: number; year?: string; name?: string } | null;
   class?: { id: number; name?: string; type?: string } | null;
@@ -389,7 +398,10 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
                       Result
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 min-w-[130px]">
-                      Date of joining
+                      Start date
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[130px]">
+                      End date
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 min-w-[160px]">
                       Remarks
@@ -419,15 +431,8 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
                       <TableCell className="text-sm text-muted-foreground">
                         {p.result?.trim() || "Pending"}
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {p.dateOfJoining
-                          ? new Date(p.dateOfJoining).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "—"}
-                      </TableCell>
+                      <TableCell className="text-sm">{formatDateDdMmYyyy(p.startDate)}</TableCell>
+                      <TableCell className="text-sm">{formatDateDdMmYyyy(p.endDate)}</TableCell>
                       <TableCell className="text-sm text-gray-600 max-w-[240px] truncate">
                         {p.remarks?.trim() || "—"}
                       </TableCell>

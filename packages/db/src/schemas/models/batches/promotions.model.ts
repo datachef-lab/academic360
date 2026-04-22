@@ -45,8 +45,8 @@ export const promotionModel = pgTable("promotions", {
         .references(() => examFormFillupModel.id),
     boardResultStatusId: integer("board_result_status_id_fk")
         .references(() => boardResultStatusModel.id),
-    startDate: timestamp("start_date"),
-    endDate: timestamp("end_date"),
+    startDate: timestamp("start_date", {withTimezone: true}),
+    endDate: timestamp("end_date", {withTimezone: true}),
     remarks: text("remarks"),
     examFormSubmissionTimeStamp: timestamp({withTimezone: true}),
     createdAt: timestamp("created_at").defaultNow(),
