@@ -40,6 +40,7 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
       academicYearIds,
       shiftIds,
       gender,
+      examCommencementDate,
     } = req.body;
 
     console.log("[EXAM-SCHEDULE-CONTROLLER] Received request:", {
@@ -49,6 +50,7 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
       academicYearIds,
       shiftIds,
       gender,
+      examCommencementDate,
     });
 
     if (
@@ -125,6 +127,9 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
         : undefined,
       gender,
       excelStudents,
+      examCommencementDate: examCommencementDate
+        ? String(examCommencementDate)
+        : undefined,
     };
 
     console.log(
@@ -181,6 +186,7 @@ export const countStudentsBreakdownForExam = async (
       req.body.academicYearIds || req.body.academicyearids || [];
     const combinations = req.body.combinations;
     const gender = req.body.gender;
+    const examCommencementDate = req.body.examCommencementDate;
 
     console.log("[EXAM-SCHEDULE-CONTROLLER] Received breakdown request:", {
       classId,
@@ -189,6 +195,7 @@ export const countStudentsBreakdownForExam = async (
       combinations,
       combinationsType: typeof combinations,
       gender,
+      examCommencementDate,
     });
 
     // Handle combinations - could be JSON string (from FormData) or array (from JSON body) or undefined
@@ -331,6 +338,9 @@ export const countStudentsBreakdownForExam = async (
       combinations: parsedCombinations,
       gender: gender || null,
       excelStudents,
+      examCommencementDate: examCommencementDate
+        ? String(examCommencementDate)
+        : undefined,
     };
 
     console.log("[EXAM-SCHEDULE-CONTROLLER] Parsed params:", {

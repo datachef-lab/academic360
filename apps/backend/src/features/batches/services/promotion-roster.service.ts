@@ -760,6 +760,10 @@ export type BulkSemesterPromoteParams = Pick<
   | "q"
 > & {
   studentIds: number[];
+  /** Applied to source (promoted-from) promotion row as `endDate`. */
+  fromSemesterEndDate?: Date;
+  /** Applied to target (promoted-to) promotion row as `startDate`. */
+  toSemesterStartDate?: Date;
   /**
    * When true, promotes every **eligible** student in the roster scope (same filters + search as
    * the table). Ignores `studentIds`. Suspended rows still require explicit selection.
@@ -881,6 +885,7 @@ export async function bulkPromoteSemesterStudents(
 
   const candidateRows = await db
     .select({
+      sourcePromotionId: pFrom.id,
       studentId: studentModel.id,
       bucket: rowBucketExpr(policy),
       /**
@@ -1010,6 +1015,7 @@ export async function bulkPromoteSemesterStudents(
       sectionId: r.sectionId,
       classRollNumber: r.classRollNumber!,
       examFormFillupId: r.examFormFillupId,
+      startDate: params.toSemesterStartDate ?? null,
     }) as Omit<
       typeof promotionModel.$inferInsert,
       "id" | "createdAt" | "updatedAt"
@@ -1067,6 +1073,25 @@ export async function bulkPromoteSemesterStudents(
           })
           .where(eq(promotionModel.id, id));
         updated++;
+      }
+
+      if (params.fromSemesterEndDate) {
+        const sourcePromotionIds = [
+          ...new Set(
+            toInsert
+              .map((r) => r.sourcePromotionId)
+              .filter((id): id is number => Number.isFinite(id)),
+          ),
+        ];
+        if (sourcePromotionIds.length > 0) {
+          await tx
+            .update(promotionModel)
+            .set({
+              endDate: params.fromSemesterEndDate,
+              updatedAt: now,
+            })
+            .where(inArray(promotionModel.id, sourcePromotionIds));
+        }
       }
     });
   } catch (e) {

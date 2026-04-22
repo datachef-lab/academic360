@@ -307,6 +307,10 @@ export async function bulkPromoteSemesterStudents(body: {
   fromClassId: number;
   toSessionId: number;
   toClassId: number;
+  /** Applied to source (promoted-from) promotion row as `endDate`. */
+  fromSemesterEndDate?: string;
+  /** Applied to target (promoted-to) promotion row as `startDate`. */
+  toSemesterStartDate?: string;
   affiliationIds?: number[];
   regulationTypeIds?: number[];
   programCourseIds?: number[];

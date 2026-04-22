@@ -34,6 +34,12 @@ function optPositiveIntArray(v: unknown): number[] | undefined {
   return nums.length > 0 ? nums : undefined;
 }
 
+function optDate(v: unknown): Date | undefined {
+  if (v == null || v === "") return undefined;
+  const d = new Date(String(v));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 export async function getPromotionRosterHandler(
   req: Request,
   res: Response,
@@ -426,6 +432,35 @@ export async function postBulkSemesterPromoteHandler(
 
     const promoteAllEligibleInScope = body.promoteAllEligibleInScope === true;
     const q = typeof body.q === "string" ? body.q : undefined;
+    const fromSemesterEndDate = optDate(body.fromSemesterEndDate);
+    const toSemesterStartDate = optDate(body.toSemesterStartDate);
+
+    if (body.fromSemesterEndDate != null && fromSemesterEndDate == null) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "fromSemesterEndDate must be a valid date",
+          ),
+        );
+      return;
+    }
+    if (body.toSemesterStartDate != null && toSemesterStartDate == null) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "toSemesterStartDate must be a valid date",
+          ),
+        );
+      return;
+    }
 
     const rawIds = body.studentIds;
     let studentIds: number[] = [];
@@ -483,6 +518,8 @@ export async function postBulkSemesterPromoteHandler(
         programCourseIds: optPositiveIntArray(body.programCourseId),
         shiftIds: optPositiveIntArray(body.shiftId),
         q,
+        fromSemesterEndDate,
+        toSemesterStartDate,
         studentIds,
         promoteAllEligibleInScope,
       },

@@ -9,6 +9,7 @@ export interface CountStudentsParams {
   academicYearIds: number[];
   shiftIds?: number[];
   gender: "MALE" | "FEMALE" | "OTHER" | null;
+  examCommencementDate?: string;
 }
 
 export interface CountStudentsResponse {
@@ -21,6 +22,7 @@ export interface CountStudentsBreakdownParams {
   academicYearIds: number[];
   combinations: Array<{ programCourseId: number; shiftId: number }>;
   gender?: "MALE" | "FEMALE" | "OTHER" | null;
+  examCommencementDate?: string;
 }
 
 export interface StudentCountBreakdownItem {
@@ -56,6 +58,9 @@ export async function countStudentsForExam(
 
   formData.append("classId", String(params.classId));
   formData.append("gender", params.gender ?? "");
+  if (params.examCommencementDate) {
+    formData.append("examCommencementDate", params.examCommencementDate);
+  }
 
   params.programCourseIds.forEach((id) => formData.append("programCourseIds[]", String(id)));
   params.paperIds.forEach((id) => formData.append("paperIds[]", String(id)));
@@ -95,6 +100,9 @@ export async function countStudentsBreakdownForExam(
   const formData = new FormData();
   formData.append("classId", String(params.classId));
   formData.append("gender", params.gender ?? "");
+  if (params.examCommencementDate) {
+    formData.append("examCommencementDate", params.examCommencementDate);
+  }
 
   params.paperIds.forEach((id) => formData.append("paperIds[]", String(id)));
   params.academicYearIds.forEach((id) => formData.append("academicYearIds[]", String(id)));

@@ -749,6 +749,8 @@ export function SemesterPromotionScreen() {
   const [toSessionId, setToSessionId] = useState("");
   const [fromClassId, setFromClassId] = useState("");
   const [toClassId, setToClassId] = useState("");
+  const [fromSemesterEndDate, setFromSemesterEndDate] = useState("");
+  const [toSemesterStartDate, setToSemesterStartDate] = useState("");
 
   const [bucket, setBucket] = useState<PromotionRosterBucket>("all");
   const [sortBy, setSortBy] = useState<PromotionRosterSort>("uid");
@@ -997,6 +999,8 @@ export function SemesterPromotionScreen() {
     !!toClassId &&
     Number(fromClassId) !== Number(toClassId);
 
+  const hasPromotionDates = !!fromSemesterEndDate && !!toSemesterStartDate;
+
   useEffect(() => {
     if (promotionModal !== "selectAllScope" || !canQuery || academicYearId == null) {
       setSelectAllScopeBreakdown(null);
@@ -1215,6 +1219,10 @@ export function SemesterPromotionScreen() {
   const runSemesterPromotion = useCallback(
     async (opts: { mode: "selected" } | { mode: "allEligible" }) => {
       if (!canQuery || !academicYearId) return;
+      if (!hasPromotionDates) {
+        toast.error("Please select promoted-from end date and promoted-to start date.");
+        return;
+      }
       if (opts.mode === "selected" && selectedStudentIds.size === 0) return;
       if (opts.mode === "allEligible") {
         const n = bucketCounts?.eligible ?? 0;
@@ -1231,6 +1239,8 @@ export function SemesterPromotionScreen() {
           fromClassId: Number(fromClassId),
           toSessionId: Number(toSessionId),
           toClassId: Number(toClassId),
+          fromSemesterEndDate,
+          toSemesterStartDate,
           affiliationIds: affiliationIds.length > 0 ? affiliationIds : undefined,
           regulationTypeIds: regulationIds.length > 0 ? regulationIds : undefined,
           programCourseIds: programCourseIds.length > 0 ? programCourseIds : undefined,
@@ -1309,12 +1319,15 @@ export function SemesterPromotionScreen() {
       debouncedQ,
       fetchRoster,
       fromClassId,
+      fromSemesterEndDate,
       fromSessionId,
+      hasPromotionDates,
       programCourseIds,
       regulationIds,
       selectedStudentIds,
       shiftIds,
       toClassId,
+      toSemesterStartDate,
       toSessionId,
       userId,
     ],
@@ -2093,6 +2106,28 @@ export function SemesterPromotionScreen() {
               page. Suspended accounts are not included unless you select them manually per row.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="grid gap-3 py-1 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Promoted-from end date
+              </label>
+              <Input
+                type="date"
+                value={fromSemesterEndDate}
+                onChange={(e) => setFromSemesterEndDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Promoted-to start date
+              </label>
+              <Input
+                type="date"
+                value={toSemesterStartDate}
+                onChange={(e) => setToSemesterStartDate(e.target.value)}
+              />
+            </div>
+          </div>
           <AlertDialogFooter>
             <Button
               type="button"
@@ -2104,7 +2139,12 @@ export function SemesterPromotionScreen() {
             </Button>
             <Button
               type="button"
-              disabled={promoting || rosterLoading || (bucketCounts?.eligible ?? 0) < 1}
+              disabled={
+                promoting ||
+                rosterLoading ||
+                (bucketCounts?.eligible ?? 0) < 1 ||
+                !hasPromotionDates
+              }
               className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
               onClick={() => {
                 setConfirmPromoteAllOpen(false);
@@ -2147,6 +2187,17 @@ export function SemesterPromotionScreen() {
                     <div className="text-xs text-muted-foreground">
                       {fromSessionObj?.name ?? "—"}
                     </div>
+                    <div className="mt-2 space-y-1 text-left">
+                      <label className="text-[11px] font-medium text-muted-foreground">
+                        Promoted-from end date
+                      </label>
+                      <Input
+                        type="date"
+                        value={fromSemesterEndDate}
+                        onChange={(e) => setFromSemesterEndDate(e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
                   </div>
                   <ArrowRight
                     className="h-5 w-5 shrink-0 text-muted-foreground"
@@ -2160,6 +2211,17 @@ export function SemesterPromotionScreen() {
                       {toClassObj?.name ?? "—"}
                     </div>
                     <div className="text-xs text-muted-foreground">{toSessionObj?.name ?? "—"}</div>
+                    <div className="mt-2 space-y-1 text-left">
+                      <label className="text-[11px] font-medium text-muted-foreground">
+                        Promoted-to start date
+                      </label>
+                      <Input
+                        type="date"
+                        value={toSemesterStartDate}
+                        onChange={(e) => setToSemesterStartDate(e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
                   </div>
                   <div className="ml-auto rounded-md bg-primary/10 px-2.5 py-1 text-xs font-bold tabular-nums text-primary">
                     {promotionModal === "selectAllScope"
@@ -2322,7 +2384,7 @@ export function SemesterPromotionScreen() {
             ) : promotionModal === "confirmPromotion" ? (
               <Button
                 type="button"
-                disabled={promoting || rosterLoading}
+                disabled={promoting || rosterLoading || !hasPromotionDates}
                 className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
                 onClick={() => {
                   setPromotionModal("closed");

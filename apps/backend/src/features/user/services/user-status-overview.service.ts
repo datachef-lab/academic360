@@ -245,6 +245,8 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
         : null,
       appearTypeName,
       dateOfJoining: promotion.dateOfJoining,
+      startDate: promotion.startDate,
+      endDate: promotion.endDate,
       remarks: promotion.remarks,
     });
   }
