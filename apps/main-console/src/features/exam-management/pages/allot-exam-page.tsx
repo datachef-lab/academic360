@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -255,6 +255,18 @@ export default function AllotExamPage() {
     },
   });
 
+  const selectedExamCommencementDate = useMemo(() => {
+    if (selectedExam?.examGroupId && examGroupsData) {
+      const grp = examGroupsData.find((g) => g.id === selectedExam.examGroupId);
+      if (grp?.examCommencementDate) return String(grp.examCommencementDate);
+    }
+    if (selectedExamGroupId && examGroupsData) {
+      const grp = examGroupsData.find((g) => g.id === selectedExamGroupId);
+      if (grp?.examCommencementDate) return String(grp.examCommencementDate);
+    }
+    return undefined;
+  }, [selectedExam?.examGroupId, selectedExamGroupId, examGroupsData]);
+
   // Fetch floors
   const { data: floors = [] } = useQuery({
     queryKey: ["floors"],
@@ -493,6 +505,7 @@ export default function AllotExamPage() {
           academicYearIds: [selectedExam.academicYear.id!],
           shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
           gender: gender === "ALL" ? null : gender,
+          examCommencementDate: selectedExamCommencementDate,
         },
         excelFile,
       );
@@ -548,6 +561,7 @@ export default function AllotExamPage() {
             academicYearIds: [selectedExam.academicYear.id!],
             combinations,
             gender: gender === "ALL" ? null : gender,
+            examCommencementDate: selectedExamCommencementDate,
           },
           excelFile,
         );
@@ -643,6 +657,7 @@ export default function AllotExamPage() {
           assignBy: assignBy,
           roomAssignments,
           gender: gender === "ALL" ? null : gender,
+          examCommencementDate: selectedExamCommencementDate,
         },
         excelFile,
       );

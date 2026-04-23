@@ -1,4 +1,7 @@
-import { AcademicYearT, CareerProgressionFormCertificateT, CareerProgressionFormFieldT, CareerProgressionFormT, CertificateFieldMasterT, CertificateFieldOptionMasterT, CertificateMasterT, SessionT } from "@/schemas";
+import { AcademicYearT, CareerProgressionFormCertificateT, CareerProgressionFormFieldT, CareerProgressionFormT, CertificateFieldMasterT, CertificateFieldOptionMasterT, CertificateMasterT, ClassT, ProgramCourseT, SessionT } from "@/schemas";
+import { AcademicActivityClassScopeT } from "@/schemas/models/academics/academic-activity-class-scope.model";
+import { AcademicActivityProgramCourseScopeT } from "@/schemas/models/academics/academic-activity-program-course-scope.model";
+import { AcademicActivityT } from "@/schemas/models/academics/academic-activity.model";
 
 export interface SessionDto extends Omit<SessionT, "academicYearId"> {
     academicYear: AcademicYearT;
@@ -42,3 +45,15 @@ export interface CareerProgressionFormDto extends Omit<CareerProgressionFormT, "
     student?: CareerProgressionFormStudentExport;
 }
 
+export interface AcademicActivityProgramCourseDto extends Omit<AcademicActivityProgramCourseScopeT, "programCourseId"> {
+    programCourse: ProgramCourseT;
+}
+
+export interface AcademicActivityClassScopeDto extends Omit<AcademicActivityClassScopeT, "classId"> {
+    class: ClassT;
+}
+
+export interface AcademicActivityDto extends AcademicActivityT {
+    classes: AcademicActivityClassScopeDto[];
+    programCourses: AcademicActivityProgramCourseDto[];
+}

@@ -436,3 +436,9 @@ export const examFormFillupStatusEnum = pgEnum("exam_form_fillup_status", [
     "PENDING",
     "COMPLETED",
 ]);
+
+export const academicActivityAudienceEnum = pgEnum("academic_activity_audience", [
+    "STAFF",
+    "STUDENT",
+    "ALL",
+]);

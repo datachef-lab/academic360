@@ -177,6 +177,9 @@ export async function getStudentsForExam(
   formData.append("classId", String(params.classId));
   formData.append("assignBy", params.assignBy);
   formData.append("gender", params.gender ?? "");
+  if (params.examCommencementDate) {
+    formData.append("examCommencementDate", params.examCommencementDate);
+  }
 
   params.programCourseIds.forEach((id) => formData.append("programCourseIds[]", String(id)));
   params.paperIds.forEach((id) => formData.append("paperIds[]", String(id)));

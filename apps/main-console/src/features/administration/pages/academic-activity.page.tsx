@@ -10,136 +10,87 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import axiosInstance from "@/utils/api";
+import {
+  getAffiliations,
+  getProgramCourses,
+  getRegulationTypes,
+} from "@/services/course-design.api";
+import { findAllClasses } from "@/services/class.service";
 
 const SL = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const;
-const SESSIONS = ["2024-25", "2023-24"] as const;
 
-const ALL_AFFS = [
-  { id: "sc", l: "Scottish Church College" },
-  { id: "presi", l: "Presidency University" },
-  { id: "lore", l: "Loreto College" },
-  { id: "stxa", l: "St. Xavier's College" },
-  { id: "maz", l: "Maulana Azad College" },
-] as const;
-
-const ALL_PROGRAMS = [
-  { id: "bsc_cs", l: "B.Sc. Computer Science" },
-  { id: "bsc_phy", l: "B.Sc. Physics" },
-  { id: "bsc_chem", l: "B.Sc. Chemistry" },
-  { id: "ba_eng", l: "B.A. English" },
-  { id: "ba_hist", l: "B.A. History" },
-  { id: "bcom_gen", l: "B.Com. General" },
-  { id: "bcom_hons", l: "B.Com. Honours" },
-  { id: "bsc_math", l: "B.Sc. Mathematics" },
-] as const;
-
-const ALL_SEMS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
-
-const ACTIVITY_DEFS = [
-  {
-    id: "fee_payment",
-    label: "Semester Fee Payment",
-    icon: "💳",
-    desc: "Online & cash payment gateway for semester fees",
-    category: "Finance",
-  },
-  {
-    id: "failed_paper_fee",
-    label: "Failed Paper Fee Payment",
-    icon: "🧾",
-    desc: "Fee payment portal for students with failed paper re-examinations",
-    category: "Finance",
-  },
-  {
-    id: "admit_card",
-    label: "Admit Card Download",
-    icon: "🪪",
-    desc: "Examination admit card generation and download",
-    category: "Examination",
-  },
-  {
-    id: "form_fillup",
-    label: "Form Fill-up Upload",
-    icon: "📋",
-    desc: "CU form fill-up submission and document upload",
-    category: "Examination",
-  },
-  {
-    id: "cu_registration",
-    label: "Calcutta University Registration",
-    icon: "✍️",
-    desc: "Official CU registration for newly admitted students",
-    category: "Admission",
-  },
-  {
-    id: "subject_select_s1",
-    label: "Subject Selection for Semester I",
-    icon: "📚",
-    desc: "Initial subject and paper selection for first-semester students",
-    category: "Admission",
-  },
-  {
-    id: "specialization",
-    label: "Specialization Selection",
-    icon: "🔬",
-    desc: "Honours / major specialization choice for eligible students",
-    category: "Academic",
-  },
-  {
-    id: "marks_upload",
-    label: "Marks Upload",
-    icon: "📊",
-    desc: "Faculty portal for internal assessment and attendance marks upload",
-    category: "Academic",
-  },
-] as const;
-
-type ActivityId = (typeof ACTIVITY_DEFS)[number]["id"];
+type ActivityId = string | number;
 type Audience = "staff" | "all" | "student";
 
-type Activity = (typeof ACTIVITY_DEFS)[number] & {
+type Activity = {
+  id: number;
+  key: string;
+  label: string;
+  icon: string;
+  desc: string;
+  category: string;
   enabled: boolean;
   startDt: string;
   endDt: string;
   audience: Audience;
   note: string;
   scopeSems: number[];
-  scopePrograms: string[];
-  scopeAffs: string[];
+  scopePrograms: number[];
+  scopeAffs: number[];
+  scopeRegulations: number[];
 };
 
-type MockStudent = {
+type ProgramOption = {
+  id: number;
+  l: string;
+  affiliationId?: number | null;
+  regulationTypeId?: number | null;
+};
+type AffiliationOption = { id: number; l: string };
+type RegulationOption = { id: number; l: string };
+type ClassOption = {
+  id: number;
+  name: string;
+  sequence?: number | null;
+  isActive?: boolean | null;
+};
+type AcademicActivityApiDto = {
+  id: number;
+  name: string;
+  description: string | null;
+  audience: "STAFF" | "STUDENT" | "ALL";
+  startDate: string;
+  endDate: string | null;
+  remarks: string | null;
+  isEnabled: boolean;
+  classes: Array<{ class: { id?: number; name?: string; sequence?: number | null } }>;
+  programCourses: Array<{
+    programCourse: { id?: number; name?: string | null; shortName?: string | null };
+  }>;
+};
+type ApiResponse<T> = { payload: T };
+
+type ProxyStudent = {
   uid: string;
   name: string;
   roll: string;
   sem: number;
   dept: string;
-  deptId: string;
-  affId: string;
+  deptId: string | number;
+  affId: string | number;
   photo: string;
   ffStatus: Record<number, string>;
   failedPapers: Record<number, number>;
   feePaid: Record<number, boolean>;
   admitCard: Record<number, boolean>;
 };
-
-function nowPlus(h: number): string {
-  const d = new Date(Date.now() + h * 3600000);
-  return d.toISOString().slice(0, 16);
-}
 
 function fmt(iso: string): string {
   if (!iso) return "—";
@@ -150,7 +101,30 @@ function fmt(iso: string): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Kolkata",
   });
+}
+
+function toDateTimeLocalFromUtc(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  // Convert UTC timestamp to IST wall-clock string for datetime-local input
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(d)
+    .reduce<Record<string, string>>((acc, p) => {
+      if (p.type !== "literal") acc[p.type] = p.value;
+      return acc;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
 function windowStatus(act: Activity): {
@@ -216,153 +190,75 @@ function audienceLabel(a: Audience): { label: string; color: string; bg: string;
   };
 }
 
-function isAll(arr: unknown[], master: readonly unknown[]): boolean {
-  return arr.length === 0 || arr.length === master.length;
-}
-
-function scopeLabel(arr: string[], masterLen: number, unit: string): string {
+function scopeLabel(arr: unknown[], masterLen: number, unit: string): string {
   if (arr.length === 0 || arr.length === masterLen) return `All ${unit}`;
   if (arr.length === 1) return `1 ${unit.replace(/s$/, "")}`;
   return `${arr.length} ${unit}`;
 }
 
-function semScopeLabel(sems: number[]): string {
-  if (isAll(sems, ALL_SEMS)) return "All Sems";
-  if (sems.length === 1) {
-    const s = sems[0] ?? 1;
-    return `Sem ${SL[s - 1]}`;
+function classScopeLabel(classIds: number[], classOptions: ClassOption[]): string {
+  if (classIds.length === 0 || classIds.length === classOptions.length) return "All Classes";
+  if (classIds.length === 1) return "1 Class";
+  return `${classIds.length} Classes`;
+}
+
+function classDisplayToken(name?: string | null): string {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/);
+  if (parts.length >= 2 && parts[0]?.toUpperCase() === "SEMESTER") return parts[1] ?? "";
+  return String(name || "");
+}
+
+function semesterNumberFromToken(token: string): number | null {
+  const upper = token.toUpperCase();
+  const romanIdx = SL.findIndex((r) => r === upper);
+  if (romanIdx >= 0) return romanIdx + 1;
+  const parsed = Number(token);
+  if (Number.isFinite(parsed) && parsed >= 1) return parsed;
+  return null;
+}
+
+function getSemesterNumber(cls: { name?: string | null; sequence?: number | null }): number | null {
+  const upper = String(cls.name || "").toUpperCase();
+  const romanIdx = SL.findIndex((r) => upper.includes(`SEMESTER ${r}`) || upper === r);
+  if (romanIdx >= 0) return romanIdx + 1;
+  const digitMatch = upper.match(/SEMESTER\s+(\d{1,2})/) || upper.match(/^(\d{1,2})$/);
+  if (digitMatch) {
+    const parsed = Number(digitMatch[1]);
+    if (Number.isFinite(parsed) && parsed >= 1) return parsed;
   }
-  return `${sems.length} Sems`;
+  if (typeof cls.sequence === "number" && cls.sequence >= 1) return cls.sequence;
+  return null;
 }
 
-function makeActivities(): Activity[] {
-  return ACTIVITY_DEFS.map((def, i) => ({
-    ...def,
-    enabled: i < 4,
-    startDt: i < 2 ? nowPlus(-1) : i < 4 ? nowPlus(2) : "",
-    endDt: i < 2 ? nowPlus(72) : i < 4 ? nowPlus(168) : "",
-    audience: (i === 0 ? "staff" : i < 3 ? "all" : "student") as Audience,
-    note: "",
-    scopeSems: [],
-    scopePrograms: [],
-    scopeAffs: [],
-  }));
-}
-
-const MOCK_STUDENTS: MockStudent[] = [
-  {
-    uid: "CU-SC-2022-001",
-    name: "Arjun Sharma",
-    roll: "22-001",
-    sem: 5,
-    dept: "B.Sc. Computer Science",
-    deptId: "bsc_cs",
-    affId: "sc",
-    photo: "AS",
-    ffStatus: {
-      1: "Form Filled",
-      2: "Form Filled",
-      3: "Form Filled",
-      4: "Form Filled",
-      5: "Pending",
-    },
-    failedPapers: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-    feePaid: { 1: true, 2: true, 3: true, 4: true, 5: false },
-    admitCard: { 5: false },
-  },
-  {
-    uid: "CU-SC-2022-042",
-    name: "Priya Banerjee",
-    roll: "22-042",
-    sem: 3,
-    dept: "B.A. English",
-    deptId: "ba_eng",
-    affId: "sc",
-    photo: "PB",
-    ffStatus: { 1: "Form Filled", 2: "Form Filled", 3: "Form Filled" },
-    failedPapers: { 1: 0, 2: 1, 3: 0 },
-    feePaid: { 1: true, 2: true, 3: false },
-    admitCard: { 3: false },
-  },
-  {
-    uid: "CU-SC-2023-108",
-    name: "Souvik Das",
-    roll: "23-108",
-    sem: 1,
-    dept: "B.Sc. Physics",
-    deptId: "bsc_phy",
-    affId: "sc",
-    photo: "SD",
-    ffStatus: { 1: "Pending" },
-    failedPapers: {},
-    feePaid: { 1: false },
-    admitCard: {},
-  },
-  {
-    uid: "123456",
-    name: "Ritam Chakraborty",
-    roll: "23-201",
-    sem: 4,
-    dept: "B.Com. General",
-    deptId: "bcom_gen",
-    affId: "presi",
-    photo: "RC",
-    ffStatus: { 1: "Form Filled", 2: "Form Filled", 3: "Form Filled", 4: "Form Filled" },
-    failedPapers: { 1: 0, 2: 0, 3: 1, 4: 0 },
-    feePaid: { 1: true, 2: true, 3: true, 4: true },
-    admitCard: { 4: false },
-  },
-  {
-    uid: "456789",
-    name: "Moumita Dey",
-    roll: "22-087",
-    sem: 6,
-    dept: "B.Sc. Chemistry",
-    deptId: "bsc_chem",
-    affId: "lore",
-    photo: "MD",
-    ffStatus: {
-      1: "Form Filled",
-      2: "Form Filled",
-      3: "Form Filled",
-      4: "Form Filled",
-      5: "Form Filled",
-      6: "Pending",
-    },
-    failedPapers: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
-    feePaid: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: false },
-    admitCard: { 6: false },
-  },
-  {
-    uid: "123789",
-    name: "Kaustav Mitra",
-    roll: "24-045",
-    sem: 2,
-    dept: "B.Sc. Mathematics",
-    deptId: "bsc_math",
-    affId: "stxa",
-    photo: "KM",
-    ffStatus: { 1: "Form Filled", 2: "Form Filled" },
-    failedPapers: { 1: 0, 2: 0 },
-    feePaid: { 1: true, 2: false },
-    admitCard: { 2: false },
-  },
-];
-
-function studentInScope(act: Activity, student: MockStudent): boolean {
-  const semOk = isAll(act.scopeSems, ALL_SEMS) || act.scopeSems.includes(student.sem);
+function studentInScope(
+  act: Activity,
+  student: ProxyStudent,
+  classOptions: ClassOption[],
+): boolean {
+  const semesterCount = classOptions.length;
+  const semOk =
+    act.scopeSems.length === 0 ||
+    act.scopeSems.length === semesterCount ||
+    act.scopeSems.some((classId) => {
+      const cls = classOptions.find((c) => c.id === classId);
+      return cls ? getSemesterNumber(cls) === student.sem : false;
+    });
   const progOk =
-    isAll(act.scopePrograms, ALL_PROGRAMS) || act.scopePrograms.includes(student.deptId);
-  const affOk = isAll(act.scopeAffs, ALL_AFFS) || act.scopeAffs.includes(student.affId);
+    act.scopePrograms.length === 0 ||
+    act.scopePrograms.map(String).includes(String(student.deptId));
+  const affOk =
+    act.scopeAffs.length === 0 || act.scopeAffs.map(String).includes(String(student.affId));
   return semOk && progOk && affOk;
 }
 
 function getActStatus(
   act: Activity,
-  s: MockStudent,
+  s: ProxyStudent,
 ): { accessible: boolean; info: string; done: boolean } {
   const failedCount = Object.values(s.failedPapers ?? {}).reduce((a, b) => a + b, 0);
-  switch (act.id) {
+  switch (act.key) {
     case "fee_payment":
       return {
         accessible: true,
@@ -419,10 +315,20 @@ function getActStatus(
   }
 }
 
-function ScopeSummary({ act }: { act: Activity }) {
-  const semLbl = semScopeLabel(act.scopeSems);
-  const progLbl = scopeLabel(act.scopePrograms, ALL_PROGRAMS.length, "Programs");
-  const affLbl = scopeLabel(act.scopeAffs, ALL_AFFS.length, "Affiliations");
+function ScopeSummary({
+  act,
+  classOptions,
+  totalPrograms,
+  totalAffiliations,
+}: {
+  act: Activity;
+  classOptions: ClassOption[];
+  totalPrograms: number;
+  totalAffiliations: number;
+}) {
+  const semLbl = classScopeLabel(act.scopeSems, classOptions);
+  const progLbl = scopeLabel(act.scopePrograms.map(String), totalPrograms, "Programs");
+  const affLbl = scopeLabel(act.scopeAffs.map(String), totalAffiliations, "Affiliations");
   const pill = (lbl: string, isAllPill: boolean, c: string, bg: string, bd: string) => (
     <Badge
       variant="outline"
@@ -463,22 +369,152 @@ function semChipColors(sem: number) {
 }
 
 export default function AcademicActivityPage() {
-  const [activities, setActivities] = React.useState<Activity[]>(() => makeActivities());
-  const [session, setSession] = React.useState<string>("2024-25");
+  const [activities, setActivities] = React.useState<Activity[]>([]);
+  const [classOptions, setClassOptions] = React.useState<ClassOption[]>([]);
+  const [programOptions, setProgramOptions] = React.useState<ProgramOption[]>([]);
+  const [affiliationOptions, setAffiliationOptions] = React.useState<AffiliationOption[]>([]);
+  const [regulationOptions, setRegulationOptions] = React.useState<RegulationOption[]>([]);
+  const [isSaving, setIsSaving] = React.useState(false);
   const [filterCat, setFilterCat] = React.useState<string>("All");
   const [editOpen, setEditOpen] = React.useState(false);
   const [editDraft, setEditDraft] = React.useState<Activity | null>(null);
   const [proxyUID, setProxyUID] = React.useState("");
-  const [proxyStudent, setProxyStudent] = React.useState<MockStudent | null>(null);
+  const [proxyStudent, setProxyStudent] = React.useState<ProxyStudent | null>(null);
   const [proxyResolved, setProxyResolved] = React.useState(false);
   const [proxyAction, setProxyAction] = React.useState<{ icon: string; label: string } | null>(
     null,
   );
 
   const CATS = React.useMemo(
-    () => ["All", ...Array.from(new Set(ACTIVITY_DEFS.map((a) => a.category)))],
-    [],
+    () => ["All", ...Array.from(new Set(activities.map((a) => a.category || "General")))],
+    [activities],
   );
+
+  const filteredProgramOptions = React.useMemo(() => {
+    if (!editDraft) return programOptions;
+    return programOptions.filter((p) => {
+      const affOk =
+        editDraft.scopeAffs.length === 0 ||
+        (typeof p.affiliationId === "number" && editDraft.scopeAffs.includes(p.affiliationId));
+      const regOk =
+        editDraft.scopeRegulations.length === 0 ||
+        (typeof p.regulationTypeId === "number" &&
+          editDraft.scopeRegulations.includes(p.regulationTypeId));
+      return affOk && regOk;
+    });
+  }, [editDraft, programOptions]);
+
+  const activeClassOptions = React.useMemo(
+    () =>
+      classOptions
+        .filter((c) => c.isActive !== false)
+        .sort((a, b) => {
+          const sa = a.sequence ?? Number.MAX_SAFE_INTEGER;
+          const sb = b.sequence ?? Number.MAX_SAFE_INTEGER;
+          if (sa !== sb) return sa - sb;
+          return (a.name || "").localeCompare(b.name || "");
+        }),
+    [classOptions],
+  );
+
+  const audienceFromApi = (aud: string): Audience => {
+    if (aud === "STAFF") return "staff";
+    if (aud === "STUDENT") return "student";
+    return "all";
+  };
+
+  const audienceToApi = (aud: Audience): "STAFF" | "STUDENT" | "ALL" => {
+    if (aud === "staff") return "STAFF";
+    if (aud === "student") return "STUDENT";
+    return "ALL";
+  };
+
+  const mapApiActivityToUi = React.useCallback((row: AcademicActivityApiDto): Activity => {
+    const scopeSems = (row.classes ?? [])
+      .map((s) => s?.class?.id)
+      .filter((classId): classId is number => typeof classId === "number");
+
+    const scopePrograms = (row.programCourses ?? [])
+      .map((s) => s?.programCourse?.id)
+      .filter((id): id is number => typeof id === "number");
+
+    return {
+      id: row.id,
+      key: `activity_${row.id}`,
+      label: row.name,
+      icon: "📌",
+      desc: row.description ?? "",
+      category: "General",
+      enabled: !!row.isEnabled,
+      startDt: toDateTimeLocalFromUtc(row.startDate),
+      endDt: toDateTimeLocalFromUtc(row.endDate),
+      audience: audienceFromApi(row.audience),
+      note: row.remarks ?? "",
+      scopeSems,
+      scopePrograms,
+      scopeAffs: [],
+      scopeRegulations: [],
+    };
+  }, []);
+
+  const loadAcademicActivityData = React.useCallback(async () => {
+    const [classesRes, programRes, affiliationRes, regulationRes, activitiesRes] =
+      await Promise.all([
+        findAllClasses(),
+        getProgramCourses(),
+        getAffiliations(),
+        getRegulationTypes(),
+        axiosInstance.get<ApiResponse<AcademicActivityApiDto[]>>(
+          "/api/academics/academic-activities",
+        ),
+      ]);
+
+    const classesPayload = (classesRes?.payload ?? [])
+      .filter((c: any) => c?.isActive !== false)
+      .map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        sequence: c.sequence,
+        isActive: c.isActive,
+      }));
+    setClassOptions(classesPayload);
+
+    const programsPayload = (programRes ?? [])
+      .filter((p: any) => p?.isActive !== false)
+      .map((p: any) => ({
+        id: p.id,
+        l: p.name || p.shortName || `Program ${p.id}`,
+        affiliationId: p.affiliationId,
+        regulationTypeId: p.regulationTypeId,
+      }));
+    setProgramOptions(programsPayload);
+
+    setAffiliationOptions(
+      (affiliationRes ?? [])
+        .filter((a: any) => a?.isActive !== false)
+        .map((a: any) => ({
+          id: a.id,
+          l: a.name || a.shortName || `Affiliation ${a.id}`,
+        })),
+    );
+    setRegulationOptions(
+      (regulationRes ?? [])
+        .filter((r: any) => r?.isActive !== false)
+        .map((r: any) => ({
+          id: r.id,
+          l: r.name || r.shortName || `Regulation ${r.id}`,
+        })),
+    );
+
+    const rows = activitiesRes.data?.payload ?? [];
+    setActivities(rows.map((row) => mapApiActivityToUi(row)));
+  }, [mapApiActivityToUi]);
+
+  React.useEffect(() => {
+    loadAcademicActivityData().catch((err) => {
+      console.error("Failed to load academic activities:", err);
+    });
+  }, [loadAcademicActivityData]);
 
   const openEdit = (id: ActivityId) => {
     const act = activities.find((x) => x.id === id);
@@ -488,26 +524,114 @@ export default function AcademicActivityPage() {
       scopeSems: [...act.scopeSems],
       scopePrograms: [...act.scopePrograms],
       scopeAffs: [...act.scopeAffs],
+      scopeRegulations: [...act.scopeRegulations],
     });
     setEditOpen(true);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editDraft) return;
-    setActivities((prev) => prev.map((a) => (a.id === editDraft.id ? { ...editDraft } : a)));
-    setEditOpen(false);
-    setEditDraft(null);
+    try {
+      setIsSaving(true);
+      const classIds = [...editDraft.scopeSems];
+      const scopedProgramIds = editDraft.scopePrograms.filter((id) =>
+        filteredProgramOptions.some((p) => p.id === id),
+      );
+
+      const payload = {
+        id: editDraft.id,
+        name: editDraft.label,
+        description: editDraft.desc || null,
+        audience: audienceToApi(editDraft.audience),
+        startDate: editDraft.startDt
+          ? new Date(editDraft.startDt).toISOString()
+          : new Date().toISOString(),
+        endDate: editDraft.endDt ? new Date(editDraft.endDt).toISOString() : null,
+        remarks: editDraft.note || null,
+        isEnabled: editDraft.enabled,
+        classIds,
+        programCourseIds: scopedProgramIds,
+      };
+
+      const res = await axiosInstance.post<ApiResponse<AcademicActivityApiDto>>(
+        "/api/academics/academic-activities/upsert",
+        payload,
+      );
+      const saved = res.data?.payload;
+      if (saved) {
+        setActivities((prev) =>
+          prev.map((a) => (a.id === editDraft.id ? mapApiActivityToUi(saved) : a)),
+        );
+      }
+      setEditOpen(false);
+      setEditDraft(null);
+    } catch (err) {
+      console.error("Failed to save activity configuration:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const toggleActivityEnabled = (id: ActivityId, enabled: boolean) => {
+  const toggleActivityEnabled = async (id: ActivityId, enabled: boolean) => {
+    const activity = activities.find((a) => a.id === id);
+    if (!activity) return;
     setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, enabled } : a)));
+    try {
+      const classIds = [...activity.scopeSems];
+      await axiosInstance.post("/api/academics/academic-activities/upsert", {
+        id: activity.id,
+        name: activity.label,
+        description: activity.desc || null,
+        audience: audienceToApi(activity.audience),
+        startDate: activity.startDt
+          ? new Date(activity.startDt).toISOString()
+          : new Date().toISOString(),
+        endDate: activity.endDt ? new Date(activity.endDt).toISOString() : null,
+        remarks: activity.note || null,
+        isEnabled: enabled,
+        classIds,
+        programCourseIds: activity.scopePrograms,
+      });
+    } catch (err) {
+      console.error("Failed to persist activity enabled toggle:", err);
+      setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, enabled: !enabled } : a)));
+    }
   };
 
-  const loadStudent = (uid: string) => {
+  const loadStudent = async (uid: string) => {
     const t = uid.trim();
     setProxyUID(t);
     setProxyResolved(true);
-    setProxyStudent(MOCK_STUDENTS.find((s) => s.uid === t) ?? null);
+    if (!t) {
+      setProxyStudent(null);
+      return;
+    }
+    try {
+      const res = await axiosInstance.get<ApiResponse<any>>(
+        `/api/students/uid/${encodeURIComponent(t)}`,
+      );
+      const p = res.data?.payload;
+      if (!p?.uid) {
+        setProxyStudent(null);
+        return;
+      }
+      setProxyStudent({
+        uid: String(p.uid),
+        name: p?.personalDetails?.firstName || p?.name || "Student",
+        roll: p?.rollNumber || "-",
+        sem: Number(p?.currentSemester || 1),
+        dept: p?.programCourse?.name || p?.programCourse?.shortName || "Program",
+        deptId: p?.programCourse?.id ?? "",
+        affId: p?.programCourse?.affiliationId ?? "",
+        photo: (p?.personalDetails?.firstName || p?.name || "S").slice(0, 2).toUpperCase(),
+        ffStatus: {},
+        failedPapers: {},
+        feePaid: {},
+        admitCard: {},
+      });
+    } catch {
+      setProxyStudent(null);
+    }
   };
 
   const filtered = activities.filter((a) => filterCat === "All" || a.category === filterCat);
@@ -519,21 +643,26 @@ export default function AcademicActivityPage() {
   const toggleScopeSem = (v: number) => {
     if (!editDraft) return;
     const cur = editDraft.scopeSems;
-    const wasAll = cur.length === 0 || cur.length === 8;
+    const wasAll = cur.length === 0 || cur.length === activeClassOptions.length;
     if (wasAll) setEditDraft({ ...editDraft, scopeSems: [v] });
     else if (cur.includes(v)) {
       const next = cur.filter((x) => x !== v);
       setEditDraft({ ...editDraft, scopeSems: next.length === 0 ? [] : next });
     } else {
       const next = [...cur, v];
-      setEditDraft({ ...editDraft, scopeSems: next.length === 8 ? [] : next });
+      setEditDraft({
+        ...editDraft,
+        scopeSems: next.length === activeClassOptions.length ? [] : next,
+      });
     }
   };
 
-  const toggleScopeProg = (v: string) => {
+  const toggleScopeProg = (v: number) => {
     if (!editDraft) return;
     const cur = editDraft.scopePrograms;
-    const wasAll = cur.length === 0 || cur.length === ALL_PROGRAMS.length;
+    const activeProgramIds = filteredProgramOptions.map((p) => p.id);
+    const curInActiveSet = cur.filter((id) => activeProgramIds.includes(id));
+    const wasAll = curInActiveSet.length === 0 || curInActiveSet.length === activeProgramIds.length;
     if (wasAll) setEditDraft({ ...editDraft, scopePrograms: [v] });
     else if (cur.includes(v)) {
       const next = cur.filter((x) => x !== v);
@@ -542,22 +671,43 @@ export default function AcademicActivityPage() {
       const next = [...cur, v];
       setEditDraft({
         ...editDraft,
-        scopePrograms: next.length === ALL_PROGRAMS.length ? [] : next,
+        scopePrograms:
+          next.filter((id) => activeProgramIds.includes(id)).length === activeProgramIds.length
+            ? []
+            : next,
       });
     }
   };
 
-  const toggleScopeAff = (v: string) => {
+  const toggleScopeAff = (v: number) => {
     if (!editDraft) return;
     const cur = editDraft.scopeAffs;
-    const wasAll = cur.length === 0 || cur.length === ALL_AFFS.length;
-    if (wasAll) setEditDraft({ ...editDraft, scopeAffs: [v] });
+    const wasAll = cur.length === 0;
+    if (wasAll) setEditDraft({ ...editDraft, scopeAffs: [v], scopePrograms: [] });
     else if (cur.includes(v)) {
       const next = cur.filter((x) => x !== v);
-      setEditDraft({ ...editDraft, scopeAffs: next.length === 0 ? [] : next });
+      setEditDraft({ ...editDraft, scopeAffs: next.length === 0 ? [] : next, scopePrograms: [] });
     } else {
       const next = [...cur, v];
-      setEditDraft({ ...editDraft, scopeAffs: next.length === ALL_AFFS.length ? [] : next });
+      setEditDraft({ ...editDraft, scopeAffs: next, scopePrograms: [] });
+    }
+  };
+
+  const toggleScopeRegulation = (v: number) => {
+    if (!editDraft) return;
+    const cur = editDraft.scopeRegulations;
+    const wasAll = cur.length === 0;
+    if (wasAll) setEditDraft({ ...editDraft, scopeRegulations: [v], scopePrograms: [] });
+    else if (cur.includes(v)) {
+      const next = cur.filter((x) => x !== v);
+      setEditDraft({
+        ...editDraft,
+        scopeRegulations: next.length === 0 ? [] : next,
+        scopePrograms: [],
+      });
+    } else {
+      const next = [...cur, v];
+      setEditDraft({ ...editDraft, scopeRegulations: next, scopePrograms: [] });
     }
   };
 
@@ -588,20 +738,7 @@ export default function AcademicActivityPage() {
               </AlertDescription>
             </Alert>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Select value={session} onValueChange={setSession}>
-              <SelectTrigger className="h-9 w-[140px] rounded-lg border-[#D0CCC3] bg-white font-semibold text-[#1B2B4B] shadow-sm">
-                <SelectValue placeholder="Session" />
-              </SelectTrigger>
-              <SelectContent>
-                {SESSIONS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2" />
         </div>
 
         <Tabs defaultValue="windows" className="w-full min-w-0">
@@ -756,7 +893,12 @@ export default function AcademicActivityPage() {
                         </div>
                       </div>
                       <div className="py-3 pl-2.5">
-                        <ScopeSummary act={act} />
+                        <ScopeSummary
+                          act={act}
+                          classOptions={activeClassOptions}
+                          totalPrograms={programOptions.length}
+                          totalAffiliations={affiliationOptions.length}
+                        />
                       </div>
                       <div className="py-3 pl-2.5">
                         <div
@@ -889,20 +1031,9 @@ export default function AcademicActivityPage() {
                       Enter a student UID to preview their activity portal.
                     </p>
                     <div className="mt-3.5 flex flex-wrap justify-center gap-2">
-                      {MOCK_STUDENTS.map((s) => (
-                        <button
-                          key={s.uid}
-                          type="button"
-                          className="cursor-pointer rounded-md border border-[#E0DDD6] bg-[#F7F6F3] px-2.5 py-1 font-mono text-[11.5px] text-[#2C3E63] hover:bg-[#EFEDE8]"
-                          onClick={() => {
-                            setProxyUID(s.uid);
-                            setProxyResolved(true);
-                            setProxyStudent(s);
-                          }}
-                        >
-                          {s.uid}
-                        </button>
-                      ))}
+                      <span className="rounded-md border border-[#E0DDD6] bg-[#F7F6F3] px-2.5 py-1 text-[11.5px] text-[#9AA0AE]">
+                        Use a valid UID to load live student data
+                      </span>
                     </div>
                   </div>
                 ) : (
@@ -944,6 +1075,7 @@ export default function AcademicActivityPage() {
                     </div>
                     <ProxyActivityGrid
                       activities={activities}
+                      classOptions={activeClassOptions}
                       student={proxyStudent}
                       onOpen={(act) => setProxyAction({ icon: act.icon, label: act.label })}
                     />
@@ -996,11 +1128,19 @@ export default function AcademicActivityPage() {
 
               <div className="flex flex-col gap-4 px-6 py-5">
                 {(() => {
-                  const semPrev = semScopeLabel(draft.scopeSems);
-                  const progPrev = scopeLabel(draft.scopePrograms, ALL_PROGRAMS.length, "Programs");
-                  const affPrev = scopeLabel(draft.scopeAffs, ALL_AFFS.length, "Affiliations");
+                  const semPrev = classScopeLabel(draft.scopeSems, activeClassOptions);
+                  const progPrev = scopeLabel(
+                    draft.scopePrograms,
+                    programOptions.length,
+                    "Programs",
+                  );
+                  const affPrev = scopeLabel(
+                    draft.scopeAffs,
+                    affiliationOptions.length,
+                    "Affiliations",
+                  );
                   const isRestricted =
-                    semPrev !== "All Sems" ||
+                    semPrev !== "All Classes" ||
                     progPrev !== "All Programs" ||
                     affPrev !== "All Affiliations";
                   if (!isRestricted) return null;
@@ -1008,7 +1148,7 @@ export default function AcademicActivityPage() {
                     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#F0D888] bg-[#FDF4DC] p-2.5 text-[11.5px] text-[#A07010]">
                       <CircleAlert className="h-3.5 w-3.5 shrink-0" />
                       <span className="font-semibold">Restricted to:</span>
-                      {semPrev !== "All Sems" ? (
+                      {semPrev !== "All Classes" ? (
                         <Badge className="border border-[#F0C97A] bg-[#FEF6E8] text-[11px] font-semibold text-[#C8820A]">
                           {semPrev}
                         </Badge>
@@ -1071,7 +1211,8 @@ export default function AcademicActivityPage() {
                       size="sm"
                       className={cn(
                         "h-8 rounded-md font-bold",
-                        draft.scopeSems.length === 0 || draft.scopeSems.length === 8
+                        draft.scopeSems.length === 0 ||
+                          draft.scopeSems.length === activeClassOptions.length
                           ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
                           : "border-[#D0CCC3]",
                       )}
@@ -1079,24 +1220,28 @@ export default function AcademicActivityPage() {
                     >
                       All
                     </Button>
-                    {ALL_SEMS.map((s) => {
+                    {activeClassOptions.map((cls) => {
+                      const token = classDisplayToken(cls.name);
+                      const sem = semesterNumberFromToken(token) ?? getSemesterNumber(cls) ?? 1;
                       const sel =
-                        !(draft.scopeSems.length === 0 || draft.scopeSems.length === 8) &&
-                        draft.scopeSems.includes(s);
-                      const { c, bg, bd } = semChipColors(s);
+                        !(
+                          draft.scopeSems.length === 0 ||
+                          draft.scopeSems.length === activeClassOptions.length
+                        ) && draft.scopeSems.includes(cls.id);
+                      const { c, bg, bd } = semChipColors(sem);
                       return (
                         <Button
-                          key={s}
+                          key={cls.id}
                           type="button"
                           variant="outline"
                           size="sm"
                           className={cn(
-                            "h-8 w-[38px] p-0 font-['Sora',sans-serif] text-xs font-bold",
+                            "h-8 rounded-md px-2.5 font-['Sora',sans-serif] text-xs font-bold",
                             sel ? cn(c, bg, bd) : "border-[#D0CCC3] text-[#5A6478]",
                           )}
-                          onClick={() => toggleScopeSem(s)}
+                          onClick={() => toggleScopeSem(cls.id)}
                         >
-                          {SL[s - 1]}
+                          {token}
                         </Button>
                       );
                     })}
@@ -1104,8 +1249,8 @@ export default function AcademicActivityPage() {
                 </ScopeSection>
 
                 <ScopeSection
-                  title="Program / Course Scope"
-                  note="Restrict to specific programs, or leave All open"
+                  title="Affiliation Filter"
+                  note="Filter program courses by affiliation"
                 >
                   <div className="flex flex-wrap gap-1.5">
                     <Button
@@ -1114,19 +1259,111 @@ export default function AcademicActivityPage() {
                       size="sm"
                       className={cn(
                         "h-8 rounded-md text-xs font-bold",
-                        draft.scopePrograms.length === 0 ||
-                          draft.scopePrograms.length === ALL_PROGRAMS.length
+                        draft.scopeAffs.length === 0
                           ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
                           : "border-[#D0CCC3]",
                       )}
-                      onClick={() => setEditDraft({ ...draft, scopePrograms: [] })}
+                      onClick={() => setEditDraft({ ...draft, scopeAffs: [], scopePrograms: [] })}
                     >
                       All
                     </Button>
-                    {ALL_PROGRAMS.map((p) => {
+                    {affiliationOptions.map((a) => {
+                      const sel = draft.scopeAffs.includes(a.id);
+                      return (
+                        <Button
+                          key={a.id}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 rounded-md px-2.5 text-xs font-semibold",
+                            sel
+                              ? "border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5]"
+                              : "border-[#D0CCC3] text-[#5A6478]",
+                          )}
+                          onClick={() => toggleScopeAff(a.id)}
+                        >
+                          {a.l}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </ScopeSection>
+
+                <ScopeSection
+                  title="Regulation Filter"
+                  note="Filter program courses by regulation type"
+                >
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 rounded-md text-xs font-bold",
+                        draft.scopeRegulations.length === 0
+                          ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
+                          : "border-[#D0CCC3]",
+                      )}
+                      onClick={() =>
+                        setEditDraft({ ...draft, scopeRegulations: [], scopePrograms: [] })
+                      }
+                    >
+                      All
+                    </Button>
+                    {regulationOptions.map((r) => {
+                      const sel = draft.scopeRegulations.includes(r.id);
+                      return (
+                        <Button
+                          key={r.id}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 rounded-md px-2.5 text-xs font-semibold",
+                            sel
+                              ? "border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5]"
+                              : "border-[#D0CCC3] text-[#5A6478]",
+                          )}
+                          onClick={() => toggleScopeRegulation(r.id)}
+                        >
+                          {r.l}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </ScopeSection>
+
+                <ScopeSection
+                  title="Program / Course Scope"
+                  note={`Filtered by selected affiliation/regulation (${filteredProgramOptions.length} available)`}
+                >
+                  <div className="flex flex-wrap gap-1.5">
+                    {filteredProgramOptions.length > 0 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "h-8 rounded-md text-xs font-bold",
+                          draft.scopePrograms.length === 0 ||
+                            draft.scopePrograms.filter((id) =>
+                              filteredProgramOptions.some((p) => p.id === id),
+                            ).length === filteredProgramOptions.length
+                            ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
+                            : "border-[#D0CCC3]",
+                        )}
+                        onClick={() => setEditDraft({ ...draft, scopePrograms: [] })}
+                      >
+                        All
+                      </Button>
+                    ) : null}
+                    {filteredProgramOptions.map((p) => {
                       const allSel =
                         draft.scopePrograms.length === 0 ||
-                        draft.scopePrograms.length === ALL_PROGRAMS.length;
+                        draft.scopePrograms.filter((id) =>
+                          filteredProgramOptions.some((fp) => fp.id === id),
+                        ).length === filteredProgramOptions.length;
                       const sel = !allSel && draft.scopePrograms.includes(p.id);
                       return (
                         <Button
@@ -1143,50 +1380,6 @@ export default function AcademicActivityPage() {
                           onClick={() => toggleScopeProg(p.id)}
                         >
                           {p.l}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </ScopeSection>
-
-                <ScopeSection
-                  title="Affiliation Scope"
-                  note="Restrict to specific affiliated colleges, or leave All open"
-                >
-                  <div className="flex flex-wrap gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "h-8 rounded-md text-xs font-bold",
-                        draft.scopeAffs.length === 0 || draft.scopeAffs.length === ALL_AFFS.length
-                          ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
-                          : "border-[#D0CCC3]",
-                      )}
-                      onClick={() => setEditDraft({ ...draft, scopeAffs: [] })}
-                    >
-                      All
-                    </Button>
-                    {ALL_AFFS.map((a) => {
-                      const allSel =
-                        draft.scopeAffs.length === 0 || draft.scopeAffs.length === ALL_AFFS.length;
-                      const sel = !allSel && draft.scopeAffs.includes(a.id);
-                      return (
-                        <Button
-                          key={a.id}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            "h-8 rounded-md px-2.5 text-xs font-semibold",
-                            sel
-                              ? "border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5]"
-                              : "border-[#D0CCC3] text-[#5A6478]",
-                          )}
-                          onClick={() => toggleScopeAff(a.id)}
-                        >
-                          {a.l}
                         </Button>
                       );
                     })}
@@ -1274,8 +1467,9 @@ export default function AcademicActivityPage() {
                   type="button"
                   className="flex-[2] bg-[#1B2B4B] font-['Sora',sans-serif] font-bold hover:bg-[#2C3E63]"
                   onClick={saveEdit}
+                  disabled={isSaving}
                 >
-                  Save Configuration →
+                  {isSaving ? "Saving..." : "Save Configuration →"}
                 </Button>
               </DialogFooter>
             </>
@@ -1336,11 +1530,13 @@ function ScopeSection({
 
 function ProxyActivityGrid({
   activities,
+  classOptions,
   student,
   onOpen,
 }: {
   activities: Activity[];
-  student: MockStudent;
+  classOptions: ClassOption[];
+  student: ProxyStudent;
   onOpen: (act: Activity) => void;
 }) {
   const visible = activities.filter((a) => {
@@ -1362,17 +1558,26 @@ function ProxyActivityGrid({
     <div className="grid h-full  grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
       {visible.map((act) => {
         const ws = windowStatus(act);
-        const inScope = studentInScope(act, student);
+        const inScope = studentInScope(act, student, classOptions);
         const as = getActStatus(act, student);
         const audOk = act.audience === "all" || act.audience === "student";
         const isScheduled = ws.label === "Scheduled";
         const blocked = !inScope || !as.accessible;
         let scopeBlockReason = "";
         if (!inScope) {
-          const semOk = isAll(act.scopeSems, ALL_SEMS) || act.scopeSems.includes(student.sem);
+          const semesterCount = classOptions.length;
+          const semOk =
+            act.scopeSems.length === 0 ||
+            act.scopeSems.length === semesterCount ||
+            act.scopeSems.some((classId) => {
+              const cls = classOptions.find((c) => c.id === classId);
+              return cls ? getSemesterNumber(cls) === student.sem : false;
+            });
           const progOk =
-            isAll(act.scopePrograms, ALL_PROGRAMS) || act.scopePrograms.includes(student.deptId);
-          const affOk = isAll(act.scopeAffs, ALL_AFFS) || act.scopeAffs.includes(student.affId);
+            act.scopePrograms.length === 0 ||
+            act.scopePrograms.map(String).includes(String(student.deptId));
+          const affOk =
+            act.scopeAffs.length === 0 || act.scopeAffs.map(String).includes(String(student.affId));
           if (!semOk) scopeBlockReason = `Not available for Sem ${SL[student.sem - 1]}`;
           else if (!progOk) scopeBlockReason = `Not available for ${student.dept}`;
           else if (!affOk) scopeBlockReason = "Not available for this college";

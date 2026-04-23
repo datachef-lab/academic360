@@ -45,6 +45,7 @@ import { loadDefaultCertificateMasters } from "@/features/academics/services/def
 import { loadDefaultPromotionData } from "@/features/batches/default-promotion-data-loader.service.js";
 import { loadStudentFees } from "@/features/fees/services/legacy-fees-data.service";
 import { defaultSetDateOfJoining } from "@/features/user/defaut-set-date-of-joining";
+import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
 const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -103,6 +104,7 @@ export const connectToDatabase = async () => {
       log.warn("Default promotion data load failed", { error: e });
     });
     loadStudentFees();
+    initializeAcademicActivities();
     defaultSetDateOfJoining();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();

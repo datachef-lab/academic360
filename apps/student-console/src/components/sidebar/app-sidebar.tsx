@@ -233,10 +233,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         socket.on("exam_updated", () => {
           updateExamCount();
         });
-
-        socket.on("fee_student_mapping_updated", () => {
-          invalidateFeeMappings();
-        });
       } catch (err) {
         console.error("[Sidebar] Failed to load socket.io-client:", err);
       }
@@ -251,7 +247,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         socketRef.current = null;
       }
     };
-  }, [student?.id, user?.id, updateExamCount, invalidateFeeMappings]);
+  }, [student?.id, user?.id, updateExamCount]);
 
   // Check if student's program course is MA or MCOM (hide admission registration for these)
   const isBlockedProgram = React.useMemo(() => {

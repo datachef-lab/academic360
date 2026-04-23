@@ -1,3 +1,8 @@
+export * from "./academic-activity-class-scope.model";
+export * from "./academic-activity-program-course-scope.model";
+export * from "./academic-activity.model";
+
+
 export * from "./academic-year.model";
 export * from "./batch-student-mapping.model";
 export * from "./batch.model";
