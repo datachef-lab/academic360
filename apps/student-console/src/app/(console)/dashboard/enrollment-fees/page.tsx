@@ -43,6 +43,15 @@ import {
 
 type ApiResponse<T> = { payload: T; message?: string };
 
+type AcademicActivityApiDto = {
+  id: number;
+  name: string;
+  isEnabled: boolean;
+  startDate?: string | null;
+  classes?: Array<{ class?: { id?: number | null } | null }>;
+  programCourses?: Array<{ programCourse?: { id?: number | null } | null }>;
+};
+
 export type FeeMapping = {
   id: number;
   studentId: number;
@@ -55,9 +64,9 @@ export type FeeMapping = {
   feeStructure: {
     id: number;
     receiptType: { name: string };
-    class: { name: string };
+    class: { id: number; name: string };
     academicYear: { id: number; year: string };
-    programCourse: { name: string };
+    programCourse: { id: number; name: string };
   };
 };
 
@@ -170,6 +179,9 @@ export default function EnrollmentFeesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mappings, setMappings] = useState<FeeMapping[]>([]);
+  const [semesterFeeActivity, setSemesterFeeActivity] = useState<AcademicActivityApiDto | null>(
+    null,
+  );
   const [hasExistingCpForm, setHasExistingCpForm] = useState<boolean | null>(null);
 
   const [cpOpen, setCpOpen] = useState(false);
@@ -215,8 +227,25 @@ export default function EnrollmentFeesPage() {
     }
   };
 
+  const fetchSemesterFeeActivity = async () => {
+    try {
+      const { data } = await axiosInstance.get<ApiResponse<AcademicActivityApiDto[]>>(
+        "/api/academics/academic-activities",
+      );
+      const activities = Array.isArray(data?.payload) ? data.payload : [];
+      const semesterFeePayment = activities.find(
+        (a) => (a?.name || "").trim().toLowerCase() === "semester fee payment",
+      );
+      setSemesterFeeActivity(semesterFeePayment ?? null);
+    } catch (e) {
+      console.error(e);
+      setSemesterFeeActivity(null);
+    }
+  };
+
   useEffect(() => {
     fetchMappings();
+    fetchSemesterFeeActivity();
   }, [student?.id, feeMappingsVersion]);
 
   useEffect(() => {
@@ -423,6 +452,35 @@ export default function EnrollmentFeesPage() {
       })),
     [mappings],
   );
+
+  const visibleCards = useMemo(() => {
+    if (!semesterFeeActivity?.isEnabled) return [];
+    const startTs = semesterFeeActivity.startDate
+      ? new Date(semesterFeeActivity.startDate).getTime()
+      : NaN;
+    if (!Number.isFinite(startTs) || startTs > Date.now()) return [];
+
+    const scopedClassIds = (semesterFeeActivity.classes ?? [])
+      .map((c) => c?.class?.id)
+      .filter((id): id is number => typeof id === "number");
+    const scopedProgramCourseIds = (semesterFeeActivity.programCourses ?? [])
+      .map((p) => p?.programCourse?.id)
+      .filter((id): id is number => typeof id === "number");
+
+    const currentPromotionProgramCourseId =
+      (student as { currentPromotion?: { programCourse?: { id?: number } | null } | null })
+        ?.currentPromotion?.programCourse?.id ?? null;
+
+    return cards.filter((card) => {
+      const cardClassId = mappings.find((m) => m.id === card.id)?.feeStructure?.class?.id;
+      const classOk = scopedClassIds.length === 0 || scopedClassIds.includes(Number(cardClassId));
+      const programOk =
+        scopedProgramCourseIds.length === 0 ||
+        (typeof currentPromotionProgramCourseId === "number" &&
+          scopedProgramCourseIds.includes(currentPromotionProgramCourseId));
+      return classOk && programOk;
+    });
+  }, [cards, mappings, semesterFeeActivity, student]);
 
   const getMasterKey = (master: CertificateMaster, idx: number) => {
     const idNum = Number(master.id);
@@ -843,7 +901,7 @@ export default function EnrollmentFeesPage() {
         ) : null}
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {cards.map((fee) => (
+          {visibleCards.map((fee) => (
             <Card
               key={fee.id}
               className="h-full max-w-[360px] overflow-hidden border bg-white shadow-lg transition-all hover:shadow-xl"
@@ -899,6 +957,14 @@ export default function EnrollmentFeesPage() {
               </div>
             </Card>
           ))}
+          {!visibleCards.length ? (
+            <Card className="col-span-full border border-amber-200 bg-amber-50">
+              <CardContent className="py-4 text-sm text-amber-800">
+                Semester Fee Payment activity is not currently active for your scoped
+                semester/program.
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </main>
 

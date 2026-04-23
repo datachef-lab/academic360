@@ -897,6 +897,20 @@
       "when": 1776853585565,
       "tag": "0127_chilly_microchip",
       "breakpoints": true
+    },
+    {
+      "idx": 128,
+      "version": "7",
+      "when": 1776934440075,
+      "tag": "0128_faithful_northstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 129,
+      "version": "7",
+      "when": 1776937802702,
+      "tag": "0129_warm_mole_man",
+      "breakpoints": true
     }
   ]
 }

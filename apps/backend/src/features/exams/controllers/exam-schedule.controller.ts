@@ -392,6 +392,7 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       assignBy,
       roomAssignments,
       gender,
+      examCommencementDate,
     } = req.body;
 
     console.log("[EXAM-SCHEDULE-CONTROLLER] Received get students request:", {
@@ -402,6 +403,7 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       shiftIds,
       assignBy,
       roomAssignmentsCount: roomAssignments?.length,
+      examCommencementDate,
     });
 
     if (
@@ -488,6 +490,9 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       assignBy: assignBy as "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER",
       gender,
       excelStudents,
+      examCommencementDate: examCommencementDate
+        ? String(examCommencementDate)
+        : undefined,
     };
 
     const students = await getStudentsByPapers(params, roomAssignments || []);
