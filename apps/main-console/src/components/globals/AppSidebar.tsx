@@ -28,6 +28,7 @@ import {
   BookOpen,
   Layers,
   TrendingUp,
+  SlidersHorizontal,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -81,6 +82,7 @@ const data = {
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
     { title: "Promote Students", url: "/dashboard/promote-students", icon: GraduationCap },
+    { title: "Academic Activity", url: "/dashboard/academic-activity", icon: SlidersHorizontal },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
     {
       title: "Admit Card Distributions",
