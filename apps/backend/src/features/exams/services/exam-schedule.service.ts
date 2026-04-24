@@ -3156,6 +3156,7 @@ export async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
     ? candidateCountResult
     : [{ count: 0 }];
   const candidateCount = candidateCountData?.count ?? 0;
+  const isAllotted = locations.length > 0 && candidateCount > 0;
 
   return {
     ...model,
@@ -3170,6 +3171,7 @@ export async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
     scheduledByUser: scheduledByUser ?? null,
     lastUpdatedByUser: lastUpdatedByUser ?? null,
     candidateCount,
+    isAllotted,
   };
 }
 
