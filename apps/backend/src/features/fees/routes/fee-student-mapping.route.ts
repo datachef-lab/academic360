@@ -21,6 +21,7 @@ function asyncHandler(
 
 router.get("/", asyncHandler(getAllFeeStudentMappingsHandler));
 router.get("/download-receipt", asyncHandler(downloadFeeReceiptController));
+
 router.get(
   "/student/:studentId",
   asyncHandler(getFeeStudentMappingsByStudentIdHandler),

@@ -18,8 +18,20 @@ router.get(
   "/academic-years/all",
   feesStructureController.getAcademicYearsFromFeesStructures,
 );
+router.get(
+  "/download/fee-structures",
+  feesStructureController.downloadFeeStructuresExcel,
+);
+router.get(
+  "/download/fee-student-mappings",
+  feesStructureController.downloadFeeStudentMappingsExcel,
+);
 router.get("/", feesStructureController.getAllFeeStructures);
 router.get("/:id", feesStructureController.getFeeStructureById);
+router.get(
+  "/:id/locked-slabs",
+  feesStructureController.getLockedSlabsForFeeStructure,
+);
 router.put("/:id", feesStructureController.updateFeeStructure);
 router.delete("/:id", feesStructureController.deleteFeeStructure);
 

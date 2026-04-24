@@ -39,8 +39,6 @@ export async function createFeeCategoryPromotionMappingHandler(
       id: true,
       createdAt: true,
       updatedAt: true,
-      createdByUserId: true,
-      updatedByUserId: true,
     });
     const parsed = schemaWithoutAutoFields.parse(req.body);
     const created = await createFeeCategoryPromotionMapping(parsed, userId);

@@ -4,7 +4,9 @@
 
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title><%= pageTitle %></title>
+  <title>
+    <%= pageTitle %>
+  </title>
   <style type="text/css">
     * {
       margin: 0;
@@ -111,20 +113,27 @@
       display: flex;
       gap: 16px;
       margin-bottom: 8px;
-      align-items: flex-end;
+      align-items: center;
     }
 
     .student-info {
-      display: flex;
-      flex-direction: column;
       flex: 1;
       min-width: 0;
-      border-collapse: collapse;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
     }
 
     .student-info-row {
       display: flex;
       line-height: 14px;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .student-info-row>span:not(.student-info-value) {
+      flex-shrink: 0;
+      font-size: 10px;
     }
 
     .student-info-label {
@@ -132,6 +141,9 @@
       padding: 2px 6px 2px 0;
       font-size: 10px;
       white-space: nowrap;
+      min-width: 50px;
+      text-align: left;
+      flex-shrink: 0;
     }
 
     .student-info-value {
@@ -139,6 +151,28 @@
       padding: 2px 0;
       font-size: 10px;
       white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .student-info-table .si-label {
+      font-weight: bold;
+      text-align: left;
+      white-space: nowrap;
+      padding-right: 3px;
+      vertical-align: top;
+    }
+
+    .student-info-table .si-colon {
+      font-weight: bold;
+      white-space: nowrap;
+      min-width: 70px;
+      text-align: left;
+      flex-shrink: 0;
+    }
+
+    .student-info-table .si-value {
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .challan-barcode-block {
@@ -146,12 +180,15 @@
       min-width: 130px;
       width: 160px;
       min-height: 50px;
-      margin-bottom: 24px;
+      margin-bottom: 0;
       margin-right: 4px;
+      padding-bottom: 10px;
+      white-space: nowrap;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-      align-items: flex-start; /* left-align label + bars */
+      justify-content: center;
+      align-items: flex-start;
+      /* left-align label + bars */
       text-align: left;
     }
 
@@ -173,13 +210,14 @@
       min-height: 40px;
       display: flex;
       align-items: center;
-      justify-content: flex-start; /* bars start directly under label */
+      justify-content: flex-start;
+      /* bars start directly under label */
       width: 100%;
     }
 
     .challan-barcode {
       display: block;
-      width: 160px;
+      width: 100%;
       height: 40px;
       margin: 0;
       flex-shrink: 0;
@@ -296,6 +334,48 @@
       margin-bottom: 12px;
     }
 
+    /* Non-production: watermark — warm amber (draft/specimen; less “error” than red) */
+    .specimen-watermark {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .specimen-watermark-inner {
+      transform: rotate(-32deg);
+      font-size: 26pt;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      /* Light amber fill + darker amber stroke — readable over table lines, still clearly a watermark */
+      color: rgba(253, 212, 128, 0.46);
+      -webkit-text-stroke: 0.7px rgba(180, 83, 9, 0.52);
+      paint-order: stroke fill;
+      text-align: center;
+      line-height: 1.15;
+      white-space: nowrap;
+      max-width: 95%;
+      user-select: none;
+    }
+
+    .challan-copy--specimen {
+      position: relative;
+    }
+
+    .challan-copy--specimen > .specimen-watermark {
+      z-index: 1;
+    }
+
+    .challan-copy--specimen > *:not(.specimen-watermark) {
+      position: relative;
+      z-index: 2;
+    }
+
     @media print {
 
       html,
@@ -331,6 +411,14 @@
       .print-tip {
         display: none !important;
       }
+
+      .specimen-watermark-inner {
+        font-size: 27pt !important;
+        color: rgba(253, 212, 128, 0.52) !important;
+        -webkit-text-stroke: 0.8px rgba(154, 52, 18, 0.55) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
     }
   </style>
 </head>
@@ -340,9 +428,15 @@
     <% const SECTIONS=["STUDENT COPY", "COLLEGE COPY" , "BANK COPY" ]; %>
 
       <% SECTIONS.forEach((section, sectionIndex)=> { %>
-        <div class="challan-copy">
+        <div class="challan-copy<%= typeof showSpecimenWatermark !== 'undefined' && showSpecimenWatermark ? ' challan-copy--specimen' : '' %>">
+          <% if (typeof showSpecimenWatermark !== 'undefined' && showSpecimenWatermark) { %>
+          <div class="specimen-watermark" aria-hidden="true">
+            <div class="specimen-watermark-inner">SPECIMEN ONLY</div>
+          </div>
+          <% } %>
           <div class="challan-header">
-            <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4"
+            <img class="college-logo"
+              src="<%= collegeLogoDataUrl || 'https://besc.academic360.app/api/api/v1/settings/file/4' %>"
               alt="College Logo" />
             <div class="header-text">
               <div class="college-name">The Bhawanipur Education Society College</div>
@@ -362,33 +456,51 @@
           </div>
           <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
           <div class="student-info-wrapper">
-            <div class="student-info">
+            <div class="student-info" style="width: 45%; ">
               <div class="student-info-row">
-                <div class="student-info-label">Name :</div>
-                <span class="student-info-value"><%= name %></span>
+                <div class="student-info-label">Name</div>
+                <span>:</span>
+                <span class="student-info-value">
+                  <%= name %>
+                </span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">UID :</div>
-                <span class="student-info-value"><%= uid %></span>
+                <div class="student-info-label">UID</div>
+                <span>:</span>
+                <span class="student-info-value">
+                  <%= uid %>
+                </span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">DOB :</div>
-                <span class="student-info-value"><%= dob %></span>
+                <div class="student-info-label">DOB</div>
+                <span>:</span>
+                <span class="student-info-value">
+                  <%= dob %>
+                </span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">Mob No. :</div>
-                <span class="student-info-value"><%= phone %></span>
+                <div class="student-info-label">Mob No.</div>
+                <span>:</span>
+                <span class="student-info-value">
+                  <%= phone %>
+                </span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">Year :</div>
-                <span class="student-info-value"><%= semester %></span>
+                <div class="student-info-label">Year</div>
+                <span>:</span>
+                <span class="student-info-value">
+                  <%= semester %>
+                </span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">Course :</div>
-                <span class="student-info-value"><%= programCourse %> (<%= shift %>)</span>
+                <div class="student-info-label">Course</div>
+                <span>:</span>
+                <span class="student-info-value">
+                  <%= programCourse %> (<%= shift %>)
+                </span>
               </div>
             </div>
-            <div class="challan-barcode-block">
+            <div class="challan-barcode-block" style="width: 55%;">
               <span class="challan-no-value">Challan No : <%= challanNumber %></span>
               <div class="challan-barcode-wrap">
                 <canvas class="challan-barcode" data-challan="<%= challanNumber %>"></canvas>
@@ -426,78 +538,109 @@
           <div class="amount-words"></div>
           <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
               href="mailto:feeupdate@thebges.edu.in" style="font-weight: bold;">feeupdate@thebges.edu.in</a></div>
-          <div style="flex: 1; min-height: 8px;"></div>
-          <div class="footer-content">
-            <div class="signature-row" style="border-bottom: 1px solid black;">
-              <span style="font-weight: bolder;">Date: <span style="font-weight: normal;margin-left: 10px;"><%= challanDate %></span></span>
-              <span style="font-weight:bolder;" class="sig-right">Bank Official's Signature</span>
+          <% if (isPaid) { %>
+            <!-- Center ePAID box within remaining vertical space -->
+            <div style="flex: 1; display: flex; align-items: center; justify-content: center; ">
+              <div
+                style="font-size: 14px; border: 2px solid #000; border-radius: 10px; padding: 8px 12px; font-size: 10px; font-weight: bold; text-align: center; min-width: 220px;">
+                <% if (mode==="online" ) { %>
+                  <span style="font-size: 14px;">
+                    ePAID - <%= ePaid.orderId %>
+                  </span>
+                  <br />
+                  <span style="font-size: 14px;">
+
+                    (<%= ePaid.transactionDate %>)
+                  </span>
+                  <br /><br />
+                  <span style="font-weight: normal; font-size: 14px;">E-paid challan do not<br />require bank
+                    stamp</span>
+                  <% } else { %>
+                    <br /> <br /><br /><span style="font-size: 14px;">
+                      PAID (<%= paidDate %>)
+                    </span>
+                    <br /><br /><br />
+                    <% } %>
+              </div>
             </div>
-            <div class="nb-notes">
-              <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the
-                receiving
-                authority. Please retain the Money Receipt for future reference.</p>
-              <p style="margin-bottom:5px;">N.B. 2. Please note that taking enrollment &amp; paying fees for the same
-                alone does not make you
-                automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is
-                mandatory
-                for each University Exam.</p>
-              <p style="margin-bottom: 10px; font-weight: bold;">N.B.3. Please do not make any request to Management
-                or
-                Staff for refund of fees. Fees once paid is not
-                refundable under any circumstances.</p>
-            </div>
-            <div class="copy-label" style="text-align: end; font-style: italic;">
-              <%= section %>
-            </div>
-          </div>
+            <% } else { %>
+              <div style="flex: 1; min-height: 8px;"></div>
+              <% } %>
+                <div class="footer-content">
+                  <div class="signature-row" style="border-bottom: 1px solid black;">
+                    <span style="font-weight: bolder;">Date: <span style="font-weight: normal;margin-left: 10px;">
+                        <%= challanDate %>
+                      </span></span>
+                    <span style="font-weight:bolder;" class="sig-right">Bank Official's Signature</span>
+                  </div>
+                  <div class="nb-notes">
+                    <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the
+                      receiving
+                      authority. Please retain the Money Receipt for future reference.</p>
+                    <p style="margin-bottom:5px;">N.B. 2. Please note that taking enrollment &amp; paying fees for the
+                      same
+                      alone does not make you
+                      automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is
+                      mandatory
+                      for each University Exam.</p>
+                    <p style="margin-bottom: 10px; font-weight: bold;">N.B.3. Please do not make any request to
+                      Management
+                      or
+                      Staff for refund of fees. Fees once paid is not
+                      refundable under any circumstances.</p>
+                  </div>
+                  <div class="copy-label" style="text-align: end; font-style: italic;">
+                    <%= section %>
+                  </div>
+                </div>
         </div>
         <% }) %>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
 
-  function sanitizeChallanForBarcode(str) {
-    if (!str) return "";
-    var s = String(str).trim();
-    s = s.replace(/[\x00-\x1F\x7F]/g, "");
-    return s;
-  }
-
-  var barcodeEls = document.querySelectorAll(".challan-barcode");
-
-  barcodeEls.forEach(function (el) {
-    var raw = el.getAttribute("data-challan") || "";
-    var value = sanitizeChallanForBarcode(raw);
-
-    if (!value) {
-      var wrap = el.closest(".challan-barcode-block");
-      if (wrap) {
-        var label = wrap.querySelector(".challan-no-value");
-        if (label) {
-          var text = label.textContent || "";
-          if (text.includes(":")) {
-            text = text.split(":")[1];
-          }
-          value = sanitizeChallanForBarcode(text);
-        }
+      function sanitizeChallanForBarcode(str) {
+        if (!str) return "";
+        var s = String(str).trim();
+        s = s.replace(/[\x00-\x1F\x7F]/g, "");
+        return s;
       }
-    }
 
-    if (!value) return;
+      var barcodeEls = document.querySelectorAll(".challan-barcode");
 
-    JsBarcode(el, value, {
-      format: "CODE128",
-      lineColor: "#000",
-      width: 2,
-      height: 40,
-      displayValue: false,
-      margin: 0
+      barcodeEls.forEach(function (el) {
+        var raw = el.getAttribute("data-challan") || "";
+        var value = sanitizeChallanForBarcode(raw);
+
+        if (!value) {
+          var wrap = el.closest(".challan-barcode-block");
+          if (wrap) {
+            var label = wrap.querySelector(".challan-no-value");
+            if (label) {
+              var text = label.textContent || "";
+              if (text.includes(":")) {
+                text = text.split(":")[1];
+              }
+              value = sanitizeChallanForBarcode(text);
+            }
+          }
+        }
+
+        if (!value) return;
+
+        JsBarcode(el, value, {
+          format: "CODE128",
+          lineColor: "#000",
+          width: 2,
+          height: 40,
+          displayValue: false,
+          margin: 0
+        });
+      });
+
     });
-  });
-
-});
-</script>
+  </script>
 </body>
 
 </html>

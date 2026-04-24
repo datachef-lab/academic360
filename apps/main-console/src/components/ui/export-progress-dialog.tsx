@@ -149,6 +149,7 @@ export function ExportProgressDialog({
     if (operation?.includes("student_")) return "Upload Progress";
     if (operation === "fee_structure_mapping") return "Fee Structure Progress";
     if (operation === "fee_group_promotion_bulk_upload") return "Bulk Upload Progress";
+    if (operation === "semester_promotion") return "Semester promotion";
     return "Export Progress";
   };
 
@@ -157,6 +158,7 @@ export function ExportProgressDialog({
     if (operation?.includes("student_")) return "Upload Steps:";
     if (operation === "fee_structure_mapping") return "Processing Steps:";
     if (operation === "fee_group_promotion_bulk_upload") return "Validation & Processing:";
+    if (operation === "semester_promotion") return "Promotion steps:";
     return "Export Steps:";
   };
 
@@ -198,6 +200,15 @@ export function ExportProgressDialog({
         { label: "Verifying students & promotions", done: progress >= 20 || isCompleted },
         { label: "Verifying fee slabs & categories", done: progress >= 40 || isCompleted },
         { label: "Creating mappings", done: progress >= 70 || isCompleted },
+        { label: "Completed", done: isCompleted },
+      ];
+    }
+
+    if (operation === "semester_promotion") {
+      return [
+        { label: "Starting", done: progress >= 2 || status !== "started" },
+        { label: "Evaluating roster & eligibility", done: progress >= 25 || isCompleted },
+        { label: "Writing promotion records", done: progress >= 55 || isCompleted },
         { label: "Completed", done: isCompleted },
       ];
     }

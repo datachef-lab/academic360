@@ -11,7 +11,8 @@ import {
 import { createFeeStudentMappingSchema } from "@repo/db/schemas";
 import { ApiError, handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
-import { z } from "zod";
+import { buildFeeReceiptPdfContentDisposition } from "@/utils/fee-receipt-content-disposition.js";
+import { sendNotFoundHtmlIfDocumentNavigation } from "@/utils/send-not-found-html-or-json.js";
 
 export async function createFeeStudentMappingHandler(
   req: Request,
@@ -267,21 +268,29 @@ export const downloadFeeReceiptController = async (
     );
 
     if (!result) {
-      res
-        .status(404)
-        .json(
-          new ApiError(
-            404,
-            "Fee Receipt not found for the given feeStrucure and studentId",
-          ),
-        );
+      sendNotFoundHtmlIfDocumentNavigation(req, res, 404, () => {
+        res
+          .status(404)
+          .json(
+            new ApiError(
+              404,
+              "Fee Receipt not found for the given feeStrucure and studentId",
+            ),
+          );
+      });
       return;
     }
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${result.uid} | ${result.receiptName} - ${result.semester} | ${result.programCourse} (${result.session}).pdf"`,
+      buildFeeReceiptPdfContentDisposition({
+        uid: result.uid ?? "",
+        receiptName: result.receiptName ?? "",
+        semester: result.semester ?? "",
+        programCourse: result.programCourse ?? "",
+        session: result.session ?? "",
+      }),
     );
 
     res.send(result.pdfBuffer);

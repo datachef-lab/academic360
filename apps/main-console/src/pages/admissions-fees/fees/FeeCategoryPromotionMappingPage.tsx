@@ -1,6 +1,15 @@
 // @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Link2, Trash2, Upload, Download, Loader2, Pencil } from "lucide-react";
+import {
+  Link2,
+  Trash2,
+  Upload,
+  Download,
+  Loader2,
+  Pencil,
+  GitCompare,
+  ArrowRight,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,6 +33,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -36,10 +46,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFeeCategories, useFeeGroups } from "@/hooks/useFees";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
-import { FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
+import { FeeGroupPromotionMappingDto, type FeeGroupDto } from "@repo/db/dtos/fees";
 import { toast } from "sonner";
 import { NewFeeGroupPromotionMapping, BulkUploadResult, BulkUploadRow } from "@/services/fees-api";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  feeGroupPromotionMappingKeys,
   useFeeGroupPromotionMappings,
   useCreateFeeGroupPromotionMapping,
   useUpdateFeeGroupPromotionMapping,
@@ -60,6 +72,65 @@ import { useAuth } from "@/features/auth/providers/auth-provider";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import type { ProgressUpdate } from "@/types/progress";
 
+const DotSpinnerLoader: React.FC = () => (
+  <div className="flex items-center justify-center py-8">
+    <div className="dot-spinner" role="status" aria-label="Loading mappings">
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+    </div>
+  </div>
+);
+
+function isPaymentStatusPaid(status: string | undefined): boolean {
+  const s = (status || "").trim().toUpperCase();
+  return s === "SUCCESS" || s === "COMPLETED" || s === "DONE" || s === "PAID";
+}
+
+function paymentStatusLabel(status: string | undefined): "Paid" | "Pending" {
+  return isPaymentStatusPaid(status) ? "Paid" : "Pending";
+}
+
+/** Roman numerals I–X only (semester labels); longer tokens checked first. */
+const ROMAN_SEM_VALUE: Record<string, number> = {
+  I: 1,
+  II: 2,
+  III: 3,
+  IV: 4,
+  V: 5,
+  VI: 6,
+  VII: 7,
+  VIII: 8,
+  IX: 9,
+  X: 10,
+};
+const ROMAN_SEM_SCAN_ORDER = ["VIII", "VII", "III", "VI", "IV", "IX", "II", "V", "I", "X"] as const;
+
+function parseSemesterOrdinalFromClassName(name: string | undefined | null): number {
+  if (!name || !String(name).trim()) return 10_000;
+  const upper = String(name).toUpperCase();
+  for (const tok of ROMAN_SEM_SCAN_ORDER) {
+    if (new RegExp(`\\b${tok}\\b`).test(upper)) {
+      return ROMAN_SEM_VALUE[tok] ?? 10_000;
+    }
+  }
+  const digit = String(name).match(/(\d+)/);
+  if (digit) return parseInt(digit[1], 10);
+  return 10_000 + upper.localeCompare("");
+}
+
+function semesterClassSortKey(mapping: FeeGroupPromotionMappingDto): number {
+  const promo: any = mapping.promotion || {};
+  const seq = promo.class?.sequence;
+  if (typeof seq === "number" && Number.isFinite(seq)) return seq;
+  return parseSemesterOrdinalFromClassName(promo.class?.name);
+}
+
 const FeeGroupPromotionMappingPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -72,12 +143,29 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     feeGroupId: number | null;
     remarks: string;
     updatedByUserId: number | null;
-  }>({ feeGroupId: null, remarks: "", updatedByUserId: null });
+    approvalType: "SYSTEM" | "MANUAL";
+    approvalUserId: number | null;
+  }>({
+    feeGroupId: null,
+    remarks: "",
+    updatedByUserId: null,
+    approvalType: "SYSTEM",
+    approvalUserId: null,
+  });
   const [adminStaffUsers, setAdminStaffUsers] = useState<
     { id: number; name: string; email: string; image: string | null; type?: string }[]
   >([]);
+  const [adminStaffUsersLoading, setAdminStaffUsersLoading] = useState(false);
+  const [adminStaffUsersLoaded, setAdminStaffUsersLoaded] = useState(false);
   const [approvalSearchText, setApprovalSearchText] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingEditData, setPendingEditData] = useState<typeof editForm | null>(null);
+  const [feeGroupTotalsById, setFeeGroupTotalsById] = useState<Record<number, number>>({});
+  const [feeGroupTotalsLoading, setFeeGroupTotalsLoading] = useState(false);
+  const [feeGroupTotalsCacheByPromotionId, setFeeGroupTotalsCacheByPromotionId] = useState<
+    Record<number, Record<number, number>>
+  >({});
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [bulkUploadResult, setBulkUploadResult] = useState<BulkUploadResult | null>(null);
@@ -122,7 +210,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const { feeGroups } = useFeeGroups();
   const { currentAcademicYear } = useAcademicYear();
 
-  // Only fetch when user has applied at least one filter
+  // Fetch when user has applied filters OR typed search text
   const hasFilters =
     !!filters.academicYear ||
     !!filters.semesterOrClass ||
@@ -132,12 +220,15 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.community ||
     !!filters.category ||
     !!filters.feeCategory;
+  const hasSearch = !!searchText.trim();
+  const shouldFetchMappings = hasFilters || hasSearch;
+  const queryClient = useQueryClient();
 
   const {
     data: mappings = [],
     isLoading: loading,
     refetch: refetchMappings,
-  } = useFeeGroupPromotionMappings(10000, hasFilters);
+  } = useFeeGroupPromotionMappings(10000, shouldFetchMappings);
   const createMutation = useCreateFeeGroupPromotionMapping();
   const updateMutation = useUpdateFeeGroupPromotionMapping();
   const deleteMutation = useDeleteFeeGroupPromotionMapping();
@@ -187,10 +278,34 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       mappingId: number;
       type: string;
       message: string;
+      paymentStatus?: "Paid" | "Pending" | "Unpaid";
+      amountToPay?: number;
+      totalPayableAmount?: number;
+      saveBlockedForEdit?: boolean;
     }) => {
       console.log("[Fee Group Promotion Mapping Page] Mapping updated:", data);
-      // Silently refresh UI without showing toast
-      refetchMappings();
+      if (data?.type === "recalculation_completed" && typeof data.mappingId === "number") {
+        queryClient.setQueriesData<FeeGroupPromotionMappingDto[]>(
+          { queryKey: feeGroupPromotionMappingKeys.lists() },
+          (old) => {
+            if (!old?.length) return old;
+            return old.map((m) =>
+              m.id === data.mappingId
+                ? {
+                    ...m,
+                    paymentStatus: data.paymentStatus ?? m.paymentStatus,
+                    amountToPay: data.amountToPay ?? m.amountToPay,
+                    totalPayableAmount: data.totalPayableAmount ?? m.totalPayableAmount,
+                    saveBlockedForEdit: data.saveBlockedForEdit ?? m.saveBlockedForEdit,
+                  }
+                : m,
+            );
+          },
+        );
+        return;
+      }
+      // Avoid expensive full-list refetch for every update event.
+      // Local mutation already updates key fields for current user flow.
     };
 
     const handleFeeGroupPromotionMappingDeleted = (data: {
@@ -212,7 +327,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       socket.off("fee_group_promotion_mapping_updated", handleFeeGroupPromotionMappingUpdated);
       socket.off("fee_group_promotion_mapping_deleted", handleFeeGroupPromotionMappingDeleted);
     };
-  }, [socket, isConnected, user?.type, refetchMappings]);
+  }, [socket, isConnected, user?.type, refetchMappings, queryClient]);
 
   const [form, setForm] = useState<{
     feeCategoryId: number | undefined;
@@ -398,75 +513,101 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     return counts;
   }, [mappings]);
 
-  const matchesFilters = (mapping: FeeGroupPromotionMappingDto) => {
-    const promo: any = mapping.promotion || {};
-    const academicYearName = promo.academicYearName || promo.session?.name || "";
-    const semesterName = promo.class?.name || "";
-    const programCourseName = promo.programCourse?.name || "";
-    const shiftName = promo.shift?.name || promo.shiftName || "";
-    const religionName = promo.religionName || "";
-    const categoryName = promo.categoryName || "";
-    const communityName = promo.communityName || promo.community || "";
-
-    if (filters.academicYear && academicYearName !== filters.academicYear) return false;
-    if (filters.semesterOrClass && semesterName !== filters.semesterOrClass) return false;
-    if (filters.programCourse && programCourseName !== filters.programCourse) return false;
-    if (filters.shift && shiftName !== filters.shift) return false;
-    if (filters.religion && religionName !== filters.religion) return false;
-    if (filters.category && categoryName !== filters.category) return false;
-    if (filters.community && communityName !== filters.community) return false;
-    if (
-      filters.feeCategory &&
-      mapping.feeGroup?.feeCategory?.name !== filters.feeCategory &&
-      mapping.feeCategory?.name !== filters.feeCategory
-    )
-      return false;
-
-    return true;
-  };
-
-  // Filter mappings based on search text and selected filters
-  const filteredMappings =
-    mappings?.filter((mapping) => {
-      if (!searchText.trim()) {
-        return matchesFilters(mapping);
-      }
-
-      const searchLower = searchText.toLowerCase();
+  const matchesFilters = useCallback(
+    (mapping: FeeGroupPromotionMappingDto) => {
       const promo: any = mapping.promotion || {};
-      const studentName = (promo.studentName || promo.name || "").toLowerCase();
-      const uid = (promo.uid || promo.studentUid || "").toLowerCase();
-      const classRollNumber = (promo.classRollNumber || "").toLowerCase();
-      const rollNumber = (promo.rollNumber || "").toLowerCase();
-      const programCourseName = (promo.programCourse?.name || "").toLowerCase();
-      const semesterName = (promo.class?.name || "").toLowerCase();
-      const shiftName = (promo.shift?.name || "").toLowerCase();
-      const categoryName = (promo.categoryName || "").toLowerCase();
-      const religionName = (promo.religionName || "").toLowerCase();
-      const feeCategoryName = (
-        mapping.feeGroup?.feeCategory?.name ||
-        mapping.feeCategory?.name ||
-        ""
+      const academicYearName = promo.academicYearName || promo.session?.name || "";
+      const semesterName = promo.class?.name || "";
+      const programCourseName = promo.programCourse?.name || "";
+      const shiftName = promo.shift?.name || promo.shiftName || "";
+      const religionName = promo.religionName || "";
+      const categoryName = promo.categoryName || "";
+      const communityName = promo.communityName || promo.community || "";
+
+      if (filters.academicYear && academicYearName !== filters.academicYear) return false;
+      if (filters.semesterOrClass && semesterName !== filters.semesterOrClass) return false;
+      if (filters.programCourse && programCourseName !== filters.programCourse) return false;
+      if (filters.shift && shiftName !== filters.shift) return false;
+      if (filters.religion && religionName !== filters.religion) return false;
+      if (filters.category && categoryName !== filters.category) return false;
+      if (filters.community && communityName !== filters.community) return false;
+      if (
+        filters.feeCategory &&
+        mapping.feeGroup?.feeCategory?.name !== filters.feeCategory &&
+        mapping.feeCategory?.name !== filters.feeCategory
+      )
+        return false;
+
+      return true;
+    },
+    [filters],
+  );
+
+  // Filter mappings, then sort ascending by semester/class (sequence or parsed ordinal)
+  const filteredMappings = useMemo(() => {
+    const list =
+      mappings?.filter((mapping) => {
+        if (!searchText.trim()) {
+          return matchesFilters(mapping);
+        }
+
+        const searchLower = searchText.toLowerCase();
+        const promo: any = mapping.promotion || {};
+        const studentName = (promo.studentName || promo.name || "").toLowerCase();
+        const uid = (promo.uid || promo.studentUid || "").toLowerCase();
+        const classRollNumber = (promo.classRollNumber || "").toLowerCase();
+        const rollNumber = (promo.rollNumber || "").toLowerCase();
+        const programCourseName = (promo.programCourse?.name || "").toLowerCase();
+        const semesterName = (promo.class?.name || "").toLowerCase();
+        const shiftName = (promo.shift?.name || "").toLowerCase();
+        const categoryName = (promo.categoryName || "").toLowerCase();
+        const religionName = (promo.religionName || "").toLowerCase();
+        const feeCategoryName = (
+          mapping.feeGroup?.feeCategory?.name ||
+          mapping.feeCategory?.name ||
+          ""
+        ).toLowerCase();
+        const feeSlabName = (mapping.feeGroup?.feeSlab?.name || "").toLowerCase();
+        const paymentStatus = (mapping.paymentStatus || "").toLowerCase();
+        const mappingId = mapping.id?.toString() || "";
+
+        const matchesSearch =
+          studentName.includes(searchLower) ||
+          uid.includes(searchLower) ||
+          classRollNumber.includes(searchLower) ||
+          rollNumber.includes(searchLower) ||
+          programCourseName.includes(searchLower) ||
+          semesterName.includes(searchLower) ||
+          shiftName.includes(searchLower) ||
+          categoryName.includes(searchLower) ||
+          religionName.includes(searchLower) ||
+          feeCategoryName.includes(searchLower) ||
+          feeSlabName.includes(searchLower) ||
+          paymentStatus.includes(searchLower) ||
+          mappingId.includes(searchText);
+
+        return matchesSearch && matchesFilters(mapping);
+      }) ?? [];
+
+    return [...list].sort((a, b) => {
+      const da = semesterClassSortKey(a);
+      const db = semesterClassSortKey(b);
+      if (da !== db) return da - db;
+      const na = String(
+        (a.promotion as { studentName?: string; name?: string } | undefined)?.studentName ||
+          (a.promotion as { name?: string } | undefined)?.name ||
+          "",
       ).toLowerCase();
-      const feeSlabName = (mapping.feeGroup?.feeSlab?.name || "").toLowerCase();
-      const mappingId = mapping.id?.toString() || "";
-
-      const matchesSearch =
-        studentName.includes(searchLower) ||
-        uid.includes(searchLower) ||
-        classRollNumber.includes(searchLower) ||
-        rollNumber.includes(searchLower) ||
-        programCourseName.includes(searchLower) ||
-        semesterName.includes(searchLower) ||
-        shiftName.includes(searchLower) ||
-        categoryName.includes(searchLower) ||
-        religionName.includes(searchLower) ||
-        feeCategoryName.includes(searchLower) ||
-        feeSlabName.includes(searchLower) ||
-        mappingId.includes(searchText);
-
-      return matchesSearch && matchesFilters(mapping);
-    }) || [];
+      const nb = String(
+        (b.promotion as { studentName?: string; name?: string } | undefined)?.studentName ||
+          (b.promotion as { name?: string } | undefined)?.name ||
+          "",
+      ).toLowerCase();
+      const c = na.localeCompare(nb);
+      if (c !== 0) return c;
+      return (a.id ?? 0) - (b.id ?? 0);
+    });
+  }, [mappings, searchText, matchesFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filteredMappings.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -794,33 +935,110 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   };
 
   const handleEditClick = (mapping: FeeGroupPromotionMappingDto) => {
+    const promotionId = mapping?.promotion?.id ?? null;
+    if (promotionId && feeGroupTotalsCacheByPromotionId[promotionId]) {
+      setFeeGroupTotalsById(feeGroupTotalsCacheByPromotionId[promotionId]);
+    } else {
+      setFeeGroupTotalsById({});
+    }
     setEditingItem(mapping);
-    const mappingAny = mapping as { updatedByUserId?: number | null };
+    const mappingAny = mapping as {
+      updatedByUserId?: number | null;
+      approvalType?: "SYSTEM" | "MANUAL";
+      approvalUserId?: number | null;
+    };
     setEditForm({
       feeGroupId: mapping.feeGroup?.id ?? null,
       remarks: mapping.remarks ?? "",
       updatedByUserId: mappingAny?.updatedByUserId ?? null,
+      approvalType: (mappingAny?.approvalType ?? "SYSTEM") as "SYSTEM" | "MANUAL",
+      approvalUserId: mappingAny?.approvalUserId ?? null,
     });
     setEditDialogOpen(true);
   };
 
-  // Load admin/staff users when edit dialog opens
+  const loadAdminStaffUsers = useCallback(async () => {
+    if (adminStaffUsersLoaded || adminStaffUsersLoading) return;
+    setAdminStaffUsersLoading(true);
+    try {
+      const users = await findAdminsAndStaff(1, 200);
+      setAdminStaffUsers(
+        users.map((u) => ({
+          id: u.id as number,
+          name: u.name,
+          email: u.email,
+          image: u.image ?? null,
+          type: (u as { type?: string }).type,
+        })),
+      );
+      setAdminStaffUsersLoaded(true);
+    } finally {
+      setAdminStaffUsersLoading(false);
+    }
+  }, [adminStaffUsersLoaded, adminStaffUsersLoading]);
+
+  // Preload approvers once for instant dialog open.
+  useEffect(() => {
+    void loadAdminStaffUsers();
+  }, [loadAdminStaffUsers]);
+
+  // Ensure approvers are available when edit dialog opens.
   useEffect(() => {
     if (editDialogOpen) {
       setApprovalSearchText("");
-      findAdminsAndStaff(1, 200).then((users) => {
-        setAdminStaffUsers(
-          users.map((u) => ({
-            id: u.id as number,
-            name: u.name,
-            email: u.email,
-            image: u.image ?? null,
-            type: (u as { type?: string }).type,
-          })),
-        );
-      });
+      void loadAdminStaffUsers();
     }
-  }, [editDialogOpen]);
+  }, [editDialogOpen, loadAdminStaffUsers]);
+
+  // Load fee-group totals for slab dropdown — backend returns fee groups for every slab
+  // that appears in this promotion's fee structure(s). Do not pass feeCategoryId: changing
+  // slab often means moving to another fee category (e.g. General F vs Sports B vs Aid C).
+  useEffect(() => {
+    const promotionId = editingItem?.promotion?.id;
+    if (!editDialogOpen || !promotionId) {
+      setFeeGroupTotalsById({});
+      setFeeGroupTotalsLoading(false);
+      return;
+    }
+
+    const cachedTotals = feeGroupTotalsCacheByPromotionId[promotionId];
+    if (cachedTotals) {
+      setFeeGroupTotalsById(cachedTotals);
+      setFeeGroupTotalsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setFeeGroupTotalsById({});
+    setFeeGroupTotalsLoading(true);
+    (async () => {
+      try {
+        const res = await axiosInstance.get(`/api/v1/fees/groups/promotion/${promotionId}/totals`);
+        const payload = Array.isArray(res.data?.payload) ? res.data.payload : [];
+        const map: Record<number, number> = {};
+        payload.forEach((row: any) => {
+          if (typeof row?.feeGroupId === "number") {
+            map[row.feeGroupId] = Number(row?.totalPayable ?? 0);
+          }
+        });
+        if (!cancelled) {
+          setFeeGroupTotalsById(map);
+          setFeeGroupTotalsCacheByPromotionId((prev) => ({
+            ...prev,
+            [promotionId]: map,
+          }));
+        }
+      } catch (e) {
+        if (!cancelled) setFeeGroupTotalsById({});
+      } finally {
+        if (!cancelled) setFeeGroupTotalsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editDialogOpen, editingItem?.promotion?.id, feeGroupTotalsCacheByPromotionId]);
 
   const filteredAdminStaffUsers = useMemo(() => {
     if (!approvalSearchText.trim()) return adminStaffUsers;
@@ -833,23 +1051,255 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     );
   }, [adminStaffUsers, approvalSearchText]);
 
+  /** Linked payment status SUCCESS — read-only dialog (Okay only) */
+  const isEditSaveHidden = editingItem?.saveBlockedForEdit === true;
+
+  const editDialogSlabTotal = useMemo(() => {
+    const fgId = editForm.feeGroupId ?? editingItem?.feeGroup?.id ?? null;
+    if (fgId == null) return null;
+    const v = feeGroupTotalsById[fgId];
+    return typeof v === "number" ? v : null;
+  }, [editForm.feeGroupId, editingItem?.feeGroup?.id, feeGroupTotalsById]);
+
+  /** Sum from fee_student_mappings, else slab total for mapped fee group */
+  const editReadOnlyTotalPayable = useMemo(() => {
+    const tp = editingItem?.totalPayableAmount;
+    if (tp != null && tp > 0) return tp;
+    const fgId = editingItem?.feeGroup?.id;
+    if (fgId != null && typeof feeGroupTotalsById[fgId] === "number") {
+      return feeGroupTotalsById[fgId] as number;
+    }
+    return null;
+  }, [editingItem?.totalPayableAmount, editingItem?.feeGroup?.id, feeGroupTotalsById]);
+
+  /** Rich slab line for confirm dialog: clear separators instead of a thin pipe character. */
+  const renderSlabSummaryEl = useCallback(
+    (
+      fg: FeeGroupDto | null | undefined,
+      preferredTotal?: number | null,
+      options?: { obsolete?: boolean },
+    ): React.ReactNode => {
+      if (!fg) {
+        return <span className="text-sm text-muted-foreground">—</span>;
+      }
+      const fromRow = preferredTotal != null && preferredTotal > 0 ? preferredTotal : null;
+      const fromMap =
+        fg.id != null && typeof feeGroupTotalsById[fg.id] === "number"
+          ? feeGroupTotalsById[fg.id]
+          : null;
+      const amt = fromRow ?? fromMap;
+      const amountStr =
+        amt != null && Number(amt) >= 0 ? `₹${Number(amt).toLocaleString("en-IN")}` : "—";
+      const obsolete = options?.obsolete;
+      return (
+        <span
+          className={
+            obsolete
+              ? "inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm line-through decoration-muted-foreground opacity-80"
+              : "inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+          }
+        >
+          <span className="font-semibold text-foreground">{fg.feeSlab?.name ?? "—"}</span>
+          <span
+            className="inline-block h-4 w-1 shrink-0 rounded-sm bg-violet-500/35 dark:bg-violet-400/40"
+            aria-hidden
+          />
+          <span className="rounded-md bg-violet-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-violet-900 ring-1 ring-violet-300/70 dark:bg-violet-950/70 dark:text-violet-100 dark:ring-violet-700">
+            {amountStr}
+          </span>
+          <span
+            className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+            aria-hidden
+          >
+            ·
+          </span>
+          <span className="rounded-md border border-muted-foreground/30 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground">
+            {fg.feeCategory?.name ?? "—"}
+          </span>
+        </span>
+      );
+    },
+    [feeGroupTotalsById],
+  );
+
+  /** Fee groups allowed for this promotion: slabs present in fee structure (all categories). */
+  const slabDropdownFeeGroups = useMemo((): FeeGroupDto[] => {
+    const isFullFeeOption = (fg: FeeGroupDto): boolean => {
+      const slabName = (fg.feeSlab?.name ?? "").trim().toLowerCase();
+      const categoryName = (fg.feeCategory?.name ?? "").trim().toLowerCase();
+      return (
+        slabName === "slab f" ||
+        slabName.includes("full fee") ||
+        categoryName === "full fee" ||
+        categoryName === "full fees"
+      );
+    };
+
+    const sortWithFullFeeFirst = (a: FeeGroupDto, b: FeeGroupDto): number => {
+      const aIsFullFee = isFullFeeOption(a);
+      const bIsFullFee = isFullFeeOption(b);
+      if (aIsFullFee !== bIsFullFee) {
+        return aIsFullFee ? -1 : 1;
+      }
+
+      const slab = (a.feeSlab?.name ?? "").localeCompare(b.feeSlab?.name ?? "", undefined, {
+        numeric: true,
+      });
+      if (slab !== 0) return slab;
+
+      return (a.feeCategory?.name ?? "").localeCompare(b.feeCategory?.name ?? "");
+    };
+
+    const base: FeeGroupDto[] =
+      feeGroups && feeGroups.length > 0
+        ? feeGroups
+        : (() => {
+            const seen = new Set<number>();
+            const out: FeeGroupDto[] = [];
+            for (const m of mappings) {
+              if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
+                seen.add(m.feeGroup.id);
+                out.push(m.feeGroup);
+              }
+            }
+            if (editingItem?.feeGroup?.id && !seen.has(editingItem.feeGroup.id)) {
+              out.unshift(editingItem.feeGroup);
+            }
+            return out;
+          })();
+
+    const allowedIds = new Set(
+      Object.keys(feeGroupTotalsById)
+        .map((k) => Number(k))
+        .filter((n) => Number.isFinite(n)),
+    );
+
+    if (allowedIds.size > 0) {
+      let filtered = base.filter((fg) => fg.id != null && allowedIds.has(fg.id));
+      if (editingItem?.feeGroup?.id && !filtered.some((g) => g.id === editingItem.feeGroup?.id)) {
+        filtered = [editingItem.feeGroup, ...filtered];
+      }
+      filtered.sort(sortWithFullFeeFirst);
+      return filtered;
+    }
+
+    // Show full slab list immediately while totals are loading.
+    return [...base].sort(sortWithFullFeeFirst);
+  }, [feeGroups, mappings, editingItem?.feeGroup, feeGroupTotalsById]);
+
+  const feePromotionEditFormEqualsItem = useCallback(
+    (item: FeeGroupPromotionMappingDto, form: typeof editForm) => {
+      const prevRemarks = (item.remarks ?? "").trim();
+      const nextRemarks = (form.remarks ?? "").trim();
+      return (
+        (item.feeGroup?.id ?? null) === (form.feeGroupId ?? null) &&
+        (item.approvalType ?? "SYSTEM") === form.approvalType &&
+        (item.approvalUserId ?? null) === (form.approvalUserId ?? null) &&
+        prevRemarks === nextRemarks
+      );
+    },
+    [],
+  );
+
+  /** When false, edit dialog shows Okay (close only); when true, shows Save → confirm dialog. */
+  const editFormHasChanges = useMemo(() => {
+    if (!editingItem || editingItem.saveBlockedForEdit) return false;
+    return !feePromotionEditFormEqualsItem(editingItem, editForm);
+  }, [editingItem, editForm, feePromotionEditFormEqualsItem]);
+
+  const confirmEditDiff = useMemo(() => {
+    if (!editingItem || !pendingEditData) return null;
+
+    const newFg = slabDropdownFeeGroups.find((fg) => fg.id === pendingEditData.feeGroupId);
+
+    const slabChanged = (editingItem.feeGroup?.id ?? null) !== (pendingEditData.feeGroupId ?? null);
+    const prevApproval = editingItem.approvalType ?? "SYSTEM";
+    const nextApproval = pendingEditData.approvalType;
+    const approvalChanged = prevApproval !== nextApproval;
+    const prevUserId = editingItem.approvalUserId ?? null;
+    const nextUserId = pendingEditData.approvalUserId ?? null;
+    const approvalUserChanged = prevUserId !== nextUserId;
+    const prevRemarks = (editingItem.remarks ?? "").trim();
+    const nextRemarks = (pendingEditData.remarks ?? "").trim();
+    const remarksChanged = prevRemarks !== nextRemarks;
+
+    const hasAnyChange = slabChanged || approvalChanged || approvalUserChanged || remarksChanged;
+
+    return {
+      slabChanged,
+      prevSlabFg: editingItem.feeGroup ?? null,
+      nextSlabFg: newFg ?? null,
+      approvalChanged,
+      prevApproval,
+      nextApproval,
+      approvalUserChanged,
+      prevUserId,
+      nextUserId,
+      remarksChanged,
+      prevRemarks,
+      nextRemarks,
+      hasAnyChange,
+    };
+  }, [editingItem, pendingEditData, slabDropdownFeeGroups]);
+
   const handleEditSave = async () => {
     if (!editingItem?.id || !editForm.feeGroupId) {
       toast.error("Please select a slab type");
       return;
     }
+    // Check if approval user is required (when slab is not F)
+    const selectedFg = slabDropdownFeeGroups.find((fg) => fg.id === editForm.feeGroupId);
+    const slabName = (selectedFg?.feeSlab?.name ?? "").toLowerCase();
+    if (slabName !== "slab f" && !editForm.approvalUserId) {
+      toast.error("Please select an approved by user");
+      return;
+    }
+    if (editingItem?.saveBlockedForEdit) {
+      toast.error("Cannot save: a successful payment is already recorded for this mapping.");
+      return;
+    }
+
+    if (feePromotionEditFormEqualsItem(editingItem, editForm)) {
+      return;
+    }
+
+    // Store pending data and show confirmation dialog
+    setPendingEditData(editForm);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmEdit = async () => {
+    if (!editingItem?.id || !pendingEditData) {
+      return;
+    }
+    if (pendingEditData.feeGroupId == null) {
+      toast.error("Please select a slab type");
+      return;
+    }
+
+    if (feePromotionEditFormEqualsItem(editingItem, pendingEditData)) {
+      toast.info("No changes to save");
+      setShowConfirmDialog(false);
+      setPendingEditData(null);
+      return;
+    }
+
     setSavingEdit(true);
     try {
       await updateMutation.mutateAsync({
         id: editingItem.id,
         data: {
-          feeGroupId: editForm.feeGroupId,
-          remarks: editForm.remarks || undefined,
-          updatedByUserId: editForm.updatedByUserId ?? undefined,
+          feeGroupId: pendingEditData.feeGroupId,
+          remarks: pendingEditData.remarks || undefined,
+          updatedByUserId: pendingEditData.updatedByUserId ?? undefined,
+          approvalType: pendingEditData.approvalType,
+          approvalUserId: pendingEditData.approvalUserId ?? undefined,
         },
       });
       setEditDialogOpen(false);
       setEditingItem(null);
+      setShowConfirmDialog(false);
+      setPendingEditData(null);
     } catch {
       // Error handled by mutation
     } finally {
@@ -915,8 +1365,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <Card>
+    <div className="container mx-auto min-w-0 max-w-full px-4 py-4 sm:p-6 space-y-6">
+      <Card className="min-w-0 overflow-hidden">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -937,7 +1387,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-w-0">
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
             <div className="flex items-center gap-2 w-full md:w-auto">
               <Button
@@ -1017,10 +1467,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               </div>
             </div>
             <Input
-              placeholder="Search by fee category, UID, roll no, class roll, or ID..."
+              placeholder="Search: Student Name / UID / Program Course / Semester / Shift / Pay Status / Slab / Fee Category"
+              title="Search by Student Name, UID, Program Course, Semester, Shift, Pay Status, Slab, Fee Category"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              className="md:max-w-md md:ml-3"
+              className="w-full md:ml-3 md:flex-1 md:max-w-none"
             />
           </div>
 
@@ -1034,198 +1485,219 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </div>
           )}
 
-          {loading && hasFilters ? (
-            <div className="text-center py-8">Loading mappings...</div>
+          {loading && shouldFetchMappings ? (
+            <DotSpinnerLoader />
           ) : (
-            <Table className="border rounded-md">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      aria-label="Select all on page"
-                      checked={allSelectedOnPage}
-                      onCheckedChange={toggleSelectAllOnPage}
-                    />
-                  </TableHead>
-                  <TableHead className="w-[60px]">Sr No.</TableHead>
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Program Course</TableHead>
-                  <TableHead className="text-center">Semester</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead>Payment Status</TableHead>
-                  <TableHead>Amount to Pay</TableHead>
-                  <TableHead>Slab Type</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!hasFilters ? (
+            <div className="min-w-0 rounded-md border overflow-x-auto">
+              <Table
+                containerClassName="max-w-full overflow-x-auto"
+                className="border-0 rounded-none text-[11px] sm:text-sm w-full min-w-[880px] table-auto [&_th]:!h-auto [&_th]:!px-1.5 [&_th]:!py-2 sm:[&_th]:!px-2.5 [&_tbody_td]:!px-1.5 [&_tbody_td]:!py-2 sm:[&_tbody_td]:!px-2.5 [&_tbody_td]:align-top"
+              >
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-gray-500">
-                      <p className="font-medium">Apply filters to load data</p>
-                      <p className="text-sm mt-1">
-                        Select at least one filter (e.g. Academic Year, Semester) to view student
-                        fee group mappings.
-                      </p>
-                    </TableCell>
+                    <TableHead className="w-8 min-w-0 p-0">
+                      <Checkbox
+                        aria-label="Select all on page"
+                        checked={allSelectedOnPage}
+                        onCheckedChange={toggleSelectAllOnPage}
+                      />
+                    </TableHead>
+                    <TableHead className="w-8 min-w-0 text-center">#</TableHead>
+                    <TableHead className="min-w-[120px] max-w-[220px]">Student</TableHead>
+                    <TableHead className="min-w-[96px] max-w-[180px] leading-tight">
+                      <span className="hidden sm:inline">Program</span>
+                      <span className="sm:hidden">Prog.</span>
+                    </TableHead>
+                    <TableHead className="text-center w-[4.5%] min-w-[38px] max-w-[48px] px-0.5">
+                      Sem.
+                    </TableHead>
+                    <TableHead className="min-w-[104px] w-[14%]">Shift</TableHead>
+                    <TableHead className="min-w-[76px] w-[10%] leading-tight whitespace-normal">
+                      Pay status
+                    </TableHead>
+                    <TableHead className="min-w-[72px] w-[9%]">Amt</TableHead>
+                    <TableHead className="min-w-[140px] w-[18%] leading-tight whitespace-normal">
+                      Slab
+                    </TableHead>
+                    <TableHead className="min-w-[72px] w-[8%] text-right pr-1">Act.</TableHead>
                   </TableRow>
-                ) : paginatedMappings.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                      No mappings found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedMappings.map((mapping, index) => {
-                    const promo: any = mapping.promotion || {};
-                    const studentName = promo.studentName || promo.name || "-";
-                    const uid = promo.uid || promo.studentUid || "";
-                    const programCourseName = promo.programCourse?.name || "-";
-                    const rawSemesterName = promo.class?.name || "-";
-                    const semesterParts =
-                      typeof rawSemesterName === "string" ? rawSemesterName.split(/\s+/) : [];
-                    const semesterName =
-                      semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
-                    const shiftName = promo.shift?.name || "-";
-                    const paymentStatus = mapping.paymentStatus ?? "Pending";
-                    const amountToPay = mapping.amountToPay ?? 0;
+                </TableHeader>
+                <TableBody>
+                  {!shouldFetchMappings ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-12 text-gray-500">
+                        <p className="font-medium">Apply filters or type in search to load data</p>
+                        <p className="text-sm mt-1">
+                          Select at least one filter (e.g. Academic Year, Semester) or start typing
+                          in search to view student fee group mappings.
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedMappings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                        No mappings found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedMappings.map((mapping, index) => {
+                      const promo: any = mapping.promotion || {};
+                      const studentName = promo.studentName || promo.name || "-";
+                      const uid = promo.uid || promo.studentUid || "";
+                      const programCourseName = promo.programCourse?.name || "-";
+                      const rawSemesterName = promo.class?.name || "-";
+                      const semesterParts =
+                        typeof rawSemesterName === "string" ? rawSemesterName.split(/\s+/) : [];
+                      const semesterName =
+                        semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
+                      const shiftName = promo.shift?.name || "-";
+                      const paymentStatus = paymentStatusLabel(mapping.paymentStatus);
+                      const amountToPay = mapping.amountToPay ?? 0;
+                      const totalPayableAmt = mapping.totalPayableAmount ?? 0;
+                      const displayAmount = totalPayableAmt > 0 ? totalPayableAmt : amountToPay;
 
-                    const globalIndex = (currentPage - 1) * pageSize + index + 1;
+                      const globalIndex = (currentPage - 1) * pageSize + index + 1;
 
-                    const promotionId = promo.id as number | undefined;
-                    const mappingCountForPromotion = promotionId
-                      ? (promotionMappingCounts.get(promotionId) ?? 0)
-                      : 0;
-                    const canDelete = mappingCountForPromotion > 1;
+                      const promotionId = promo.id as number | undefined;
+                      const mappingCountForPromotion = promotionId
+                        ? (promotionMappingCounts.get(promotionId) ?? 0)
+                        : 0;
+                      const canDelete = mappingCountForPromotion > 1;
 
-                    return (
-                      <TableRow key={mapping.id}>
-                        <TableCell>
-                          <Checkbox
-                            aria-label="Select row"
-                            checked={mapping.id ? selectedIds.includes(mapping.id) : false}
-                            onCheckedChange={(checked) => toggleOne(mapping.id, checked)}
-                          />
-                        </TableCell>
-                        <TableCell>{globalIndex}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span>{studentName}</span>
-                            {uid && <span className="text-xs text-gray-500">UID: {uid}</span>}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {programCourseName !== "-" ? (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                            >
-                              {programCourseName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {semesterName !== "-" ? (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-orange-300 text-orange-700 bg-orange-50"
-                            >
-                              {semesterName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {shiftName !== "-" ? (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
-                            >
-                              {shiftName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              paymentStatus === "Paid"
-                                ? "bg-green-100 text-green-800 border-green-300"
-                                : paymentStatus === "Pending"
-                                  ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                  : "bg-red-100 text-red-800 border-red-300"
-                            }
-                          >
-                            {paymentStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-gray-900">
-                            ₹{amountToPay.toLocaleString("en-IN")}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {mapping.feeGroup?.feeCategory?.name &&
-                          mapping.feeGroup?.feeSlab?.name ? (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <Badge
-                                variant="outline"
-                                className="text-xs border-pink-300 text-pink-700 bg-pink-50"
-                              >
-                                {mapping.feeGroup.feeSlab.name}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className="text-xs border-purple-300 text-purple-700 bg-purple-50"
-                              >
-                                {mapping.feeGroup.feeCategory.name}
-                              </Badge>
+                      return (
+                        <TableRow key={mapping.id}>
+                          <TableCell className="min-w-0 p-1 align-middle">
+                            <Checkbox
+                              aria-label="Select row"
+                              checked={mapping.id ? selectedIds.includes(mapping.id) : false}
+                              onCheckedChange={(checked) => toggleOne(mapping.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell className="min-w-0 text-center tabular-nums">
+                            {globalIndex}
+                          </TableCell>
+                          <TableCell className="min-w-0">
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                              <span className="line-clamp-2 break-words leading-tight">
+                                {studentName}
+                              </span>
+                              {uid && (
+                                <span className="text-[10px] text-gray-500 truncate" title={uid}>
+                                  {uid}
+                                </span>
+                              )}
                             </div>
-                          ) : mapping.feeCategory?.name ? (
-                            // Fallback for old structure if feeGroup is not available
+                          </TableCell>
+                          <TableCell className="min-w-0 align-top">
+                            {programCourseName !== "-" ? (
+                              <Badge
+                                variant="outline"
+                                className="inline-flex max-w-full whitespace-normal text-left text-[10px] leading-tight sm:text-xs border-blue-300 bg-blue-50 text-blue-700"
+                              >
+                                {programCourseName}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="min-w-0 max-w-[3rem] px-0.5 text-center align-top">
+                            {semesterName !== "-" ? (
+                              <Badge
+                                variant="outline"
+                                className="inline-flex max-w-full justify-center whitespace-nowrap px-1 text-[10px] leading-tight sm:text-xs border-orange-300 bg-orange-50 text-orange-700"
+                              >
+                                {semesterName}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="min-w-[5.5rem] align-top">
+                            {shiftName !== "-" ? (
+                              <Badge
+                                variant="outline"
+                                className="inline-flex max-w-full whitespace-normal text-[10px] leading-tight sm:text-xs border-emerald-300 bg-emerald-50 text-emerald-700"
+                              >
+                                {shiftName}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="min-w-0 align-top">
                             <Badge
-                              variant="outline"
-                              className="text-xs border-purple-300 text-purple-700 bg-purple-50"
+                              className={
+                                paymentStatus === "Paid"
+                                  ? "inline-flex max-w-full whitespace-normal border border-green-300 bg-green-100 px-1.5 py-0.5 text-[10px] text-green-800 sm:text-xs"
+                                  : "inline-flex max-w-full whitespace-normal border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[10px] text-yellow-800 sm:text-xs"
+                              }
                             >
-                              {mapping.feeCategory.name}
+                              {paymentStatus}
                             </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => paymentStatus !== "Paid" && handleEditClick(mapping)}
-                              disabled={paymentStatus === "Paid"}
-                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {canDelete && (
+                          </TableCell>
+                          <TableCell className="min-w-0 tabular-nums align-top">
+                            <span className="font-semibold text-gray-900 text-[11px] sm:text-sm">
+                              ₹{displayAmount.toLocaleString("en-IN")}
+                            </span>
+                          </TableCell>
+                          <TableCell className="min-w-0 align-top">
+                            {mapping.feeGroup?.feeCategory?.name &&
+                            mapping.feeGroup?.feeSlab?.name ? (
+                              <div className="flex min-w-0 flex-wrap content-start gap-1">
+                                <Badge
+                                  variant="outline"
+                                  className="inline-flex max-w-full shrink-0 basis-auto whitespace-normal text-[10px] leading-tight sm:text-xs border-pink-300 bg-pink-50 text-pink-700"
+                                >
+                                  {mapping.feeGroup.feeSlab.name}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="inline-flex min-w-0 max-w-full shrink whitespace-normal text-[10px] leading-tight sm:text-xs border-purple-300 bg-purple-50 text-purple-700"
+                                >
+                                  {mapping.feeGroup.feeCategory.name}
+                                </Badge>
+                              </div>
+                            ) : mapping.feeCategory?.name ? (
+                              // Fallback for old structure if feeGroup is not available
+                              <Badge
+                                variant="outline"
+                                className="inline-flex max-w-full whitespace-normal text-[10px] leading-tight sm:text-xs border-purple-300 bg-purple-50 text-purple-700"
+                              >
+                                {mapping.feeCategory.name}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="min-w-0 text-right">
+                            <div className="flex items-center justify-end gap-0.5">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteClick(mapping)}
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                onClick={() => handleEditClick(mapping)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                              {canDelete && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteClick(mapping)}
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
 
           {/* Simple pagination controls */}
@@ -1478,12 +1950,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               <Button variant="ghost" onClick={handleClearFilters}>
                 Clear filters
               </Button>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowFilterModal(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => setShowFilterModal(false)}>Apply filters</Button>
-              </div>
+              <Button variant="outline" onClick={() => setShowFilterModal(false)}>
+                Close
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -1698,175 +2167,245 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </div>
           </DialogHeader>
           <div className="space-y-4 py-4 overflow-y-auto max-h-[90vh]">
-            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
-              <div>
-                <span className="text-muted-foreground">Program Course:</span>
-                <p className="font-medium">{editingItem?.promotion?.programCourse?.name ?? "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Semester:</span>
-                <p className="font-medium">{editingItem?.promotion?.class?.name ?? "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Shift:</span>
-                <p className="font-medium">{editingItem?.promotion?.shift?.name ?? "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Amount to Pay:</span>
-                <p className="font-semibold">
-                  ₹{(editingItem?.amountToPay ?? 0).toLocaleString("en-IN")}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Slab Type</Label>
-              <Select
-                value={editForm.feeGroupId?.toString() ?? ""}
-                onValueChange={(v) =>
-                  setEditForm((prev) => ({ ...prev, feeGroupId: v ? Number(v) : null }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select slab type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(() => {
-                    const groups =
-                      feeGroups && feeGroups.length > 0
-                        ? feeGroups
-                        : (() => {
-                            const seen = new Set<number>();
-                            const out: typeof feeGroups = [];
-                            for (const m of mappings) {
-                              if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
-                                seen.add(m.feeGroup.id);
-                                out.push(m.feeGroup);
-                              }
-                            }
-                            if (editingItem?.feeGroup?.id && !seen.has(editingItem.feeGroup.id)) {
-                              out.unshift(editingItem.feeGroup);
-                            }
-                            return out;
-                          })();
-                    return groups?.map((fg) => (
-                      <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
-                        <div className="flex items-center gap-2">
-                          <span>{fg.feeSlab?.name || "-"}</span>
-                          <span className="text-gray-400">|</span>
-                          <span>{fg.feeCategory?.name || "-"}</span>
-                        </div>
-                      </SelectItem>
-                    ));
-                  })()}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <Label>Approval Details</Label>
-                  <p className="text-xs text-muted-foreground">Select approver (admin/staff)</p>
+            {isEditSaveHidden ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Program Course:</span>
+                    <p className="font-medium">
+                      {editingItem?.promotion?.programCourse?.name ?? "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Semester:</span>
+                    <p className="font-medium">{editingItem?.promotion?.class?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Shift:</span>
+                    <p className="font-medium">{editingItem?.promotion?.shift?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total payable:</span>
+                    <p className="font-semibold">
+                      {editReadOnlyTotalPayable != null
+                        ? `₹${editReadOnlyTotalPayable.toLocaleString("en-IN")}`
+                        : "—"}
+                    </p>
+                  </div>
                 </div>
-                <Input
-                  placeholder="Search by name, email, type..."
-                  value={approvalSearchText}
-                  onChange={(e) => setApprovalSearchText(e.target.value)}
-                  className="max-w-[200px] h-8 text-sm"
-                />
-              </div>
-              <div
-                className="border rounded-md max-h-48 overflow-y-auto divide-y"
-                role="listbox"
-                aria-label="Select approver"
-              >
-                {filteredAdminStaffUsers.length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground text-center">
-                    {approvalSearchText ? "No users match your search" : "No users available"}
-                  </p>
-                ) : (
-                  filteredAdminStaffUsers.map((u) => {
-                    const isSelected = editForm.updatedByUserId === u.id;
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        role="option"
-                        aria-selected={isSelected}
-                        onClick={() =>
-                          setEditForm((prev) => ({
-                            ...prev,
-                            updatedByUserId: isSelected ? null : u.id,
-                          }))
-                        }
-                        className={`w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-slate-100 ${
-                          isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "bg-transparent"
-                        }`}
-                      >
-                        <UserAvatar
-                          user={{ name: u.name, image: u.image ?? undefined }}
-                          size="sm"
-                          className="rounded-full shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{u.name}</p>
-                            {u.type && (
-                              <Badge
-                                variant="secondary"
-                                className="text-[10px] px-1.5 py-0 h-4 shrink-0"
-                              >
-                                {u.type}
-                              </Badge>
-                            )}
-                          </div>
-                          {u.email && (
-                            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                          )}
+                <div className="space-y-2">
+                  <Label>Slab Type</Label>
+                  <div className="rounded-md border border-input bg-muted/40 px-3 py-2.5 text-sm">
+                    {editingItem?.feeGroup
+                      ? (() => {
+                          const fg = editingItem.feeGroup;
+                          const amt = feeGroupTotalsById[fg.id as number];
+                          return (
+                            <span className="font-medium text-foreground">
+                              {fg.feeSlab?.name ?? "—"}
+                              <span className="text-muted-foreground"> | </span>₹
+                              {Number(amt ?? 0).toLocaleString("en-IN")}
+                              <span className="text-muted-foreground">
+                                {" "}
+                                ({fg.feeCategory?.name ?? "—"})
+                              </span>
+                            </span>
+                          );
+                        })()
+                      : "—"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
+                  <div className="rounded-md border border-input bg-muted/40 px-3 py-2.5 text-sm whitespace-pre-wrap min-h-[4.5rem]">
+                    {editingItem?.remarks?.trim() ? editingItem.remarks : "—"}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Program Course:</span>
+                    <p className="font-medium">
+                      {editingItem?.promotion?.programCourse?.name ?? "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Semester:</span>
+                    <p className="font-medium">{editingItem?.promotion?.class?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Shift:</span>
+                    <p className="font-medium">{editingItem?.promotion?.shift?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Slab fee (total):</span>
+                    <p className="font-semibold">
+                      {editDialogSlabTotal != null
+                        ? `₹${editDialogSlabTotal.toLocaleString("en-IN")}`
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    Slab Type{" "}
+                    {feeGroupTotalsLoading ? (
+                      <span className="text-xs text-muted-foreground">(loading options...)</span>
+                    ) : null}
+                  </Label>
+                  <Select
+                    value={editForm.feeGroupId?.toString() ?? ""}
+                    onValueChange={(v) => {
+                      const fgId = v ? Number(v) : null;
+                      const selectedFg = slabDropdownFeeGroups.find((fg) => fg.id === fgId);
+                      const slabName = (selectedFg?.feeSlab?.name ?? "").toLowerCase();
+                      // If slab f is selected, approval type is SYSTEM with no user required
+                      // Otherwise, approval type is MANUAL and user is required
+                      if (slabName === "slab f") {
+                        setEditForm((prev) => ({
+                          ...prev,
+                          feeGroupId: fgId,
+                          approvalType: "SYSTEM",
+                          approvalUserId: null,
+                        }));
+                      } else {
+                        setEditForm((prev) => ({
+                          ...prev,
+                          feeGroupId: fgId,
+                          approvalType: "MANUAL",
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select slab type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {feeGroupTotalsLoading && slabDropdownFeeGroups.length === 0 ? (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                          Loading slab options...
                         </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-              {editForm.updatedByUserId && editingItem?.updatedAt && (
-                <p className="text-xs text-muted-foreground">
-                  Last updated:{" "}
-                  {new Date(editingItem.updatedAt).toLocaleString("en-GB", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  })}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Remarks</Label>
-              <Textarea
-                placeholder="Optional remarks"
-                value={editForm.remarks}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, remarks: e.target.value }))}
-                rows={3}
-                className="resize-none"
-              />
-            </div>
+                      ) : null}
+                      {slabDropdownFeeGroups.map((fg) => (
+                        <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
+                          <div className="grid w-full grid-cols-[1fr_auto] items-center gap-3">
+                            <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+                              <span>{fg.feeSlab?.name || "-"}</span>
+                              <span className="text-gray-400">|</span>
+                              <span className="text-slate-700 font-semibold whitespace-nowrap">
+                                ₹
+                                {Number(feeGroupTotalsById?.[fg.id as number] ?? 0).toLocaleString(
+                                  "en-IN",
+                                )}
+                              </span>
+                            </div>
+                            <span className="justify-self-end text-right whitespace-nowrap text-slate-700">
+                              ({fg.feeCategory?.name || "-"})
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(() => {
+                  const selectedFg = slabDropdownFeeGroups.find(
+                    (fg) => fg.id === editForm.feeGroupId,
+                  );
+                  const slabName = (selectedFg?.feeSlab?.name ?? "").toLowerCase();
+                  // Show Approved By only when slab is NOT slab f
+                  return slabName !== "slab f" ? (
+                    <div className="space-y-2">
+                      <Label className="text-red-600">Approved By *</Label>
+                      <Select
+                        value={editForm.approvalUserId?.toString() ?? ""}
+                        onValueChange={(v) =>
+                          setEditForm((prev) => ({ ...prev, approvalUserId: v ? Number(v) : null }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select approver" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {adminStaffUsersLoading && adminStaffUsers.length === 0 ? (
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                              Loading approvers...
+                            </div>
+                          ) : null}
+                          {filteredAdminStaffUsers.map((u) => (
+                            <SelectItem key={u.id} value={u.id?.toString() ?? ""}>
+                              <div className="flex items-center gap-2">
+                                <span>{u.name}</span>
+                                {u.type && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] px-1.5 py-0 h-4"
+                                  >
+                                    {u.type}
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null;
+                })()}
+
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
+                  <Textarea
+                    placeholder="Optional remarks"
+                    value={editForm.remarks}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, remarks: e.target.value }))}
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
+              </>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditSave} disabled={savingEdit}>
-              {savingEdit ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Saving...
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
+          <DialogFooter className={isEditSaveHidden ? "sm:justify-end" : undefined}>
+            {isEditSaveHidden ? (
+              <Button onClick={() => setEditDialogOpen(false)}>Okay</Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                {editFormHasChanges ? (
+                  <Button
+                    onClick={handleEditSave}
+                    disabled={
+                      savingEdit ||
+                      (() => {
+                        const selectedFg = slabDropdownFeeGroups.find(
+                          (fg) => fg.id === editForm.feeGroupId,
+                        );
+                        const slabName = (selectedFg?.feeSlab?.name ?? "").toLowerCase();
+                        return slabName !== "slab f" && !editForm.approvalUserId;
+                      })()
+                    }
+                  >
+                    {savingEdit ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save"
+                    )}
+                  </Button>
+                ) : (
+                  <Button onClick={() => setEditDialogOpen(false)}>Okay</Button>
+                )}
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1892,6 +2431,342 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         }}
         progressUpdate={currentProgressUpdate}
       />
+
+      {/* Confirmation Dialog for Edit */}
+      <Dialog
+        open={showConfirmDialog}
+        onOpenChange={(open) => {
+          setShowConfirmDialog(open);
+          if (!open) setPendingEditData(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl gap-0 overflow-hidden border-0 p-0 shadow-lg sm:max-w-2xl">
+          <div className="bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-4 text-white sm:px-6">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
+                <GitCompare className="h-5 w-5 shrink-0 opacity-90" aria-hidden />
+                Confirm changes
+              </DialogTitle>
+              <DialogDescription className="text-sm text-violet-100">
+                Two-column summary of what will be saved. Unchanged fields show a single value;
+                changed fields show the previous value struck through, then the new value.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="max-h-[min(70vh,560px)] space-y-4 overflow-y-auto bg-background px-5 py-4 sm:px-6 sm:py-5">
+            {pendingEditData && editingItem && confirmEditDiff && (
+              <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="w-[160px] text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Field
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Value / changes
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="align-top">
+                      <TableCell className="font-medium text-muted-foreground">Slab type</TableCell>
+                      <TableCell className="text-sm leading-relaxed">
+                        {confirmEditDiff.slabChanged ? (
+                          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                            <div className="min-w-0 flex-1 rounded-lg border border-border bg-muted/25 p-3">
+                              {renderSlabSummaryEl(
+                                confirmEditDiff.prevSlabFg,
+                                editingItem.totalPayableAmount,
+                                { obsolete: true },
+                              )}
+                            </div>
+                            <div className="flex shrink-0 items-center justify-center py-1 sm:px-1">
+                              <ArrowRight
+                                className="h-5 w-5 text-violet-600 dark:text-violet-400"
+                                aria-hidden
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1 rounded-lg border border-violet-200 bg-violet-50/60 p-3 dark:border-violet-900/60 dark:bg-violet-950/35">
+                              {renderSlabSummaryEl(confirmEditDiff.nextSlabFg, null, {})}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-border bg-muted/20 p-3">
+                            {renderSlabSummaryEl(
+                              confirmEditDiff.nextSlabFg,
+                              editingItem.totalPayableAmount,
+                              {},
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    {/* Approval type row intentionally hidden */}
+                    <TableRow className="align-top">
+                      <TableCell className="font-medium text-muted-foreground">
+                        Approved by
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {(() => {
+                          const renderApproverRow = (
+                            userId: number | null,
+                            obsolete: boolean,
+                          ): React.ReactNode => {
+                            if (userId == null) return null;
+                            const u = adminStaffUsers.find((x) => x.id === userId);
+                            if (!u) {
+                              return (
+                                <div className="flex items-start gap-3">
+                                  <span
+                                    className={
+                                      obsolete
+                                        ? "line-through text-muted-foreground"
+                                        : "font-medium"
+                                    }
+                                  >
+                                    User #{userId}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="flex items-start gap-3">
+                                <UserAvatar
+                                  user={{ name: u.name, image: u.image ?? undefined }}
+                                  size="sm"
+                                  className="shrink-0 rounded-full"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p
+                                    className={
+                                      obsolete
+                                        ? "font-medium leading-tight break-words line-through text-muted-foreground decoration-muted-foreground"
+                                        : "font-medium leading-tight break-words text-foreground"
+                                    }
+                                  >
+                                    {u.name}
+                                  </p>
+                                  {u.email ? (
+                                    <p
+                                      className={
+                                        obsolete
+                                          ? "text-xs break-all line-through text-muted-foreground decoration-muted-foreground"
+                                          : "text-xs break-all text-muted-foreground"
+                                      }
+                                    >
+                                      {u.email}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          };
+
+                          if (confirmEditDiff.approvalUserChanged) {
+                            return (
+                              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                                <div className="min-w-0 flex-1 rounded-lg border border-border bg-muted/25 p-3">
+                                  {renderApproverRow(confirmEditDiff.prevUserId, true) ?? (
+                                    <span className="text-xs text-muted-foreground">
+                                      No previous approver
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex shrink-0 items-center justify-center py-1 sm:px-1">
+                                  <ArrowRight
+                                    className="h-5 w-5 text-violet-600 dark:text-violet-400"
+                                    aria-hidden
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1 rounded-lg border border-violet-200 bg-violet-50/60 p-3 dark:border-violet-900/60 dark:bg-violet-950/35">
+                                  {renderApproverRow(confirmEditDiff.nextUserId, false) ?? (
+                                    <span className="text-xs text-muted-foreground">
+                                      Not assigned
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+                          if (confirmEditDiff.nextUserId) {
+                            return (
+                              <div className="rounded-lg border border-border bg-muted/20 p-3">
+                                {renderApproverRow(confirmEditDiff.nextUserId, false)}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="font-medium text-muted-foreground">Remarks</TableCell>
+                      <TableCell className="text-sm">
+                        {confirmEditDiff.remarksChanged ? (
+                          <div className="space-y-2">
+                            {confirmEditDiff.prevRemarks ? (
+                              <p className="line-through whitespace-pre-wrap break-words text-muted-foreground decoration-muted-foreground">
+                                {confirmEditDiff.prevRemarks}
+                              </p>
+                            ) : null}
+                            {confirmEditDiff.nextRemarks ? (
+                              <p className="whitespace-pre-wrap break-words font-medium text-foreground">
+                                {confirmEditDiff.nextRemarks}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : confirmEditDiff.nextRemarks ? (
+                          <p className="whitespace-pre-wrap break-words text-foreground">
+                            {confirmEditDiff.nextRemarks}
+                          </p>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <p className="border-t pt-3 text-xs text-muted-foreground">
+              Saving updates student's fee-group mapping and recalculates related student fee totals
+              when the slab changes.
+            </p>
+          </div>
+
+          <DialogFooter className="flex-col-reverse gap-2 border-t bg-muted/20 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                setShowConfirmDialog(false);
+                setPendingEditData(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="w-full bg-violet-600 hover:bg-violet-700 sm:w-auto"
+              onClick={handleConfirmEdit}
+              disabled={savingEdit || !confirmEditDiff?.hasAnyChange}
+            >
+              {savingEdit ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Confirming...
+                </>
+              ) : (
+                "Yes, update"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <style>{`
+        .dot-spinner {
+          --uib-size: 2.8rem;
+          --uib-speed: 0.9s;
+          --uib-color: #183153;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          height: var(--uib-size);
+          width: var(--uib-size);
+        }
+
+        .dot-spinner__dot {
+          position: absolute;
+          top: 0;
+          left: 0;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          height: 100%;
+          width: 100%;
+        }
+
+        .dot-spinner__dot::before {
+          content: "";
+          height: 20%;
+          width: 20%;
+          border-radius: 50%;
+          background-color: var(--uib-color);
+          transform: scale(0);
+          opacity: 0.5;
+          animation: pulse0112 calc(var(--uib-speed) * 1.111) ease-in-out infinite;
+          box-shadow: 0 0 20px rgba(18, 31, 53, 0.3);
+        }
+
+        .dot-spinner__dot:nth-child(2) {
+          transform: rotate(45deg);
+        }
+
+        .dot-spinner__dot:nth-child(2)::before {
+          animation-delay: calc(var(--uib-speed) * -0.875);
+        }
+
+        .dot-spinner__dot:nth-child(3) {
+          transform: rotate(90deg);
+        }
+
+        .dot-spinner__dot:nth-child(3)::before {
+          animation-delay: calc(var(--uib-speed) * -0.75);
+        }
+
+        .dot-spinner__dot:nth-child(4) {
+          transform: rotate(135deg);
+        }
+
+        .dot-spinner__dot:nth-child(4)::before {
+          animation-delay: calc(var(--uib-speed) * -0.625);
+        }
+
+        .dot-spinner__dot:nth-child(5) {
+          transform: rotate(180deg);
+        }
+
+        .dot-spinner__dot:nth-child(5)::before {
+          animation-delay: calc(var(--uib-speed) * -0.5);
+        }
+
+        .dot-spinner__dot:nth-child(6) {
+          transform: rotate(225deg);
+        }
+
+        .dot-spinner__dot:nth-child(6)::before {
+          animation-delay: calc(var(--uib-speed) * -0.375);
+        }
+
+        .dot-spinner__dot:nth-child(7) {
+          transform: rotate(270deg);
+        }
+
+        .dot-spinner__dot:nth-child(7)::before {
+          animation-delay: calc(var(--uib-speed) * -0.25);
+        }
+
+        .dot-spinner__dot:nth-child(8) {
+          transform: rotate(315deg);
+        }
+
+        .dot-spinner__dot:nth-child(8)::before {
+          animation-delay: calc(var(--uib-speed) * -0.125);
+        }
+
+        @keyframes pulse0112 {
+          0%,
+          100% {
+            transform: scale(0);
+            opacity: 0.5;
+          }
+
+          50% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };

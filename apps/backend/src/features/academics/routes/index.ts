@@ -11,8 +11,18 @@ import classRouter from "@/features/academics/routes/class.route.js";
 import sectionRoutes from "@/features/academics/routes/section.route.js";
 import sessionRouter from "@/features/academics/routes/session.route.js";
 import promotionRouter from "@/features/academics/routes/promotion.route";
+import careerProgressionFormFieldRouter from "@/features/academics/routes/career-progression-form-field.route.js";
+import careerProgressionFormRouter from "@/features/academics/routes/career-progression-form.route.js";
+import certificateFieldMasterRouter from "@/features/academics/routes/certificate-field-master.route.js";
+import certificateFieldOptionMasterRouter from "@/features/academics/routes/certificate-field-option-master.route.js";
+import certificateMasterRouter from "@/features/academics/routes/certificate-master.route.js";
 
 export {
+  careerProgressionFormFieldRouter,
+  careerProgressionFormRouter,
+  certificateFieldMasterRouter,
+  certificateFieldOptionMasterRouter,
+  certificateMasterRouter,
   classRouter,
   documentRouter,
   sessionRouter,

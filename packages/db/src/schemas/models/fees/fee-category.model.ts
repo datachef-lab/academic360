@@ -1,5 +1,5 @@
 
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import z from "zod";
 import { createInsertSchema } from "drizzle-zod";
@@ -9,6 +9,8 @@ export const feeCategoryModel = pgTable("fee_categories", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
     description: varchar({ length: 500 }),
+    code: varchar({ length: 100 }).unique(),
+    isDefault: boolean().default(false).notNull(),
     createdAt: timestamp({withTimezone: true})
         .notNull()
         .defaultNow(),

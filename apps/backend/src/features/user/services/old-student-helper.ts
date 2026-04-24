@@ -2713,7 +2713,7 @@ export async function addPromotion(
         classRollNumber:
           String(oldHistoricalRecord?.rollNo!) || student.classRollNumber!,
         dateOfJoining: toDate(oldHistoricalRecord?.dateofJoining),
-        promotionStatusId: foundPromotionStatus?.id!,
+        // promotionStatusId: foundPromotionStatus?.id!,
         boardResultStatusId: foundBoardResultStatus?.id!,
         startDate: toDate(oldHistoricalRecord?.startDate) ?? null,
         endDate: toDate(oldHistoricalRecord?.endDate) ?? null,

@@ -1,10 +1,14 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Badge } from "../ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/utils/api";
-import { Loader2, Plus, Pencil } from "lucide-react";
+import { getFeeStudentMappingsByStudentId } from "@/services/fees-api";
+import type { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import { cn } from "@/lib/utils";
+import { ExternalLink, Loader2, Plus, Pencil } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
@@ -15,6 +19,128 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useAuth } from "@/features/auth/providers/auth-provider";
+
+/** Sentence-case class/semester labels; Roman numerals stay uppercase (e.g. Semester II). */
+function formatSemesterBadgeLabel(name: string | undefined | null): string {
+  if (!name?.trim()) return "";
+  const ROMAN = /^(M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3}))$/i;
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((w) =>
+      ROMAN.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+    )
+    .join(" ");
+}
+
+function isFeeMappingPaidUi(status: string | undefined): boolean {
+  const s = (status || "").trim().toUpperCase();
+  return s === "SUCCESS" || s === "COMPLETED" || s === "DONE" || s === "PAID";
+}
+
+function parseMappingDate(value: string | Date | null | undefined): Date | null {
+  if (value == null || value === "") return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+type FeeOverviewHeadline = "Pending" | "Paid latest" | "Upcoming latest";
+
+function feeMappingSemesterLabel(m: FeeStudentMappingDto): string {
+  const promotion = m.feeGroupPromotionMappings?.[0]?.promotion;
+  return promotion?.class?.name || m.feeStructure?.class?.name || "—";
+}
+
+function feeMappingPayable(m: FeeStudentMappingDto): number {
+  return Number(m.totalPayable ?? 0);
+}
+
+function pickLatestPaidMappingByTxn(mappings: FeeStudentMappingDto[]): FeeStudentMappingDto | null {
+  const paid = mappings.filter((m) => isFeeMappingPaidUi(m.paymentStatus));
+  if (!paid.length) return null;
+  let best: FeeStudentMappingDto = paid[0]!;
+  let bestT = -1;
+  for (const m of paid) {
+    const t = parseMappingDate(m.transactionDate as string | Date | null);
+    const ms = t ? t.getTime() : -1;
+    if (ms > bestT) {
+      bestT = ms;
+      best = m;
+    }
+  }
+  return best;
+}
+
+/**
+ * When fee mappings exist: Pending (owed / overdue), Upcoming latest (next window not open yet),
+ * or Paid latest (all settled). Includes the row used for semester + amount on the card.
+ */
+function computeFeeCardSummary(mappings: FeeStudentMappingDto[]): {
+  headline: FeeOverviewHeadline;
+  detail: string | null;
+  focusMapping: FeeStudentMappingDto;
+} | null {
+  if (!mappings.length) return null;
+
+  const unpaid = mappings.filter((m) => !isFeeMappingPaidUi(m.paymentStatus));
+  const now = Date.now();
+
+  const windowStart = (m: FeeStudentMappingDto) =>
+    parseMappingDate(m.feeStructureInstallment?.startDate ?? m.feeStructure?.startDate ?? null);
+  const windowEnd = (m: FeeStudentMappingDto) =>
+    parseMappingDate(m.feeStructureInstallment?.endDate ?? m.feeStructure?.endDate ?? null);
+
+  const isOverdue = (m: FeeStudentMappingDto) => {
+    const end = windowEnd(m);
+    if (end && end.getTime() < now) return true;
+    const start = windowStart(m);
+    if (start && start.getTime() <= now && !end) return true;
+    return false;
+  };
+
+  if (unpaid.length === 0) {
+    const focusMapping = pickLatestPaidMappingByTxn(mappings) ?? mappings[0]!;
+    let latest: Date | null = null;
+    for (const m of mappings) {
+      const t = parseMappingDate(m.transactionDate as string | Date | null);
+      if (t && (!latest || t.getTime() > latest.getTime())) latest = t;
+    }
+    return {
+      headline: "Paid latest",
+      detail: latest
+        ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(
+            latest,
+          )
+        : null,
+      focusMapping,
+    };
+  }
+
+  const anyOverdue = unpaid.some(isOverdue);
+  const allFuture = unpaid.every((m) => {
+    const start = windowStart(m);
+    return start != null && start.getTime() > now;
+  });
+
+  if (anyOverdue || !allFuture) {
+    const focusMapping = unpaid.find(isOverdue) ?? unpaid[0]!;
+    return { headline: "Pending", detail: null, focusMapping };
+  }
+
+  const withStart = unpaid
+    .map((m) => ({ m, s: windowStart(m) }))
+    .filter((x): x is { m: FeeStudentMappingDto; s: Date } => x.s != null)
+    .sort((a, b) => a.s.getTime() - b.s.getTime());
+  const next = withStart[0]?.s;
+  const focusMapping = withStart[0]?.m ?? unpaid[0]!;
+  return {
+    headline: "Upcoming latest",
+    detail: next
+      ? `Opens ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(next)}`
+      : null,
+    focusMapping,
+  };
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,19 +179,25 @@ interface PromotionRow {
   studentId: number;
   sessionId: number;
   classId: number;
-  session?: { id: number; name?: string; academicYearId?: number } | null;
+  dateOfJoining?: string | null;
+  remarks?: string | null;
   academicYear?: { id: number; year?: string; name?: string } | null;
   class?: { id: number; name?: string; type?: string } | null;
+  appearTypeName?: string | null;
+  /** Board / exam outcome; wired when API exposes it */
+  result?: string | null;
 }
 
 interface OverviewTabProps {
   studentId?: number;
   userId?: number;
+  /** For deep-link to Student Fees search */
+  studentUid?: string | null;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
+export default function OverviewTab({ studentId, userId, studentUid }: OverviewTabProps) {
   const queryClient = useQueryClient();
   const { user: authUser } = useAuth();
   const { availableAcademicYears } = useAcademicYear();
@@ -99,7 +231,11 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
   });
 
   // ── Fetch promotions for this student ──
-  const { data: promotionsData } = useQuery<{
+  const {
+    data: promotionsData,
+    isLoading: promotionsLoading,
+    isError: promotionsError,
+  } = useQuery<{
     promotions: PromotionRow[];
     meta: { totalSemesters: number | null; completedSemesters: number };
   }>({
@@ -115,6 +251,23 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
     },
     enabled: !!studentId && studentId > 0,
   });
+
+  const {
+    data: feeMappingsRes,
+    isLoading: feeMappingsLoading,
+    isError: feeMappingsError,
+  } = useQuery({
+    queryKey: ["student-fee-mappings", studentId],
+    queryFn: async () => {
+      if (!studentId) return [] as FeeStudentMappingDto[];
+      const res = await getFeeStudentMappingsByStudentId(studentId);
+      return res.payload ?? [];
+    },
+    enabled: !!studentId && studentId > 0,
+  });
+
+  const feeMappings = feeMappingsRes ?? [];
+  const feeCardSummary = useMemo(() => computeFeeCardSummary(feeMappings), [feeMappings]);
 
   const promotions = promotionsData?.promotions ?? [];
   const isEligibleForAlumni =
@@ -141,32 +294,150 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
-      {/* Top cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Fee summary card — compact width */}
+      <div className="w-full max-w-xs sm:max-w-sm">
         <Card className="shadow-sm border">
-          <CardHeader className="p-3 sm:p-4">
-            <CardTitle className="text-sm sm:text-base">Overview</CardTitle>
+          <CardHeader className="p-2.5 sm:p-3 pb-2">
+            <CardTitle className="text-sm font-semibold">Fee details</CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0 text-xs sm:text-sm text-muted-foreground">
-            No data available.
+          <CardContent className="p-2.5 sm:p-3 pt-0 space-y-1.5 text-xs sm:text-sm">
+            {feeMappingsLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                Loading fee summary…
+              </div>
+            ) : feeMappingsError ? (
+              <p className="text-red-500">Could not load fee data.</p>
+            ) : feeCardSummary ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] sm:text-xs font-medium",
+                      feeCardSummary.headline === "Pending" &&
+                        "bg-yellow-50 text-yellow-900 border-yellow-300",
+                      feeCardSummary.headline === "Paid latest" &&
+                        "bg-green-50 text-green-900 border-green-300",
+                      feeCardSummary.headline === "Upcoming latest" &&
+                        "bg-sky-50 text-sky-900 border-sky-300",
+                    )}
+                  >
+                    {feeCardSummary.headline}
+                  </Badge>
+                </div>
+                <p className="text-sm text-foreground">
+                  <span className="font-medium">
+                    {formatSemesterBadgeLabel(feeMappingSemesterLabel(feeCardSummary.focusMapping))}
+                  </span>
+                  <span className="text-muted-foreground"> · </span>
+                  <span className="font-semibold tabular-nums">
+                    ₹{feeMappingPayable(feeCardSummary.focusMapping).toLocaleString("en-IN")}
+                  </span>
+                </p>
+                {feeCardSummary.detail ? (
+                  <p className="text-muted-foreground">{feeCardSummary.detail}</p>
+                ) : null}
+                {studentUid ? (
+                  <Link
+                    to={`/dashboard/fees/student-fees?search=${encodeURIComponent(studentUid)}`}
+                    className="inline-flex items-center gap-1 font-medium text-violet-700 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View all fees
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-muted-foreground">No fee mappings for this student.</p>
+            )}
           </CardContent>
         </Card>
-        <Card className="shadow-sm border">
-          <CardHeader className="p-3 sm:p-4">
-            <CardTitle className="text-sm sm:text-base">Attendance</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0 text-xs sm:text-sm text-muted-foreground">
-            No data available.
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border">
-          <CardHeader className="p-3 sm:p-4">
-            <CardTitle className="text-sm sm:text-base">Fee Details</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0 text-xs sm:text-sm text-muted-foreground">
-            No data available.
-          </CardContent>
-        </Card>
+      </div>
+
+      {/* Promotion history */}
+      <div>
+        <h3 className="text-sm sm:text-base font-semibold mb-3">Promotion history</h3>
+        {promotionsLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Loading promotions…</span>
+          </div>
+        ) : promotionsError ? (
+          <p className="text-sm text-red-500 py-4">Failed to load promotion history.</p>
+        ) : promotions.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">No promotion records found.</p>
+        ) : (
+          <div className="rounded-md border border-gray-200 overflow-hidden shadow-none">
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-12">Sr.</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
+                      Academic year
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
+                      Semester
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[140px]">
+                      Appear Type
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[100px]">
+                      Result
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[130px]">
+                      Date of joining
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[160px]">
+                      Remarks
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {promotions.map((p, index) => (
+                    <TableRow key={p.id} className="border-b border-gray-200">
+                      <TableCell className="text-sm text-gray-800">{index + 1}</TableCell>
+                      <TableCell className="text-sm">
+                        {p.academicYear?.year || p.academicYear?.name || "—"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {p.class?.name ? (
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-orange-300 text-orange-800 bg-orange-50 font-normal"
+                          >
+                            {formatSemesterBadgeLabel(p.class.name)}
+                          </Badge>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">{p.appearTypeName?.trim() || "—"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {p.result?.trim() || "Pending"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {p.dateOfJoining
+                          ? new Date(p.dateOfJoining).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600 max-w-[240px] truncate">
+                        {p.remarks?.trim() || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User Status History — no Card wrapper */}

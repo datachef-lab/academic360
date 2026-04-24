@@ -1,3 +1,4 @@
+import axios from "axios";
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 import {
@@ -177,17 +178,51 @@ export async function updateFeesStructure(
   feesStructureId: number,
   feesStructure: Partial<FeeStructureDto>,
 ): Promise<ApiResponse<FeeStructureDto>> {
-  const response = await axiosInstance.put(
-    `${BASE_PATH}/structure/${feesStructureId}`,
-    feesStructure,
-  );
-  return response.data;
+  try {
+    const response = await axiosInstance.put(
+      `${BASE_PATH}/structure/${feesStructureId}`,
+      feesStructure,
+    );
+    if (!response.data?.success) {
+      const error = new Error(response.data?.message || "Failed to update fee structure");
+      (error as any).status = response.data?.statusCode;
+      (error as any).code = response.data?.code;
+      throw error;
+    }
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.message) {
+      const apiError = new Error(error.response.data.message);
+      (apiError as any).status = error.response.data.statusCode;
+      (apiError as any).code = error.response.data.code;
+      throw apiError;
+    }
+    throw error;
+  }
 }
 
 // Delete a fees structure
 export async function deleteFeesStructure(feesStructureId: number): Promise<ApiResponse<void>> {
-  const response = await axiosInstance.delete(`${BASE_PATH}/structure/${feesStructureId}`);
-  return response.data;
+  try {
+    const response = await axiosInstance.delete(`${BASE_PATH}/structure/${feesStructureId}`);
+    // Accept both legacy `{ success: true }` and ApiResponse-style success payloads.
+    // Only fail when backend explicitly marks it as unsuccessful.
+    if (response.data?.success === false) {
+      const error = new Error(response.data?.message || "Failed to delete fee structure");
+      (error as any).status = response.data?.statusCode;
+      (error as any).code = response.data?.code;
+      throw error;
+    }
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.message) {
+      const apiError = new Error(error.response.data.message);
+      (apiError as any).status = error.response.data.statusCode;
+      (apiError as any).code = error.response.data.code;
+      throw apiError;
+    }
+    throw error;
+  }
 }
 
 // ==================== FEES HEADS APIs ====================
@@ -675,7 +710,7 @@ export interface NewStudentFeesMapping {
   lateFee: number;
   totalPayable: number;
   amountPaid?: number | null;
-  paymentStatus: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED";
+  paymentStatus: "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED" | "CANCELLED";
   paymentMode: "CASH" | "CHEQUE" | "ONLINE";
   transactionRef?: string | null;
   transactionDate?: Date | null;
@@ -739,6 +774,7 @@ export async function getFeeStudentMappingsByStudentId(
 export interface NewFeeCategory {
   name: string;
   description?: string | null;
+  code?: string | null;
 }
 
 export async function getAllFeeCategories(): Promise<ApiResponse<FeeCategoryDto[]>> {
@@ -864,6 +900,9 @@ export interface NewFeeGroupPromotionMapping {
   feeGroupId?: number;
   promotionId: number;
   updatedByUserId?: number;
+  remarks?: string;
+  approvalType?: "SYSTEM" | "MANUAL";
+  approvalUserId?: number;
 }
 
 export interface FeeGroupPromotionFilterRequest {
@@ -1054,3 +1093,84 @@ export const getFeesDesignAbstractLevel = async (academicYearId?: number, course
   );
   return response.data;
 };
+
+function parseFilenameFromContentDisposition(header: string | undefined): string | null {
+  if (!header) return null;
+  const m = /filename\*?=(?:UTF-8'')?["']?([^"';\\n]+)/i.exec(header);
+  return m?.[1] ? decodeURIComponent(m[1].replace(/"/g, "").trim()) : null;
+}
+
+async function downloadFeeStructureExcelBlob(
+  kind: "fee-structures" | "fee-student-mappings",
+  academicYearId: number,
+  classId?: number,
+): Promise<{ blob: Blob; fileName: string }> {
+  try {
+    const res = await axiosInstance.get(`${BASE_PATH}/structure/download/${kind}`, {
+      params: { academicYearId, ...(classId ? { classId } : {}) },
+      responseType: "blob",
+      _skipGlobalErrorHandler: true,
+    } as Parameters<typeof axiosInstance.get>[1] & { _skipGlobalErrorHandler?: boolean });
+    const blob = res.data as Blob;
+    const fromHeader = parseFilenameFromContentDisposition(
+      res.headers["content-disposition"] as string | undefined,
+    );
+    const fileName =
+      fromHeader ??
+      (kind === "fee-structures" ? "fee-structures.xlsx" : "Fee Student Mapping & Payments.xlsx");
+    return { blob, fileName };
+  } catch (e: unknown) {
+    if (axios.isAxiosError(e) && e.response?.data instanceof Blob) {
+      const text = await (e.response.data as Blob).text();
+      try {
+        const j = JSON.parse(text) as { message?: string };
+        throw new Error(j.message || "Download failed");
+      } catch (err) {
+        if (err instanceof SyntaxError) throw new Error("Download failed");
+        throw err;
+      }
+    }
+    throw e;
+  }
+}
+
+function triggerBlobDownload(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** GET /api/v1/fees/structure/download/fee-structures — styled Excel per academic year */
+export async function downloadFeeStructuresExcelFile(
+  academicYearId: number,
+  classId?: number,
+  overrideFileName?: string,
+): Promise<void> {
+  const { blob, fileName } = await downloadFeeStructureExcelBlob(
+    "fee-structures",
+    academicYearId,
+    classId,
+  );
+  triggerBlobDownload(blob, overrideFileName || fileName);
+}
+
+/** GET /api/v1/fees/structure/download/fee-student-mappings */
+export async function downloadFeeStudentMappingsExcelFile(
+  academicYearId: number,
+  classId?: number,
+  overrideFileName?: string,
+): Promise<void> {
+  const { blob, fileName } = await downloadFeeStructureExcelBlob(
+    "fee-student-mappings",
+    academicYearId,
+    classId,
+  );
+  triggerBlobDownload(blob, overrideFileName || fileName);
+}

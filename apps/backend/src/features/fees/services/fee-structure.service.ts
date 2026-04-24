@@ -1,7 +1,6 @@
 /**
- * Checks if any fee-student-mapping for a fee structure is marked as paid
- * Returns true if any mapping is paid, else false
- * Adjust the field name (isPaid/paymentStatus) as per your schema
+ * Checks if any fee-student-mapping for a fee structure has successful payments
+ * Returns true if any mapping has a linked payment with SUCCESS status, else false
  */
 export async function hasPaidFeeStudentMappings(
   feeStructureId: number,
@@ -9,9 +8,62 @@ export async function hasPaidFeeStudentMappings(
   const mappings = await db
     .select()
     .from(feeStudentMappingModel)
+    .leftJoin(
+      paymentModel,
+      eq(feeStudentMappingModel.paymentId, paymentModel.id),
+    )
     .where(eq(feeStudentMappingModel.feeStructureId, feeStructureId));
-  // Adjust the field name as per your schema
-  return mappings.some((m) => m.paymentStatus === "COMPLETED");
+
+  // Check if any mapping has a linked payment with SUCCESS status
+  return mappings.some((m) => m.payments?.status === "SUCCESS");
+}
+
+/**
+ * Returns slabIds (feeSlabId) that are locked for a given feeStructureId.
+ *
+ * A slab is considered locked if there exists any fee-student-mapping for this fee structure
+ * whose linked fee group points to that slab AND at least one of:
+ * - challanGeneratedAt is set
+ * - paymentId is set
+ * - linked payment status is SUCCESS
+ */
+export async function getLockedSlabIdsForFeeStructure(
+  feeStructureId: number,
+): Promise<number[]> {
+  const rows = await db
+    .select({
+      feeSlabId: feeGroupModel.feeSlabId,
+      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      paymentId: feeStudentMappingModel.paymentId,
+      paymentStatus: paymentModel.status,
+    })
+    .from(feeStudentMappingModel)
+    .innerJoin(
+      feeGroupPromotionMappingModel,
+      eq(
+        feeGroupPromotionMappingModel.id,
+        feeStudentMappingModel.feeGroupPromotionMappingId,
+      ),
+    )
+    .innerJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .leftJoin(
+      paymentModel,
+      eq(paymentModel.id, feeStudentMappingModel.paymentId),
+    )
+    .where(eq(feeStudentMappingModel.feeStructureId, feeStructureId));
+
+  const locked = new Set<number>();
+  for (const r of rows) {
+    const slabId = r.feeSlabId;
+    if (typeof slabId !== "number") continue;
+    if (r.challanGeneratedAt) locked.add(slabId);
+    else if (typeof r.paymentId === "number") locked.add(slabId);
+    else if (r.paymentStatus === "SUCCESS") locked.add(slabId);
+  }
+  return Array.from(locked);
 }
 import { db } from "@/db/index.js";
 import {
@@ -37,22 +89,28 @@ import {
   classModel,
   shiftModel,
   sessionModel,
+  sectionModel,
 } from "@repo/db/schemas/models/academics";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import {
+  affiliationModel,
+  programCourseModel,
+  regulationTypeModel,
+} from "@repo/db/schemas/models/course-design";
 import { promotionModel } from "@repo/db/schemas/models/batches";
+import { paymentModel } from "@repo/db/schemas/models/payments";
 import {
   and,
   eq,
+  ne,
   count,
   desc,
   inArray,
-  sql,
-  ne,
-  not,
-  notInArray,
   or,
   asc,
+  aliasedTable,
+  sql,
 } from "drizzle-orm";
+import ExcelJS from "exceljs";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as academicYearService from "@/features/academics/services/academic-year.service.js";
 import * as classService from "@/features/academics/services/class.service.js";
@@ -64,15 +122,17 @@ import * as feeSlabService from "./fee-slab.service.js";
 import { studentModel, userModel } from "@repo/db/index.js";
 import { socketService } from "@/services/socketService.js";
 import * as userService from "@/features/user/services/user.service.js";
+import { copyCareerProgressionFormsForAcademicYearMigration } from "@/features/academics/services/career-progression-form.service.js";
 
 type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
 
 /**
  * Ensures default fee-group-promotion-mapping and fee-student-mapping
- * entries exist for all active students matching the given fee structure.
+ * entries exist for all students matching the given fee structure
+ * (regardless of active/inactive/suspended/cancelled status).
  *
  * Business rules:
- * - Find all promotions (active students) for:
+ * - Find all promotions for:
  *   - same academic year (via session -> academicYear)
  *   - same class, program course, shift as the fee structure
  * - For each promotion:
@@ -88,10 +148,12 @@ type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
  *
  * This function is idempotent for a given fee structure and set of promotions.
  */
-async function ensureDefaultFeeStudentMappingsForFeeStructure(
+export async function ensureDefaultFeeStudentMappingsForFeeStructure(
   feeStructure: typeof feeStructureModel.$inferSelect,
-  userId: number,
+  userId?: number,
   progressUserId?: string,
+  /** When set and different from the fee structure's current academic year, copy career-progression form data from this year for affected students. */
+  previousAcademicYearId?: number | null,
 ): Promise<void> {
   const emitProgress = (
     message: string,
@@ -184,7 +246,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
 
   emitProgress("Finding matching students...", 20, "in_progress");
 
-  // Find promotions (active students) matching this fee structure context
+  // Find all promotions matching this fee structure context (all students regardless of status)
   const promotions = await db
     .select({
       id: promotionModel.id,
@@ -192,15 +254,12 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
     })
     .from(promotionModel)
     .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
     .where(
       and(
         eq(sessionModel.academicYearId, feeStructure.academicYearId),
         eq(promotionModel.classId, feeStructure.classId),
         eq(promotionModel.programCourseId, feeStructure.programCourseId),
         eq(promotionModel.shiftId, feeStructure.shiftId),
-        eq(userModel.isActive, true),
       ),
     );
 
@@ -237,6 +296,26 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
     .from(programCourseModel)
     .where(eq(programCourseModel.id, feeStructure.programCourseId));
 
+  const io = socketService.getIO();
+  const studentUserIdCache = new Map<number, number>();
+  const emitFeeStudentMappingUpdated = async (studentId: number) => {
+    if (!io) return;
+    let userId = studentUserIdCache.get(studentId);
+    if (!userId) {
+      const [stu] = await db
+        .select({ userId: studentModel.userId })
+        .from(studentModel)
+        .where(eq(studentModel.id, studentId));
+      if (!stu?.userId) return;
+      userId = stu.userId;
+      studentUserIdCache.set(studentId, userId);
+    }
+    io.to(`user:${userId}`).emit("fee_student_mapping_updated", {
+      studentId,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
   let processed = 0;
   for (const promotion of promotions) {
     // 1. Ensure fee-group-promotion-mapping exists for (promotion)
@@ -257,136 +336,161 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
           .values({
             feeGroupId: generalFeeGroup.id,
             promotionId: promotion.id,
-            createdByUserId: userId,
-            updatedByUserId: userId,
+            approvalType: "SYSTEM",
           })
           .returning();
 
         feeGroupPromotionMappingId = createdMapping.id!;
       } else {
-        // For other semesters, we will take the fee-group mapping from the previous session of the same student provided that the linked fee-group has carry forward enabled.
-        const [{ promotions: previousPromotion }] = await db
-          .select()
+        // Prefer carrying forward the prior fee-group mapping when validity rules allow;
+        // otherwise create a General fee-group mapping (never skip the student).
+        let carriedFgpId: number | null = null;
+
+        const [prevPromoRow] = await db
+          .select({ id: promotionModel.id })
           .from(promotionModel)
-          .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-          .where(and(eq(promotionModel.studentId, promotion.studentId)))
-          .orderBy(desc(sessionModel.name));
-
-        if (!previousPromotion) continue; // If there is no previous promotion, we cannot carry forward, so we skip creating the mapping for this student.
-
-        const [previousFeeGroupPromotionMapping] = await db
-          .select()
-          .from(feeGroupPromotionMappingModel)
           .where(
             and(
-              eq(
-                feeGroupPromotionMappingModel.promotionId,
-                previousPromotion.id,
-              ),
+              eq(promotionModel.studentId, promotion.studentId),
+              ne(promotionModel.id, promotion.id),
             ),
-          );
+          )
+          .orderBy(desc(promotionModel.id))
+          .limit(1);
 
-        if (!previousFeeGroupPromotionMapping) continue; // If there is no previous mapping, we skip creating the mapping for this student.
-
-        // Check if the fee group linked to the previous mapping has carry forward enabled
-        const [previousFeeGroup] = await db
-          .select()
-          .from(feeGroupModel)
-          .where(
-            eq(feeGroupModel.id, previousFeeGroupPromotionMapping.feeGroupId),
-          );
-
-        let shouldFeeGroupCarryForwarded: boolean = false;
-
-        if (!previousFeeGroup) {
-          shouldFeeGroupCarryForwarded = false;
-        } else if (
-          previousFeeGroup &&
-          previousFeeGroup.validityType === "ACADEMIC_YEAR"
-        ) {
-          const [{ academic_years: previousAcademicYear }] = await db
+        if (prevPromoRow?.id != null) {
+          const [previousFeeGroupPromotionMapping] = await db
             .select()
-            .from(academicYearModel)
-            .leftJoin(
-              sessionModel,
-              eq(sessionModel.academicYearId, academicYearModel.id),
-            )
-            .leftJoin(
-              promotionModel,
-              eq(promotionModel.sessionId, sessionModel.id),
-            )
-            .where(eq(promotionModel.id, previousPromotion.id));
-
-          if (!previousAcademicYear) {
-            throw new Error(
-              `Academic year not found for previous promotion ${previousPromotion.id}`,
+            .from(feeGroupPromotionMappingModel)
+            .where(
+              eq(feeGroupPromotionMappingModel.promotionId, prevPromoRow.id),
             );
-          }
 
-          if (previousAcademicYear.id === feeStructure.academicYearId) {
-            shouldFeeGroupCarryForwarded = true;
-          } else {
-            shouldFeeGroupCarryForwarded = false;
-          }
-        } else if (
-          previousFeeGroup &&
-          previousFeeGroup.validityType === "PROGRAM_COURSE"
-        ) {
-          const [{ academic_years: registrationAcademicYear }] = await db
-            .select()
-            .from(promotionModel)
-            .leftJoin(
-              studentModel,
-              eq(studentModel.id, promotionModel.studentId),
-            )
-            .leftJoin(
-              sessionModel,
-              eq(sessionModel.id, promotionModel.sessionId),
-            )
-            .leftJoin(
-              academicYearModel,
-              eq(academicYearModel.id, sessionModel.academicYearId),
-            )
-            .where(eq(studentModel.id, promotion.studentId))
-            .orderBy(asc(sessionModel.name));
+          if (previousFeeGroupPromotionMapping) {
+            const [previousFeeGroup] = await db
+              .select()
+              .from(feeGroupModel)
+              .where(
+                eq(
+                  feeGroupModel.id,
+                  previousFeeGroupPromotionMapping.feeGroupId,
+                ),
+              );
 
-          if (!registrationAcademicYear) {
-            throw new Error(
-              `Academic year not found for student ${promotion.studentId} registration`,
-            );
-          }
+            let shouldFeeGroupCarryForwarded = false;
 
-          const registrationYear = registrationAcademicYear.year
-            .split("-")[0]
-            .trim();
-          const currentYear = foundAcademicYear.year.split("-")[0].trim();
+            if (previousFeeGroup) {
+              // Validity rules for carrying forward the *previous* fee group to this promotion:
+              // - ACADEMIC_YEAR: only while still in the same academic year as the prior mapping
+              //   (same AY as this fee structure / target promotion).
+              // - PROGRAM_COURSE: for the whole program window from admission start year through
+              //   (registration year + duration) inclusive — carry while current A.Y. start year is in range.
+              // - SEMESTER: never carried (per-semester fee group).
+              if (previousFeeGroup.validityType === "ACADEMIC_YEAR") {
+                const [{ academic_years: previousAcademicYear }] = await db
+                  .select()
+                  .from(academicYearModel)
+                  .leftJoin(
+                    sessionModel,
+                    eq(sessionModel.academicYearId, academicYearModel.id),
+                  )
+                  .leftJoin(
+                    promotionModel,
+                    eq(promotionModel.sessionId, sessionModel.id),
+                  )
+                  .where(eq(promotionModel.id, prevPromoRow.id));
 
-          if (registrationYear + foundProgramCourse.duration <= currentYear) {
-            shouldFeeGroupCarryForwarded = true;
-          } else {
-            shouldFeeGroupCarryForwarded = false;
+                if (
+                  previousAcademicYear &&
+                  previousAcademicYear.id === feeStructure.academicYearId
+                ) {
+                  shouldFeeGroupCarryForwarded = true;
+                }
+              } else if (previousFeeGroup.validityType === "PROGRAM_COURSE") {
+                const [{ academic_years: registrationAcademicYear }] = await db
+                  .select()
+                  .from(promotionModel)
+                  .leftJoin(
+                    studentModel,
+                    eq(studentModel.id, promotionModel.studentId),
+                  )
+                  .leftJoin(
+                    sessionModel,
+                    eq(sessionModel.id, promotionModel.sessionId),
+                  )
+                  .leftJoin(
+                    academicYearModel,
+                    eq(academicYearModel.id, sessionModel.academicYearId),
+                  )
+                  .where(eq(studentModel.id, promotion.studentId))
+                  .orderBy(asc(sessionModel.name));
+
+                if (registrationAcademicYear && foundProgramCourse) {
+                  const regPart = registrationAcademicYear.year
+                    .split("-")[0]
+                    .trim();
+                  const currPart = foundAcademicYear.year.split("-")[0].trim();
+                  const regY = parseInt(regPart, 10);
+                  const currY = parseInt(currPart, 10);
+                  const dur = foundProgramCourse.duration;
+                  // Inclusive window: admission start year … admission start + duration (calendar start years).
+                  const lastCoveredYear = regY + dur;
+                  const inProgramCourseWindow =
+                    Number.isFinite(regY) &&
+                    Number.isFinite(currY) &&
+                    Number.isFinite(dur) &&
+                    dur >= 0 &&
+                    currY >= regY &&
+                    currY <= lastCoveredYear;
+                  if (inProgramCourseWindow) {
+                    shouldFeeGroupCarryForwarded = true;
+                  }
+                }
+              } else if (previousFeeGroup.validityType === "SEMESTER") {
+                shouldFeeGroupCarryForwarded = false;
+              } else {
+                console.warn(
+                  `ensureDefaultFeeStudentMappingsForFeeStructure: unknown fee group validityType ${String(previousFeeGroup.validityType)} for fee group ${previousFeeGroup.id}`,
+                );
+              }
+            }
+
+            if (shouldFeeGroupCarryForwarded) {
+              // Must NOT reuse previousFeeGroupPromotionMapping.id: that row is tied to the *prior*
+              // semester's promotion_id. Fee-student-mappings must point at an FGP row whose
+              // promotion_id is *this* target promotion (correct semester linkage).
+              const prevFgp = previousFeeGroupPromotionMapping;
+              const hasPrevApproval =
+                prevFgp.approvalUserId != null && prevFgp.approvalUserId > 0;
+              const [createdCarried] = await db
+                .insert(feeGroupPromotionMappingModel)
+                .values({
+                  feeGroupId: prevFgp.feeGroupId,
+                  promotionId: promotion.id,
+                  approvalType: hasPrevApproval
+                    ? prevFgp.approvalType
+                    : "SYSTEM",
+                  ...(hasPrevApproval
+                    ? { approvalUserId: prevFgp.approvalUserId }
+                    : {}),
+                })
+                .returning();
+              if (createdCarried?.id != null) {
+                carriedFgpId = createdCarried.id;
+              }
+            }
           }
-        } else if (
-          previousFeeGroup &&
-          previousFeeGroup.validityType === "SEMESTER"
-        ) {
-          shouldFeeGroupCarryForwarded = false; // Semester-wise fee groups are not carried forward as the fees are different for each semester.
-        } else {
-          throw new Error(
-            `Invalid validity type for fee group ${previousFeeGroup.id}`,
-          );
         }
 
-        if (shouldFeeGroupCarryForwarded) {
-          feeGroupPromotionMappingId = previousFeeGroupPromotionMapping.id!;
+        if (carriedFgpId != null) {
+          feeGroupPromotionMappingId = carriedFgpId;
         } else {
           const [createdMapping] = await db
             .insert(feeGroupPromotionMappingModel)
             .values({
               feeGroupId: generalFeeGroup.id,
               promotionId: promotion.id,
-              createdByUserId: userId,
-              updatedByUserId: userId,
+              approvalType: "SYSTEM",
             })
             .returning();
 
@@ -441,6 +545,8 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
             updatedAt: new Date(),
           })
           .where(eq(feeStudentMappingModel.id, existingFeeStudentMapping.id!));
+
+        await emitFeeStudentMappingUpdated(promotion.studentId);
       }
       continue;
     }
@@ -479,8 +585,28 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
       feeStructureId: feeStructure.id!,
       feeGroupPromotionMappingId,
       totalPayable,
-      // Other fields use their database defaults (e.g. type, totals)
     });
+    await emitFeeStudentMappingUpdated(promotion.studentId);
+  }
+
+  if (
+    previousAcademicYearId != null &&
+    feeStructure.academicYearId != null &&
+    previousAcademicYearId !== feeStructure.academicYearId &&
+    promotions.length > 0
+  ) {
+    try {
+      await copyCareerProgressionFormsForAcademicYearMigration(
+        previousAcademicYearId,
+        feeStructure.academicYearId,
+        promotions.map((p) => p.studentId),
+      );
+    } catch (err) {
+      console.error(
+        "ensureDefaultFeeStudentMappingsForFeeStructure: career progression migration failed (fee mappings were still applied):",
+        err,
+      );
+    }
   }
 
   emitProgress(
@@ -534,18 +660,18 @@ export async function calculateTotalPayableForFeeStudentMapping(
       return sum + (component.amount || 0);
     }, 0);
 
-    const [feeStudentMapping] = await db
-      .select()
-      .from(feeStudentMappingModel)
-      .where(
-        and(
-          eq(
-            feeStudentMappingModel.feeGroupPromotionMappingId,
-            feeGroupPromotionMapping.id,
-          ),
-          eq(feeStudentMappingModel.feeStructureId, feeStructureId),
-        ),
-      );
+    // const [feeStudentMapping] = await db
+    //   .select()
+    //   .from(feeStudentMappingModel)
+    //   .where(
+    //     and(
+    //       eq(
+    //         feeStudentMappingModel.feeGroupPromotionMappingId,
+    //         feeGroupPromotionMapping.id,
+    //       ),
+    //       eq(feeStudentMappingModel.feeStructureId, feeStructureId),
+    //     ),
+    //   );
 
     // Return base total (sum of components) without applying any student-specific
     // waived off amounts. Waiver adjustments are handled at the mapping/update
@@ -636,6 +762,15 @@ async function modelToDto(
       advanceForClassId,
       ...rest
     } = model;
+    console.log(
+      receiptTypeId,
+      academicYearId,
+      programCourseId,
+      classId,
+      shiftId,
+      advanceForProgramCourseId,
+      advanceForClassId,
+    );
 
     return {
       ...rest,
@@ -813,7 +948,6 @@ export const getAllFeeStructures = async (
   const [
     receiptTypes,
     academicYears,
-    programCoursesRaw,
     classes,
     shifts,
     components,
@@ -831,12 +965,7 @@ export const getAllFeeStructures = async (
           .from(academicYearModel)
           .where(inArray(academicYearModel.id, academicYearIds))
       : [],
-    programCourseIds.length > 0
-      ? db
-          .select()
-          .from(programCourseModel)
-          .where(inArray(programCourseModel.id, programCourseIds))
-      : [],
+
     classIds.length > 0
       ? db.select().from(classModel).where(inArray(classModel.id, classIds))
       : [],
@@ -1291,6 +1420,58 @@ export async function updateFeeStructureByDto(
     return null;
   }
 
+  // Prevent updates to slabs that have any payment/challan activity
+  const lockedSlabIds = await getLockedSlabIdsForFeeStructure(feeStructureId);
+  if (lockedSlabIds.length > 0) {
+    // Existing components for locked slabs
+    const existingLockedComponents = await db
+      .select()
+      .from(feeStructureComponentModel)
+      .where(
+        and(
+          eq(feeStructureComponentModel.feeStructureId, feeStructureId),
+          inArray(feeStructureComponentModel.feeSlabId, lockedSlabIds),
+        ),
+      );
+
+    const existingMap = new Map<string, number>();
+    for (const c of existingLockedComponents) {
+      existingMap.set(`${c.feeSlabId}:${c.feeHeadId}`, Number(c.amount || 0));
+    }
+
+    const incoming = Array.isArray(givenDto.components)
+      ? givenDto.components
+      : [];
+    const incomingLocked = incoming.filter((c) =>
+      lockedSlabIds.includes((c as any).feeSlabId),
+    );
+
+    const incomingMap = new Map<string, number>();
+    for (const c of incomingLocked) {
+      const slabId = (c as any).feeSlabId as number;
+      const headId = (c as any).feeHeadId as number;
+      incomingMap.set(`${slabId}:${headId}`, Number((c as any).amount || 0));
+    }
+
+    let mismatch = false;
+    if (incomingMap.size !== existingMap.size) {
+      mismatch = true;
+    } else {
+      for (const [k, v] of existingMap.entries()) {
+        if (!incomingMap.has(k) || incomingMap.get(k)! !== v) {
+          mismatch = true;
+          break;
+        }
+      }
+    }
+
+    if (mismatch) {
+      throw new Error(
+        `LOCKED_SLAB_UPDATE_NOT_ALLOWED: One or more slabs have payment/challan activity. Locked slabs: ${lockedSlabIds.join(", ")}`,
+      );
+    }
+  }
+
   // Step 3: Upsert components (delete existing and insert new)
   // Delete existing components
   await db
@@ -1332,6 +1513,7 @@ export async function updateFeeStructureByDto(
     updatedFeeStructure,
     userId,
     progressUserId,
+    existingFeeStructure.academicYearId,
   );
 
   emitUpdateProgress("Fee structure updated successfully.", 100, "completed");
@@ -1386,6 +1568,19 @@ export const updateFeeStructure = async (
   data: Partial<FeeStructure>,
   userId: number,
 ): Promise<FeeStructureDto | null> => {
+  // Check if there are any fee-student-mappings with successful payments
+  const hasPaidMappings = await hasPaidFeeStudentMappings(id);
+  if (hasPaidMappings) {
+    throw new Error(
+      "PAID_MAPPINGS_EXIST|Cannot update fee structure: Some students have already paid for this fee structure. Please contact support if you need to make changes.",
+    );
+  }
+
+  const [beforeUpdate] = await db
+    .select()
+    .from(feeStructureModel)
+    .where(eq(feeStructureModel.id, id));
+
   const [updated] = await db
     .update(feeStructureModel)
     .set({
@@ -1401,6 +1596,7 @@ export const updateFeeStructure = async (
     updated,
     userId,
     userId.toString(),
+    beforeUpdate?.academicYearId,
   );
 
   const dto = await modelToDto(updated);
@@ -1439,6 +1635,14 @@ export const deleteFeeStructure = async (
   id: number,
   userId?: number,
 ): Promise<FeeStructureDto | null> => {
+  // Block deletion if any payment/challan activity exists for any slab under this structure
+  const lockedSlabIds = await getLockedSlabIdsForFeeStructure(id);
+  if (lockedSlabIds.length > 0) {
+    throw new Error(
+      "LOCKED_MAPPINGS_EXIST|Cannot delete fee structure: Payment/challan exists for this fee structure. Please contact support if deletion is necessary.",
+    );
+  }
+
   // First, get the fee structure to return it later
   const [existingFeeStructure] = await db
     .select()
@@ -1474,6 +1678,23 @@ export const deleteFeeStructure = async (
         eq(feeGroupPromotionMappingModel.promotionId, promotionModel.id),
       )
       .where(eq(feeStudentMappingModel.feeStructureId, id));
+
+    // Delete dependent payment rows first to satisfy FK
+    // payments.feeStudentMappingId -> fee_student_mappings.id.
+    const mappingIds = await tx
+      .select({ id: feeStudentMappingModel.id })
+      .from(feeStudentMappingModel)
+      .where(eq(feeStudentMappingModel.feeStructureId, id));
+
+    if (mappingIds.length > 0) {
+      // await tx.delete(paymentModel).where(
+      //   inArray(
+      //     // paymentModel.feeStudentMappingId,
+      //     mappingIds.map((m) => m.id),
+      //   ),
+      // );
+    }
+
     await tx
       .delete(feeStudentMappingModel)
       .where(eq(feeStudentMappingModel.feeStructureId, id));
@@ -2268,3 +2489,711 @@ export const checkUniqueFeeStructureAmounts = async (
     },
   };
 };
+
+const FEE_STRUCTURE_DOWNLOAD_COLUMNS = [
+  "id",
+  "Affiliation",
+  "Regulation",
+  "Academic Year",
+  "Program Course",
+  "Semester",
+  "Shift",
+  "Receipt Type",
+  "Number of Installments (Count)",
+  "Is Published?",
+  "Fee Slab",
+  "Fee Category",
+  "Fee Head (Or Components)",
+  "Amount Configured (For Fee Head)",
+  "Total Amount Configured (Per Fee Slab)",
+  "Remarks",
+  "Advance For Program Course",
+  "Advance For Semester",
+  "Fee Structure Created By",
+  "Created At",
+  "Fee Structure Last Updated By",
+  "Last Updated At",
+] as const;
+
+const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
+  "Fee-Student Mapping Id",
+  "Student",
+  "UID",
+  "Student Status",
+  "Academic Year",
+  "Program Course",
+  "Class / Semester",
+  "Shift",
+  "Section",
+  "Receipt Type",
+  "Fee Slab",
+  "Fee Category",
+  "Approval Type",
+  "Approved By",
+  "Fee Head (or Components)",
+  "Amount Configured (For Fee Heads / Components)",
+  "Total Amount Configured (Per Fee Structure)",
+  "Total Amount To Pay",
+  "Paid Amount",
+  "Payment Status",
+  "Paid Timestamp",
+  "Payment Mode",
+  "Payment Internal Remarks",
+  "Receipt / Challan Number",
+  "Receipt / Challan Generated At",
+  "Online Payment Gateway Vendor",
+  "Online Payment Order Id",
+  "Online Payment Transaction Id",
+] as const;
+
+/** Light column fills for Excel (ARGB with alpha FF). Each amount column gets a distinct pastel. */
+const FEE_STRUCTURE_AMOUNT_COLUMN_FILLS: Record<string, string> = {
+  "Amount Configured (For Fee Head)": "FFE3F2FD",
+  "Total Amount Configured (Per Fee Slab)": "FFFFF3E0",
+};
+
+/** Headers whose values are formatted as INR for Excel (₹ + Indian grouping; UTF-8 safe in XLSX). */
+const FEE_STRUCTURE_INR_AMOUNT_HEADERS = [
+  "Amount Configured (For Fee Head)",
+  "Total Amount Configured (Per Fee Slab)",
+] as const;
+
+const FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS = [
+  "Amount Configured (For Fee Heads / Components)",
+  "Total Amount Configured (Per Fee Structure)",
+  "Total Amount To Pay",
+  "Paid Amount",
+] as const;
+
+const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
+  "Total Amount Configured (Per Fee Structure)": "FFFFF3E0",
+  "Total Amount To Pay": "FFE3F2FD",
+  "Paid Amount": "FFC8E6C9",
+  "Amount Configured (For Fee Heads / Components)": "FFF3E5F5",
+};
+
+/** Display timestamps in IST (Asia/Kolkata); UTC instants from DB are converted correctly. */
+const IST_DATE_TIME: Intl.DateTimeFormatOptions = {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true,
+};
+
+const IST_DATE_ONLY: Intl.DateTimeFormatOptions = {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+};
+
+function formatInstantToIst(d: Date): string {
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-IN", IST_DATE_TIME);
+}
+
+/** ISO / SQL date[-time] strings (often UTC with `Z`) — parse then show in IST. */
+function tryParseDateStringToIst(s: string): string | null {
+  const t = s.trim();
+  if (t.length < 8) return null;
+  // yyyy-mm-dd… or ISO; avoid matching arbitrary text
+  if (!/^\d{4}-\d{2}-\d{2}/.test(t)) return null;
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return null;
+  const hasTime =
+    /[T ]\d/.test(t) ||
+    /\d{2}:\d{2}/.test(t) ||
+    t.endsWith("Z") ||
+    /[+-]\d{2}:?\d{2}$/.test(t);
+  if (hasTime) {
+    return d.toLocaleString("en-IN", IST_DATE_TIME);
+  }
+  return d.toLocaleDateString("en-IN", IST_DATE_ONLY);
+}
+
+/**
+ * INR for spreadsheet exports: Unicode ₹ (U+20B9) + `en-IN` grouping (lakhs/crores).
+ * Stored as plain UTF-8 text so mobile Excel, WPS, Word, Google Sheets all display it when fonts support ₹;
+ * if a viewer lacks the glyph, it may show a box — "Rs." is not used here per product preference for ₹.
+ */
+function formatInrMoneyForExcel(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "bigint") {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    return formatInrMoneyForExcel(n);
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return "";
+    const hasDecimals = Math.abs(value % 1) > 1e-9;
+    const formatted = value.toLocaleString("en-IN", {
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: 2,
+    });
+    return `\u20B9 ${formatted}`;
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  return formatInrMoneyForExcel(n);
+}
+
+function formatExcelCell(value: unknown): string | number {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "bigint") {
+    const n = Number(value);
+    return Number.isSafeInteger(n) ? n : String(value);
+  }
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") return value;
+  if (value instanceof Date) {
+    return formatInstantToIst(value);
+  }
+  if (typeof value === "object" && value !== null && "getTime" in value) {
+    return formatInstantToIst(new Date(value as Date));
+  }
+  if (typeof value === "string") {
+    const asIst = tryParseDateStringToIst(value);
+    if (asIst !== null) return asIst;
+  }
+  return String(value);
+}
+
+type FeeExportXlsxWriteOptions = {
+  /** Default true. Set false for large sheets (skips sharedStrings.xml build). */
+  useSharedStrings?: boolean;
+  /** STORE = no deflate; much faster writes, slightly larger file. */
+  zipCompression?: "DEFLATE" | "STORE";
+};
+
+type FeeExportExcelBufferOptions = FeeExportXlsxWriteOptions & {
+  /** Header text → ARGB (e.g. FFE8F5E9). Tints that column for row 1 (header) and all data rows. */
+  columnLightFillsByHeader?: Record<string, string>;
+  /** Column headers whose numeric amounts are exported as formatted INR strings (₹ + commas per en-IN). */
+  inrFormattedAmountHeaders?: readonly string[];
+};
+
+const EXCEL_THIN_BORDER = {
+  top: { style: "thin" as const },
+  left: { style: "thin" as const },
+  bottom: { style: "thin" as const },
+  right: { style: "thin" as const },
+};
+
+const EXCEL_COL_WIDTH_MAX = 90;
+const EXCEL_COL_WIDTH_MIN = 8;
+const EXCEL_COL_WIDTH_PAD = 2;
+/** Header row height in points (Excel); extra vertical space for wrapped titles. */
+const EXCEL_HEADER_ROW_HEIGHT_PT = 36;
+
+/** Single-pass column width computation (avoids per-column full scan). */
+function computeExcelColumnWidths(
+  columnHeaders: readonly string[],
+  formatted: Record<string, string | number>[],
+): number[] {
+  const maxLens = new Array<number>(columnHeaders.length);
+  for (let c = 0; c < columnHeaders.length; c++) {
+    maxLens[c] = columnHeaders[c].length;
+  }
+  for (const row of formatted) {
+    for (let c = 0; c < columnHeaders.length; c++) {
+      const v = row[columnHeaders[c]];
+      const len = v === "" || v == null ? 0 : String(v).length;
+      if (len > maxLens[c]) maxLens[c] = len;
+    }
+  }
+  for (let c = 0; c < maxLens.length; c++) {
+    const w = maxLens[c] + EXCEL_COL_WIDTH_PAD;
+    maxLens[c] = Math.min(
+      Math.max(w, EXCEL_COL_WIDTH_MIN),
+      EXCEL_COL_WIDTH_MAX,
+    );
+  }
+  return maxLens;
+}
+
+async function buildStyledFeeExportExcelBuffer(
+  sheetName: string,
+  columnHeaders: readonly string[],
+  rows: Record<string, unknown>[],
+  options?: FeeExportExcelBufferOptions,
+): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName);
+
+  const inrHeaders =
+    options?.inrFormattedAmountHeaders != null
+      ? new Set(options.inrFormattedAmountHeaders)
+      : null;
+
+  const n = rows.length;
+  const formatted: Record<string, string | number>[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const raw = rows[i];
+    const row: Record<string, string | number> = {};
+    for (let c = 0; c < columnHeaders.length; c++) {
+      const h = columnHeaders[c];
+      row[h] =
+        inrHeaders?.has(h) === true
+          ? formatInrMoneyForExcel(raw[h])
+          : formatExcelCell(raw[h]);
+    }
+    formatted[i] = row;
+  }
+
+  const widths = computeExcelColumnWidths(columnHeaders, formatted);
+
+  sheet.columns = columnHeaders.map((header, i) => ({
+    header,
+    key: header,
+    width: widths[i],
+  }));
+
+  sheet.addRows(formatted);
+
+  const fills = options?.columnLightFillsByHeader;
+  const lastRow = sheet.rowCount;
+
+  // --- Style header row (row 1) ---
+  if (lastRow >= 1) {
+    const headerRow = sheet.getRow(1);
+    headerRow.height = EXCEL_HEADER_ROW_HEIGHT_PT;
+    for (let c = 1; c <= columnHeaders.length; c++) {
+      const header = columnHeaders[c - 1]!;
+      const argb = fills?.[header];
+      const cell = headerRow.getCell(c);
+      cell.font = { bold: true, size: 12 };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: argb ?? "FFD3D3D3" },
+      };
+      cell.border = EXCEL_THIN_BORDER;
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "left",
+        wrapText: true,
+      };
+    }
+  }
+
+  // --- Tint only the filled amount columns in body rows (skip unfilled columns entirely) ---
+  if (fills && lastRow > 1) {
+    const filledCols: { colIdx: number; argb: string }[] = [];
+    for (let c = 0; c < columnHeaders.length; c++) {
+      const argb = fills[columnHeaders[c]];
+      if (argb) filledCols.push({ colIdx: c + 1, argb });
+    }
+    if (filledCols.length > 0) {
+      for (let r = 2; r <= lastRow; r++) {
+        const row = sheet.getRow(r);
+        for (const { colIdx, argb } of filledCols) {
+          const cell = row.getCell(colIdx);
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb } };
+          cell.border = EXCEL_THIN_BORDER;
+        }
+      }
+    }
+  }
+
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+  const useSharedStrings = options?.useSharedStrings ?? true;
+  const buffer = await workbook.xlsx.writeBuffer({
+    useSharedStrings,
+    ...(options?.zipCompression != null
+      ? { zip: { compression: options.zipCompression } }
+      : {}),
+  });
+  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+}
+
+export async function downloadFeeStructures(
+  academicYearId: number,
+  classId?: number,
+): Promise<{
+  buffer: Buffer;
+  academicYearYear: string;
+}> {
+  const advanceClass = aliasedTable(classModel, "advance_class");
+  const advanceProgramCourse = aliasedTable(
+    programCourseModel,
+    "advance_program_course",
+  );
+  const createdFeeStructureByUser = aliasedTable(userModel, "cr_fs_user");
+  const lastUpdateFeeStructureByUser = aliasedTable(userModel, "up_fs_user");
+
+  /** Sum of component amounts per fee structure + slab (same grain as downloadFeeStudentMappings). */
+  const feeSlabTotalsSq = db
+    .select({
+      feeStructureId: feeStructureComponentModel.feeStructureId,
+      feeSlabId: feeStructureComponentModel.feeSlabId,
+      slabTotal: sql<number>`sum(${feeStructureComponentModel.amount})`.as(
+        "slab_total",
+      ),
+    })
+    .from(feeStructureComponentModel)
+    .groupBy(
+      feeStructureComponentModel.feeStructureId,
+      feeStructureComponentModel.feeSlabId,
+    )
+    .as("fee_structure_slab_totals");
+
+  const rows = await db
+    .select({
+      id: feeStructureModel.id,
+
+      // Batch Details
+      Affiliation: affiliationModel.name,
+      Regulation: regulationTypeModel.name,
+      "Academic Year": academicYearModel.year,
+      "Program Course": programCourseModel.name,
+      Semester: classModel.name,
+      Shift: shiftModel.name,
+
+      // Fee Structure Meta
+      "Receipt Type": receiptTypeModel.name,
+      "Number of Installments (Count)": feeStructureModel.numberOfInstallments,
+      "Is Published?": feeStructureModel.isPublished,
+
+      // Fee Components
+      "Fee Slab": feeSlabModel.name,
+      "Fee Category": feeCategoryModel.name,
+      "Fee Head (Or Components)": feeHeadModel.name,
+      "Amount Configured (For Fee Head)": feeStructureComponentModel.amount,
+      "Total Amount Configured (Per Fee Slab)": feeSlabTotalsSq.slabTotal,
+      Remarks: feeStructureComponentModel.remarks,
+
+      // Advance Configurations
+      "Advance For Program Course": advanceProgramCourse.name,
+      "Advance For Semester": advanceClass.name,
+
+      // User Details
+      "Fee Structure Created By": createdFeeStructureByUser.name,
+      "Created At": feeStructureModel.createdAt,
+      "Fee Structure Last Updated By": lastUpdateFeeStructureByUser.name,
+      "Last Updated At": feeStructureModel.updatedAt,
+    })
+    .from(feeStructureModel)
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, feeStructureModel.academicYearId),
+    )
+    .leftJoin(
+      receiptTypeModel,
+      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, feeStructureModel.programCourseId),
+    )
+    .leftJoin(
+      affiliationModel,
+      eq(affiliationModel.id, programCourseModel.affiliationId),
+    )
+    .leftJoin(
+      regulationTypeModel,
+      eq(regulationTypeModel.id, programCourseModel.regulationTypeId),
+    )
+    .leftJoin(classModel, eq(classModel.id, feeStructureModel.classId))
+    .leftJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
+    .leftJoin(
+      advanceClass,
+      eq(advanceClass.id, feeStructureModel.advanceForClassId),
+    )
+    .leftJoin(
+      advanceProgramCourse,
+      eq(advanceProgramCourse.id, feeStructureModel.advanceForProgramCourseId),
+    )
+    .leftJoin(
+      createdFeeStructureByUser,
+      eq(createdFeeStructureByUser.id, feeStructureModel.createdByUserId),
+    )
+    .leftJoin(
+      lastUpdateFeeStructureByUser,
+      eq(lastUpdateFeeStructureByUser.id, feeStructureModel.updatedByUserId),
+    )
+    .leftJoin(
+      feeStructureComponentModel,
+      eq(feeStructureComponentModel.feeStructureId, feeStructureModel.id),
+    )
+    .leftJoin(
+      feeHeadModel,
+      eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
+    )
+    .leftJoin(
+      feeSlabModel,
+      eq(feeSlabModel.id, feeStructureComponentModel.feeSlabId),
+    )
+    .leftJoin(
+      feeSlabTotalsSq,
+      and(
+        eq(feeSlabTotalsSq.feeStructureId, feeStructureModel.id),
+        eq(feeSlabTotalsSq.feeSlabId, feeSlabModel.id),
+      ),
+    )
+    .leftJoin(feeGroupModel, eq(feeGroupModel.feeSlabId, feeSlabModel.id))
+    .leftJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+    )
+    .where(
+      classId
+        ? and(
+            eq(feeStructureModel.academicYearId, academicYearId),
+            eq(feeStructureModel.classId, classId),
+          )
+        : eq(feeStructureModel.academicYearId, academicYearId),
+    )
+    .orderBy(feeStructureModel.id, feeStructureComponentModel.id);
+
+  const academicYear =
+    await academicYearService.findAcademicYearById(academicYearId);
+  const academicYearYear =
+    academicYear?.year != null
+      ? String(academicYear.year)
+      : String(academicYearId);
+
+  const buffer = await buildStyledFeeExportExcelBuffer(
+    "Fee Structures",
+    FEE_STRUCTURE_DOWNLOAD_COLUMNS,
+    rows as Record<string, unknown>[],
+    {
+      columnLightFillsByHeader: FEE_STRUCTURE_AMOUNT_COLUMN_FILLS,
+      inrFormattedAmountHeaders: FEE_STRUCTURE_INR_AMOUNT_HEADERS,
+    },
+  );
+
+  return { buffer, academicYearYear };
+}
+
+export async function downloadFeeStudentMappings(
+  academicYearId: number,
+  classId?: number,
+): Promise<{
+  buffer: Buffer;
+  academicYearYear: string;
+}> {
+  const stdUser = aliasedTable(userModel, "std_user");
+  const fgpmUser = aliasedTable(userModel, "fgpm_user");
+  /** Pre-aggregate slab totals once (replaces per-row window SUM). */
+  const feeSlabTotalsSq = db
+    .select({
+      feeStructureId: feeStructureComponentModel.feeStructureId,
+      feeSlabId: feeStructureComponentModel.feeSlabId,
+      slabTotal: sql<number>`sum(${feeStructureComponentModel.amount})`.as(
+        "slab_total",
+      ),
+    })
+    .from(feeStructureComponentModel)
+    .groupBy(
+      feeStructureComponentModel.feeStructureId,
+      feeStructureComponentModel.feeSlabId,
+    )
+    .as("fee_slab_totals");
+
+  /** True when export treats the row as Paid (same as Payment Status = 'Paid'). */
+  const feeStudentMappingExportIsPaid = sql`(
+    UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
+      'SUCCESS', 'COMPLETED', 'DONE', 'PAID', 'TXN_SUCCESS'
+    )
+    OR (
+      NULLIF(TRIM(COALESCE(${paymentModel.txnId}::text, '')), '') IS NOT NULL
+      AND NULLIF(TRIM(COALESCE(${paymentModel.txnDate}::text, '')), '') IS NOT NULL
+      AND COALESCE(${feeStudentMappingModel.amountPaid}, 0)
+        >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
+      AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
+    )
+  )`;
+
+  const rowsPromise = db
+    .select({
+      // Fee-Student Mapping Id
+      "Fee-Student Mapping Id": feeStudentMappingModel.id,
+
+      // Student Details
+      Student: stdUser.name,
+      UID: studentModel.uid,
+      "Student Status": sql<string>`CASE
+        WHEN COALESCE(${stdUser.isActive}, true) = true
+          AND COALESCE(${studentModel.active}, true) = true
+          AND COALESCE(${stdUser.isSuspended}, false) = false
+          AND COALESCE(${studentModel.hasCancelledAdmission}, false) = false
+        THEN 'Active'
+        ELSE 'Inactive'
+      END`,
+
+      // Batch Details
+      "Academic Year": academicYearModel.year,
+      "Program Course": programCourseModel.name,
+      "Class / Semester": classModel.name,
+      Shift: shiftModel.name,
+      Section: sectionModel.name,
+
+      // Fee Structure Meta
+      "Receipt Type": receiptTypeModel.name,
+      "Fee Slab": feeSlabModel.name,
+      "Fee Category": feeCategoryModel.name,
+      "Approval Type": feeGroupPromotionMappingModel.approvalType,
+      "Approved By": fgpmUser.name,
+      "Fee Head (or Components)": feeHeadModel.name,
+      "Amount Configured (For Fee Heads / Components)":
+        feeStructureComponentModel.amount,
+      "Total Amount Configured (Per Fee Structure)": feeSlabTotalsSq.slabTotal,
+      "Total Amount To Pay": feeStudentMappingModel.totalPayable,
+
+      // Payment Summary — amounts / status / payment & receipt fields only when export is Paid.
+      "Paid Amount": sql<number | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.amount}
+        ELSE NULL
+      END`,
+      "Payment Status": sql<string>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN 'Paid' ELSE 'Pending'
+      END`,
+      "Paid Timestamp": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.txnDate}
+        ELSE NULL
+      END`,
+      "Payment Mode": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.paymentMode}::text
+        ELSE NULL
+      END`,
+      "Payment Internal Remarks": paymentModel.internalRemarks,
+      "Receipt / Challan Number": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${feeStudentMappingModel.receiptNumber}
+        ELSE NULL
+      END`,
+      "Receipt / Challan Generated At": sql<Date | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${feeStudentMappingModel.challanGeneratedAt}
+        ELSE NULL
+      END`,
+
+      // Online Payment Details (blank when Pending)
+      "Online Payment Gateway Vendor": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.paymentGatewayVendor}::text
+        ELSE NULL
+      END`,
+      "Online Payment Order Id": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.orderId}::text
+        ELSE NULL
+      END`,
+      "Online Payment Transaction Id": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.txnId}::text
+        ELSE NULL
+      END`,
+    })
+    .from(feeStudentMappingModel)
+    .innerJoin(
+      studentModel,
+      eq(studentModel.id, feeStudentMappingModel.studentId),
+    )
+    .innerJoin(stdUser, eq(stdUser.id, studentModel.userId))
+    .innerJoin(
+      feeGroupPromotionMappingModel,
+      eq(
+        feeGroupPromotionMappingModel.id,
+        feeStudentMappingModel.feeGroupPromotionMappingId,
+      ),
+    )
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
+    )
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .innerJoin(
+      academicYearModel,
+      and(
+        eq(academicYearModel.id, sessionModel.academicYearId),
+        eq(academicYearModel.id, academicYearId),
+      ),
+    )
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, promotionModel.programCourseId),
+    )
+    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+    .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
+    .innerJoin(
+      feeStructureModel,
+      classId
+        ? and(
+            eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+            eq(feeStructureModel.academicYearId, academicYearId),
+            eq(feeStructureModel.classId, classId),
+          )
+        : and(
+            eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+            eq(feeStructureModel.academicYearId, academicYearId),
+          ),
+    )
+    .leftJoin(
+      receiptTypeModel,
+      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    .innerJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .innerJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
+    .leftJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+    )
+    .leftJoin(
+      fgpmUser,
+      eq(fgpmUser.id, feeGroupPromotionMappingModel.approvalUserId),
+    )
+    .leftJoin(
+      feeSlabTotalsSq,
+      and(
+        eq(feeSlabTotalsSq.feeStructureId, feeStructureModel.id),
+        eq(feeSlabTotalsSq.feeSlabId, feeSlabModel.id),
+      ),
+    )
+    .leftJoin(
+      feeStructureComponentModel,
+      and(
+        eq(feeStructureComponentModel.feeStructureId, feeStructureModel.id),
+        eq(feeStructureComponentModel.feeSlabId, feeSlabModel.id),
+      ),
+    )
+    .leftJoin(
+      feeHeadModel,
+      eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
+    )
+    .leftJoin(
+      paymentModel,
+      eq(paymentModel.id, feeStudentMappingModel.paymentId),
+    )
+    .orderBy(
+      asc(feeStudentMappingModel.id),
+      asc(feeStructureComponentModel.id),
+    );
+
+  const [rows, academicYear] = await Promise.all([
+    rowsPromise,
+    academicYearService.findAcademicYearById(academicYearId),
+  ]);
+  const academicYearYear =
+    academicYear?.year != null
+      ? String(academicYear.year)
+      : String(academicYearId);
+
+  const buffer = await buildStyledFeeExportExcelBuffer(
+    "Fee Student Mapping & Payment",
+    FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS,
+    rows as Record<string, unknown>[],
+    {
+      useSharedStrings: false,
+      zipCompression: "STORE",
+      columnLightFillsByHeader: FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS,
+      inrFormattedAmountHeaders: FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS,
+    },
+  );
+
+  return { buffer, academicYearYear };
+}

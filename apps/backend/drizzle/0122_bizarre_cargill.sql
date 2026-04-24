@@ -1,0 +1,1 @@
+ALTER TABLE "fee_structures" DROP COLUMN "legacy_fee_structure_id";

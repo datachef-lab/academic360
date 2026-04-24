@@ -53,6 +53,7 @@ export interface ExamDto extends Omit<ExamT, "academicYearId" | "examTypeId" | "
     scheduledByUser?: ExamAuditUserInfo | null;
     lastUpdatedByUser?: ExamAuditUserInfo | null;
     candidateCount?: number; // Number of exam candidates already allotted
+    isAllotted?: boolean; // True only when rooms and candidates are assigned
 }
 
 export interface ExamGroupDto extends ExamGroupT {
@@ -63,4 +64,13 @@ export interface ExamPapersWithStats {
     paper: PaperDto;
     studentCount: number;
     examSubjectId: number;
+}
+
+/** Row shape for exam form fillup bulk Excel (headers must match exactly). */
+export interface ExamFormFillupExcelUploadRow {
+    "CU Reg Number": string;
+    "CU Roll Number": string;
+    "Appear Type": string; // Promotion Status (name)
+    /** Maps to `exam_form_fillup.status`: PENDING or COMPLETED */
+    "Form Fill Up Status": "PENDING" | "COMPLETED";
 }

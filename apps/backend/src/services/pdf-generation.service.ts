@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import puppeteer, { Browser } from "puppeteer";
 import ejs from "ejs";
 import path from "path";
 import fs from "fs/promises";
@@ -133,13 +133,23 @@ export interface CuRegistrationFormData {
   photoUrlDebug?: string;
 }
 
-// Cached admit-card template to avoid disk read per PDF
+// Cached templates to avoid disk reads per PDF
 let cachedAdmitCardTemplate: string | null = null;
+let cachedFeeReceiptTemplate: string | null = null;
+let cachedCuRegistrationTemplate: string | null = null;
+let cachedAttendanceSheetTemplate: string | null = null;
+
+// Image cache (base64 data URLs)
+const imageCache = new Map<string, string>();
+
+const PAGE_POOL_SIZE = 2;
 
 export class PdfGenerationService {
   private static instance: PdfGenerationService;
   private browser: Browser | null = null;
   private browserLaunchPromise: Promise<Browser> | null = null;
+  private pagePool: any[] = [];
+  private pagePoolReady = false;
 
   private constructor() {}
 
@@ -167,6 +177,12 @@ export class PdfGenerationService {
           "--no-first-run",
           "--no-zygote",
           "--disable-gpu",
+          "--disable-extensions",
+          "--disable-plugins",
+          "--disable-default-apps",
+          "--disable-preconnect",
+          "--disable-component-update",
+          "--disable-sync",
         ],
       };
 
@@ -176,16 +192,228 @@ export class PdfGenerationService {
 
       this.browser = await puppeteer.launch(launchOptions);
       this.browserLaunchPromise = null;
+
+      // Initialize page pool in background
+      this.initializePagePool().catch((err) =>
+        console.warn("[PDF GENERATION] Failed to initialize page pool:", err),
+      );
+
       return this.browser;
     })();
 
     return this.browserLaunchPromise;
   }
 
+  private async initializePagePool(): Promise<void> {
+    if (this.pagePoolReady || !this.browser) return;
+
+    try {
+      for (let i = 0; i < PAGE_POOL_SIZE; i++) {
+        const page = await this.browser.newPage();
+
+        // Enable request interception to block resources
+        await page.setRequestInterception(true);
+
+        // Block heavy external resources, but allow internal images
+        page.on("request", (request) => {
+          const resourceType = request.resourceType();
+          const url = request.url();
+
+          // Block external trackers and heavy CDNs
+          if (
+            resourceType === "stylesheet" ||
+            resourceType === "font" ||
+            url.includes("google-analytics") ||
+            url.includes("analytics") ||
+            url.includes("gtag") ||
+            url.includes("doubleclick")
+          ) {
+            request.abort();
+          } else {
+            // Allow images from internal domains and other resources
+            request.continue();
+          }
+        });
+
+        this.pagePool.push(page);
+      }
+      this.pagePoolReady = true;
+      console.info(
+        "[PDF GENERATION] Page pool initialized with",
+        PAGE_POOL_SIZE,
+        "pages",
+      );
+    } catch (err) {
+      console.error("[PDF GENERATION] Failed to initialize page pool:", err);
+    }
+  }
+
+  private async getPageFromPool(): Promise<any> {
+    if (!this.pagePoolReady) {
+      // If pool not ready, create page on demand
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+
+      // Enable request interception
+      await page.setRequestInterception(true);
+
+      page.on("request", (request) => {
+        const resourceType = request.resourceType();
+        const url = request.url();
+
+        if (
+          resourceType === "stylesheet" ||
+          resourceType === "font" ||
+          url.includes("google-analytics") ||
+          url.includes("analytics") ||
+          url.includes("gtag") ||
+          url.includes("doubleclick")
+        ) {
+          request.abort();
+        } else {
+          request.continue();
+        }
+      });
+
+      return page;
+    }
+
+    // Return page from pool
+    if (this.pagePool.length > 0) {
+      return this.pagePool.pop();
+    }
+
+    // If pool empty, create new page
+    const browser = await this.getBrowser();
+    const page = await browser.newPage();
+
+    // Enable request interception
+    await page.setRequestInterception(true);
+
+    page.on("request", (request) => {
+      const resourceType = request.resourceType();
+      const url = request.url();
+
+      if (
+        resourceType === "stylesheet" ||
+        resourceType === "font" ||
+        url.includes("google-analytics") ||
+        url.includes("analytics") ||
+        url.includes("gtag") ||
+        url.includes("doubleclick")
+      ) {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+    return page;
+  }
+
+  private async loadImageAsBase64(url: string): Promise<string> {
+    // Return cached image if available
+    if (imageCache.has(url)) {
+      return imageCache.get(url)!;
+    }
+
+    try {
+      // Fetch image with short timeout (internal domain should be fast)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      const response = await fetch(url, {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+
+      const buffer = await response.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString("base64");
+
+      // Determine MIME type from response header
+      const contentType = response.headers.get("content-type") || "image/png";
+      const dataUrl = `data:${contentType};base64,${base64}`;
+
+      // Cache it
+      imageCache.set(url, dataUrl);
+      console.info(
+        "[PDF GENERATION] Image cached:",
+        url.substring(0, 50) + "...",
+      );
+
+      return dataUrl;
+    } catch (error) {
+      console.warn(
+        "[PDF GENERATION] Failed to load image, using placeholder:",
+        url,
+        error,
+      );
+      // Return a small placeholder if image fails to load
+      return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmMGYwZjAiLz48L3N2Zz4=";
+    }
+  }
+
+  private returnPageToPool(page: any): void {
+    if (this.pagePool.length < PAGE_POOL_SIZE) {
+      this.pagePool.push(page);
+    } else {
+      page.close().catch(() => {});
+    }
+  }
+
+  private async loadTemplate(templateName: string): Promise<string> {
+    // Return cached template if available
+    if (templateName === "admit-card" && cachedAdmitCardTemplate) {
+      return cachedAdmitCardTemplate;
+    }
+    if (templateName === "fee-receipt" && cachedFeeReceiptTemplate) {
+      return cachedFeeReceiptTemplate;
+    }
+    if (
+      templateName === "cu-registration-form" &&
+      cachedCuRegistrationTemplate
+    ) {
+      return cachedCuRegistrationTemplate;
+    }
+    if (
+      templateName === "exam-attendance-dr-sheet" &&
+      cachedAttendanceSheetTemplate
+    ) {
+      return cachedAttendanceSheetTemplate;
+    }
+
+    // Load from disk
+    const templatePath = path.join(
+      __dirname,
+      `../templates/${templateName}.ejs`,
+    );
+    const content = await fs.readFile(templatePath, "utf-8");
+
+    // Cache it
+    if (templateName === "admit-card") {
+      cachedAdmitCardTemplate = content;
+    } else if (templateName === "fee-receipt") {
+      cachedFeeReceiptTemplate = content;
+    } else if (templateName === "cu-registration-form") {
+      cachedCuRegistrationTemplate = content;
+    } else if (templateName === "exam-attendance-dr-sheet") {
+      cachedAttendanceSheetTemplate = content;
+    }
+
+    return content;
+  }
+
   public async generateCuRegistrationPdf(
     formData: CuRegistrationFormData,
     outputPath: string,
   ): Promise<string> {
+    const startTime = Date.now();
+    let page: any = null;
+
     try {
       console.info("[PDF GENERATION] Starting CU Registration PDF generation", {
         studentUid: formData.studentUid,
@@ -210,52 +438,52 @@ export class PdfGenerationService {
         }
       }
 
-      // Read the EJS template
-      const templatePath = path.join(
-        __dirname,
-        "../templates/cu-registration-form.ejs",
-      );
-      const templateContent = await fs.readFile(templatePath, "utf-8");
+      // Load template (cached)
+      const templateContent = await this.loadTemplate("cu-registration-form");
 
       // Render the template with data
       const htmlContent = ejs.render(templateContent, formData);
 
-      // Get browser instance
-      const browser = await this.getBrowser();
-      const page = await browser.newPage();
+      // Get page from pool
+      page = await this.getPageFromPool();
 
-      // Set content and wait for resources to load
+      // Set content with short timeout
       await page.setContent(htmlContent, {
-        // waitUntil: "networkidle0",
-        waitUntil: "networkidle0",
+        waitUntil: "domcontentloaded",
+        timeout: 3000,
       });
 
-      // Generate PDF with specific settings for A4 format
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: {
-          top: "0.3cm",
-          right: "0.3cm",
-          bottom: "0.3cm",
-          left: "0.3cm",
-        },
-        displayHeaderFooter: false,
-        preferCSSPageSize: true,
-      });
+      // Generate PDF with timeout
+      const pdfBuffer = (await Promise.race([
+        page.pdf({
+          format: "A4",
+          printBackground: true,
+          margin: {
+            top: "0.3cm",
+            right: "0.3cm",
+            bottom: "0.3cm",
+            left: "0.3cm",
+          },
+          displayHeaderFooter: false,
+          preferCSSPageSize: true,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("PDF generation timeout")), 5000),
+        ),
+      ])) as any;
 
       // Ensure output directory exists
       const outputDir = path.dirname(outputPath);
       await fs.mkdir(outputDir, { recursive: true });
 
       // Write PDF to file
-      await fs.writeFile(outputPath, pdfBuffer);
+      await fs.writeFile(outputPath, Buffer.from(pdfBuffer));
 
-      await page.close();
-
+      const elapsedTime = Date.now() - startTime;
       console.info("[PDF GENERATION] PDF generated successfully", {
         outputPath,
-        fileSize: pdfBuffer.length,
+        fileSize: Buffer.byteLength(pdfBuffer),
+        elapsedMs: elapsedTime,
       });
 
       return outputPath;
@@ -264,6 +492,10 @@ export class PdfGenerationService {
       throw new Error(
         `Failed to generate PDF: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
+    } finally {
+      if (page) {
+        this.returnPageToPool(page);
+      }
     }
   }
 
@@ -281,6 +513,9 @@ export class PdfGenerationService {
   public async generateCuRegistrationPdfBuffer(
     formData: CuRegistrationFormData,
   ): Promise<Buffer> {
+    const startTime = Date.now();
+    let page: any = null;
+
     try {
       console.info(
         "[PDF GENERATION] Starting CU Registration PDF generation in memory",
@@ -307,51 +542,57 @@ export class PdfGenerationService {
         }
       }
 
-      // Read the EJS template
-      const templatePath = path.join(
-        __dirname,
-        "../templates/cu-registration-form.ejs",
-      );
-      const templateContent = await fs.readFile(templatePath, "utf-8");
+      // Load template (cached)
+      const templateContent = await this.loadTemplate("cu-registration-form");
 
       // Render the template with data
       const htmlContent = ejs.render(templateContent, formData);
 
-      // Get browser instance
-      const browser = await this.getBrowser();
-      const page = await browser.newPage();
+      // Get page from pool
+      page = await this.getPageFromPool();
 
-      // Set content and wait for resources to load
+      // Set content and wait for resources to load with timeout
       await page.setContent(htmlContent, {
-        waitUntil: "networkidle0",
+        waitUntil: "domcontentloaded",
+        timeout: 3000,
       });
 
-      // Generate PDF buffer
-      const pdfUint8Array = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: {
-          top: "0.3in",
-          right: "0.3in",
-          bottom: "0.3in",
-          left: "0.3in",
-        },
-      });
+      // Generate PDF buffer with timeout to prevent hangs
+      const pdfUint8Array = (await Promise.race([
+        page.pdf({
+          format: "A4",
+          printBackground: true,
+          margin: {
+            top: "0.3in",
+            right: "0.3in",
+            bottom: "0.3in",
+            left: "0.3in",
+          },
+          preferCSSPageSize: true,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("PDF generation timeout")), 5000),
+        ),
+      ])) as any;
 
       // Convert Uint8Array to Buffer
       const pdfBuffer = Buffer.from(pdfUint8Array);
 
-      await page.close();
-
+      const elapsedTime = Date.now() - startTime;
       console.info("[PDF GENERATION] PDF generated successfully in memory", {
         bufferSize: pdfBuffer.length,
         studentUid: formData.studentUid,
+        elapsedMs: elapsedTime,
       });
 
       return pdfBuffer;
     } catch (error) {
       console.error("[PDF GENERATION] PDF generation failed:", error);
       throw error;
+    } finally {
+      if (page) {
+        this.returnPageToPool(page);
+      }
     }
   }
 
@@ -378,6 +619,9 @@ export class PdfGenerationService {
     }>;
     studentImage?: string;
   }): Promise<Buffer> {
+    const startTime = Date.now();
+    let page: any = null;
+
     formData.studentImage = `https://besc.academic360.app/id-card-generate/api/images?uid=${formData.uid}&crop=true`;
     try {
       console.info(
@@ -388,7 +632,6 @@ export class PdfGenerationService {
       );
 
       // Generate QR code for application number if not provided
-
       try {
         formData.qrCodeDataUrl = await QRCodeService.generateApplicationQRCode(
           formData.uid,
@@ -403,57 +646,57 @@ export class PdfGenerationService {
         );
       }
 
-      // Read and cache the EJS template (avoids disk read per PDF)
-      if (!cachedAdmitCardTemplate) {
-        const templatePath = path.join(
-          __dirname,
-          "../templates/admit-card.ejs",
-        );
-        cachedAdmitCardTemplate = await fs.readFile(templatePath, "utf-8");
-      }
+      // Load template (cached)
+      const templateContent = await this.loadTemplate("admit-card");
 
       // Render the template with data
-      const htmlContent = ejs.render(cachedAdmitCardTemplate, formData);
+      const htmlContent = ejs.render(templateContent, formData);
 
-      // Get browser instance
-      const browser = await this.getBrowser();
-      const page = await browser.newPage();
+      // Get page from pool
+      page = await this.getPageFromPool();
 
-      // Set content: use "load" instead of "networkidle0" - networkidle0 waits
-      // for 500ms of no network activity, which can hang on slow external images.
-      // "load" fires when DOM + resources (images) are loaded or failed.
-      const CONTENT_TIMEOUT_MS = 30_000;
+      // Set content: use "domcontentloaded" for faster rendering
       await page.setContent(htmlContent, {
-        waitUntil: "load",
-        timeout: CONTENT_TIMEOUT_MS,
+        waitUntil: "domcontentloaded",
+        timeout: 3000,
       });
 
-      // Generate PDF buffer
-      const pdfUint8Array = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: {
-          top: "0.3in",
-          right: "0.3in",
-          bottom: "0.3in",
-          left: "0.3in",
-        },
-      });
+      // Generate PDF buffer with timeout to prevent hangs
+      const pdfUint8Array = (await Promise.race([
+        page.pdf({
+          format: "A4",
+          printBackground: true,
+          margin: {
+            top: "0.3in",
+            right: "0.3in",
+            bottom: "0.3in",
+            left: "0.3in",
+          },
+          preferCSSPageSize: true,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("PDF generation timeout")), 5000),
+        ),
+      ])) as any;
 
       // Convert Uint8Array to Buffer
       const pdfBuffer = Buffer.from(pdfUint8Array);
 
-      await page.close();
-
+      const elapsedTime = Date.now() - startTime;
       console.info("[PDF GENERATION] PDF generated successfully in memory", {
         bufferSize: pdfBuffer.length,
         studentUid: formData.uid,
+        elapsedMs: elapsedTime,
       });
 
       return pdfBuffer;
     } catch (error) {
       console.error("[PDF GENERATION] PDF generation failed:", error);
       throw error;
+    } finally {
+      if (page) {
+        this.returnPageToPool(page);
+      }
     }
   }
 
@@ -471,56 +714,55 @@ export class PdfGenerationService {
       seatNumber: string;
     }>;
   }): Promise<Buffer> {
+    const startTime = Date.now();
+    let page: any = null;
+
     try {
       console.info(
         "[PDF GENERATION] Starting Exam Attendance Sheet PDF generation in memory",
         formData.roomNumber,
       );
 
-      // Read the EJS template
-      const templatePath = path.join(
-        __dirname,
-        "../templates/exam-attendance-dr-sheet.ejs",
+      // Load template (cached)
+      const templateContent = await this.loadTemplate(
+        "exam-attendance-dr-sheet",
       );
-      const templateContent = await fs.readFile(templatePath, "utf-8");
 
       // Render the template with data
       const htmlContent = ejs.render(templateContent, formData);
 
-      // Get browser instance
-      const browser = await this.getBrowser();
-      const page = await browser.newPage();
+      // Get page from pool
+      page = await this.getPageFromPool();
 
-      // Set content and wait for resources to load
+      // Set content and wait for resources to load with timeout
       await page.setContent(htmlContent, {
-        waitUntil: "networkidle0",
-        timeout: 0, // optional but recommended
+        waitUntil: "domcontentloaded",
+        timeout: 3000,
       });
-      page.setDefaultNavigationTimeout(0);
-      page.setDefaultTimeout(0);
 
-      // Generate PDF buffer
-      const pdfUint8Array = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        landscape: true,
-        margin: {
-          //   top: "0.3in",
-          //   right: "0.3in",
-          //   bottom: "0.3in",
-          //   left: "0.3in",
-        },
-      });
+      // Generate PDF buffer with timeout to prevent hangs
+      const pdfUint8Array = (await Promise.race([
+        page.pdf({
+          format: "A4",
+          printBackground: true,
+          landscape: true,
+          preferCSSPageSize: true,
+          margin: {},
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("PDF generation timeout")), 5000),
+        ),
+      ])) as any;
 
       // Convert Uint8Array to Buffer
       const pdfBuffer = Buffer.from(pdfUint8Array);
 
-      await page.close();
-
+      const elapsedTime = Date.now() - startTime;
       console.info(
         "[PDF GENERATION] Attendance DR PDF generated successfully in memory",
         {
           bufferSize: pdfBuffer.length,
+          elapsedMs: elapsedTime,
         },
       );
 
@@ -528,6 +770,10 @@ export class PdfGenerationService {
     } catch (error) {
       console.error("[PDF GENERATION] PDF generation failed:", error);
       throw error;
+    } finally {
+      if (page) {
+        this.returnPageToPool(page);
+      }
     }
   }
 
@@ -542,7 +788,14 @@ export class PdfGenerationService {
     programCourse: string;
     shift: string;
     challanNumber: string;
+    paidDate: string; // dd/mm/yyyy
+    isPaid: boolean;
+    mode: "online" | "offline";
     challanDate: string; // dd/mm/yyyy — immutable generation date
+    ePaid?: null | {
+      orderId: string;
+      transactionDate: string; // dd/mm/yyyy
+    };
     feeComponents: Array<{
       name: string;
       amount: string;
@@ -550,71 +803,98 @@ export class PdfGenerationService {
     totalPayableAmount: string;
     totalPayableAmountInWords: string;
   }): Promise<Buffer> {
+    const startTime = Date.now();
+    let page: any = null;
+
     try {
       console.info(
         "[PDF GENERATION] Starting Fee Receipt PDF generation in memory",
         formData.uid,
       );
 
-      // Read the EJS template
-      const templatePath = path.join(__dirname, "../templates/fee-receipt.ejs");
-      const templateContent = await fs.readFile(templatePath, "utf-8");
+      // Load template (cached)
+      const templateContent = await this.loadTemplate("fee-receipt");
+
+      // Pre-load college logo as base64 to avoid network delays during PDF generation
+      // This MUST be done before EJS rendering
+      const collegeLogoUrl =
+        "https://besc.academic360.app/api/api/v1/settings/file/4";
+      const collegeLogoBase64 = await this.loadImageAsBase64(collegeLogoUrl);
+
+      // Create a modified template that uses the injected base64 image
+      const modifiedTemplateData = {
+        ...formData,
+        collegeLogoDataUrl: collegeLogoBase64,
+        showSpecimenWatermark:
+          process.env.NODE_ENV === "development" ||
+          process.env.NODE_ENV === "staging",
+      };
 
       // Render the template with data
-      const htmlContent = ejs.render(templateContent, formData);
+      const htmlContent = ejs.render(templateContent, modifiedTemplateData);
 
-      // Get browser instance
-      const browser = await this.getBrowser();
-      const page = await browser.newPage();
+      // Get page from pool (much faster than creating new)
+      page = await this.getPageFromPool();
 
-      // Set content and wait for resources to load (CDN script + barcode render)
+      // Set content - skip waiting for external resources
       await page.setContent(htmlContent, {
-        waitUntil: "networkidle0",
-        timeout: 30000,
+        waitUntil: "domcontentloaded",
+        timeout: 2000,
       });
-      page.setDefaultNavigationTimeout(30000);
-      page.setDefaultTimeout(15000);
 
-      // Wait for JsBarcode to render barcodes before capturing PDF (avoids blank barcodes)
-      await page
-        .waitForSelector(".challan-barcode path", { timeout: 10000 })
-        .catch(() => {
-          // If selector never appears, continue anyway to avoid blocking
-        });
-
-      // Generate PDF buffer
-      const pdfUint8Array = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        landscape: true,
-        margin: {
-          //   top: "0.3in",
-          //   right: "0.3in",
-          //   bottom: "0.3in",
-          //   left: "0.3in",
-        },
-      });
+      // Render PDF immediately without waiting for anything
+      const pdfUint8Array = (await Promise.race([
+        page.pdf({
+          format: "A4",
+          printBackground: true,
+          landscape: true,
+          preferCSSPageSize: true,
+          margin: {
+            top: "0",
+            right: "0",
+            bottom: "0",
+            left: "0",
+          },
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("PDF generation timeout")), 4000),
+        ),
+      ])) as any;
 
       // Convert Uint8Array to Buffer
       const pdfBuffer = Buffer.from(pdfUint8Array);
 
-      await page.close();
-
-      console.info(
-        "[PDF GENERATION] Fee Receipt PDF generated successfully in memory",
-        {
-          bufferSize: pdfBuffer.length,
-        },
-      );
+      const elapsedTime = Date.now() - startTime;
+      console.info("[PDF GENERATION] Fee Receipt PDF generated in memory", {
+        bufferSize: pdfBuffer.length,
+        elapsedMs: elapsedTime,
+      });
 
       return pdfBuffer;
     } catch (error) {
       console.error("[PDF GENERATION] PDF generation failed:", error);
       throw error;
+    } finally {
+      // Return page to pool for reuse
+      if (page) {
+        this.returnPageToPool(page);
+      }
     }
   }
 
   public async close(): Promise<void> {
+    // Close all pooled pages
+    for (const page of this.pagePool) {
+      try {
+        await page.close();
+      } catch (err) {
+        console.warn("[PDF GENERATION] Error closing pooled page:", err);
+      }
+    }
+    this.pagePool = [];
+    this.pagePoolReady = false;
+
+    // Close browser
     if (this.browser) {
       await this.browser.close();
       this.browser = null;
@@ -622,13 +902,13 @@ export class PdfGenerationService {
   }
 }
 
-function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-}
+// function chunkArray<T>(array: T[], size: number): T[][] {
+//   const chunks: T[][] = [];
+//   for (let i = 0; i < array.length; i += size) {
+//     chunks.push(array.slice(i, i + size));
+//   }
+//   return chunks;
+// }
 
 // Export singleton instance
 export const pdfGenerationService = PdfGenerationService.getInstance();

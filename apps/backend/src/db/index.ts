@@ -41,6 +41,9 @@ import { createLogger } from "@/config/logger.js";
 import { loadDefaultUserTypes } from "@/features/administration/services/user-type.service";
 import { loadDefaultUserStatusMasters } from "@/features/administration/services/user-status-master.service";
 import { loadDefaultAppModules } from "@/features/administration/services/app-module.service";
+import { loadDefaultCertificateMasters } from "@/features/academics/services/default-certificate-master-loader.service.js";
+import { loadDefaultPromotionData } from "@/features/batches/default-promotion-data-loader.service.js";
+import { loadStudentFees } from "@/features/fees/services/legacy-fees-data.service";
 const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -76,7 +79,7 @@ export const connectToDatabase = async () => {
     // loadOccupations();
     // loadQualifications();
     // loadNationalities();
-    loadAffiliation();
+    await loadAffiliation();
     loadCourseLevel();
     // loadAllAddress();
     // loadAllPostOffice();
@@ -92,6 +95,13 @@ export const connectToDatabase = async () => {
     // loadDefaultUserTypes();
     // loadDefaultUserStatusMasters();
     loadDefaultAppModules();
+    loadDefaultCertificateMasters().catch((e) => {
+      log.warn("Default certificate master load failed", { error: e });
+    });
+    loadDefaultPromotionData().catch((e) => {
+      log.warn("Default promotion data load failed", { error: e });
+    });
+    loadStudentFees();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();

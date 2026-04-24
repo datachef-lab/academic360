@@ -52,95 +52,82 @@ async function promotionToDto(
 ): Promise<PromotionDto | null> {
   if (!promotion) return null;
 
-  const [
-    promStatus,
-    boardResStatus,
-    sess,
-    cls,
-    sec,
-    shf,
-    progCourse,
-    studentWithDetails,
-  ] = await Promise.all([
-    db
-      .select()
-      .from(promotionStatusModel)
-      .where(eq(promotionStatusModel.id, promotion.promotionStatusId))
-      .then((r) => r[0] ?? null),
-    promotion.boardResultStatusId
-      ? db
-          .select()
-          .from(boardResultStatusModel)
-          .where(eq(boardResultStatusModel.id, promotion.boardResultStatusId))
-          .then((r) => r[0] ?? null)
-      : Promise.resolve(null),
-    db
-      .select()
-      .from(sessionModel)
-      .where(eq(sessionModel.id, promotion.sessionId))
-      .then(async (r) => {
-        const session = r[0] ?? null;
-        if (session && session.academicYearId) {
-          const [academicYear] = await db
+  const [boardResStatus, sess, cls, sec, shf, progCourse, studentWithDetails] =
+    await Promise.all([
+      promotion.boardResultStatusId
+        ? db
             .select()
-            .from(academicYearModel)
-            .where(eq(academicYearModel.id, session.academicYearId));
+            .from(boardResultStatusModel)
+            .where(eq(boardResultStatusModel.id, promotion.boardResultStatusId))
+            .then((r) => r[0] ?? null)
+        : Promise.resolve(null),
+      db
+        .select()
+        .from(sessionModel)
+        .where(eq(sessionModel.id, promotion.sessionId))
+        .then(async (r) => {
+          const session = r[0] ?? null;
+          if (session && session.academicYearId) {
+            const [academicYear] = await db
+              .select()
+              .from(academicYearModel)
+              .where(eq(academicYearModel.id, session.academicYearId));
 
-          return {
-            ...session,
-            academicYear: academicYear || null,
-          };
-        }
-        return session;
-      }),
-    db
-      .select()
-      .from(classModel)
-      .where(eq(classModel.id, promotion.classId))
-      .then((r) => r[0] ?? null),
-    promotion.sectionId
-      ? db
-          .select()
-          .from(sectionModel)
-          .where(eq(sectionModel.id, promotion.sectionId))
-          .then((r) => r[0] ?? null)
-      : Promise.resolve(null),
-    db
-      .select()
-      .from(shiftModel)
-      .where(eq(shiftModel.id, promotion.shiftId))
-      .then((r) => r[0] ?? null),
-    programCourseService.findById(promotion.programCourseId),
-    // Student + personal details (for name, UID, religion, category, community)
-    db
-      .select({
-        uid: studentModel.uid,
-        community: studentModel.community,
-        firstName: personalDetailsModel.firstName,
-        middleName: personalDetailsModel.middleName,
-        lastName: personalDetailsModel.lastName,
-        religionName: religionModel.name,
-        categoryName: categoryModel.name,
-      })
-      .from(studentModel)
-      .leftJoin(
-        personalDetailsModel,
-        eq(personalDetailsModel.userId, studentModel.userId),
-      )
-      .leftJoin(
-        religionModel,
-        eq(religionModel.id, personalDetailsModel.religionId),
-      )
-      .leftJoin(
-        categoryModel,
-        eq(categoryModel.id, personalDetailsModel.categoryId),
-      )
-      .where(eq(studentModel.id, promotion.studentId))
-      .then((r) => r[0] ?? null),
-  ]);
+            return {
+              ...session,
+              academicYear: academicYear || null,
+            };
+          }
+          return session;
+        }),
+      db
+        .select()
+        .from(classModel)
+        .where(eq(classModel.id, promotion.classId))
+        .then((r) => r[0] ?? null),
+      promotion.sectionId
+        ? db
+            .select()
+            .from(sectionModel)
+            .where(eq(sectionModel.id, promotion.sectionId))
+            .then((r) => r[0] ?? null)
+        : Promise.resolve(null),
+      db
+        .select()
+        .from(shiftModel)
+        .where(eq(shiftModel.id, promotion.shiftId))
+        .then((r) => r[0] ?? null),
+      programCourseService.findById(promotion.programCourseId),
+      // Student + personal details (for name, UID, religion, category, community)
+      db
+        .select({
+          uid: studentModel.uid,
+          community: studentModel.community,
+          firstName: personalDetailsModel.firstName,
+          middleName: personalDetailsModel.middleName,
+          lastName: personalDetailsModel.lastName,
+          religionName: religionModel.name,
+          categoryName: categoryModel.name,
+        })
+        .from(studentModel)
+        .leftJoin(
+          personalDetailsModel,
+          eq(personalDetailsModel.userId, studentModel.userId),
+        )
+        .leftJoin(
+          religionModel,
+          eq(religionModel.id, personalDetailsModel.religionId),
+        )
+        .leftJoin(
+          categoryModel,
+          eq(categoryModel.id, personalDetailsModel.categoryId),
+        )
+        .where(eq(studentModel.id, promotion.studentId))
+        .then((r) => r[0] ?? null),
+    ]);
 
   // Section can be optional; allow promotions without a section.
-  if (!promStatus || !sess || !cls || !shf || !progCourse) {
+  if (!sess || !cls || !shf || !progCourse) {
     return null;
   }
 
@@ -170,7 +157,7 @@ async function promotionToDto(
     remarks: promotion.remarks ?? null,
     createdAt: promotion.createdAt ?? new Date(),
     updatedAt: promotion.updatedAt ?? new Date(),
-    promotionStatus: promStatus,
+    // promotionStatus: promStatus,
     boardResultStatus: boardResStatus!,
     session: sess,
     class: cls,
@@ -266,8 +253,6 @@ export const createFeeCategoryPromotionMapping = async (
     .insert(feeGroupPromotionMappingModel)
     .values({
       ...data,
-      createdByUserId: userId,
-      updatedByUserId: userId,
     })
     .returning();
 
@@ -349,7 +334,6 @@ export const updateFeeCategoryPromotionMapping = async (
     .set({
       ...data,
       updatedAt: new Date(),
-      updatedByUserId: userId,
     })
     .where(eq(feeGroupPromotionMappingModel.id, id))
     .returning();
@@ -363,46 +347,86 @@ export const updateFeeCategoryPromotionMapping = async (
     data.feeGroupId !== undefined && data.feeGroupId !== existing.feeGroupId;
 
   if (feeGroupChanged) {
-    // Import the calculateTotalPayableForFeeStudentMapping function from fee-structure service
-    const { calculateTotalPayableForFeeStudentMapping } =
-      await import("./fee-structure.service.js");
-
     // Find all fee-student-mappings that use this fee-group-promotion-mapping
     const relatedFeeStudentMappings = await db
-      .select()
+      .select({
+        id: feeStudentMappingModel.id,
+        feeStructureId: feeStudentMappingModel.feeStructureId,
+        isWaivedOff: feeStudentMappingModel.isWaivedOff,
+        waivedOffAmount: feeStudentMappingModel.waivedOffAmount,
+      })
       .from(feeStudentMappingModel)
       .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, id));
 
-    // Get fee group to get fee category ID
+    if (relatedFeeStudentMappings.length === 0) {
+      return await modelToDto(updated);
+    }
+
+    // Get fee group to access mapped slab
     const [feeGroup] = await db
-      .select()
+      .select({ feeSlabId: feeGroupModel.feeSlabId })
       .from(feeGroupModel)
       .where(eq(feeGroupModel.id, updated.feeGroupId));
 
-    if (feeGroup) {
-      // Update each fee-student-mapping with recalculated totalPayable
-      for (const feeStudentMapping of relatedFeeStudentMappings) {
-        const newTotalPayable = await calculateTotalPayableForFeeStudentMapping(
-          feeStudentMapping.feeStructureId,
-          updated,
-        );
+    if (feeGroup?.feeSlabId) {
+      const feeStructureIds = Array.from(
+        new Set(relatedFeeStudentMappings.map((m) => m.feeStructureId)),
+      );
 
-        // Recalculate final totalPayable accounting for waived off amount
-        const waivedOffAmount = feeStudentMapping.isWaivedOff
-          ? feeStudentMapping.waivedOffAmount || 0
-          : 0;
-        const finalTotalPayable = Math.max(
-          0,
-          newTotalPayable - waivedOffAmount,
-        );
+      const relevantComponents =
+        feeStructureIds.length > 0
+          ? await db
+              .select({
+                feeStructureId: feeStructureComponentModel.feeStructureId,
+                amount: feeStructureComponentModel.amount,
+              })
+              .from(feeStructureComponentModel)
+              .where(
+                and(
+                  inArray(
+                    feeStructureComponentModel.feeStructureId,
+                    feeStructureIds,
+                  ),
+                  eq(feeStructureComponentModel.feeSlabId, feeGroup.feeSlabId),
+                ),
+              )
+          : [];
 
-        await db
-          .update(feeStudentMappingModel)
-          .set({
-            totalPayable: finalTotalPayable,
-            updatedAt: new Date(),
-          })
-          .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
+      const totalByFeeStructureId = new Map<number, number>();
+      for (const component of relevantComponents) {
+        totalByFeeStructureId.set(
+          component.feeStructureId,
+          (totalByFeeStructureId.get(component.feeStructureId) ?? 0) +
+            (component.amount || 0),
+        );
+      }
+
+      const chunkSize = 100;
+      for (let i = 0; i < relatedFeeStudentMappings.length; i += chunkSize) {
+        const chunk = relatedFeeStudentMappings.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map(async (feeStudentMapping) => {
+            const baseTotal =
+              Math.round(
+                totalByFeeStructureId.get(feeStudentMapping.feeStructureId) ??
+                  0,
+              ) || 0;
+            const waivedOffAmount = feeStudentMapping.isWaivedOff
+              ? feeStudentMapping.waivedOffAmount || 0
+              : 0;
+            const finalTotalPayable = Math.max(0, baseTotal - waivedOffAmount);
+
+            await db
+              .update(feeStudentMappingModel)
+              .set({
+                totalPayable: finalTotalPayable,
+                receiptNumber: null,
+                challanGeneratedAt: null,
+                updatedAt: new Date(),
+              })
+              .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
+          }),
+        );
       }
     }
   }
@@ -751,8 +775,6 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
             .values({
               feeGroupId,
               promotionId: promotion.id,
-              createdByUserId: userId,
-              updatedByUserId: userId,
             })
             .returning();
 

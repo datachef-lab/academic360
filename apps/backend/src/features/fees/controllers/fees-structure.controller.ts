@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
+import { User } from "@repo/db/schemas";
+import { socketService } from "@/services/socketService.js";
 import * as feeStructureService from "../services/fee-structure.service.js";
 import {
   FeeStructure,
@@ -7,8 +9,14 @@ import {
 } from "@repo/db/schemas/models/fees";
 import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
 import { handleError } from "@/utils/handleError.js";
+import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
+
+/** Socket `meta.operation` — must match main-console reports `handleDownload(..., op)` */
+const FEE_STRUCTURES_EXCEL_DOWNLOAD_OP = "fee_structures_excel_download";
+const FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP =
+  "fee_student_mappings_excel_download";
 
 function toDate(val: unknown): Date | null {
   if (!val) return null;
@@ -209,6 +217,37 @@ export const getFeeStructureById = async (
   }
 };
 
+export const getLockedSlabsForFeeStructure = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+
+    const slabIds =
+      await feeStructureService.getLockedSlabIdsForFeeStructure(id);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { slabIds },
+          "Locked slabs fetched successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
 export const updateFeeStructure = async (
   req: Request,
   res: Response,
@@ -278,6 +317,19 @@ export const updateFeeStructure = async (
       .status(200)
       .json(new ApiResponse(200, "UPDATED", updated, "Fee structure updated"));
   } catch (error) {
+    // Handle paid mappings validation error
+    if (
+      error instanceof Error &&
+      error.message.startsWith("PAID_MAPPINGS_EXIST")
+    ) {
+      const message =
+        error.message.split("|")[1] ||
+        "Cannot update fee structure with paid mappings";
+      res
+        .status(409)
+        .json(new ApiResponse(409, "PAID_MAPPINGS_EXIST", null, message));
+      return;
+    }
     handleError(error, res, next);
   }
 };
@@ -314,6 +366,19 @@ export const deleteFeeStructure = async (
       .status(200)
       .json(new ApiResponse(200, "DELETED", deleted, "Fee structure deleted"));
   } catch (error) {
+    // Handle paid mappings validation error
+    if (
+      error instanceof Error &&
+      error.message.startsWith("PAID_MAPPINGS_EXIST")
+    ) {
+      const message =
+        error.message.split("|")[1] ||
+        "Cannot delete fee structure with paid mappings";
+      res
+        .status(409)
+        .json(new ApiResponse(409, "PAID_MAPPINGS_EXIST", null, message));
+      return;
+    }
     handleError(error, res, next);
   }
 };
@@ -521,11 +586,21 @@ export const updateFeeStructureByDto = async (
       return;
     }
 
-    const updated = await feeStructureService.updateFeeStructureByDto(
-      id,
-      data,
-      userId,
-    );
+    let updated: FeeStructureDto | null = null;
+    try {
+      updated = await feeStructureService.updateFeeStructureByDto(
+        id,
+        data,
+        userId,
+      );
+    } catch (e: any) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.startsWith("LOCKED_SLAB_UPDATE_NOT_ALLOWED")) {
+        res.status(409).json(new ApiResponse(409, "LOCKED_SLAB", null, msg));
+        return;
+      }
+      throw e;
+    }
 
     if (!updated) {
       res
@@ -800,6 +875,252 @@ export const checkUniqueFeeStructureAmounts = async (
         ),
       );
   } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const downloadFeeStructuresExcel = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  const progressUserId = (req.user as User)?.id?.toString();
+  try {
+    const raw = req.query.academicYearId;
+    const academicYearId = Number(raw);
+    if (
+      raw === undefined ||
+      raw === "" ||
+      Number.isNaN(academicYearId) ||
+      academicYearId < 1
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            "academicYearId query parameter is required and must be a positive number",
+          ),
+        );
+      return;
+    }
+
+    if (progressUserId) {
+      const startUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Starting fee structures export…",
+        5,
+        "started",
+        undefined,
+        undefined,
+        undefined,
+        { operation: FEE_STRUCTURES_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, startUpdate);
+    }
+
+    const rawClassId = req.query.classId;
+    const classId =
+      rawClassId !== undefined && rawClassId !== ""
+        ? Number(rawClassId)
+        : undefined;
+    if (classId !== undefined && (Number.isNaN(classId) || classId < 1)) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "classId must be a positive number if provided"),
+        );
+      return;
+    }
+
+    if (progressUserId) {
+      const midUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Building fee structures workbook…",
+        40,
+        "in_progress",
+        undefined,
+        undefined,
+        undefined,
+        { operation: FEE_STRUCTURES_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, midUpdate);
+    }
+
+    const { buffer, academicYearYear } =
+      await feeStructureService.downloadFeeStructures(academicYearId, classId);
+
+    const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+
+    const sanitizedYear = (academicYearYear || "academic-year")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const fileName = `${sanitizedYear} fee-structures.xlsx`;
+
+    if (progressUserId) {
+      const doneUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Fee structures ready",
+        100,
+        "completed",
+        fileName,
+        undefined,
+        undefined,
+        { operation: FEE_STRUCTURES_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, doneUpdate);
+    }
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName.replace(/"/g, "%22")}"`,
+    );
+    res.send(buf);
+  } catch (error) {
+    if (progressUserId) {
+      const errUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Failed to export fee structures",
+        100,
+        "error",
+        undefined,
+        undefined,
+        error instanceof Error ? error.message : "Unknown error",
+        { operation: FEE_STRUCTURES_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, errUpdate);
+    }
+    handleError(error, res, next);
+  }
+};
+
+export const downloadFeeStudentMappingsExcel = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  const progressUserId = (req.user as User)?.id?.toString();
+  try {
+    const raw = req.query.academicYearId;
+    const academicYearId = Number(raw);
+    if (
+      raw === undefined ||
+      raw === "" ||
+      Number.isNaN(academicYearId) ||
+      academicYearId < 1
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            "academicYearId query parameter is required and must be a positive number",
+          ),
+        );
+      return;
+    }
+
+    if (progressUserId) {
+      const startUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Starting fee–student mappings export…",
+        5,
+        "started",
+        undefined,
+        undefined,
+        undefined,
+        { operation: FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, startUpdate);
+    }
+
+    const rawClassId = req.query.classId;
+    const classId =
+      rawClassId !== undefined && rawClassId !== ""
+        ? Number(rawClassId)
+        : undefined;
+    if (classId !== undefined && (Number.isNaN(classId) || classId < 1)) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "classId must be a positive number if provided"),
+        );
+      return;
+    }
+
+    if (progressUserId) {
+      const midUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Building fee–student mappings workbook…",
+        40,
+        "in_progress",
+        undefined,
+        undefined,
+        undefined,
+        { operation: FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, midUpdate);
+    }
+
+    const { buffer, academicYearYear } =
+      await feeStructureService.downloadFeeStudentMappings(
+        academicYearId,
+        classId,
+      );
+
+    const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+
+    const sanitizedYear = (academicYearYear || "academic-year")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const fileName = `Fee Student Mapping & Payments (${sanitizedYear}).xlsx`;
+
+    if (progressUserId) {
+      const doneUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Fee–student mappings ready",
+        100,
+        "completed",
+        fileName,
+        undefined,
+        undefined,
+        { operation: FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, doneUpdate);
+    }
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    const safeFileName = fileName.replace(/[^\w\s\-().&]/g, "_");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    );
+    res.send(buf);
+  } catch (error) {
+    if (progressUserId) {
+      const errUpdate = socketService.createExportProgressUpdate(
+        progressUserId,
+        "Failed to export fee–student mappings",
+        100,
+        "error",
+        undefined,
+        undefined,
+        error instanceof Error ? error.message : "Unknown error",
+        { operation: FEE_STUDENT_MAPPINGS_EXCEL_DOWNLOAD_OP },
+      );
+      socketService.sendProgressUpdate(progressUserId, errUpdate);
+    }
     handleError(error, res, next);
   }
 };

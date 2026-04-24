@@ -1,0 +1,579 @@
+import { NextFunction, Request, Response } from "express";
+import { ApiResponse, handleError } from "@/utils/index.js";
+import type { User } from "@repo/db/schemas";
+import {
+  bulkPromoteSemesterStudents,
+  checkCourseDesignForTarget,
+  checkFeeStructuresForTarget,
+  getPromotionRosterBucketCounts,
+  getPromotionRosterPage,
+  getPromotionSelectableShiftBreakdown,
+  getPromotionShiftBreakdownForStudentIds,
+  getSelectablePromotionStudentIds,
+  type PromotionRosterBucket,
+  type PromotionRosterSort,
+} from "../services/promotion-roster.service.js";
+
+function parseIntQ(v: unknown, fallback: number): number {
+  const n = parseInt(String(v ?? ""), 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function optPositiveInt(v: unknown): number | undefined {
+  if (v == null || v === "") return undefined;
+  const n = parseInt(String(v), 10);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+function optPositiveIntArray(v: unknown): number[] | undefined {
+  if (v == null || v === "") return undefined;
+  const raw = Array.isArray(v) ? v : String(v).split(",");
+  const nums = raw
+    .map((x) => parseInt(String(x).trim(), 10))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return nums.length > 0 ? nums : undefined;
+}
+
+export async function getPromotionRosterHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const fromSessionId = parseIntQ(q.fromSessionId, NaN);
+    const fromClassId = parseIntQ(q.fromClassId, NaN);
+    const toSessionId = parseIntQ(q.toSessionId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const bucket =
+      (String(q.bucket || "all") as PromotionRosterBucket) || "all";
+    const allowed: PromotionRosterBucket[] = [
+      "all",
+      "eligible",
+      "ineligible",
+      "suspended",
+      "promoted",
+    ];
+    if (!allowed.includes(bucket)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid bucket"));
+      return;
+    }
+
+    const sortBy = (String(q.sortBy || "uid") as PromotionRosterSort) || "uid";
+    const sortAllowed: PromotionRosterSort[] = [
+      "uid",
+      "rollNumber",
+      "registrationNumber",
+    ];
+    if (!sortAllowed.includes(sortBy)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid sortBy"));
+      return;
+    }
+
+    const sortDir = String(q.sortDir || "asc") === "desc" ? "desc" : "asc";
+    const page = parseIntQ(q.page, 1);
+    const pageSize = parseIntQ(q.pageSize, 20);
+    const includeBucketCounts = String(q.includeBucketCounts ?? "") === "true";
+
+    const data = await getPromotionRosterPage({
+      academicYearId,
+      fromSessionId,
+      fromClassId,
+      toSessionId,
+      toClassId,
+      affiliationIds: optPositiveIntArray(q.affiliationId),
+      regulationTypeIds: optPositiveIntArray(q.regulationTypeId),
+      programCourseIds: optPositiveIntArray(q.programCourseId),
+      shiftIds: optPositiveIntArray(q.shiftId),
+      bucket,
+      sortBy,
+      sortDir,
+      page,
+      pageSize,
+      q: typeof q.q === "string" ? q.q : undefined,
+      includeBucketCounts,
+    });
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Promotion roster"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function getPromotionRosterBucketCountsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const fromSessionId = parseIntQ(q.fromSessionId, NaN);
+    const fromClassId = parseIntQ(q.fromClassId, NaN);
+    const toSessionId = parseIntQ(q.toSessionId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const data = await getPromotionRosterBucketCounts({
+      academicYearId,
+      fromSessionId,
+      fromClassId,
+      toSessionId,
+      toClassId,
+      affiliationIds: optPositiveIntArray(q.affiliationId),
+      regulationTypeIds: optPositiveIntArray(q.regulationTypeId),
+      programCourseIds: optPositiveIntArray(q.programCourseId),
+      shiftIds: optPositiveIntArray(q.shiftId),
+      q: typeof q.q === "string" ? q.q : undefined,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", data, "Promotion roster bucket counts"),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function getPromotionSelectableShiftBreakdownHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const fromSessionId = parseIntQ(q.fromSessionId, NaN);
+    const fromClassId = parseIntQ(q.fromClassId, NaN);
+    const toSessionId = parseIntQ(q.toSessionId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const data = await getPromotionSelectableShiftBreakdown({
+      academicYearId,
+      fromSessionId,
+      fromClassId,
+      toSessionId,
+      toClassId,
+      affiliationIds: optPositiveIntArray(q.affiliationId),
+      regulationTypeIds: optPositiveIntArray(q.regulationTypeId),
+      programCourseIds: optPositiveIntArray(q.programCourseId),
+      shiftIds: optPositiveIntArray(q.shiftId),
+      q: typeof q.q === "string" ? q.q : undefined,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          data,
+          "Selectable promotion shift breakdown",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function postPromotionShiftBreakdownForSelectionHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const academicYearId = parseIntQ(body.academicYearId, NaN);
+    const fromSessionId = parseIntQ(body.fromSessionId, NaN);
+    const fromClassId = parseIntQ(body.fromClassId, NaN);
+    const toSessionId = parseIntQ(body.toSessionId, NaN);
+    const toClassId = parseIntQ(body.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const rawIds = body.studentIds;
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "studentIds must be a non-empty array",
+          ),
+        );
+      return;
+    }
+
+    const studentIds = rawIds
+      .map((x) => parseInt(String(x), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+
+    if (studentIds.length === 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "studentIds must contain at least one valid positive integer",
+          ),
+        );
+      return;
+    }
+
+    const q = typeof body.q === "string" ? body.q : undefined;
+
+    const data = await getPromotionShiftBreakdownForStudentIds({
+      academicYearId,
+      fromSessionId,
+      fromClassId,
+      toSessionId,
+      toClassId,
+      affiliationIds: optPositiveIntArray(body.affiliationId),
+      regulationTypeIds: optPositiveIntArray(body.regulationTypeId),
+      programCourseIds: optPositiveIntArray(body.programCourseId),
+      shiftIds: optPositiveIntArray(body.shiftId),
+      q,
+      studentIds,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          data,
+          "Promotion shift breakdown for selection",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function getSelectablePromotionStudentIdsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const fromSessionId = parseIntQ(q.fromSessionId, NaN);
+    const fromClassId = parseIntQ(q.fromClassId, NaN);
+    const toSessionId = parseIntQ(q.toSessionId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const studentIds = await getSelectablePromotionStudentIds({
+      academicYearId,
+      fromSessionId,
+      fromClassId,
+      toSessionId,
+      toClassId,
+      affiliationIds: optPositiveIntArray(q.affiliationId),
+      regulationTypeIds: optPositiveIntArray(q.regulationTypeId),
+      programCourseIds: optPositiveIntArray(q.programCourseId),
+      shiftIds: optPositiveIntArray(q.shiftId),
+      q: typeof q.q === "string" ? q.q : undefined,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { studentIds },
+          "Selectable promotion student ids",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function postBulkSemesterPromoteHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const academicYearId = parseIntQ(body.academicYearId, NaN);
+    const fromSessionId = parseIntQ(body.fromSessionId, NaN);
+    const fromClassId = parseIntQ(body.fromClassId, NaN);
+    const toSessionId = parseIntQ(body.toSessionId, NaN);
+    const toClassId = parseIntQ(body.toClassId, NaN);
+
+    if (
+      [academicYearId, fromSessionId, fromClassId, toSessionId, toClassId].some(
+        (n) => !Number.isFinite(n) || n < 1,
+      )
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId, fromSessionId, fromClassId, toSessionId, and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const promoteAllEligibleInScope = body.promoteAllEligibleInScope === true;
+    const q = typeof body.q === "string" ? body.q : undefined;
+
+    const rawIds = body.studentIds;
+    let studentIds: number[] = [];
+
+    if (promoteAllEligibleInScope) {
+      studentIds = [];
+    } else {
+      if (!Array.isArray(rawIds) || rawIds.length === 0) {
+        res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "BAD_REQUEST",
+              null,
+              "studentIds must be a non-empty array of student ids (or set promoteAllEligibleInScope to true)",
+            ),
+          );
+        return;
+      }
+
+      studentIds = rawIds
+        .map((x) => parseInt(String(x), 10))
+        .filter((n) => Number.isFinite(n) && n > 0);
+
+      if (studentIds.length === 0) {
+        res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "BAD_REQUEST",
+              null,
+              "studentIds must contain at least one valid positive integer",
+            ),
+          );
+        return;
+      }
+    }
+
+    const progressUserId =
+      (req.user as User | undefined)?.id != null
+        ? String((req.user as User).id)
+        : undefined;
+
+    const result = await bulkPromoteSemesterStudents(
+      {
+        academicYearId,
+        fromSessionId,
+        fromClassId,
+        toSessionId,
+        toClassId,
+        affiliationIds: optPositiveIntArray(body.affiliationId),
+        regulationTypeIds: optPositiveIntArray(body.regulationTypeId),
+        programCourseIds: optPositiveIntArray(body.programCourseId),
+        shiftIds: optPositiveIntArray(body.shiftId),
+        q,
+        studentIds,
+        promoteAllEligibleInScope,
+      },
+      { progressUserId },
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", result, "Semester promotion completed"),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function getFeeStructureCheckHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if ([academicYearId, toClassId].some((n) => !Number.isFinite(n) || n < 1)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const data = await checkFeeStructuresForTarget(
+      academicYearId,
+      toClassId,
+      optPositiveIntArray(q.programCourseId),
+      optPositiveIntArray(q.shiftId),
+    );
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Fee structure check"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+export async function getCourseDesignCheckHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const q = req.query;
+    const academicYearId = parseIntQ(q.academicYearId, NaN);
+    const toClassId = parseIntQ(q.toClassId, NaN);
+
+    if ([academicYearId, toClassId].some((n) => !Number.isFinite(n) || n < 1)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId and toClassId are required positive integers",
+          ),
+        );
+      return;
+    }
+
+    const data = await checkCourseDesignForTarget(
+      academicYearId,
+      toClassId,
+      optPositiveIntArray(q.programCourseId),
+      optPositiveIntArray(q.affiliationId),
+      optPositiveIntArray(q.regulationTypeId),
+    );
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Course design check"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}

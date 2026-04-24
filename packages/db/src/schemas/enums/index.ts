@@ -100,11 +100,7 @@ export const paymentStatusEnum = pgEnum("payment_status", [
     "CANCELLED",
 ])
 
-export const paymentModeEnum = pgEnum("payment_mode", [
-    "CASH",
-    "CHEQUE",
-    "ONLINE",
-]);
+
 
 export const studentFeesMappingEnum = pgEnum("student_fee_mapping_type", [
     "FULL",
@@ -158,7 +154,13 @@ export const personTitleType = pgEnum("person_title_type", [
     "MR", "MRS", "MS", "DR", "PROF", "REV", "OTHER",
 ]);
 
-export const paymentMode = pgEnum("payment_mode", [
+export const paymentModeEnum = pgEnum("payment_mode", [
+    "CASH",
+    "CHEQUE",
+    "ONLINE",
+]);
+
+export const paymentOnlineOptions = pgEnum("payment_online_options", [
     "UPI", "WALLET", "NET_BANKING", "CREDIT_CARD", "DEBIT_CARD", "PAYTM_BALANCE"
 ]);
 
@@ -363,6 +365,7 @@ export const paymentGatewayEnum = pgEnum("payment_gateway", [
 export const paymentForTypeEnum = pgEnum("payment_for_type", [
     "ADMISSION_APPLICATION_FEE",
     "FEE",
+    "ADMISSION",
     "OTHER",
 ]);
 
@@ -399,4 +402,37 @@ export const appModuleIconEnum = pgEnum("app_module_icon_type", [
 export const accessGroupModuleTypeEnum = pgEnum("access_group_module_type", [
     "STATIC",
     "CONDITIONAL",
+]);
+
+export const certificateFieldMasterTypeEnum = pgEnum("certificate_field_master_type", [
+    "TEXT",
+    "TEXTAREA",
+    "SELECT",
+    "NUMBER",
+    "DATE",
+]);
+
+export const promotionBuilderLogicTypeEnum = pgEnum("promotion_builder_logic_type", [
+    "AUTO_PROMOTE",
+    "CONDITIONAL",
+]);
+
+export const promotionBuilderOperatorEnum = pgEnum("promotion_builder_operator", [
+    "EQUALS",
+    "NONE_IN",
+]);
+
+export const classTrackTypeEnum = pgEnum("class_track_type", [
+    "ODD",
+    "EVEN",
+]);
+
+export const feeGroupPromotionMappingApprovalTypeEnum = pgEnum("fee_group_promotion_mapping_approval_type", [
+    "SYSTEM",
+    "MANUAL"
+]);
+
+export const examFormFillupStatusEnum = pgEnum("exam_form_fillup_status", [
+    "PENDING",
+    "COMPLETED",
 ]);

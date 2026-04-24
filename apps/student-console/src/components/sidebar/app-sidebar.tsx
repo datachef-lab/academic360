@@ -35,18 +35,27 @@ import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamDto } from "@/dtos";
 import { useAuth } from "@/hooks/use-auth";
 import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { axiosInstance } from "@/lib/utils";
+import { useFeeSocket } from "@/providers/fee-socket-provider";
+import { FeeMapping } from "@/app/(console)/dashboard/enrollment-fees/page";
+
+type ApiResponse<T> = { payload: T; message?: string };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isNestedIframe = window.self !== window.top;
+  const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
   const pathname = usePathname();
   const { user } = useAuth();
+  const [mappings, setMappings] = React.useState<FeeMapping[]>([]);
   const { accessControl, student } = useStudent();
+  const { invalidateFeeMappings, cpFormVersion } = useFeeSocket();
   const {
     name: collegeName,
     logoUrl: collegeLogoUrl,
     isLoading: isLoadingSettings,
   } = useCollegeSettings();
   const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
+  const [hasCareerProgressionForm, setHasCareerProgressionForm] = React.useState(false);
   const socketRef = React.useRef<any | null>(null);
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
   console.log("pathname:", pathname);
@@ -124,6 +133,46 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     updateExamCount();
   }, [updateExamCount]);
 
+  const fetchMappings = async () => {
+    if (!student?.id) return;
+    try {
+      const { data } = await axiosInstance.get<ApiResponse<FeeMapping[]>>(
+        `/api/v1/fees/student-mappings/student/${student.id}`,
+      );
+      setMappings(Array.isArray(data?.payload) ? data.payload : []);
+      return data?.payload || [];
+    } catch (e) {
+      console.error(e);
+      setMappings([]);
+      return [];
+    }
+  };
+
+  const refreshCpFormStatus = React.useCallback(() => {
+    if (!student?.id) return;
+    axiosInstance
+      .get<{ payload: { hasExistingForms: boolean } }>(
+        `/api/academics/career-progression-forms/student/${student.id}/current`,
+      )
+      .then(async ({ data }) => {
+        setHasCareerProgressionForm(Boolean(data?.payload?.hasExistingForms));
+        const mappings = await fetchMappings();
+        const isPaid = mappings?.some(
+          (m) => m.paymentStatus === "COMPLETED" || m.paymentStatus === "SUCCESS",
+        );
+        if (Boolean(data?.payload?.hasExistingForms) || isPaid) {
+          setHasCareerProgressionForm(true);
+        } else {
+          setHasCareerProgressionForm(false);
+        }
+      })
+      .catch(() => setHasCareerProgressionForm(false));
+  }, [student?.id]);
+
+  React.useEffect(() => {
+    refreshCpFormStatus();
+  }, [refreshCpFormStatus, cpFormVersion]);
+
   // Setup socket connection to update badge count on exam changes
   React.useEffect(() => {
     if (!student?.id || typeof window === "undefined") return;
@@ -176,13 +225,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           }
         });
 
-        // Listen for exam updates and refresh count
         socket.on("exam_created", () => {
           updateExamCount();
         });
 
         socket.on("exam_updated", () => {
           updateExamCount();
+        });
+
+        socket.on("fee_student_mapping_updated", () => {
+          invalidateFeeMappings();
         });
       } catch (err) {
         console.error("[Sidebar] Failed to load socket.io-client:", err);
@@ -198,7 +250,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         socketRef.current = null;
       }
     };
-  }, [student?.id, updateExamCount]);
+  }, [student?.id, user?.id, updateExamCount, invalidateFeeMappings]);
 
   // Check if student's program course is MA or MCOM (hide admission registration for these)
   const isBlockedProgram = React.useMemo(() => {
@@ -268,13 +320,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isActive: pathname === "/dashboard/exams",
       badge: upcomingExamCount > 0 ? upcomingExamCount : undefined,
     },
-
-    {
-      title: "Admission & Reg. Data",
-      url: "/dashboard/admission-registration",
-      icon: FileText,
-      isActive: pathname === "/dashboard/admission-registration",
-    },
     // 20 Feb 2026, 16:00 PM IST
     Date.now() > new Date("2026-02-20T16:00:00+05:30").getTime() && !isBlockedProgram
       ? {
@@ -297,18 +342,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     //   icon: ScrollText,
     //   isActive: pathname === "/dashboard/documents",
     // },
-    // {
-    //   title: "Enrollment & Fees",
-    //   url: "/dashboard/enrollment-fees",
-    //   icon: IndianRupee,
-    //   isActive: pathname === "/dashboard/enrollment-fees",
-    // },
     {
-      title: "Library",
-      url: "/dashboard/library",
-      icon: Library,
-      isActive: pathname === "/dashboard/library",
+      title: "Enrolment & Fees",
+      url: "/dashboard/enrollment-fees",
+      icon: IndianRupee,
+      isActive: pathname === "/dashboard/enrollment-fees",
     },
+    hasCareerProgressionForm
+      ? {
+          title: "Career Progression",
+          url: "/dashboard/career-progression",
+          icon: ScrollText,
+          isActive: pathname === "/dashboard/career-progression",
+        }
+      : null,
+    !isProduction
+      ? {
+          title: "Library",
+          url: "/dashboard/library",
+          icon: Library,
+          isActive: pathname === "/dashboard/library",
+        }
+      : null,
     {
       title: "Profile",
       url: "/dashboard/profile",

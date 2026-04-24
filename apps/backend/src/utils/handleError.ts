@@ -47,5 +47,7 @@ export const handleError = (
       .json(new ApiError(500, `Unknown Error: An unexpected error occurred`));
   }
 
-  if (next) next(error);
+  // Do not forward after sending a response, otherwise Express
+  // global error middleware attempts to write headers again.
+  // if (next) next(error);
 };

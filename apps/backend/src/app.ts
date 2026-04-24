@@ -23,6 +23,7 @@ import { policeStationModel } from "@repo/db/schemas/models/user/police-station.
 import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model.js";
 
 import { generateToken } from "./utils/index.js";
+import userStatusOverviewRouter from "@/features/user/routes/user-status-overview.routes.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import {
   academicYearRouter,
@@ -34,6 +35,11 @@ import {
   sectionRoutes,
   sessionRouter,
   shiftRouter,
+  careerProgressionFormFieldRouter,
+  careerProgressionFormRouter,
+  certificateFieldMasterRouter,
+  certificateFieldOptionMasterRouter,
+  certificateMasterRouter,
 } from "@/features/academics/routes/index.js";
 import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -104,7 +110,14 @@ import {
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
 import feeStudentMappingRouter from "@/features/fees/routes/fee-student-mapping.route.js";
+import feeReceiptRouter from "@/features/fees/routes/fee-receipt.route.js";
 import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
+import {
+  promotionBuilderRouter,
+  promotionClauseRouter,
+  promotionRosterRouter,
+  promotionStatusRouter,
+} from "@/features/batches/routes/index.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
@@ -134,6 +147,7 @@ import {
   studentAcademicSubjectRouter,
 } from "@/features/admissions/index.js";
 import bulkUploadRouter from "@/features/common/routes/bulkUpload.routes.js";
+import bulkDataUploadsRouter from "@/features/bulk-data-uploads/routes/bulk-data-upload.route.js";
 import {
   affiliationRouter,
   cascadingDropdownsRouter,
@@ -396,7 +410,7 @@ app.use(
 
 app.use("/api/users", userRouter);
 
-// app.use("/api/user-statuses", userStatusMappingRouter);
+app.use("/api/user-statuses", userStatusOverviewRouter);
 
 // User status master endpoints
 app.use("/api/administration/user-status-masters", userStatusMasterRouter);
@@ -408,6 +422,25 @@ app.use("/api/administration/app-modules", appModuleRouter);
 // // User status master frequency endpoints
 // app.use("/api/user-status-master-frequencies", userStatusMasterFrequencyRouter);
 app.use("/api/sessions", sessionRouter);
+
+app.use(
+  "/api/academics/career-progression-form-fields",
+  careerProgressionFormFieldRouter,
+);
+
+app.use("/api/academics/career-progression-forms", careerProgressionFormRouter);
+
+app.use("/api/academics/certificate-masters", certificateMasterRouter);
+
+app.use(
+  "/api/academics/certificate-field-masters",
+  certificateFieldMasterRouter,
+);
+
+app.use(
+  "/api/academics/certificate-field-option-masters",
+  certificateFieldOptionMasterRouter,
+);
 
 app.use("/api/personal-details", personalDetailsRouter);
 
@@ -517,6 +550,11 @@ app.use("/api/v1/fees/structure", feesStructureRouter);
 
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
 app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
+app.use("/api/v1/fees/receipts", feeReceiptRouter);
+app.use("/api/v1/batches/promotion-clauses", promotionClauseRouter);
+app.use("/api/v1/batches/promotion-builders", promotionBuilderRouter);
+app.use("/api/v1/batches/promotion-roster", promotionRosterRouter);
+app.use("/api/v1/batches/promotion-statuses", promotionStatusRouter);
 app.use("/api/v1/fees/receipt-types", receiptTypeRouter);
 app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/slabs", feeSlabRouter);
@@ -529,6 +567,7 @@ app.use(
 );
 // app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 app.use("/api/v1/fees", feesRouter);
+app.use("/api/v1/bulk-data-uploads", bulkDataUploadsRouter);
 app.use("/api/v1/courses", courseRouter);
 // app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 app.use("/api/exams/floors", floorRouter);
@@ -883,6 +922,10 @@ app.use("/api/v1/academics", academicYearRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
 app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
+app.use("/api/v1/fees/receipts", feeReceiptRouter);
+app.use("/api/v1/batches/promotion-clauses", promotionClauseRouter);
+app.use("/api/v1/batches/promotion-builders", promotionBuilderRouter);
+app.use("/api/v1/batches/promotion-statuses", promotionStatusRouter);
 app.use("/api/v1/fees/heads", feeHeadRouter);
 app.use("/api/v1/fees", feesRouter);
 

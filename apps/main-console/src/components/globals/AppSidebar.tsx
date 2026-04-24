@@ -16,17 +16,18 @@ import {
   LayoutDashboard,
   Megaphone,
   UserCog,
-  Plus,
   ChevronDown,
   Calendar,
-  Users,
   GraduationCap,
+  Users,
   ClipboardList,
   IndianRupee,
   CheckSquare,
   Activity,
   FileText,
   BookOpen,
+  Layers,
+  TrendingUp,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -79,6 +80,7 @@ const data = {
   navMain: [
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
+    { title: "Promote Students", url: "/dashboard/promote-students", icon: GraduationCap },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
     {
       title: "Admit Card Distributions",
@@ -95,6 +97,8 @@ const data = {
     { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
     { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
     { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
+    { title: "Career Progression", url: "/dashboard/career-progression", icon: TrendingUp },
+    { title: "Bulk Data Upload", url: "/dashboard/bulk-upload", icon: Layers },
     {
       title: "Student Console Simulation",
       url: "/dashboard/apps/student-console/simulation",
@@ -292,19 +296,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <div className="h-full flex flex-col justify-between ">
               <div className="">
                 <div className="flex flex-col h-full justify-between ">
-                  {/* Academic Year Setup */}
-                  {user?.email && !TEMP_USER_EMAILS.includes(user.email) && (
-                    <div className="my-4 mb-6 border mx-2 rounded-l-md">
-                      <NavItem
-                        key={"Academic Year Setup"}
-                        icon={<Plus className="h-5 w-5" />}
-                        href={"/dashboard/academic-year-setup"}
-                      >
-                        <span className="text">New Academic Setup</span>
-                      </NavItem>
-                    </div>
-                  )}
-
                   {/* Dashboard Link */}
                   <div className="mb-2">
                     {data.navDash.map((item) => (
@@ -326,7 +317,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {/* Masters Section */}
                   <div className=" ">
                     <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                      Masters
+                      Modules
                     </h3>
                     <div className="space-y-1">
                       {data.navMain

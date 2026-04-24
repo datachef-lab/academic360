@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PaginationProps {
@@ -18,6 +19,32 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   onItemsPerPageChange: (itemsPerPage: number) => void;
   sticky?: boolean;
+  /** Merged onto the outer wrapper (e.g. theme tokens for a specific page). */
+  className?: string;
+}
+
+/** Page numbers to show with ellipses for large page counts. */
+function getPageNumbers(current: number, last: number): (number | "ellipsis")[] {
+  if (last <= 1) return last === 1 ? [1] : [];
+  if (last <= 9) {
+    return Array.from({ length: last }, (_, i) => i + 1);
+  }
+  const delta = 2;
+  const set = new Set<number>();
+  set.add(1);
+  set.add(last);
+  for (let i = current - delta; i <= current + delta; i++) {
+    if (i >= 1 && i <= last) set.add(i);
+  }
+  const sorted = [...set].sort((a, b) => a - b);
+  const out: (number | "ellipsis")[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const cur = sorted[i]!;
+    const prev = sorted[i - 1];
+    if (i > 0 && prev !== undefined && cur - prev > 1) out.push("ellipsis");
+    out.push(cur);
+  }
+  return out;
 }
 
 export function Pagination({
@@ -30,112 +57,111 @@ export function Pagination({
   onPageChange,
   onItemsPerPageChange,
   sticky = false,
+  className,
 }: PaginationProps) {
-  // Ensure we always show at least 1 page even with no data
   const displayTotalPages = Math.max(1, totalPages);
   const displayCurrentPage = totalItems === 0 ? 1 : currentPage;
+  const pageItems = totalItems === 0 ? [] : getPageNumbers(displayCurrentPage, displayTotalPages);
 
   return (
     <div
-      className={
-        sticky
-          ? "sticky bottom-0 z-20 bg-gray-100 border-t border-gray-300 shadow-lg rounded-t-lg"
-          : "bg-gray-100 border border-gray-300 rounded-lg shadow-lg"
-      }
+      className={cn(
+        "w-full min-w-0 rounded-lg border border-border bg-muted/30 text-foreground shadow-sm",
+        sticky &&
+          "sticky bottom-0 z-20 rounded-t-lg border-t-2 border-primary/20 bg-background/95 backdrop-blur-sm",
+        className,
+      )}
     >
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-700">
+      <div className="flex flex-col gap-4 p-4 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-6 md:gap-y-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+          <span className="whitespace-nowrap tabular-nums">
             {totalItems === 0
-              ? "Showing 0 to 0 of 0 entries"
-              : `Showing ${startIndex + 1} to ${Math.min(endIndex, totalItems)} of ${totalItems} entries`}
+              ? "No entries"
+              : `Showing ${startIndex + 1}–${Math.min(endIndex, totalItems)} of ${totalItems}`}
           </span>
-          <Select
-            value={itemsPerPage.toString()}
-            onValueChange={(value) => onItemsPerPageChange(Number(value))}
-          >
-            <SelectTrigger className="w-20 text-gray-700">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-700">per page</span>
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline">Rows</span>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => onItemsPerPageChange(Number(value))}
+            >
+              <SelectTrigger className="h-9 w-[4.5rem] shrink-0 bg-background font-medium tabular-nums">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-muted-foreground">per page</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-1 md:justify-end">
           <Button
+            type="button"
             variant="outline"
             size="sm"
+            className="h-9 gap-1 px-3"
             onClick={() => onPageChange(Math.max(1, displayCurrentPage - 1))}
             disabled={displayCurrentPage === 1 || totalItems === 0}
-            className="text-gray-700"
           >
             <ChevronLeft className="h-4 w-4" />
-            Previous
+            <span className="hidden sm:inline">Prev</span>
           </Button>
 
-          <div className="flex items-center gap-1">
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-1 px-1">
             {totalItems === 0 ? (
               <Button
-                variant="default"
+                type="button"
+                variant="secondary"
                 size="sm"
-                className="w-8 h-8 p-0 text-gray-700 bg-gray-200 border-gray-400"
+                className="h-9 min-w-9 px-0"
                 disabled
               >
                 1
               </Button>
             ) : (
-              Array.from({ length: Math.min(5, displayTotalPages) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={displayCurrentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => onPageChange(pageNum)}
-                    className={`w-8 h-8 p-0 text-gray-700 ${
-                      displayCurrentPage === pageNum
-                        ? "bg-gray-200 border-gray-400 hover:bg-gray-300"
-                        : ""
-                    }`}
+              pageItems.map((item, idx) =>
+                item === "ellipsis" ? (
+                  <span
+                    key={`e-${idx}`}
+                    className="inline-flex min-w-7 items-center justify-center text-sm text-muted-foreground"
+                    aria-hidden
                   >
-                    {pageNum}
+                    …
+                  </span>
+                ) : (
+                  <Button
+                    key={item}
+                    type="button"
+                    variant={displayCurrentPage === item ? "default" : "outline"}
+                    size="sm"
+                    className={cn(
+                      "h-9 min-w-9 px-0 font-semibold tabular-nums",
+                      displayCurrentPage === item && "pointer-events-none shadow-sm",
+                    )}
+                    onClick={() => onPageChange(item)}
+                  >
+                    {item}
                   </Button>
-                );
-              })
-            )}
-            {displayTotalPages > 5 && totalItems > 0 && (
-              <>
-                <span className="text-sm text-gray-500">...</span>
-                <Button
-                  variant={displayCurrentPage === displayTotalPages ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onPageChange(displayTotalPages)}
-                  className={`w-8 h-8 p-0 text-gray-700 ${
-                    displayCurrentPage === displayTotalPages
-                      ? "bg-gray-200 border-gray-400 hover:bg-gray-300"
-                      : ""
-                  }`}
-                >
-                  {displayTotalPages}
-                </Button>
-              </>
+                ),
+              )
             )}
           </div>
 
           <Button
+            type="button"
             variant="outline"
             size="sm"
+            className="h-9 gap-1 px-3"
             onClick={() => onPageChange(Math.min(displayTotalPages, displayCurrentPage + 1))}
             disabled={displayCurrentPage === displayTotalPages || totalItems === 0}
-            className="text-gray-700"
           >
-            Next
+            <span className="hidden sm:inline">Next</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

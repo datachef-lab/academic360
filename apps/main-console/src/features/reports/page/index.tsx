@@ -14,11 +14,11 @@ import {
   FileText,
   Users,
   Clock,
-  BarChart3,
   FileImage,
   Upload,
   AlertTriangle,
   Copy,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ExportService } from "@/services/exportService";
@@ -47,10 +47,22 @@ import {
   AlertDialogTitle,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface ReportItem {
   id: string;
+  /** Single domain (default). Ignored when `domains` is non-empty. */
   domain?: string;
+  /** Multiple domain tags for one row (e.g. fees + admission). */
+  domains?: string[];
   name: string;
   description: string;
   icon: React.ReactNode;
@@ -59,6 +71,44 @@ interface ReportItem {
   requiresRegulation?: boolean;
   actionType?: "download" | "upload";
   uploadOperation?: string;
+}
+
+function getReportDomains(report: ReportItem): string[] {
+  if (report.domains && report.domains.length > 0) return report.domains;
+  return [report.domain ?? "POST_ADMISSION"];
+}
+
+/** Display domain keys (e.g. `ADMISSION_PHASE`) as sentence case in the UI. */
+function domainToSentenceCase(domain: string): string {
+  const s = domain.replace(/_/g, " ").trim().toLowerCase();
+  if (!s.length) return domain;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function formatDomainBadgeLabel(domain: string): string {
+  const label = domainToSentenceCase(domain);
+  return domain === "FEES" ? `₹ ${label}` : label;
+}
+
+function domainBadgeClassName(domain: string): string {
+  switch (domain) {
+    case "POST_CU_REGISTRATION":
+      return "bg-purple-50 text-purple-700 border-purple-200";
+    case "ADMISSION_PHASE":
+      return "bg-amber-50 text-amber-800 border-amber-200";
+    case "PRE_CU_REGISTRATION":
+      return "bg-teal-50 text-teal-700 border-teal-200";
+    case "SUBJECT_SELECTION_PHASE":
+      return "bg-indigo-50 text-indigo-700 border-indigo-200";
+    case "STUDENT_PROFILE_PHASE":
+      return "bg-rose-50 text-rose-700 border-rose-200";
+    case "XII_ACADEMICS_PHASE":
+      return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200";
+    case "FEES":
+      return "bg-emerald-50 text-emerald-800 border-emerald-200";
+    default:
+      return "bg-blue-50 text-blue-700 border-blue-200";
+  }
 }
 
 export default function ReportsPage() {
@@ -82,6 +132,8 @@ export default function ReportsPage() {
   // Dropdown states
   const [regulationTypes, setRegulationTypes] = useState<RegulationType[]>([]);
   const [selectedRegulationType, setSelectedRegulationType] = useState<string>("");
+  /** Empty = show all reports (no domain filter). */
+  const [domainFilter, setDomainFilter] = useState<string[]>([]);
 
   // Authenticated user id for scoping socket room
   const { user } = useAuth();
@@ -151,11 +203,15 @@ export default function ReportsPage() {
   );
   const selectedAcademicYearId = selectedAcademicYear?.id?.toString() || "";
 
-  const handleDownload = async (reportId: string, downloadFunction: () => Promise<void>) => {
+  const handleDownload = async (
+    reportId: string,
+    downloadFunction: () => Promise<void>,
+    socketOperation?: string | null,
+  ) => {
     try {
       setIsExporting(true);
       setExportProgressOpen(true);
-      setCurrentOperation(null);
+      setCurrentOperation(socketOperation ?? null);
 
       // Set initial progress
       setCurrentProgressUpdate({
@@ -182,7 +238,9 @@ export default function ReportsPage() {
         createdAt: new Date(),
       });
       setIsExporting(false);
-      toast.error(`Failed to download ${reportId}`);
+      toast.error(
+        error instanceof Error && error.message ? error.message : `Failed to download ${reportId}`,
+      );
     }
   };
 
@@ -912,6 +970,28 @@ export default function ReportsPage() {
     },
   ];
 
+  const allReportDomains = Array.from(new Set(reports.flatMap((r) => getReportDomains(r)))).sort(
+    (a, b) => a.localeCompare(b),
+  );
+
+  const reportCountByDomain = reports.reduce<Record<string, number>>((acc, r) => {
+    for (const d of getReportDomains(r)) {
+      acc[d] = (acc[d] ?? 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const filteredReports =
+    domainFilter.length === 0
+      ? reports
+      : reports.filter((r) => getReportDomains(r).some((d) => domainFilter.includes(d)));
+
+  const toggleDomainFilter = (domain: string) => {
+    setDomainFilter((prev) =>
+      prev.includes(domain) ? prev.filter((d) => d !== domain) : [...prev, domain],
+    );
+  };
+
   return (
     <div className="p-3 sm:p-6">
       {/* Hidden file inputs for Excel uploads */}
@@ -931,154 +1011,194 @@ export default function ReportsPage() {
       />
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Reports</h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-2">
-            Download various reports and analytics
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-slate-600" />
-          <span className="text-xs sm:text-sm text-slate-500">Analytics Dashboard</span>
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:gap-4 gap-3 flex-1 min-w-0 w-full">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Reports</h1>
+            <p className="text-sm sm:text-base text-slate-600 mt-2">
+              Download various reports and analytics
+            </p>
+          </div>
+          <div className="w-full pr-10 sm:w-auto sm:min-w-[220px] lg:max-w-[300px] flex-shrink-0">
+            <span className="text-xs font-medium text-slate-600 mb-1.5 block">Domain</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-[260px] justify-between font-normal text-left"
+                >
+                  <span className="truncate">
+                    {domainFilter.length === 0
+                      ? "All domains"
+                      : domainFilter.length === 1
+                        ? formatDomainBadgeLabel(domainFilter[0]!)
+                        : `${domainFilter.length} domains selected`}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-72 max-h-[min(70vh,360px)] overflow-y-auto"
+                align="start"
+              >
+                <DropdownMenuLabel className="font-normal text-xs text-slate-500">
+                  Show reports that match any selected domain. Leave empty for all.
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={domainFilter.length === 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) setDomainFilter([]);
+                  }}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  ({reports.length}) All domains
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                {allReportDomains.map((d) => (
+                  <DropdownMenuCheckboxItem
+                    key={d}
+                    checked={domainFilter.includes(d)}
+                    onCheckedChange={() => toggleDomainFilter(d)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    ({reportCountByDomain[d] ?? 0}) {formatDomainBadgeLabel(d)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      {/* Reports Table */}
-      <div className="w-full overflow-x-auto">
-        <Table className="w-full min-w-[900px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[6%] border border-slate-200 text-xs sm:text-sm">
-                Sr. No.
-              </TableHead>
-              <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm">
-                Domain
-              </TableHead>
-              <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm">
-                Report
-              </TableHead>
-              <TableHead className="w-[23%] sm:w-80 lg:w-[360px] border border-slate-200 text-xs sm:text-sm">
-                Description
-              </TableHead>
-              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm">
-                Filters
-              </TableHead>
-              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reports.map((report, index) => {
-              return (
-                <TableRow key={report.id} className="hover:bg-slate-50">
-                  <TableCell className="w-[6%] font-medium border border-slate-200 text-xs sm:text-sm py-3 sm:py-4 px-2 sm:px-4">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell className="w-[23%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 min-w-0">
-                    <Badge
-                      variant="outline"
-                      title={report.domain || "POST_ADMISSION"}
-                      className={`text-xs max-w-full  ${
-                        (report.domain || "POST_ADMISSION") === "POST_CU_REGISTRATION"
-                          ? "bg-purple-50 text-purple-700 border-purple-200"
-                          : (report.domain || "POST_ADMISSION") === "ADMISSION_PHASE"
-                            ? "bg-amber-50 text-amber-800 border-amber-200"
-                            : (report.domain || "POST_ADMISSION") === "PRE_CU_REGISTRATION"
-                              ? "bg-teal-50 text-teal-700 border-teal-200"
-                              : (report.domain || "POST_ADMISSION") === "SUBJECT_SELECTION_PHASE"
-                                ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                : (report.domain || "POST_ADMISSION") === "STUDENT_PROFILE_PHASE"
-                                  ? "bg-rose-50 text-rose-700 border-rose-200"
-                                  : (report.domain || "POST_ADMISSION") === "XII_ACADEMICS_PHASE"
-                                    ? "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200"
-                                    : "bg-blue-50 text-blue-700 border-blue-200"
-                      }`}
-                    >
-                      {report.domain || "POST_ADMISSION"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="w-[23%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="flex-shrink-0">{report.icon}</div>
-                      <div className="min-w-0">
-                        <div className="font-semibold text-slate-800 text-xs sm:text-sm ">
-                          {report.name}
-                        </div>
+      {/* Reports Table — scroll body; header stays visible */}
+      <Table
+        className="w-full min-w-[900px] border-separate border-spacing-0"
+        containerClassName="w-full max-h-[min(72vh,calc(100vh-10rem))] overflow-auto rounded-md border border-slate-200 shadow-sm"
+      >
+        <TableHeader className="sticky top-0 z-20 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]">
+          <TableRow className="border-b border-slate-200 bg-slate-100 hover:bg-slate-100">
+            <TableHead className="w-[6%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+              Sr. No.
+            </TableHead>
+            <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+              Domain
+            </TableHead>
+            <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+              Report
+            </TableHead>
+            <TableHead className="w-[23%] sm:w-80 lg:w-[360px] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+              Description
+            </TableHead>
+            <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+              Filters
+            </TableHead>
+            <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm bg-slate-100">
+              Actions
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredReports.map((report, index) => {
+            return (
+              <TableRow key={report.id} className="hover:bg-slate-50">
+                <TableCell className="w-[6%] font-medium border border-slate-200 text-xs sm:text-sm py-3 sm:py-4 px-2 sm:px-4">
+                  {index + 1}
+                </TableCell>
+                <TableCell className="w-[23%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 min-w-0">
+                  <div className="flex flex-wrap gap-1.5">
+                    {getReportDomains(report).map((domain) => (
+                      <Badge
+                        key={domain}
+                        variant="outline"
+                        title={formatDomainBadgeLabel(domain)}
+                        className={cn("text-xs max-w-full", domainBadgeClassName(domain))}
+                      >
+                        {formatDomainBadgeLabel(domain)}
+                      </Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="w-[23%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex-shrink-0">{report.icon}</div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-800 text-xs sm:text-sm ">
+                        {report.name}
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="w-[23%] text-slate-600 border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm whitespace-normal break-words">
-                    {report.description}
-                  </TableCell>
-                  <TableCell className="w-[14%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
-                    {report.requiresRegulation ? (
-                      <div className="space-y-2">
-                        <div className="space-y-1">
-                          <Select
-                            value={selectedRegulationType}
-                            onValueChange={setSelectedRegulationType}
-                          >
-                            <SelectTrigger className="w-full h-8 text-xs">
-                              <SelectValue placeholder="Select Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {regulationTypes.map((type) => (
-                                <SelectItem key={type.id} value={type.shortName || type.name}>
-                                  {type.shortName || type.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                  </div>
+                </TableCell>
+                <TableCell className="w-[23%] text-slate-600 border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm whitespace-normal break-words">
+                  {report.description}
+                </TableCell>
+                <TableCell className="w-[14%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                  {report.requiresRegulation ? (
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <Select
+                          value={selectedRegulationType}
+                          onValueChange={setSelectedRegulationType}
+                        >
+                          <SelectTrigger className="w-full h-8 text-xs">
+                            <SelectValue placeholder="Select Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {regulationTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.shortName || type.name}>
+                                {type.shortName || type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="w-[14%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                  <Button
+                    onClick={report.downloadFunction}
+                    disabled={
+                      isExporting ||
+                      (report.requiresAcademicYear && !selectedAcademicYearId) ||
+                      (report.requiresRegulation && !selectedRegulationType)
+                    }
+                    className="flex items-center gap-1 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm disabled:opacity-50 w-full sm:w-auto flex-shrink-0"
+                    size="sm"
+                  >
+                    {isExporting ? (
+                      <>
+                        <Clock className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        <span className="hidden sm:inline">Downloading...</span>
+                        <span className="sm:hidden">...</span>
+                      </>
                     ) : (
-                      <span className="text-xs text-slate-400">-</span>
+                      <>
+                        {report.actionType === "upload" ? (
+                          <>
+                            <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span className="hidden sm:inline">Upload</span>
+                            <span className="sm:hidden">Upload</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span className="hidden sm:inline">Download</span>
+                            <span className="sm:hidden">Download</span>
+                          </>
+                        )}
+                      </>
                     )}
-                  </TableCell>
-                  <TableCell className="w-[14%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
-                    <Button
-                      onClick={report.downloadFunction}
-                      disabled={
-                        isExporting ||
-                        (report.requiresAcademicYear && !selectedAcademicYearId) ||
-                        (report.requiresRegulation && !selectedRegulationType)
-                      }
-                      className="flex items-center gap-1 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm disabled:opacity-50 w-full sm:w-auto flex-shrink-0"
-                      size="sm"
-                    >
-                      {isExporting ? (
-                        <>
-                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                          <span className="hidden sm:inline">Downloading...</span>
-                          <span className="sm:hidden">...</span>
-                        </>
-                      ) : (
-                        <>
-                          {report.actionType === "upload" ? (
-                            <>
-                              <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                              <span className="hidden sm:inline">Upload</span>
-                              <span className="sm:hidden">Upload</span>
-                            </>
-                          ) : (
-                            <>
-                              <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                              <span className="hidden sm:inline">Download</span>
-                              <span className="sm:hidden">Download</span>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
 
       {/* Export Progress Dialog */}
       <ExportProgressDialog

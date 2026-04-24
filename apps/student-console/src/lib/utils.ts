@@ -36,3 +36,27 @@ export interface PaginatedResponse<T> {
   /** Count of unique exam subjects (papers) the student is enrolled in via exam_candidates. Present for exam-group responses. */
   totalSubjectCount?: number;
 }
+
+/** Words that are only Roman numerals (e.g. semester "II", "III") must stay all-caps. */
+const ROMAN_NUMERAL_WORD = /^[IVXLCDM]+$/i;
+
+export function toSentenceCase(str: string): string {
+  let result = str
+    .replace(/_/g, " ") // Replace underscores with spaces
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // Add space before capital letters
+    .split(" ")
+    .filter((w) => w.length > 0)
+    .map((word) => {
+      if (ROMAN_NUMERAL_WORD.test(word)) {
+        return word.toUpperCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+
+  // Remove "Student" prefix from registration and roll number headers
+  result = result.replace(/^Student Registration Number$/, "Registration Number");
+  result = result.replace(/^Student Roll Number$/, "Roll Number");
+
+  return result;
+}

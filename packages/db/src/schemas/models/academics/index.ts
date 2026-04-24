@@ -1,6 +1,14 @@
 export * from "./academic-year.model";
 export * from "./batch-student-mapping.model";
 export * from "./batch.model";
+
+export * from "./career-progression-form-certificate.model";
+export * from "./career-progression-form-field.model";
+export * from "./career-progression-form.model";
+export * from "./certificate-field-master.model";
+export * from "./certificate-field-option-master.model";
+export * from "./certificate-master.model";
+
 export * from "./class.model";
 export * from "./document.model";
 export * from "./marksheet-paper-component-mapping.model";

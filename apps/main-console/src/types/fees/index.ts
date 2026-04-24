@@ -141,7 +141,7 @@ export interface StudentFeesMapping {
   lateFee: number;
   totalPayable: number;
   amountPaid: number | null;
-  paymentStatus: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED";
+  paymentStatus: "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED" | "CANCELLED";
   paymentMode: "CASH" | "CHEQUE" | "ONLINE";
   transactionRef: string | null;
   transactionDate: Date | null;

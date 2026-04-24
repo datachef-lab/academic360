@@ -34,6 +34,7 @@ import GradeCard from "./components/GradeMarks/GradeCard";
 import * as courseSubjectModule from "@/pages/courses-subjects-design";
 import * as admissionFeesModule from "@/pages/admissions-fees";
 import * as documentIssuanceModule from "@/features/document-issuance";
+import * as careerProgressionModule from "@/features/career-progression";
 import * as batchModule from "@/pages/batches";
 import * as studentModule from "@/pages/students";
 import * as attendanceModule from "@/pages/attendance-timetable";
@@ -57,7 +58,7 @@ import StaffAssignmentPage from "./pages/admissions-fees/admissions/[year]/workf
 import EligibilityPage from "./pages/admissions-fees/admissions/[year]/workflows/EligibilityPage";
 import MeritCriteriaPage from "./pages/admissions-fees/admissions/[year]/workflows/MeritCriteriaPage";
 import FeesSlabMappingPage from "./pages/admissions-fees/admissions/[year]/workflows/FeesSlabMappingPage";
-import BulkUploadPage from "./pages/BulkUpload";
+import { BulkDataUploadPage } from "@/features/bulk-upload";
 import Dashboard from "./features/dashboard/pages/dashboard";
 import LoginPage from "./features/auth/pages/login-page";
 import ResetPasswordPage from "./features/auth/pages/reset-password-page";
@@ -82,9 +83,14 @@ import BoardSubjectPage from "./features/academic-year-setup/pages/board-subject
 import ProtectedRouteWrapper from "./components/globals/ProtectedRouteWrapper";
 import CuRegStudentPage from "./features/cu-registration/pages/CuRegStudentPage";
 import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/pages/board-subject-univ-subject-mapping-paper";
+import StudentPromotionLogicMaster from "./features/academic-year-setup/layouts/student-promotion-logic-master";
+import PromotionBuilderPage from "./features/academic-year-setup/pages/promotion-builder-page";
+import PromotionClausesPage from "./features/academic-year-setup/pages/promotion-clauses-page";
+import AppearTypePage from "./features/academic-year-setup/pages/appear-type-page";
 import * as examManagementModule from "@/features/exam-management";
 import RealTimeTrackerPage from "./features/realtime-tracker/pages";
 import ReportsPage from "./features/reports/page";
+import PromoteStudentsPage from "./pages/PromoteStudentsPage";
 import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalCURegMarkingPage";
 import * as administrationModule from "./features/administration";
 // import * as resourceModule from "@/pages/resources";
@@ -114,6 +120,7 @@ const router = createBrowserRouter(
       ),
       children: [
         { path: "", element: <Dashboard /> },
+        { path: "promote-students", element: <PromoteStudentsPage /> },
         {
           path: "academic-year-setup",
           element: <Outlet />,
@@ -178,6 +185,16 @@ const router = createBrowserRouter(
                 { path: "restricted-groupings", element: <RestrictedGroupingPage /> },
                 { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
                 { path: "semester-availability", element: <SemesterAvailabilityPage /> },
+              ],
+            },
+            {
+              path: "student-promotion-logic",
+              element: <StudentPromotionLogicMaster />,
+              children: [
+                { path: "", element: <PromotionBuilderPage /> },
+                { path: "classes", element: <courseSubjectModule.ClassesPage /> },
+                { path: "promotion-clauses", element: <PromotionClausesPage /> },
+                { path: "appear-types", element: <AppearTypePage /> },
               ],
             },
           ],
@@ -316,6 +333,7 @@ const router = createBrowserRouter(
             { path: "reports", element: <admissionFeesModule.feesModule.FeesReportsPage /> },
             { path: "structure", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
             { path: "student-fees", element: <admissionFeesModule.feesModule.StudentFees /> },
+            { path: "marking", element: <admissionFeesModule.feesModule.FeePaymentMarkingPage /> },
             {
               path: "fee-group-promotion-mapping",
               element: <admissionFeesModule.feesModule.FeeGroupPromotionMappingPage />,
@@ -348,6 +366,21 @@ const router = createBrowserRouter(
             { path: "types", element: <documentIssuanceModule.DocumentTypesPage /> },
             { path: "templates", element: <documentIssuanceModule.DocumentTemplatesPage /> },
             { path: "logs", element: <documentIssuanceModule.DocumentIssuanceLogsPage /> },
+          ],
+        },
+        {
+          path: "career-progression",
+          element: <careerProgressionModule.CareerProgressionMasterLayout />,
+          children: [
+            { path: "", element: <careerProgressionModule.CareerProgressionHomePage /> },
+            {
+              path: "certificate-master",
+              element: <careerProgressionModule.CertificateMasterPage />,
+            },
+            {
+              path: "certificate-fields",
+              element: <careerProgressionModule.CertificateFieldsPage />,
+            },
           ],
         },
         {
@@ -542,7 +575,7 @@ const router = createBrowserRouter(
         },
 
         { path: "profile", element: <UserProfilePage /> },
-        { path: "bulk-upload", element: <BulkUploadPage /> },
+        { path: "bulk-upload", element: <BulkDataUploadPage /> },
       ],
     },
     { path: "*", element: <NotFoundPage /> },

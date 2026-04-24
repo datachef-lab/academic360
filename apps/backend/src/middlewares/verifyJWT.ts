@@ -17,7 +17,7 @@ export const verifyJWT = async (
   try {
     const authHeader =
       req.headers.authorization || (req.headers.Authorization as string);
-    log.debug(authHeader);
+    // log.debug(authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
       throw new ApiError(401, "Unauthorized");
     }
@@ -33,15 +33,15 @@ export const verifyJWT = async (
       .from(userModel)
       .where(eq(userModel.id, decoded.id));
 
-    log.debug("JWT Verification - User ID:", { userId: decoded.id });
-    log.debug("JWT Verification - Decoded Type:", decoded.type);
-    log.debug("JWT Verification - Found User:", foundUser);
-    log.debug("JWT Verification - Found User Type:", {
-      userType: foundUser?.type,
-    });
-    log.debug("JWT Verification - User Active:", {
-      isActive: foundUser?.isActive,
-    });
+    // log.debug("JWT Verification - User ID:", { userId: decoded.id });
+    // log.debug("JWT Verification - Decoded Type:", decoded.type);
+    // log.debug("JWT Verification - Found User:", foundUser);
+    // log.debug("JWT Verification - Found User Type:", {
+    //   userType: foundUser?.type,
+    // });
+    // log.debug("JWT Verification - User Active:", {
+    //   isActive: foundUser?.isActive,
+    // });
 
     if (!foundUser) {
       log.error("JWT Verification - User not found in database");
