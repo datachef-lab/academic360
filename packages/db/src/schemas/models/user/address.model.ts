@@ -12,6 +12,7 @@ import { accommodationModel } from "./accommodation.model";
 import { postOfficeModel } from "./post-office.model";
 import { policeStationModel } from "./police-station.model";
 import { personModel } from "./person.model";
+import { publisherModel } from "../library/publisher.model";
 
 export const addressModel = pgTable("address", {
     id: serial().primaryKey(),
@@ -21,6 +22,7 @@ export const addressModel = pgTable("address", {
     institutionId: integer("institution_id_fk").references(() => institutionModel.id),
     accommodationId: integer("accommodation_id_fk").references(() => accommodationModel.id),
     personId: integer("person_id_fk").references(() => personModel.id),
+    publisherId: integer("publisher_id_fk").references(() => publisherModel.id),
 
     type: addressTypeEnum(),
     countryId: integer("country_id_fk").references(() => countryModel.id),

@@ -442,3 +442,8 @@ export const academicActivityAudienceEnum = pgEnum("academic_activity_audience",
     "STUDENT",
     "ALL",
 ]);
+
+export const libraryEntryExitStatusEnum = pgEnum("library_entry_exit_status", [
+    "CHECKED_IN",
+    "CHECKED_OUT",
+]);
