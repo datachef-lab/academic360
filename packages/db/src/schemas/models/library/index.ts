@@ -1,5 +1,6 @@
 export * from "./binding.model";
 export * from "./book-circulation.model";
+export * from "./book-reissue.model";
 export * from "./book.model";
 export * from "./borrowing-type.model";
 export * from "./copy-details.model";

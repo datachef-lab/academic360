@@ -97,6 +97,7 @@ const data = {
     { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
     { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
     { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
+    { title: "Library", url: "/dashboard/library", icon: BookOpen },
     { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
     { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
     { title: "Career Progression", url: "/dashboard/career-progression", icon: TrendingUp },

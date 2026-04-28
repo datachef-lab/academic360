@@ -186,6 +186,7 @@ import {
   admitCardRouter,
   examGroupRouter,
 } from "./features/exams/routes/index.js";
+import libraryEntryExitRouter from "@/features/library/routes/library-entry-exit.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -616,6 +617,7 @@ app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 app.use("/api/admissions", admissionRouter);
 
 app.use("/api/payments", paymentRouter);
+app.use("/api/library/entry-exit", libraryEntryExitRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 

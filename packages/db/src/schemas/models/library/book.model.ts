@@ -48,7 +48,7 @@ export const bookModel = pgTable("books", {
     issueDate1: date(),
     issueDate2: date(),
     monthFromAt1: varchar({ length: 255 }),
-    monthToAt2: varchar({ length: 255 }),
+    monthFromAt2: varchar({ length: 255 }),
     frontCover: varchar(),
     backCover: varchar(),
     softCopy: varchar(),

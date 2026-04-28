@@ -9,8 +9,7 @@ import { paymentModel } from "../payments";
 export const bookCirculationModel = pgTable("book_circulation", {
     id: serial().primaryKey(),
     legacyBookCirculationId: integer(),
-    reIssuedFromParentId: integer("reissued_from_parent_id_fk")
-        .references((): AnyPgColumn => bookCirculationModel.id),
+    
     copyDetailsId: integer("copy_details_id_fk")
         .references(() => copyDetailsModel.id)
         .notNull(),

@@ -16,12 +16,12 @@ export const subjectGroupingMainModel = pgTable(
     "subject_grouping_main",
     {
         id: serial().primaryKey(),
+        legacySubjectGroupId: integer(),
         academicYearId: integer("academic_year_id_fk")
             .references(() => academicYearModel.id)
             .notNull(),
         subjectTypeId: integer("subject_type_id_fk")
-            .references(() => subjectTypeModel.id)
-            .notNull(),
+            .references(() => subjectTypeModel.id),
         name: varchar({ length: 500 }).notNull(),
         code: varchar({ length: 500 }),
         description: varchar({ length: 500 }),

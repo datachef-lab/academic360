@@ -46,6 +46,7 @@ import { loadDefaultPromotionData } from "@/features/batches/default-promotion-d
 import { loadStudentFees } from "@/features/fees/services/legacy-fees-data.service";
 import { defaultSetDateOfJoining } from "@/features/user/defaut-set-date-of-joining";
 import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
+import { loadLibrary } from "@/features/library/old-irp-data";
 const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -104,6 +105,7 @@ export const connectToDatabase = async () => {
       log.warn("Default promotion data load failed", { error: e });
     });
     loadStudentFees();
+    loadLibrary();
     initializeAcademicActivities();
     defaultSetDateOfJoining();
     // loadAllStaff();
@@ -198,6 +200,7 @@ export const connectToMySQL = async () => {
     ); // Simple query to test the connection
     // console.log(rows);
     // exportStaffDataToExcel();
+
     log.info("Connected to MySQL successfully 🎉");
     // getIrpNotFoundCourseDesigns();
   } catch (error) {

@@ -19,7 +19,7 @@ export async function defaultSetDateOfJoining() {
     );
 
   for (const promotion of promotions) {
-    console.log("processing promotion doj, for uid: ", promotion.students?.uid);
+    // console.log("processing promotion doj, for uid: ", promotion.students?.uid);
     const studentId = promotion.promotions.studentId;
     const dateOfJoining = promotion.promotions.dateOfJoining;
     if (dateOfJoining) {
