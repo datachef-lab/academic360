@@ -164,9 +164,9 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
     meta?: Record<string, unknown>,
   ) => {
     if (!progressUserId) {
-      console.log(
-        "[FeeStructureService] Skipping progress update - no progressUserId",
-      );
+      // console.log(
+      //   "[FeeStructureService] Skipping progress update - no progressUserId",
+      // );
       return;
     }
     console.log(
