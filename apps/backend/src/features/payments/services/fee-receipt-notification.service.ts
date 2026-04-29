@@ -23,10 +23,7 @@ const DEFAULT_COLLEGE_LOGO_URL =
  * `http://localhost:${PORT}` (PORT defaults like `app.ts`).
  */
 function getApiPublicOrigin(): string {
-  const raw =
-    process.env.API_PUBLIC_ORIGIN ||
-    process.env.BACKEND_PUBLIC_URL ||
-    process.env.BACKEND_URL;
+  const raw = process.env.BACKEND_URL;
   if (raw && String(raw).trim()) {
     return String(raw).trim().replace(/\/$/, "");
   }

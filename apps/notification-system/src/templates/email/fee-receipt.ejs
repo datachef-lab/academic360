@@ -294,7 +294,7 @@
 
     /* ── Footer ── */
     .footer {
-      background: #0a2240;
+      background: #183558;
       padding: clamp(18px, 4vw, 24px) clamp(18px, 5vw, 48px);
       text-align: center;
     }
@@ -417,12 +417,8 @@
             />
           </div>
           <div class="college-name" style="margin-left: 12px;">
-            Bhawanipur Education Society College<br/>
-            <span style="font-weight:300; font-size:11px; letter-spacing:0.04em; opacity:0.6;">System Control Room</span>
+            The Bhawanipur Education Society College<br/>
           </div>
-        </div>
-        <div class="header-title">
-          Fee Payment<br/><span>Confirmed ✓</span>
         </div>
       </div>
 
@@ -446,21 +442,10 @@
           </div>
         </div>
 
-        <!-- Challan info -->
-        <div class="info-box">
-          <div class="info-label">Challan Reference</div>
-          <div class="challan-number"><%= challanDisplay %></div>
-          <div class="divider"></div>
-          <div class="meta-row">
-            <span class="meta-label">Status</span>
-            <span class="meta-value" style="color:#16a34a;font-weight:600;">&#10003; Paid</span>
-          </div>
-        </div>
-
         <!-- CTA: paid challan PDF -->
         <div class="cta-wrap">
-          <a href="<%- pdfUrl %>" class="cta-btn" target="_blank" rel="noopener noreferrer">Download Your Paid Challan (PDF)</a>
-          <p class="cta-sub">Opens your official fee receipt PDF for this challan.</p>
+          <a href="<%- pdfUrl %>" class="cta-btn" target="_blank" rel="noopener noreferrer">Download Your Paid Challan</a>
+          <p class="cta-sub">Click on the above link to download your paid copy of the challan.</p>
         </div>
 
         <p class="greeting" style="margin-bottom:0; padding-top: 30px;">
@@ -474,13 +459,19 @@
       <div class="footer">
         <div class="regards">
           <strong>The Bhawanipur Education Society College</strong>
-          5, B.L. Saha Road, Kolkata – 700 026, West Bengal
+          This is an automated security messagae. Please do not reply to this email.<br />
+          &copy; <span id="year"></span> The Bhawanipur Education Society College. All rights reserved.
         </div>
         <div class="footer-rule"></div>
       </div>
 
     </div>
   </div>
+
+  <script>
+    const yearSpan = document.getElementById("year");
+    yearSpan.innerText = new Date().getFullYear();
+  </script>
 
 </body>
 </html>
