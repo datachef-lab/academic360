@@ -74,22 +74,26 @@
     }
 
     .college-badge {
-      display: flex;
-      align-items: center;
-      gap: 14px;
+      width: 100%;
+      border-collapse: collapse;
       margin-bottom: 28px;
+    }
+    .college-badge-cell {
+      vertical-align: middle;
+    }
+    .college-badge-cell.logo {
+      width: 58px;
+      padding-right: 14px;
     }
     .badge-icon {
       width: 44px;
       height: 44px;
       border: 2px solid rgba(255,255,255,0.25);
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+      display: block;
       background: rgba(255,255,255,0.06);
       overflow: hidden;
+      line-height: 0;
     }
     .college-logo-img {
       width: 100%;
@@ -102,13 +106,16 @@
     }
 
     .college-name {
+      display: block;
       font-family: 'Playfair Display', serif;
       font-size: 13px;
       font-weight: 600;
       color: rgba(255,255,255,0.75);
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      line-height: 1.3;
+      line-height: 1.35;
+      mso-line-height-rule: exactly;
+      padding-top: 1px;
     }
 
     .header-title {
@@ -397,6 +404,7 @@
         '/api/v1/fees/receipts?challanNumber=' +
         encodeURIComponent(challanRef)
       : '#');
+  const currentYear = new Date().getFullYear();
 %>
   <div class="wrapper">
 
@@ -404,22 +412,28 @@
 
       <!-- Header -->
       <div class="header">
-        <div class="college-badge">
-          <div class="badge-icon">
-            <img
-              class="college-logo-img"
-              src="<%- logoUrl %>"
-              alt="The Bhawanipur Education Society College, Kolkata — official emblem"
-              width="44"
-              height="44"
-              loading="eager"
-              decoding="async"
-            />
-          </div>
-          <div class="college-name" style="margin-left: 12px;">
-            The Bhawanipur Education Society College<br/>
-          </div>
-        </div>
+        <table class="college-badge" role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="college-badge-cell logo">
+              <div class="badge-icon">
+                <img
+                  class="college-logo-img"
+                  src="<%- logoUrl %>"
+                  alt="The Bhawanipur Education Society College, Kolkata — official emblem"
+                  width="44"
+                  height="44"
+                  loading="eager"
+                  decoding="async"
+                />
+              </div>
+            </td>
+            <td class="college-badge-cell">
+              <div class="college-name">
+                The Bhawanipur Education Society College
+              </div>
+            </td>
+          </tr>
+        </table>
       </div>
 
       <!-- Gold stripe -->
@@ -460,18 +474,13 @@
         <div class="regards">
           <strong>The Bhawanipur Education Society College</strong>
           This is an automated security messagae. Please do not reply to this email.<br />
-          &copy; <span id="year"></span> The Bhawanipur Education Society College. All rights reserved.
+          &copy; <%= currentYear %> The Bhawanipur Education Society College. All rights reserved.
         </div>
         <div class="footer-rule"></div>
       </div>
 
     </div>
   </div>
-
-  <script>
-    const yearSpan = document.getElementById("year");
-    yearSpan.innerText = new Date().getFullYear();
-  </script>
 
 </body>
 </html>

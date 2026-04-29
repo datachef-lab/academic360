@@ -771,7 +771,6 @@ export function SemesterPromotionScreen() {
   const [bucketCountsLoading, setBucketCountsLoading] = useState(false);
 
   const [promotionModal, setPromotionModal] = useState<PromotionModal>("closed");
-  const [confirmPromoteAllOpen, setConfirmPromoteAllOpen] = useState(false);
   const [loadingSelectableIds, setLoadingSelectableIds] = useState(false);
   const [selectAllScopeBreakdown, setSelectAllScopeBreakdown] = useState<
     (ShiftBreakdownTableModel & { totalSelectable: number }) | null
@@ -1224,10 +1223,6 @@ export function SemesterPromotionScreen() {
         return;
       }
       if (opts.mode === "selected" && selectedStudentIds.size === 0) return;
-      if (opts.mode === "allEligible") {
-        const n = bucketCounts?.eligible ?? 0;
-        if (n < 1) return;
-      }
       setPromoteProgressOpen(true);
       setCurrentProgressUpdate(null);
       setProgressOperation(SEMESTER_PROMOTION_SOCKET_OP);
@@ -1314,7 +1309,6 @@ export function SemesterPromotionScreen() {
     [
       academicYearId,
       affiliationIds,
-      bucketCounts?.eligible,
       canQuery,
       debouncedQ,
       fetchRoster,
@@ -1833,20 +1827,6 @@ export function SemesterPromotionScreen() {
                         </span>
                       )}
                     </div>
-                    {!rosterLoading && roster && roster.totalElements > 0 ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={
-                          bucketCountsLoading || loadingSelectableIds || selectableScopeEstimate < 1
-                        }
-                        className="h-8 shrink-0 gap-1.5 border-[var(--sp-border)] font-sans text-[11.5px] font-semibold text-[var(--sp-navy)] hover:bg-[var(--sp-surface)]"
-                        onClick={() => setPromotionModal("selectAllScope")}
-                      >
-                        {loadingSelectableIds ? "Loading…" : "Select all for promotion (all pages)"}
-                      </Button>
-                    ) : null}
                   </div>
                   <div className="relative max-h-[min(520px,60vh)] touch-pan-x overflow-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
                     <div className="w-full min-w-[1080px]">
@@ -1862,14 +1842,13 @@ export function SemesterPromotionScreen() {
                             className="border-[var(--sp-navy)] data-[state=checked]:bg-[var(--sp-navy)]"
                             onCheckedChange={(c) => {
                               const on = c === true;
-                              setSelectedStudentIds((prev) => {
-                                const next = new Set(prev);
-                                if (on) selectableOnPage.forEach((row) => next.add(row.studentId));
-                                else selectableOnPage.forEach((row) => next.delete(row.studentId));
-                                return next;
-                              });
+                              if (on) {
+                                void applySelectAllMatchingScope();
+                                return;
+                              }
+                              setSelectedStudentIds(new Set());
                             }}
-                            aria-label="Select all eligible and suspended students on this page"
+                            aria-label="Select all eligible and suspended students in filtered scope"
                           />
                         </div>
                         <div className="leading-snug">Student / Reg No.</div>
@@ -2018,23 +1997,6 @@ export function SemesterPromotionScreen() {
                         }}
                       />
                       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--sp-border)] px-4 py-3">
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={
-                            promoting ||
-                            rosterLoading ||
-                            bucketCountsLoading ||
-                            (bucketCounts?.eligible ?? 0) < 1
-                          }
-                          className="bg-[var(--sp-navy)] font-sans text-[12px] font-semibold text-white hover:opacity-95"
-                          onClick={() => setConfirmPromoteAllOpen(true)}
-                        >
-                          Promote all eligible
-                          {bucketCounts != null && !bucketCountsLoading
-                            ? ` (${bucketCounts.eligible.toLocaleString()})`
-                            : ""}
-                        </Button>
                         <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
                           <Download className="h-4 w-4" />
                           Export CSV
@@ -2064,7 +2026,7 @@ export function SemesterPromotionScreen() {
         )}
       </div>
 
-      {selectedStudentIds.size > 0 && !promotionModalOpen && !confirmPromoteAllOpen ? (
+      {selectedStudentIds.size > 0 && !promotionModalOpen ? (
         <div className="sp-sel-bar">
           <div className="flex items-center gap-2.5">
             <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--sp-amber-bd)]" />
@@ -2095,69 +2057,6 @@ export function SemesterPromotionScreen() {
           </div>
         </div>
       ) : null}
-
-      <AlertDialog open={confirmPromoteAllOpen} onOpenChange={setConfirmPromoteAllOpen}>
-        <AlertDialogContent className="max-w-lg bg-background text-foreground">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Promote all eligible students?</AlertDialogTitle>
-            <AlertDialogDescription className="text-left text-sm leading-relaxed">
-              This will promote every student who is <strong>eligible</strong> for the target
-              semester under your current filters and search — including rows that are not on this
-              page. Suspended accounts are not included unless you select them manually per row.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-3 py-1 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">
-                Promoted-from end date
-              </label>
-              <Input
-                type="date"
-                value={fromSemesterEndDate}
-                onChange={(e) => setFromSemesterEndDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">
-                Promoted-to start date
-              </label>
-              <Input
-                type="date"
-                value={toSemesterStartDate}
-                onChange={(e) => setToSemesterStartDate(e.target.value)}
-              />
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setConfirmPromoteAllOpen(false)}
-              disabled={promoting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={
-                promoting ||
-                rosterLoading ||
-                (bucketCounts?.eligible ?? 0) < 1 ||
-                !hasPromotionDates
-              }
-              className="bg-emerald-600 font-bold text-white hover:bg-emerald-700"
-              onClick={() => {
-                setConfirmPromoteAllOpen(false);
-                void runSemesterPromotion({ mode: "allEligible" });
-              }}
-            >
-              {promoting
-                ? "Promoting…"
-                : `Promote ${(bucketCounts?.eligible ?? 0).toLocaleString()} eligible →`}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog
         open={promotionModal !== "closed"}
