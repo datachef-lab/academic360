@@ -38,7 +38,7 @@ export async function defaultSetDateOfJoining() {
           .where(eq(promotionModel.id, promotion.promotions.id));
       }
     } else {
-      console.log(`No date of joining found for student ${studentId}`);
+      // console.log(`No date of joining found for student ${studentId}`);
     }
   }
 }
