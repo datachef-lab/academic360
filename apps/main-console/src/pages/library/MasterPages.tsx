@@ -13,33 +13,6 @@ function LibraryMasterPlaceholderPage({
   );
 }
 
-export function PublicationsPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Publications"
-      description="Publications master management UI will be available here."
-    />
-  );
-}
-
-export function EnclosuresPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Enclosure / Attachments"
-      description="Enclosure and attachments master management UI will be available here."
-    />
-  );
-}
-
-export function EntryModesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Entry Mode"
-      description="Entry mode master management UI will be available here."
-    />
-  );
-}
-
 export function JournalTypesPage() {
   return (
     <LibraryMasterPlaceholderPage
@@ -76,24 +49,6 @@ export function ShelvesPage() {
   );
 }
 
-export function BindingTypesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Binding Type"
-      description="Binding type master management UI will be available here."
-    />
-  );
-}
-
-export function PeriodsPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Period / Frequency"
-      description="Period and frequency master management UI will be available here."
-    />
-  );
-}
-
 export function ArticlesPage() {
   return (
     <LibraryMasterPlaceholderPage
@@ -108,15 +63,6 @@ export function LibraryDocumentsPage() {
     <LibraryMasterPlaceholderPage
       title="Library Document"
       description="Library document master management UI will be available here."
-    />
-  );
-}
-
-export function BorrowingTypesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Borrowing Type"
-      description="Borrowing type master management UI will be available here."
     />
   );
 }
