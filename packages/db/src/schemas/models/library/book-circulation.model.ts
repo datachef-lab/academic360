@@ -1,4 +1,4 @@
-import { AnyPgColumn, boolean, doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import {  boolean, doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { userModel } from "../user";
@@ -9,7 +9,6 @@ import { paymentModel } from "../payments";
 export const bookCirculationModel = pgTable("book_circulation", {
     id: serial().primaryKey(),
     legacyBookCirculationId: integer(),
-    
     copyDetailsId: integer("copy_details_id_fk")
         .references(() => copyDetailsModel.id)
         .notNull(),

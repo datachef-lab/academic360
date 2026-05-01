@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import { BookOpen, CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,12 +15,14 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ComboboxProps = {
-  dataArr: { value: string; label: string }[];
+  dataArr: { value: string; label: string; imageUrl?: string }[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  showOptionsHint?: boolean;
+  contentClassName?: string;
 };
 
 export function Combobox({
@@ -30,6 +32,8 @@ export function Combobox({
   placeholder = "Select...",
   className = "",
   disabled = false,
+  showOptionsHint = true,
+  contentClassName = "",
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -50,13 +54,13 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("justify-between w-full", className)}
+          className={cn("w-full justify-between overflow-hidden", className)}
           disabled={disabled}
         >
-          <div className="flex items-center gap-2">
-            <span>{selectedLabel || placeholder}</span>
-            {!selectedLabel && dataArr.length > 0 && (
-              <span className="text-xs text-muted-foreground">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+            <span className="truncate text-left">{selectedLabel || placeholder}</span>
+            {showOptionsHint && !selectedLabel && dataArr.length > 0 && (
+              <span className="hidden shrink-0 text-xs text-muted-foreground xl:inline">
                 ({dataArr.filter((item) => item.value !== "").length} option
                 {dataArr.filter((item) => item.value !== "").length !== 1 ? "s" : ""} available)
               </span>
@@ -65,17 +69,27 @@ export function Combobox({
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="z-50 w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-[60vh] overflow-y-auto">
-        <Command>
+      <PopoverContent
+        align="start"
+        className={cn(
+          "z-[120] flex w-[min(var(--radix-popover-trigger-width,280px),calc(100vw-2rem))] max-h-[min(70vh,var(--radix-popover-content-available-height,80vh))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-0",
+          contentClassName,
+        )}
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <Command
+          shouldFilter={false}
+          className="h-auto max-h-full min-h-0 flex-1 flex-col overflow-hidden rounded-md bg-popover text-popover-foreground"
+        >
           <CommandInput
             value={search}
             onValueChange={setSearch}
             placeholder={placeholder ? `Search ${placeholder.toLowerCase()}` : "Search..."}
           />
-          <CommandList className="max-h-[60vh] overflow-y-auto">
+          <CommandList className="min-h-0 max-h-[min(55vh,400px)] flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
             <CommandEmpty>No options found.</CommandEmpty>
             {filtered.length > 0 && (
-              <div className="px-2 py-1.5 text-xs text-muted-foreground border-b">
+              <div className="border-b px-2 py-1.5 text-xs text-muted-foreground">
                 {filtered.filter((item) => item.value !== "").length} option
                 {filtered.filter((item) => item.value !== "").length !== 1 ? "s" : ""} available
               </div>
@@ -85,6 +99,7 @@ export function Combobox({
                 <CommandItem
                   key={item.value}
                   value={item.label}
+                  className="whitespace-normal break-words"
                   onSelect={() => {
                     onChange(item.value);
                     setOpen(false);
@@ -97,7 +112,18 @@ export function Combobox({
                       value === item.value ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  {item.label}
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.label}
+                      className="mr-2 h-7 w-6 shrink-0 rounded border object-cover"
+                    />
+                  ) : (
+                    <span className="mr-2 inline-flex h-7 w-6 shrink-0 items-center justify-center rounded border bg-muted/40 text-muted-foreground">
+                      <BookOpen className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                  <span>{item.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

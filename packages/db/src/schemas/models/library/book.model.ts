@@ -1,7 +1,6 @@
 import { boolean, date, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
-import { libraryArticleModel } from "./library-article.model";
 import { libraryDocumentTypeModel } from "./library-document-type.model";
 import { languageMediumModel } from "../resources";
 import { seriesModel } from "./series.model";

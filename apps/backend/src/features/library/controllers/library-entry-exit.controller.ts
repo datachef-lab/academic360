@@ -5,11 +5,14 @@ import { NextFunction, Request, Response } from "express";
 import {
   createLibraryEntryExit,
   deleteLibraryEntryExit,
+  exportLibraryEntryExitExcel,
   findLibraryEntryExitById,
   findLibraryEntryExitPaginated,
+  getLibraryEntryExitPreviewByUserId,
   searchLibraryUsers,
   updateLibraryEntryExit,
 } from "@/features/library/services/library-entry-exit.service.js";
+import { socketService } from "@/services/socketService.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -137,6 +140,39 @@ export const searchLibraryUsersController = async (
   }
 };
 
+export const getLibraryEntryExitPreviewController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userId = parseId(req.params.userId);
+    if (!userId) {
+      res.status(400).json(new ApiError(400, "Valid userId is required"));
+      return;
+    }
+
+    const payload = await getLibraryEntryExitPreviewByUserId(userId);
+    if (!payload) {
+      res.status(404).json(new ApiError(404, "User not found"));
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          payload,
+          "Library entry/exit preview fetched successfully.",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
 export const createLibraryEntryExitController = async (
   req: Request,
   res: Response,
@@ -155,6 +191,17 @@ export const createLibraryEntryExitController = async (
       currentStatus: currentStatus ?? "CHECKED_IN",
       entryTimestamp: new Date(),
       exitTimestamp: null,
+    });
+
+    const createdUserPreview = await getLibraryEntryExitPreviewByUserId(
+      created.userId,
+    );
+    socketService.sendLibraryEntryExitUpdate({
+      action:
+        created.currentStatus === "CHECKED_OUT" ? "CHECKED_OUT" : "CHECKED_IN",
+      userId: created.userId,
+      userName: createdUserPreview?.user.name || `User ${created.userId}`,
+      meta: { entryExitId: created.id },
     });
 
     res
@@ -210,6 +257,21 @@ export const updateLibraryEntryExitController = async (
           : {}),
     });
 
+    if (updated) {
+      const updatedUserPreview = await getLibraryEntryExitPreviewByUserId(
+        updated.userId,
+      );
+      socketService.sendLibraryEntryExitUpdate({
+        action:
+          updated.currentStatus === "CHECKED_OUT"
+            ? "CHECKED_OUT"
+            : "CHECKED_IN",
+        userId: updated.userId,
+        userName: updatedUserPreview?.user.name || `User ${updated.userId}`,
+        meta: { entryExitId: updated.id },
+      });
+    }
+
     res
       .status(200)
       .json(
@@ -256,6 +318,49 @@ export const deleteLibraryEntryExitController = async (
           "Library entry/exit deleted successfully.",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const downloadLibraryEntryExitExcelController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const search =
+      typeof req.query.search === "string" ? req.query.search : undefined;
+    const userType =
+      typeof req.query.userType === "string" ? req.query.userType : undefined;
+    const currentStatus =
+      typeof req.query.currentStatus === "string"
+        ? req.query.currentStatus
+        : undefined;
+    const date =
+      typeof req.query.date === "string" ? req.query.date : undefined;
+
+    const buffer = await exportLibraryEntryExitExcel({
+      search,
+      userType: userType as
+        | "ADMIN"
+        | "STUDENT"
+        | "FACULTY"
+        | "STAFF"
+        | "PARENTS"
+        | undefined,
+      currentStatus: currentStatus as "CHECKED_IN" | "CHECKED_OUT" | undefined,
+      date,
+    });
+
+    const filename = `library-entry-exit-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", buffer.length);
+    res.status(200).send(buffer);
   } catch (error) {
     handleError(error, res, next);
   }

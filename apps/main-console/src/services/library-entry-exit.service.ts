@@ -22,6 +22,8 @@ export type LibraryEntryExitRow = {
 export type LibraryEntryExitListPayload = {
   rows: LibraryEntryExitRow[];
   total: number;
+  checkedInCount: number;
+  checkedOutCount: number;
   page: number;
   limit: number;
 };
@@ -49,6 +51,51 @@ export type LibrarySearchUsersPayload = {
   total: number;
   page: number;
   limit: number;
+};
+
+export type LibraryEntryExitPreviewUser = {
+  userId: number;
+  userType: string;
+  name: string;
+  image: string | null;
+  isActive: boolean | null;
+  uid: string | null;
+  rfid: string | null;
+  rollNumber: string | null;
+  registrationNumber: string | null;
+  classRollNumber: string | null;
+  email: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  staffCode: string | null;
+  attendanceCode: string | null;
+  classOrSemester: string | null;
+  shift: string | null;
+  section: string | null;
+  programCourse: string | null;
+  programCourseShortName: string | null;
+  affiliation: string | null;
+  affiliationShortName: string | null;
+  regulationType: string | null;
+  regulationTypeShortName: string | null;
+};
+
+export type LibraryEntryExitPreviewCirculationRow = {
+  id: number;
+  accessNumber: string | null;
+  title: string | null;
+  author: string | null;
+  borrowingType: string | null;
+  status: string;
+  issuedTimestamp: string | null;
+  approvedReturnTimestamp: string | null;
+  returnTimestamp: string | null;
+  daysLate: number;
+};
+
+export type LibraryEntryExitPreviewPayload = {
+  user: LibraryEntryExitPreviewUser;
+  circulationRows: LibraryEntryExitPreviewCirculationRow[];
 };
 
 const BASE_URL = "/api/library/entry-exit";
@@ -93,4 +140,23 @@ export async function searchLibraryUsers(
     },
   );
   return response.data;
+}
+
+export async function getLibraryEntryExitPreview(
+  userId: number,
+): Promise<ApiResponse<LibraryEntryExitPreviewPayload>> {
+  const response = await axiosInstance.get<ApiResponse<LibraryEntryExitPreviewPayload>>(
+    `${BASE_URL}/preview/${userId}`,
+  );
+  return response.data;
+}
+
+export async function downloadLibraryEntryExitExcel(
+  filters: Omit<LibraryEntryExitFilters, "page" | "limit">,
+): Promise<Blob> {
+  const response = await axiosInstance.get(`${BASE_URL}/download`, {
+    params: filters,
+    responseType: "blob",
+  });
+  return response.data as Blob;
 }
