@@ -186,6 +186,11 @@ import {
   admitCardRouter,
   examGroupRouter,
 } from "./features/exams/routes/index.js";
+import libraryEntryExitRouter from "@/features/library/routes/library-entry-exit.route.js";
+import bookCirculationRouter from "@/features/library/routes/book-circulation.route.js";
+import journalRouter from "@/features/library/routes/journal.route.js";
+import copyDetailsRouter from "@/features/library/routes/copy-details.route.js";
+import bookRouter from "@/features/library/routes/book.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -616,6 +621,11 @@ app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 app.use("/api/admissions", admissionRouter);
 
 app.use("/api/payments", paymentRouter);
+app.use("/api/library/entry-exit", libraryEntryExitRouter);
+app.use("/api/library/book-circulation", bookCirculationRouter);
+app.use("/api/library/journals", journalRouter);
+app.use("/api/library/copy-details", copyDetailsRouter);
+app.use("/api/library/books", bookRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 

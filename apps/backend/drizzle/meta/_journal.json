@@ -911,6 +911,20 @@
       "when": 1776937802702,
       "tag": "0129_warm_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "7",
+      "when": 1777357953340,
+      "tag": "0130_pink_barracuda",
+      "breakpoints": true
+    },
+    {
+      "idx": 131,
+      "version": "7",
+      "when": 1777550311457,
+      "tag": "0131_ambiguous_barracuda",
+      "breakpoints": true
     }
   ]
 }

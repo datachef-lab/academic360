@@ -8,3 +8,5 @@ export * from "./subject-selection/index.js";
 export * from "./exams/index.js";
 export * from "./academics/index.js";
 export * from "./batches/index.js";
+export * from "./library/index.js";
+export * from "./fees/index.js";

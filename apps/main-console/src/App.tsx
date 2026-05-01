@@ -5,8 +5,6 @@ import HomeLayout from "@/features/dashboard/layouts/home-layout";
 import { AuthProvider } from "./features/auth/providers/auth-provider";
 import { NotificationProvider } from "./providers/NotificationProvider";
 // import StudentPage from "./pages/students/StudentPage";
-import BookCatalog from "./components/LibManagement/BookCatalog";
-import IssueRetun from "./components/LibManagement/IssueRetun";
 // import LibFineManagement from "./components/LibManagement/LibFines";
 // import LibReport from "./components/LibManagement/LibReport";
 
@@ -16,7 +14,6 @@ import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActiv
 // import MarksheetPage from "./pages/students/MarksheetPage";
 // import Downloads from "./pages/Downloads";
 import Event from "./pages/events/EventPage";
-import LibraryDashboard from "./pages/library/LibraryDashboard";
 
 import Downloads from "./pages/Downloads";
 
@@ -480,10 +477,25 @@ const router = createBrowserRouter(
           path: "library",
           element: <libraryModule.LibraryMaster />,
           children: [
-            { path: "", element: <LibraryDashboard /> },
-            { path: "archived", element: <div>TODO: Archived Books</div> },
-            { path: "catalog", element: <BookCatalog /> },
-            { path: "issued", element: <IssueRetun /> },
+            { path: "", element: <libraryModule.LibraryHomePage /> },
+            { path: "entry-exit", element: <libraryModule.EntryExitPage /> },
+            { path: "book-circulation", element: <libraryModule.BookCirculationPage /> },
+            { path: "books", element: <libraryModule.BooksPage /> },
+            { path: "copy-details", element: <libraryModule.CopyDetailsPage /> },
+            { path: "journal", element: <libraryModule.JournalPage /> },
+            { path: "series", element: <libraryModule.SeriesPage /> },
+            { path: "publications", element: <libraryModule.PublicationsPage /> },
+            { path: "enclosures", element: <libraryModule.EnclosuresPage /> },
+            { path: "entry-modes", element: <libraryModule.EntryModesPage /> },
+            { path: "journal-types", element: <libraryModule.JournalTypesPage /> },
+            { path: "statuses", element: <libraryModule.StatusesPage /> },
+            { path: "racks", element: <libraryModule.RacksPage /> },
+            { path: "shelves", element: <libraryModule.ShelvesPage /> },
+            { path: "binding-types", element: <libraryModule.BindingTypesPage /> },
+            { path: "periods", element: <libraryModule.PeriodsPage /> },
+            { path: "articles", element: <libraryModule.ArticlesPage /> },
+            { path: "library-documents", element: <libraryModule.LibraryDocumentsPage /> },
+            { path: "borrowing-types", element: <libraryModule.BorrowingTypesPage /> },
             //   { path: "fine-management", element: <LibFineManagement /> },
             //   { path: "lib-report", element: <LibReport /> },
           ],
