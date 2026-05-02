@@ -970,6 +970,9 @@ function combineDateTime(
 }
 
 const arr = [
+  { table: "libentryexit", fn: getEntryExitByOldId },
+  { table: "issuereturn", fn: getBookCirculationByOldId },
+
   { table: "language", fn: getLanguageByOldId },
   { table: "series", fn: getSeriesByOldId },
   { table: "publisher", fn: getPublisherByOldId },
@@ -989,8 +992,6 @@ const arr = [
   { table: "journalmaster", fn: getJournalByOldId },
   { table: "bookentry", fn: getBookByOldId },
   { table: "copydetailsub", fn: getCopyDetailsByOldId },
-  { table: "issuereturn", fn: getBookCirculationByOldId },
-  { table: "libentryexit", fn: getEntryExitByOldId },
 ];
 
 export async function loadLibrary() {
