@@ -84,15 +84,15 @@ export async function loadStudentFees() {
   const shifts = await db.select().from(shiftModel);
 
   // Sync/Link the receipt type master
-  console.log("Sync/Link the receipt type master");
+  // console.log("Sync/Link the receipt type master");
   const receiptTypes = await syncLegacyReceiptTypes();
 
   // Sync/Link the fee-heads master
-  console.log("Sync/Link the fee-heads master");
+  // console.log("Sync/Link the fee-heads master");
   const feeHeads = await syncLegacyFeeHeads();
 
   // Load the student fees mapping
-  console.log("Load the student fees mapping");
+  // console.log("Load the student fees mapping");
   const [result] = (await mysqlConnection.query(`
         SELECT
             -- Installment Id
@@ -253,7 +253,7 @@ export async function loadStudentFees() {
     `)) as [LegacyStudentFeeMappingRow[], unknown];
 
   // Iterate over the result
-  console.log("Iterate over the result");
+  // console.log("Iterate over the result");
   const uniqueLegacyAcademicYears = new Set(
     result.map((r) => r["Academic Year"]),
   );
@@ -269,11 +269,11 @@ export async function loadStudentFees() {
       for (const legacyPCName of uniqueLegacyProgramCourseNames) {
         for (const legacyClassName of uniqueLegacyClassNames) {
           for (const legacyShiftId of uniqueLegacyShifts) {
-            console.log(
-              `Processing: ${legacyAcademicYearName} | ${legacyReceiptTypeName} | ${legacyPCName} | ${legacyClassName} | Shift-${legacyShiftId}`,
-            );
+            // console.log(
+            //   `Processing: ${legacyAcademicYearName} | ${legacyReceiptTypeName} | ${legacyPCName} | ${legacyClassName} | Shift-${legacyShiftId}`,
+            // );
             // Step 1: Filter the entries by batches
-            console.log("in loop, Step 1: Filter the entries by batches");
+            // console.log("in loop, Step 1: Filter the entries by batches");
             const filteredDataByBatches = result.filter(
               (r) =>
                 r["Academic Year"] === legacyAcademicYearName &&
@@ -282,42 +282,42 @@ export async function loadStudentFees() {
                 r.Semester === legacyClassName &&
                 r.legacyShiftId === legacyShiftId,
             );
-            console.log("filteredDataByBatches:", filteredDataByBatches.length);
+            // console.log("filteredDataByBatches:", filteredDataByBatches.length);
             const donUids: string[] = [];
             // Iterate over each student
-            console.log("in loop, Step 2: Iterate over each student");
+            // console.log("in loop, Step 2: Iterate over each student");
             for (const data of filteredDataByBatches) {
               const uid = data.Uid;
               if (donUids.includes(uid)) continue; // Skip if already processed
 
-              console.log("Processing the uid:", uid);
+              // console.log("Processing the uid:", uid);
               // Grab all the student related entries for the uid from `filteredDataByBatches[]`
-              console.log(
-                "in loop, Step 3: Grab all the student related entries for the uid from `filteredDataByBatches[]`",
-              );
+              // console.log(
+              //   "in loop, Step 3: Grab all the student related entries for the uid from `filteredDataByBatches[]`",
+              // );
               const studentRows = filteredDataByBatches.filter(
                 (ele) => ele.Uid === uid,
               );
 
               // Find the student id from a360-db via uid
-              console.log(
-                "in loop, Step 4: Find the student id from a360-db via uid",
-              );
+              // console.log(
+              //   "in loop, Step 4: Find the student id from a360-db via uid",
+              // );
               const [foundStudent] = await db
                 .select()
                 .from(studentModel)
                 .where(eq(studentModel.uid, uid));
 
               if (!foundStudent) {
-                console.log(
-                  "Student Not Found in a360-db, capturing entries...",
-                );
+                // console.log(
+                //   "Student Not Found in a360-db, capturing entries...",
+                // );
                 await captureErrorRows("Student Not Found!", studentRows);
                 continue;
                 // throw Error("Student - Not Found!"); // TODO
               }
 
-              console.log("Find the fee-structure id from a360-db...");
+              // console.log("Find the fee-structure id from a360-db...");
               // Find the fee-structure id from a360-db
               const feeStructureResult = await syncLegacyFeeStructure(
                 studentRows,
@@ -336,9 +336,9 @@ export async function loadStudentFees() {
               if (!feeStructureResult) continue;
 
               // Find the fee student mapping by - studentId, feeStructureId, amount and fees-slab name (if is missing or not provided then use Slab F as default)
-              console.log(
-                "in loop, Find the fee student mapping by - studentId, feeStructureId, amount and fees-slab name (if is missing or not provided then use Slab F as default)",
-              );
+              // console.log(
+              //   "in loop, Find the fee student mapping by - studentId, feeStructureId, amount and fees-slab name (if is missing or not provided then use Slab F as default)",
+              // );
               await syncFeeStudentMapping(
                 studentRows,
                 uid,
@@ -435,7 +435,7 @@ async function syncFeeStudentMapping(
   //   studentUid,
   // );
   if (!tmpResult[0]?.feeStudentMapping) {
-    console.log("feeStudentMapping not found");
+    // console.log("feeStudentMapping not found");
     // throw Error("feeStudentMapping not found");
   }
 
@@ -612,9 +612,9 @@ async function syncLegacyFeeStructure(
 
   // Step 1: Try fetching with batch details if not found with legacy_fee_structure_id
 
-  console.log(
-    "syncLegacyFeeStructure() | Step 2 (optional): Try fetching with batch details if not found with legacy_fee_structure_id",
-  );
+  // console.log(
+  //   "syncLegacyFeeStructure() | Step 2 (optional): Try fetching with batch details if not found with legacy_fee_structure_id",
+  // );
   const tmpResult = await db
     .select({ feeStructure: feeStructureModel })
     .from(feeStructureModel)

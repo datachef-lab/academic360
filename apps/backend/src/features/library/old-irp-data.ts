@@ -1062,29 +1062,115 @@ function combineDateTime(
   return new Date(`${ymd}T${hh}:${mm}:${ss}${IST_OFFSET}`);
 }
 
-const arr = [
-  { table: "libentryexit", fn: getEntryExitByOldId },
-  { table: "issuereturn", fn: getBookCirculationByOldId },
+const arr: {
+  table: string;
+  fn: (id: number) => Promise<unknown>;
+  sql: string;
+}[] = [
+  {
+    table: "libentryexit",
+    fn: getEntryExitByOldId,
+    sql: `
+      SELECT l.id
+      FROM libentryexit l
+      LEFT JOIN staffpersonaldetails st ON st.id = l.usrid AND l.usrtype IN ('Staff', 'Teacher')
+      LEFT JOIN studentpersonaldetails spd ON spd.id = l.usrid AND l.usrtype = 'Student'
+      LEFT JOIN historicalrecord h ON h.parent_id = spd.id
+      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid AND sess.id > 17
+      ORDER BY entrydt, entrytime;
+    `,
+  },
+  {
+    table: "issuereturn",
+    fn: getBookCirculationByOldId,
+    sql: `
+      SELECT i.id
+      FROM issuereturn i
+      LEFT JOIN staffpersonaldetails st ON st.id = i.userId AND i.userTypeId IN ('Staff', 'Teacher')
+      LEFT JOIN studentpersonaldetails spd ON spd.id = i.userId AND i.userTypeId = 'Student'
+      LEFT JOIN historicalrecord h ON h.parent_id = spd.id
+      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid AND sess.id > 17
+      ORDER BY i.id;
+    `,
+  },
 
-  { table: "language", fn: getLanguageByOldId },
-  { table: "series", fn: getSeriesByOldId },
-  { table: "publisher", fn: getPublisherByOldId },
-  { table: "subjectgroup", fn: getSubjectGroupByOldId },
-  { table: "enclosetype", fn: getEnclosureByOldId },
-  { table: "entrymode", fn: getEntryModeByOldId },
-  { table: "journaltype", fn: getJournalTypeByOldId },
-  { table: "status", fn: getLibraryStatusByOldId },
-  { table: "rack", fn: getRackByOldId },
-  { table: "shelf", fn: getShelfByOldId },
-  { table: "bindingtype", fn: getBindingTypeByOldId },
-  { table: "periodpojo", fn: getPeriodByOldId },
-  { table: "latype", fn: getLibraryArticleByOldId },
-  { table: "documenttypelist", fn: getLibraryDocumentByOldId },
-  { table: "borrowingtype", fn: getBorrowingTypeByOldId },
+  {
+    table: "language",
+    fn: getLanguageByOldId,
+    sql: `
+      SELECT id FROM language;
+    `,
+  },
+  { table: "series", fn: getSeriesByOldId, sql: `SELECT id FROM series;` },
+  {
+    table: "publisher",
+    fn: getPublisherByOldId,
+    sql: `SELECT id FROM publisher;`,
+  },
+  {
+    table: "subjectgroup",
+    fn: getSubjectGroupByOldId,
+    sql: `SELECT id FROM subjectgroup;`,
+  },
+  {
+    table: "enclosetype",
+    fn: getEnclosureByOldId,
+    sql: `SELECT id FROM enclosetype;`,
+  },
+  {
+    table: "entrymode",
+    fn: getEntryModeByOldId,
+    sql: `SELECT id FROM entrymode;`,
+  },
+  {
+    table: "journaltype",
+    fn: getJournalTypeByOldId,
+    sql: `SELECT id FROM journaltype;`,
+  },
+  {
+    table: "status",
+    fn: getLibraryStatusByOldId,
+    sql: `SELECT id FROM status;`,
+  },
+  { table: "rack", fn: getRackByOldId, sql: `SELECT id FROM rack;` },
+  { table: "shelf", fn: getShelfByOldId, sql: `SELECT id FROM shelf;` },
+  {
+    table: "bindingtype",
+    fn: getBindingTypeByOldId,
+    sql: `SELECT id FROM bindingtype;`,
+  },
+  {
+    table: "periodpojo",
+    fn: getPeriodByOldId,
+    sql: `SELECT id FROM periodpojo;`,
+  },
+  {
+    table: "latype",
+    fn: getLibraryArticleByOldId,
+    sql: `SELECT id FROM latype;`,
+  },
+  {
+    table: "documenttypelist",
+    fn: getLibraryDocumentByOldId,
+    sql: `SELECT id FROM documenttypelist;`,
+  },
+  {
+    table: "borrowingtype",
+    fn: getBorrowingTypeByOldId,
+    sql: `SELECT id FROM borrowingtype;`,
+  },
 
-  { table: "journalmaster", fn: getJournalByOldId },
-  { table: "bookentry", fn: getBookByOldId },
-  { table: "copydetailsub", fn: getCopyDetailsByOldId },
+  {
+    table: "journalmaster",
+    fn: getJournalByOldId,
+    sql: `SELECT id FROM journalmaster;`,
+  },
+  { table: "bookentry", fn: getBookByOldId, sql: `SELECT id FROM bookentry;` },
+  {
+    table: "copydetailsub",
+    fn: getCopyDetailsByOldId,
+    sql: `SELECT id FROM copydetailsub;`,
+  },
 ];
 
 export async function loadLibrary() {
@@ -1096,9 +1182,10 @@ export async function loadLibrary() {
     const alreadySuccessful =
       await readSuccessfulLegacyIdsFromWorkbook(workbookPath);
 
-    const [result] = (await mysqlConnection.query(`
-    SELECT id FROM ${ele.table} ORDER BY id ASC
-    `)) as [{ id: number }[], unknown];
+    const [result] = (await mysqlConnection.query(ele.sql)) as [
+      { id: number }[],
+      unknown,
+    ];
     console.log(
       "Processing data for table:",
       ele.table,
