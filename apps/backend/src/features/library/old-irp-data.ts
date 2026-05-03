@@ -54,12 +54,105 @@ import {
   statusModel,
 } from "@repo/db/schemas/models/library";
 import { and, eq, ilike } from "drizzle-orm";
+import ExcelJS from "exceljs";
+import fs from "fs";
+import path from "path";
 import {
   bitToBool,
   upsertUser,
 } from "../user/services/refactor-old-migration.service";
 import { OldStaff } from "@repo/db/legacy-system-types/users";
 import { bookReissueModel } from "@repo/db/schemas/models/library/book-reissue.model";
+
+const MIGRATION_LOG_SHEET = "migration_log";
+
+function getLibraryExcelBaseDir(): string {
+  const raw = process.env.LIBRARY_EXCEL_DATA_PATH?.trim();
+  if (!raw) {
+    throw new Error(
+      "LIBRARY_EXCEL_DATA_PATH is not set. Set it in .env to a directory for library migration Excel logs.",
+    );
+  }
+  const abs = path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+  fs.mkdirSync(abs, { recursive: true });
+  return abs;
+}
+
+function migrationWorkbookPathForTable(table: string): string {
+  const safe = table.replace(/[^a-zA-Z0-9_-]/g, "_");
+  return path.join(getLibraryExcelBaseDir(), `${safe}_library_migration.xlsx`);
+}
+
+async function readSuccessfulLegacyIdsFromWorkbook(
+  filePath: string,
+): Promise<Set<number>> {
+  const done = new Set<number>();
+  if (!fs.existsSync(filePath)) return done;
+
+  try {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(filePath);
+    const sheet = wb.getWorksheet(MIGRATION_LOG_SHEET);
+    if (!sheet) return done;
+
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const legacyCell = row.getCell(1).value;
+      const statusCell = row.getCell(2).value;
+      const legacyId =
+        typeof legacyCell === "number"
+          ? legacyCell
+          : legacyCell != null &&
+              typeof (legacyCell as { text?: string }).text === "string"
+            ? Number((legacyCell as { text: string }).text)
+            : Number(legacyCell);
+      const status =
+        typeof statusCell === "string"
+          ? statusCell
+          : statusCell != null &&
+              typeof (statusCell as { text?: string }).text === "string"
+            ? (statusCell as { text: string }).text
+            : String(statusCell ?? "");
+      if (
+        !Number.isNaN(legacyId) &&
+        status.trim().toLowerCase() === "success"
+      ) {
+        done.add(legacyId);
+      }
+    });
+  } catch (e) {
+    console.warn(
+      `[loadLibrary] Could not read migration workbook, will not skip prior rows: ${filePath}`,
+      e,
+    );
+  }
+  return done;
+}
+
+async function appendMigrationLogRow(
+  filePath: string,
+  legacyId: number,
+  status: "success" | "failed",
+  errorMessage: string | null,
+): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  if (fs.existsSync(filePath)) {
+    await wb.xlsx.readFile(filePath);
+  }
+  let sheet = wb.getWorksheet(MIGRATION_LOG_SHEET);
+  if (!sheet) {
+    sheet = wb.addWorksheet(MIGRATION_LOG_SHEET);
+    sheet.addRow(["legacy_id", "status", "error_message", "recorded_at"]);
+    sheet.getRow(1).font = { bold: true };
+  }
+  sheet.addRow([
+    legacyId,
+    status,
+    errorMessage ?? "",
+    new Date().toISOString(),
+  ]);
+  await wb.xlsx.writeFile(filePath);
+}
 
 async function getLanguageByOldId(oldLanguageId: number | null) {
   if (!oldLanguageId) return null;
@@ -995,8 +1088,14 @@ const arr = [
 ];
 
 export async function loadLibrary() {
+  getLibraryExcelBaseDir();
+
   for (const ele of arr) {
     console.log("Loading data for table:", ele.table);
+    const workbookPath = migrationWorkbookPathForTable(ele.table);
+    const alreadySuccessful =
+      await readSuccessfulLegacyIdsFromWorkbook(workbookPath);
+
     const [result] = (await mysqlConnection.query(`
     SELECT id FROM ${ele.table} ORDER BY id ASC
     `)) as [{ id: number }[], unknown];
@@ -1005,11 +1104,75 @@ export async function loadLibrary() {
       ele.table,
       "Rows:",
       result.length,
+      "already logged success:",
+      alreadySuccessful.size,
     );
     for (const row of result) {
-      const tmp = await ele.fn(row.id);
+      if (alreadySuccessful.has(row.id)) {
+        continue;
+      }
+
+      let tmp: unknown;
+      try {
+        tmp = await ele.fn(row.id);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(
+          "Failed to load data for table:",
+          ele.table,
+          "Row:",
+          row.id,
+          msg,
+        );
+        try {
+          await appendMigrationLogRow(workbookPath, row.id, "failed", msg);
+        } catch (excelErr) {
+          console.warn(
+            "[loadLibrary] Excel append failed after migration error; skipping excel row:",
+            ele.table,
+            row.id,
+            excelErr,
+          );
+        }
+        continue;
+      }
+
       if (tmp) {
         console.log("Loaded data for table:", ele.table, "Row:", row.id);
+        try {
+          await appendMigrationLogRow(workbookPath, row.id, "success", null);
+          alreadySuccessful.add(row.id);
+        } catch (excelErr) {
+          console.warn(
+            "[loadLibrary] Excel append failed after success; skipping log (row will retry on next run):",
+            ele.table,
+            row.id,
+            excelErr,
+          );
+        }
+      } else {
+        console.log(
+          "Failed to load data for table:",
+          ele.table,
+          "Row:",
+          row.id,
+          "(no result)",
+        );
+        try {
+          await appendMigrationLogRow(
+            workbookPath,
+            row.id,
+            "failed",
+            "migration returned no result",
+          );
+        } catch (excelErr) {
+          console.warn(
+            "[loadLibrary] Excel append failed for no-result row; skipping:",
+            ele.table,
+            row.id,
+            excelErr,
+          );
+        }
       }
     }
     console.log("Done data for table:", ele.table);
