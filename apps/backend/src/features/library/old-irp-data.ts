@@ -1074,10 +1074,21 @@ const arr: {
       SELECT DISTINCT l.id
       FROM libentryexit l
       LEFT JOIN staffpersonaldetails st ON st.id = l.usrid AND l.usrtype IN ('Staff', 'Teacher')
-      LEFT JOIN studentpersonaldetails spd ON spd.id = l.usrid AND l.usrtype = 'Student'
-      LEFT JOIN historicalrecord h ON h.parent_id = spd.id
-      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid AND sess.id > 17
-      ORDER BY entrydt, entrytime;
+      LEFT JOIN historicalrecord h ON h.parent_id = l.usrid AND l.usrtype = 'Student'
+      LEFT JOIN studentpersonaldetails spd ON spd.id = h.parent_id
+      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid
+      WHERE
+          l.usrid IS NOT NULL
+          AND l.usrtype IS NOT NULL
+          AND (
+              l.usrtype IN ('Staff', 'Teacher')
+              OR (
+                  l.usrtype = 'Student'
+                  AND h.id IS NOT NULL
+                  AND sess.id > 17
+              )
+          )
+      ORDER BY l.entrydt, l.entrytime;
     `,
   },
   {
@@ -1087,10 +1098,21 @@ const arr: {
       SELECT DISTINCT i.id
       FROM issuereturn i
       LEFT JOIN staffpersonaldetails st ON st.id = i.userId AND i.userTypeId IN ('Staff', 'Teacher')
-      LEFT JOIN studentpersonaldetails spd ON spd.id = i.userId AND i.userTypeId = 'Student'
-      LEFT JOIN historicalrecord h ON h.parent_id = spd.id
-      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid AND sess.id > 17
-      ORDER BY i.id;
+      LEFT JOIN historicalrecord h ON h.parent_id = i.userId AND i.userTypeId = 'Student'
+      LEFT JOIN studentpersonaldetails spd ON spd.id = h.parent_id
+      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid
+      WHERE
+          i.userId IS NOT NULL
+          AND i.userTypeId IS NOT NULL
+          AND (
+              i.userTypeId IN ('Staff', 'Teacher')
+              OR (
+                  i.userTypeId = 'Student'
+                  AND h.id IS NOT NULL
+                  AND sess.id > 17
+              )
+          )
+      ORDER BY i.issueDate, i.id;
     `,
   },
 
