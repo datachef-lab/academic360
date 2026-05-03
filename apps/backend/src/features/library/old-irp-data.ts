@@ -1071,7 +1071,7 @@ const arr: {
     table: "libentryexit",
     fn: getEntryExitByOldId,
     sql: `
-      SELECT l.id
+      SELECT DISTINCT l.id
       FROM libentryexit l
       LEFT JOIN staffpersonaldetails st ON st.id = l.usrid AND l.usrtype IN ('Staff', 'Teacher')
       LEFT JOIN studentpersonaldetails spd ON spd.id = l.usrid AND l.usrtype = 'Student'
@@ -1084,7 +1084,7 @@ const arr: {
     table: "issuereturn",
     fn: getBookCirculationByOldId,
     sql: `
-      SELECT i.id
+      SELECT DISTINCT i.id
       FROM issuereturn i
       LEFT JOIN staffpersonaldetails st ON st.id = i.userId AND i.userTypeId IN ('Staff', 'Teacher')
       LEFT JOIN studentpersonaldetails spd ON spd.id = i.userId AND i.userTypeId = 'Student'
