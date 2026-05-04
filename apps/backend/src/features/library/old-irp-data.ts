@@ -1091,30 +1091,6 @@ const arr: {
       ORDER BY i.issueDate, i.id;
     `,
   },
-  {
-    table: "libentryexit",
-    fn: getEntryExitByOldId,
-    sql: `
-      SELECT DISTINCT l.id
-      FROM libentryexit l
-      LEFT JOIN staffpersonaldetails st ON st.id = l.usrid AND l.usrtype IN ('Staff', 'Teacher')
-      LEFT JOIN historicalrecord h ON h.parent_id = l.usrid AND l.usrtype = 'Student'
-      LEFT JOIN studentpersonaldetails spd ON spd.id = h.parent_id
-      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid
-      WHERE
-          l.usrid IS NOT NULL
-          AND l.usrtype IS NOT NULL
-          AND (
-              l.usrtype IN ('Staff', 'Teacher')
-              OR (
-                  l.usrtype = 'Student'
-                  AND h.id IS NOT NULL
-                  AND sess.id > 17
-              )
-          )
-      ORDER BY l.entrydt, l.entrytime;
-    `,
-  },
 
   {
     table: "language",
@@ -1192,6 +1168,31 @@ const arr: {
     table: "copydetailsub",
     fn: getCopyDetailsByOldId,
     sql: `SELECT id FROM copydetailsub;`,
+  },
+
+  {
+    table: "libentryexit",
+    fn: getEntryExitByOldId,
+    sql: `
+      SELECT DISTINCT l.id
+      FROM libentryexit l
+      LEFT JOIN staffpersonaldetails st ON st.id = l.usrid AND l.usrtype IN ('Staff', 'Teacher')
+      LEFT JOIN historicalrecord h ON h.parent_id = l.usrid AND l.usrtype = 'Student'
+      LEFT JOIN studentpersonaldetails spd ON spd.id = h.parent_id
+      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid
+      WHERE
+          l.usrid IS NOT NULL
+          AND l.usrtype IS NOT NULL
+          AND (
+              l.usrtype IN ('Staff', 'Teacher')
+              OR (
+                  l.usrtype = 'Student'
+                  AND h.id IS NOT NULL
+                  AND sess.id > 17
+              )
+          )
+      ORDER BY l.entrydt, l.entrytime;
+    `,
   },
 ];
 
