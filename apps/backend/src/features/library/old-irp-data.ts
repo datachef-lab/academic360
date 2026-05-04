@@ -864,8 +864,8 @@ async function getCopyDetailsByOldId(oldCopyId: number | null) {
     isbn: oldCopy.isbn,
     issueType: oldCopy.issueType,
     legacyVendorId: oldCopy.vendorid,
-    numberOfEnclosures: oldCopy.noOfEncloser,
-    numberOfPages: oldCopy.noOfPages,
+    numberOfEnclosures: parseLegacyOptionalInt(oldCopy.noOfEncloser) ?? 0,
+    numberOfPages: parseLegacyOptionalInt(oldCopy.noOfPages) ?? 0,
     pdfPath: oldCopy.pdfpath,
     prefix: oldCopy.prefixid,
     priceForeignCurrency: oldCopy.priceForeign,
@@ -978,6 +978,23 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
 
 /** Legacy IRP MySQL stores naive date/datetime in India (IST, UTC+5:30). */
 const IST_OFFSET = "+05:30";
+
+/**
+ * Legacy sometimes stores counts as free text (e.g. "1032p."). Postgres integer
+ * columns must get a real int or null/default.
+ */
+function parseLegacyOptionalInt(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  const s = String(value).trim();
+  if (!s) return null;
+  const m = s.match(/-?\d+/);
+  if (!m) return null;
+  const n = Number.parseInt(m[0], 10);
+  return Number.isNaN(n) ? null : n;
+}
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
