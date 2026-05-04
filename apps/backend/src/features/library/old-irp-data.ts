@@ -1122,6 +1122,7 @@ const arr: {
                   i.userTypeId = 'Student'
                   AND h.id IS NOT NULL
                   AND sess.id > 17
+                  AND h.classId = 4
               )
           )
       ORDER BY i.issueDate, i.id;
