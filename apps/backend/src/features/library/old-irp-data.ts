@@ -924,27 +924,46 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
     userId = (await getUserByOldId(oldIssueReturn.userId))?.id;
   }
 
+  if (userId == null) return null;
+
+  const copyDetailsRow = await getCopyDetailsByOldId(oldIssueReturn.copyId);
+  if (!copyDetailsRow?.id) return null;
+
+  let issuerPgId = (await getUserByOldId(oldIssueReturn.issuerid))?.id;
+  if (issuerPgId == null) {
+    const [fallbackIssuer] = await db
+      .select({ id: userModel.id })
+      .from(userModel)
+      .where(eq(userModel.email, "test@gmail.com"))
+      .limit(1);
+    issuerPgId = fallbackIssuer?.id;
+  }
+  /** `issued_from_user_id_fk` is NOT NULL; last resort is circulation user. */
+  const issuedFromId = issuerPgId ?? userId;
+
   const issueTimestamp =
     parseMysqlAsIst(oldIssueReturn.issueDate) ?? new Date();
   const returnTimestamp =
     parseMysqlAsIst(oldIssueReturn.returnDate) ?? new Date();
 
+  const fineNum = Number(oldIssueReturn.fine);
+  const waiverNum = Number(oldIssueReturn.finewaived);
+
   const payload = {
-    copyDetailsId: (await getCopyDetailsByOldId(oldIssueReturn.copyId))
-      ?.id as number,
-    issuedFromId: (await getUserByOldId(oldIssueReturn.issuerid))?.id,
+    copyDetailsId: copyDetailsRow.id,
+    issuedFromId,
     issueTimestamp,
     returnTimestamp,
-    userId: userId!,
+    userId,
     actualReturnTimestamp: parseMysqlAsIst(oldIssueReturn.actualRetDate),
     borrowingTypeId: (
       await getBorrowingTypeByOldId(oldIssueReturn.borrowingTypeId)
     )?.id,
-    fineAmount: oldIssueReturn.fine,
+    fineAmount: Number.isFinite(fineNum) ? fineNum : 0,
     fineDate: parseMysqlAsIst(oldIssueReturn.fineDate),
     fineRemarks: oldIssueReturn.fineremarks,
-    fineWaiver: oldIssueReturn.finewaived,
-    isForcedIssue: oldIssueReturn.isForceIssue,
+    fineWaiver: Number.isFinite(waiverNum) ? waiverNum : 0,
+    isForcedIssue: bitToBool(oldIssueReturn.isForceIssue),
     isReIssued: bitToBool(oldIssueReturn.reIssue),
     isReturned: bitToBool(oldIssueReturn.isReturn),
     legacyBookCirculationId: oldIssueReturn.id,
