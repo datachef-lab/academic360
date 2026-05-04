@@ -902,13 +902,22 @@ async function getCopyDetailsByOldId(oldCopyId: number | null) {
 }
 
 async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
-  if (!oldIssueReturnId) return null;
+  if (!oldIssueReturnId) {
+    console.log("oldIssueReturnId is null");
+    return null;
+  }
 
   const [[oldIssueReturn]] = (await mysqlConnection.query(`
     SELECT * FROM issuereturn WHERE id = ${oldIssueReturnId}
     `)) as [OldIssueReturn[], unknown];
 
-  if (!oldIssueReturn) return null;
+  if (!oldIssueReturn) {
+    console.log(
+      "oldIssueReturn is null for oldIssueReturnId",
+      oldIssueReturnId,
+    );
+    return null;
+  }
 
   let userId: number | undefined;
   if (oldIssueReturn.userTypeId === "Student") {
@@ -924,7 +933,15 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
     userId = (await getUserByOldId(oldIssueReturn.userId))?.id;
   }
 
-  if (userId == null) return null;
+  if (userId == null) {
+    console.log(
+      "userId is null for oldIssueReturnId",
+      oldIssueReturnId,
+      "userId",
+      userId,
+    );
+    return null;
+  }
 
   const copyDetailsRow = await getCopyDetailsByOldId(oldIssueReturn.copyId);
   if (!copyDetailsRow?.id) return null;
@@ -1226,6 +1243,7 @@ const arr: {
                   l.usrtype = 'Student'
                   AND h.id IS NOT NULL
                   AND sess.id > 17
+                  AND h.classId = 4
               )
           )
       ORDER BY l.entrydt, l.entrytime;

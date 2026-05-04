@@ -570,7 +570,11 @@ export default function EntryExitPage() {
                                 alt={row.userName ?? "user"}
                                 className="object-cover"
                               />
-                              <AvatarFallback>{getInitials(row.userName ?? "User")}</AvatarFallback>
+                              <AvatarFallback
+                                className={`text-white text-[10px] font-semibold ${getColorFromName(row.userName)}`}
+                              >
+                                {getInitials(row.userName ?? "User")}
+                              </AvatarFallback>
                             </Avatar>
                             <div className="truncate font-medium text-slate-800">
                               {row.userName ?? "-"}

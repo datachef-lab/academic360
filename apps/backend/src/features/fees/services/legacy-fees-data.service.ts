@@ -528,7 +528,7 @@ async function syncFeeStudentMapping(
     .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!))
     .returning();
 
-  console.log("Saved feeStudentMapping!");
+  // console.log("Saved feeStudentMapping!");
 }
 
 async function syncLegacyFeeStructure(

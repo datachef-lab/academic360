@@ -23,9 +23,16 @@ const DEFAULT_COLLEGE_LOGO_URL =
  * `http://localhost:${PORT}` (PORT defaults like `app.ts`).
  */
 function getApiPublicOrigin(): string {
-  const raw = process.env.BACKEND_URL;
-  if (raw && String(raw).trim()) {
-    return String(raw).trim().replace(/\/$/, "");
+  for (const key of [
+    "API_PUBLIC_ORIGIN",
+    "BACKEND_PUBLIC_URL",
+    "BACKEND_URL",
+  ]) {
+    const v = process.env[key];
+    console.log(key, v);
+    if (v && String(v).trim()) {
+      return String(v).trim().replace(/\/$/, "");
+    }
   }
   const port = process.env.PORT || "8080";
   return `http://localhost:${port}`;
@@ -109,20 +116,28 @@ export async function loadFeeReceiptEmailRowByPaymentId(
   return row ?? null;
 }
 
+function getEnvSubjectPrefix(): string {
+  const env = (process.env.NODE_ENV ?? "").trim().toLowerCase();
+  if (env === "development") return "[DEV] ";
+  if (env === "staging") return "[STAGE] ";
+  return "";
+}
+
 function buildFeeReceiptSubject(row: FeeReceiptEmailRow): string {
+  const prefix = getEnvSubjectPrefix();
   const type = String(row.receiptType ?? "fee").trim() || "fee";
   const year = String(row.academicYear ?? "").trim();
   const classLabel = sentenceCaseSemesterWord(row.className);
   if (classLabel && year) {
-    return `Your paid challan (${type}) for ${classLabel}, Year ${year}`;
+    return `${prefix}Your paid challan (${type}) for ${classLabel}, Year ${year}`;
   }
   if (classLabel) {
-    return `Your paid challan (${type}) for ${classLabel}`;
+    return `${prefix}Your paid challan (${type}) for ${classLabel}`;
   }
   if (year) {
-    return `Your paid challan (${type}) for Year ${year}`;
+    return `${prefix}Your paid challan (${type}) for Year ${year}`;
   }
-  return `Your paid challan (${type})`;
+  return `${prefix}Your paid challan (${type})`;
 }
 
 /**
