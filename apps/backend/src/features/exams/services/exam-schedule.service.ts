@@ -4050,11 +4050,14 @@ export async function downloadExamCandidatesbyExamId(
       semester: classModel.name,
       orderType: examModel.orderType,
       gender: examModel.gender,
-
       name: userModel.name,
       uid: studentModel.uid,
       roll_number: studentModel.rollNumber,
       registration_number: studentModel.registrationNumber,
+      foilNumber: examCandidateModel.foilNumber,
+      floor: floorModel.name,
+      room: roomModel.name,
+      seat: examCandidateModel.seatNumber,
       email: userModel.email,
       phone: userModel.phone,
       whatsapp_number: userModel.whatsappNumber,
@@ -4072,6 +4075,12 @@ export async function downloadExamCandidatesbyExamId(
       eq(academicYearModel.id, examModel.academicYearId),
     )
     .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
+    .leftJoin(
+      examRoomModel,
+      eq(examRoomModel.id, examCandidateModel.examRoomId),
+    )
+    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
     .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
     .leftJoin(
       promotionModel,
@@ -4188,6 +4197,10 @@ export async function downloadExamCandidatesbyExamId(
     program_course: "Program Course",
     section: "Section",
     shift: "Shift",
+    floor: "Floor",
+    room: "Room",
+    seat: "Seat Number",
+    foilNumber: "Foil Number",
   };
 
   const baseColumns = Object.keys(baseHeaders).map((key) => ({
@@ -4548,6 +4561,10 @@ export async function downloadAdmitCardTrackingByExamId(
       whatsapp_number: userModel.whatsappNumber,
       program_course: programCourseModel.name,
       shift: shiftModel.name,
+      floor: floorModel.name,
+      room: roomModel.name,
+      seat: examCandidateModel.seatNumber,
+      foilNumber: examCandidateModel.foilNumber,
 
       paper: paperModel.name,
       paper_code: paperModel.code,
@@ -4556,6 +4573,13 @@ export async function downloadAdmitCardTrackingByExamId(
       admitCardDownloadedAt: examCandidateModel.admitCardDownloadedAt,
     })
     .from(examCandidateModel)
+    .leftJoin(
+      examRoomModel,
+      eq(examRoomModel.id, examCandidateModel.examRoomId),
+    )
+    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
     .leftJoin(
       examSubjectModel,
@@ -4663,6 +4687,10 @@ export async function downloadAdmitCardTrackingByExamId(
     whatsapp_number: "WhatsApp",
     program_course: "Program Course",
     shift: "Shift",
+    floor: "Floor",
+    room: "Room",
+    seat: "Seat Number",
+    foilNumber: "Foil Number",
   };
 
   const baseColumns = Object.keys(baseHeaders).map((key) => ({
