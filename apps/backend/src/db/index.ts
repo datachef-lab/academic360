@@ -106,7 +106,7 @@ export const connectToDatabase = async () => {
     });
     loadStudentFees();
     loadLibrary();
-    // initializeAcademicActivities();
+    initializeAcademicActivities();
     defaultSetDateOfJoining();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
