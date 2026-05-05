@@ -443,22 +443,22 @@ export default function AcademicActivityPage() {
     }
   };
 
-  const deleteMaster = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this activity?")) return;
-    try {
-      const linked = activities.filter((a) => a.master.id === id);
-      for (const a of linked) {
-        await axiosInstance.delete(`/api/academics/academic-activities/${a.id}`);
-      }
-      await axiosInstance.delete(`/api/academics/academic-activity-masters/${id}`);
-      setMasters((prev) => prev.filter((m) => m.id !== id));
-      setActivities((prev) => prev.filter((a) => a.master.id !== id));
-      setMasterOpen(false);
-      setMasterDraft(null);
-    } catch (err) {
-      console.error("Failed to delete:", err);
-    }
-  };
+  // const deleteMaster = async (id: number) => {
+  //   if (!confirm("Are you sure you want to delete this activity?")) return;
+  //   try {
+  //     const linked = activities.filter((a) => a.master.id === id);
+  //     for (const a of linked) {
+  //       await axiosInstance.delete(`/api/academics/academic-activities/${a.id}`);
+  //     }
+  //     await axiosInstance.delete(`/api/academics/academic-activity-masters/${id}`);
+  //     setMasters((prev) => prev.filter((m) => m.id !== id));
+  //     setActivities((prev) => prev.filter((a) => a.master.id !== id));
+  //     setMasterOpen(false);
+  //     setMasterDraft(null);
+  //   } catch (err) {
+  //     console.error("Failed to delete:", err);
+  //   }
+  // };
 
   const toggleMasterActive = async (m: ActivityMasterDto, isActive: boolean) => {
     setMasters((prev) => prev.map((x) => (x.id === m.id ? { ...x, isActive } : x)));
