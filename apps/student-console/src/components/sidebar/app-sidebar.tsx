@@ -318,14 +318,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       badge: upcomingExamCount > 0 ? upcomingExamCount : undefined,
     },
     // 20 Feb 2026, 16:00 PM IST
-    Date.now() > new Date("2026-02-20T16:00:00+05:30").getTime() && !isBlockedProgram
-      ? {
-          title: "CU Form Upload",
-          url: "/dashboard/cu-form-upload",
-          icon: UploadCloud,
-          isActive: pathname === "/dashboard/cu-form-upload",
-        }
-      : null,
+    // Date.now() > new Date("2026-02-20T16:00:00+05:30").getTime() && !isBlockedProgram
+    //   ? {
+    //       title: "CU Form Upload",
+    //       url: "/dashboard/cu-form-upload",
+    //       icon: UploadCloud,
+    //       isActive: pathname === "/dashboard/cu-form-upload",
+    //     }
+    //   : null,
 
     // {
     //   title: "Course Catalogue",
