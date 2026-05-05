@@ -365,6 +365,33 @@ export class PdfGenerationService {
     }
   }
 
+  private async fetchImageAsDataUrl(url: string): Promise<string | null> {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.warn(
+          `[PDF GENERATION] Failed to fetch image (${response.status}): ${url}`,
+        );
+        return null;
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      return `data:${contentType};base64,${base64}`;
+    } catch (error) {
+      console.warn(
+        `[PDF GENERATION] Failed to fetch image, will use URL directly: ${url}`,
+        error,
+      );
+      return null;
+    }
+  }
+
   private async loadTemplate(templateName: string): Promise<string> {
     // Return cached template if available
     if (templateName === "admit-card" && cachedAdmitCardTemplate) {
@@ -622,7 +649,6 @@ export class PdfGenerationService {
     const startTime = Date.now();
     let page: any = null;
 
-    formData.studentImage = `https://besc.academic360.app/id-card-generate/api/images?uid=${formData.uid}&crop=true`;
     try {
       console.info(
         "[PDF GENERATION] Starting Exam Form PDF generation in memory",
@@ -631,20 +657,34 @@ export class PdfGenerationService {
         },
       );
 
-      // Generate QR code for application number if not provided
-      try {
-        formData.qrCodeDataUrl = await QRCodeService.generateApplicationQRCode(
-          formData.uid,
-        );
-        console.info("[PDF GENERATION] QR code generated successfully", {
-          applicationNumber: formData.uid,
-        });
-      } catch (error) {
-        console.warn(
-          "[PDF GENERATION] Failed to generate QR code, continuing without it:",
-          error,
-        );
-      }
+      // Pre-fetch external images as base64 data URLs to avoid network requests during rendering
+      const studentImageUrl = `https://besc.academic360.app/id-card-generate/api/images?uid=${formData.uid}&crop=true`;
+      const collegeLogoUrl = `https://besc.academic360.app/api/api/v1/settings/file/4`;
+
+      const [studentImageDataUrl, collegeLogoDataUrl, qrCodeDataUrl] =
+        await Promise.all([
+          this.fetchImageAsDataUrl(studentImageUrl),
+          this.fetchImageAsDataUrl(collegeLogoUrl),
+          QRCodeService.generateApplicationQRCode(formData.uid).catch(
+            (error) => {
+              console.warn(
+                "[PDF GENERATION] Failed to generate QR code, continuing without it:",
+                error,
+              );
+              return formData.qrCodeDataUrl ?? "";
+            },
+          ),
+        ]);
+
+      formData.studentImage = studentImageDataUrl || studentImageUrl;
+      (formData as any).collegeLogo = collegeLogoDataUrl || collegeLogoUrl;
+      formData.qrCodeDataUrl = qrCodeDataUrl;
+
+      console.info("[PDF GENERATION] Images pre-fetched", {
+        studentImageEmbedded: !!studentImageDataUrl,
+        collegeLogoEmbedded: !!collegeLogoDataUrl,
+        qrCodeGenerated: !!qrCodeDataUrl,
+      });
 
       // Load template (cached)
       const templateContent = await this.loadTemplate("admit-card");
@@ -655,7 +695,6 @@ export class PdfGenerationService {
       // Get page from pool
       page = await this.getPageFromPool();
 
-      // Set content: use "domcontentloaded" for faster rendering
       await page.setContent(htmlContent, {
         waitUntil: "domcontentloaded",
         timeout: 3000,
