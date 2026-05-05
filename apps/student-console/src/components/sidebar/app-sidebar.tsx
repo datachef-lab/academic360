@@ -339,12 +339,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     //   icon: ScrollText,
     //   isActive: pathname === "/dashboard/documents",
     // },
-    {
-      title: "Enrolment & Fees",
-      url: "/dashboard/enrollment-fees",
-      icon: IndianRupee,
-      isActive: pathname === "/dashboard/enrollment-fees",
-    },
+    // {
+    //   title: "Enrolment & Fees",
+    //   url: "/dashboard/enrollment-fees",
+    //   icon: IndianRupee,
+    //   isActive: pathname === "/dashboard/enrollment-fees",
+    // },
     hasCareerProgressionForm
       ? {
           title: "Career Progression",
