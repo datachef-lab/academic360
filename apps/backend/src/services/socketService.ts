@@ -865,6 +865,31 @@ class SocketService {
     }
   }
 
+  broadcastAcademicActivityUpdate(payload?: {
+    activityName?: string;
+    masterId?: number;
+    action?: "created" | "updated" | "deleted";
+  }) {
+    if (!this.io) {
+      log.error("Cannot send academic activity update: io is null");
+      return;
+    }
+
+    try {
+      this.io.emit("academic_activity_student_console_updated", {
+        activityName: payload?.activityName,
+        masterId: payload?.masterId,
+        action: payload?.action,
+        timestamp: new Date().toISOString(),
+      });
+      log.debug(
+        `Academic activity update broadcasted: ${payload?.action || "unknown"} (master: ${payload?.masterId || "N/A"})`,
+      );
+    } catch (error) {
+      log.error("Error broadcasting academic activity update", { error });
+    }
+  }
+
   sendLibraryBookCirculationUpdate(payload: {
     action: "UPSERTED";
     actorUserId: number | null;

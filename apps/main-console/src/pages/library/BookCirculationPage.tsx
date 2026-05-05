@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import {
   BookOpenCheck,
+  CalendarClock,
   Download,
   Eye,
   Filter,
@@ -152,6 +153,8 @@ export default function BookCirculationPage() {
     Array<{ id: number; name: string }>
   >([]);
   const [savingRows, setSavingRows] = useState(false);
+  const [reissueRowId, setReissueRowId] = useState<number | null>(null);
+  const [reissueDate, setReissueDate] = useState<Date | undefined>(undefined);
   const lastLocalSaveAtRef = useRef<number>(0);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -1022,7 +1025,7 @@ export default function BookCirculationPage() {
                               value={
                                 item.returnTimestamp ? new Date(item.returnTimestamp) : undefined
                               }
-                              disabled={!item.isNew && !!item.actualReturnTimestamp}
+                              disabled={!item.isNew}
                               onSelect={(date) =>
                                 setEditableRows((prev) =>
                                   prev.map((row) =>
@@ -1073,6 +1076,24 @@ export default function BookCirculationPage() {
                               >
                                 <RotateCcw className="mr-1 h-3.5 w-3.5" />
                                 Return
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 border-blue-300 bg-blue-50 px-2 text-xs text-blue-700 hover:bg-blue-100"
+                                type="button"
+                                disabled={item.isNew || !!item.actualReturnTimestamp}
+                                onClick={() => {
+                                  setReissueRowId(item.id);
+                                  setReissueDate(
+                                    item.returnTimestamp
+                                      ? new Date(item.returnTimestamp)
+                                      : undefined,
+                                  );
+                                }}
+                              >
+                                <CalendarClock className="mr-1 h-3.5 w-3.5" />
+                                Re-issue
                               </Button>
                               <Button
                                 size="sm"
@@ -1132,6 +1153,62 @@ export default function BookCirculationPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={reissueRowId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReissueRowId(null);
+            setReissueDate(undefined);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Re-issue Book</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-2">
+            <p className="text-sm text-muted-foreground">Select a new return date for this book.</p>
+            <DatePicker
+              value={reissueDate}
+              onSelect={(date) => setReissueDate(date ?? undefined)}
+              className="w-full"
+              displayFormat="dd/MM/yyyy"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setReissueRowId(null);
+                  setReissueDate(undefined);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="bg-blue-600 text-white hover:bg-blue-700"
+                disabled={!reissueDate}
+                onClick={() => {
+                  if (!reissueDate || reissueRowId === null) return;
+                  setEditableRows((prev) =>
+                    prev.map((row) =>
+                      row.id === reissueRowId
+                        ? { ...row, returnTimestamp: reissueDate.toISOString() }
+                        : row,
+                    ),
+                  );
+                  setReissueRowId(null);
+                  setReissueDate(undefined);
+                }}
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

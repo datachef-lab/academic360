@@ -100,11 +100,11 @@ export type BookCirculationUpsertEntry = {
 };
 
 const toDayBounds = (isoDate: string) => {
-  const parsed = new Date(`${isoDate}T00:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  const end = new Date(parsed);
-  end.setUTCDate(end.getUTCDate() + 1);
-  return { start: parsed, end };
+  const start = new Date(`${isoDate}T00:00:00.000+05:30`);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
 };
 
 const buildCirculationFilterConditions = (

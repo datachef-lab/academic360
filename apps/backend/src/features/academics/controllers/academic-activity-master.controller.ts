@@ -8,6 +8,7 @@ import {
   deleteActivityMaster,
   CreateMasterPayload,
 } from "../services/academic-activity-master.service.js";
+import { socketService } from "@/services/socketService.js";
 
 export async function getAllActivityMastersController(
   req: Request,
@@ -121,6 +122,11 @@ export async function updateActivityMasterController(
         );
       return;
     }
+    socketService.broadcastAcademicActivityUpdate({
+      masterId: id,
+      activityName: updated.name,
+      action: "updated",
+    });
     res
       .status(200)
       .json(
@@ -152,6 +158,10 @@ export async function deleteActivityMasterController(
         );
       return;
     }
+    socketService.broadcastAcademicActivityUpdate({
+      masterId: id,
+      action: "deleted",
+    });
     res
       .status(200)
       .json(

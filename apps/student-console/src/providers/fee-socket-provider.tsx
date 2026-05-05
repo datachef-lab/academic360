@@ -15,15 +15,19 @@ import {
 interface FeeSocketContextType {
   feeMappingsVersion: number;
   cpFormVersion: number;
+  academicActivityVersion: number;
   invalidateFeeMappings: () => void;
   invalidateCpForm: () => void;
+  invalidateAcademicActivity: () => void;
 }
 
 const FeeSocketContext = createContext<FeeSocketContextType>({
   feeMappingsVersion: 0,
   cpFormVersion: 0,
+  academicActivityVersion: 0,
   invalidateFeeMappings: () => {},
   invalidateCpForm: () => {},
+  invalidateAcademicActivity: () => {},
 });
 
 export const useFeeSocket = () => useContext(FeeSocketContext);
@@ -34,10 +38,16 @@ export function FeeSocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<any>(null);
   const [feeMappingsVersion, setFeeMappingsVersion] = useState(0);
   const [cpFormVersion, setCpFormVersion] = useState(0);
+  const [academicActivityVersion, setAcademicActivityVersion] = useState(0);
 
   const invalidateFeeMappings = useCallback(() => setFeeMappingsVersion((v) => v + 1), []);
 
   const invalidateCpForm = useCallback(() => setCpFormVersion((v) => v + 1), []);
+
+  const invalidateAcademicActivity = useCallback(
+    () => setAcademicActivityVersion((v) => v + 1),
+    [],
+  );
 
   useEffect(() => {
     if (!student?.id || !user?.id || typeof window === "undefined") return;
@@ -81,14 +91,9 @@ export function FeeSocketProvider({ children }: { children: React.ReactNode }) {
           invalidateFeeMappings();
         });
 
-        socket.on(
-          "academic_activity_student_console_updated",
-          (payload: { activityName?: string }) => {
-            if ((payload?.activityName || "").trim().toLowerCase() !== "semester fee payment")
-              return;
-            invalidateFeeMappings();
-          },
-        );
+        socket.on("academic_activity_student_console_updated", () => {
+          invalidateAcademicActivity();
+        });
       } catch (err) {
         console.error("[FeeSocketProvider] socket setup failed", err);
       }
@@ -100,16 +105,25 @@ export function FeeSocketProvider({ children }: { children: React.ReactNode }) {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [student?.id, user?.id, invalidateFeeMappings]);
+  }, [student?.id, user?.id, invalidateFeeMappings, invalidateAcademicActivity]);
 
   const value = useMemo(
     () => ({
       feeMappingsVersion,
       cpFormVersion,
+      academicActivityVersion,
       invalidateFeeMappings,
       invalidateCpForm,
+      invalidateAcademicActivity,
     }),
-    [feeMappingsVersion, cpFormVersion, invalidateFeeMappings, invalidateCpForm],
+    [
+      feeMappingsVersion,
+      cpFormVersion,
+      academicActivityVersion,
+      invalidateFeeMappings,
+      invalidateCpForm,
+      invalidateAcademicActivity,
+    ],
   );
 
   return <FeeSocketContext.Provider value={value}>{children}</FeeSocketContext.Provider>;

@@ -196,7 +196,8 @@ export default function EnrollmentFeesPage() {
   }, [router, isProduction]);
 
   const { student } = useStudent();
-  const { feeMappingsVersion, cpFormVersion, invalidateCpForm } = useFeeSocket();
+  const { feeMappingsVersion, cpFormVersion, academicActivityVersion, invalidateCpForm } =
+    useFeeSocket();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mappings, setMappings] = useState<FeeMapping[]>([]);
@@ -252,12 +253,12 @@ export default function EnrollmentFeesPage() {
         "/api/academics/academic-activities",
       );
       const activities = Array.isArray(data?.payload) ? data.payload : [];
-      const semesterFeePayments = activities.filter(
+      const feeActivities = activities.filter(
         (a) =>
           a.master?.isActive &&
           (a.master?.name || "").trim().toLowerCase() === "semester fee payment",
       );
-      setSemesterFeeActivities(semesterFeePayments);
+      setSemesterFeeActivities(feeActivities);
     } catch (e) {
       console.error(e);
       setSemesterFeeActivities([]);
@@ -266,8 +267,11 @@ export default function EnrollmentFeesPage() {
 
   useEffect(() => {
     fetchMappings();
-    fetchSemesterFeeActivities();
   }, [student?.id, feeMappingsVersion]);
+
+  useEffect(() => {
+    fetchSemesterFeeActivities();
+  }, [student?.id, academicActivityVersion]);
 
   useEffect(() => {
     const checkCp = async () => {
@@ -453,75 +457,60 @@ export default function EnrollmentFeesPage() {
 
   const cards = useMemo(
     () =>
-      mappings.map((m) => ({
-        id: m.id,
-        title: m.feeStructure?.receiptType?.name || "Fees",
-        className: m.feeStructure?.class?.name || "—",
-        academicYear: m.feeStructure?.academicYear?.year || "—",
-        total: Number(m.totalPayable || 0),
-        isPaid: ["COMPLETED", "SUCCESS"].includes(String(m.paymentStatus).toUpperCase()),
-        installmentLabel:
-          m.feeStructureInstallment?.name ||
-          (m.type === "INSTALLMENT"
-            ? `Installment ${m.feeStructureInstallment?.sequence ?? ""}`.trim()
-            : "Full payment"),
-        feeStructureId: m.feeStructure?.id,
-        academicYearId:
-          typeof m.feeStructure?.academicYear?.id === "number"
-            ? m.feeStructure.academicYear.id
-            : undefined,
-      })),
+      mappings
+        .filter((m) => {
+          const total = Number(m.totalPayable || 0);
+          const isPaid = ["COMPLETED", "SUCCESS"].includes(String(m.paymentStatus).toUpperCase());
+          return total > 0 || isPaid;
+        })
+        .map((m) => ({
+          id: m.id,
+          title: m.feeStructure?.receiptType?.name || "Fees",
+          className: m.feeStructure?.class?.name || "—",
+          academicYear: m.feeStructure?.academicYear?.year || "—",
+          total: Number(m.totalPayable || 0),
+          isPaid: ["COMPLETED", "SUCCESS"].includes(String(m.paymentStatus).toUpperCase()),
+          installmentLabel:
+            m.feeStructureInstallment?.name ||
+            (m.type === "INSTALLMENT"
+              ? `Installment ${m.feeStructureInstallment?.sequence ?? ""}`.trim()
+              : "Full payment"),
+          feeStructureId: m.feeStructure?.id,
+          academicYearId:
+            typeof m.feeStructure?.academicYear?.id === "number"
+              ? m.feeStructure.academicYear.id
+              : undefined,
+        })),
     [mappings],
   );
 
   const visibleCards = useMemo(() => {
-    if (!semesterFeeActivities.length) return [];
+    if (!semesterFeeActivities.length) return cards;
 
     const promotion = (student as any)?.currentPromotion;
-    if (!promotion) return [];
-
-    const studentClassId: number | null = promotion?.class?.id ?? null;
-    const studentStreamId: number | null = promotion?.programCourse?.stream?.id ?? null;
-    const studentAffiliationId: number | null = promotion?.programCourse?.affiliation?.id ?? null;
-    const studentRegulationTypeId: number | null =
-      promotion?.programCourse?.regulationType?.id ?? null;
-    const studentAcademicYearId: number | null = promotion?.session?.academicYearId ?? null;
+    const studentStreamId: number | null =
+      (student as any)?.programCourse?.stream?.id ?? promotion?.programCourse?.stream?.id ?? null;
 
     const now = Date.now();
 
-    const matchingActivities = semesterFeeActivities.filter((activity) => {
-      if (activity.audience !== "STUDENT" && activity.audience !== "ALL") return false;
-      if (studentAffiliationId != null && activity.affiliation.id !== studentAffiliationId)
-        return false;
-      if (studentRegulationTypeId != null && activity.regulationType.id !== studentRegulationTypeId)
-        return false;
-      if (studentAcademicYearId != null && activity.academicYear.id !== studentAcademicYearId)
-        return false;
-
-      const hasActiveScope = activity.scopes.some((scope) => {
-        if (!scope.isEnabled) return false;
-        if (studentStreamId != null && scope.stream.id !== studentStreamId) return false;
-        if (studentClassId != null && scope.class.id !== studentClassId) return false;
-        const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
-        const end = scope.endDate ? new Date(scope.endDate).getTime() : Number.POSITIVE_INFINITY;
-        return now >= start && now <= end;
-      });
-
-      return hasActiveScope;
-    });
-
-    if (!matchingActivities.length) return [];
-
-    const scopedClassIds = new Set<number>();
-    for (const activity of matchingActivities) {
-      for (const scope of activity.scopes) {
-        if (scope.isEnabled) scopedClassIds.add(scope.class.id);
-      }
-    }
-
     return cards.filter((card) => {
-      const cardClassId = mappings.find((m) => m.id === card.id)?.feeStructure?.class?.id;
-      return scopedClassIds.size === 0 || scopedClassIds.has(Number(cardClassId));
+      const mapping = mappings.find((m) => m.id === card.id);
+      const cardClassId = mapping?.feeStructure?.class?.id;
+      const cardAyId = mapping?.feeStructure?.academicYear?.id;
+      if (!cardClassId || !cardAyId) return false;
+
+      return semesterFeeActivities.some((activity) => {
+        if (activity.academicYear.id !== cardAyId) return false;
+
+        return activity.scopes.some((scope) => {
+          if (!scope.isEnabled) return false;
+          if (scope.class.id !== cardClassId) return false;
+          if (studentStreamId != null && scope.stream.id !== studentStreamId) return false;
+          const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
+          const end = scope.endDate ? new Date(scope.endDate).getTime() : Infinity;
+          return now >= start && now <= end;
+        });
+      });
     });
   }, [cards, mappings, semesterFeeActivities, student]);
 
@@ -1005,8 +994,7 @@ export default function EnrollmentFeesPage() {
           {!visibleCards.length ? (
             <Card className="col-span-full border border-amber-200 bg-amber-50">
               <CardContent className="py-4 text-sm text-amber-800">
-                Semester Fee Payment activity is not currently active for your scoped
-                semester/program.
+                No fee payments are currently active for your semester/program.
               </CardContent>
             </Card>
           ) : null}

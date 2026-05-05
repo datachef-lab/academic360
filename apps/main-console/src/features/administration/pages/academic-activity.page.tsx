@@ -402,6 +402,17 @@ export default function AcademicActivityPage() {
         setMasters((prev) => [...prev, savedMaster]);
       }
 
+      const existingRules = rules.filter((r) => r.id);
+      for (const rule of existingRules) {
+        await axiosInstance.put(`/api/academics/academic-activities/${rule.id}`, {
+          academicYearId: rule.academicYearId,
+          affiliationId: rule.affiliationId,
+          regulationTypeId: rule.regulationTypeId,
+          appearTypeId: rule.appearTypeId,
+          audience: rule.audience,
+        });
+      }
+
       const newRules = rules.filter((r) => !r.id);
       for (const rule of newRules) {
         await axiosInstance.post("/api/academics/academic-activities", {
@@ -916,15 +927,6 @@ export default function AcademicActivityPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {masterDraft.id ? (
-                    <button
-                      type="button"
-                      onClick={() => deleteMaster(masterDraft.id!)}
-                      className="flex h-7 w-7 items-center justify-center rounded-[6px] border-[1.5px] border-[#F5BFBF] bg-[#FEF0F0] text-sm text-[#C23B3B] transition-colors hover:bg-[#FDDDDD]"
-                    >
-                      &times;
-                    </button>
-                  ) : null}
                   <Button
                     variant="outline"
                     size="icon"

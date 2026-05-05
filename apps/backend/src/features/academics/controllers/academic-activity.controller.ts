@@ -11,6 +11,7 @@ import {
   UpdateAcademicActivityPayload,
   CreateScopePayload,
 } from "../services/academic-activity.service.js";
+import { socketService } from "@/services/socketService.js";
 
 function getRequestUserId(req: Request): number | undefined {
   const userId = (req.user as any)?.id;
@@ -127,6 +128,10 @@ export async function createAcademicActivityController(
     };
 
     const created = await createAcademicActivity(payload, userId);
+    socketService.broadcastAcademicActivityUpdate({
+      masterId: payload.academicActivityMasterId,
+      action: "created",
+    });
     res
       .status(201)
       .json(
@@ -172,6 +177,7 @@ export async function updateAcademicActivityController(
         );
       return;
     }
+    socketService.broadcastAcademicActivityUpdate({ action: "updated" });
     res
       .status(200)
       .json(
@@ -208,6 +214,7 @@ export async function deleteAcademicActivityController(
         );
       return;
     }
+    socketService.broadcastAcademicActivityUpdate({ action: "deleted" });
     res
       .status(200)
       .json(
