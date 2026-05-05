@@ -3,19 +3,30 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { userModel } from "../user";
+import { academicYearModel } from "./academic-year.model";
+import { affiliationModel, regulationTypeModel } from "../course-design";
+import { promotionStatusModel } from "../batches";
+import { academicActivityMasterModel } from "./academic-activity-master.model";
 
 export const academicActivityModel = pgTable("academic_activities", {
     id: serial().primaryKey(),
-    name: varchar({ length: 500 }).notNull(),
-    description: varchar({ length: 1000 }),
+    academicYearId: integer("academic_year_id_fk")
+    .references(() => academicYearModel.id)
+    .notNull(),
+    academicActivityMasterId: integer("academic_activity_master_id_fk")
+        .references(() => academicActivityMasterModel.id)
+        .notNull(),
     audience: academicActivityAudienceEnum()
         .default("ALL")
         .notNull(),
-    startDate: timestamp({ withTimezone: true }).notNull().defaultNow(),
-    endDate: timestamp({ withTimezone: true }),
-    remarks: varchar({ length: 1000 }),
-    isEnabled: boolean()
-        .default(false)
+    affiliationId: integer("affiliation_id_fk")
+        .references(() => affiliationModel.id)
+        .notNull(),
+    regulationTypeId: integer("regulation_type_id_fk")
+        .references(() => regulationTypeModel.id)
+        .notNull(),
+    appearTypeId: integer("appear_type_promotion_status_id_fk")
+        .references(() => promotionStatusModel.id)
         .notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })

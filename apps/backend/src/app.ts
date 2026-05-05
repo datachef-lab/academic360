@@ -41,6 +41,7 @@ import {
   certificateFieldOptionMasterRouter,
   certificateMasterRouter,
   academicActivityRouter,
+  academicActivityMasterRouter,
 } from "@/features/academics/routes/index.js";
 import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -436,6 +437,10 @@ app.use(
 
 app.use("/api/academics/career-progression-forms", careerProgressionFormRouter);
 app.use("/api/academics/academic-activities", academicActivityRouter);
+app.use(
+  "/api/academics/academic-activity-masters",
+  academicActivityMasterRouter,
+);
 
 app.use("/api/academics/certificate-masters", certificateMasterRouter);
 

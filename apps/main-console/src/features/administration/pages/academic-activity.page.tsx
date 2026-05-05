@@ -1,115 +1,130 @@
 import * as React from "react";
-import { Info, Pencil, CircleAlert, Search } from "lucide-react";
+import { Pencil, Plus, Search, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import axiosInstance from "@/utils/api";
-import {
-  getAffiliations,
-  getProgramCourses,
-  getRegulationTypes,
-} from "@/services/course-design.api";
 import { findAllClasses } from "@/services/class.service";
+import { getAffiliations, getRegulationTypes, getStreams } from "@/services/course-design.api";
+import { getAllAcademicYears } from "@/services/academic-year-api";
+import { getPromotionStatuses } from "@/services/promotion-status.api";
 
 const SL = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const;
 
-type ActivityId = string | number;
-type Audience = "staff" | "all" | "student";
+const ACTIVITY_TYPE_OPTIONS = [
+  { value: "FINANCE", label: "Finance" },
+  { value: "EXAMINATION", label: "Examination" },
+  { value: "ADMISSION", label: "Admission" },
+  { value: "ACADEMIC", label: "Academic" },
+] as const;
 
-type Activity = {
+const DEFAULT_AUDIENCE: Audience = "STUDENT";
+
+type ActivityType = "FINANCE" | "EXAMINATION" | "ADMISSION" | "ACADEMIC";
+type Audience = "ALL" | "STUDENT" | "STAFF";
+
+type ScopeDto = {
+  id?: number;
+  streamId: number;
+  classId: number;
+  startDate: string | null;
+  endDate: string | null;
+  isEnabled: boolean;
+  stream?: { id: number; name: string; code?: string };
+  class?: { id: number; name: string; sequence?: number | null };
+};
+
+type ActivityMasterDto = {
   id: number;
-  key: string;
-  label: string;
-  icon: string;
-  desc: string;
-  category: string;
-  enabled: boolean;
-  startDt: string;
-  endDt: string;
+  type: ActivityType;
+  name: string;
+  description: string | null;
+  remarks: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type AcademicActivityApiDto = {
+  id: number;
   audience: Audience;
-  note: string;
-  scopeSems: number[];
-  scopePrograms: number[];
-  scopeAffs: number[];
-  scopeRegulations: number[];
+  master: ActivityMasterDto;
+  academicYear: { id: number; year: string };
+  affiliation: { id: number; name: string; shortName?: string | null };
+  regulationType: { id: number; name: string; shortName?: string | null };
+  appearType: { id: number; name: string };
+  scopes: ScopeDto[];
 };
 
-type ProgramOption = {
-  id: number;
-  l: string;
-  affiliationId?: number | null;
-  regulationTypeId?: number | null;
-};
-type AffiliationOption = { id: number; l: string };
-type RegulationOption = { id: number; l: string };
+type ApiResponse<T> = { payload: T };
+
 type ClassOption = {
   id: number;
   name: string;
   sequence?: number | null;
   isActive?: boolean | null;
 };
-type AcademicActivityApiDto = {
-  id: number;
-  name: string;
-  description: string | null;
-  audience: "STAFF" | "STUDENT" | "ALL";
+type StreamOption = { id: number; name: string; code?: string };
+type AcademicYearOption = { id: number; year: string; isCurrentYear?: boolean };
+type AffiliationOption = { id: number; name: string; shortName?: string | null };
+type RegulationOption = { id: number; name: string; shortName?: string | null };
+type PromotionStatusOption = { id: number; name: string };
+
+type ScopeDraft = {
+  id?: number;
+  streamId: number;
+  classId: number;
   startDate: string;
-  endDate: string | null;
-  remarks: string | null;
+  endDate: string;
   isEnabled: boolean;
-  classes: Array<{ class: { id?: number; name?: string; sequence?: number | null } }>;
-  programCourses: Array<{
-    programCourse: { id?: number; name?: string | null; shortName?: string | null };
-  }>;
 };
-type ApiResponse<T> = { payload: T };
+
+type RuleDraft = {
+  id?: number;
+  academicYearId: number;
+  affiliationId: number;
+  regulationTypeId: number;
+  appearTypeId: number;
+  audience: Audience;
+  scopes: ScopeDraft[];
+};
+
+type MasterDraft = {
+  id?: number;
+  name: string;
+  description: string;
+  remarks: string;
+  type: ActivityType;
+  isActive: boolean;
+};
 
 type ProxyStudent = {
   uid: string;
   name: string;
-  roll: string;
   sem: number;
   dept: string;
-  deptId: string | number;
-  affId: string | number;
+  deptId: number;
+  affId: number;
   photo: string;
-  ffStatus: Record<number, string>;
-  failedPapers: Record<number, number>;
-  feePaid: Record<number, boolean>;
-  admitCard: Record<number, boolean>;
 };
 
-function fmt(iso: string): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Kolkata",
-  });
-}
-
-function toDateTimeLocalFromUtc(iso: string | null | undefined): string {
+function toDateTimeLocal(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  // Convert UTC timestamp to IST wall-clock string for datetime-local input
   const parts = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Kolkata",
     year: "numeric",
@@ -127,282 +142,135 @@ function toDateTimeLocalFromUtc(iso: string | null | undefined): string {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
-function windowStatus(act: Activity): {
+function ruleStatus(rule: RuleDraft): string {
+  const enabled = rule.scopes.filter((s) => s.isEnabled);
+  if (!enabled.length) return "No scopes";
+  const now = Date.now();
+  const live = enabled.some((s) => {
+    const start = s.startDate ? new Date(s.startDate).getTime() : 0;
+    const end = s.endDate ? new Date(s.endDate).getTime() : Number.POSITIVE_INFINITY;
+    return now >= start && now <= end;
+  });
+  if (live) return "Live";
+  const scheduled = enabled.some((s) => {
+    const start = s.startDate ? new Date(s.startDate).getTime() : 0;
+    return now < start;
+  });
+  if (scheduled) return "Scheduled";
+  return "Closed";
+}
+
+function scopeStatus(scope: ScopeDraft): { label: string; cls: string } {
+  if (!scope.isEnabled)
+    return { label: "Off", cls: "border-[#E0DDD6] bg-[#F7F6F3] text-[#9AA0AE]" };
+  if (!scope.startDate && !scope.endDate)
+    return { label: "No Dates", cls: "border-[#F0D888] bg-[#FDF4DC] text-[#A07010]" };
+  const now = Date.now();
+  const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
+  const end = scope.endDate ? new Date(scope.endDate).getTime() : Number.POSITIVE_INFINITY;
+  if (now < start)
+    return { label: "Scheduled", cls: "border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5]" };
+  if (now > end) return { label: "Closed", cls: "border-[#E0DDD6] bg-[#F7F6F3] text-[#9AA0AE]" };
+  return { label: "Live", cls: "border-[#A0D8B8] bg-[#E8F5EE] text-[#1A7A4A]" };
+}
+
+function activityStatus(act: AcademicActivityApiDto): {
   label: string;
   color: string;
   bg: string;
   bd: string;
   live?: boolean;
 } {
-  if (!act.enabled)
+  if (!act.master.isActive)
     return {
       label: "Disabled",
       color: "text-[#9AA0AE]",
       bg: "bg-[#F7F6F3]",
       bd: "border-[#E0DDD6]",
     };
+  if (!act.scopes.length)
+    return {
+      label: "No Scopes",
+      color: "text-[#A07010]",
+      bg: "bg-[#FDF4DC]",
+      bd: "border-[#F0D888]",
+    };
+  const enabledScopes = act.scopes.filter((s) => s.isEnabled);
+  if (!enabledScopes.length)
+    return {
+      label: "All Off",
+      color: "text-[#9AA0AE]",
+      bg: "bg-[#F7F6F3]",
+      bd: "border-[#E0DDD6]",
+    };
   const now = Date.now();
-  const s = act.startDt ? new Date(act.startDt).getTime() : 0;
-  const e = act.endDt ? new Date(act.endDt).getTime() : Number.POSITIVE_INFINITY;
-  if (now < s)
+  const live = enabledScopes.filter((s) => {
+    const start = s.startDate ? new Date(s.startDate).getTime() : 0;
+    const end = s.endDate ? new Date(s.endDate).getTime() : Number.POSITIVE_INFINITY;
+    return now >= start && now <= end;
+  });
+  if (live.length > 0)
+    return {
+      label: `${live.length} Live`,
+      color: "text-[#1A7A4A]",
+      bg: "bg-[#E8F5EE]",
+      bd: "border-[#A0D8B8]",
+      live: true,
+    };
+  const scheduled = enabledScopes.filter((s) => {
+    const start = s.startDate ? new Date(s.startDate).getTime() : 0;
+    return now < start;
+  });
+  if (scheduled.length > 0)
     return {
       label: "Scheduled",
       color: "text-[#1A6BB5]",
       bg: "bg-[#EBF3FC]",
       bd: "border-[#9EC8F0]",
     };
-  if (now > e)
-    return {
-      label: "Closed",
-      color: "text-[#9AA0AE]",
-      bg: "bg-[#F7F6F3]",
-      bd: "border-[#E0DDD6]",
-    };
-  return {
-    label: "Live",
-    color: "text-[#1A7A4A]",
-    bg: "bg-[#E8F5EE]",
-    bd: "border-[#A0D8B8]",
-    live: true,
-  };
+  return { label: "Closed", color: "text-[#9AA0AE]", bg: "bg-[#F7F6F3]", bd: "border-[#E0DDD6]" };
 }
 
-function audienceLabel(a: Audience): { label: string; color: string; bg: string; bd: string } {
-  if (a === "staff")
-    return {
-      label: "Staff Only",
-      color: "text-[#5B3FC4]",
-      bg: "bg-[#EEE9FC]",
-      bd: "border-[#C4B4F4]",
-    };
-  if (a === "student")
-    return {
-      label: "Students",
-      color: "text-[#C8820A]",
-      bg: "bg-[#FEF6E8]",
-      bd: "border-[#F0C97A]",
-    };
-  return {
-    label: "All",
-    color: "text-[#0A7F6A]",
-    bg: "bg-[#E6F5F2]",
-    bd: "border-[#85CFC0]",
-  };
-}
-
-function scopeLabel(arr: unknown[], masterLen: number, unit: string): string {
-  if (arr.length === 0 || arr.length === masterLen) return `All ${unit}`;
-  if (arr.length === 1) return `1 ${unit.replace(/s$/, "")}`;
-  return `${arr.length} ${unit}`;
-}
-
-function classScopeLabel(classIds: number[], classOptions: ClassOption[]): string {
-  if (classIds.length === 0 || classIds.length === classOptions.length) return "All Classes";
-  if (classIds.length === 1) return "1 Class";
-  return `${classIds.length} Classes`;
-}
-
-function classDisplayToken(name?: string | null): string {
-  const parts = String(name || "")
-    .trim()
-    .split(/\s+/);
-  if (parts.length >= 2 && parts[0]?.toUpperCase() === "SEMESTER") return parts[1] ?? "";
-  return String(name || "");
-}
-
-function semesterNumberFromToken(token: string): number | null {
-  const upper = token.toUpperCase();
-  const romanIdx = SL.findIndex((r) => r === upper);
-  if (romanIdx >= 0) return romanIdx + 1;
-  const parsed = Number(token);
-  if (Number.isFinite(parsed) && parsed >= 1) return parsed;
-  return null;
-}
-
-function getSemesterNumber(cls: { name?: string | null; sequence?: number | null }): number | null {
-  const upper = String(cls.name || "").toUpperCase();
-  const romanIdx = SL.findIndex((r) => upper.includes(`SEMESTER ${r}`) || upper === r);
-  if (romanIdx >= 0) return romanIdx + 1;
-  const digitMatch = upper.match(/SEMESTER\s+(\d{1,2})/) || upper.match(/^(\d{1,2})$/);
-  if (digitMatch) {
-    const parsed = Number(digitMatch[1]);
-    if (Number.isFinite(parsed) && parsed >= 1) return parsed;
-  }
-  if (typeof cls.sequence === "number" && cls.sequence >= 1) return cls.sequence;
-  return null;
-}
-
-function studentInScope(
-  act: Activity,
-  student: ProxyStudent,
-  classOptions: ClassOption[],
-): boolean {
-  const semesterCount = classOptions.length;
-  const semOk =
-    act.scopeSems.length === 0 ||
-    act.scopeSems.length === semesterCount ||
-    act.scopeSems.some((classId) => {
-      const cls = classOptions.find((c) => c.id === classId);
-      return cls ? getSemesterNumber(cls) === student.sem : false;
-    });
-  const progOk =
-    act.scopePrograms.length === 0 ||
-    act.scopePrograms.map(String).includes(String(student.deptId));
-  const affOk =
-    act.scopeAffs.length === 0 || act.scopeAffs.map(String).includes(String(student.affId));
-  return semOk && progOk && affOk;
-}
-
-function getActStatus(
-  act: Activity,
-  s: ProxyStudent,
-): { accessible: boolean; info: string; done: boolean } {
-  const failedCount = Object.values(s.failedPapers ?? {}).reduce((a, b) => a + b, 0);
-  switch (act.key) {
-    case "fee_payment":
-      return {
-        accessible: true,
-        info: s.feePaid[s.sem] ? "Paid" : "Payment pending",
-        done: !!s.feePaid[s.sem],
-      };
-    case "failed_paper_fee":
-      return {
-        accessible: failedCount > 0,
-        info:
-          failedCount > 0
-            ? `${failedCount} paper${failedCount > 1 ? "s" : ""} — fee due`
-            : "No failed papers",
-        done: false,
-      };
-    case "admit_card":
-      return {
-        accessible: !!s.feePaid[s.sem],
-        info: s.feePaid[s.sem]
-          ? s.admitCard[s.sem]
-            ? "Downloaded"
-            : "Ready to download"
-          : "Fee payment required first",
-        done: !!s.admitCard[s.sem],
-      };
-    case "form_fillup":
-      return {
-        accessible: true,
-        info: s.ffStatus[s.sem] === "Form Filled" ? "Submitted" : "Not submitted",
-        done: s.ffStatus[s.sem] === "Form Filled",
-      };
-    case "cu_registration":
-      return {
-        accessible: s.sem === 1,
-        info: s.sem === 1 ? "Registration open" : "Only for new students",
-        done: false,
-      };
-    case "subject_select_s1":
-      return {
-        accessible: s.sem === 1,
-        info: s.sem === 1 ? "Selection open" : "Only for Semester I",
-        done: false,
-      };
-    case "specialization":
-      return {
-        accessible: s.sem >= 3,
-        info: s.sem >= 3 ? "Selection open" : "Available from Sem III",
-        done: false,
-      };
-    case "marks_upload":
-      return { accessible: true, info: "Upload open", done: false };
+function typeIcon(type: ActivityType): string {
+  switch (type) {
+    case "FINANCE":
+      return "\u{1F4B3}";
+    case "EXAMINATION":
+      return "\u{1F4CB}";
+    case "ADMISSION":
+      return "\u{270D}\u{FE0F}";
+    case "ACADEMIC":
+      return "\u{1F4DA}";
     default:
-      return { accessible: true, info: "Available", done: false };
+      return "\u{1F4CC}";
   }
-}
-
-function ScopeSummary({
-  act,
-  classOptions,
-  totalPrograms,
-  totalAffiliations,
-}: {
-  act: Activity;
-  classOptions: ClassOption[];
-  totalPrograms: number;
-  totalAffiliations: number;
-}) {
-  const semLbl = classScopeLabel(act.scopeSems, classOptions);
-  const progLbl = scopeLabel(act.scopePrograms.map(String), totalPrograms, "Programs");
-  const affLbl = scopeLabel(act.scopeAffs.map(String), totalAffiliations, "Affiliations");
-  const pill = (lbl: string, isAllPill: boolean, c: string, bg: string, bd: string) => (
-    <Badge
-      variant="outline"
-      className={cn(
-        "whitespace-nowrap border px-2 py-0.5 text-[10.5px] font-semibold",
-        isAllPill ? "border-[#E0DDD6] bg-[#F7F6F3] text-[#9AA0AE]" : cn(bg, c, bd),
-      )}
-    >
-      {lbl}
-    </Badge>
-  );
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {pill(semLbl, semLbl === "All Sems", "text-[#C8820A]", "bg-[#FEF6E8]", "border-[#F0C97A]")}
-      {pill(
-        progLbl,
-        progLbl === "All Programs",
-        "text-[#5B3FC4]",
-        "bg-[#EEE9FC]",
-        "border-[#C4B4F4]",
-      )}
-      {pill(
-        affLbl,
-        affLbl === "All Affiliations",
-        "text-[#1A6BB5]",
-        "bg-[#EBF3FC]",
-        "border-[#9EC8F0]",
-      )}
-    </div>
-  );
-}
-
-const isOdd = (n: number) => n % 2 !== 0;
-function semChipColors(sem: number) {
-  return isOdd(sem)
-    ? { c: "text-[#C8820A]", bg: "bg-[#FEF6E8]", bd: "border-[#F0C97A]" }
-    : { c: "text-[#0A7F6A]", bg: "bg-[#E6F5F2]", bd: "border-[#85CFC0]" };
 }
 
 export default function AcademicActivityPage() {
-  const [activities, setActivities] = React.useState<Activity[]>([]);
+  const [masters, setMasters] = React.useState<ActivityMasterDto[]>([]);
+  const [activities, setActivities] = React.useState<AcademicActivityApiDto[]>([]);
   const [classOptions, setClassOptions] = React.useState<ClassOption[]>([]);
-  const [programOptions, setProgramOptions] = React.useState<ProgramOption[]>([]);
-  const [affiliationOptions, setAffiliationOptions] = React.useState<AffiliationOption[]>([]);
-  const [regulationOptions, setRegulationOptions] = React.useState<RegulationOption[]>([]);
+  const [streams, setStreams] = React.useState<StreamOption[]>([]);
+  const [academicYears, setAcademicYears] = React.useState<AcademicYearOption[]>([]);
+  const [affiliations, setAffiliations] = React.useState<AffiliationOption[]>([]);
+  const [regulations, setRegulations] = React.useState<RegulationOption[]>([]);
+  const [promotionStatuses, setPromotionStatuses] = React.useState<PromotionStatusOption[]>([]);
+
   const [isSaving, setIsSaving] = React.useState(false);
   const [filterCat, setFilterCat] = React.useState<string>("All");
-  const [editOpen, setEditOpen] = React.useState(false);
-  const [editDraft, setEditDraft] = React.useState<Activity | null>(null);
+
+  const [masterOpen, setMasterOpen] = React.useState(false);
+  const [masterDraft, setMasterDraft] = React.useState<MasterDraft | null>(null);
+  const [rules, setRules] = React.useState<RuleDraft[]>([]);
+
+  const [scopeOpen, setScopeOpen] = React.useState(false);
+  const [scopeRuleIdx, setScopeRuleIdx] = React.useState<number>(-1);
+
   const [proxyUID, setProxyUID] = React.useState("");
   const [proxyStudent, setProxyStudent] = React.useState<ProxyStudent | null>(null);
   const [proxyResolved, setProxyResolved] = React.useState(false);
-  const [proxyAction, setProxyAction] = React.useState<{ icon: string; label: string } | null>(
-    null,
-  );
 
-  const CATS = React.useMemo(
-    () => ["All", ...Array.from(new Set(activities.map((a) => a.category || "General")))],
-    [activities],
-  );
-
-  const filteredProgramOptions = React.useMemo(() => {
-    if (!editDraft) return programOptions;
-    return programOptions.filter((p) => {
-      const affOk =
-        editDraft.scopeAffs.length === 0 ||
-        (typeof p.affiliationId === "number" && editDraft.scopeAffs.includes(p.affiliationId));
-      const regOk =
-        editDraft.scopeRegulations.length === 0 ||
-        (typeof p.regulationTypeId === "number" &&
-          editDraft.scopeRegulations.includes(p.regulationTypeId));
-      return affOk && regOk;
-    });
-  }, [editDraft, programOptions]);
+  const CATS = React.useMemo(() => ["All", ...ACTIVITY_TYPE_OPTIONS.map((t) => t.label)], []);
 
   const activeClassOptions = React.useMemo(
     () =>
@@ -417,185 +285,205 @@ export default function AcademicActivityPage() {
     [classOptions],
   );
 
-  const audienceFromApi = (aud: string): Audience => {
-    if (aud === "STAFF") return "staff";
-    if (aud === "STUDENT") return "student";
-    return "all";
-  };
-
-  const audienceToApi = (aud: Audience): "STAFF" | "STUDENT" | "ALL" => {
-    if (aud === "staff") return "STAFF";
-    if (aud === "student") return "STUDENT";
-    return "ALL";
-  };
-
-  const mapApiActivityToUi = React.useCallback((row: AcademicActivityApiDto): Activity => {
-    const scopeSems = (row.classes ?? [])
-      .map((s) => s?.class?.id)
-      .filter((classId): classId is number => typeof classId === "number");
-
-    const scopePrograms = (row.programCourses ?? [])
-      .map((s) => s?.programCourse?.id)
-      .filter((id): id is number => typeof id === "number");
-
-    return {
-      id: row.id,
-      key: `activity_${row.id}`,
-      label: row.name,
-      icon: "📌",
-      desc: row.description ?? "",
-      category: "General",
-      enabled: !!row.isEnabled,
-      startDt: toDateTimeLocalFromUtc(row.startDate),
-      endDt: toDateTimeLocalFromUtc(row.endDate),
-      audience: audienceFromApi(row.audience),
-      note: row.remarks ?? "",
-      scopeSems,
-      scopePrograms,
-      scopeAffs: [],
-      scopeRegulations: [],
-    };
-  }, []);
-
-  const loadAcademicActivityData = React.useCallback(async () => {
-    const [classesRes, programRes, affiliationRes, regulationRes, activitiesRes] =
+  const loadData = React.useCallback(async () => {
+    const [classesRes, streamsRes, ayRes, affRes, regRes, psRes, mastersRes, activitiesRes] =
       await Promise.all([
         findAllClasses(),
-        getProgramCourses(),
+        getStreams(),
+        getAllAcademicYears(),
         getAffiliations(),
         getRegulationTypes(),
+        getPromotionStatuses({ isActive: true }),
+        axiosInstance.get<ApiResponse<ActivityMasterDto[]>>(
+          "/api/academics/academic-activity-masters",
+        ),
         axiosInstance.get<ApiResponse<AcademicActivityApiDto[]>>(
           "/api/academics/academic-activities",
         ),
       ]);
 
-    const classesPayload = (classesRes?.payload ?? [])
-      .filter((c: any) => c?.isActive !== false)
-      .map((c: any) => ({
+    setClassOptions(
+      (classesRes?.payload ?? []).map((c: any) => ({
         id: c.id,
         name: c.name,
         sequence: c.sequence,
         isActive: c.isActive,
-      }));
-    setClassOptions(classesPayload);
-
-    const programsPayload = (programRes ?? [])
-      .filter((p: any) => p?.isActive !== false)
-      .map((p: any) => ({
-        id: p.id,
-        l: p.name || p.shortName || `Program ${p.id}`,
-        affiliationId: p.affiliationId,
-        regulationTypeId: p.regulationTypeId,
-      }));
-    setProgramOptions(programsPayload);
-
-    setAffiliationOptions(
-      (affiliationRes ?? [])
+      })),
+    );
+    setStreams((streamsRes ?? []).map((s: any) => ({ id: s.id, name: s.name, code: s.code })));
+    setAcademicYears(
+      (ayRes?.payload ?? []).map((a: any) => ({
+        id: a.id,
+        year: a.year,
+        isCurrentYear: a.isCurrentYear,
+      })),
+    );
+    setAffiliations(
+      (affRes ?? [])
         .filter((a: any) => a?.isActive !== false)
-        .map((a: any) => ({
-          id: a.id,
-          l: a.name || a.shortName || `Affiliation ${a.id}`,
-        })),
+        .map((a: any) => ({ id: a.id, name: a.name, shortName: a.shortName })),
     );
-    setRegulationOptions(
-      (regulationRes ?? [])
+    setRegulations(
+      (regRes ?? [])
         .filter((r: any) => r?.isActive !== false)
-        .map((r: any) => ({
-          id: r.id,
-          l: r.name || r.shortName || `Regulation ${r.id}`,
-        })),
+        .map((r: any) => ({ id: r.id, name: r.name, shortName: r.shortName })),
     );
-
-    const rows = activitiesRes.data?.payload ?? [];
-    setActivities(rows.map((row) => mapApiActivityToUi(row)));
-  }, [mapApiActivityToUi]);
+    setPromotionStatuses((psRes ?? []).map((p: any) => ({ id: p.id, name: p.name })));
+    setMasters(mastersRes.data?.payload ?? []);
+    setActivities(activitiesRes.data?.payload ?? []);
+  }, []);
 
   React.useEffect(() => {
-    loadAcademicActivityData().catch((err) => {
-      console.error("Failed to load academic activities:", err);
-    });
-  }, [loadAcademicActivityData]);
+    loadData().catch(console.error);
+  }, [loadData]);
 
-  const openEdit = (id: ActivityId) => {
-    const act = activities.find((x) => x.id === id);
-    if (!act) return;
-    setEditDraft({
-      ...act,
-      scopeSems: [...act.scopeSems],
-      scopePrograms: [...act.scopePrograms],
-      scopeAffs: [...act.scopeAffs],
-      scopeRegulations: [...act.scopeRegulations],
-    });
-    setEditOpen(true);
+  const openCreateMaster = () => {
+    setMasterDraft({ name: "", description: "", remarks: "", type: "ACADEMIC", isActive: true });
+    setRules([]);
+    setMasterOpen(true);
   };
 
-  const saveEdit = async () => {
-    if (!editDraft) return;
+  const openEditMaster = (m: ActivityMasterDto) => {
+    setMasterDraft({
+      id: m.id,
+      name: m.name,
+      description: m.description ?? "",
+      remarks: m.remarks ?? "",
+      type: m.type,
+      isActive: m.isActive,
+    });
+    const linked = activities.filter((a) => a.master.id === m.id);
+    setRules(
+      linked.map((a) => ({
+        id: a.id,
+        academicYearId: a.academicYear.id,
+        affiliationId: a.affiliation.id,
+        regulationTypeId: a.regulationType.id,
+        appearTypeId: a.appearType.id,
+        audience: a.audience,
+        scopes: a.scopes.map((s) => ({
+          id: s.id,
+          streamId: s.streamId ?? s.stream?.id ?? 0,
+          classId: s.classId ?? s.class?.id ?? 0,
+          startDate: toDateTimeLocal(s.startDate),
+          endDate: toDateTimeLocal(s.endDate),
+          isEnabled: s.isEnabled,
+        })),
+      })),
+    );
+    setMasterOpen(true);
+  };
+
+  const saveMasterAndRules = async () => {
+    if (!masterDraft) return;
     try {
       setIsSaving(true);
-      const classIds = [...editDraft.scopeSems];
-      const scopedProgramIds = editDraft.scopePrograms.filter((id) =>
-        filteredProgramOptions.some((p) => p.id === id),
-      );
 
-      const payload = {
-        id: editDraft.id,
-        name: editDraft.label,
-        description: editDraft.desc || null,
-        audience: audienceToApi(editDraft.audience),
-        startDate: editDraft.startDt
-          ? new Date(editDraft.startDt).toISOString()
-          : new Date().toISOString(),
-        endDate: editDraft.endDt ? new Date(editDraft.endDt).toISOString() : null,
-        remarks: editDraft.note || null,
-        isEnabled: editDraft.enabled,
-        classIds,
-        programCourseIds: scopedProgramIds,
-      };
-
-      const res = await axiosInstance.post<ApiResponse<AcademicActivityApiDto>>(
-        "/api/academics/academic-activities/upsert",
-        payload,
-      );
-      const saved = res.data?.payload;
-      if (saved) {
-        setActivities((prev) =>
-          prev.map((a) => (a.id === editDraft.id ? mapApiActivityToUi(saved) : a)),
+      let savedMaster: ActivityMasterDto;
+      if (masterDraft.id) {
+        const res = await axiosInstance.put<ApiResponse<ActivityMasterDto>>(
+          `/api/academics/academic-activity-masters/${masterDraft.id}`,
+          { remarks: masterDraft.remarks || null, isActive: masterDraft.isActive },
         );
+        savedMaster = res.data.payload;
+        setMasters((prev) => prev.map((m) => (m.id === savedMaster.id ? savedMaster : m)));
+      } else {
+        const res = await axiosInstance.post<ApiResponse<ActivityMasterDto>>(
+          "/api/academics/academic-activity-masters",
+          {
+            name: masterDraft.name.trim(),
+            description: masterDraft.description || null,
+            remarks: masterDraft.remarks || null,
+            type: masterDraft.type,
+            isActive: masterDraft.isActive,
+          },
+        );
+        savedMaster = res.data.payload;
+        setMasters((prev) => [...prev, savedMaster]);
       }
-      setEditOpen(false);
-      setEditDraft(null);
+
+      const newRules = rules.filter((r) => !r.id);
+      for (const rule of newRules) {
+        await axiosInstance.post("/api/academics/academic-activities", {
+          academicActivityMasterId: savedMaster.id,
+          academicYearId: rule.academicYearId,
+          affiliationId: rule.affiliationId,
+          regulationTypeId: rule.regulationTypeId,
+          appearTypeId: rule.appearTypeId,
+          audience: rule.audience,
+          scopes: rule.scopes.map((s) => ({
+            streamId: s.streamId,
+            classId: s.classId,
+            startDate: s.startDate ? new Date(s.startDate).toISOString() : null,
+            endDate: s.endDate ? new Date(s.endDate).toISOString() : null,
+            isEnabled: s.isEnabled,
+          })),
+        });
+      }
+
+      await loadData();
+      setMasterOpen(false);
+      setMasterDraft(null);
+      setRules([]);
     } catch (err) {
-      console.error("Failed to save activity configuration:", err);
+      console.error("Failed to save:", err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const toggleActivityEnabled = async (id: ActivityId, enabled: boolean) => {
-    const activity = activities.find((a) => a.id === id);
-    if (!activity) return;
-    setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, enabled } : a)));
+  const deleteMaster = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this activity?")) return;
     try {
-      const classIds = [...activity.scopeSems];
-      await axiosInstance.post("/api/academics/academic-activities/upsert", {
-        id: activity.id,
-        name: activity.label,
-        description: activity.desc || null,
-        audience: audienceToApi(activity.audience),
-        startDate: activity.startDt
-          ? new Date(activity.startDt).toISOString()
-          : new Date().toISOString(),
-        endDate: activity.endDt ? new Date(activity.endDt).toISOString() : null,
-        remarks: activity.note || null,
-        isEnabled: enabled,
-        classIds,
-        programCourseIds: activity.scopePrograms,
-      });
+      const linked = activities.filter((a) => a.master.id === id);
+      for (const a of linked) {
+        await axiosInstance.delete(`/api/academics/academic-activities/${a.id}`);
+      }
+      await axiosInstance.delete(`/api/academics/academic-activity-masters/${id}`);
+      setMasters((prev) => prev.filter((m) => m.id !== id));
+      setActivities((prev) => prev.filter((a) => a.master.id !== id));
+      setMasterOpen(false);
+      setMasterDraft(null);
     } catch (err) {
-      console.error("Failed to persist activity enabled toggle:", err);
-      setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, enabled: !enabled } : a)));
+      console.error("Failed to delete:", err);
     }
+  };
+
+  const toggleMasterActive = async (m: ActivityMasterDto, isActive: boolean) => {
+    setMasters((prev) => prev.map((x) => (x.id === m.id ? { ...x, isActive } : x)));
+    try {
+      await axiosInstance.put(`/api/academics/academic-activity-masters/${m.id}`, { isActive });
+    } catch {
+      setMasters((prev) => prev.map((x) => (x.id === m.id ? { ...x, isActive: !isActive } : x)));
+    }
+  };
+
+  const addRule = () => {
+    const currentAy = academicYears.find((a) => a.isCurrentYear) ?? academicYears[0];
+    setRules((prev) => [
+      ...prev,
+      {
+        academicYearId: currentAy?.id ?? 0,
+        affiliationId: affiliations[0]?.id ?? 0,
+        regulationTypeId: regulations[0]?.id ?? 0,
+        appearTypeId: promotionStatuses[0]?.id ?? 0,
+        audience: DEFAULT_AUDIENCE,
+        scopes: [],
+      },
+    ]);
+  };
+
+  const removeRule = (idx: number) => {
+    setRules((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateRule = (idx: number, patch: Partial<RuleDraft>) => {
+    setRules((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  };
+
+  const openScopeDialog = (ruleIdx: number) => {
+    setScopeRuleIdx(ruleIdx);
+    setScopeOpen(true);
   };
 
   const loadStudent = async (uid: string) => {
@@ -618,127 +506,45 @@ export default function AcademicActivityPage() {
       setProxyStudent({
         uid: String(p.uid),
         name: p?.personalDetails?.firstName || p?.name || "Student",
-        roll: p?.rollNumber || "-",
         sem: Number(p?.currentSemester || 1),
         dept: p?.programCourse?.name || p?.programCourse?.shortName || "Program",
-        deptId: p?.programCourse?.id ?? "",
-        affId: p?.programCourse?.affiliationId ?? "",
+        deptId: p?.programCourse?.id ?? 0,
+        affId: p?.programCourse?.affiliationId ?? 0,
         photo: (p?.personalDetails?.firstName || p?.name || "S").slice(0, 2).toUpperCase(),
-        ffStatus: {},
-        failedPapers: {},
-        feePaid: {},
-        admitCard: {},
       });
     } catch {
       setProxyStudent(null);
     }
   };
 
-  const filtered = activities.filter((a) => filterCat === "All" || a.category === filterCat);
-  const liveCount = activities.filter((a) => windowStatus(a).live).length;
-  const scheduledCount = activities.filter((a) => windowStatus(a).label === "Scheduled").length;
+  const filteredMasters = masters.filter((m) => {
+    if (filterCat === "All") return true;
+    const typeLabel = ACTIVITY_TYPE_OPTIONS.find((t) => t.value === m.type)?.label;
+    return typeLabel === filterCat;
+  });
 
-  const draft = editDraft;
-
-  const toggleScopeSem = (v: number) => {
-    if (!editDraft) return;
-    const cur = editDraft.scopeSems;
-    const wasAll = cur.length === 0 || cur.length === activeClassOptions.length;
-    if (wasAll) setEditDraft({ ...editDraft, scopeSems: [v] });
-    else if (cur.includes(v)) {
-      const next = cur.filter((x) => x !== v);
-      setEditDraft({ ...editDraft, scopeSems: next.length === 0 ? [] : next });
-    } else {
-      const next = [...cur, v];
-      setEditDraft({
-        ...editDraft,
-        scopeSems: next.length === activeClassOptions.length ? [] : next,
-      });
-    }
-  };
-
-  const toggleScopeProg = (v: number) => {
-    if (!editDraft) return;
-    const cur = editDraft.scopePrograms;
-    const activeProgramIds = filteredProgramOptions.map((p) => p.id);
-    const curInActiveSet = cur.filter((id) => activeProgramIds.includes(id));
-    const wasAll = curInActiveSet.length === 0 || curInActiveSet.length === activeProgramIds.length;
-    if (wasAll) setEditDraft({ ...editDraft, scopePrograms: [v] });
-    else if (cur.includes(v)) {
-      const next = cur.filter((x) => x !== v);
-      setEditDraft({ ...editDraft, scopePrograms: next.length === 0 ? [] : next });
-    } else {
-      const next = [...cur, v];
-      setEditDraft({
-        ...editDraft,
-        scopePrograms:
-          next.filter((id) => activeProgramIds.includes(id)).length === activeProgramIds.length
-            ? []
-            : next,
-      });
-    }
-  };
-
-  const toggleScopeAff = (v: number) => {
-    if (!editDraft) return;
-    const cur = editDraft.scopeAffs;
-    const wasAll = cur.length === 0;
-    if (wasAll) setEditDraft({ ...editDraft, scopeAffs: [v], scopePrograms: [] });
-    else if (cur.includes(v)) {
-      const next = cur.filter((x) => x !== v);
-      setEditDraft({ ...editDraft, scopeAffs: next.length === 0 ? [] : next, scopePrograms: [] });
-    } else {
-      const next = [...cur, v];
-      setEditDraft({ ...editDraft, scopeAffs: next, scopePrograms: [] });
-    }
-  };
-
-  const toggleScopeRegulation = (v: number) => {
-    if (!editDraft) return;
-    const cur = editDraft.scopeRegulations;
-    const wasAll = cur.length === 0;
-    if (wasAll) setEditDraft({ ...editDraft, scopeRegulations: [v], scopePrograms: [] });
-    else if (cur.includes(v)) {
-      const next = cur.filter((x) => x !== v);
-      setEditDraft({
-        ...editDraft,
-        scopeRegulations: next.length === 0 ? [] : next,
-        scopePrograms: [],
-      });
-    } else {
-      const next = [...cur, v];
-      setEditDraft({ ...editDraft, scopeRegulations: next, scopePrograms: [] });
-    }
-  };
+  const activeMasters = masters.filter((m) => m.isActive).length;
 
   return (
     <div className="min-h-full w-full min-w-0 max-w-none overflow-x-hidden bg-[#F0EEE9] px-4 py-6 font-['DM_Sans',system-ui,sans-serif] md:px-6 lg:px-8">
       <div className="w-full min-w-0">
         <div className="mb-6 flex min-w-0 flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border border-[#F0C97A] bg-[#FEF6E8] px-2.5 py-1">
-              <span className="font-['Sora',sans-serif] text-[10.5px] font-bold uppercase tracking-wider text-[#C8820A]">
-                Calcutta University · ERP Admin
-              </span>
-            </div>
             <h1 className="font-['Sora',sans-serif] text-[22px] font-extrabold tracking-tight text-[#1B2B4B]">
               Academic Activity Control
             </h1>
             <p className="mt-1.5 max-w-[520px] text-[13px] leading-relaxed text-[#5A6478]">
-              Schedule activity windows, control access by semester, program & affiliation, and
-              preview any student&apos;s portal.
+              Configure rule-based access windows per activity. Each activity targets a specific
+              academic year, affiliation, regulation, and per-scope (stream + class) timings.
             </p>
-            <Alert className="mt-2.5 max-w-[600px] border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5] [&>svg]:text-[#1A6BB5]">
-              <Info className="h-4 w-4" />
-              <AlertDescription className="text-[11.5px] leading-snug text-[#1A6BB5] [&_strong]:font-semibold">
-                Scope filters layer on top of the Audience setting. An activity set to{" "}
-                <strong>Staff Only</strong> is live for internal testing regardless of
-                semester/program/affiliation scope. Use <strong>Staff Proxy</strong> to verify what
-                each student actually sees.
-              </AlertDescription>
-            </Alert>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2" />
+          <Button
+            type="button"
+            className="bg-[#1B2B4B] font-['Sora',sans-serif] font-bold hover:bg-[#2C3E63]"
+            onClick={openCreateMaster}
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> New Activity
+          </Button>
         </div>
 
         <Tabs defaultValue="windows" className="w-full min-w-0">
@@ -765,31 +571,31 @@ export default function AcademicActivityPage() {
               {[
                 {
                   l: "Total",
-                  v: activities.length,
+                  v: masters.length,
                   c: "text-[#1B2B4B]",
                   bg: "bg-[#F7F6F3]",
                   bd: "border-[#E0DDD6]",
                   dot: false,
                 },
                 {
-                  l: "Currently Live",
-                  v: liveCount,
+                  l: "Active",
+                  v: activeMasters,
                   c: "text-[#1A7A4A]",
                   bg: "bg-[#E8F5EE]",
                   bd: "border-[#A0D8B8]",
                   dot: true,
                 },
                 {
-                  l: "Scheduled",
-                  v: scheduledCount,
+                  l: "Instances",
+                  v: activities.length,
                   c: "text-[#1A6BB5]",
                   bg: "bg-[#EBF3FC]",
                   bd: "border-[#9EC8F0]",
                   dot: false,
                 },
                 {
-                  l: "Disabled",
-                  v: activities.filter((a) => !a.enabled).length,
+                  l: "Inactive",
+                  v: masters.filter((m) => !m.isActive).length,
                   c: "text-[#9AA0AE]",
                   bg: "bg-[#F7F6F3]",
                   bd: "border-[#E0DDD6]",
@@ -825,137 +631,161 @@ export default function AcademicActivityPage() {
             </div>
 
             <div className="mb-3.5 flex flex-wrap gap-1.5">
-              {CATS.map((c) => {
-                const a = filterCat === c;
-                return (
-                  <Button
-                    key={c}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "h-8 rounded-md border-[1.5px] text-xs font-semibold",
-                      a
-                        ? "border-[#1B2B4B] bg-[#1B2B4B] text-white hover:bg-[#1B2B4B]"
-                        : "border-[#D0CCC3] bg-white text-[#5A6478] hover:bg-[#F7F6F3]",
-                    )}
-                    onClick={() => setFilterCat(c)}
-                  >
-                    {c}
-                  </Button>
-                );
-              })}
+              {CATS.map((c) => (
+                <Button
+                  key={c}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-8 rounded-md border-[1.5px] text-xs font-semibold",
+                    filterCat === c
+                      ? "border-[#1B2B4B] bg-[#1B2B4B] text-white hover:bg-[#1B2B4B]"
+                      : "border-[#D0CCC3] bg-white text-[#5A6478] hover:bg-[#F7F6F3]",
+                  )}
+                  onClick={() => setFilterCat(c)}
+                >
+                  {c}
+                </Button>
+              ))}
             </div>
 
-            <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border-[1.5px] border-[#D0CCC3] bg-white shadow-sm">
-              <div className="w-full min-w-0 max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]">
+            <div className="w-full min-w-0 overflow-hidden rounded-xl border-[1.5px] border-[#D0CCC3] bg-white shadow-sm">
+              <div className="overflow-x-auto">
                 <div
-                  className="grid w-full min-w-[960px] grid-cols-[220px_180px_minmax(180px,1fr)_100px_104px_120px_52px] border-b border-[#E0DDD6] bg-[#F7F6F3] px-3 sm:min-w-0 sm:px-4 sm:grid-cols-[minmax(200px,1.15fr)_minmax(168px,0.95fr)_minmax(200px,1.25fr)_minmax(92px,0.55fr)_minmax(96px,0.55fr)_minmax(120px,0.65fr)_52px]"
+                  className="grid min-w-[600px] grid-cols-[48px_1fr_180px_120px_110px_44px] border-b border-[#E0DDD6] bg-[#F7F6F3] px-4"
                   style={{ fontFamily: "'Sora', sans-serif" }}
                 >
-                  {["Activity", "Scope", "Window", "Audience", "Status", "Enabled", ""].map(
-                    (h, i) => (
-                      <div
-                        key={h}
-                        className={cn(
-                          "py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#9AA0AE]",
-                          i > 0 && "pl-2.5",
-                        )}
-                      >
-                        {h}
-                      </div>
-                    ),
-                  )}
-                </div>
-                {filtered.map((act, i) => {
-                  const ws = windowStatus(act);
-                  const aud = audienceLabel(act.audience);
-                  const isLast = i === filtered.length - 1;
-                  return (
-                    <button
-                      key={act.id}
-                      type="button"
-                      onClick={() => openEdit(act.id)}
+                  {["", "Activity", "Rules", "Status", "Enabled", ""].map((h, i) => (
+                    <div
+                      key={i}
                       className={cn(
-                        "grid w-full min-w-[960px] grid-cols-[220px_180px_minmax(180px,1fr)_100px_104px_120px_52px] items-center border-b border-[#E0DDD6] px-3 text-left transition-colors hover:bg-[#F7F6F3] sm:min-w-0 sm:px-4 sm:grid-cols-[minmax(200px,1.15fr)_minmax(168px,0.95fr)_minmax(200px,1.25fr)_minmax(92px,0.55fr)_minmax(96px,0.55fr)_minmax(120px,0.65fr)_52px]",
-                        isLast && "border-b-0",
+                        "py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#9AA0AE]",
+                        i > 0 && "pl-3",
                       )}
                     >
-                      <div className="flex items-center gap-2 py-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E0DDD6] bg-[#F7F6F3] text-[15px]">
-                          {act.icon}
-                        </div>
-                        <div>
-                          <div className="font-['Sora',sans-serif] text-[12.5px] font-bold leading-tight text-[#1B2B4B]">
-                            {act.label}
-                          </div>
-                          <div className="mt-0.5 text-[10px] text-[#9AA0AE]">{act.category}</div>
+                      {h}
+                    </div>
+                  ))}
+                </div>
+                {filteredMasters.length === 0 ? (
+                  <div className="px-6 py-10 text-center text-sm text-[#9AA0AE]">
+                    No activities found. Click <strong>+ New Activity</strong> to create one.
+                  </div>
+                ) : null}
+                {filteredMasters.map((m, i) => {
+                  const linkedRules = activities.filter((a) => a.master.id === m.id);
+                  const totalItems = linkedRules.reduce((sum, r) => sum + r.scopes.length, 0);
+                  const liveItems = linkedRules.reduce(
+                    (sum, r) =>
+                      sum +
+                      r.scopes.filter((s) => {
+                        if (!s.isEnabled) return false;
+                        const start = s.startDate ? new Date(s.startDate).getTime() : 0;
+                        const end = s.endDate
+                          ? new Date(s.endDate).getTime()
+                          : Number.POSITIVE_INFINITY;
+                        return Date.now() >= start && Date.now() <= end;
+                      }).length,
+                    0,
+                  );
+                  const masterStatus = (() => {
+                    if (!m.isActive)
+                      return {
+                        label: "Disabled",
+                        cls: "border-[#E0DDD6] bg-[#F7F6F3] text-[#9AA0AE]",
+                      };
+                    if (!linkedRules.length)
+                      return {
+                        label: "No Rules",
+                        cls: "border-[#F0D888] bg-[#FDF4DC] text-[#A07010]",
+                      };
+                    if (liveItems > 0)
+                      return {
+                        label: `${liveItems} Live`,
+                        cls: "border-[#A0D8B8] bg-[#E8F5EE] text-[#1A7A4A]",
+                      };
+                    const allScopes = linkedRules.flatMap((r) =>
+                      r.scopes.filter((s) => s.isEnabled),
+                    );
+                    const scheduled = allScopes.some((s) => {
+                      const st = s.startDate ? new Date(s.startDate).getTime() : 0;
+                      return Date.now() < st;
+                    });
+                    if (scheduled)
+                      return {
+                        label: "Scheduled",
+                        cls: "border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5]",
+                      };
+                    return { label: "Closed", cls: "border-[#E0DDD6] bg-[#F7F6F3] text-[#9AA0AE]" };
+                  })();
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => openEditMaster(m)}
+                      className={cn(
+                        "grid w-full min-w-[600px] grid-cols-[48px_1fr_180px_120px_110px_44px] items-center border-b border-[#E0DDD6] px-4 text-left transition-colors hover:bg-[#F7F6F3]",
+                        i === filteredMasters.length - 1 && "border-b-0",
+                      )}
+                    >
+                      <div className="py-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E0DDD6] bg-[#F7F6F3] text-[15px]">
+                          {typeIcon(m.type)}
                         </div>
                       </div>
-                      <div className="py-3 pl-2.5">
-                        <ScopeSummary
-                          act={act}
-                          classOptions={activeClassOptions}
-                          totalPrograms={programOptions.length}
-                          totalAffiliations={affiliationOptions.length}
-                        />
+                      <div className="py-3 pl-3">
+                        <div className="font-['Sora',sans-serif] text-[12.5px] font-bold leading-tight text-[#1B2B4B]">
+                          {m.name}
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-[#9AA0AE]">
+                          {ACTIVITY_TYPE_OPTIONS.find((t) => t.value === m.type)?.label}
+                        </div>
                       </div>
-                      <div className="py-3 pl-2.5">
-                        <div
-                          className={cn(
-                            "text-[11.5px]",
-                            act.startDt ? "text-[#5A6478]" : "text-[#9AA0AE]",
-                          )}
+                      <div className="py-3 pl-3">
+                        {linkedRules.length > 0 ? (
+                          <>
+                            <div className="text-[12px] font-bold text-[#1B2B4B]">
+                              {linkedRules.length} rule{linkedRules.length > 1 ? "s" : ""} &middot;{" "}
+                              {totalItems} item{totalItems !== 1 ? "s" : ""}
+                            </div>
+                            <div
+                              className={cn(
+                                "mt-0.5 text-[10.5px]",
+                                liveItems > 0 ? "text-[#1A7A4A]" : "text-[#9AA0AE]",
+                              )}
+                            >
+                              {liveItems > 0 ? `${liveItems} live` : "None live"}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-[11.5px] text-[#9AA0AE]">No rules yet</span>
+                        )}
+                      </div>
+                      <div className="py-3 pl-3">
+                        <Badge
+                          variant="outline"
+                          className={cn("text-[10px] font-bold", masterStatus.cls)}
                         >
-                          {act.startDt ? fmt(act.startDt) : "—"}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-[#9AA0AE]">
-                          {act.endDt ? `→ ${fmt(act.endDt)}` : "No end"}
-                        </div>
-                      </div>
-                      <div className="py-3 pl-2.5">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-md border px-2 py-0.5 text-[11px] font-semibold",
-                            aud.bg,
-                            aud.color,
-                            aud.bd,
-                          )}
-                        >
-                          {aud.label}
-                        </span>
-                      </div>
-                      <div className="py-3 pl-2.5">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-bold",
-                            ws.bg,
-                            ws.color,
-                            ws.bd,
-                          )}
-                        >
-                          {ws.live ? (
-                            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-[#1A7A4A]" />
-                          ) : null}
-                          {ws.label}
-                        </span>
+                          {masterStatus.label}
+                        </Badge>
                       </div>
                       <div
-                        className="flex items-center gap-2 py-3 pl-2.5"
+                        className="flex items-center gap-2 py-3 pl-3"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Switch
-                          checked={act.enabled}
-                          onCheckedChange={(v) => toggleActivityEnabled(act.id, v)}
+                          checked={m.isActive}
+                          onCheckedChange={(v) => toggleMasterActive(m, v)}
                           className="data-[state=checked]:bg-[#1A7A4A]"
                         />
                         <span
                           className={cn(
                             "text-[11px] font-semibold",
-                            act.enabled ? "text-[#1A7A4A]" : "text-[#9AA0AE]",
+                            m.isActive ? "text-[#1A7A4A]" : "text-[#9AA0AE]",
                           )}
                         >
-                          {act.enabled ? "On" : "Off"}
+                          {m.isActive ? "On" : "Off"}
                         </span>
                       </div>
                       <div className="flex justify-center py-3 text-[#9AA0AE]">
@@ -994,92 +824,61 @@ export default function AcademicActivityPage() {
                   className="h-10 rounded-lg bg-[#1B2B4B] font-['Sora',sans-serif] font-bold hover:bg-[#2C3E63]"
                   onClick={() => loadStudent(proxyUID)}
                 >
-                  Load →
+                  Load &rarr;
                 </Button>
               </div>
               {proxyResolved && !proxyStudent ? (
                 <p className="mt-2 text-xs text-[#C23B3B]">
-                  ⚠ No student found with UID &quot;{proxyUID}&quot;.
+                  &lsaquo; No student found with UID &quot;{proxyUID}&quot;.
                 </p>
               ) : null}
-              <div className="mt-2 rounded-lg border border-[#F0D888] bg-[#FDF4DC] p-2 text-[11.5px] leading-snug text-[#A07010]">
-                ⚠ Staff proxy mode. Actions are logged under your staff ID. Activities blocked by
-                scope filters will appear as locked.
-              </div>
             </div>
 
             <div className="overflow-hidden rounded-xl border-[1.5px] border-[#D0CCC3] bg-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E0DDD6] bg-[#F7F6F3] px-4 py-3">
+              <div className="flex items-center justify-between border-b border-[#E0DDD6] bg-[#F7F6F3] px-4 py-3">
                 <div className="font-['Sora',sans-serif] text-[13px] font-bold text-[#1B2B4B]">
                   Student Activity Portal
                 </div>
                 {proxyStudent ? (
-                  <div className="text-[11px] text-[#9AA0AE]">
-                    Showing for <strong className="text-[#5A6478]">{proxyStudent.name}</strong> ·
-                    Scope filters applied
+                  <div className="flex items-center gap-2">
+                    <Badge className="border border-[#F0C97A] bg-[#FEF6E8] text-[11px] text-[#C8820A]">
+                      {proxyStudent.name}
+                    </Badge>
+                    <Badge className="border border-[#9EC8F0] bg-[#EBF3FC] text-[11px] text-[#1A6BB5]">
+                      {proxyStudent.dept} &middot; Sem {SL[proxyStudent.sem - 1]}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[11px] text-[#9AA0AE]"
+                      onClick={() => {
+                        setProxyStudent(null);
+                        setProxyUID("");
+                        setProxyResolved(false);
+                      }}
+                    >
+                      Clear &times;
+                    </Button>
                   </div>
                 ) : null}
               </div>
-              <div className={cn(proxyStudent ? "p-4" : "p-0")}>
+              <div className={proxyStudent ? "p-4" : ""}>
                 {!proxyStudent ? (
                   <div className="px-5 py-10 text-center">
-                    <div className="mb-3 text-3xl">🔍</div>
+                    <div className="mb-3 text-3xl">{"\u{1F50D}"}</div>
                     <div className="font-['Sora',sans-serif] text-sm font-bold text-[#1B2B4B]">
                       No student loaded
                     </div>
                     <p className="mt-1.5 text-xs text-[#9AA0AE]">
                       Enter a student UID to preview their activity portal.
                     </p>
-                    <div className="mt-3.5 flex flex-wrap justify-center gap-2">
-                      <span className="rounded-md border border-[#E0DDD6] bg-[#F7F6F3] px-2.5 py-1 text-[11.5px] text-[#9AA0AE]">
-                        Use a valid UID to load live student data
-                      </span>
-                    </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="mb-4 flex items-center gap-3 rounded-[11px] bg-[#1B2B4B] p-3 shadow-md">
-                      <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[11px] border-2 border-[#F0C97A] bg-[#FEF6E8] font-['Sora',sans-serif] text-[13px] font-extrabold text-[#C8820A]">
-                        {proxyStudent.photo}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-['Sora',sans-serif] text-[15px] font-extrabold text-white">
-                          {proxyStudent.name}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-white/55">
-                          {proxyStudent.uid} · {proxyStudent.dept}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-[26px] w-[26px] items-center justify-center rounded-md border border-[#F0C97A] bg-[#FEF6E8] font-['Sora',sans-serif] text-[11px] font-bold text-[#C8820A]">
-                          {SL[proxyStudent.sem - 1]}
-                        </div>
-                        <span className="text-[11px] text-white/60">Sem {proxyStudent.sem}</span>
-                      </div>
-                      <Badge className="border border-white/20 bg-white/10 font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-wide text-white/90">
-                        Staff view
-                      </Badge>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 text-white/50 hover:bg-white/10 hover:text-white"
-                        onClick={() => {
-                          setProxyStudent(null);
-                          setProxyUID("");
-                          setProxyResolved(false);
-                        }}
-                      >
-                        ✕
-                      </Button>
-                    </div>
-                    <ProxyActivityGrid
-                      activities={activities}
-                      classOptions={activeClassOptions}
-                      student={proxyStudent}
-                      onOpen={(act) => setProxyAction({ icon: act.icon, label: act.label })}
-                    />
-                  </>
+                  <ProxyActivityGrid
+                    activities={activities}
+                    classOptions={activeClassOptions}
+                    student={proxyStudent}
+                  />
                 )}
               </div>
             </div>
@@ -1087,348 +886,291 @@ export default function AcademicActivityPage() {
         </Tabs>
       </div>
 
+      {/* Master Dialog with Access Rules */}
       <Dialog
-        open={editOpen}
+        open={masterOpen}
         onOpenChange={(o) => {
           if (!o) {
-            setEditOpen(false);
-            setEditDraft(null);
+            setMasterOpen(false);
+            setMasterDraft(null);
+            setRules([]);
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-[560px] overflow-y-auto rounded-[14px] border-[#E0DDD6] p-0 font-['DM_Sans',system-ui,sans-serif] [&>button]:hidden">
-          {draft ? (
+        <DialogContent className="max-h-[92vh] w-[96vw] max-w-[1100px] overflow-y-auto rounded-[14px] border-[#E0DDD6] p-0 font-['DM_Sans',system-ui,sans-serif] shadow-[0_2px_8px_rgba(27,43,75,.09),0_8px_32px_rgba(27,43,75,.09)] [&>button]:hidden">
+          {masterDraft ? (
             <>
-              <DialogHeader className="space-y-0 border-b border-[#E0DDD6] px-6 pb-4 pt-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[#E0DDD6] bg-[#F7F6F3] text-lg">
-                      {draft.icon}
-                    </div>
-                    <div>
-                      <div className="font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-wider text-[#9AA0AE]">
-                        Configure Activity
-                      </div>
-                      <DialogTitle className="mt-0.5 font-['Sora',sans-serif] text-left text-base font-extrabold text-[#1B2B4B]">
-                        {draft.label}
-                      </DialogTitle>
-                    </div>
+              {/* Sticky header */}
+              <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-[14px] border-b border-[#E0DDD6] bg-white px-6 pb-3.5 pt-[18px]">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[9px] border-[1.5px] border-[#E0DDD6] bg-[#F7F6F3] text-lg">
+                    {typeIcon(masterDraft.type)}
                   </div>
+                  <div>
+                    <div className="font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+                      {masterDraft.id ? "Configure Activity" : "Create Activity"}
+                    </div>
+                    <DialogTitle className="mt-0.5 font-['Sora',sans-serif] text-left text-[15px] font-extrabold text-[#1B2B4B]">
+                      {masterDraft.name || "New Activity"}
+                    </DialogTitle>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {masterDraft.id ? (
+                    <button
+                      type="button"
+                      onClick={() => deleteMaster(masterDraft.id!)}
+                      className="flex h-7 w-7 items-center justify-center rounded-[6px] border-[1.5px] border-[#F5BFBF] bg-[#FEF0F0] text-sm text-[#C23B3B] transition-colors hover:bg-[#FDDDDD]"
+                    >
+                      &times;
+                    </button>
+                  ) : null}
                   <Button
-                    type="button"
                     variant="outline"
                     size="icon"
-                    className="h-7 w-7 shrink-0"
-                    onClick={() => setEditOpen(false)}
+                    className="h-7 w-7 border-[#E0DDD6] text-[#9AA0AE]"
+                    onClick={() => setMasterOpen(false)}
                   >
-                    ✕
+                    <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </DialogHeader>
+              </div>
 
-              <div className="flex flex-col gap-4 px-6 py-5">
-                {(() => {
-                  const semPrev = classScopeLabel(draft.scopeSems, activeClassOptions);
-                  const progPrev = scopeLabel(
-                    draft.scopePrograms,
-                    programOptions.length,
-                    "Programs",
-                  );
-                  const affPrev = scopeLabel(
-                    draft.scopeAffs,
-                    affiliationOptions.length,
-                    "Affiliations",
-                  );
-                  const isRestricted =
-                    semPrev !== "All Classes" ||
-                    progPrev !== "All Programs" ||
-                    affPrev !== "All Affiliations";
-                  if (!isRestricted) return null;
-                  return (
-                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#F0D888] bg-[#FDF4DC] p-2.5 text-[11.5px] text-[#A07010]">
-                      <CircleAlert className="h-3.5 w-3.5 shrink-0" />
-                      <span className="font-semibold">Restricted to:</span>
-                      {semPrev !== "All Classes" ? (
-                        <Badge className="border border-[#F0C97A] bg-[#FEF6E8] text-[11px] font-semibold text-[#C8820A]">
-                          {semPrev}
-                        </Badge>
-                      ) : null}
-                      {progPrev !== "All Programs" ? (
-                        <Badge className="border border-[#C4B4F4] bg-[#EEE9FC] text-[11px] font-semibold text-[#5B3FC4]">
-                          {progPrev}
-                        </Badge>
-                      ) : null}
-                      {affPrev !== "All Affiliations" ? (
-                        <Badge className="border border-[#9EC8F0] bg-[#EBF3FC] text-[11px] font-semibold text-[#1A6BB5]">
-                          {affPrev}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  );
-                })()}
-
+              <div className="flex flex-col gap-4 px-6 pb-4 pt-3">
+                {/* ACCESS RULES */}
                 <div>
-                  <div className="mb-2 font-['Sora',sans-serif] text-[11px] font-bold uppercase tracking-wider text-[#9AA0AE]">
-                    Audience
-                  </div>
-                  <div className="flex gap-1.5">
-                    {(
-                      [
-                        { v: "staff" as const, l: "Staff Only" },
-                        { v: "all" as const, l: "All" },
-                        { v: "student" as const, l: "Students" },
-                      ] as const
-                    ).map(({ v, l }) => {
-                      const a = draft.audience === v;
-                      return (
-                        <Button
-                          key={v}
-                          type="button"
-                          variant="outline"
-                          className={cn(
-                            "flex-1 rounded-md font-['Sora',sans-serif] text-xs font-bold",
-                            a
-                              ? "border-[#1B2B4B] bg-[#1B2B4B] text-white hover:bg-[#1B2B4B]"
-                              : "border-[#D0CCC3] text-[#5A6478]",
-                          )}
-                          onClick={() => setEditDraft({ ...draft, audience: v })}
-                        >
-                          {l}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <ScopeSection
-                  title="Semester Scope"
-                  note="Restrict to specific semesters, or leave All open"
-                >
-                  <div className="flex flex-wrap gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "h-8 rounded-md font-bold",
-                        draft.scopeSems.length === 0 ||
-                          draft.scopeSems.length === activeClassOptions.length
-                          ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
-                          : "border-[#D0CCC3]",
-                      )}
-                      onClick={() => setEditDraft({ ...draft, scopeSems: [] })}
-                    >
-                      All
-                    </Button>
-                    {activeClassOptions.map((cls) => {
-                      const token = classDisplayToken(cls.name);
-                      const sem = semesterNumberFromToken(token) ?? getSemesterNumber(cls) ?? 1;
-                      const sel =
-                        !(
-                          draft.scopeSems.length === 0 ||
-                          draft.scopeSems.length === activeClassOptions.length
-                        ) && draft.scopeSems.includes(cls.id);
-                      const { c, bg, bd } = semChipColors(sem);
-                      return (
-                        <Button
-                          key={cls.id}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            "h-8 rounded-md px-2.5 font-['Sora',sans-serif] text-xs font-bold",
-                            sel ? cn(c, bg, bd) : "border-[#D0CCC3] text-[#5A6478]",
-                          )}
-                          onClick={() => toggleScopeSem(cls.id)}
-                        >
-                          {token}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </ScopeSection>
-
-                <ScopeSection
-                  title="Affiliation Filter"
-                  note="Filter program courses by affiliation"
-                >
-                  <div className="flex flex-wrap gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "h-8 rounded-md text-xs font-bold",
-                        draft.scopeAffs.length === 0
-                          ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
-                          : "border-[#D0CCC3]",
-                      )}
-                      onClick={() => setEditDraft({ ...draft, scopeAffs: [], scopePrograms: [] })}
-                    >
-                      All
-                    </Button>
-                    {affiliationOptions.map((a) => {
-                      const sel = draft.scopeAffs.includes(a.id);
-                      return (
-                        <Button
-                          key={a.id}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            "h-8 rounded-md px-2.5 text-xs font-semibold",
-                            sel
-                              ? "border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5]"
-                              : "border-[#D0CCC3] text-[#5A6478]",
-                          )}
-                          onClick={() => toggleScopeAff(a.id)}
-                        >
-                          {a.l}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </ScopeSection>
-
-                <ScopeSection
-                  title="Regulation Filter"
-                  note="Filter program courses by regulation type"
-                >
-                  <div className="flex flex-wrap gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "h-8 rounded-md text-xs font-bold",
-                        draft.scopeRegulations.length === 0
-                          ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
-                          : "border-[#D0CCC3]",
-                      )}
-                      onClick={() =>
-                        setEditDraft({ ...draft, scopeRegulations: [], scopePrograms: [] })
-                      }
-                    >
-                      All
-                    </Button>
-                    {regulationOptions.map((r) => {
-                      const sel = draft.scopeRegulations.includes(r.id);
-                      return (
-                        <Button
-                          key={r.id}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            "h-8 rounded-md px-2.5 text-xs font-semibold",
-                            sel
-                              ? "border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5]"
-                              : "border-[#D0CCC3] text-[#5A6478]",
-                          )}
-                          onClick={() => toggleScopeRegulation(r.id)}
-                        >
-                          {r.l}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </ScopeSection>
-
-                <ScopeSection
-                  title="Program / Course Scope"
-                  note={`Filtered by selected affiliation/regulation (${filteredProgramOptions.length} available)`}
-                >
-                  <div className="flex flex-wrap gap-1.5">
-                    {filteredProgramOptions.length > 0 ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "h-8 rounded-md text-xs font-bold",
-                          draft.scopePrograms.length === 0 ||
-                            draft.scopePrograms.filter((id) =>
-                              filteredProgramOptions.some((p) => p.id === id),
-                            ).length === filteredProgramOptions.length
-                            ? "border-[#1B2B4B] bg-[#1B2B4B] text-white"
-                            : "border-[#D0CCC3]",
-                        )}
-                        onClick={() => setEditDraft({ ...draft, scopePrograms: [] })}
-                      >
-                        All
-                      </Button>
-                    ) : null}
-                    {filteredProgramOptions.map((p) => {
-                      const allSel =
-                        draft.scopePrograms.length === 0 ||
-                        draft.scopePrograms.filter((id) =>
-                          filteredProgramOptions.some((fp) => fp.id === id),
-                        ).length === filteredProgramOptions.length;
-                      const sel = !allSel && draft.scopePrograms.includes(p.id);
-                      return (
-                        <Button
-                          key={p.id}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            "h-auto min-h-8 whitespace-normal rounded-md px-2.5 py-1 text-xs font-semibold",
-                            sel
-                              ? "border-[#C4B4F4] bg-[#EEE9FC] text-[#5B3FC4]"
-                              : "border-[#D0CCC3] text-[#5A6478]",
-                          )}
-                          onClick={() => toggleScopeProg(p.id)}
-                        >
-                          {p.l}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </ScopeSection>
-
-                <div>
-                  <div className="mb-2 font-['Sora',sans-serif] text-[11px] font-bold uppercase tracking-wider text-[#9AA0AE]">
-                    Activity Window
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <Label className="text-[11.5px] font-semibold text-[#5A6478]">Start</Label>
-                      <Input
-                        type="datetime-local"
-                        className="mt-1.5 h-9 rounded-lg border-[#D0CCC3] bg-[#F7F6F3] text-xs"
-                        value={draft.startDt}
-                        onChange={(e) => setEditDraft({ ...draft, startDt: e.target.value })}
-                      />
+                  <div className="mb-2.5 flex items-center justify-between">
+                    <div className="font-['Sora',sans-serif] text-[11px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+                      Access Rules
                     </div>
-                    <div>
-                      <Label className="text-[11.5px] font-semibold text-[#5A6478]">End</Label>
-                      <Input
-                        type="datetime-local"
-                        className="mt-1.5 h-9 rounded-lg border-[#D0CCC3] bg-[#F7F6F3] text-xs"
-                        value={draft.endDt}
-                        onChange={(e) => setEditDraft({ ...draft, endDt: e.target.value })}
-                      />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 rounded-[7px] bg-[#1B2B4B] px-3.5 font-['Sora',sans-serif] text-[12px] font-bold"
+                      onClick={addRule}
+                    >
+                      <Plus className="mr-1 h-3 w-3" /> Add Rule
+                    </Button>
+                  </div>
+
+                  <div className="overflow-hidden rounded-[10px] border-[1.5px] border-[#D0CCC3] shadow-[0_1px_3px_rgba(27,43,75,.06)]">
+                    <div className="h-[280px] overflow-auto">
+                      <table className="w-full border-collapse">
+                        <thead className="sticky top-0 z-[1]">
+                          <tr className="bg-[#F7F6F3]">
+                            {[
+                              "#",
+                              "Academic Year",
+                              "Affiliation",
+                              "Regulation",
+                              "Appear Type",
+                              "Applicable To",
+                              "Status",
+                              "",
+                            ].map((h, i) => (
+                              <th
+                                key={i}
+                                className="whitespace-nowrap border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-left font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE] first:w-8 first:text-center last:w-8"
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rules.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={8}
+                                className="px-4 py-8 text-center text-[13px] text-[#9AA0AE]"
+                              >
+                                No rules yet. Click <strong>+ Add Rule</strong> to get started.
+                              </td>
+                            </tr>
+                          ) : null}
+                          {rules.map((rule, idx) => {
+                            const st = ruleStatus(rule);
+                            const enabledScopes = rule.scopes.filter((s) => s.isEnabled).length;
+                            const totalScopes = rule.scopes.length;
+                            const scopeClasses = [
+                              ...new Set(
+                                rule.scopes
+                                  .filter((s) => s.isEnabled)
+                                  .map((s) => {
+                                    const cls = activeClassOptions.find((c) => c.id === s.classId);
+                                    return cls?.sequence ? SL[cls.sequence - 1] : null;
+                                  })
+                                  .filter(Boolean),
+                              ),
+                            ];
+                            return (
+                              <tr key={idx} className="border-b border-[#E0DDD6] last:border-b-0">
+                                <td className="px-2.5 py-2.5 text-center font-['Sora',sans-serif] text-[11px] font-bold text-[#9AA0AE]">
+                                  {idx + 1}
+                                </td>
+                                <td className="px-2.5 py-2.5">
+                                  <Select
+                                    value={String(rule.academicYearId)}
+                                    onValueChange={(v) =>
+                                      updateRule(idx, { academicYearId: Number(v) })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 rounded-[7px] border-[1.5px] border-[#D0CCC3] bg-white text-[12px] font-semibold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {academicYears.map((a) => (
+                                        <SelectItem key={a.id} value={String(a.id)}>
+                                          {a.year}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                                <td className="px-2.5 py-2.5">
+                                  <Select
+                                    value={String(rule.affiliationId)}
+                                    onValueChange={(v) =>
+                                      updateRule(idx, { affiliationId: Number(v) })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 rounded-[7px] border-[1.5px] border-[#D0CCC3] bg-white text-[12px] font-semibold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {affiliations.map((a) => (
+                                        <SelectItem key={a.id} value={String(a.id)}>
+                                          {a.shortName || a.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                                <td className="px-2.5 py-2.5">
+                                  <Select
+                                    value={String(rule.regulationTypeId)}
+                                    onValueChange={(v) =>
+                                      updateRule(idx, { regulationTypeId: Number(v) })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 rounded-[7px] border-[1.5px] border-[#D0CCC3] bg-white text-[12px] font-semibold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {regulations.map((r) => (
+                                        <SelectItem key={r.id} value={String(r.id)}>
+                                          {r.shortName || r.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                                <td className="px-2.5 py-2.5">
+                                  <Select
+                                    value={String(rule.appearTypeId)}
+                                    onValueChange={(v) =>
+                                      updateRule(idx, { appearTypeId: Number(v) })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 rounded-[7px] border-[1.5px] border-[#D0CCC3] bg-white text-[12px] font-semibold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {promotionStatuses.map((p) => (
+                                        <SelectItem key={p.id} value={String(p.id)}>
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                                <td className="px-2.5 py-2.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => openScopeDialog(idx)}
+                                    className="w-full min-w-[120px] rounded-[7px] border-[1.5px] border-[#D0CCC3] bg-[#F7F6F3] px-2.5 py-1.5 text-left transition-colors hover:border-[#1B2B4B]"
+                                  >
+                                    {totalScopes > 0 ? (
+                                      <>
+                                        <span className="block text-[11px] font-bold text-[#1B2B4B]">
+                                          {enabledScopes}/{totalScopes} items enabled
+                                          {scopeClasses.length > 0
+                                            ? ` \u00B7 ${scopeClasses.join(", ")}`
+                                            : ""}
+                                        </span>
+                                        <span className="block text-[10.5px] font-semibold text-[#1A6BB5]">
+                                          Edit &rarr;
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="block text-[11px] italic text-[#9AA0AE]">
+                                        None
+                                        <br />
+                                        <span className="not-italic font-semibold text-[#1A6BB5]">
+                                          Edit &rarr;
+                                        </span>
+                                      </span>
+                                    )}
+                                  </button>
+                                </td>
+                                <td className="px-2.5 py-2.5">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "whitespace-nowrap text-[10px] font-bold",
+                                      st === "Live" &&
+                                        "border-[#A0D8B8] bg-[#E8F5EE] text-[#1A7A4A]",
+                                      st === "Scheduled" &&
+                                        "border-[#9EC8F0] bg-[#EBF3FC] text-[#1A6BB5]",
+                                      st === "Closed" &&
+                                        "border-[#E0DDD6] bg-[#F7F6F3] text-[#9AA0AE]",
+                                      st === "Disabled" &&
+                                        "border-[#E0DDD6] bg-[#F7F6F3] text-[#9AA0AE]",
+                                      st === "No scopes" &&
+                                        "border-[#F0D888] bg-[#FDF4DC] text-[#A07010]",
+                                    )}
+                                  >
+                                    {st}
+                                  </Badge>
+                                </td>
+                                <td className="px-2.5 py-2.5 text-center">
+                                  {!rule.id ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeRule(idx)}
+                                      className="flex h-[26px] w-[26px] items-center justify-center rounded-[6px] border-[1.5px] border-[#F5BFBF] bg-[#FEF0F0] text-sm text-[#C23B3B] transition-colors hover:bg-[#FDDDDD]"
+                                    >
+                                      &times;
+                                    </button>
+                                  ) : null}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
 
+                {/* Internal Note */}
                 <div>
-                  <Label className="text-[11.5px] font-semibold text-[#5A6478]">
+                  <Label className="mb-1.5 block text-[11.5px] font-semibold text-[#5A6478]">
                     Internal Note <span className="font-normal text-[#9AA0AE]">(optional)</span>
                   </Label>
                   <Textarea
                     rows={2}
-                    placeholder="e.g. Pilot batch only — fee payment for Sem V B.Sc. CS"
-                    className="mt-1.5 resize-none rounded-lg border-[#D0CCC3] bg-[#F7F6F3] text-[12.5px]"
-                    value={draft.note}
-                    onChange={(e) => setEditDraft({ ...draft, note: e.target.value })}
+                    className="resize-none rounded-[8px] border-[1.5px] border-[#D0CCC3] bg-[#F7F6F3] text-[12.5px] leading-relaxed"
+                    value={masterDraft.remarks}
+                    onChange={(e) => setMasterDraft({ ...masterDraft, remarks: e.target.value })}
                   />
                 </div>
 
+                {/* Master enabled toggle */}
                 <div
                   className={cn(
-                    "flex items-center justify-between rounded-lg border p-3",
-                    draft.enabled
+                    "flex items-center justify-between rounded-[9px] border-[1.5px] px-3.5 py-2.5",
+                    masterDraft.isActive
                       ? "border-[#A0D8B8] bg-[#E8F5EE]"
                       : "border-[#E0DDD6] bg-[#F7F6F3]",
                   )}
@@ -1437,70 +1179,84 @@ export default function AcademicActivityPage() {
                     <div
                       className={cn(
                         "font-['Sora',sans-serif] text-[12.5px] font-bold",
-                        draft.enabled ? "text-[#1A7A4A]" : "text-[#5A6478]",
+                        masterDraft.isActive ? "text-[#1A7A4A]" : "text-[#5A6478]",
                       )}
                     >
-                      {draft.enabled ? "Activity Enabled" : "Activity Disabled"}
+                      {masterDraft.isActive ? "Activity Enabled" : "Activity Disabled"}
                     </div>
-                    <p className="mt-0.5 text-[11px] text-[#9AA0AE]">
-                      Master switch — overrides all scope settings if off
-                    </p>
+                    <div className="mt-0.5 text-[11px] text-[#9AA0AE]">
+                      Master switch &mdash; disabling hides this activity for everyone
+                    </div>
                   </div>
                   <Switch
-                    checked={draft.enabled}
-                    onCheckedChange={(v) => setEditDraft({ ...draft, enabled: v })}
+                    checked={masterDraft.isActive}
+                    onCheckedChange={(v) => setMasterDraft({ ...masterDraft, isActive: v })}
                     className="data-[state=checked]:bg-[#1A7A4A]"
                   />
                 </div>
               </div>
 
-              <DialogFooter className="flex gap-2 border-t border-[#E0DDD6] bg-[#F7F6F3] px-6 py-3.5 sm:flex-row">
+              {/* Footer */}
+              <div className="sticky bottom-0 z-10 flex gap-2 rounded-b-[14px] border-t border-[#E0DDD6] bg-[#F7F6F3] px-6 py-3">
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 border-[#D0CCC3]"
-                  onClick={() => setEditOpen(false)}
+                  className="flex-1 rounded-[8px] border-[1.5px] border-[#D0CCC3] text-[13px] font-semibold text-[#5A6478]"
+                  onClick={() => setMasterOpen(false)}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="button"
-                  className="flex-[2] bg-[#1B2B4B] font-['Sora',sans-serif] font-bold hover:bg-[#2C3E63]"
-                  onClick={saveEdit}
-                  disabled={isSaving}
+                  className="flex-[3] rounded-[8px] bg-[#1B2B4B] font-['Sora',sans-serif] text-[13px] font-bold hover:bg-[#2C3E63]"
+                  onClick={saveMasterAndRules}
+                  disabled={isSaving || !masterDraft.name.trim()}
                 >
-                  {isSaving ? "Saving..." : "Save Configuration →"}
+                  {isSaving ? "Saving..." : "Save Configuration \u2192"}
                 </Button>
-              </DialogFooter>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!proxyAction} onOpenChange={(o) => !o && setProxyAction(null)}>
-        <DialogContent className="max-w-[360px] rounded-[14px] text-center [&>button]:hidden">
-          {proxyAction ? (
-            <>
-              <div className="text-4xl">{proxyAction.icon}</div>
-              <DialogTitle className="mt-3 font-['Sora',sans-serif] text-base font-extrabold text-[#1B2B4B]">
-                {proxyAction.label}
-              </DialogTitle>
-              <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#5A6478]">
-                Opens <strong>{proxyAction.label}</strong> for <strong>{proxyStudent?.name}</strong>
-                .<br />
-                In production this loads the student&apos;s live page.
-              </p>
-              <div className="my-3 rounded-lg border border-[#F0D888] bg-[#FDF4DC] p-2.5 text-[11.5px] text-[#A07010]">
-                Action logged under Staff ID. Student sees the same view.
               </div>
-              <Button
-                type="button"
-                className="w-full bg-[#1B2B4B] font-['Sora',sans-serif] font-bold"
-                onClick={() => setProxyAction(null)}
-              >
-                Close
-              </Button>
             </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Nested Scope Dialog */}
+      <Dialog
+        open={scopeOpen}
+        onOpenChange={(o) => {
+          if (!o) setScopeOpen(false);
+        }}
+      >
+        <DialogContent className="max-h-[92vh] w-[96vw] max-w-[960px] overflow-y-auto rounded-[14px] border-[#E0DDD6] p-0 font-['DM_Sans',system-ui,sans-serif] shadow-[0_2px_8px_rgba(27,43,75,.09),0_8px_32px_rgba(27,43,75,.09)] [&>button]:hidden">
+          {scopeRuleIdx >= 0 && rules[scopeRuleIdx] ? (
+            <ScopeEditor
+              scopes={rules[scopeRuleIdx].scopes}
+              classOptions={activeClassOptions}
+              streams={streams}
+              ruleIdx={scopeRuleIdx}
+              onDone={async (updatedScopes) => {
+                const currentRuleId = rules[scopeRuleIdx]?.id;
+                updateRule(scopeRuleIdx, { scopes: updatedScopes });
+                if (currentRuleId) {
+                  try {
+                    await axiosInstance.put(`/api/academics/academic-activities/${currentRuleId}`, {
+                      scopes: updatedScopes.map((s) => ({
+                        streamId: s.streamId,
+                        classId: s.classId,
+                        startDate: s.startDate ? new Date(s.startDate).toISOString() : null,
+                        endDate: s.endDate ? new Date(s.endDate).toISOString() : null,
+                        isEnabled: s.isEnabled,
+                      })),
+                    });
+                    await loadData();
+                  } catch (err) {
+                    console.error("Failed to save scopes:", err);
+                  }
+                }
+                setScopeOpen(false);
+              }}
+              onCancel={() => setScopeOpen(false)}
+            />
           ) : null}
         </DialogContent>
       </Dialog>
@@ -1508,108 +1264,330 @@ export default function AcademicActivityPage() {
   );
 }
 
-function ScopeSection({
-  title,
-  note,
-  children,
+/* ─── Scope Editor (nested dialog content) ─── */
+function ScopeEditor({
+  scopes: initialScopes,
+  classOptions,
+  streams,
+  ruleIdx,
+  onDone,
+  onCancel,
 }: {
-  title: string;
-  note?: string;
-  children: React.ReactNode;
+  scopes: ScopeDraft[];
+  classOptions: ClassOption[];
+  streams: StreamOption[];
+  ruleIdx: number;
+  onDone: (scopes: ScopeDraft[]) => Promise<void> | void;
+  onCancel: () => void;
 }) {
+  const [draftScopes, setDraftScopes] = React.useState<ScopeDraft[]>(initialScopes);
+  const [saving, setSaving] = React.useState(false);
+
+  const addScope = () => {
+    setDraftScopes((prev) => [
+      ...prev,
+      {
+        streamId: streams[0]?.id ?? 0,
+        classId: classOptions[0]?.id ?? 0,
+        startDate: "",
+        endDate: "",
+        isEnabled: true,
+      },
+    ]);
+  };
+
+  const updateScopeDraft = (idx: number, patch: Partial<ScopeDraft>) => {
+    setDraftScopes((prev) => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  };
+
+  const removeScopeDraft = (idx: number) => {
+    setDraftScopes((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const enabledCount = draftScopes.filter((s) => s.isEnabled).length;
+
+  const handleDone = async () => {
+    setSaving(true);
+    try {
+      await onDone(draftScopes);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="overflow-hidden rounded-[10px] border-[1.5px] border-[#E0DDD6]">
-      <div className="border-b border-[#E0DDD6] bg-[#F7F6F3] px-3.5 py-2.5">
-        <div className="font-['Sora',sans-serif] text-xs font-bold text-[#1B2B4B]">{title}</div>
-        {note ? <div className="mt-0.5 text-[10.5px] text-[#9AA0AE]">{note}</div> : null}
+    <>
+      {/* Header */}
+      <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-[14px] border-b border-[#E0DDD6] bg-white px-6 pb-3 pt-4">
+        <div>
+          <div className="font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+            Applicable To &mdash; Rule #{ruleIdx + 1}
+          </div>
+          <DialogTitle className="mt-0.5 font-['Sora',sans-serif] text-[14px] font-extrabold text-[#1B2B4B]">
+            Configure Scopes
+          </DialogTitle>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7 border-[#E0DDD6] text-[#9AA0AE]"
+          onClick={onCancel}
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
       </div>
-      <div className="p-3">{children}</div>
-    </div>
+
+      {/* Content */}
+      <div className="px-6 py-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-[11px] text-[#9AA0AE]">
+            {draftScopes.length} row{draftScopes.length !== 1 ? "s" : ""} &middot; {enabledCount}{" "}
+            enabled
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="h-7 rounded-[7px] bg-[#1B2B4B] px-3.5 font-['Sora',sans-serif] text-[12px] font-bold"
+            onClick={addScope}
+          >
+            <Plus className="mr-1 h-3 w-3" /> Add Scope
+          </Button>
+        </div>
+
+        <div className="overflow-hidden rounded-[10px] border-[1.5px] border-[#D0CCC3] shadow-[0_1px_3px_rgba(27,43,75,.06)]">
+          <div className="h-[320px] overflow-y-auto">
+            <table className="w-full border-collapse">
+              <colgroup>
+                <col className="w-[48px]" />
+                <col />
+                <col />
+                <col />
+                <col />
+                <col className="w-[72px]" />
+                <col className="w-[36px]" />
+              </colgroup>
+              <thead className="sticky top-0 z-[1]">
+                <tr className="bg-[#F7F6F3]">
+                  <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-left font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+                    On
+                  </th>
+                  <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-left font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+                    Stream
+                  </th>
+                  <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-left font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+                    Course Level
+                  </th>
+                  <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-left font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+                    Start Date
+                  </th>
+                  <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-left font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+                    End Date
+                  </th>
+                  <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-center font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
+                    Status
+                  </th>
+                  <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {draftScopes.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-[12px] text-[#9AA0AE]">
+                      No scopes yet. Click <strong>+ Add Scope</strong> to add one.
+                    </td>
+                  </tr>
+                ) : null}
+                {draftScopes.map((scope, idx) => {
+                  const st = scopeStatus(scope);
+                  return (
+                    <tr
+                      key={idx}
+                      className={cn(
+                        "border-b border-[#E0DDD6] last:border-b-0",
+                        !scope.isEnabled && "bg-[#F7F6F3]",
+                      )}
+                    >
+                      <td className="px-2.5 py-2.5">
+                        <Switch
+                          checked={scope.isEnabled}
+                          onCheckedChange={(v) => updateScopeDraft(idx, { isEnabled: v })}
+                          className="scale-[0.8] data-[state=checked]:bg-[#1A7A4A]"
+                        />
+                      </td>
+                      <td className="px-2.5 py-2.5">
+                        <Select
+                          value={String(scope.streamId)}
+                          onValueChange={(v) => updateScopeDraft(idx, { streamId: Number(v) })}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "h-8 w-full rounded-[7px] border-[1.5px] border-[#D0CCC3] bg-white text-[12px] font-medium",
+                              !scope.isEnabled && "opacity-50",
+                            )}
+                          >
+                            <SelectValue placeholder="Stream" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {streams.map((s) => (
+                              <SelectItem key={s.id} value={String(s.id)}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-2.5 py-2.5">
+                        <Select
+                          value={String(scope.classId)}
+                          onValueChange={(v) => updateScopeDraft(idx, { classId: Number(v) })}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "h-8 w-full rounded-[7px] border-[1.5px] border-[#D0CCC3] bg-white text-[12px] font-medium",
+                              !scope.isEnabled && "opacity-50",
+                            )}
+                          >
+                            <SelectValue placeholder="Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {classOptions.map((c) => (
+                              <SelectItem key={c.id} value={String(c.id)}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-2.5 py-2.5">
+                        <input
+                          type="datetime-local"
+                          className={cn(
+                            "h-8 w-full rounded-[6px] border-[1.5px] border-[#D0CCC3] bg-white px-2 text-[11px] font-medium text-[#1B2B4B] outline-none",
+                            !scope.isEnabled &&
+                              "cursor-not-allowed bg-[#F7F6F3] text-[#9AA0AE] opacity-50",
+                          )}
+                          value={scope.startDate}
+                          onChange={(e) => updateScopeDraft(idx, { startDate: e.target.value })}
+                          disabled={!scope.isEnabled}
+                        />
+                      </td>
+                      <td className="px-2.5 py-2.5">
+                        <input
+                          type="datetime-local"
+                          className={cn(
+                            "h-8 w-full rounded-[6px] border-[1.5px] border-[#D0CCC3] bg-white px-2 text-[11px] font-medium text-[#1B2B4B] outline-none",
+                            !scope.isEnabled &&
+                              "cursor-not-allowed bg-[#F7F6F3] text-[#9AA0AE] opacity-50",
+                          )}
+                          value={scope.endDate}
+                          onChange={(e) => updateScopeDraft(idx, { endDate: e.target.value })}
+                          disabled={!scope.isEnabled}
+                        />
+                      </td>
+                      <td className="px-2.5 py-2.5 text-center">
+                        <Badge
+                          variant="outline"
+                          className={cn("whitespace-nowrap text-[9px] font-bold", st.cls)}
+                        >
+                          {st.label}
+                        </Badge>
+                      </td>
+                      <td className="px-1 py-2.5 text-center">
+                        {!scope.id ? (
+                          <button
+                            type="button"
+                            onClick={() => removeScopeDraft(idx)}
+                            className="flex h-6 w-6 items-center justify-center rounded-[5px] border-[1.5px] border-[#F5BFBF] bg-[#FEF0F0] text-sm text-[#C23B3B] transition-colors hover:bg-[#FDDDDD]"
+                          >
+                            &times;
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between rounded-b-[14px] border-t border-[#E0DDD6] bg-[#F7F6F3] px-6 py-3">
+        <div className="text-[11px] text-[#9AA0AE]">
+          {draftScopes.length} row{draftScopes.length !== 1 ? "s" : ""} &middot; {enabledCount}{" "}
+          enabled
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-[8px] border-[1.5px] border-[#D0CCC3] px-4 text-[13px] font-semibold text-[#5A6478]"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="rounded-[8px] bg-[#1B2B4B] px-5 font-['Sora',sans-serif] text-[13px] font-bold hover:bg-[#2C3E63]"
+            onClick={handleDone}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Done \u2192"}
+          </Button>
+        </div>
+      </div>
+    </>
   );
 }
 
+/* ─── Proxy Activity Grid ─── */
 function ProxyActivityGrid({
   activities,
   classOptions,
   student,
-  onOpen,
 }: {
-  activities: Activity[];
+  activities: AcademicActivityApiDto[];
   classOptions: ClassOption[];
   student: ProxyStudent;
-  onOpen: (act: Activity) => void;
 }) {
-  const visible = activities.filter((a) => {
-    if (!a.enabled) return false;
-    const ws = windowStatus(a);
-    if (ws.label === "Closed") return false;
-    return true;
-  });
-
+  const visible = activities.filter((a) => a.master.isActive);
   if (visible.length === 0) {
     return (
       <div className="py-6 text-center text-[13px] text-[#9AA0AE]">
-        No activities are currently live or scheduled.
+        No activities are currently enabled.
       </div>
     );
   }
-
   return (
-    <div className="grid h-full  grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
       {visible.map((act) => {
-        const ws = windowStatus(act);
-        const inScope = studentInScope(act, student, classOptions);
-        const as = getActStatus(act, student);
-        const audOk = act.audience === "all" || act.audience === "student";
-        const isScheduled = ws.label === "Scheduled";
-        const blocked = !inScope || !as.accessible;
-        let scopeBlockReason = "";
-        if (!inScope) {
-          const semesterCount = classOptions.length;
-          const semOk =
-            act.scopeSems.length === 0 ||
-            act.scopeSems.length === semesterCount ||
-            act.scopeSems.some((classId) => {
-              const cls = classOptions.find((c) => c.id === classId);
-              return cls ? getSemesterNumber(cls) === student.sem : false;
-            });
-          const progOk =
-            act.scopePrograms.length === 0 ||
-            act.scopePrograms.map(String).includes(String(student.deptId));
-          const affOk =
-            act.scopeAffs.length === 0 || act.scopeAffs.map(String).includes(String(student.affId));
-          if (!semOk) scopeBlockReason = `Not available for Sem ${SL[student.sem - 1]}`;
-          else if (!progOk) scopeBlockReason = `Not available for ${student.dept}`;
-          else if (!affOk) scopeBlockReason = "Not available for this college";
-        }
+        const st = activityStatus(act);
+        const hasMatchingScope = act.scopes.some((s) => {
+          if (!s.isEnabled) return false;
+          const cls = classOptions.find((c) => c.id === (s.classId ?? s.class?.id));
+          if (!cls) return false;
+          return (cls.sequence ?? null) === student.sem;
+        });
+        const blocked = !hasMatchingScope;
         return (
           <div
             key={act.id}
             className={cn(
-              "relative flex flex-col gap-2 overflow-hidden rounded-[11px] border bg-white p-3.5 shadow-sm transition-all",
-              as.done ? "border-[#A0D8B8]" : "border-[#E0DDD6]",
-              blocked && !isScheduled
-                ? "pointer-events-none opacity-45"
-                : "hover:-translate-y-px hover:shadow-md",
+              "flex flex-col gap-2 rounded-[11px] border bg-white p-3.5 shadow-sm transition-all",
+              blocked
+                ? "border-[#E0DDD6] opacity-45"
+                : "border-[#E0DDD6] hover:-translate-y-px hover:shadow-md",
             )}
           >
-            {!audOk ? (
-              <div className="absolute right-2 top-2 rounded border border-[#C4B4F4] bg-[#EEE9FC] px-1.5 py-0.5 font-['Sora',sans-serif] text-[9px] font-bold tracking-wide text-[#5B3FC4]">
-                STAFF ONLY
-              </div>
-            ) : null}
             <div className="flex gap-2">
               <div
                 className={cn(
                   "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-base",
-                  !inScope
-                    ? "border-[#E0DDD6] bg-[#EFEDE8]"
-                    : as.done
-                      ? "border-[#A0D8B8] bg-[#E8F5EE]"
-                      : "border-[#E0DDD6] bg-[#F7F6F3]",
+                  blocked ? "border-[#E0DDD6] bg-[#EFEDE8]" : "border-[#E0DDD6] bg-[#F7F6F3]",
                 )}
               >
-                {act.icon}
+                {typeIcon(act.master.type)}
               </div>
               <div className="min-w-0 flex-1">
                 <div
@@ -1618,42 +1596,36 @@ function ProxyActivityGrid({
                     blocked ? "text-[#9AA0AE]" : "text-[#1B2B4B]",
                   )}
                 >
-                  {act.label}
+                  {act.master.name}
                 </div>
-                <p className="mt-0.5 text-[10.5px] text-[#9AA0AE]">{act.desc}</p>
+                <p className="mt-0.5 text-[10.5px] text-[#9AA0AE]">
+                  {act.master.description || act.master.type}
+                </p>
               </div>
             </div>
             <div className="flex items-center justify-between border-t border-[#E0DDD6] pt-2">
               <span
                 className={cn(
                   "text-[11.5px] font-semibold",
-                  as.done
-                    ? "text-[#1A7A4A]"
-                    : !inScope
-                      ? "text-[#9AA0AE]"
-                      : as.accessible
-                        ? "text-[#5A6478]"
-                        : "text-[#C23B3B]",
+                  blocked ? "text-[#9AA0AE]" : st.live ? "text-[#1A7A4A]" : "text-[#5A6478]",
                 )}
               >
-                {scopeBlockReason || as.info}
+                {blocked ? `Not available for Sem ${SL[student.sem - 1]}` : st.label}
               </span>
-              {isScheduled ? (
-                <span className="text-[10.5px] font-semibold text-[#1A6BB5]">
-                  Opens {fmt(act.startDt)}
-                </span>
-              ) : !blocked ? (
-                <Button
-                  type="button"
-                  size="sm"
+              {!blocked ? (
+                <span
                   className={cn(
-                    "h-7 rounded-md px-3 font-['Sora',sans-serif] text-[11.5px] font-bold",
-                    as.done ? "bg-[#1B2B4B]" : "bg-[#1A7A4A] hover:bg-[#145E38]",
+                    "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold",
+                    st.bg,
+                    st.color,
+                    st.bd,
                   )}
-                  onClick={() => onOpen(act)}
                 >
-                  {as.done ? "View" : "Open →"}
-                </Button>
+                  {st.live ? (
+                    <span className="h-1 w-1 shrink-0 animate-pulse rounded-full bg-[#1A7A4A]" />
+                  ) : null}
+                  {st.label}
+                </span>
               ) : (
                 <span className="text-[11px] text-[#D0CCC3]">Locked</span>
               )}

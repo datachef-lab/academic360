@@ -1,33 +1,39 @@
 import { db } from "@/db/index.js";
-import { eq, ilike, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
-import { programCourseModel } from "@repo/db/schemas/models/course-design/program-course.model.js";
-import { AcademicActivityDto } from "@repo/db/dtos";
+import { streamModel } from "@repo/db/schemas/models/course-design/stream.model.js";
+import { academicYearModel } from "@repo/db/schemas/models/academics/academic-year.model.js";
+import { affiliationModel } from "@repo/db/schemas/models/course-design/affiliation.model.js";
+import { regulationTypeModel } from "@repo/db/schemas/models/course-design/regulation-type.model.js";
+import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model.js";
+import { AcademicActivityDto, AcademicActivityScopeDto } from "@repo/db/dtos";
 import {
   academicActivityModel,
   AcademicActivityT,
 } from "@repo/db/schemas/models/academics/academic-activity.model.js";
-import { academicActivityClassScopeModel } from "@repo/db/schemas/models/academics/academic-activity-class-scope.model.js";
-import { academicActivityProgramCourseScopeModel } from "@repo/db/schemas/models/academics/academic-activity-program-course-scope.model.js";
+import { academicActivityScopeModel } from "@repo/db/schemas/models/academics/academic-activity-scope.model.js";
+import { academicActivityMasterModel } from "@repo/db/schemas/models/academics/academic-activity-master.model.js";
 
-type UpsertAcademicActivityPayload = Partial<
-  Omit<
-    AcademicActivityT,
-    | "id"
-    | "createdAt"
-    | "updatedAt"
-    | "lastUpdatedBy"
-    | "classes"
-    | "programCourses"
-  >
+export type CreateAcademicActivityPayload = Omit<
+  AcademicActivityT,
+  "id" | "createdAt" | "updatedAt" | "lastUpdatedBy"
 > & {
-  id?: number;
-  name?: string;
-  classIds?: number[];
-  programCourseIds?: number[];
+  scopes?: CreateScopePayload[];
 };
 
-type CreateAcademicActivityPayload = Omit<UpsertAcademicActivityPayload, "id">;
+export type UpdateAcademicActivityPayload = Partial<
+  Omit<AcademicActivityT, "id" | "createdAt" | "updatedAt" | "lastUpdatedBy">
+> & {
+  scopes?: CreateScopePayload[];
+};
+
+export type CreateScopePayload = {
+  streamId: number;
+  classId: number;
+  startDate?: Date | string | null;
+  endDate?: Date | string | null;
+  isEnabled?: boolean;
+};
 
 function normalizeIds(ids?: number[]): number[] {
   if (!ids?.length) return [];
@@ -55,117 +61,101 @@ async function enrichAcademicActivities(
   if (activities.length === 0) return [];
 
   const ids = activities.map((a) => a.id);
+  const masterIds = [
+    ...new Set(activities.map((a) => a.academicActivityMasterId)),
+  ];
 
-  const classScopes = await db
-    .select({
-      scopeId: academicActivityClassScopeModel.id,
-      academicActivityId: academicActivityClassScopeModel.academicActivityId,
-      createdAt: academicActivityClassScopeModel.createdAt,
-      updatedAt: academicActivityClassScopeModel.updatedAt,
-      classEntity: classModel,
-    })
-    .from(academicActivityClassScopeModel)
-    .innerJoin(
-      classModel,
-      eq(classModel.id, academicActivityClassScopeModel.classId),
-    )
-    .where(inArray(academicActivityClassScopeModel.academicActivityId, ids));
+  const [
+    scopes,
+    masters,
+    academicYears,
+    affiliations,
+    regulationTypes,
+    promotionStatuses,
+  ] = await Promise.all([
+    db
+      .select({
+        scope: academicActivityScopeModel,
+        stream: streamModel,
+        classEntity: classModel,
+      })
+      .from(academicActivityScopeModel)
+      .innerJoin(
+        streamModel,
+        eq(streamModel.id, academicActivityScopeModel.streamId),
+      )
+      .innerJoin(
+        classModel,
+        eq(classModel.id, academicActivityScopeModel.classId),
+      )
+      .where(inArray(academicActivityScopeModel.academicActivityId, ids)),
+    db
+      .select()
+      .from(academicActivityMasterModel)
+      .where(inArray(academicActivityMasterModel.id, masterIds)),
+    db.select().from(academicYearModel),
+    db.select().from(affiliationModel),
+    db.select().from(regulationTypeModel),
+    db.select().from(promotionStatusModel),
+  ]);
 
-  const programCourseScopes = await db
-    .select({
-      scopeId: academicActivityProgramCourseScopeModel.id,
-      academicActivityId:
-        academicActivityProgramCourseScopeModel.academicActivityId,
-      createdAt: academicActivityProgramCourseScopeModel.createdAt,
-      updatedAt: academicActivityProgramCourseScopeModel.updatedAt,
-      programCourseEntity: programCourseModel,
-    })
-    .from(academicActivityProgramCourseScopeModel)
-    .innerJoin(
-      programCourseModel,
-      eq(
-        programCourseModel.id,
-        academicActivityProgramCourseScopeModel.programCourseId,
-      ),
-    )
-    .where(
-      inArray(academicActivityProgramCourseScopeModel.academicActivityId, ids),
-    );
-
-  const classScopeMap = new Map<number, AcademicActivityDto["classes"]>();
-  for (const scope of classScopes) {
-    const existing = classScopeMap.get(scope.academicActivityId) ?? [];
+  const scopeMap = new Map<number, AcademicActivityScopeDto[]>();
+  for (const row of scopes) {
+    const activityId = row.scope.academicActivityId;
+    const existing = scopeMap.get(activityId) ?? [];
     existing.push({
-      id: scope.scopeId,
-      academicActivityId: scope.academicActivityId,
-      createdAt: scope.createdAt,
-      updatedAt: scope.updatedAt,
-      class: scope.classEntity,
+      id: row.scope.id,
+      startDate: row.scope.startDate,
+      endDate: row.scope.endDate,
+      isEnabled: row.scope.isEnabled,
+      createdAt: row.scope.createdAt,
+      updatedAt: row.scope.updatedAt,
+      stream: row.stream,
+      class: row.classEntity,
     });
-    classScopeMap.set(scope.academicActivityId, existing);
+    scopeMap.set(activityId, existing);
   }
 
-  const programScopeMap = new Map<
-    number,
-    AcademicActivityDto["programCourses"]
-  >();
-  for (const scope of programCourseScopes) {
-    const existing = programScopeMap.get(scope.academicActivityId) ?? [];
-    existing.push({
-      id: scope.scopeId,
-      academicActivityId: scope.academicActivityId,
-      createdAt: scope.createdAt,
-      updatedAt: scope.updatedAt,
-      programCourse: scope.programCourseEntity,
-    });
-    programScopeMap.set(scope.academicActivityId, existing);
-  }
+  const masterMap = new Map(masters.map((m) => [m.id, m]));
+  const ayMap = new Map(academicYears.map((ay) => [ay.id, ay]));
+  const affMap = new Map(affiliations.map((a) => [a.id, a]));
+  const regMap = new Map(regulationTypes.map((r) => [r.id, r]));
+  const psMap = new Map(promotionStatuses.map((p) => [p.id, p]));
 
   return activities.map((activity) => ({
-    ...activity,
-    classes: classScopeMap.get(activity.id) ?? [],
-    programCourses: programScopeMap.get(activity.id) ?? [],
+    id: activity.id,
+    audience: activity.audience,
+    createdAt: activity.createdAt,
+    updatedAt: activity.updatedAt,
+    master: masterMap.get(activity.academicActivityMasterId)!,
+    academicYear: ayMap.get(activity.academicYearId)!,
+    affiliation: affMap.get(activity.affiliationId)!,
+    regulationType: regMap.get(activity.regulationTypeId)!,
+    appearType: psMap.get(activity.appearTypeId)!,
+    scopes: scopeMap.get(activity.id) ?? [],
   }));
 }
 
 async function replaceScopes(
   academicActivityId: number,
-  classIds: number[],
-  programCourseIds: number[],
+  scopes: CreateScopePayload[],
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await tx
-      .delete(academicActivityClassScopeModel)
+      .delete(academicActivityScopeModel)
       .where(
-        eq(
-          academicActivityClassScopeModel.academicActivityId,
-          academicActivityId,
-        ),
+        eq(academicActivityScopeModel.academicActivityId, academicActivityId),
       );
 
-    if (classIds.length > 0) {
-      await tx.insert(academicActivityClassScopeModel).values(
-        classIds.map((classId) => ({
+    if (scopes.length > 0) {
+      await tx.insert(academicActivityScopeModel).values(
+        scopes.map((s) => ({
           academicActivityId,
-          classId,
-        })),
-      );
-    }
-
-    await tx
-      .delete(academicActivityProgramCourseScopeModel)
-      .where(
-        eq(
-          academicActivityProgramCourseScopeModel.academicActivityId,
-          academicActivityId,
-        ),
-      );
-
-    if (programCourseIds.length > 0) {
-      await tx.insert(academicActivityProgramCourseScopeModel).values(
-        programCourseIds.map((programCourseId) => ({
-          academicActivityId,
-          programCourseId,
+          streamId: s.streamId,
+          classId: s.classId,
+          startDate: s.startDate ? new Date(s.startDate as string) : null,
+          endDate: s.endDate ? new Date(s.endDate as string) : null,
+          isEnabled: s.isEnabled ?? true,
         })),
       );
     }
@@ -189,28 +179,22 @@ export async function createAcademicActivity(
   payload: CreateAcademicActivityPayload,
   userId?: number,
 ): Promise<AcademicActivityDto> {
-  if (!payload.name?.trim()) {
-    throw new Error("Activity name is required");
-  }
-
-  const classIds = normalizeIds(payload.classIds);
-  const programCourseIds = normalizeIds(payload.programCourseIds);
-
   const [created] = await db
     .insert(academicActivityModel)
     .values({
-      name: payload.name.trim(),
-      description: payload.description ?? null,
+      academicYearId: payload.academicYearId,
+      academicActivityMasterId: payload.academicActivityMasterId,
       audience: payload.audience ?? "ALL",
-      startDate: payload.startDate ?? new Date(),
-      endDate: payload.endDate ?? null,
-      remarks: payload.remarks ?? null,
-      isEnabled: payload.isEnabled ?? false,
+      affiliationId: payload.affiliationId,
+      regulationTypeId: payload.regulationTypeId,
+      appearTypeId: payload.appearTypeId,
       lastUpdatedBy: userId ?? null,
     })
     .returning();
 
-  await replaceScopes(created.id, classIds, programCourseIds);
+  if (payload.scopes?.length) {
+    await replaceScopes(created.id, payload.scopes);
+  }
 
   const enriched = await getAcademicActivityById(created.id);
   if (!enriched) throw new Error("Failed to fetch created academic activity");
@@ -219,7 +203,7 @@ export async function createAcademicActivity(
 
 export async function updateAcademicActivity(
   id: number,
-  payload: UpsertAcademicActivityPayload,
+  payload: UpdateAcademicActivityPayload,
   userId?: number,
 ): Promise<AcademicActivityDto | null> {
   const [existing] = await db
@@ -228,24 +212,18 @@ export async function updateAcademicActivity(
     .where(eq(academicActivityModel.id, id));
   if (!existing) return null;
 
-  const classIds = payload.classIds
-    ? normalizeIds(payload.classIds)
-    : undefined;
-  const programCourseIds = payload.programCourseIds
-    ? normalizeIds(payload.programCourseIds)
-    : undefined;
-
   const updateData: Partial<typeof academicActivityModel.$inferInsert> = {};
-  if (payload.name !== undefined) updateData.name = payload.name.trim();
-  if (payload.description !== undefined)
-    updateData.description = payload.description ?? null;
   if (payload.audience !== undefined) updateData.audience = payload.audience;
-  if (payload.startDate !== undefined) updateData.startDate = payload.startDate;
-  if (payload.endDate !== undefined)
-    updateData.endDate = payload.endDate ?? null;
-  if (payload.remarks !== undefined)
-    updateData.remarks = payload.remarks ?? null;
-  if (payload.isEnabled !== undefined) updateData.isEnabled = payload.isEnabled;
+  if (payload.academicYearId !== undefined)
+    updateData.academicYearId = payload.academicYearId;
+  if (payload.academicActivityMasterId !== undefined)
+    updateData.academicActivityMasterId = payload.academicActivityMasterId;
+  if (payload.affiliationId !== undefined)
+    updateData.affiliationId = payload.affiliationId;
+  if (payload.regulationTypeId !== undefined)
+    updateData.regulationTypeId = payload.regulationTypeId;
+  if (payload.appearTypeId !== undefined)
+    updateData.appearTypeId = payload.appearTypeId;
   updateData.lastUpdatedBy = userId ?? null;
 
   if (Object.keys(updateData).length > 0) {
@@ -255,21 +233,8 @@ export async function updateAcademicActivity(
       .where(eq(academicActivityModel.id, id));
   }
 
-  if (classIds || programCourseIds) {
-    const current = await getAcademicActivityById(id);
-    const resolvedClassIds =
-      classIds ??
-      current?.classes
-        .map((c) => c.class.id)
-        .filter((id): id is number => typeof id === "number") ??
-      [];
-    const resolvedProgramIds =
-      programCourseIds ??
-      current?.programCourses
-        .map((p) => p.programCourse.id)
-        .filter((id): id is number => typeof id === "number") ??
-      [];
-    await replaceScopes(id, resolvedClassIds, resolvedProgramIds);
+  if (payload.scopes) {
+    await replaceScopes(id, payload.scopes);
   }
 
   return getAcademicActivityById(id);
@@ -278,13 +243,8 @@ export async function updateAcademicActivity(
 export async function deleteAcademicActivity(id: number): Promise<boolean> {
   return db.transaction(async (tx) => {
     await tx
-      .delete(academicActivityClassScopeModel)
-      .where(eq(academicActivityClassScopeModel.academicActivityId, id));
-    await tx
-      .delete(academicActivityProgramCourseScopeModel)
-      .where(
-        eq(academicActivityProgramCourseScopeModel.academicActivityId, id),
-      );
+      .delete(academicActivityScopeModel)
+      .where(eq(academicActivityScopeModel.academicActivityId, id));
     const deleted = await tx
       .delete(academicActivityModel)
       .where(eq(academicActivityModel.id, id))
@@ -293,84 +253,32 @@ export async function deleteAcademicActivity(id: number): Promise<boolean> {
   });
 }
 
-export async function upsertAcademicActivity(
-  payload: UpsertAcademicActivityPayload,
-  userId?: number,
-): Promise<AcademicActivityDto> {
-  if (payload.id) {
-    const updated = await updateAcademicActivity(payload.id, payload, userId);
-    if (!updated) {
-      throw new Error(`Academic activity with id ${payload.id} not found`);
-    }
-    return updated;
-  }
-
-  if (!payload.name?.trim()) {
-    throw new Error("Either id or name is required for upsert");
-  }
-
-  const [existingByName] = await db
-    .select()
-    .from(academicActivityModel)
-    .where(ilike(academicActivityModel.name, payload.name.trim()))
-    .limit(1);
-
-  if (existingByName) {
-    const updated = await updateAcademicActivity(
-      existingByName.id,
-      payload,
-      userId,
-    );
-    if (!updated) {
-      throw new Error("Failed to update existing academic activity");
-    }
-    return updated;
-  }
-
-  return createAcademicActivity(payload, userId);
-}
-
-export async function upsertAcademicActivities(
-  payloads: UpsertAcademicActivityPayload[],
-  userId?: number,
-): Promise<AcademicActivityDto[]> {
-  const result: AcademicActivityDto[] = [];
-  for (const payload of payloads) {
-    result.push(await upsertAcademicActivity(payload, userId));
-  }
-  return result;
-}
-
 export async function validateScopeReferences(
-  classIds: number[] = [],
-  programCourseIds: number[] = [],
-): Promise<{ missingClassIds: number[]; missingProgramCourseIds: number[] }> {
-  const normalizedClassIds = normalizeIds(classIds);
-  const normalizedProgramIds = normalizeIds(programCourseIds);
+  scopes: CreateScopePayload[] = [],
+): Promise<{ missingStreamIds: number[]; missingClassIds: number[] }> {
+  const streamIds = normalizeIds(scopes.map((s) => s.streamId));
+  const classIds = normalizeIds(scopes.map((s) => s.classId));
 
-  const classRows =
-    normalizedClassIds.length > 0
-      ? await db
+  const [streamRows, classRows] = await Promise.all([
+    streamIds.length > 0
+      ? db
+          .select({ id: streamModel.id })
+          .from(streamModel)
+          .where(inArray(streamModel.id, streamIds))
+      : [],
+    classIds.length > 0
+      ? db
           .select({ id: classModel.id })
           .from(classModel)
-          .where(inArray(classModel.id, normalizedClassIds))
-      : [];
+          .where(inArray(classModel.id, classIds))
+      : [],
+  ]);
 
-  const programRows =
-    normalizedProgramIds.length > 0
-      ? await db
-          .select({ id: programCourseModel.id })
-          .from(programCourseModel)
-          .where(inArray(programCourseModel.id, normalizedProgramIds))
-      : [];
-
+  const foundStreamIds = new Set(streamRows.map((r) => r.id));
   const foundClassIds = new Set(classRows.map((r) => r.id));
-  const foundProgramIds = new Set(programRows.map((r) => r.id));
 
   return {
-    missingClassIds: normalizedClassIds.filter((id) => !foundClassIds.has(id)),
-    missingProgramCourseIds: normalizedProgramIds.filter(
-      (id) => !foundProgramIds.has(id),
-    ),
+    missingStreamIds: streamIds.filter((id) => !foundStreamIds.has(id)),
+    missingClassIds: classIds.filter((id) => !foundClassIds.has(id)),
   };
 }

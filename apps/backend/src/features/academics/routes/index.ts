@@ -17,6 +17,7 @@ import certificateFieldMasterRouter from "@/features/academics/routes/certificat
 import certificateFieldOptionMasterRouter from "@/features/academics/routes/certificate-field-option-master.route.js";
 import certificateMasterRouter from "@/features/academics/routes/certificate-master.route.js";
 import academicActivityRouter from "@/features/academics/routes/academic-activity.route.js";
+import academicActivityMasterRouter from "@/features/academics/routes/academic-activity-master.route.js";
 
 export {
   careerProgressionFormFieldRouter,
@@ -25,6 +26,7 @@ export {
   certificateFieldOptionMasterRouter,
   certificateMasterRouter,
   academicActivityRouter,
+  academicActivityMasterRouter,
   classRouter,
   documentRouter,
   sessionRouter,

@@ -44,13 +44,24 @@ import {
 
 type ApiResponse<T> = { payload: T; message?: string };
 
+type AcademicActivityScopeApiDto = {
+  id: number;
+  stream: { id: number; name: string };
+  class: { id: number; name: string; sequence?: number | null };
+  startDate: string | null;
+  endDate: string | null;
+  isEnabled: boolean;
+};
+
 type AcademicActivityApiDto = {
   id: number;
-  name: string;
-  isEnabled: boolean;
-  startDate?: string | null;
-  classes?: Array<{ class?: { id?: number | null } | null }>;
-  programCourses?: Array<{ programCourse?: { id?: number | null } | null }>;
+  audience: "STUDENT" | "STAFF" | "ALL";
+  master: { id: number; name: string; type: string; isActive: boolean };
+  academicYear: { id: number; year: string };
+  affiliation: { id: number; name: string };
+  regulationType: { id: number; name: string };
+  appearType: { id: number; name: string };
+  scopes: AcademicActivityScopeApiDto[];
 };
 
 export type FeeMapping = {
@@ -176,19 +187,20 @@ const buildRowDraftFromEditingValues = (
 
 export default function EnrollmentFeesPage() {
   const router = useRouter();
+  const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
 
   useEffect(() => {
-    router.replace("/dashboard");
-  }, [router]);
+    if (isProduction) {
+      router.replace("/dashboard");
+    }
+  }, [router, isProduction]);
 
   const { student } = useStudent();
   const { feeMappingsVersion, cpFormVersion, invalidateCpForm } = useFeeSocket();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mappings, setMappings] = useState<FeeMapping[]>([]);
-  const [semesterFeeActivity, setSemesterFeeActivity] = useState<AcademicActivityApiDto | null>(
-    null,
-  );
+  const [semesterFeeActivities, setSemesterFeeActivities] = useState<AcademicActivityApiDto[]>([]);
   const [hasExistingCpForm, setHasExistingCpForm] = useState<boolean | null>(null);
 
   const [cpOpen, setCpOpen] = useState(false);
@@ -234,25 +246,27 @@ export default function EnrollmentFeesPage() {
     }
   };
 
-  const fetchSemesterFeeActivity = async () => {
+  const fetchSemesterFeeActivities = async () => {
     try {
       const { data } = await axiosInstance.get<ApiResponse<AcademicActivityApiDto[]>>(
         "/api/academics/academic-activities",
       );
       const activities = Array.isArray(data?.payload) ? data.payload : [];
-      const semesterFeePayment = activities.find(
-        (a) => (a?.name || "").trim().toLowerCase() === "semester fee payment",
+      const semesterFeePayments = activities.filter(
+        (a) =>
+          a.master?.isActive &&
+          (a.master?.name || "").trim().toLowerCase() === "semester fee payment",
       );
-      setSemesterFeeActivity(semesterFeePayment ?? null);
+      setSemesterFeeActivities(semesterFeePayments);
     } catch (e) {
       console.error(e);
-      setSemesterFeeActivity(null);
+      setSemesterFeeActivities([]);
     }
   };
 
   useEffect(() => {
     fetchMappings();
-    fetchSemesterFeeActivity();
+    fetchSemesterFeeActivities();
   }, [student?.id, feeMappingsVersion]);
 
   useEffect(() => {
@@ -461,33 +475,55 @@ export default function EnrollmentFeesPage() {
   );
 
   const visibleCards = useMemo(() => {
-    if (!semesterFeeActivity?.isEnabled) return [];
-    const startTs = semesterFeeActivity.startDate
-      ? new Date(semesterFeeActivity.startDate).getTime()
-      : NaN;
-    if (!Number.isFinite(startTs) || startTs > Date.now()) return [];
+    if (!semesterFeeActivities.length) return [];
 
-    const scopedClassIds = (semesterFeeActivity.classes ?? [])
-      .map((c) => c?.class?.id)
-      .filter((id): id is number => typeof id === "number");
-    const scopedProgramCourseIds = (semesterFeeActivity.programCourses ?? [])
-      .map((p) => p?.programCourse?.id)
-      .filter((id): id is number => typeof id === "number");
+    const promotion = (student as any)?.currentPromotion;
+    if (!promotion) return [];
 
-    const currentPromotionProgramCourseId =
-      (student as { currentPromotion?: { programCourse?: { id?: number } | null } | null })
-        ?.currentPromotion?.programCourse?.id ?? null;
+    const studentClassId: number | null = promotion?.class?.id ?? null;
+    const studentStreamId: number | null = promotion?.programCourse?.stream?.id ?? null;
+    const studentAffiliationId: number | null = promotion?.programCourse?.affiliation?.id ?? null;
+    const studentRegulationTypeId: number | null =
+      promotion?.programCourse?.regulationType?.id ?? null;
+    const studentAcademicYearId: number | null = promotion?.session?.academicYearId ?? null;
+
+    const now = Date.now();
+
+    const matchingActivities = semesterFeeActivities.filter((activity) => {
+      if (activity.audience !== "STUDENT" && activity.audience !== "ALL") return false;
+      if (studentAffiliationId != null && activity.affiliation.id !== studentAffiliationId)
+        return false;
+      if (studentRegulationTypeId != null && activity.regulationType.id !== studentRegulationTypeId)
+        return false;
+      if (studentAcademicYearId != null && activity.academicYear.id !== studentAcademicYearId)
+        return false;
+
+      const hasActiveScope = activity.scopes.some((scope) => {
+        if (!scope.isEnabled) return false;
+        if (studentStreamId != null && scope.stream.id !== studentStreamId) return false;
+        if (studentClassId != null && scope.class.id !== studentClassId) return false;
+        const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
+        const end = scope.endDate ? new Date(scope.endDate).getTime() : Number.POSITIVE_INFINITY;
+        return now >= start && now <= end;
+      });
+
+      return hasActiveScope;
+    });
+
+    if (!matchingActivities.length) return [];
+
+    const scopedClassIds = new Set<number>();
+    for (const activity of matchingActivities) {
+      for (const scope of activity.scopes) {
+        if (scope.isEnabled) scopedClassIds.add(scope.class.id);
+      }
+    }
 
     return cards.filter((card) => {
       const cardClassId = mappings.find((m) => m.id === card.id)?.feeStructure?.class?.id;
-      const classOk = scopedClassIds.length === 0 || scopedClassIds.includes(Number(cardClassId));
-      const programOk =
-        scopedProgramCourseIds.length === 0 ||
-        (typeof currentPromotionProgramCourseId === "number" &&
-          scopedProgramCourseIds.includes(currentPromotionProgramCourseId));
-      return classOk && programOk;
+      return scopedClassIds.size === 0 || scopedClassIds.has(Number(cardClassId));
     });
-  }, [cards, mappings, semesterFeeActivity, student]);
+  }, [cards, mappings, semesterFeeActivities, student]);
 
   const getMasterKey = (master: CertificateMaster, idx: number) => {
     const idNum = Number(master.id);
@@ -872,6 +908,8 @@ export default function EnrollmentFeesPage() {
     document.body.appendChild(form);
     form.submit();
   };
+
+  if (isProduction) return null;
 
   if (loading) {
     return (

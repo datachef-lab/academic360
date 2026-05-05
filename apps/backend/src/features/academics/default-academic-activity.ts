@@ -1,29 +1,28 @@
 import { db } from "@/db";
-import { AcademicActivityDto } from "@repo/db/dtos";
-import { academicActivityModel } from "@repo/db/schemas/models/academics/academic-activity.model";
 import { ilike } from "drizzle-orm";
+import { createLogger } from "@/config/logger.js";
+import { academicActivityMasterModel } from "@repo/db/schemas/models/academics/academic-activity-master.model";
 
-export const defaultAcademicActivities: AcademicActivityDto[] = [
-  {
-    name: "Semester Fee Payment",
-    description: "Online & cash payment gateway for semester fees",
-    audience: "STUDENT",
-    startDate: new Date(),
-    isEnabled: true,
-    classes: [],
-    programCourses: [],
-  },
-];
+const log = createLogger("default-academic-activity");
 
 export async function initializeAcademicActivities() {
-  for (const activity of defaultAcademicActivities) {
+  try {
     const [existingActivity] = await db
       .select()
-      .from(academicActivityModel)
-      .where(ilike(academicActivityModel.name, activity.name));
-    if (existingActivity) {
-      continue;
-    }
-    await db.insert(academicActivityModel).values(activity);
+      .from(academicActivityMasterModel)
+      .where(ilike(academicActivityMasterModel.name, "Semester Fee Payment"));
+
+    if (existingActivity) return;
+
+    await db.insert(academicActivityMasterModel).values({
+      name: "Semester Fee Payment",
+      description: "Online & cash payment gateway for semester fees",
+      type: "FINANCE",
+      isActive: true,
+    });
+
+    log.info("Default academic activity 'Semester Fee Payment' created");
+  } catch (e) {
+    log.warn("Failed to initialize academic activities", { error: e });
   }
 }
