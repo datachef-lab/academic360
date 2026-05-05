@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -174,6 +175,12 @@ const buildRowDraftFromEditingValues = (
 });
 
 export default function EnrollmentFeesPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/dashboard");
+  }, [router]);
+
   const { student } = useStudent();
   const { feeMappingsVersion, cpFormVersion, invalidateCpForm } = useFeeSocket();
   const [loading, setLoading] = useState(true);
