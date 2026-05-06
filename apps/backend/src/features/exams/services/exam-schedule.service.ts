@@ -5000,12 +5000,15 @@ function formatExamDateFromTimestamp(date: Date): string {
 }
 
 function formatExamTimeFromTimestamps(start: Date, end: Date): string {
-  const formatTime = (d: Date) =>
-    d.toLocaleTimeString("en-US", {
+  const formatTime = (d: Date) => {
+    // Normalize 12:00 PM display across the app
+    if (d.getHours() === 12 && d.getMinutes() === 0) return "12 Noon";
+    return d.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     });
+  };
 
   return `${formatTime(start)} - ${formatTime(end)}`;
 }
@@ -6398,10 +6401,14 @@ export async function downloadAttendanceSheetsByExamId(
               d.getMonth() + 1,
             ).padStart(2, "0")}/${d.getFullYear()}`;
 
-            const time = d.toLocaleTimeString("en-IN", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
+            const time =
+              d.getHours() === 12 && d.getMinutes() === 0
+                ? "12 Noon"
+                : d.toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
 
             const paperCode = item.paperCode!;
             const key = `${date}|${time}|${paperCode}`;
