@@ -40,6 +40,17 @@ import {
   getRegulationTypes,
 } from "@/services/course-design.api";
 
+/** AlertDialog uses z-[100]; SelectContent defaults to z-50 and renders under the overlay. */
+const SELECT_IN_DIALOG_Z = "z-[200]";
+
+/**
+ * Radix Select must not receive `String(null)` (`"null"`) — no matching item, breaks selection UI.
+ */
+function selectValueFromNullableId(id: number | null | undefined): string | undefined {
+  if (id == null || !Number.isFinite(Number(id)) || Number(id) <= 0) return undefined;
+  return String(id);
+}
+
 const programCourseSchema = z.object({
   streamId: z.number().nullable(),
   courseId: z.number().nullable(),
@@ -47,6 +58,7 @@ const programCourseSchema = z.object({
   courseLevelId: z.number().nullable(),
   duration: z.number().min(1, "Duration must be at least 1 year"),
   totalSemesters: z.number().min(1, "Total semesters must be at least 1"),
+  validityYears: z.coerce.number().int().min(1, "Validity must be at least 1 year"),
   affiliationId: z.number().nullable(),
   regulationTypeId: z.number().nullable(),
   name: z.string().nullable(),
@@ -126,6 +138,7 @@ export function ProgramCourseForm({
       courseLevelId: initialData?.courseLevelId || null,
       duration: initialData?.duration || 3,
       totalSemesters: initialData?.totalSemesters || 6,
+      validityYears: initialData?.validityYears ?? 1,
       affiliationId: initialData?.affiliationId || null,
       regulationTypeId: initialData?.regulationTypeId || null,
       name: initialData?.name || "",
@@ -143,6 +156,7 @@ export function ProgramCourseForm({
         courseLevelId: initialData.courseLevelId,
         duration: initialData.duration,
         totalSemesters: initialData.totalSemesters,
+        validityYears: initialData.validityYears ?? 1,
         affiliationId: initialData.affiliationId,
         regulationTypeId: initialData.regulationTypeId,
         name: initialData.name || "",
@@ -157,6 +171,7 @@ export function ProgramCourseForm({
         courseLevelId: null,
         duration: 3,
         totalSemesters: 6,
+        validityYears: 1,
         affiliationId: null,
         regulationTypeId: null,
         name: "",
@@ -215,7 +230,8 @@ export function ProgramCourseForm({
     onSubmit({
       streamId: data.streamId,
       courseId: data.courseId,
-      validYears: 7,
+      validYears: initialData?.validYears ?? 7,
+      validityYears: data.validityYears,
       name: data.name?.trim() || null,
       courseTypeId: data.courseTypeId,
       courseLevelId: data.courseLevelId,
@@ -225,8 +241,8 @@ export function ProgramCourseForm({
       regulationTypeId: data.regulationTypeId,
       shortName: data.shortName?.trim() || null,
       isActive: data.isActive,
-      codePrefix: "",
-      universityCode: "",
+      codePrefix: initialData?.codePrefix ?? "",
+      universityCode: initialData?.universityCode ?? "",
     });
   };
 
@@ -250,14 +266,14 @@ export function ProgramCourseForm({
                 <FormLabel>Stream</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(Number(value))}
-                  value={String(field.value)}
+                  value={selectValueFromNullableId(field.value)}
                 >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select stream" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className={SELECT_IN_DIALOG_Z}>
                     {streams.map((stream) => (
                       <SelectItem key={stream.id} value={String(stream.id)}>
                         {stream.name}
@@ -278,14 +294,14 @@ export function ProgramCourseForm({
                 <FormLabel>Course</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(Number(value))}
-                  value={String(field.value)}
+                  value={selectValueFromNullableId(field.value)}
                 >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select course" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className={SELECT_IN_DIALOG_Z}>
                     {courses.map((course) => (
                       <SelectItem key={course.id} value={String(course.id)}>
                         {course.name}
@@ -306,14 +322,14 @@ export function ProgramCourseForm({
                 <FormLabel>Course Type</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(Number(value))}
-                  value={String(field.value)}
+                  value={selectValueFromNullableId(field.value)}
                 >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select course type" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className={SELECT_IN_DIALOG_Z}>
                     {courseTypes.map((courseType) => (
                       <SelectItem key={courseType.id} value={String(courseType.id)}>
                         {courseType.name}
@@ -334,14 +350,14 @@ export function ProgramCourseForm({
                 <FormLabel>Course Level</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(Number(value))}
-                  value={String(field.value)}
+                  value={selectValueFromNullableId(field.value)}
                 >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select level" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className={SELECT_IN_DIALOG_Z}>
                     {courseLevels.map((courseLevel) => (
                       <SelectItem key={courseLevel.id} value={String(courseLevel.id)}>
                         {courseLevel.name}
@@ -398,20 +414,41 @@ export function ProgramCourseForm({
 
           <FormField
             control={form.control}
+            name="validityYears"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Validity (years)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={1}
+                    placeholder="Years"
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    disabled={isLoading}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="affiliationId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Affiliated To</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(Number(value))}
-                  value={String(field.value)}
+                  value={selectValueFromNullableId(field.value)}
                 >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select affiliation" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className={SELECT_IN_DIALOG_Z}>
                     {affiliations.map((affiliation) => (
                       <SelectItem key={affiliation.id} value={String(affiliation.id)}>
                         {affiliation.name}
@@ -432,14 +469,14 @@ export function ProgramCourseForm({
                 <FormLabel>Regulation Type</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(Number(value))}
-                  value={String(field.value)}
+                  value={selectValueFromNullableId(field.value)}
                 >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select regulation" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className={SELECT_IN_DIALOG_Z}>
                     {regulationTypes.map((regulationType) => (
                       <SelectItem key={regulationType.id} value={String(regulationType.id)}>
                         {regulationType.name}

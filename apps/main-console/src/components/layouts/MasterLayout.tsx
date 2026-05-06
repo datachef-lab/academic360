@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { SearchStudentModal } from "../globals/SearchStudentModal";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useIsMobile } from "@/hooks/useMobile";
 import styles from "./MaterLayout.module.css";
 
 export type LinkType = {
@@ -43,15 +42,10 @@ export default function MasterLayout({
   const [isSearchActive, setIsSearchActive] = React.useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
-  const isMobile = useIsMobile();
 
-  // Close mobile sheet when route changes
   useEffect(() => {
-    if (isMobile && isMobileSheetOpen) {
-      setIsMobileSheetOpen(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath, isMobile]);
+    setIsMobileSheetOpen(false);
+  }, [currentPath]);
 
   // Sidebar content component (reusable for both desktop and mobile)
   const SidebarContent = () => (
@@ -78,7 +72,7 @@ export default function MasterLayout({
                     onClick={() => {
                       setIsSearchModalOpen(true);
                       setIsSearchActive(true);
-                      if (isMobile) setIsMobileSheetOpen(false);
+                      setIsMobileSheetOpen(false);
                     }}
                     className={cn(
                       "group flex items-center transition-all duration-100 px-4 py-3 text-sm relative cursor-pointer",
@@ -104,7 +98,7 @@ export default function MasterLayout({
                     href={link.url}
                     isActive={currentPath.endsWith(link.url)}
                     onNavigate={() => {
-                      if (isMobile) setIsMobileSheetOpen(false);
+                      setIsMobileSheetOpen(false);
                     }}
                   >
                     {link.title}
@@ -119,7 +113,7 @@ export default function MasterLayout({
                           href={nested.url}
                           isActive={currentPath.endsWith(nested.url)}
                           onNavigate={() => {
-                            if (isMobile) setIsMobileSheetOpen(false);
+                            setIsMobileSheetOpen(false);
                           }}
                         >
                           <span
@@ -158,12 +152,13 @@ export default function MasterLayout({
 
   return (
     <>
-      {/* Main Layout */}
-      <div className={`h-full w-full flex ${styles["shared-layout"]} overflow-hidden`}>
-        {/* Center - Full width on mobile, 80% on desktop */}
-        <div className={`w-full md:w-[80%] overflow-auto`}>
-          {/* Mobile menu button - only visible on mobile, sticky at top */}
-          <div className="md:hidden border-b px-4 py-2 bg-white sticky top-0 z-50 shadow-sm">
+      {/* Main Layout: sidebar only fixed from lg — tablets use full-width + sheet */}
+      <div
+        className={`h-full w-full flex flex-1 min-h-0 min-w-0 ${styles["shared-layout"]} overflow-hidden`}
+      >
+        <div className="w-full min-w-0 flex-1 overflow-auto">
+          {/* Quick Links sheet trigger — tablet & mobile */}
+          <div className="lg:hidden border-b px-4 py-2 bg-background sticky top-0 z-50 shadow-sm">
             <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" className="h-9 gap-2">
@@ -171,8 +166,8 @@ export default function MasterLayout({
                   <span className="text-sm font-medium">Quick Links</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[80%] sm:max-w-sm p-0">
-                <div className="h-full flex flex-col">
+              <SheetContent side="right" className="w-[min(100vw-2rem,20rem)] sm:max-w-sm p-0">
+                <div className="h-full flex flex-col min-h-0">
                   <SidebarContent />
                 </div>
               </SheetContent>
@@ -180,8 +175,7 @@ export default function MasterLayout({
           </div>
           {children}
         </div>
-        {/* Right-bar - Hidden on mobile, visible on desktop */}
-        <div className="hidden md:flex md:w-[20%] border-l h-full flex-col bg-white">
+        <div className="hidden lg:flex w-[min(280px,24vw)] shrink-0 xl:w-72 border-l h-full flex-col bg-white min-w-0">
           <SidebarContent />
         </div>
       </div>
