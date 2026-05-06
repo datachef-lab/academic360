@@ -70,6 +70,7 @@ type AcademicActivityApiDto = {
   academicYear: { id: number; year: string };
   affiliation: { id: number; name: string; shortName?: string | null };
   regulationType: { id: number; name: string; shortName?: string | null };
+  courseLevelId?: number | null;
   courseLevel?: { id: number; name: string; shortName?: string | null } | null;
   appearType: { id: number; name: string };
   scopes: ScopeDto[];
@@ -374,7 +375,7 @@ export default function AcademicActivityPage() {
         academicYearId: a.academicYear.id,
         affiliationId: a.affiliation.id,
         regulationTypeId: a.regulationType.id,
-        courseLevelId: a.courseLevel?.id ?? null,
+        courseLevelId: a.courseLevel?.id ?? a.courseLevelId ?? null,
         appearTypeId: a.appearType.id,
         audience: a.audience,
         scopes: a.scopes.map((s) => ({

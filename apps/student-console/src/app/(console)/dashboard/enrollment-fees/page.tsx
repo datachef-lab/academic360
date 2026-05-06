@@ -60,6 +60,7 @@ type AcademicActivityApiDto = {
   academicYear: { id: number; year: string };
   affiliation: { id: number; name: string };
   regulationType: { id: number; name: string };
+  courseLevelId?: number | null;
   appearType: { id: number; name: string };
   scopes: AcademicActivityScopeApiDto[];
 };
@@ -78,7 +79,12 @@ export type FeeMapping = {
     receiptType: { name: string };
     class: { id: number; name: string };
     academicYear: { id: number; year: string };
-    programCourse: { id: number; name: string };
+    programCourse: {
+      id: number;
+      name: string;
+      courseLevelId?: number | null;
+      courseLevel?: { id: number; name: string } | null;
+    };
   };
 };
 
@@ -490,6 +496,12 @@ export default function EnrollmentFeesPage() {
     const promotion = (student as any)?.currentPromotion;
     const studentStreamId: number | null =
       (student as any)?.programCourse?.stream?.id ?? promotion?.programCourse?.stream?.id ?? null;
+    const studentCourseLevelId: number | null =
+      (student as any)?.programCourse?.courseLevel?.id ??
+      (student as any)?.programCourse?.courseLevelId ??
+      promotion?.programCourse?.courseLevel?.id ??
+      promotion?.programCourse?.courseLevelId ??
+      null;
 
     const now = Date.now();
 
@@ -497,10 +509,29 @@ export default function EnrollmentFeesPage() {
       const mapping = mappings.find((m) => m.id === card.id);
       const cardClassId = mapping?.feeStructure?.class?.id;
       const cardAyId = mapping?.feeStructure?.academicYear?.id;
+      const cardCourseLevelId =
+        mapping?.feeStructure?.programCourse?.courseLevel?.id ??
+        mapping?.feeStructure?.programCourse?.courseLevelId ??
+        null;
       if (!cardClassId || !cardAyId) return false;
 
       return semesterFeeActivities.some((activity) => {
         if (activity.academicYear.id !== cardAyId) return false;
+        if (
+          activity.courseLevelId != null &&
+          cardCourseLevelId != null &&
+          activity.courseLevelId !== cardCourseLevelId
+        ) {
+          return false;
+        }
+        if (
+          activity.courseLevelId != null &&
+          cardCourseLevelId == null &&
+          studentCourseLevelId != null &&
+          activity.courseLevelId !== studentCourseLevelId
+        ) {
+          return false;
+        }
 
         return activity.scopes.some((scope) => {
           if (!scope.isEnabled) return false;
