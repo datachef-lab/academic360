@@ -18,7 +18,12 @@ import {
 import { cn } from "@/lib/utils";
 import axiosInstance from "@/utils/api";
 import { findAllClasses } from "@/services/class.service";
-import { getAffiliations, getRegulationTypes, getStreams } from "@/services/course-design.api";
+import {
+  getAffiliations,
+  getCourseLevels,
+  getRegulationTypes,
+  getStreams,
+} from "@/services/course-design.api";
 import { getAllAcademicYears } from "@/services/academic-year-api";
 import { getPromotionStatuses } from "@/services/promotion-status.api";
 
@@ -65,6 +70,7 @@ type AcademicActivityApiDto = {
   academicYear: { id: number; year: string };
   affiliation: { id: number; name: string; shortName?: string | null };
   regulationType: { id: number; name: string; shortName?: string | null };
+  courseLevel?: { id: number; name: string; shortName?: string | null } | null;
   appearType: { id: number; name: string };
   scopes: ScopeDto[];
 };
@@ -81,6 +87,7 @@ type StreamOption = { id: number; name: string; code?: string };
 type AcademicYearOption = { id: number; year: string; isCurrentYear?: boolean };
 type AffiliationOption = { id: number; name: string; shortName?: string | null };
 type RegulationOption = { id: number; name: string; shortName?: string | null };
+type CourseLevelOption = { id: number; name: string; shortName?: string | null };
 type PromotionStatusOption = { id: number; name: string };
 
 type ScopeDraft = {
@@ -97,6 +104,7 @@ type RuleDraft = {
   academicYearId: number;
   affiliationId: number;
   regulationTypeId: number;
+  courseLevelId: number | null;
   appearTypeId: number;
   audience: Audience;
   scopes: ScopeDraft[];
@@ -254,6 +262,7 @@ export default function AcademicActivityPage() {
   const [academicYears, setAcademicYears] = React.useState<AcademicYearOption[]>([]);
   const [affiliations, setAffiliations] = React.useState<AffiliationOption[]>([]);
   const [regulations, setRegulations] = React.useState<RegulationOption[]>([]);
+  const [courseLevels, setCourseLevels] = React.useState<CourseLevelOption[]>([]);
   const [promotionStatuses, setPromotionStatuses] = React.useState<PromotionStatusOption[]>([]);
 
   const [isSaving, setIsSaving] = React.useState(false);
@@ -286,13 +295,14 @@ export default function AcademicActivityPage() {
   );
 
   const loadData = React.useCallback(async () => {
-    const [classesRes, streamsRes, ayRes, affRes, regRes, psRes, mastersRes, activitiesRes] =
+    const [classesRes, streamsRes, ayRes, affRes, regRes, clRes, psRes, mastersRes, activitiesRes] =
       await Promise.all([
         findAllClasses(),
         getStreams(),
         getAllAcademicYears(),
         getAffiliations(),
         getRegulationTypes(),
+        getCourseLevels(),
         getPromotionStatuses({ isActive: true }),
         axiosInstance.get<ApiResponse<ActivityMasterDto[]>>(
           "/api/academics/academic-activity-masters",
@@ -328,6 +338,11 @@ export default function AcademicActivityPage() {
         .filter((r: any) => r?.isActive !== false)
         .map((r: any) => ({ id: r.id, name: r.name, shortName: r.shortName })),
     );
+    setCourseLevels(
+      (clRes ?? [])
+        .filter((c: any) => c?.isActive !== false)
+        .map((c: any) => ({ id: c.id, name: c.name, shortName: c.shortName })),
+    );
     setPromotionStatuses((psRes ?? []).map((p: any) => ({ id: p.id, name: p.name })));
     setMasters(mastersRes.data?.payload ?? []);
     setActivities(activitiesRes.data?.payload ?? []);
@@ -359,6 +374,7 @@ export default function AcademicActivityPage() {
         academicYearId: a.academicYear.id,
         affiliationId: a.affiliation.id,
         regulationTypeId: a.regulationType.id,
+        courseLevelId: a.courseLevel?.id ?? null,
         appearTypeId: a.appearType.id,
         audience: a.audience,
         scopes: a.scopes.map((s) => ({
@@ -408,6 +424,7 @@ export default function AcademicActivityPage() {
           academicYearId: rule.academicYearId,
           affiliationId: rule.affiliationId,
           regulationTypeId: rule.regulationTypeId,
+          courseLevelId: rule.courseLevelId,
           appearTypeId: rule.appearTypeId,
           audience: rule.audience,
         });
@@ -420,6 +437,7 @@ export default function AcademicActivityPage() {
           academicYearId: rule.academicYearId,
           affiliationId: rule.affiliationId,
           regulationTypeId: rule.regulationTypeId,
+          courseLevelId: rule.courseLevelId,
           appearTypeId: rule.appearTypeId,
           audience: rule.audience,
           scopes: rule.scopes.map((s) => ({
@@ -477,6 +495,7 @@ export default function AcademicActivityPage() {
         academicYearId: currentAy?.id ?? 0,
         affiliationId: affiliations[0]?.id ?? 0,
         regulationTypeId: regulations[0]?.id ?? 0,
+        courseLevelId: courseLevels[0]?.id ?? null,
         appearTypeId: promotionStatuses[0]?.id ?? 0,
         audience: DEFAULT_AUDIENCE,
         scopes: [],
@@ -965,6 +984,7 @@ export default function AcademicActivityPage() {
                               "Academic Year",
                               "Affiliation",
                               "Regulation",
+                              "Course Level",
                               "Appear Type",
                               "Applicable To",
                               "Status",
@@ -983,7 +1003,7 @@ export default function AcademicActivityPage() {
                           {rules.length === 0 ? (
                             <tr>
                               <td
-                                colSpan={8}
+                                colSpan={9}
                                 className="px-4 py-8 text-center text-[13px] text-[#9AA0AE]"
                               >
                                 No rules yet. Click <strong>+ Add Rule</strong> to get started.
@@ -1062,6 +1082,32 @@ export default function AcademicActivityPage() {
                                       {regulations.map((r) => (
                                         <SelectItem key={r.id} value={String(r.id)}>
                                           {r.shortName || r.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                                <td className="px-2.5 py-2.5">
+                                  <Select
+                                    value={
+                                      rule.courseLevelId != null
+                                        ? String(rule.courseLevelId)
+                                        : "none"
+                                    }
+                                    onValueChange={(v) =>
+                                      updateRule(idx, {
+                                        courseLevelId: v === "none" ? null : Number(v),
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 rounded-[7px] border-[1.5px] border-[#D0CCC3] bg-white text-[12px] font-semibold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">All</SelectItem>
+                                      {courseLevels.map((cl) => (
+                                        <SelectItem key={cl.id} value={String(cl.id)}>
+                                          {cl.shortName || cl.name}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1377,7 +1423,7 @@ function ScopeEditor({
                     Stream
                   </th>
                   <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-left font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
-                    Course Level
+                    Semester
                   </th>
                   <th className="border-b-[1.5px] border-[#E0DDD6] px-2.5 py-2 text-left font-['Sora',sans-serif] text-[10px] font-bold uppercase tracking-[.07em] text-[#9AA0AE]">
                     Start Date
@@ -1454,7 +1500,7 @@ function ScopeEditor({
                           <SelectContent>
                             {classOptions.map((c) => (
                               <SelectItem key={c.id} value={String(c.id)}>
-                                {c.name}
+                                {c.name.split(" ")[1]}
                               </SelectItem>
                             ))}
                           </SelectContent>
