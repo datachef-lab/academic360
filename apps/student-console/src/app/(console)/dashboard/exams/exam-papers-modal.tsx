@@ -19,6 +19,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { fetchExamCandidatesbyExamGroupIdAndStudentId } from "@/services/exam-group.service";
 
+function formatTimeNoon(d: Date): string {
+  if (d.getHours() === 12 && d.getMinutes() === 0) return "12 Noon";
+  return format(d, "hh:mm a");
+}
+
 interface ExamPapersModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -336,8 +341,7 @@ export function ExamPapersModal({
                               {format(detail.startTime, "dd/MM/yyyy")}
                             </div>
                             <div className="text-muted-gray-800 text-[10px] sm:text-xs font-mono">
-                              {format(detail.startTime, "hh:mm a")} –{" "}
-                              {format(detail.endTime, "hh:mm a")}
+                              {formatTimeNoon(detail.startTime)} – {formatTimeNoon(detail.endTime)}
                             </div>
                           </div>
                         </TableCell>

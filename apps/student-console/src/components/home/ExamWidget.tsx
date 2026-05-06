@@ -7,6 +7,11 @@ import { format } from "date-fns";
 import { Calendar, Clock, GraduationCap, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
+function formatTimeNoon(d: Date): string {
+  if (d.getHours() === 12 && d.getMinutes() === 0) return "12 Noon";
+  return format(d, "hh:mm a");
+}
+
 interface ExamWidgetProps {
   exams: ExamDto[];
   examGroups: ExamGroupDto[];
@@ -159,7 +164,7 @@ export default function ExamWidget({ exams, examGroups }: ExamWidgetProps) {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3 h-3" />
-                  <span>{format(examDate, "hh:mm a")}</span>
+                  <span>{formatTimeNoon(examDate)}</span>
                 </div>
               </div>
 
