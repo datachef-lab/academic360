@@ -123,6 +123,10 @@ export async function createAcademicActivityController(
       audience: req.body.audience ?? "ALL",
       affiliationId: Number(req.body.affiliationId),
       regulationTypeId: Number(req.body.regulationTypeId),
+      courseLevelId:
+        req.body.courseLevelId == null || req.body.courseLevelId === ""
+          ? null
+          : Number(req.body.courseLevelId),
       appearTypeId: Number(req.body.appearTypeId),
       scopes,
     };

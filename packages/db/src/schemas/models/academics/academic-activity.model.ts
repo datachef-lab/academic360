@@ -4,7 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { userModel } from "../user";
 import { academicYearModel } from "./academic-year.model";
-import { affiliationModel, regulationTypeModel } from "../course-design";
+import { affiliationModel, courseLevelModel, regulationTypeModel } from "../course-design";
 import { promotionStatusModel } from "../batches";
 import { academicActivityMasterModel } from "./academic-activity-master.model";
 
@@ -28,6 +28,8 @@ export const academicActivityModel = pgTable("academic_activities", {
     appearTypeId: integer("appear_type_promotion_status_id_fk")
         .references(() => promotionStatusModel.id)
         .notNull(),
+    courseLevelId: integer("course_level_id_fk")
+        .references(() => courseLevelModel.id),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })
         .notNull()
