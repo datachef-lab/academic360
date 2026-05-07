@@ -1,3 +1,10 @@
+import ArticlesMasterPage from "./ArticlesMasterPage";
+import LibraryDocumentsMasterPage from "./LibraryDocumentsMasterPage";
+import JournalTypesMasterPage from "./JournalTypesMasterPage";
+import RacksMasterPage from "./RacksMasterPage";
+import ShelvesMasterPage from "./ShelvesMasterPage";
+import StatusesMasterPage from "./StatusesMasterPage";
+
 function LibraryMasterPlaceholderPage({
   title,
   description,
@@ -41,39 +48,19 @@ export function EntryModesPage() {
 }
 
 export function JournalTypesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Journal Type"
-      description="Journal type master management UI will be available here."
-    />
-  );
+  return <JournalTypesMasterPage />;
 }
 
 export function StatusesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Status"
-      description="Status master management UI will be available here."
-    />
-  );
+  return <StatusesMasterPage />;
 }
 
 export function RacksPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Rack"
-      description="Rack master management UI will be available here."
-    />
-  );
+  return <RacksMasterPage />;
 }
 
 export function ShelvesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Shelf"
-      description="Shelf master management UI will be available here."
-    />
-  );
+  return <ShelvesMasterPage />;
 }
 
 export function BindingTypesPage() {
@@ -95,21 +82,11 @@ export function PeriodsPage() {
 }
 
 export function ArticlesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Article"
-      description="Article master management UI will be available here."
-    />
-  );
+  return <ArticlesMasterPage />;
 }
 
 export function LibraryDocumentsPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Library Document"
-      description="Library document master management UI will be available here."
-    />
-  );
+  return <LibraryDocumentsMasterPage />;
 }
 
 export function BorrowingTypesPage() {

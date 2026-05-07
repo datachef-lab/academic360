@@ -678,7 +678,7 @@ export default function BooksPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle className="flex items-center text-lg sm:text-xl">
-                <Book className="mr-2 h-6 w-6 rounded-md border border-slate-400 p-1" />
+                <Book className="mr-2 h-8 w-8 rounded-md border p-1" />
                 Books
               </CardTitle>
               <p className="mt-1 text-[11px] text-muted-foreground sm:text-sm">
