@@ -192,6 +192,10 @@ import bookCirculationRouter from "@/features/library/routes/book-circulation.ro
 import journalRouter from "@/features/library/routes/journal.route.js";
 import copyDetailsRouter from "@/features/library/routes/copy-details.route.js";
 import bookRouter from "@/features/library/routes/book.route.js";
+import shelfRouter from "@/features/library/routes/shelf.route.js";
+import rackRouter from "@/features/library/routes/rack.route.js";
+import statusRouter from "@/features/library/routes/status.route.js";
+import journalTypeRouter from "@/features/library/routes/journal-type.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -631,6 +635,10 @@ app.use("/api/library/book-circulation", bookCirculationRouter);
 app.use("/api/library/journals", journalRouter);
 app.use("/api/library/copy-details", copyDetailsRouter);
 app.use("/api/library/books", bookRouter);
+app.use("/api/library/shelves", shelfRouter);
+app.use("/api/library/racks", rackRouter);
+app.use("/api/library/statuses", statusRouter);
+app.use("/api/library/journal-types", journalTypeRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 
