@@ -196,6 +196,8 @@ import shelfRouter from "@/features/library/routes/shelf.route.js";
 import rackRouter from "@/features/library/routes/rack.route.js";
 import statusRouter from "@/features/library/routes/status.route.js";
 import journalTypeRouter from "@/features/library/routes/journal-type.route.js";
+import libraryArticleRouter from "@/features/library/routes/library-article.route.js";
+import libraryDocumentTypeRouter from "@/features/library/routes/library-document-type.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -639,6 +641,8 @@ app.use("/api/library/shelves", shelfRouter);
 app.use("/api/library/racks", rackRouter);
 app.use("/api/library/statuses", statusRouter);
 app.use("/api/library/journal-types", journalTypeRouter);
+app.use("/api/library/articles", libraryArticleRouter);
+app.use("/api/library/document-types", libraryDocumentTypeRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 
