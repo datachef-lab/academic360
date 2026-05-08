@@ -125,6 +125,7 @@ async function enrichAcademicActivities(
   return activities.map((activity) => ({
     id: activity.id,
     audience: activity.audience,
+    courseLevelId: activity.courseLevelId,
     createdAt: activity.createdAt,
     updatedAt: activity.updatedAt,
     master: masterMap.get(activity.academicActivityMasterId)!,
@@ -187,6 +188,7 @@ export async function createAcademicActivity(
       audience: payload.audience ?? "ALL",
       affiliationId: payload.affiliationId,
       regulationTypeId: payload.regulationTypeId,
+      courseLevelId: payload.courseLevelId ?? null,
       appearTypeId: payload.appearTypeId,
       lastUpdatedBy: userId ?? null,
     })
@@ -222,6 +224,8 @@ export async function updateAcademicActivity(
     updateData.affiliationId = payload.affiliationId;
   if (payload.regulationTypeId !== undefined)
     updateData.regulationTypeId = payload.regulationTypeId;
+  if (payload.courseLevelId !== undefined)
+    updateData.courseLevelId = payload.courseLevelId;
   if (payload.appearTypeId !== undefined)
     updateData.appearTypeId = payload.appearTypeId;
   updateData.lastUpdatedBy = userId ?? null;
