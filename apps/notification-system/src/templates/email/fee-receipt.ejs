@@ -259,7 +259,7 @@
     }
     .cta-btn {
       display: inline-block;
-      background: #0a2240;
+      background: #1e40af;
       color: #ffffff !important;
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
@@ -280,7 +280,11 @@
       background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
       pointer-events: none;
     }
-    .cta-btn:hover { background: #0f2f56; }
+    .cta-btn:hover {
+      background: #1d4ed8;
+      color: #ffffff !important;
+      text-decoration: none;
+    }
 
     .cta-sub {
       margin-top: 10px;
@@ -412,29 +416,8 @@
     <div class="card">
 
       <!-- Header -->
-      <div class="header">
-        <table class="college-badge" role="presentation" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td class="college-badge-cell logo">
-              <div class="badge-icon">
-                <img
-                  class="college-logo-img"
-                  src="<%- logoUrl %>"
-                  alt="The Bhawanipur Education Society College, Kolkata — official emblem"
-                  width="44"
-                  height="44"
-                  loading="eager"
-                  decoding="async"
-                />
-              </div>
-            </td>
-            <td class="college-badge-cell">
-              <div class="college-name">
-                The Bhawanipur Education Society College
-              </div>
-            </td>
-          </tr>
-        </table>
+      <div class="header" style="text-align: center;">
+        <p style="color: white; font-size: 20px; font-weight: bold; text-align: center; margin: 0;">Payment Successfully Received</p>
       </div>
 
       <!-- Gold stripe -->
@@ -447,15 +430,6 @@
           Dear <strong><%= displayName %></strong>,<br/><br/>
           We are pleased to inform you that your fee payment has been successfully received and recorded in our system. Your challan has been updated accordingly.
         </p>
-
-        <!-- Success indicator -->
-        <div class="success-block" style="padding-top: 16px;">
-          <div class="tick-circle" role="img" aria-label="Success">&#10003;</div>
-          <div class="success-text" style="margin-left: 12px;">
-            Payment Successfully Received
-            <span>Your account has been updated. No further action is required.</span>
-          </div>
-        </div>
 
         <!-- CTA: paid challan PDF -->
         <div class="cta-wrap">
