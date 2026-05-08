@@ -26,7 +26,6 @@ import {
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import type {
@@ -582,6 +581,7 @@ const ProgramCoursesPage = () => {
         CourseLevel: pc.courseLevelId ? (courseLevelsLookup[pc.courseLevelId] ?? "-") : "-",
         Duration: pc.duration,
         TotalSemesters: pc.totalSemesters,
+        ValidityYears: pc.validityYears ?? 1,
         Affiliation: pc.affiliationId ? (affiliationsLookup[pc.affiliationId] ?? "-") : "-",
         RegulationType: pc.regulationTypeId
           ? (regulationTypesLookup[pc.regulationTypeId] ?? "-")
@@ -675,6 +675,10 @@ const ProgramCoursesPage = () => {
       regulationType: pc.regulationTypeId
         ? (regulationTypesLookup[pc.regulationTypeId] ?? "-")
         : "-",
+      validityYears:
+        pc.validityYears != null && Number.isFinite(pc.validityYears)
+          ? String(pc.validityYears)
+          : "",
     })
       .join(" ")
       .toLowerCase()
@@ -881,16 +885,14 @@ const ProgramCoursesPage = () => {
               <span className="hidden sm:inline">Download Template</span>
               <span className="sm:hidden">Template</span>
             </Button>
+            <Button
+              onClick={handleAddNew}
+              className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add
+            </Button>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-              <AlertDialogTrigger asChild>
-                <Button
-                  onClick={handleAddNew}
-                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add
-                </Button>
-              </AlertDialogTrigger>
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-2xl">
                 <AlertDialogHeader>
                   <AlertDialogTitle>
@@ -929,7 +931,7 @@ const ProgramCoursesPage = () => {
                   <TableRow>
                     <TableHead style={{ width: 40 }}>#</TableHead>
                     <TableHead style={{ width: 90 }}>Stream</TableHead>
-                    <TableHead style={{ width: 120 }}>Name</TableHead>
+                    <TableHead style={{ width: 140 }}>Name</TableHead>
                     <TableHead style={{ width: 70 }}>Course Level</TableHead>
                     <TableHead style={{ width: 90 }}>Affiliated To</TableHead>
                     <TableHead style={{ width: 90 }}>Regulation Type</TableHead>
@@ -962,6 +964,11 @@ const ProgramCoursesPage = () => {
                                 : null,
                               typeof pc.totalSemesters === "number"
                                 ? `${pc.totalSemesters} semester${pc.totalSemesters !== 1 ? "s" : ""}`
+                                : null,
+                              pc.validityYears != null &&
+                              typeof pc.validityYears === "number" &&
+                              Number.isFinite(pc.validityYears)
+                                ? `Validity: ${pc.validityYears} year${pc.validityYears !== 1 ? "s" : ""}`
                                 : null,
                             ]
                               .filter(Boolean)

@@ -1,5 +1,6 @@
-export * from "./academic-activity-class-scope.model";
-export * from "./academic-activity-program-course-scope.model";
+
+export * from "./academic-activity-master.model";
+export * from "./academic-activity-scope.model";
 export * from "./academic-activity.model";
 
 

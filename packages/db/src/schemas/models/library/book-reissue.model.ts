@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { bookCirculationModel } from "./book-circulation.model";
@@ -11,6 +11,7 @@ export const bookReissueModel = pgTable("book_reissue", {
     reissuedBy: integer("reissued_by_user_id_fk")
         .references(() => userModel.id)
         .notNull(),
+    returnTimestamp: timestamp({ withTimezone: true }).notNull(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -1,6 +1,4 @@
-import { AcademicYearT, CareerProgressionFormCertificateT, CareerProgressionFormFieldT, CareerProgressionFormT, CertificateFieldMasterT, CertificateFieldOptionMasterT, CertificateMasterT, ClassT, ProgramCourseT, SessionT } from "@/schemas";
-import { AcademicActivityClassScopeT } from "@/schemas/models/academics/academic-activity-class-scope.model";
-import { AcademicActivityProgramCourseScopeT } from "@/schemas/models/academics/academic-activity-program-course-scope.model";
+import { AcademicActivityMasterT, AcademicActivityScopeT, AcademicYearT, AffiliationT, CareerProgressionFormCertificateT, CareerProgressionFormFieldT, CareerProgressionFormT, CertificateFieldMasterT, CertificateFieldOptionMasterT, CertificateMasterT, ClassT, PromotionStatusT, RegulationTypeT, SessionT, StreamT } from "@/schemas";
 import { AcademicActivityT } from "@/schemas/models/academics/academic-activity.model";
 
 export interface SessionDto extends Omit<SessionT, "academicYearId"> {
@@ -45,15 +43,24 @@ export interface CareerProgressionFormDto extends Omit<CareerProgressionFormT, "
     student?: CareerProgressionFormStudentExport;
 }
 
-export interface AcademicActivityProgramCourseDto extends Omit<AcademicActivityProgramCourseScopeT, "programCourseId"> {
-    programCourse: ProgramCourseT;
-}
-
-export interface AcademicActivityClassScopeDto extends Omit<AcademicActivityClassScopeT, "classId"> {
+export interface AcademicActivityScopeDto extends Omit<AcademicActivityScopeT, "streamId" | "classId" | "academicActivityId"> {
+    stream: StreamT;
     class: ClassT;
 }
 
-export interface AcademicActivityDto extends AcademicActivityT {
-    classes: AcademicActivityClassScopeDto[];
-    programCourses: AcademicActivityProgramCourseDto[];
+
+export interface AcademicActivityDto extends Omit<AcademicActivityT,
+    "academicYearId"
+    | "academicActivityMasterId"
+    | "affiliationId"
+    | "regulationTypeId"
+    | "appearTypeId"
+    | "lastUpdatedBy"
+> {
+    master: AcademicActivityMasterT;
+    academicYear: AcademicYearT;
+    affiliation: AffiliationT;
+    regulationType: RegulationTypeT;
+    appearType: PromotionStatusT;
+    scopes: AcademicActivityScopeDto[];
 }

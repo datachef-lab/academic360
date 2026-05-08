@@ -434,14 +434,15 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
                   const currPart = foundAcademicYear.year.split("-")[0].trim();
                   const regY = parseInt(regPart, 10);
                   const currY = parseInt(currPart, 10);
-                  const dur = foundProgramCourse.duration;
+                  const programCourseValidity =
+                    foundProgramCourse.validityYears;
                   // Inclusive window: admission start year … admission start + duration (calendar start years).
-                  const lastCoveredYear = regY + dur;
+                  const lastCoveredYear = regY + programCourseValidity;
                   const inProgramCourseWindow =
                     Number.isFinite(regY) &&
                     Number.isFinite(currY) &&
-                    Number.isFinite(dur) &&
-                    dur >= 0 &&
+                    Number.isFinite(programCourseValidity) &&
+                    programCourseValidity >= 0 &&
                     currY >= regY &&
                     currY <= lastCoveredYear;
                   if (inProgramCourseWindow) {

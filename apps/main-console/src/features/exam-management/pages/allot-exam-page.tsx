@@ -1618,6 +1618,8 @@ export default function AllotExamPage() {
 
                               // Format time as HH:MM AM/PM
                               const formatTime = (date: Date): string => {
+                                if (date.getHours() === 12 && date.getMinutes() === 0)
+                                  return "12 Noon";
                                 return date.toLocaleTimeString("en-US", {
                                   hour: "2-digit",
                                   minute: "2-digit",

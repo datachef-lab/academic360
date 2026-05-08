@@ -447,3 +447,10 @@ export const libraryEntryExitStatusEnum = pgEnum("library_entry_exit_status", [
     "CHECKED_IN",
     "CHECKED_OUT",
 ]);
+
+export const academicActivityTypeEnum = pgEnum("academic_activity_type", [
+    "FINANCE",
+    "EXAMINATION",
+    "ADMISSION",
+    "ACADEMIC",
+]);

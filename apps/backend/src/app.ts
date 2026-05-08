@@ -41,6 +41,7 @@ import {
   certificateFieldOptionMasterRouter,
   certificateMasterRouter,
   academicActivityRouter,
+  academicActivityMasterRouter,
 } from "@/features/academics/routes/index.js";
 import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -187,6 +188,16 @@ import {
   examGroupRouter,
 } from "./features/exams/routes/index.js";
 import libraryEntryExitRouter from "@/features/library/routes/library-entry-exit.route.js";
+import bookCirculationRouter from "@/features/library/routes/book-circulation.route.js";
+import journalRouter from "@/features/library/routes/journal.route.js";
+import copyDetailsRouter from "@/features/library/routes/copy-details.route.js";
+import bookRouter from "@/features/library/routes/book.route.js";
+import shelfRouter from "@/features/library/routes/shelf.route.js";
+import rackRouter from "@/features/library/routes/rack.route.js";
+import statusRouter from "@/features/library/routes/status.route.js";
+import journalTypeRouter from "@/features/library/routes/journal-type.route.js";
+import libraryArticleRouter from "@/features/library/routes/library-article.route.js";
+import libraryDocumentTypeRouter from "@/features/library/routes/library-document-type.route.js";
 import bindingRouter from "@/features/library/routes/binding.route.js";
 import borrowingTypeRouter from "@/features/library/routes/borrowing-type.route.js";
 import enclosureRouter from "@/features/library/routes/enclosure.route.js";
@@ -439,6 +450,10 @@ app.use(
 
 app.use("/api/academics/career-progression-forms", careerProgressionFormRouter);
 app.use("/api/academics/academic-activities", academicActivityRouter);
+app.use(
+  "/api/academics/academic-activity-masters",
+  academicActivityMasterRouter,
+);
 
 app.use("/api/academics/certificate-masters", certificateMasterRouter);
 
@@ -625,6 +640,16 @@ app.use("/api/admissions", admissionRouter);
 
 app.use("/api/payments", paymentRouter);
 app.use("/api/library/entry-exit", libraryEntryExitRouter);
+app.use("/api/library/book-circulation", bookCirculationRouter);
+app.use("/api/library/journals", journalRouter);
+app.use("/api/library/copy-details", copyDetailsRouter);
+app.use("/api/library/books", bookRouter);
+app.use("/api/library/shelves", shelfRouter);
+app.use("/api/library/racks", rackRouter);
+app.use("/api/library/statuses", statusRouter);
+app.use("/api/library/journal-types", journalTypeRouter);
+app.use("/api/library/articles", libraryArticleRouter);
+app.use("/api/library/document-types", libraryDocumentTypeRouter);
 app.use("/api/library/bindings", bindingRouter);
 app.use("/api/library/borrowing-types", borrowingTypeRouter);
 app.use("/api/library/enclosures", enclosureRouter);

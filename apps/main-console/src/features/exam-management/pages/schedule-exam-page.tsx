@@ -807,6 +807,8 @@ export default function ScheduleExamPage() {
 
     if (isNaN(hours) || isNaN(minutes)) return time24;
 
+    if (hours === 12 && minutes === 0) return "12 Noon";
+
     const period = hours >= 12 ? "PM" : "AM";
     const hours12 = hours % 12 || 12; // Convert 0 to 12 for midnight
     const minutesStr = minutes.toString().padStart(2, "0");
