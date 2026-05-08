@@ -357,10 +357,7 @@ export const getPaymentConfigHandler = async (
         .json(new ApiResponse(503, "ERROR", null, "Paytm is not configured"));
       return;
     }
-    const host =
-      paytmConfig.environment === "PRODUCTION"
-        ? "https://secure.paytmpayments.com"
-        : "https://securestage.paytmpayments.com";
+    const host = process.env.PAYTM_HOST!;
     res.status(200).json(
       new ApiResponse(
         200,

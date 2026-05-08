@@ -108,7 +108,7 @@ export function createDefaultPaytmDowntimeConfig(): PaymentVendorDowntimeConfig 
     vendor: "paytm",
     pollIntervalMinutes: 10,
     fetchCurrentDowntimeUrl:
-      "https://secure.paytmpayments.com/downtime-manager/api/paytm/pg/daas/fetch-current-instrument-states",
+      process.env.PAYTM_HOST! + "/downtime-manager/api/paytm/pg/daas/fetch-current-instrument-states",
   };
 }
 

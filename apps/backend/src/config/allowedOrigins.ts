@@ -12,6 +12,7 @@ async function getOrigins() {
   return [
     "https://securestage.paytmpayments.com",
     "https://secure.paytmpayments.com",
+    process.env.PAYTM_HOST!,
     "http://localhost:3000",
     "http://localhost:3008",
     "http://localhost:5173",
