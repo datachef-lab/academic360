@@ -344,7 +344,7 @@ const FeeGroupsPage: React.FC = () => {
                         <SelectTrigger>
                           <SelectValue placeholder="Select fee category" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[200]">
                           {feeCategories && feeCategories.length > 0 ? (
                             feeCategories.map((category) => (
                               <SelectItem key={category.id} value={category.id!.toString()}>
@@ -377,7 +377,7 @@ const FeeGroupsPage: React.FC = () => {
                           <SelectTrigger>
                             <SelectValue placeholder="Select fee slab" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="z-[200]">
                             {availableSlabs && availableSlabs.length > 0 ? (
                               availableSlabs.map((slab) => (
                                 <SelectItem key={slab.id} value={slab.id!.toString()}>
@@ -445,7 +445,7 @@ const FeeGroupsPage: React.FC = () => {
                           <SelectValue />
                         </SelectTrigger>
 
-                        <SelectContent>
+                        <SelectContent className="z-[200]">
                           <SelectItem value="SEMESTER">Semester</SelectItem>
 
                           <SelectItem value="ACADEMIC_YEAR">Academic Year</SelectItem>
