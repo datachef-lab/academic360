@@ -182,6 +182,7 @@ export default function ExamPage() {
     if (!value) return "-";
     const d = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(d.getTime())) return "-";
+    if (d.getHours() === 12 && d.getMinutes() === 0) return "12 Noon";
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
