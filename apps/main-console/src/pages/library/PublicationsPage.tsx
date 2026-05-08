@@ -22,20 +22,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Edit, Loader2, PlusCircle, Search, Trash2, Workflow } from "lucide-react";
+import { Download, Edit, Loader2, PlusCircle, ScrollText, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  createLibrarySeries,
-  deleteLibrarySeries,
-  getLibrarySeries,
-  LibrarySeries,
-  updateLibrarySeries,
-} from "@/services/library-series.service";
+  createLibraryPublisher,
+  deleteLibraryPublisher,
+  getLibraryPublishers,
+  LibraryPublisher,
+  updateLibraryPublisher,
+} from "@/services/library-publisher.service";
 
 const DEFAULT_LIMIT = 10;
 
-export default function SeriesPage() {
-  const [rows, setRows] = useState<LibrarySeries[]>([]);
+export default function PublicationsPage() {
+  const [rows, setRows] = useState<LibraryPublisher[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(DEFAULT_LIMIT);
@@ -43,10 +43,11 @@ export default function SeriesPage() {
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState<LibrarySeries | null>(null);
+  const [selectedRow, setSelectedRow] = useState<LibraryPublisher | null>(null);
   const [formName, setFormName] = useState("");
+  const [formCode, setFormCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [deleteRow, setDeleteRow] = useState<LibrarySeries | null>(null);
+  const [deleteRow, setDeleteRow] = useState<LibraryPublisher | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -59,7 +60,7 @@ export default function SeriesPage() {
   const fetchRows = async () => {
     try {
       setLoading(true);
-      const response = await getLibrarySeries({
+      const response = await getLibraryPublishers({
         page,
         limit,
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
@@ -68,7 +69,7 @@ export default function SeriesPage() {
       setTotal(response.payload.total);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to fetch series");
+      toast.error("Failed to fetch publications");
     } finally {
       setLoading(false);
     }
@@ -89,6 +90,7 @@ export default function SeriesPage() {
   const resetForm = () => {
     setSelectedRow(null);
     setFormName("");
+    setFormCode("");
   };
 
   const openCreateDialog = () => {
@@ -96,9 +98,10 @@ export default function SeriesPage() {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (row: LibrarySeries) => {
+  const openEditDialog = (row: LibraryPublisher) => {
     setSelectedRow(row);
     setFormName(row.name);
+    setFormCode(row.code ?? "");
     setIsDialogOpen(true);
   };
 
@@ -110,20 +113,20 @@ export default function SeriesPage() {
     }
     try {
       setIsSubmitting(true);
-      const payload = { name };
+      const payload = { name, code: formCode.trim() ? formCode.trim() : null };
       if (selectedRow) {
-        await updateLibrarySeries(selectedRow.id, payload);
-        toast.success("Series updated successfully");
+        await updateLibraryPublisher(selectedRow.id, payload);
+        toast.success("Publication updated successfully");
       } else {
-        await createLibrarySeries(payload);
-        toast.success("Series created successfully");
+        await createLibraryPublisher(payload);
+        toast.success("Publication created successfully");
       }
       setIsDialogOpen(false);
       resetForm();
       await fetchRows();
     } catch (error) {
       console.error(error);
-      toast.error(selectedRow ? "Failed to update series" : "Failed to create series");
+      toast.error(selectedRow ? "Failed to update publication" : "Failed to create publication");
     } finally {
       setIsSubmitting(false);
     }
@@ -133,8 +136,8 @@ export default function SeriesPage() {
     if (!deleteRow) return;
     try {
       setIsDeleting(true);
-      await deleteLibrarySeries(deleteRow.id);
-      toast.success("Series deleted successfully");
+      await deleteLibraryPublisher(deleteRow.id);
+      toast.success("Publication deleted successfully");
       setDeleteRow(null);
       if (rows.length === 1 && page > 1) {
         setPage((prev) => prev - 1);
@@ -143,17 +146,18 @@ export default function SeriesPage() {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete series");
+      toast.error("Failed to delete publication");
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleDownload = () => {
-    const headers = ["#", "Name", "Updated At"];
+    const headers = ["#", "Name", "Code", "Updated At"];
     const csvRows = rows.map((row, index) => [
       String((page - 1) * limit + index + 1),
       row.name,
+      row.code ?? "-",
       new Date(row.updatedAt).toLocaleString(),
     ]);
     const csv = [headers, ...csvRows]
@@ -163,7 +167,7 @@ export default function SeriesPage() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "library-series.csv";
+    anchor.download = "library-publications.csv";
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -176,11 +180,11 @@ export default function SeriesPage() {
         <CardHeader className="sticky top-0 z-30 mb-3 flex flex-col items-start justify-between gap-4 rounded-md border bg-background p-4 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center text-lg sm:text-xl">
-              <Workflow className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
-              <span className="truncate">Series</span>
+              <ScrollText className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
+              <span className="truncate">Publications</span>
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Manage library series master entries.
+              Manage library publication/publisher master entries.
             </p>
           </div>
           <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
@@ -204,7 +208,7 @@ export default function SeriesPage() {
               <Input
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search series..."
+                placeholder="Search publication..."
                 className="pl-9"
               />
             </div>
@@ -217,8 +221,11 @@ export default function SeriesPage() {
                     <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 70 }}>
                       #
                     </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 540 }}>
+                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 420 }}>
                       Name
+                    </TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 120 }}>
+                      Code
                     </TableHead>
                     <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 220 }}>
                       Updated At
@@ -231,17 +238,17 @@ export default function SeriesPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="py-6 text-center">
+                      <TableCell colSpan={5} className="py-6 text-center">
                         <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading series...
+                          Loading publications...
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center">
-                        No series found.
+                      <TableCell colSpan={5} className="text-center">
+                        No publications found.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -249,6 +256,7 @@ export default function SeriesPage() {
                       <TableRow key={row.id}>
                         <TableCell>{(page - 1) * limit + index + 1}</TableCell>
                         <TableCell className="font-medium">{row.name}</TableCell>
+                        <TableCell>{row.code ?? "-"}</TableCell>
                         <TableCell>{new Date(row.updatedAt).toLocaleString()}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -314,16 +322,25 @@ export default function SeriesPage() {
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{selectedRow ? "Edit Series" : "Add Series"}</DialogTitle>
+            <DialogTitle>{selectedRow ? "Edit Publication" : "Add Publication"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="series-name">Name</Label>
+              <Label htmlFor="publication-name">Name</Label>
               <Input
-                id="series-name"
+                id="publication-name"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                placeholder="Enter series name"
+                placeholder="Enter publication name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="publication-code">Code (optional)</Label>
+              <Input
+                id="publication-code"
+                value={formCode}
+                onChange={(e) => setFormCode(e.target.value)}
+                placeholder="Enter publication code"
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -346,7 +363,7 @@ export default function SeriesPage() {
       <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Series?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Publication?</AlertDialogTitle>
             <AlertDialogDescription>
               This action will permanently remove{" "}
               <span className="font-medium text-slate-700">{deleteRow?.name}</span>.

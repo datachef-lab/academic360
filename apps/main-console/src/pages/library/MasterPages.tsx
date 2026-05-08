@@ -1,3 +1,10 @@
+import ArticlesMasterPage from "./ArticlesMasterPage";
+import LibraryDocumentsMasterPage from "./LibraryDocumentsMasterPage";
+import JournalTypesMasterPage from "./JournalTypesMasterPage";
+import RacksMasterPage from "./RacksMasterPage";
+import ShelvesMasterPage from "./ShelvesMasterPage";
+import StatusesMasterPage from "./StatusesMasterPage";
+
 function LibraryMasterPlaceholderPage({
   title,
   description,
@@ -13,110 +20,26 @@ function LibraryMasterPlaceholderPage({
   );
 }
 
-export function PublicationsPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Publications"
-      description="Publications master management UI will be available here."
-    />
-  );
-}
-
-export function EnclosuresPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Enclosure / Attachments"
-      description="Enclosure and attachments master management UI will be available here."
-    />
-  );
-}
-
-export function EntryModesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Entry Mode"
-      description="Entry mode master management UI will be available here."
-    />
-  );
-}
-
 export function JournalTypesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Journal Type"
-      description="Journal type master management UI will be available here."
-    />
-  );
+  return <JournalTypesMasterPage />;
 }
 
 export function StatusesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Status"
-      description="Status master management UI will be available here."
-    />
-  );
+  return <StatusesMasterPage />;
 }
 
 export function RacksPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Rack"
-      description="Rack master management UI will be available here."
-    />
-  );
+  return <RacksMasterPage />;
 }
 
 export function ShelvesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Shelf"
-      description="Shelf master management UI will be available here."
-    />
-  );
-}
-
-export function BindingTypesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Binding Type"
-      description="Binding type master management UI will be available here."
-    />
-  );
-}
-
-export function PeriodsPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Period / Frequency"
-      description="Period and frequency master management UI will be available here."
-    />
-  );
+  return <ShelvesMasterPage />;
 }
 
 export function ArticlesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Article"
-      description="Article master management UI will be available here."
-    />
-  );
+  return <ArticlesMasterPage />;
 }
 
 export function LibraryDocumentsPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Library Document"
-      description="Library document master management UI will be available here."
-    />
-  );
-}
-
-export function BorrowingTypesPage() {
-  return (
-    <LibraryMasterPlaceholderPage
-      title="Borrowing Type"
-      description="Borrowing type master management UI will be available here."
-    />
-  );
+  return <LibraryDocumentsMasterPage />;
 }

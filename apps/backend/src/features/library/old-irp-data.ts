@@ -414,7 +414,7 @@ async function getLibraryStatusByOldId(oldLibraryStatusId: number | null) {
   const payload = {
     legacyStatusId: oldLibraryStatusId,
     name: oldStatus.statusName.trim(),
-    issuedTo: String(oldStatus.issueTo),
+    issuedTo: String(oldStatus.issueto),
   };
   const [existingLibraryStatus] = await db
     .select()
