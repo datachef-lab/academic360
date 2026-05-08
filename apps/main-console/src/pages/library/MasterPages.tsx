@@ -5,20 +5,20 @@ import RacksMasterPage from "./RacksMasterPage";
 import ShelvesMasterPage from "./ShelvesMasterPage";
 import StatusesMasterPage from "./StatusesMasterPage";
 
-function LibraryMasterPlaceholderPage({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="p-6 md:p-8">
-      <h1 className="text-2xl font-semibold text-slate-800">{title}</h1>
-      <p className="mt-2 text-sm text-slate-600">{description}</p>
-    </div>
-  );
-}
+// function LibraryMasterPlaceholderPage({
+//   title,
+//   description,
+// }: {
+//   title: string;
+//   description: string;
+// }) {
+//   return (
+//     <div className="p-6 md:p-8">
+//       <h1 className="text-2xl font-semibold text-slate-800">{title}</h1>
+//       <p className="mt-2 text-sm text-slate-600">{description}</p>
+//     </div>
+//   );
+// }
 
 export function JournalTypesPage() {
   return <JournalTypesMasterPage />;
