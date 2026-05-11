@@ -10,7 +10,10 @@ export async function hasPaidFeeStudentMappings(
     .from(feeStudentMappingModel)
     .leftJoin(
       paymentModel,
-      eq(feeStudentMappingModel.paymentId, paymentModel.id),
+      and(
+        eq(paymentModel.feeStudentMappingId, feeStudentMappingModel.id),
+        eq(paymentModel.isLinked, true),
+      ),
     )
     .where(eq(feeStudentMappingModel.feeStructureId, feeStructureId));
 
@@ -24,8 +27,8 @@ export async function hasPaidFeeStudentMappings(
  * A slab is considered locked if there exists any fee-student-mapping for this fee structure
  * whose linked fee group points to that slab AND at least one of:
  * - challanGeneratedAt is set
- * - paymentId is set
- * - linked payment status is SUCCESS
+ * - has any payment row (any attempt taken)
+ * - the linked payment (isLinked = true) has status SUCCESS
  */
 export async function getLockedSlabIdsForFeeStructure(
   feeStructureId: number,
@@ -34,7 +37,10 @@ export async function getLockedSlabIdsForFeeStructure(
     .select({
       feeSlabId: feeGroupModel.feeSlabId,
       challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
-      paymentId: feeStudentMappingModel.paymentId,
+      hasAnyPayment: sql<boolean>`EXISTS (
+        SELECT 1 FROM ${paymentModel}
+        WHERE ${paymentModel.feeStudentMappingId} = ${feeStudentMappingModel.id}
+      )`,
       paymentStatus: paymentModel.status,
     })
     .from(feeStudentMappingModel)
@@ -51,7 +57,10 @@ export async function getLockedSlabIdsForFeeStructure(
     )
     .leftJoin(
       paymentModel,
-      eq(paymentModel.id, feeStudentMappingModel.paymentId),
+      and(
+        eq(paymentModel.feeStudentMappingId, feeStudentMappingModel.id),
+        eq(paymentModel.isLinked, true),
+      ),
     )
     .where(eq(feeStudentMappingModel.feeStructureId, feeStructureId));
 
@@ -60,7 +69,7 @@ export async function getLockedSlabIdsForFeeStructure(
     const slabId = r.feeSlabId;
     if (typeof slabId !== "number") continue;
     if (r.challanGeneratedAt) locked.add(slabId);
-    else if (typeof r.paymentId === "number") locked.add(slabId);
+    else if (r.hasAnyPayment) locked.add(slabId);
     else if (r.paymentStatus === "SUCCESS") locked.add(slabId);
   }
   return Array.from(locked);
@@ -106,6 +115,7 @@ import {
   count,
   desc,
   inArray,
+  isNotNull,
   or,
   asc,
   aliasedTable,
@@ -2548,6 +2558,7 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Online Payment Gateway Vendor",
   "Online Payment Order Id",
   "Online Payment Transaction Id",
+  "Online Payment Status",
 ] as const;
 
 /** Light column fills for Excel (ARGB with alpha FF). Each amount column gets a distinct pastel. */
@@ -3013,7 +3024,50 @@ export async function downloadFeeStudentMappings(
     )
     .as("cp_form_by_student_year");
 
-  /** True when export treats the row as Paid (same as Payment Status = 'Paid'). */
+  /**
+   * Latest ONLINE payment attempt per fee_student_mapping — regardless of
+   * status / isLinked — so the export can surface orderId / gateway vendor /
+   * txnId / mode for pending or failed online attempts as well. The linked
+   * payment join below (filtered by isLinked = true) is still the source of
+   * truth for "Paid Amount", "Paid Date", "Payment Status = Paid".
+   */
+  const latestOnlinePaymentSq = db
+    .selectDistinctOn([paymentModel.feeStudentMappingId], {
+      feeStudentMappingId: paymentModel.feeStudentMappingId,
+      orderId: paymentModel.orderId,
+      txnId: paymentModel.txnId,
+      paymentGatewayVendor: paymentModel.paymentGatewayVendor,
+      paymentMode: paymentModel.paymentMode,
+      status: paymentModel.status,
+    })
+    .from(paymentModel)
+    .where(
+      and(
+        isNotNull(paymentModel.feeStudentMappingId),
+        eq(paymentModel.paymentMode, "ONLINE"),
+      ),
+    )
+    .orderBy(
+      asc(paymentModel.feeStudentMappingId),
+      desc(paymentModel.createdAt),
+      desc(paymentModel.id),
+    )
+    .as("latest_online_payment_per_mapping");
+
+  /**
+   * True when export treats the row as Paid (same as Payment Status = 'Paid').
+   *
+   * Aligned with `fee-student-mapping.service.ts → modelToDto`, which the
+   * student-console uses to render the PAID badge:
+   *   totalPayable > 0 && amountPaid >= totalPayable → SUCCESS
+   *
+   * We therefore consider a mapping paid when EITHER:
+   *  - the linked payment row is SUCCESS / COMPLETED / DONE / PAID / TXN_SUCCESS, OR
+   *  - the linked payment has a txnId + txnDate AND the mapping is fully paid, OR
+   *  - the mapping itself is fully paid (amountPaid >= totalPayable, totalPayable > 0)
+   *    — this covers manual cash receipts and legacy rows that may not have a
+   *    `payments` row with `isLinked = true` yet still show PAID in the UI.
+   */
   const feeStudentMappingExportIsPaid = sql`(
     UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
       'SUCCESS', 'COMPLETED', 'DONE', 'PAID', 'TXN_SUCCESS'
@@ -3022,6 +3076,11 @@ export async function downloadFeeStudentMappings(
       NULLIF(TRIM(COALESCE(${paymentModel.txnId}::text, '')), '') IS NOT NULL
       AND NULLIF(TRIM(COALESCE(${paymentModel.txnDate}::text, '')), '') IS NOT NULL
       AND COALESCE(${feeStudentMappingModel.amountPaid}, 0)
+        >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
+      AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
+    )
+    OR (
+      COALESCE(${feeStudentMappingModel.amountPaid}, 0)
         >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
       AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
     )
@@ -3065,11 +3124,23 @@ export async function downloadFeeStudentMappings(
       "Amount Configured (For Fee Heads / Components)":
         feeStructureComponentModel.amount,
       "Total Amount Configured (Per Fee Structure)": feeSlabTotalsSq.slabTotal,
-      "Total Amount To Pay": feeStudentMappingModel.totalPayable,
+      "Total Amount To Pay": sql<number>`CASE
+        WHEN ${feeStudentMappingExportIsPaid} THEN 0
+        ELSE GREATEST(
+          COALESCE(${feeStudentMappingModel.totalPayable}, 0)
+            - COALESCE(${feeStudentMappingModel.amountPaid}, 0),
+          0
+        )
+      END`,
 
-      // Payment Summary — amounts / status / payment & receipt fields only when export is Paid.
+      // Payment Summary — paid mappings show paid amount/status, while
+      // "Total Amount To Pay" above is the remaining payable balance.
       "Paid Amount": sql<number | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN ${paymentModel.amount}
+        WHEN ${feeStudentMappingExportIsPaid} THEN COALESCE(
+          ${feeStudentMappingModel.amountPaid},
+          ${paymentModel.amount},
+          0
+        )
         ELSE NULL
       END`,
       "Payment Status": sql<string>`CASE
@@ -3077,11 +3148,19 @@ export async function downloadFeeStudentMappings(
       END`,
       "Paid Date": sql<string | null>`CASE
         WHEN ${feeStudentMappingExportIsPaid}
-          THEN TO_CHAR(${paymentModel.txnDate}::date, 'DD/MM/YYYY')
+          THEN TO_CHAR(
+            COALESCE(
+              ${paymentModel.txnDate}::date,
+              ${feeStudentMappingModel.challanGeneratedAt}::date
+            ),
+            'DD/MM/YYYY'
+          )
         ELSE NULL
       END`,
       "Payment Mode": sql<string | null>`CASE
         WHEN ${paymentModel.paymentMode} IS NOT NULL THEN ${paymentModel.paymentMode}::text
+        WHEN ${latestOnlinePaymentSq.paymentMode} IS NOT NULL THEN ${latestOnlinePaymentSq.paymentMode}::text
+        WHEN ${feeStudentMappingExportIsPaid} THEN 'CASH'
         WHEN ${feeStudentMappingModel.receiptNumber} IS NOT NULL
           AND ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL THEN 'CASH'
         ELSE NULL
@@ -3091,17 +3170,25 @@ export async function downloadFeeStudentMappings(
       "Receipt / Challan Generated At":
         feeStudentMappingModel.challanGeneratedAt,
 
-      // Online Payment Details (blank when Pending)
-      "Online Payment Gateway Vendor": sql<string | null>`CASE
-        WHEN ${paymentModel.paymentGatewayVendor} IS NOT NULL THEN ${paymentModel.paymentGatewayVendor}::text
-        ELSE NULL
-      END`,
-      "Online Payment Order Id": sql<string | null>`CASE
-        WHEN ${paymentModel.orderId} IS NOT NULL THEN ${paymentModel.orderId}::text
-        ELSE NULL
-      END`,
-      "Online Payment Transaction Id": sql<string | null>`CASE
-        WHEN ${paymentModel.txnId} IS NOT NULL THEN ${paymentModel.txnId}::text
+      // Online Payment Details — show the LATEST online attempt (including
+      // pending / failed). Coalesce with the linked-payment join so manual
+      // success rows that aren't online (e.g. cash) don't shadow a real
+      // historical online attempt.
+      "Online Payment Gateway Vendor": sql<string | null>`COALESCE(
+        ${latestOnlinePaymentSq.paymentGatewayVendor}::text,
+        ${paymentModel.paymentGatewayVendor}::text
+      )`,
+      "Online Payment Order Id": sql<string | null>`COALESCE(
+        ${latestOnlinePaymentSq.orderId}::text,
+        ${paymentModel.orderId}::text
+      )`,
+      "Online Payment Transaction Id": sql<string | null>`COALESCE(
+        ${latestOnlinePaymentSq.txnId}::text,
+        ${paymentModel.txnId}::text
+      )`,
+      "Online Payment Status": sql<string | null>`CASE
+        WHEN ${latestOnlinePaymentSq.status} IS NOT NULL THEN ${latestOnlinePaymentSq.status}::text
+        WHEN ${paymentModel.paymentMode} = 'ONLINE' THEN ${paymentModel.status}::text
         ELSE NULL
       END`,
     })
@@ -3194,7 +3281,14 @@ export async function downloadFeeStudentMappings(
     )
     .leftJoin(
       paymentModel,
-      eq(paymentModel.id, feeStudentMappingModel.paymentId),
+      and(
+        eq(paymentModel.feeStudentMappingId, feeStudentMappingModel.id),
+        eq(paymentModel.isLinked, true),
+      ),
+    )
+    .leftJoin(
+      latestOnlinePaymentSq,
+      eq(latestOnlinePaymentSq.feeStudentMappingId, feeStudentMappingModel.id),
     )
     .orderBy(
       asc(feeStudentMappingModel.id),

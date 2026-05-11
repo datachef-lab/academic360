@@ -489,21 +489,20 @@ async function syncFeeStudentMapping(
     .from(feeStudentMappingModel)
     .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
 
-  // Update the payment fields, if done
-  let paymentId: number | null = null;
+  // Persist the legacy payment as a linked cash entry tied directly to the
+  // fee_student_mapping via payments.feeStudentMappingId / isLinked.
   if (amountPaid) {
-    const [savedPayment] = await db
-      .insert(paymentModel)
-      .values({
-        userId: user?.id,
-        context: "ADMISSION",
-        amount: feeStudentMapping.totalPayable,
-        status: "SUCCESS",
-        paymentMode: "CASH",
-        txnDate,
-      })
-      .returning();
-    paymentId = savedPayment?.id!;
+    await db.insert(paymentModel).values({
+      userId: user?.id,
+      feeStudentMappingId: feeStudentMapping.id!,
+      context: "ADMISSION",
+      amount: feeStudentMapping.totalPayable,
+      status: "SUCCESS",
+      paymentMode: "CASH",
+      isManualEntry: true,
+      isLinked: true,
+      txnDate,
+    });
   }
 
   // Legacy import: when challan is missing, persist `uid/01` or `uid/01-{feeCategoryCode}` (trimmed).
@@ -523,7 +522,6 @@ async function syncFeeStudentMapping(
       amountPaid: amountPaid ? feeStudentMapping.totalPayable : null,
       challanGeneratedAt: formatDate(txnDate) ?? new Date(),
       receiptNumber: finalReceiptNumber,
-      paymentId,
     })
     .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!))
     .returning();

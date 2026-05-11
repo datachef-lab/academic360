@@ -665,18 +665,21 @@ export const paymentCallbackHandler = async (
     let studentIdForRedirect: number | null = null;
 
     // For fees: attach student context for UI refresh after redirect.
-    const feeStudentMappingId = isFeeStudentMappingPaymentContext(
-      payment.context,
-    )
-      ? Number(
-          (
-            payment.gatewayResponse as
-              | { meta?: { feeStudentMappingId?: number | string } }
-              | null
-              | undefined
-          )?.meta?.feeStudentMappingId ?? 0,
-        ) || null
-      : null;
+    // Prefer the direct FK column on payments; fall back to legacy meta for
+    // any historical rows that pre-date the payments.feeStudentMappingId column.
+    const feeStudentMappingId = (() => {
+      if (!isFeeStudentMappingPaymentContext(payment.context)) return null;
+      if (payment.feeStudentMappingId) return payment.feeStudentMappingId;
+      const metaId = Number(
+        (
+          payment.gatewayResponse as
+            | { meta?: { feeStudentMappingId?: number | string } }
+            | null
+            | undefined
+        )?.meta?.feeStudentMappingId ?? 0,
+      );
+      return metaId || null;
+    })();
     if (feeStudentMappingId) {
       try {
         const [mapping] = await db

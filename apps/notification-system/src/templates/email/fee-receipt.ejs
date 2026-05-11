@@ -399,6 +399,11 @@
   const logoUrl = c.collegeLogoUrl ? String(c.collegeLogoUrl) : 'https://besc.academic360.app/api/api/v1/settings/file/4';
   const challanRef = c.receiptNumber ? String(c.receiptNumber).trim() : '';
   const challanDisplay = challanRef || '—';
+  /* Backend (fee-receipt-notification.service.ts) injects `className` already
+     sentence-cased (e.g. "Semester III"), plus optional `academicYear`. */
+  const classLabel = c.className ? String(c.className).trim() : '';
+  const academicYearLabel = c.academicYear ? String(c.academicYear).trim() : '';
+  const semesterPhrase = classLabel ? classLabel : '';
   const pdfFromPayload = c.paidChallanPdfUrl ? String(c.paidChallanPdfUrl).trim() : '';
   /* Fallback PDF link if backend merge dropped paidChallanPdfUrl but challan is present */
   const pdfUrlFallbackBase = 'https://besc.academic360.app';
@@ -428,13 +433,12 @@
 
         <p class="greeting">
           Dear <strong><%= displayName %></strong>,<br/><br/>
-          We are pleased to inform you that your fee payment has been successfully received and recorded in our system. Your challan has been updated accordingly.
+          Your fee payment<% if (semesterPhrase) { %> for <strong><%= semesterPhrase %></strong><% } %> has been successfully received. Click on the button below to download the paid copy of the challan.
         </p>
 
         <!-- CTA: paid challan PDF -->
         <div class="cta-wrap">
           <a href="<%- pdfUrl %>" class="cta-btn" target="_blank" rel="noopener noreferrer">Download Your Paid Challan</a>
-          <p class="cta-sub">Click on the above link to download your paid copy of the challan.</p>
         </div>
 
         <p class="greeting" style="margin-bottom:0; padding-top: 30px;">
