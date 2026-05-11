@@ -29,6 +29,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Package2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type { LibraryRackRow, LibraryRackUpsertBody } from "@/services/library-racks.service";
 import {
   createLibraryRack,
@@ -37,6 +39,17 @@ import {
   getLibraryRacks,
   updateLibraryRack,
 } from "@/services/library-racks.service";
+
+type LibraryRackSocketUpdate = {
+  id: string;
+  type: "library_rack_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  rackId: number;
+  rackName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   name: string;
@@ -61,8 +74,8 @@ function RowActions({
   onDelete,
 }: {
   row: LibraryRackRow;
-  onEdit: (id: number) => void;
-  onDelete: (row: LibraryRackRow) => void;
+  onEdit: (_id: number) => void;
+  onDelete: (_row: LibraryRackRow) => void;
 }) {
   return (
     <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
@@ -89,6 +102,10 @@ function RowActions({
 }
 
 export default function RacksMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryRackRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -132,6 +149,24 @@ export default function RacksMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_racks");
+
+    const handleUpdate = (data: LibraryRackSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_rack_update", handleUpdate);
+
+    return () => {
+      socket.off("library_rack_update", handleUpdate);
+      socket.emit("unsubscribe_library_racks");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const openCreate = () => {
     setEditingId(null);

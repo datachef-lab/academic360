@@ -166,6 +166,18 @@ export interface LibraryDocumentTypeUpdate {
   meta?: Record<string, unknown>;
 }
 
+export interface LibraryJournalTypeUpdate {
+  id: string;
+  type: "library_journal_type_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  journalTypeId: number;
+  journalTypeName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
 // Active user info interface
 interface ActiveUserInfo {
   id: number;
@@ -492,6 +504,32 @@ class SocketService {
           );
         } catch (error) {
           log.error("Error unsubscribing from library document types room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_journal_types", () => {
+        try {
+          socket.join("library_journal_types_page");
+          log.debug(
+            `Socket ${socket.id} joined room: library_journal_types_page`,
+          );
+        } catch (error) {
+          log.error("Error subscribing to library journal types room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_library_journal_types", () => {
+        try {
+          socket.leave("library_journal_types_page");
+          log.debug(
+            `Socket ${socket.id} left room: library_journal_types_page`,
+          );
+        } catch (error) {
+          log.error("Error unsubscribing from library journal types room", {
             error,
           });
         }
@@ -1305,6 +1343,52 @@ class SocketService {
       );
     } catch (error) {
       log.error("Error sending library document type update", { error });
+    }
+  }
+
+  sendLibraryJournalTypeUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    journalTypeId: number;
+    journalTypeName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library journal type update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const name = payload.journalTypeName.trim() || "Untitled journal type";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} journal type "${name}"`;
+
+      const update: LibraryJournalTypeUpdate = {
+        id: `library_journal_type_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_journal_type_update",
+        action: payload.action,
+        actorName: actor,
+        journalTypeId: payload.journalTypeId,
+        journalTypeName: name,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io
+        .to("library_journal_types_page")
+        .emit("library_journal_type_update", update);
+      log.debug(
+        `Library journal type update broadcasted to page room: ${message}`,
+      );
+    } catch (error) {
+      log.error("Error sending library journal type update", { error });
     }
   }
 }

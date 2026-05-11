@@ -10,6 +10,13 @@ import {
   updateJournalType,
   type JournalTypeUpsertInput,
 } from "@/features/library/services/journal-type.service.js";
+import { socketService } from "@/services/socketService.js";
+
+const journalTypeActorName = (req: Request): string => {
+  const u = req.user as { name?: string | null } | undefined;
+  const n = typeof u?.name === "string" ? u.name.trim() : "";
+  return n || "Someone";
+};
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -102,6 +109,13 @@ export const createJournalTypeController = async (
     }
 
     const id = await createJournalType(input);
+    socketService.sendLibraryJournalTypeUpdate({
+      action: "CREATED",
+      actorName: journalTypeActorName(req),
+      journalTypeId: id,
+      journalTypeName: input.name.trim(),
+      meta: { journalTypeId: id },
+    });
     res
       .status(201)
       .json(
@@ -139,6 +153,13 @@ export const updateJournalTypeController = async (
     }
 
     await updateJournalType(id, input);
+    socketService.sendLibraryJournalTypeUpdate({
+      action: "UPDATED",
+      actorName: journalTypeActorName(req),
+      journalTypeId: id,
+      journalTypeName: input.name.trim(),
+      meta: { journalTypeId: id },
+    });
     res
       .status(200)
       .json(
@@ -170,7 +191,15 @@ export const deleteJournalTypeController = async (
       throw new ApiError(404, "Journal type not found.");
     }
 
+    const name = existing.name;
     await deleteJournalType(id);
+    socketService.sendLibraryJournalTypeUpdate({
+      action: "DELETED",
+      actorName: journalTypeActorName(req),
+      journalTypeId: id,
+      journalTypeName: name,
+      meta: { journalTypeId: id },
+    });
     res
       .status(200)
       .json(
