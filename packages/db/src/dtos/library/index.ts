@@ -149,7 +149,7 @@ export interface OldStatus {
     readonly id: number;
     statusName: string;
     issue: boolean | null;
-    issueTo: string | number;
+    issueto: string | number;
     chkreturn: boolean | null;
     chkremove: boolean | null;
 }

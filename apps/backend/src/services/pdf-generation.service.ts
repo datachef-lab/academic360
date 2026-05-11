@@ -752,6 +752,7 @@ export class PdfGenerationService {
       identifier: string;
       seatNumber: string;
     }>;
+    collegeLogo?: string;
   }): Promise<Buffer> {
     const startTime = Date.now();
     let page: any = null;
@@ -761,6 +762,11 @@ export class PdfGenerationService {
         "[PDF GENERATION] Starting Exam Attendance Sheet PDF generation in memory",
         formData.roomNumber,
       );
+
+      // Embed logo as data URL to avoid missing image during puppeteer rendering
+      const collegeLogoUrl = `https://besc.academic360.app/api/api/v1/settings/file/4`;
+      const collegeLogoDataUrl = await this.fetchImageAsDataUrl(collegeLogoUrl);
+      (formData as any).collegeLogo = collegeLogoDataUrl || collegeLogoUrl;
 
       // Load template (cached)
       const templateContent = await this.loadTemplate(

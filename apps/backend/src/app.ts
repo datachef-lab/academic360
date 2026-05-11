@@ -198,6 +198,13 @@ import statusRouter from "@/features/library/routes/status.route.js";
 import journalTypeRouter from "@/features/library/routes/journal-type.route.js";
 import libraryArticleRouter from "@/features/library/routes/library-article.route.js";
 import libraryDocumentTypeRouter from "@/features/library/routes/library-document-type.route.js";
+import bindingRouter from "@/features/library/routes/binding.route.js";
+import borrowingTypeRouter from "@/features/library/routes/borrowing-type.route.js";
+import enclosureRouter from "@/features/library/routes/enclosure.route.js";
+import entryModeRouter from "@/features/library/routes/entry-mode.route.js";
+import libraryPeriodRouter from "@/features/library/routes/library-period.route.js";
+import seriesRouter from "@/features/library/routes/series.route.js";
+import publisherRouter from "@/features/library/routes/publisher.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -643,6 +650,13 @@ app.use("/api/library/statuses", statusRouter);
 app.use("/api/library/journal-types", journalTypeRouter);
 app.use("/api/library/articles", libraryArticleRouter);
 app.use("/api/library/document-types", libraryDocumentTypeRouter);
+app.use("/api/library/bindings", bindingRouter);
+app.use("/api/library/borrowing-types", borrowingTypeRouter);
+app.use("/api/library/enclosures", enclosureRouter);
+app.use("/api/library/entry-modes", entryModeRouter);
+app.use("/api/library/periods", libraryPeriodRouter);
+app.use("/api/library/series", seriesRouter);
+app.use("/api/library/publishers", publisherRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 

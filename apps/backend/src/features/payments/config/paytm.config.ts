@@ -17,8 +17,7 @@ export const paytmConfig = {
   /** `email` claim for settlement JWT (see settlement API auth docs). */
   settlementJwtEmail:
     process.env.PAYTM_SETTLEMENT_JWT_EMAIL ?? "settlement@merchant.local",
-  environment:
-    process.env.PAYTM_ENVIRONMENT === PRODUCTION ? PRODUCTION : STAGING,
+  environment: process.env.PAYTM_ENVIRONMENT! as "PRODUCTION" | "STAGING",
 } as const;
 
 export function isPaytmConfigured(): boolean {
