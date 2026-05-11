@@ -10,6 +10,13 @@ import {
   updateStatus,
   type StatusUpsertInput,
 } from "@/features/library/services/status.service.js";
+import { socketService } from "@/services/socketService.js";
+
+const statusActorName = (req: Request): string => {
+  const u = req.user as { name?: string | null } | undefined;
+  const n = typeof u?.name === "string" ? u.name.trim() : "";
+  return n || "Someone";
+};
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -108,6 +115,13 @@ export const createStatusController = async (
     }
 
     const id = await createStatus(input);
+    socketService.sendLibraryStatusUpdate({
+      action: "CREATED",
+      actorName: statusActorName(req),
+      statusId: id,
+      statusName: input.name.trim(),
+      meta: { statusId: id },
+    });
     res
       .status(201)
       .json(
@@ -140,6 +154,13 @@ export const updateStatusController = async (
     }
 
     await updateStatus(id, input);
+    socketService.sendLibraryStatusUpdate({
+      action: "UPDATED",
+      actorName: statusActorName(req),
+      statusId: id,
+      statusName: input.name.trim(),
+      meta: { statusId: id },
+    });
     res
       .status(200)
       .json(
@@ -166,7 +187,15 @@ export const deleteStatusController = async (
       throw new ApiError(404, "Status not found.");
     }
 
+    const name = existing.name;
     await deleteStatus(id);
+    socketService.sendLibraryStatusUpdate({
+      action: "DELETED",
+      actorName: statusActorName(req),
+      statusId: id,
+      statusName: name,
+      meta: { statusId: id },
+    });
     res
       .status(200)
       .json(
