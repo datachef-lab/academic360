@@ -396,34 +396,25 @@ export async function createFeePayment(payment: {
       );
     }
 
-    // If a PENDING online payment already exists for this mapping, reuse the same row but
-    // sync orderId / amount / remarks to this initiation — the handler always generates a
-    // fresh orderId for Paytm; returning the old row without updating caused callbacks to
-    // reference an order id that was never stored (404 Payment not found).
+    // Each payment attempt must produce a brand-new row with its own orderId so that:
+    //  - late callbacks for previous attempts can still resolve the original row,
+    //  - we keep a full ledger of attempts,
+    //  - the orderId we hand to Paytm is the same one stored in our DB.
+    // Only a SUCCESS for this mapping blocks re-initiation.
     if (mapping.paymentId) {
       const [existingPayment] = await tx
-        .select()
+        .select({ id: paymentModel.id, status: paymentModel.status })
         .from(paymentModel)
         .where(eq(paymentModel.id, mapping.paymentId));
 
-      if (existingPayment?.status === "PENDING" && existingPayment.orderId) {
-        const [updated] = await tx
-          .update(paymentModel)
-          .set({
-            orderId: payment.orderId,
-            amount: Number.isFinite(amountNum) ? amountNum : 0,
-            remarks: payment.remarks ?? null,
-          })
-          .where(eq(paymentModel.id, existingPayment.id))
-          .returning();
-        return updated ?? existingPayment;
-      }
-      // If existing payment is SUCCESS, block re-initiation
       if (existingPayment?.status === "SUCCESS") {
         throw new Error(
           `Payment already completed for fee mapping ${payment.feeStudentMappingId}`,
         );
       }
+      // PENDING / FAILED / anything else → fall through and insert a new row.
+      // We deliberately leave the old row untouched so any in-flight Paytm callback
+      // referencing its orderId still finds its source-of-truth record.
     }
 
     let resolvedUserId: number | null = null;
@@ -651,26 +642,23 @@ export async function updatePaymentByOrderId(
       updates.status === "SUCCESS" &&
       updated.id
     ) {
-      // Lock the fee mapping row too to prevent double-credit
-      const [mapping] = await tx
-        .select()
-        .from(feeStudentMappingModel)
-        .where(eq(feeStudentMappingModel.paymentId, updated.id))
-        .for("update");
+      // Lock the fee mapping row too to prevent double-credit.
+      // A stale Paytm callback can arrive after a newer attempt has replaced
+      // mapping.paymentId; in that case we mark this payment row SUCCESS above,
+      // but we must not re-point the mapping or increment amountPaid again.
+      const [target] = meta.feeStudentMappingId
+        ? await tx
+            .select()
+            .from(feeStudentMappingModel)
+            .where(eq(feeStudentMappingModel.id, meta.feeStudentMappingId))
+            .for("update")
+        : await tx
+            .select()
+            .from(feeStudentMappingModel)
+            .where(eq(feeStudentMappingModel.paymentId, updated.id))
+            .for("update");
 
-      const target =
-        mapping ??
-        (meta.feeStudentMappingId
-          ? (
-              await tx
-                .select()
-                .from(feeStudentMappingModel)
-                .where(eq(feeStudentMappingModel.id, meta.feeStudentMappingId))
-                .for("update")
-            )[0]
-          : undefined);
-
-      if (target) {
+      if (target && target.paymentId === updated.id) {
         const amountPaid = Number(updated.amount);
         const existingPaid = target.amountPaid ?? 0;
         const newTotalPaid = existingPaid + amountPaid;
@@ -1075,8 +1063,8 @@ export async function deletePayment(id: number) {
 const ORDER_ID_PREFIX = "ap";
 
 /**
- * Generates order IDs strictly as: AS1000, AS1001, AS1002, ...
- * Uses a DB sequence and first syncs it with the current max numeric AS order id
+ * Generates order IDs strictly as: ap1000, ap1001, ap1002, ...
+ * Uses a DB sequence and first syncs it with the current max numeric ap order id
  * stored in `payments.order_id` to avoid reusing old ids after resets/restores.
  */
 export async function generateOrderId(): Promise<string> {
@@ -1084,16 +1072,17 @@ export async function generateOrderId(): Promise<string> {
     sql`CREATE SEQUENCE IF NOT EXISTS payment_order_id_seq START WITH 1000 INCREMENT BY 1`,
   );
 
-  // Ensure sequence continues after the highest existing AS<number> order id.
+  // Ensure sequence continues after the highest existing ap<number> order id.
+  // Use case-insensitive matching so any legacy uppercase ids (AP1000, AS1000) are also respected.
   await db.execute(sql`
     SELECT setval(
       'payment_order_id_seq',
       GREATEST(
         COALESCE((SELECT last_value::bigint FROM payment_order_id_seq), 999),
         COALESCE((
-          SELECT MAX((regexp_match(order_id, '^AS([0-9]+)$'))[1]::bigint)
+          SELECT MAX((regexp_match(order_id, '^[a-zA-Z]+([0-9]+)$'))[1]::bigint)
           FROM payments
-          WHERE order_id ~ '^AS[0-9]+$'
+          WHERE order_id ~* '^[a-zA-Z]+[0-9]+$'
         ), 999)
       ),
       true
