@@ -2336,21 +2336,23 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                               Loading approvers...
                             </div>
                           ) : null}
-                          {filteredAdminStaffUsers.map((u) => (
-                            <SelectItem key={u.id} value={u.id?.toString() ?? ""}>
-                              <div className="flex items-center gap-2">
-                                <span>{u.name}</span>
-                                {u.type && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] px-1.5 py-0 h-4"
-                                  >
-                                    {u.type}
-                                  </Badge>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {[...filteredAdminStaffUsers]
+                            .sort((a, b) => (a?.name || "").localeCompare(b?.name || ""))
+                            .map((u) => (
+                              <SelectItem key={u.id} value={u.id?.toString() ?? ""}>
+                                <div className="flex items-center gap-2">
+                                  <span>{u.name}</span>
+                                  {u.type && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-[10px] px-1.5 py-0 h-4"
+                                    >
+                                      {u.type}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
