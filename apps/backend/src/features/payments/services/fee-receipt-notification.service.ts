@@ -6,6 +6,7 @@ import {
   feeStructureModel,
   feeStudentMappingModel,
   notificationMasterModel,
+  paymentModel,
   receiptTypeModel,
   studentModel,
   userModel,
@@ -78,6 +79,8 @@ export type FeeReceiptEmailRow = {
 export async function loadFeeReceiptEmailRowByPaymentId(
   paymentId: number,
 ): Promise<FeeReceiptEmailRow | null> {
+  // payments.feeStudentMappingId now points to the fee mapping directly,
+  // so resolve it via the payment row.
   const [row] = await db
     .select({
       userId: userModel.id,
@@ -91,7 +94,11 @@ export async function loadFeeReceiptEmailRowByPaymentId(
       receiptNumber: feeStudentMappingModel.receiptNumber,
       challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
     })
-    .from(feeStudentMappingModel)
+    .from(paymentModel)
+    .innerJoin(
+      feeStudentMappingModel,
+      eq(feeStudentMappingModel.id, paymentModel.feeStudentMappingId),
+    )
     .innerJoin(
       studentModel,
       eq(feeStudentMappingModel.studentId, studentModel.id),
@@ -110,7 +117,7 @@ export async function loadFeeReceiptEmailRowByPaymentId(
       eq(academicYearModel.id, feeStructureModel.academicYearId),
     )
     .leftJoin(classModel, eq(classModel.id, feeStructureModel.classId))
-    .where(eq(feeStudentMappingModel.paymentId, paymentId))
+    .where(eq(paymentModel.id, paymentId))
     .limit(1);
 
   return row ?? null;

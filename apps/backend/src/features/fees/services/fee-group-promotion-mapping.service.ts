@@ -577,7 +577,10 @@ export const getAllFeeGroupPromotionMappings = async (
           .from(feeStudentMappingModel)
           .leftJoin(
             paymentModel,
-            eq(paymentModel.id, feeStudentMappingModel.paymentId),
+            and(
+              eq(paymentModel.feeStudentMappingId, feeStudentMappingModel.id),
+              eq(paymentModel.isLinked, true),
+            ),
           )
           .where(
             inArray(
@@ -876,7 +879,10 @@ async function recalculateFeeStudentMappingsForPromotionMapping(
       .from(feeStudentMappingModel)
       .leftJoin(
         paymentModel,
-        eq(paymentModel.id, feeStudentMappingModel.paymentId),
+        and(
+          eq(paymentModel.feeStudentMappingId, feeStudentMappingModel.id),
+          eq(paymentModel.isLinked, true),
+        ),
       )
       .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, mappingId));
 

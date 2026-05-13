@@ -9,6 +9,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { getFeeStudentMappingById } from "@/features/fees/services/fee-student-mapping.service.js";
 import {
   ensureFeeReceiptAfterSuccessfulFeePayment,
+  findLinkedPaymentByFeeStudentMappingId,
   findPaymentByOrderId,
 } from "./payment.service.js";
 import { sendFeeReceiptEmailForPaymentId } from "./fee-receipt-notification.service.js";
@@ -189,8 +190,11 @@ export async function loadFeePaymentMarkingByReceiptNumber(params: {
   const parentName =
     fatherRecord?.fatherName ?? motherRecord?.fatherName ?? null;
 
+  // Marking UI shows the canonical (linked) payment row for this mapping.
+  // If none is linked yet (no successful attempt / no manual entry), show nothing.
+  const linkedPayment = await findLinkedPaymentByFeeStudentMappingId(row.id);
   const paymentEntry = await getPaymentEntryForMarking(
-    mapping?.paymentId ?? null,
+    linkedPayment?.id ?? null,
   );
 
   return {
@@ -240,13 +244,11 @@ export async function receiveCashFeePayment(params: {
     id: number;
     studentId: number;
     totalPayable: number | null;
-    paymentId: number | null;
   }>(sql`
     SELECT
       id,
       student_id_fk as "studentId",
-      total_payable as "totalPayable",
-      payment_id_fk as "paymentId"
+      total_payable as "totalPayable"
     FROM public.fee_student_mappings
     WHERE upper(replace(trim(receipt_number), '-', '/')) = ${receiptNumber}
     LIMIT 1
@@ -264,14 +266,33 @@ export async function receiveCashFeePayment(params: {
       .from(studentModel)
       .where(eq(studentModel.id, row.studentId));
 
-    const priorPaymentId = row.paymentId ?? null;
+    // Demote any prior linked payment (manual entries have higher precedence).
+    const [priorLinked] = await tx
+      .select({ id: paymentModel.id })
+      .from(paymentModel)
+      .where(
+        and(
+          eq(paymentModel.feeStudentMappingId, row.id),
+          eq(paymentModel.isLinked, true),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
+    if (priorLinked) {
+      await tx
+        .update(paymentModel)
+        .set({ isLinked: false })
+        .where(eq(paymentModel.id, priorLinked.id));
+    }
 
     // Cash marking always creates a new payment row (e.g. failed online attempt stays in DB);
-    // the mapping points at this new SUCCESS payment.
+    // this row becomes the linked / canonical one for the mapping.
     const [created] = await tx
       .insert(paymentModel)
       .values({
         userId: student?.userId ?? undefined,
+        feeStudentMappingId: row.id,
         context: "FEE",
         amount: amountToRecord,
         paymentMode: "CASH",
@@ -280,29 +301,25 @@ export async function receiveCashFeePayment(params: {
         status: "SUCCESS",
         orderId: null,
         isManualEntry: true,
+        isLinked: true,
         txnDate: receiptDateIso,
         recordedBy: params.recordedByUserId,
         remarks: params.remarks ?? null,
         gatewayResponse: {
           meta: {
             feeStudentMappingId: row.id,
-            ...(priorPaymentId
-              ? { priorChallanPaymentId: priorPaymentId }
-              : {}),
+            ...(priorLinked ? { priorChallanPaymentId: priorLinked.id } : {}),
           },
           cash: { receiptNumber, receiptDateIso },
         },
       })
       .returning();
 
-    const paymentId = created?.id ?? null;
+    void created;
 
     await tx
       .update(feeStudentMappingModel)
-      .set({
-        amountPaid: amountToRecord,
-        paymentId: paymentId ?? undefined,
-      })
+      .set({ amountPaid: amountToRecord })
       .where(eq(feeStudentMappingModel.id, row.id));
   });
 
@@ -337,16 +354,19 @@ export async function loadFeePaymentMarkingByOrderId(params: {
   const payment = await findPaymentByOrderId(orderId);
   if (!payment?.id) return { success: false, error: "Payment not found" };
 
-  // IMPORTANT: For marking UI, we only consider an orderId "found" if the mapping
-  // is already linked via `fee_student_mappings.payment_id_fk`. Do not fall back to
-  // gatewayResponse.meta since that can point to mappings not yet linked.
+  // Each payment row is now directly tied to its fee_student_mapping via
+  // payments.feeStudentMappingId — no need to require linkage on the mapping.
+  const fsmId = payment.feeStudentMappingId ?? null;
+  if (!fsmId)
+    return { success: false, error: "Fee mapping not found for payment" };
+
   const [mappingRow] = await db
     .select({
       id: feeStudentMappingModel.id,
       studentId: feeStudentMappingModel.studentId,
     })
     .from(feeStudentMappingModel)
-    .where(eq(feeStudentMappingModel.paymentId, payment.id));
+    .where(eq(feeStudentMappingModel.id, fsmId));
   if (!mappingRow?.id)
     return { success: false, error: "Fee mapping not found for payment" };
 
@@ -488,11 +508,14 @@ export async function markOnlineFeePaymentSuccessManual(params: {
 
   await db.transaction(async (tx) => {
     const vendor = String(params.paymentGatewayVendor ?? "").trim();
+    // Mark this row as SUCCESS + manual + canonical link. Manual entries take
+    // precedence so we demote any other isLinked=true row for the same mapping.
     await tx
       .update(paymentModel)
       .set({
         status: "SUCCESS",
         isManualEntry: true,
+        isLinked: true,
         recordedBy: params.recordedByUserId,
         remarks: params.remarks ?? payment.remarks ?? null,
         txnDate: paymentDateOnly,
@@ -506,21 +529,36 @@ export async function markOnlineFeePaymentSuccessManual(params: {
         ),
       );
 
-    const [mapping] = await tx
-      .select()
-      .from(feeStudentMappingModel)
-      .where(eq(feeStudentMappingModel.paymentId, payment.id));
-
-    if (mapping?.id) {
-      const totalPayable = Number(mapping.totalPayable ?? 0);
-      const amountToSet = Number.isFinite(totalPayable) ? totalPayable : 0;
+    const fsmId = payment.feeStudentMappingId ?? null;
+    if (fsmId) {
+      // Demote any other linked row for the same mapping.
       await tx
-        .update(feeStudentMappingModel)
-        .set({
-          amountPaid: amountToSet,
-          paymentId: payment.id,
+        .update(paymentModel)
+        .set({ isLinked: false })
+        .where(
+          and(
+            eq(paymentModel.feeStudentMappingId, fsmId),
+            eq(paymentModel.isLinked, true),
+            sql`${paymentModel.id} <> ${payment.id}`,
+          ),
+        );
+
+      const [mapping] = await tx
+        .select({
+          id: feeStudentMappingModel.id,
+          totalPayable: feeStudentMappingModel.totalPayable,
         })
-        .where(eq(feeStudentMappingModel.id, mapping.id));
+        .from(feeStudentMappingModel)
+        .where(eq(feeStudentMappingModel.id, fsmId));
+
+      if (mapping?.id) {
+        const totalPayable = Number(mapping.totalPayable ?? 0);
+        const amountToSet = Number.isFinite(totalPayable) ? totalPayable : 0;
+        await tx
+          .update(feeStudentMappingModel)
+          .set({ amountPaid: amountToSet })
+          .where(eq(feeStudentMappingModel.id, mapping.id));
+      }
     }
   });
 

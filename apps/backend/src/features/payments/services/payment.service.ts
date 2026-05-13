@@ -11,11 +11,9 @@ import { and, eq, sql } from "drizzle-orm";
 import type {
   PaytmPCFDetailsRequest,
   PaytmPCFDetailsResponse,
-  PaytmBINDetailsResponse,
   PaytmTransactionStatusResponse,
 } from "@repo/db/dtos/payments";
 import {
-  getPaytmBINDetails,
   getPaytmMerchantDetails,
   getPaytmPCFDetails,
   getPaytmSettlementOrderDetail,
@@ -122,17 +120,41 @@ export async function ensureFeeReceiptAfterSuccessfulFeePayment(
     return;
   }
   try {
-    const [mapRow] = await db
-      .select({ id: feeStudentMappingModel.id })
-      .from(feeStudentMappingModel)
-      .where(eq(feeStudentMappingModel.paymentId, payment.id))
+    // The receipt is tied to the fee_student_mapping, which is now stored
+    // directly on the payment row (payments.feeStudentMappingId).
+    const [row] = await db
+      .select({ feeStudentMappingId: paymentModel.feeStudentMappingId })
+      .from(paymentModel)
+      .where(eq(paymentModel.id, payment.id))
       .limit(1);
-    if (mapRow) {
-      await issueFeeStudentMappingReceiptIfMissing(mapRow.id);
+    if (row?.feeStudentMappingId) {
+      await issueFeeStudentMappingReceiptIfMissing(row.feeStudentMappingId);
     }
   } catch (e) {
     console.error("[FEE] ensureFeeReceiptAfterSuccessfulFeePayment failed", e);
   }
+}
+
+/**
+ * Returns the canonical linked payment row for a fee_student_mapping.
+ * There can be many payment rows per fee mapping; only ONE should have
+ * `isLinked = true` (set by either the first successful Paytm callback or by a
+ * manual entry created from the marking UI / cash receipt flow).
+ */
+export async function findLinkedPaymentByFeeStudentMappingId(
+  feeStudentMappingId: number,
+): Promise<typeof paymentModel.$inferSelect | null> {
+  const [payment] = await db
+    .select()
+    .from(paymentModel)
+    .where(
+      and(
+        eq(paymentModel.feeStudentMappingId, feeStudentMappingId),
+        eq(paymentModel.isLinked, true),
+      ),
+    )
+    .limit(1);
+  return payment ?? null;
 }
 
 function logPaytmEnrich(
@@ -382,10 +404,7 @@ export async function createFeePayment(payment: {
   return await db.transaction(async (tx) => {
     // Lock the fee-student-mapping row to prevent concurrent payment initiation
     const [mapping] = await tx
-      .select({
-        id: feeStudentMappingModel.id,
-        paymentId: feeStudentMappingModel.paymentId,
-      })
+      .select({ id: feeStudentMappingModel.id })
       .from(feeStudentMappingModel)
       .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId))
       .for("update");
@@ -396,25 +415,27 @@ export async function createFeePayment(payment: {
       );
     }
 
-    // Each payment attempt must produce a brand-new row with its own orderId so that:
-    //  - late callbacks for previous attempts can still resolve the original row,
-    //  - we keep a full ledger of attempts,
-    //  - the orderId we hand to Paytm is the same one stored in our DB.
-    // Only a SUCCESS for this mapping blocks re-initiation.
-    if (mapping.paymentId) {
-      const [existingPayment] = await tx
-        .select({ id: paymentModel.id, status: paymentModel.status })
-        .from(paymentModel)
-        .where(eq(paymentModel.id, mapping.paymentId));
+    // Each payment attempt produces a brand-new row with its own orderId.
+    // Only an existing SUCCESS + isLinked=true row for this mapping blocks
+    // re-initiation. All other prior rows (PENDING / FAILED / unlinked SUCCESS)
+    // are deliberately left untouched so any in-flight Paytm callback for
+    // their orderId still resolves to its source-of-truth record.
+    const [linkedSuccess] = await tx
+      .select({ id: paymentModel.id })
+      .from(paymentModel)
+      .where(
+        and(
+          eq(paymentModel.feeStudentMappingId, mapping.id),
+          eq(paymentModel.isLinked, true),
+          eq(paymentModel.status, "SUCCESS"),
+        ),
+      )
+      .limit(1);
 
-      if (existingPayment?.status === "SUCCESS") {
-        throw new Error(
-          `Payment already completed for fee mapping ${payment.feeStudentMappingId}`,
-        );
-      }
-      // PENDING / FAILED / anything else → fall through and insert a new row.
-      // We deliberately leave the old row untouched so any in-flight Paytm callback
-      // referencing its orderId still finds its source-of-truth record.
+    if (linkedSuccess) {
+      throw new Error(
+        `Payment already completed for fee mapping ${payment.feeStudentMappingId}`,
+      );
     }
 
     let resolvedUserId: number | null = null;
@@ -430,25 +451,20 @@ export async function createFeePayment(payment: {
       .insert(paymentModel)
       .values({
         userId: resolvedUserId ?? undefined,
+        feeStudentMappingId: payment.feeStudentMappingId,
         context: "ADMISSION",
         amount: Number.isFinite(amountNum) ? amountNum : 0,
         paymentMode: "ONLINE",
         paymentGatewayVendor: payment.gatewayName ?? "PAYTM",
         orderId: payment.orderId,
         status: "PENDING",
+        isLinked: false,
         remarks: payment.remarks ?? null,
         gatewayResponse: {
           meta: { feeStudentMappingId: payment.feeStudentMappingId },
         } satisfies GatewayResponseShape,
       })
       .returning();
-
-    if (newPayment?.id) {
-      await tx
-        .update(feeStudentMappingModel)
-        .set({ paymentId: newPayment.id })
-        .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId));
-    }
 
     return newPayment;
   });
@@ -567,6 +583,15 @@ export async function updatePaymentByOrderId(
       throw new Error(`Payment not found for orderId: ${orderId}`);
     }
 
+    // Manual entries have higher precedence than gateway callbacks; the gateway
+    // is not allowed to overwrite a row that has already been recorded manually.
+    if (existingPayment.isManualEntry) {
+      console.log(
+        `Payment ${orderId} is a manual entry; ignoring gateway callback`,
+      );
+      return existingPayment;
+    }
+
     // Idempotency: skip if already processed with same txnId
     if (
       existingPayment.txnId &&
@@ -597,6 +622,7 @@ export async function updatePaymentByOrderId(
       (existingPayment.txnDate as string | undefined) ??
       null;
 
+    // Step 1: Always persist the row's latest status / txn details first.
     const [updated] = await tx
       .update(paymentModel)
       .set(
@@ -637,38 +663,54 @@ export async function updatePaymentByOrderId(
       }
     }
 
+    // Step 2: For a SUCCESS callback on a fee/admission payment, try to link.
+    //   - If another payment row for the same fee mapping is already
+    //     `isLinked = true`, this one becomes a saved-but-dead success
+    //     (audit only). The mapping is NOT re-credited.
+    //   - Otherwise this row becomes the canonical one for the mapping:
+    //     set `isLinked = true` and write `amountPaid = this.amount` on the mapping.
     if (
       isFeeStudentMappingPaymentContext(updated?.context ?? null) &&
       updates.status === "SUCCESS" &&
-      updated.id
+      updated?.id
     ) {
-      // Lock the fee mapping row too to prevent double-credit.
-      // A stale Paytm callback can arrive after a newer attempt has replaced
-      // mapping.paymentId; in that case we mark this payment row SUCCESS above,
-      // but we must not re-point the mapping or increment amountPaid again.
-      const [target] = meta.feeStudentMappingId
-        ? await tx
-            .select()
-            .from(feeStudentMappingModel)
-            .where(eq(feeStudentMappingModel.id, meta.feeStudentMappingId))
-            .for("update")
-        : await tx
-            .select()
-            .from(feeStudentMappingModel)
-            .where(eq(feeStudentMappingModel.paymentId, updated.id))
-            .for("update");
+      const fsmId =
+        updated.feeStudentMappingId ?? meta.feeStudentMappingId ?? null;
+      if (fsmId) {
+        const [mapping] = await tx
+          .select({ id: feeStudentMappingModel.id })
+          .from(feeStudentMappingModel)
+          .where(eq(feeStudentMappingModel.id, fsmId))
+          .for("update");
 
-      if (target && target.paymentId === updated.id) {
-        const amountPaid = Number(updated.amount);
-        const existingPaid = target.amountPaid ?? 0;
-        const newTotalPaid = existingPaid + amountPaid;
-        await tx
-          .update(feeStudentMappingModel)
-          .set({
-            amountPaid: newTotalPaid,
-            paymentId: updated.id,
-          })
-          .where(eq(feeStudentMappingModel.id, target.id));
+        if (mapping) {
+          const [alreadyLinked] = await tx
+            .select({ id: paymentModel.id })
+            .from(paymentModel)
+            .where(
+              and(
+                eq(paymentModel.feeStudentMappingId, mapping.id),
+                eq(paymentModel.isLinked, true),
+              ),
+            )
+            .limit(1);
+
+          if (!alreadyLinked) {
+            await tx
+              .update(paymentModel)
+              .set({ isLinked: true })
+              .where(eq(paymentModel.id, updated.id));
+
+            await tx
+              .update(feeStudentMappingModel)
+              .set({ amountPaid: Number(updated.amount) || 0 })
+              .where(eq(feeStudentMappingModel.id, mapping.id));
+          } else {
+            console.log(
+              `[FEE] Payment ${orderId} succeeded for fee_mapping ${mapping.id}, but another payment is already linked — kept as audit-only.`,
+            );
+          }
+        }
       }
     }
 
@@ -678,88 +720,6 @@ export async function updatePaymentByOrderId(
   await ensureFeeReceiptAfterSuccessfulFeePayment(updatedPayment);
 
   return updatedPayment;
-}
-
-function mapBinBodyToPaymentColumns(
-  body: PaytmBINDetailsResponse["body"],
-): Record<string, unknown> {
-  const b = body.binDetail ?? ({} as Record<string, unknown>);
-  return omitUndefined({
-    bin: (b as { bin?: string }).bin,
-    binIssuingBank: (b as { issuingBank?: string }).issuingBank,
-    binIssuingBankCode: (b as { issuingBankCode?: string }).issuingBankCode,
-    binPaymentMode: (b as { paymentMode?: string }).paymentMode,
-    binChannelName: (b as { channelName?: string }).channelName,
-    binChannelCode: (b as { channelCode?: string }).channelCode,
-    binCnMin: (b as { cnMin?: string }).cnMin,
-    binCnMax: (b as { cnMax?: string }).cnMax,
-    binCvvR: (b as { cvvR?: string }).cvvR,
-    binCvvL: (b as { cvvL?: string }).cvvL,
-    binExpR: (b as { expR?: string }).expR,
-    isbinIndian: (b as { IsIndian?: string }).IsIndian,
-    isbinActive: (b as { IsActive?: string }).IsActive,
-    binCountryCode: (b as { countryCode?: string }).countryCode,
-    binCountryName: (b as { countryName?: string }).countryName,
-    binCountryNumericCode: (b as { countryNumericCode?: string })
-      .countryNumericCode,
-    binCurrencyCode: (b as { currencyCode?: string }).currencyCode,
-    binCurrencyName: (b as { currencyName?: string }).currencyName,
-    binCurrencyNumericCode: (b as { currencyNumericCode?: string })
-      .currencyNumericCode,
-    binCurrencySymbol: (b as { currencySymbol?: string }).currencySymbol,
-    isBinEligibleForCoft: (b as { isEligibleForCoft?: boolean })
-      .isEligibleForCoft,
-    isBinCoftPaymentSupported: (b as { isCoftPaymentSupported?: boolean })
-      .isCoftPaymentSupported,
-    isBinEligibleForAltId: (b as { isEligibleForAltId?: boolean })
-      .isEligibleForAltId,
-    isBinAltIdPaymentSupported: (b as { isAltIdPaymentSupported?: boolean })
-      .isAltIdPaymentSupported,
-    hasLowSuccessRateStatus: (
-      body.hasLowSuccessRate as { status?: boolean } | undefined
-    )?.status,
-    hasLowSuccessRateMsg: (
-      body.hasLowSuccessRate as { msg?: string } | undefined
-    )?.msg,
-    IsEmiAvailable:
-      typeof (body as { IsEmiAvailable?: string }).IsEmiAvailable === "string"
-        ? (body as { IsEmiAvailable: string }).IsEmiAvailable.toLowerCase() ===
-          "true"
-        : undefined,
-    iconUrl: (body as { iconUrl?: string }).iconUrl,
-    errorMessage: (body as { errorMessage?: string }).errorMessage,
-    isSubscriptionAvailable: (body as { isSubscriptionAvailable?: boolean })
-      .isSubscriptionAvailable,
-    isHybridDisabled: (body as { isHybridDisabled?: boolean }).isHybridDisabled,
-    prepaidCard: (body as { prepaidCard?: boolean }).prepaidCard
-      ? "true"
-      : undefined,
-    prepaidCardMaxAmount: (body as { prepaidCardMaxAmount?: string })
-      .prepaidCardMaxAmount,
-    nativeOtpEligible: (body as { nativeOtpEligible?: string })
-      .nativeOtpEligible,
-  });
-}
-
-function extractBinFromGatewayResponse(
-  gatewayResponse: unknown,
-): string | null {
-  const g = gatewayResponse as Record<string, unknown> | null | undefined;
-  if (!g || typeof g !== "object") return null;
-  const candidates = [
-    g.BIN,
-    g.bin,
-    g.cardBin,
-    g.CARD_BIN,
-    (g.cardNumber as string | undefined)?.slice(0, 9),
-  ];
-  for (const c of candidates) {
-    if (typeof c === "string") {
-      const digits = c.replace(/\D/g, "");
-      if (digits.length >= 9) return digits.slice(0, 9);
-    }
-  }
-  return null;
 }
 
 export interface EnrichPaytmPaymentOptions {
@@ -863,53 +823,6 @@ export async function enrichPaymentWithPaytmDetails(
       "Missing txnToken (required for merchant/PCF)";
     paytmSnapshot.pcfError =
       paytmSnapshot.pcfError ?? "Missing txnToken (required for merchant/PCF)";
-  }
-
-  // BIN details (requires txnToken + BIN first 9 digits)
-  if (token && isPaytmConfigured()) {
-    const bin = extractBinFromGatewayResponse(payment.gatewayResponse) ?? null;
-    if (!bin) {
-      paytmSnapshot.binError =
-        "Missing BIN (first 9 digits) for BIN details API";
-      logPaytmEnrich("error", "bin.missing", { orderId: trimmed });
-    } else {
-      const effectiveMid =
-        (columnPatch.mid as string | undefined) ||
-        (payment.mid as string | undefined) ||
-        undefined;
-      const pm = (payment.txnPaymentMode ?? "").toUpperCase();
-      const paymentMode =
-        pm === "CC" || pm === "CREDIT_CARD"
-          ? "CREDIT_CARD"
-          : pm === "DC" || pm === "DEBIT_CARD"
-            ? "DEBIT_CARD"
-            : undefined;
-      const binRes = await getPaytmBINDetails({
-        orderId: trimmed,
-        txnToken: token,
-        bin,
-        paymentMode,
-        mid: effectiveMid,
-      });
-      if (binRes.success && binRes.data) {
-        paytmSnapshot.bin = binRes.data;
-        Object.assign(columnPatch, mapBinBodyToPaymentColumns(binRes.data));
-        logPaytmEnrich("info", "bin.success", {
-          orderId: trimmed,
-          bin,
-          resultStatus: binRes.data.resultInfo?.resultStatus,
-          resultCode: binRes.data.resultInfo?.resultCode,
-          response: previewJson(binRes.data),
-        });
-      } else if (binRes.error) {
-        paytmSnapshot.binError = binRes.error;
-        logPaytmEnrich("error", "bin.error", {
-          orderId: trimmed,
-          bin,
-          error: binRes.error,
-        });
-      }
-    }
   }
 
   if (token && !options.skipMerchant && isPaytmConfigured()) {

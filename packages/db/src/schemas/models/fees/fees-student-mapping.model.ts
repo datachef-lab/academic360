@@ -8,7 +8,6 @@ import { studentFeesMappingEnum } from "@/schemas/enums";
 
 
 import { feeGroupPromotionMappingModel } from "./fee-group-promotion-mapping.model";
-import { paymentModel } from "../payments";
 
 export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     id: serial().primaryKey(),
@@ -40,8 +39,8 @@ export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     // transactionDate: timestamp({withTimezone: true}),
     receiptNumber: varchar({ length: 2555 }).unique(),
     challanGeneratedAt: timestamp({withTimezone: true}),
-    paymentId: integer("payment_id_fk")
-        .references(() => paymentModel.id),
+    // paymentId: integer("payment_id_fk")
+    //     .references(() => paymentModel.id),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });

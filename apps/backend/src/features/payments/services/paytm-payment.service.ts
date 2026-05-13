@@ -18,8 +18,6 @@ import { randomUUID } from "node:crypto";
 import {
   createDefaultPaytmDowntimeConfig,
   type PaytmCurrentDowntimeStateItem,
-  type PaytmBINDetailsRequest,
-  type PaytmBINDetailsResponse,
   type PaytmFetchCurrentDowntimeResponseBody,
   type PaytmPCFDetailsRequest,
   type PaytmPCFDetailsResponse,
@@ -598,107 +596,6 @@ export interface PaytmPCFDetailsResult {
   /** Response `body` from Paytm when `resultStatus` is S. `consultDetails` may be keyed by pay mode. */
   data?: PaytmPCFDetailsResponse["body"];
   error?: string;
-}
-
-export interface PaytmBINDetailsResult {
-  success: boolean;
-  /** Response `body` from Paytm when `resultStatus` is S. */
-  data?: PaytmBINDetailsResponse["body"];
-  error?: string;
-}
-
-/**
- * Fetch BIN details for the first 9 digits of card/token.
- * Requires `txnToken` from Initiate Transaction for the same `orderId` when using `TXN_TOKEN`.
- *
- * Docs: https://business.paytm.com/docs/api/fetch-bin-details-api/
- */
-export async function getPaytmBINDetails(params: {
-  orderId: string;
-  txnToken: string;
-  bin: string;
-  paymentMode?: "CREDIT_CARD" | "DEBIT_CARD";
-  mid?: string;
-}): Promise<PaytmBINDetailsResult> {
-  if (!isPaytmConfigured()) {
-    return { success: false, error: "Paytm is not configured" };
-  }
-  const orderId = params.orderId?.trim();
-  const txnToken = params.txnToken?.trim();
-  const bin = params.bin?.trim();
-  if (!orderId || !txnToken || !bin) {
-    return { success: false, error: "orderId, txnToken and bin are required" };
-  }
-
-  const hostname =
-    paytmConfig.environment === "PRODUCTION"
-      ? "secure.paytmpayments.com"
-      : "securestage.paytmpayments.com";
-
-  const mid = params.mid?.trim() || paytmConfig.mid;
-
-  const url = `https://${hostname}/theia/api/v1/fetchBinDetail?mid=${encodeURIComponent(
-    mid,
-  )}&orderId=${encodeURIComponent(orderId)}`;
-
-  const payload: PaytmBINDetailsRequest = {
-    head: {
-      version: "v1",
-      requestTimestamp: String(Date.now()),
-      channelId: "WEB",
-      tokenType: "TXN_TOKEN",
-      token: txnToken,
-    },
-    body: {
-      bin,
-      mid,
-      txnType: "NONE",
-      requestType: "NONE",
-      ...(params.paymentMode ? { paymentMode: params.paymentMode } : {}),
-    },
-  };
-
-  try {
-    const response = await axios.post<unknown>(url, payload, {
-      headers: { "Content-Type": "application/json" },
-      timeout: 15000,
-    });
-
-    const data = response.data as { body?: PaytmBINDetailsResponse["body"] };
-    const apiBody = data?.body;
-    const resultInfo = apiBody?.resultInfo;
-    const resultStatus = resultInfo?.resultStatus;
-    const msg =
-      resultInfo?.resultMsg ?? "Failed to fetch BIN details from Paytm";
-
-    if (resultStatus === "S" && apiBody) {
-      return { success: true, data: apiBody };
-    }
-    return { success: false, error: String(msg) };
-  } catch (err) {
-    if (axios.isAxiosError(err) && err.response?.data) {
-      const d = err.response.data as {
-        body?: PaytmBINDetailsResponse["body"];
-        head?: { resultInfo?: { resultMsg?: string; resultCode?: string } };
-        message?: string;
-      };
-      const apiBody = d?.body;
-      const ri = apiBody?.resultInfo ?? d?.head?.resultInfo;
-      const msg =
-        ri?.resultMsg ??
-        (typeof d?.message === "string" ? d.message : undefined) ??
-        err.message;
-      console.error("[Paytm] getPaytmBINDetails HTTP error:", {
-        status: err.response.status,
-        resultMsg: ri?.resultMsg,
-        resultCode: ri?.resultCode,
-      });
-      return { success: false, error: String(msg ?? "Paytm request failed") };
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[Paytm] getPaytmBINDetails exception:", err);
-    return { success: false, error: message };
-  }
 }
 
 /**

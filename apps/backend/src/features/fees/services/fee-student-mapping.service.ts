@@ -195,7 +195,8 @@ async function fetchFeeReceiptJoinRow(
     .leftJoin(
       paymentModel,
       and(
-        eq(paymentModel.id, feeStudentMappingModel.paymentId),
+        eq(paymentModel.feeStudentMappingId, feeStudentMappingModel.id),
+        eq(paymentModel.isLinked, true),
         eq(paymentModel.status, "SUCCESS"),
       ),
     )
@@ -292,16 +293,24 @@ async function modelToDto(
 ): Promise<FeeStudentMappingDto | null> {
   if (!model) return null;
 
-  const [payment] = model.paymentId
-    ? await db
-        .select({
-          status: paymentModel.status,
-          txnDate: paymentModel.txnDate,
-          updatedAt: paymentModel.updatedAt,
-        })
-        .from(paymentModel)
-        .where(eq(paymentModel.id, model.paymentId))
-    : [null];
+  // Resolve the canonical (linked) payment row for this fee mapping. There can
+  // be many payment attempts per mapping; only the row with `isLinked = true`
+  // is used for display / receipts / status. Failed/pending/audit rows are
+  // intentionally ignored here.
+  const [payment] = await db
+    .select({
+      status: paymentModel.status,
+      txnDate: paymentModel.txnDate,
+      updatedAt: paymentModel.updatedAt,
+    })
+    .from(paymentModel)
+    .where(
+      and(
+        eq(paymentModel.feeStudentMappingId, model.id),
+        eq(paymentModel.isLinked, true),
+      ),
+    )
+    .limit(1);
 
   const [
     feeStructure,
@@ -627,8 +636,7 @@ async function generateFeeReceiptInternal(params: {
   const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
 
   const ePaid = await (async () => {
-    const paymentId = feeStudentMapping.paymentId;
-    if (!paymentId) return null;
+    // Look up the canonical (linked) online payment for this fee mapping.
     const [pay] = await db
       .select({
         status: paymentModel.status,
@@ -637,7 +645,13 @@ async function generateFeeReceiptInternal(params: {
         txnDate: paymentModel.txnDate,
       })
       .from(paymentModel)
-      .where(eq(paymentModel.id, paymentId));
+      .where(
+        and(
+          eq(paymentModel.feeStudentMappingId, feeStudentMapping.id!),
+          eq(paymentModel.isLinked, true),
+        ),
+      )
+      .limit(1);
     const isSuccess = String(pay?.status || "").toUpperCase() === "SUCCESS";
     const isOnline = String(pay?.paymentMode || "").toUpperCase() === "ONLINE";
     const orderId = String(pay?.orderId || "").trim();
@@ -651,6 +665,29 @@ async function generateFeeReceiptInternal(params: {
     if (!transactionDate) return null;
     return { orderId, transactionDate };
   })();
+
+  // Paid stamp aligned with the student-console / mapping logic in
+  // `modelToDto`: a mapping is considered paid when EITHER the linked payment
+  // row is SUCCESS, OR the mapping itself is fully paid
+  // (amountPaid >= totalPayable && totalPayable > 0). The latter covers
+  // legacy/manual rows that may have no `payments` row with `isLinked = true`.
+  const totalPayableNum = Number(feeStudentMapping.totalPayable ?? 0);
+  const amountPaidNum = Number(feeStudentMapping.amountPaid ?? 0);
+  const mappingFullyPaid =
+    totalPayableNum > 0 && amountPaidNum >= totalPayableNum;
+  const isPaid = payment?.status === "SUCCESS" || mappingFullyPaid;
+
+  // `mode = "online"` is only safe when `ePaid` is fully resolved
+  // (orderId + transactionDate) — the EJS template dereferences `ePaid.orderId`.
+  // Everything else (manual cash, gateway-cash, legacy mapping-only paid)
+  // falls back to "offline" → "PAID (date)" stamp.
+  const mode: "online" | "offline" = ePaid != null ? "online" : "offline";
+
+  const paidDateSource: Date | string | null =
+    payment?.txnDate ?? feeStudentMapping.challanGeneratedAt ?? null;
+  const paidDate = paidDateSource
+    ? new Date(paidDateSource).toLocaleDateString("en-GB")
+    : "";
 
   const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
     session: session.name,
@@ -670,11 +707,9 @@ async function generateFeeReceiptInternal(params: {
     ePaid,
     feeComponents: componentDtos,
     pageTitle,
-    isPaid: payment?.status === "SUCCESS",
-    mode: ePaid ? "online" : "offline",
-    paidDate: payment?.txnDate
-      ? new Date(payment.txnDate).toLocaleDateString("en-GB")
-      : "",
+    isPaid,
+    mode,
+    paidDate,
   });
 
   return {
