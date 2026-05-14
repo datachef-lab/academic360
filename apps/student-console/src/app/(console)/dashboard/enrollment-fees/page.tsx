@@ -193,13 +193,13 @@ const buildRowDraftFromEditingValues = (
 
 export default function EnrollmentFeesPage() {
   const router = useRouter();
-  const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
+  // const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
 
-  useEffect(() => {
-    if (isProduction) {
-      router.replace("/dashboard");
-    }
-  }, [router, isProduction]);
+  // useEffect(() => {
+  //   if (isProduction) {
+  //     router.replace("/dashboard");
+  //   }
+  // }, [router, isProduction]);
 
   const { student } = useStudent();
   const { feeMappingsVersion, cpFormVersion, academicActivityVersion, invalidateCpForm } =
@@ -945,7 +945,7 @@ export default function EnrollmentFeesPage() {
     form.submit();
   };
 
-  if (isProduction) return null;
+  // if (isProduction) return null;
 
   if (loading) {
     return (
