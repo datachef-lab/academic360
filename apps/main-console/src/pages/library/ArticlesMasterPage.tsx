@@ -31,6 +31,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Pencil, Plus, ScrollText, Search, Trash2 } from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type {
   LibraryArticleRow,
   LibraryArticleUpsertBody,
@@ -42,6 +44,17 @@ import {
   getLibraryArticles,
   updateLibraryArticle,
 } from "@/services/library-articles.service";
+
+type LibraryArticleSocketUpdate = {
+  id: string;
+  type: "library_article_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  articleId: number;
+  articleName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   name: string;
@@ -182,6 +195,10 @@ function RowActions({
 }
 
 export default function ArticlesMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryArticleRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -226,6 +243,24 @@ export default function ArticlesMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_articles");
+
+    const handleUpdate = (data: LibraryArticleSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_article_update", handleUpdate);
+
+    return () => {
+      socket.off("library_article_update", handleUpdate);
+      socket.emit("unsubscribe_library_articles");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const openCreate = () => {
     setEditingId(null);

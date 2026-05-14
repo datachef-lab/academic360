@@ -31,6 +31,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Pencil, Plus, Search, Tags, Trash2 } from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type {
   LibraryStatusRow,
   LibraryStatusUpsertBody,
@@ -42,6 +44,17 @@ import {
   getLibraryStatuses,
   updateLibraryStatus,
 } from "@/services/library-statuses.service";
+
+type LibraryStatusSocketUpdate = {
+  id: string;
+  type: "library_status_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  statusId: number;
+  statusName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   name: string;
@@ -106,6 +119,10 @@ function RowActions({
 }
 
 export default function StatusesMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryStatusRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -149,6 +166,24 @@ export default function StatusesMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_status");
+
+    const handleUpdate = (data: LibraryStatusSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_status_update", handleUpdate);
+
+    return () => {
+      socket.off("library_status_update", handleUpdate);
+      socket.emit("unsubscribe_library_status");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const openCreate = () => {
     setEditingId(null);

@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/table";
 import { Combobox } from "@/components/ui/combobox";
 import { Book, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type {
   LibraryDocumentTypeRow,
   LibraryDocumentTypeUpsertBody,
@@ -46,6 +48,17 @@ import type { LibraryArticleRow } from "@/services/library-articles.service";
 import { getLibraryArticles } from "@/services/library-articles.service";
 
 const NONE = "__none__";
+
+type LibraryDocumentTypeSocketUpdate = {
+  id: string;
+  type: "library_document_type_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  documentTypeId: number;
+  documentTypeName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   name: string;
@@ -106,6 +119,10 @@ function RowActions({
 }
 
 export default function LibraryDocumentsMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryDocumentTypeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -170,6 +187,24 @@ export default function LibraryDocumentsMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_document_types");
+
+    const handleUpdate = (data: LibraryDocumentTypeSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_document_type_update", handleUpdate);
+
+    return () => {
+      socket.off("library_document_type_update", handleUpdate);
+      socket.emit("unsubscribe_library_document_types");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const comboboxData = useMemo(() => {
     const data = [

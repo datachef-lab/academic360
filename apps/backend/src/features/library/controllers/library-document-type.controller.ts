@@ -10,6 +10,13 @@ import {
   updateLibraryDocumentType,
   type LibraryDocumentTypeUpsertInput,
 } from "@/features/library/services/library-document-type.service.js";
+import { socketService } from "@/services/socketService.js";
+
+const documentTypeActorName = (req: Request): string => {
+  const u = req.user as { name?: string | null } | undefined;
+  const n = typeof u?.name === "string" ? u.name.trim() : "";
+  return n || "Someone";
+};
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -121,6 +128,13 @@ export const createLibraryDocumentTypeController = async (
     }
 
     const id = await createLibraryDocumentType(input);
+    socketService.sendLibraryDocumentTypeUpdate({
+      action: "CREATED",
+      actorName: documentTypeActorName(req),
+      documentTypeId: id,
+      documentTypeName: input.name.trim(),
+      meta: { documentTypeId: id },
+    });
     res
       .status(201)
       .json(
@@ -158,6 +172,13 @@ export const updateLibraryDocumentTypeController = async (
     }
 
     await updateLibraryDocumentType(id, input);
+    socketService.sendLibraryDocumentTypeUpdate({
+      action: "UPDATED",
+      actorName: documentTypeActorName(req),
+      documentTypeId: id,
+      documentTypeName: input.name.trim(),
+      meta: { documentTypeId: id },
+    });
     res
       .status(200)
       .json(
@@ -189,7 +210,15 @@ export const deleteLibraryDocumentTypeController = async (
       throw new ApiError(404, "Library document type not found.");
     }
 
+    const name = existing.name;
     await deleteLibraryDocumentType(id);
+    socketService.sendLibraryDocumentTypeUpdate({
+      action: "DELETED",
+      actorName: documentTypeActorName(req),
+      documentTypeId: id,
+      documentTypeName: name,
+      meta: { documentTypeId: id },
+    });
     res
       .status(200)
       .json(

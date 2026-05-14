@@ -10,6 +10,13 @@ import {
   updateShelf,
   type ShelfUpsertInput,
 } from "@/features/library/services/shelf.service.js";
+import { socketService } from "@/services/socketService.js";
+
+const shelfActorName = (req: Request): string => {
+  const u = req.user as { name?: string | null } | undefined;
+  const n = typeof u?.name === "string" ? u.name.trim() : "";
+  return n || "Someone";
+};
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -95,6 +102,13 @@ export const createShelfController = async (
     }
 
     const id = await createShelf(input);
+    socketService.sendLibraryShelfUpdate({
+      action: "CREATED",
+      actorName: shelfActorName(req),
+      shelfId: id,
+      shelfName: input.name.trim(),
+      meta: { shelfId: id },
+    });
     res
       .status(201)
       .json(
@@ -127,6 +141,13 @@ export const updateShelfController = async (
     }
 
     await updateShelf(id, input);
+    socketService.sendLibraryShelfUpdate({
+      action: "UPDATED",
+      actorName: shelfActorName(req),
+      shelfId: id,
+      shelfName: input.name.trim(),
+      meta: { shelfId: id },
+    });
     res
       .status(200)
       .json(
@@ -153,7 +174,15 @@ export const deleteShelfController = async (
       throw new ApiError(404, "Shelf not found.");
     }
 
+    const name = existing.name;
     await deleteShelf(id);
+    socketService.sendLibraryShelfUpdate({
+      action: "DELETED",
+      actorName: shelfActorName(req),
+      shelfId: id,
+      shelfName: name,
+      meta: { shelfId: id },
+    });
     res
       .status(200)
       .json(

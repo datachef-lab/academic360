@@ -10,6 +10,13 @@ import {
   updateRack,
   type RackUpsertInput,
 } from "@/features/library/services/rack.service.js";
+import { socketService } from "@/services/socketService.js";
+
+const rackActorName = (req: Request): string => {
+  const u = req.user as { name?: string | null } | undefined;
+  const n = typeof u?.name === "string" ? u.name.trim() : "";
+  return n || "Someone";
+};
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -88,6 +95,13 @@ export const createRackController = async (
     }
 
     const id = await createRack(input);
+    socketService.sendLibraryRackUpdate({
+      action: "CREATED",
+      actorName: rackActorName(req),
+      rackId: id,
+      rackName: input.name.trim(),
+      meta: { rackId: id },
+    });
     res
       .status(201)
       .json(
@@ -120,6 +134,13 @@ export const updateRackController = async (
     }
 
     await updateRack(id, input);
+    socketService.sendLibraryRackUpdate({
+      action: "UPDATED",
+      actorName: rackActorName(req),
+      rackId: id,
+      rackName: input.name.trim(),
+      meta: { rackId: id },
+    });
     res
       .status(200)
       .json(
@@ -146,7 +167,15 @@ export const deleteRackController = async (
       throw new ApiError(404, "Rack not found.");
     }
 
+    const name = existing.name;
     await deleteRack(id);
+    socketService.sendLibraryRackUpdate({
+      action: "DELETED",
+      actorName: rackActorName(req),
+      rackId: id,
+      rackName: name,
+      meta: { rackId: id },
+    });
     res
       .status(200)
       .json(

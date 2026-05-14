@@ -10,6 +10,13 @@ import {
   updateLibraryArticle,
   type LibraryArticleUpsertInput,
 } from "@/features/library/services/library-article.service.js";
+import { socketService } from "@/services/socketService.js";
+
+const articleActorName = (req: Request): string => {
+  const u = req.user as { name?: string | null } | undefined;
+  const n = typeof u?.name === "string" ? u.name.trim() : "";
+  return n || "Someone";
+};
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -131,6 +138,13 @@ export const createLibraryArticleController = async (
     }
 
     const id = await createLibraryArticle(input);
+    socketService.sendLibraryArticleUpdate({
+      action: "CREATED",
+      actorName: articleActorName(req),
+      articleId: id,
+      articleName: input.name.trim(),
+      meta: { articleId: id },
+    });
     res
       .status(201)
       .json(
@@ -168,6 +182,13 @@ export const updateLibraryArticleController = async (
     }
 
     await updateLibraryArticle(id, input);
+    socketService.sendLibraryArticleUpdate({
+      action: "UPDATED",
+      actorName: articleActorName(req),
+      articleId: id,
+      articleName: input.name.trim(),
+      meta: { articleId: id },
+    });
     res
       .status(200)
       .json(
@@ -199,7 +220,15 @@ export const deleteLibraryArticleController = async (
       throw new ApiError(404, "Library article not found.");
     }
 
+    const name = existing.name;
     await deleteLibraryArticle(id);
+    socketService.sendLibraryArticleUpdate({
+      action: "DELETED",
+      actorName: articleActorName(req),
+      articleId: id,
+      articleName: name,
+      meta: { articleId: id },
+    });
     res
       .status(200)
       .json(

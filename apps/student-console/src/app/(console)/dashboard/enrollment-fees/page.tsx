@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -25,12 +28,10 @@ import { useStudent } from "@/providers/student-provider";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
 import {
   ArrowRight,
-  Calendar,
   Check,
   CheckCircle2,
   CreditCard,
   Download,
-  ExternalLink,
   ExternalLinkIcon,
   Landmark,
   Loader2,
@@ -38,7 +39,6 @@ import {
   School,
   Sparkles,
   Trash2,
-  WalletCards,
   X,
 } from "lucide-react";
 
@@ -1315,6 +1315,10 @@ export default function EnrollmentFeesPage() {
                                   bank.
                                 </li>
                                 <li>
+                                  Cheque/DD/RTGS/NEFT payments are not accepted and shall not be
+                                  considered valid.{" "}
+                                </li>
+                                <li>
                                   After the payment, email us the scan copy of your fee paid challan
                                   to{" "}
                                   <span className="font-semibold underline">
@@ -1365,6 +1369,10 @@ export default function EnrollmentFeesPage() {
                                 </li>
                                 <li>
                                   Accepted methods: UPI, Debit/Credit Card, Net Banking, and Wallet.
+                                </li>
+                                <li>
+                                  Cheque/DD/RTGS/NEFT payments are not accepted and shall not be
+                                  considered valid.{" "}
                                 </li>
                                 <li>
                                   A payment confirmation will be sent to your institutional email

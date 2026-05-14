@@ -29,6 +29,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LibraryBig, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type { LibraryShelfRow, LibraryShelfUpsertBody } from "@/services/library-shelves.service";
 import {
   createLibraryShelf,
@@ -37,6 +39,17 @@ import {
   getLibraryShelves,
   updateLibraryShelf,
 } from "@/services/library-shelves.service";
+
+type LibraryShelfSocketUpdate = {
+  id: string;
+  type: "library_shelf_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  shelfId: number;
+  shelfName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   name: string;
@@ -89,6 +102,10 @@ function RowActions({
 }
 
 export default function ShelvesMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryShelfRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -132,6 +149,24 @@ export default function ShelvesMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_shelves");
+
+    const handleUpdate = (data: LibraryShelfSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_shelf_update", handleUpdate);
+
+    return () => {
+      socket.off("library_shelf_update", handleUpdate);
+      socket.emit("unsubscribe_library_shelves");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const openCreate = () => {
     setEditingId(null);

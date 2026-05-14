@@ -29,6 +29,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { BookText, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type {
   JournalTypeRow,
   JournalTypeUpsertBody,
@@ -40,6 +42,17 @@ import {
   getJournalTypes,
   updateJournalType,
 } from "@/services/library-journal-types.service";
+
+type LibraryJournalTypeSocketUpdate = {
+  id: string;
+  type: "library_journal_type_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  journalTypeId: number;
+  journalTypeName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   name: string;
@@ -66,8 +79,8 @@ function RowActions({
   onDelete,
 }: {
   row: JournalTypeRow;
-  onEdit: (id: number) => void;
-  onDelete: (row: JournalTypeRow) => void;
+  onEdit: (_id: number) => void;
+  onDelete: (_row: JournalTypeRow) => void;
 }) {
   return (
     <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
@@ -94,6 +107,10 @@ function RowActions({
 }
 
 export default function JournalTypesMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<JournalTypeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -137,6 +154,24 @@ export default function JournalTypesMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_journal_types");
+
+    const handleUpdate = (data: LibraryJournalTypeSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_journal_type_update", handleUpdate);
+
+    return () => {
+      socket.off("library_journal_type_update", handleUpdate);
+      socket.emit("unsubscribe_library_journal_types");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const openCreate = () => {
     setEditingId(null);
