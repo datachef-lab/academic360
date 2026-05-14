@@ -15,7 +15,7 @@ import { useCollegeSettings } from "@/hooks/use-college-settings";
  * - Avoids empty dependency arrays for the title update effect
  */
 export function DynamicTitleUpdater() {
-  const { name: collegeName, isLoading } = useCollegeSettings();
+  const { collegeName, isLoading } = useCollegeSettings();
 
   // Effect runs only after college name is fetched from database
   // Depends on collegeName value to ensure title updates automatically
@@ -24,21 +24,14 @@ export function DynamicTitleUpdater() {
     if (!isLoading && collegeName) {
       const newTitle = `${collegeName} | Student Console`;
       document.title = newTitle;
-      // Persist title in sessionStorage to maintain it across page refreshes
       sessionStorage.setItem("collegeTitle", newTitle);
-      console.log("[DynamicTitleUpdater] Title updated to:", newTitle);
     }
-  }, [collegeName, isLoading]); // Proper dependency array with fetched values
+  }, [collegeName, isLoading]);
 
-  // Restore title from sessionStorage on component mount if available
   useEffect(() => {
     const savedTitle = sessionStorage.getItem("collegeTitle");
-    if (savedTitle && isLoading) {
-      // While loading, restore the saved title from previous session
-      document.title = savedTitle;
-      console.log("[DynamicTitleUpdater] Restored title from session:", savedTitle);
-    }
-  }, []); // Run only once on mount
+    if (savedTitle) document.title = savedTitle;
+  }, []);
 
   return null; // This component doesn't render anything
 }

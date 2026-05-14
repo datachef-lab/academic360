@@ -232,7 +232,7 @@
 
 // export default LoginPage;
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
@@ -250,8 +250,29 @@ const LoginPage = () => {
   const { accessToken, isReady } = useAuth();
   const { settings } = useSettings();
 
-  // All hooks must be called before any conditional returns
-  useEffect(() => {}, [settings]);
+  const collegeLogoSetting = useMemo(
+    () => settings?.find((ele) => ele.name === "College Logo Image"),
+    [settings],
+  );
+  const collegeLogoSrc = useMemo(() => {
+    if (!collegeLogoSetting?.id) return undefined;
+    const base = `${import.meta.env.VITE_APP_BACKEND_URL}/api/v1/settings/file/${collegeLogoSetting.id}`;
+    return collegeLogoSetting.updatedAt
+      ? `${base}?v=${encodeURIComponent(String(collegeLogoSetting.updatedAt))}`
+      : base;
+  }, [collegeLogoSetting]);
+
+  const loginScreenSetting = useMemo(
+    () => settings?.find((ele) => ele.name === "Login Screen Image"),
+    [settings],
+  );
+  const loginScreenSrc = useMemo(() => {
+    if (!loginScreenSetting?.id) return undefined;
+    const base = `${import.meta.env.VITE_APP_BACKEND_URL}/api/v1/settings/file/${loginScreenSetting.id}`;
+    return loginScreenSetting.updatedAt
+      ? `${base}?v=${encodeURIComponent(String(loginScreenSetting.updatedAt))}`
+      : base;
+  }, [loginScreenSetting]);
 
   // Show loading animation only if:
   // 1. Auth check is still in progress (!isReady), OR
@@ -381,10 +402,7 @@ const LoginPage = () => {
               className="inline-flex items-center space-x-4 w-full bg-white/10 backdrop-blur-xl p-6 shadow-2xl shadow-blue-500/20 border border-white/10"
             >
               <Avatar className="h-16 w-16 shadow-lg">
-                <AvatarImage
-                  src={`${import.meta.env.VITE_APP_BACKEND_URL}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
-                  alt="BESC Logo"
-                />
+                <AvatarImage src={collegeLogoSrc} alt="College logo" />
                 <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                   {settings?.find((ele) => ele.name === "College Abbreviation")?.value}
                 </AvatarFallback>
@@ -416,11 +434,13 @@ const LoginPage = () => {
         </div>
       </div>
       <div className="relative hidden bg-muted lg:block">
-        <img
-          src={`${import.meta.env.VITE_APP_BACKEND_URL}/api/v1/settings/file/${settings?.find((ele) => ele.name == "Login Screen Image")?.id}`}
-          alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-        />
+        {loginScreenSrc ? (
+          <img
+            src={loginScreenSrc}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          />
+        ) : null}
       </div>
     </div>
   );

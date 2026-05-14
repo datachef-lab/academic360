@@ -4,33 +4,38 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Library } from "lucide-react";
-import React, { useEffect, useState, useRef } from "react";
-import { findAllSettings, updateSetting } from "@/features/settings/services/settings-service";
+import React, { useEffect, useState } from "react";
+import { updateSetting } from "@/features/settings/services/settings-service";
 import { useSettings } from "../hooks/use-settings";
 import { Settings } from "@/features/settings/types/settings.type";
 // import { useSettings } from "@/features/settings/providers/settings-provider";
 
+const backendBase = import.meta.env.VITE_APP_BACKEND_URL!;
+
+function filePreviewUrl(setting: Settings): string {
+  const id = setting.id!;
+  const v = setting.updatedAt ? `?v=${encodeURIComponent(String(setting.updatedAt))}` : "";
+  return `${backendBase}/api/v1/settings/file/${id}${v}`;
+}
+
 export default function GeneralSettingsPage() {
-  const { settings, setSettings } = useSettings();
+  const { settings, fetchSettings } = useSettings();
   const [updatedSettings, setUpdatedSettings] = useState<Record<number, string | File>>({});
   const [previewImages, setPreviewImages] = useState<Record<number, string>>({});
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
-  const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Initialize preview images from existing settings (only once when settings are loaded)
-    if (settings.length > 0 && !initializedRef.current) {
-      const filePreviews: Record<number, string> = {};
+    setPreviewImages((prev) => {
+      const next: Record<number, string> = { ...prev };
       settings.forEach((setting: Settings) => {
-        if (setting.type === "FILE") {
-          filePreviews[setting.id!] =
-            `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
-        }
+        if (setting.type !== "FILE" || setting.id == null) return;
+        const draft = updatedSettings[setting.id];
+        if (draft instanceof File) return;
+        next[setting.id] = filePreviewUrl(setting);
       });
-      setPreviewImages(filePreviews);
-      initializedRef.current = true;
-    }
-  }, [settings]);
+      return next;
+    });
+  }, [settings, updatedSettings]);
 
   const handleInputChange = (settingId: number, value: string | File) => {
     setUpdatedSettings((prev) => ({ ...prev, [settingId]: value }));
@@ -46,27 +51,19 @@ export default function GeneralSettingsPage() {
         updateSetting(Number(id), value),
       );
       await Promise.all(updatePromises);
-      alert("Settings updated successfully!");
       setUpdatedSettings({});
-      //   window.location.reload(); // Refresh to load saved values
+      await fetchSettings();
+      alert("Settings updated successfully!");
     } catch (err) {
       console.error("Error updating settings:", err);
       alert("Failed to update settings.");
-    } finally {
-      findAllSettings().then((data) => {
-        const payload = data.payload || [];
-        setSettings(payload);
-
-        const filePreviews: Record<number, string> = {};
-        payload.forEach((setting: Settings) => {
-          if (setting.type === "FILE") {
-            filePreviews[setting.id!] =
-              `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
-          }
-        });
-        setPreviewImages(filePreviews);
-      });
     }
+  };
+
+  const textValue = (item: Settings): string => {
+    const draft = item.id != null ? updatedSettings[item.id] : undefined;
+    if (typeof draft === "string") return draft;
+    return String(item.value ?? "");
   };
 
   return (
@@ -124,8 +121,14 @@ export default function GeneralSettingsPage() {
                       </div>
                     ) : (
                       <Input
-                        type="text"
-                        defaultValue={String(settingItem.value)}
+                        type={
+                          settingItem.type === "EMAIL"
+                            ? "email"
+                            : settingItem.type === "NUMBER"
+                              ? "number"
+                              : "text"
+                        }
+                        value={textValue(settingItem)}
                         onChange={(e) => handleInputChange(settingItem.id!, e.target.value)}
                         placeholder={`Enter ${settingItem.name}`}
                         className="w-full"

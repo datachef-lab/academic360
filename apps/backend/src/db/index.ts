@@ -46,7 +46,7 @@ import { loadDefaultPromotionData } from "@/features/batches/default-promotion-d
 import { loadStudentFees } from "@/features/fees/services/legacy-fees-data.service";
 import { defaultSetDateOfJoining } from "@/features/user/defaut-set-date-of-joining";
 import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
-import { loadLibrary } from "@/features/library/old-irp-data";
+import { loadLibrary, loadLibraryUsers } from "@/features/library/old-irp-data";
 const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -108,6 +108,7 @@ export const connectToDatabase = async () => {
     loadLibrary();
     initializeAcademicActivities();
     defaultSetDateOfJoining();
+    loadLibraryUsers();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
