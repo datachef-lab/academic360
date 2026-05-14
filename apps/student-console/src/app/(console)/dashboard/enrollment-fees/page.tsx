@@ -888,19 +888,35 @@ export default function EnrollmentFeesPage() {
     const returnUrl = `${window.location.origin}${window.location.pathname}?${returnParams.toString()}`;
     const [configRes, initRes] = await Promise.all([
       axiosInstance.get<ApiResponse<{ mid: string; host: string }>>("/api/payments/config"),
-      axiosInstance.post<ApiResponse<{ orderId: string; txnToken: string }>>(
-        "/api/payments/initiate-fee",
-        {
-          feeStudentMappingId: selectedFee.feeStudentMappingId,
-          amount: String(selectedFee.totalPayable),
-          studentId: student.id,
-          email: (student as any).personalEmail || undefined,
-          mobile: (student as any).mobile || undefined,
-          firstName: (student.name || "").split(" ")[0],
-          lastName: (student.name || "").split(" ").slice(1).join(" ") || undefined,
-          returnUrl,
-        },
-      ),
+      axiosInstance.post<
+        ApiResponse<{
+          orderId: string;
+          txnToken: string;
+          userInfo: {
+            paymentId: number;
+            feeStudentMappingId: number | null;
+            name: string | null;
+            email: string | null;
+            phone: string | null;
+            academicYear: string | null;
+            receiptType: string | null;
+            feeSlab: string | null;
+            programCourse: string | null;
+            semester: string | null;
+            shift: string | null;
+            section: string | null;
+          };
+        }>
+      >("/api/payments/initiate-fee", {
+        feeStudentMappingId: selectedFee.feeStudentMappingId,
+        amount: String(selectedFee.totalPayable),
+        studentId: student.id,
+        email: (student as any).personalEmail || undefined,
+        mobile: (student as any).mobile || undefined,
+        firstName: (student.name || "").split(" ")[0],
+        lastName: (student.name || "").split(" ").slice(1).join(" ") || undefined,
+        returnUrl,
+      }),
     ]);
 
     const config = configRes.data?.payload;

@@ -34,6 +34,97 @@ const Paytm = require("paytm-pg-node-sdk");
 
 const PAYTM_MID = process.env.PAYTM_MID!;
 
+/** Paytm expects a 10-digit Indian mobile in userInfo.mobile. */
+function normalizePaytmMobile(
+  raw: string | null | undefined,
+): string | undefined {
+  if (!raw || typeof raw !== "string") return undefined;
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 10) return undefined;
+  return digits.slice(-10);
+}
+
+/** Fee context from DB joins — mapped into Paytm userInfo + extendInfo. */
+export type PaytmFeeUserInfoPayload = {
+  paymentId: number;
+  feeStudentMappingId: number | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  academicYear: string | null;
+  receiptType: string | null;
+  feeSlab: string | null;
+  programCourse: string | null;
+  semester: string | null;
+  shift: string | null;
+  section: string | null;
+};
+
+/** Paytm documents ~255 chars per UDF; split long JSON across udf1–udf3. */
+const PAYTM_UDF_MAX_LEN = 255;
+
+function splitFullName(full: string | null | undefined): {
+  first?: string;
+  last?: string;
+} {
+  const t = full?.trim();
+  if (!t) return {};
+  const parts = t.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return { first: parts[0] };
+  return { first: parts[0], last: parts.slice(1).join(" ") };
+}
+
+/**
+ * Paytm Initiate Transaction body only accepts a small userInfo shape.
+ * Optional body.extendInfo (udf1–udf3) carries merchant context and is
+ * returned in callbacks / txn status (per Paytm docs).
+ */
+function buildFeeContextExtendInfo(
+  u: PaytmFeeUserInfoPayload,
+): Record<string, string> | undefined {
+  const payload: Record<string, string | number | null> = {
+    paymentId: u.paymentId,
+    feeStudentMappingId: u.feeStudentMappingId,
+    name: u.name,
+    email: u.email,
+    phone: u.phone,
+    academicYear: u.academicYear,
+    receiptType: u.receiptType,
+    feeSlab: u.feeSlab,
+    programCourse: u.programCourse,
+    semester: u.semester,
+    shift: u.shift,
+    section: u.section,
+  };
+  const compact = Object.fromEntries(
+    Object.entries(payload).filter(
+      ([, v]) =>
+        v !== undefined &&
+        (v === null ||
+          typeof v === "number" ||
+          (typeof v === "string" && v.trim() !== "")),
+    ),
+  ) as Record<string, string | number | null>;
+  const json = JSON.stringify(compact);
+  if (json === "{}") return undefined;
+
+  const chunks: string[] = [];
+  for (let i = 0; i < json.length; i += PAYTM_UDF_MAX_LEN) {
+    chunks.push(json.slice(i, i + PAYTM_UDF_MAX_LEN));
+  }
+  if (chunks.length > 3) {
+    console.warn(
+      "[Paytm] Fee context JSON exceeds three UDF fields (765 chars); truncating. Rely on orderId / DB for full context.",
+    );
+  }
+
+  const out: Record<string, string> = {};
+  if (chunks[0]) out.udf1 = chunks[0];
+  if (chunks[1]) out.udf2 = chunks[1];
+  if (chunks[2]) out.udf3 = chunks[2];
+  return Object.keys(out).length ? out : undefined;
+}
+
 let paytmInitialized = false;
 
 function initPaytm() {
@@ -60,6 +151,8 @@ export interface InitiatePaymentParams {
   lastName?: string;
   address?: string;
   pincode?: string;
+  /** Fee row + joins; drives Paytm userInfo + extendInfo when present. */
+  userInfo?: PaytmFeeUserInfoPayload;
 }
 
 export interface InitiatePaymentResult {
@@ -101,10 +194,25 @@ export async function createPaytmTxnToken(
       custId: params.custId,
     },
   };
-  if (params.email)
-    (body.userInfo as Record<string, string>).email = params.email;
-  if (params.mobile)
-    (body.userInfo as Record<string, string>).mobile = params.mobile;
+  const u = params.userInfo;
+  const nameParts = u ? splitFullName(u.name) : {};
+  const emailEff = params.email?.trim() || u?.email?.trim();
+  const mobileNorm =
+    normalizePaytmMobile(params.mobile?.trim()) ||
+    normalizePaytmMobile(u?.phone?.trim());
+  const firstEff = params.firstName?.trim() || nameParts.first;
+  const lastEff = params.lastName?.trim() || nameParts.last;
+
+  const ui = body.userInfo as Record<string, string>;
+  if (emailEff) ui.email = emailEff;
+  if (mobileNorm) ui.mobile = mobileNorm;
+  if (firstEff) ui.firstName = firstEff;
+  if (lastEff) ui.lastName = lastEff;
+
+  if (u) {
+    const ext = buildFeeContextExtendInfo(u);
+    if (ext) body.extendInfo = ext;
+  }
 
   try {
     const signature = await PaytmChecksum.generateSignature(
