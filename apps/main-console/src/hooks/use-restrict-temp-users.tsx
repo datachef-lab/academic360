@@ -2,6 +2,17 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+/** Main-console routes under `LibraryMaster` (see `LibraryMaster.tsx`). */
+export const LIBRARY_MODULE_PATH_PREFIX = "/dashboard/library";
+
+const LIBRARY_ONLY_USER_EMAIL = "library@thebges.edu.in";
+
+/** Staff restricted to library-only UI and routes (see `useRestrictTempUsers`, `AppSidebar`). */
+export function isLibraryOnlyUser(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return email.trim().toLowerCase() === LIBRARY_ONLY_USER_EMAIL;
+}
+
 export const TEMP_USER_EMAILS: string[] = [
   "sreya.sengupta@thebges.edu.in",
   "suman.pal@thebges.edu.in",
@@ -15,14 +26,28 @@ export const TEMP_USER_EMAILS: string[] = [
   "scrguest2@thebges.edu.in",
 ];
 
-// This is hooks is created temporary to restrict users (and navigate them to ) from accessing the admin console certain pages
+// Temporary hook: restrict certain staff emails to allowed dashboard subtrees only.
+// Invoked from `ProtectedRouteWrapper` and many feature layouts so it runs on every navigation.
 export const useRestrictTempUsers = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user?.email || !TEMP_USER_EMAILS.includes(user.email)) {
+    if (!user?.email) return;
+
+    if (isLibraryOnlyUser(user.email)) {
+      const isOnLibraryPath =
+        location.pathname === LIBRARY_MODULE_PATH_PREFIX ||
+        location.pathname.startsWith(`${LIBRARY_MODULE_PATH_PREFIX}/`);
+
+      if (!isOnLibraryPath) {
+        navigate(LIBRARY_MODULE_PATH_PREFIX);
+      }
+      return;
+    }
+
+    if (!TEMP_USER_EMAILS.includes(user.email)) {
       return;
     }
 

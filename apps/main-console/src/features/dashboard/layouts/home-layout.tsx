@@ -45,16 +45,21 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSearchedStudents, StudentSearchItem } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
-import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import {
+  isLibraryOnlyUser,
+  LIBRARY_MODULE_PATH_PREFIX,
+  useRestrictTempUsers,
+} from "@/hooks/use-restrict-temp-users";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {
   dashboard: Home,
+  library: Library,
   resources: Boxes,
   "courses-subjects": LayoutList,
   "admissions-fees": BadgeIndianRupee,
@@ -131,6 +136,16 @@ const searchData = [
   },
 ];
 
+const libraryOnlySearchData = [
+  {
+    title: "Library",
+    description: "Book circulation, catalog, entry/exit, and library masters",
+    href: LIBRARY_MODULE_PATH_PREFIX,
+    icon: Library,
+    category: "Navigation",
+  },
+];
+
 // Header component that uses useSidebar hook (must be inside SidebarProvider)
 function LayoutHeader({
   pathSegments,
@@ -140,6 +155,9 @@ function LayoutHeader({
   setOpen: (open: boolean) => void;
 }) {
   const { toggleSidebar } = useSidebar();
+  const { user } = useAuth();
+  const hideGlobalSearch = isLibraryOnlyUser(user?.email);
+  const libraryOnly = hideGlobalSearch;
 
   return (
     <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -163,6 +181,11 @@ function LayoutHeader({
 
             {pathSegments.map((segment, index) => {
               const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
+              // Library-only staff must not hit `/dashboard` (hook redirects → flash).
+              const linkTo =
+                libraryOnly && index === 0 && segment === "dashboard"
+                  ? LIBRARY_MODULE_PATH_PREFIX
+                  : path;
               const Icon = pathIconMap[segment];
               const isLastSegment = index === pathSegments.length - 1;
 
@@ -173,7 +196,7 @@ function LayoutHeader({
                 >
                   <BreadcrumbLink asChild>
                     <Link
-                      to={path}
+                      to={linkTo}
                       className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors text-sm lg:text-base truncate"
                     >
                       {Icon && (
@@ -191,19 +214,21 @@ function LayoutHeader({
       </div>
       <div className="flex items-center mr-2 gap-2 flex-shrink-0">
         <ActiveUsersAvatars />
-        {/* Search Button */}
-        <Button
-          variant="outline"
-          size="icon"
-          className="relative h-9 w-9 sm:h-9 sm:w-full sm:min-w-[8rem] sm:justify-start sm:pl-3 sm:pr-10 md:w-40 lg:w-64 rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none"
-          onClick={() => setOpen(true)}
-        >
-          <Search className="h-4 w-4 shrink-0 sm:mr-2" />
-          <span className="hidden lg:inline-flex truncate">Search...</span>
-          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </Button>
+        {/* Spotlight search — hidden for library-only staff */}
+        {!hideGlobalSearch ? (
+          <Button
+            variant="outline"
+            size="icon"
+            className="relative h-9 w-9 sm:h-9 sm:w-full sm:min-w-[8rem] sm:justify-start sm:pl-3 sm:pr-10 md:w-40 lg:w-64 rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none"
+            onClick={() => setOpen(true)}
+          >
+            <Search className="h-4 w-4 shrink-0 sm:mr-2" />
+            <span className="hidden lg:inline-flex truncate">Search...</span>
+            <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+        ) : null}
 
         <div>
           <NavUser />
@@ -215,13 +240,18 @@ function LayoutHeader({
 
 export default function HomeLayout() {
   useRestrictTempUsers();
-  const { accessToken, isReady } = useAuth();
+  const { accessToken, isReady, user } = useAuth();
   const location = useLocation(); // Get current route location
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<Array<{ uid: string; name?: string | null }>>([]);
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
+
+  const commandSearchNavItems = useMemo(
+    () => (isLibraryOnlyUser(user?.email) ? libraryOnlySearchData : searchData),
+    [user?.email],
+  );
 
   async function fetchSuggestions(q: string) {
     try {
@@ -261,8 +291,9 @@ export default function HomeLayout() {
     }
   }
 
-  // Keyboard shortcut handler
+  // Keyboard shortcut handler (disabled for library-only accounts)
   useEffect(() => {
+    if (isLibraryOnlyUser(user?.email)) return;
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -272,7 +303,7 @@ export default function HomeLayout() {
 
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [user?.email]);
 
   return (
     isReady &&
@@ -303,7 +334,7 @@ export default function HomeLayout() {
             />
             <CommandList className="min-h-[160px] max-h-80 overflow-auto">
               <CommandEmpty>No results found.</CommandEmpty>
-              {/\d{6,}/.test(inputValue.trim()) && (
+              {/\d{6,}/.test(inputValue.trim()) && !isLibraryOnlyUser(user?.email) && (
                 <CommandGroup heading="Quick action">
                   <CommandItem
                     value={`open-${inputValue.trim()}`}
@@ -320,7 +351,7 @@ export default function HomeLayout() {
                   </CommandItem>
                 </CommandGroup>
               )}
-              {suggestions.length > 0 && (
+              {suggestions.length > 0 && !isLibraryOnlyUser(user?.email) && (
                 <CommandGroup heading="Students">
                   {suggestions.map((s) => (
                     <CommandItem
@@ -348,7 +379,7 @@ export default function HomeLayout() {
                 </CommandGroup>
               )}
               <CommandGroup heading="Navigation">
-                {searchData.map((item) => (
+                {commandSearchNavItems.map((item) => (
                   <CommandItem
                     key={item.href}
                     value={item.title}
