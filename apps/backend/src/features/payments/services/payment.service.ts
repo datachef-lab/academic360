@@ -483,6 +483,7 @@ export async function createFeePayment(payment: {
 
     const [userInfo] = await tx
       .select({
+        uid: studentModel.uid,
         paymentId: paymentModel.id,
         feeStudentMappingId: feeStudentMappingModel.id,
         name: userModel.name,

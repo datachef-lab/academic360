@@ -219,7 +219,7 @@ export const initiateFeePaymentHandler = async (
       remarks: returnUrl || undefined,
     });
 
-    const custId = userInfo.paymentId.toString();
+    const custId = userInfo.uid!.toString();
 
     const tokenResult = await createPaytmTxnToken({
       orderId,
@@ -227,7 +227,7 @@ export const initiateFeePaymentHandler = async (
       custId,
       email: userInfo.email?.trim(),
       mobile: userInfo.phone?.trim(),
-      firstName: userInfo.name?.trim()?.split(" ")[0],
+      firstName: userInfo.name?.trim(),
       lastName: userInfo.name?.trim()?.split(" ")[1],
       userInfo,
     });

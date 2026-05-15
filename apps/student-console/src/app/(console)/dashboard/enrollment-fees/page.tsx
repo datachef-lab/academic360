@@ -72,6 +72,8 @@ export type FeeMapping = {
   totalPayable: number;
   amountPaid: number;
   paymentStatus: string;
+  receiptNumber?: string | null;
+  challanGeneratedAt?: string | null;
   type: "FULL" | "INSTALLMENT";
   feeStructureInstallment: { name?: string | null; sequence?: number | null } | null;
   feeStructure: {
@@ -118,8 +120,28 @@ type RowDraft = { certificateMasterId: number; fields: RowField[] };
 type DialogStage = "form" | "submitted" | "payment";
 type PaymentMode = "cash" | "online" | null;
 const FEE_CTX_KEY = "enrollment_fee_ctx_v1";
+/** Set only after user clicks Proceed to Enrolment (not when legacy receipt_number exists in DB). */
+const ENROLLMENT_READY_KEY_PREFIX = "enrollment_fee_ready_v1_";
 
 type FeeCtx = { feeStudentMappingId: number; feeStructureId: number; totalPayable: number };
+
+const enrollmentReadyStorageKey = (feeStudentMappingId: number) =>
+  `${ENROLLMENT_READY_KEY_PREFIX}${feeStudentMappingId}`;
+
+const isEnrollmentFeeReady = (feeStudentMappingId: number): boolean => {
+  if (typeof window === "undefined") return false;
+  return window.sessionStorage.getItem(enrollmentReadyStorageKey(feeStudentMappingId)) === "1";
+};
+
+const markEnrollmentFeeReady = (feeStudentMappingId: number) => {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(enrollmentReadyStorageKey(feeStudentMappingId), "1");
+};
+
+const clearEnrollmentFeeReady = (feeStudentMappingId: number) => {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(enrollmentReadyStorageKey(feeStudentMappingId));
+};
 
 const encodeFeeCtx = (ctx: FeeCtx): string => {
   try {
@@ -151,6 +173,17 @@ const statusBadgeClass = (isPaid: boolean) =>
   isPaid
     ? "min-w-[92px] h-9 px-4 rounded-xl bg-green-100 hover:bg-green-100 text-green-800 border border-green-200"
     : "min-w-[92px] h-9 px-4 rounded-xl bg-yellow-100 hover:bg-yellow-100 text-yellow-800 border border-yellow-200";
+
+const hasFeeChallanIssued = (mapping: FeeMapping | undefined): boolean =>
+  Boolean(mapping?.receiptNumber?.trim() && mapping?.challanGeneratedAt);
+
+/** Payment UI: CP submitted, user clicked Proceed, and challan is saved on this mapping. */
+const canShowFeePaymentStage = (
+  feeStudentMappingId: number,
+  mapping: FeeMapping | undefined,
+  hasExistingCpForm: boolean,
+): boolean =>
+  hasExistingCpForm && isEnrollmentFeeReady(feeStudentMappingId) && hasFeeChallanIssued(mapping);
 
 const isInternshipOnlySection = (name: string) => {
   const n = name.trim().toLowerCase();
@@ -231,6 +264,7 @@ export default function EnrollmentFeesPage() {
   const [questionByField, setQuestionByField] = useState<Record<number, string>>({});
   const [openedFromQuery, setOpenedFromQuery] = useState(false);
   const [generatingReceipt, setGeneratingReceipt] = useState(false);
+  const [proceedingToPayment, setProceedingToPayment] = useState(false);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
   const [paymentTimestamp, setPaymentTimestamp] = useState<string>("");
   const handledPaymentRedirectRef = useRef(false);
@@ -676,15 +710,27 @@ export default function EnrollmentFeesPage() {
     params.set("cp", "1");
     window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
     try {
-      const { data } = await axiosInstance.get<ApiResponse<CareerProgressionTemplatePayload>>(
-        careerProgressionTemplateUrl(student.id, fee.academicYearId),
-      );
-      setCpData(data?.payload ?? null);
-      setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
-      if (data?.payload?.hasExistingForms) {
-        setStage("payment");
-      } else if (data?.payload) {
-        const sorted = sortCpCertificateMasters(data.payload.certificateMasters);
+      const [cpRes, mapRes] = await Promise.all([
+        axiosInstance.get<ApiResponse<CareerProgressionTemplatePayload>>(
+          careerProgressionTemplateUrl(student.id, fee.academicYearId),
+        ),
+        axiosInstance.get<ApiResponse<FeeMapping[]>>(
+          `/api/v1/fees/student-mappings/student/${student.id}`,
+        ),
+      ]);
+      const freshMappings = Array.isArray(mapRes.data?.payload) ? mapRes.data.payload : mappings;
+      setMappings(freshMappings);
+      const freshMapping = freshMappings.find((m) => m.id === fee.id) ?? mappingRow;
+      const payload = cpRes.data?.payload ?? null;
+      setCpData(payload);
+      const cpExists = Boolean(payload?.hasExistingForms);
+      setHasExistingCpForm(cpExists);
+      if (cpExists) {
+        setStage(canShowFeePaymentStage(fee.id, freshMapping, cpExists) ? "payment" : "submitted");
+      } else if (payload) {
+        clearEnrollmentFeeReady(fee.id);
+        setStage("form");
+        const sorted = sortCpCertificateMasters(payload.certificateMasters);
         const initialRows: Record<string, RowDraft[]> = {};
         sorted.forEach((master, idx) => {
           const hasTableFields = master.fields.some((f) => !f.isQuestion);
@@ -814,6 +860,9 @@ export default function EnrollmentFeesPage() {
         { certificates, academicYearId: cpData.academicYear.id },
       );
 
+      if (selectedFee?.feeStudentMappingId) {
+        clearEnrollmentFeeReady(selectedFee.feeStudentMappingId);
+      }
       setHasExistingCpForm(true);
       setStage("submitted");
       invalidateCpForm();
@@ -825,56 +874,85 @@ export default function EnrollmentFeesPage() {
     }
   };
 
+  /** Persists receipt_number + challan_generated_at on the fee mapping (idempotent). */
+  const ensureFeeChallanIssued = async (): Promise<{
+    url: string;
+    challanNumber: string;
+  } | null> => {
+    if (!selectedFee || !student?.id) return null;
+    try {
+      const { data } = await axiosInstance.post<
+        ApiResponse<{ url: string; challanNumber: string }>
+      >("/api/v1/fees/receipts", {
+        feeStructureId: selectedFee.feeStructureId,
+        studentId: student.id,
+      });
+      const url = data?.payload?.url;
+      const challanNumber = data?.payload?.challanNumber;
+      if (!url || !challanNumber) return null;
+      return { url, challanNumber };
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  const openFeeChallanPdf = (pathWithQuery: string) => {
+    const base = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+    const path = pathWithQuery.startsWith("/") ? pathWithQuery : `/${pathWithQuery}`;
+    const pdfUrl = `${base}${path}`;
+    // Student Console Simulation embeds this app in an iframe; `window.open` from a nested
+    // frame is often blocked. Main console listens for OPEN_PDF_IN_NEW_TAB (see student-console-simulation.tsx).
+    const inIframe = typeof window !== "undefined" && window.self !== window.top;
+    if (inIframe) {
+      const payload = { type: "OPEN_PDF_IN_NEW_TAB" as const, url: pdfUrl };
+      try {
+        const target = window.top ?? window.parent;
+        if (target && target !== window.self) {
+          target.postMessage(payload, "*");
+        }
+      } catch {
+        /* ignore */
+      }
+    } else {
+      window.open(pdfUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
   const handleGenerateFeeReceipt = async () => {
     if (!selectedFee || !student?.id) return;
-    const base = process.env.NEXT_PUBLIC_API_URL ?? "";
     try {
       setGeneratingReceipt(true);
-      const postRes = await fetch(`${base}/api/v1/fees/receipts`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          feeStructureId: selectedFee.feeStructureId,
-          studentId: student.id,
-        }),
-      });
-      if (!postRes.ok) {
+      setPaymentMsg(null);
+      const issued = await ensureFeeChallanIssued();
+      if (!issued) {
         setPaymentMsg("Failed to generate fee challan. Please try again.");
         return;
       }
-      const postJson = (await postRes.json()) as {
-        payload?: { url?: string };
-      };
-      const pathWithQuery = postJson.payload?.url;
-      if (!pathWithQuery) {
-        setPaymentMsg("Failed to generate fee challan. Please try again.");
-        return;
-      }
-      const origin = base.replace(/\/$/, "");
-      const path = pathWithQuery.startsWith("/") ? pathWithQuery : `/${pathWithQuery}`;
-      const pdfUrl = `${origin}${path}`;
-      // Student Console Simulation embeds this app in an iframe; `window.open` from a nested
-      // frame is often blocked. Main console listens for OPEN_PDF_IN_NEW_TAB (see student-console-simulation.tsx).
-      const inIframe = typeof window !== "undefined" && window.self !== window.top;
-      if (inIframe) {
-        const payload = { type: "OPEN_PDF_IN_NEW_TAB" as const, url: pdfUrl };
-        try {
-          const target = window.top ?? window.parent;
-          if (target && target !== window.self) {
-            target.postMessage(payload, "*");
-          }
-        } catch {
-          /* ignore */
-        }
-      } else {
-        window.open(pdfUrl, "_blank", "noopener,noreferrer");
-      }
+      openFeeChallanPdf(issued.url);
     } catch (error) {
       console.error(error);
       setPaymentMsg("Failed to generate fee challan. Please try again.");
     } finally {
       setGeneratingReceipt(false);
+    }
+  };
+
+  const handleProceedToEnrolment = async () => {
+    if (!selectedFee || !student?.id) return;
+    try {
+      setProceedingToPayment(true);
+      setCpError(null);
+      const issued = await ensureFeeChallanIssued();
+      if (!issued) {
+        setCpError("Failed to prepare your fee challan. Please try again.");
+        return;
+      }
+      markEnrollmentFeeReady(selectedFee.feeStudentMappingId);
+      await fetchMappings();
+      setStage("payment");
+    } finally {
+      setProceedingToPayment(false);
     }
   };
 
@@ -1056,7 +1134,16 @@ export default function EnrollmentFeesPage() {
             const params = new URLSearchParams(window.location.search);
             params.delete("cp");
             params.delete("stage");
-            window.sessionStorage.removeItem(FEE_CTX_KEY);
+            // Keep fee context while CP is submitted but user has not proceeded to payment yet.
+            if (stage !== "submitted") {
+              window.sessionStorage.removeItem(FEE_CTX_KEY);
+            }
+            if (stage === "payment" && selectedFee?.feeStudentMappingId) {
+              markEnrollmentFeeReady(selectedFee.feeStudentMappingId);
+            }
+            setStage("form");
+            setPaymentMode(null);
+            setPaymentResult(null);
             const next = params.toString();
             window.history.replaceState(
               {},
@@ -1132,9 +1219,19 @@ export default function EnrollmentFeesPage() {
                     </div>
                     <Button
                       className="h-12 w-full bg-indigo-700 text-lg text-white hover:bg-indigo-800"
-                      onClick={() => setStage("payment")}
+                      onClick={handleProceedToEnrolment}
+                      disabled={proceedingToPayment}
                     >
-                      Proceed to Enrolment <ArrowRight className="ml-2 h-5 w-5" />
+                      {proceedingToPayment ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Preparing enrolment...
+                        </>
+                      ) : (
+                        <>
+                          Proceed to Enrolment <ArrowRight className="ml-2 h-5 w-5" />
+                        </>
+                      )}
                     </Button>
                   </div>
                 ) : stage === "payment" ? (
