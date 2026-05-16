@@ -54,7 +54,7 @@ export interface FeeGroupPromotionMappingDto extends Omit<FeeGroupPromotionMappi
     paymentStatus?: "Paid" | "Pending" | "Unpaid";
     /** Remaining balance: sum of max(0, totalPayable - amountPaid) per related fee_student_mapping (0 when fully paid) */
     amountToPay?: number;
-    /** Sum of fee_student_mappings.totalPayable for this mapping (for display as actual fee amount) */
+    /** Slab total for this promotion + fee group (fee structure components); not a sum of every FSM row */
     totalPayableAmount?: number;
     /** True when any related fee_student_mapping has a linked payment with status SUCCESS — read-only edit dialog */
     saveBlockedForEdit?: boolean;

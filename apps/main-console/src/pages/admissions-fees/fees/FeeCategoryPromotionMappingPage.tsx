@@ -1067,14 +1067,14 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     return typeof v === "number" ? v : null;
   }, [editForm.feeGroupId, editingItem?.feeGroup?.id, feeGroupTotalsById]);
 
-  /** Sum from fee_student_mappings, else slab total for mapped fee group */
+  /** Slab total for this promotion + fee group (aligned with table Amt and slab line). */
   const editReadOnlyTotalPayable = useMemo(() => {
-    const tp = editingItem?.totalPayableAmount;
-    if (tp != null && tp > 0) return tp;
     const fgId = editingItem?.feeGroup?.id;
     if (fgId != null && typeof feeGroupTotalsById[fgId] === "number") {
       return feeGroupTotalsById[fgId] as number;
     }
+    const tp = editingItem?.totalPayableAmount;
+    if (tp != null && tp > 0) return tp;
     return null;
   }, [editingItem?.totalPayableAmount, editingItem?.feeGroup?.id, feeGroupTotalsById]);
 

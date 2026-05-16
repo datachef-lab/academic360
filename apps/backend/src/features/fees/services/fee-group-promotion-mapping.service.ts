@@ -42,6 +42,38 @@ import * as programCourseService from "@/features/course-design/services/program
 import * as userService from "@/features/user/services/user.service.js";
 import { getFeeGroupTotalsForPromotion } from "./fee-group.service.js";
 
+type FsmPaymentRow = {
+  totalPayable: number | null;
+  amountPaid: number | null;
+};
+
+/**
+ * Display total for a fee-group promotion mapping: one slab total for the promotion's
+ * fee structure(s), not the sum of every fee_student_mapping row (which multi-counts
+ * when multiple receipt types / structures exist for the same slab).
+ */
+function resolveMappingTotalPayableAmount(
+  expectedFromStructure: number,
+  fsmRows: FsmPaymentRow[],
+): number {
+  const fsmSum = fsmRows.reduce((sum, r) => sum + (r.totalPayable || 0), 0);
+  return expectedFromStructure > 0 ? expectedFromStructure : fsmSum;
+}
+
+function resolveMappingAmountToPay(
+  expectedFromStructure: number,
+  fsmRows: FsmPaymentRow[],
+): number {
+  if (expectedFromStructure > 0) {
+    const paid = fsmRows.reduce((sum, r) => sum + (r.amountPaid || 0), 0);
+    return Math.max(0, expectedFromStructure - paid);
+  }
+  return fsmRows.reduce(
+    (sum, r) => sum + Math.max(0, (r.totalPayable || 0) - (r.amountPaid || 0)),
+    0,
+  );
+}
+
 /**
  * Converts a Promotion model to PromotionDto
  */
@@ -624,30 +656,16 @@ export const getAllFeeGroupPromotionMappings = async (
     if (row.id == null) continue;
     const mappingId = row.id;
     const related = relatedByFgpmId.get(mappingId) ?? [];
-    let totalPayableAmount = related.reduce(
-      (sum, r) => sum + (r.totalPayable || 0),
-      0,
-    );
-    let amountToPay = related.reduce(
-      (sum, r) =>
-        sum + Math.max(0, (r.totalPayable || 0) - (r.amountPaid || 0)),
-      0,
-    );
     const expectedFromStructure =
       structureTotalByPromotion.get(row.promotionId)?.get(row.feeGroupId) ?? 0;
-    if (expectedFromStructure > 0) {
-      if (related.length === 0) {
-        totalPayableAmount = expectedFromStructure;
-        amountToPay = expectedFromStructure;
-      } else if (totalPayableAmount <= 0) {
-        const amountPaidSum = related.reduce(
-          (sum, r) => sum + (r.amountPaid || 0),
-          0,
-        );
-        totalPayableAmount = expectedFromStructure;
-        amountToPay = Math.max(0, expectedFromStructure - amountPaidSum);
-      }
-    }
+    const totalPayableAmount = resolveMappingTotalPayableAmount(
+      expectedFromStructure,
+      related,
+    );
+    const amountToPay = resolveMappingAmountToPay(
+      expectedFromStructure,
+      related,
+    );
     const hasSuccessfulPayment = related.some(
       (r) => r.linkedPaymentStatus === "SUCCESS",
     );
@@ -916,14 +934,19 @@ async function recalculateFeeStudentMappingsForPromotionMapping(
       )
       .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, mappingId));
 
-    const totalPayableAmount = refreshedMappings.reduce(
-      (sum, row) => sum + (row.totalPayable || 0),
-      0,
+    const slabTotals = await getFeeGroupTotalsForPromotion(
+      updatedMapping.promotionId,
     );
-    const amountToPay = refreshedMappings.reduce(
-      (sum, row) =>
-        sum + Math.max(0, (row.totalPayable || 0) - (row.amountPaid || 0)),
-      0,
+    const expectedFromStructure =
+      slabTotals.find((t) => t.feeGroupId === updatedMapping.feeGroupId)
+        ?.totalPayable ?? 0;
+    const totalPayableAmount = resolveMappingTotalPayableAmount(
+      expectedFromStructure,
+      refreshedMappings,
+    );
+    const amountToPay = resolveMappingAmountToPay(
+      expectedFromStructure,
+      refreshedMappings,
     );
     const hasSuccessfulPayment = refreshedMappings.some(
       (row) => row.linkedPaymentStatus === "SUCCESS",
