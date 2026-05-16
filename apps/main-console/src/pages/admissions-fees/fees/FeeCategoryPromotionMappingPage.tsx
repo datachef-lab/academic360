@@ -43,7 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { Textarea } from "@/components/ui/textarea";
-import { useFeeCategories, useFeeGroups } from "@/hooks/useFees";
+import { useFeeCategories, useFeeGroups, useFeesSlabs } from "@/hooks/useFees";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { FeeGroupPromotionMappingDto, type FeeGroupDto } from "@repo/db/dtos/fees";
@@ -195,6 +195,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     community: string;
     category: string;
     feeCategory: string;
+    feeSlab: string;
   }>({
     academicYear: "",
     semesterOrClass: "",
@@ -204,10 +205,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     community: "",
     category: "",
     feeCategory: "",
+    feeSlab: "",
   });
   const { showError } = useError();
   const { feeCategories } = useFeeCategories();
   const { feeGroups } = useFeeGroups();
+  const { feesSlabs } = useFeesSlabs();
   const { currentAcademicYear } = useAcademicYear();
 
   // Fetch when user has applied filters OR typed search text
@@ -219,7 +222,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.religion ||
     !!filters.community ||
     !!filters.category ||
-    !!filters.feeCategory;
+    !!filters.feeCategory ||
+    !!filters.feeSlab;
   const hasSearch = !!searchText.trim();
   const shouldFetchMappings = hasFilters || hasSearch;
   const queryClient = useQueryClient();
@@ -537,6 +541,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         mapping.feeCategory?.name !== filters.feeCategory
       )
         return false;
+      if (filters.feeSlab && mapping.feeGroup?.feeSlab?.name !== filters.feeSlab) return false;
 
       return true;
     },
@@ -656,6 +661,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       community: "",
       category: "",
       feeCategory: "",
+      feeSlab: "",
     });
   };
 
@@ -1464,6 +1470,14 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     {filters.feeCategory}
                   </Badge>
                 )}
+                {filters.feeSlab && (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-300 text-amber-800 bg-amber-50 flex items-center gap-1"
+                  >
+                    Slab: {filters.feeSlab}
+                  </Badge>
+                )}
               </div>
             </div>
             <Input
@@ -1939,6 +1953,30 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     {feeCategories?.map((fc) => (
                       <SelectItem key={fc.id} value={fc.name}>
                         {fc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Fee Slab</Label>
+                <Select
+                  value={filters.feeSlab}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      feeSlab: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All fee slabs" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {feesSlabs?.map((slab) => (
+                      <SelectItem key={slab.id} value={slab.name}>
+                        {slab.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
