@@ -40,6 +40,7 @@ import {
 } from "@repo/db/schemas/models/resources";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 import * as userService from "@/features/user/services/user.service.js";
+import { getFeeGroupTotalsForPromotion } from "./fee-group.service.js";
 
 /**
  * Converts a Promotion model to PromotionDto
@@ -590,6 +591,18 @@ export const getAllFeeGroupPromotionMappings = async (
           )
       : [];
 
+  const uniquePromotionIds = [...new Set(rows.map((r) => r.promotionId))];
+  const structureTotalByPromotion = new Map<number, Map<number, number>>();
+  await Promise.all(
+    uniquePromotionIds.map(async (promotionId) => {
+      const totals = await getFeeGroupTotalsForPromotion(promotionId);
+      structureTotalByPromotion.set(
+        promotionId,
+        new Map(totals.map((t) => [t.feeGroupId, t.totalPayable])),
+      );
+    }),
+  );
+
   const paymentByMappingId = new Map<
     number,
     {
@@ -607,17 +620,34 @@ export const getAllFeeGroupPromotionMappings = async (
     if (list) list.push(fsm);
     else relatedByFgpmId.set(mid, [fsm]);
   }
-  for (const mappingId of mappingIds) {
+  for (const row of rows) {
+    if (row.id == null) continue;
+    const mappingId = row.id;
     const related = relatedByFgpmId.get(mappingId) ?? [];
-    const totalPayableAmount = related.reduce(
+    let totalPayableAmount = related.reduce(
       (sum, r) => sum + (r.totalPayable || 0),
       0,
     );
-    const amountToPay = related.reduce(
+    let amountToPay = related.reduce(
       (sum, r) =>
         sum + Math.max(0, (r.totalPayable || 0) - (r.amountPaid || 0)),
       0,
     );
+    const expectedFromStructure =
+      structureTotalByPromotion.get(row.promotionId)?.get(row.feeGroupId) ?? 0;
+    if (expectedFromStructure > 0) {
+      if (related.length === 0) {
+        totalPayableAmount = expectedFromStructure;
+        amountToPay = expectedFromStructure;
+      } else if (totalPayableAmount <= 0) {
+        const amountPaidSum = related.reduce(
+          (sum, r) => sum + (r.amountPaid || 0),
+          0,
+        );
+        totalPayableAmount = expectedFromStructure;
+        amountToPay = Math.max(0, expectedFromStructure - amountPaidSum);
+      }
+    }
     const hasSuccessfulPayment = related.some(
       (r) => r.linkedPaymentStatus === "SUCCESS",
     );
