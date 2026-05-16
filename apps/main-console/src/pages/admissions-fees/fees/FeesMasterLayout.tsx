@@ -11,12 +11,14 @@ import {
   Link2,
   PlusCircle,
   ClipboardCheck,
+  Layers,
+  Tag,
 } from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
 const topLinks = [
   { title: "Home", url: "/dashboard/fees", icon: LayoutDashboard },
-  { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
+  { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Layers },
   { title: "Student Fee Groups", url: "/dashboard/fees/fee-group-promotion-mapping", icon: Link2 },
   { title: "Student Fees", url: "/dashboard/fees/student-fees", icon: Users },
   { title: "Fee Marking", url: "/dashboard/fees/marking", icon: ClipboardCheck },
@@ -27,7 +29,7 @@ const mastersLinks = [
   { title: "Fee Categories", url: "/dashboard/fees/fee-category", icon: FolderTree },
   { title: "Fee Slabs", url: "/dashboard/fees/fee-slabs", icon: Percent },
   { title: "Fee Groups", url: "/dashboard/fees/fee-groups", icon: Users },
-  { title: "Receipt Type", url: "/dashboard/fees/receipt-types", icon: Receipt },
+  { title: "Receipt Type", url: "/dashboard/fees/receipt-types", icon: Tag },
   { title: "Fee Heads/Components", url: "/dashboard/fees/heads", icon: FileText },
   { title: "Addon", url: "/dashboard/fees/addon", icon: PlusCircle },
 ];
