@@ -1566,9 +1566,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
                       const shiftName = promo.shift?.name || "-";
                       const paymentStatus = paymentStatusLabel(mapping.paymentStatus);
-                      const amountToPay = mapping.amountToPay ?? 0;
-                      const totalPayableAmt = mapping.totalPayableAmount ?? 0;
-                      const displayAmount = totalPayableAmt > 0 ? totalPayableAmt : amountToPay;
+                      const displayAmount = mapping.totalPayableAmount ?? 0;
 
                       const globalIndex = (currentPage - 1) * pageSize + index + 1;
 
