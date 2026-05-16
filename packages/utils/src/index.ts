@@ -11,5 +11,5 @@ export {
     formatAadhaarCardNumber,
     generateToken,
     handleError,
-    verifyToken
+    verifyToken,
 }

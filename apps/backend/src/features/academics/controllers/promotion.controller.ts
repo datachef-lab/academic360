@@ -10,6 +10,7 @@ import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { exportPromotionStudentsReport } from "../services/promotion.service";
 import { socketService } from "@/services/socketService.js";
+import { parseReportExportFilters } from "@/utils/report-export-filters.js";
 
 export async function findPromotionByStudentIdAndClassIdHandler(
   req: Request,
@@ -278,13 +279,22 @@ export async function exportPromotionStudentsReportHandler(
   try {
     const sessionIdParam = req.query.sessionId as string | undefined;
     const classIdParam = req.query.classId as string | undefined;
+    const academicYearParam = req.query.academicYearId as string | undefined;
 
     const sessionId = sessionIdParam ? Number(sessionIdParam) : undefined;
     const classId = classIdParam ? Number(classIdParam) : undefined;
+    const academicYearId = academicYearParam
+      ? Number(academicYearParam)
+      : undefined;
+
+    const filters = parseReportExportFilters(
+      req.query as Record<string, unknown>,
+    );
 
     if (
       (sessionIdParam && Number.isNaN(sessionId)) ||
-      (classIdParam && Number.isNaN(classId))
+      (classIdParam && Number.isNaN(classId)) ||
+      (academicYearParam && Number.isNaN(academicYearId))
     ) {
       return res
         .status(400)
@@ -293,7 +303,7 @@ export async function exportPromotionStudentsReportHandler(
             400,
             "BAD_REQUEST",
             null,
-            "Invalid sessionId or classId parameter",
+            "Invalid sessionId, classId, or academicYearId parameter",
           ),
         );
     }
@@ -309,7 +319,15 @@ export async function exportPromotionStudentsReportHandler(
       socketService.sendProgressUpdate(userId, startUpdate);
     }
 
-    const result = await exportPromotionStudentsReport({ sessionId, classId });
+    const result = await exportPromotionStudentsReport({
+      sessionId,
+      classId,
+      academicYearId,
+      programCourseIds: filters.programCourseIds,
+      affiliationIds: filters.affiliationIds,
+      regulationTypeIds: filters.regulationTypeIds,
+      classIds: filters.classIds,
+    });
 
     if (userId) {
       const midUpdate = socketService.createExportProgressUpdate(

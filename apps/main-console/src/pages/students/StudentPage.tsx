@@ -202,6 +202,13 @@ export default function StudentPage() {
     }
   };
 
+  const formatDisplayDate = (dateValue: string | Date | null | undefined): string => {
+    if (!dateValue) return "-";
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString("en-GB");
+  };
+
   // Initialize status option state based on actual data
   const getInitialStatus = () => {
     if (userData?.isSuspended) return "SUSPENDED";
@@ -319,6 +326,12 @@ export default function StudentPage() {
             <div>{data?.currentPromotion?.shift?.name || "-"}</div>
             <div className="font-semibold text-gray-500">Email:</div>
             <div>{data?.personalEmail || "-"}</div>
+            <div className="font-semibold text-gray-500">DOJ:</div>
+            <div>
+              {formatDisplayDate(
+                data?.dateOfJoining ?? data?.currentPromotion?.dateOfJoining ?? null,
+              )}
+            </div>
             <div className="font-semibold text-gray-500">RFID :</div>
             <div>
               <input
@@ -769,6 +782,7 @@ export default function StudentPage() {
                   activeTab={activeTab!}
                   studentId={Number(data?.id ?? 0)}
                   userId={Number(data?.userId ?? 0)}
+                  studentUid={data?.uid ?? null}
                   personalEmail={data?.personalEmail ?? null}
                 />
               </div>

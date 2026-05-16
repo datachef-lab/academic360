@@ -23,6 +23,7 @@ import { policeStationModel } from "@repo/db/schemas/models/user/police-station.
 import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model.js";
 
 import { generateToken } from "./utils/index.js";
+import userStatusOverviewRouter from "@/features/user/routes/user-status-overview.routes.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import {
   academicYearRouter,
@@ -34,6 +35,13 @@ import {
   sectionRoutes,
   sessionRouter,
   shiftRouter,
+  careerProgressionFormFieldRouter,
+  careerProgressionFormRouter,
+  certificateFieldMasterRouter,
+  certificateFieldOptionMasterRouter,
+  certificateMasterRouter,
+  academicActivityRouter,
+  academicActivityMasterRouter,
 } from "@/features/academics/routes/index.js";
 import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -83,9 +91,17 @@ import {
   designationRouter,
   sessionStatusRouter,
   userStatusMasterRouter,
+  accessGroupRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
+  accessGroupModulePermissionRouter,
+  accessGroupModuleProgramCourseRouter,
+  accessGroupModuleRouter,
   accessGroupUserTypeRouter,
+  appModuleRouter,
+  departmentRouter,
+  identityMasterRouter,
+  institutionalRoleRouter,
   userTypeRouter,
   userRouter,
   // userStatusMasterDomainRouter,
@@ -96,7 +112,14 @@ import {
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
 import feeStudentMappingRouter from "@/features/fees/routes/fee-student-mapping.route.js";
+import feeReceiptRouter from "@/features/fees/routes/fee-receipt.route.js";
 import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
+import {
+  promotionBuilderRouter,
+  promotionClauseRouter,
+  promotionRosterRouter,
+  promotionStatusRouter,
+} from "@/features/batches/routes/index.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
@@ -126,6 +149,7 @@ import {
   studentAcademicSubjectRouter,
 } from "@/features/admissions/index.js";
 import bulkUploadRouter from "@/features/common/routes/bulkUpload.routes.js";
+import bulkDataUploadsRouter from "@/features/bulk-data-uploads/routes/bulk-data-upload.route.js";
 import {
   affiliationRouter,
   cascadingDropdownsRouter,
@@ -159,7 +183,28 @@ import {
   subjectSpecificPassingRoutes,
 } from "@/features/subject-selection/routes/index.js";
 // import { userStatusMappingRouter } from "./features/user/routes/index.js";
-import { examGroupRouter } from "./features/exams/routes/index.js";
+import {
+  admitCardRouter,
+  examGroupRouter,
+} from "./features/exams/routes/index.js";
+import libraryEntryExitRouter from "@/features/library/routes/library-entry-exit.route.js";
+import bookCirculationRouter from "@/features/library/routes/book-circulation.route.js";
+import journalRouter from "@/features/library/routes/journal.route.js";
+import copyDetailsRouter from "@/features/library/routes/copy-details.route.js";
+import bookRouter from "@/features/library/routes/book.route.js";
+import shelfRouter from "@/features/library/routes/shelf.route.js";
+import rackRouter from "@/features/library/routes/rack.route.js";
+import statusRouter from "@/features/library/routes/status.route.js";
+import journalTypeRouter from "@/features/library/routes/journal-type.route.js";
+import libraryArticleRouter from "@/features/library/routes/library-article.route.js";
+import libraryDocumentTypeRouter from "@/features/library/routes/library-document-type.route.js";
+import bindingRouter from "@/features/library/routes/binding.route.js";
+import borrowingTypeRouter from "@/features/library/routes/borrowing-type.route.js";
+import enclosureRouter from "@/features/library/routes/enclosure.route.js";
+import entryModeRouter from "@/features/library/routes/entry-mode.route.js";
+import libraryPeriodRouter from "@/features/library/routes/library-period.route.js";
+import seriesRouter from "@/features/library/routes/series.route.js";
+import publisherRouter from "@/features/library/routes/publisher.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -286,6 +331,12 @@ app.use(passport.session());
 
 app.use("/", express.static(path.join(__dirname, "..", "public")));
 
+// Explicitly serve app-module images (same path as saveAppModuleImage uses)
+const appModuleImageBase = path.resolve(
+  process.env.APP_MODULE_IMAGE_BASE_PATH ?? "./public/app-module-images",
+);
+app.use("/app-module-images", express.static(appModuleImageBase));
+
 // Serve CU registration documents from the configured path
 const cuRegAppPath = process.env.CU_REGISTRATION_APP_PATH;
 if (cuRegAppPath) {
@@ -379,10 +430,11 @@ app.use(
 
 app.use("/api/users", userRouter);
 
-// app.use("/api/user-statuses", userStatusMappingRouter);
+app.use("/api/user-statuses", userStatusOverviewRouter);
 
 // User status master endpoints
 app.use("/api/administration/user-status-masters", userStatusMasterRouter);
+app.use("/api/administration/app-modules", appModuleRouter);
 // // User status master level endpoints
 // app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
 // // User status master domain endpoints
@@ -390,6 +442,30 @@ app.use("/api/administration/user-status-masters", userStatusMasterRouter);
 // // User status master frequency endpoints
 // app.use("/api/user-status-master-frequencies", userStatusMasterFrequencyRouter);
 app.use("/api/sessions", sessionRouter);
+
+app.use(
+  "/api/academics/career-progression-form-fields",
+  careerProgressionFormFieldRouter,
+);
+
+app.use("/api/academics/career-progression-forms", careerProgressionFormRouter);
+app.use("/api/academics/academic-activities", academicActivityRouter);
+app.use(
+  "/api/academics/academic-activity-masters",
+  academicActivityMasterRouter,
+);
+
+app.use("/api/academics/certificate-masters", certificateMasterRouter);
+
+app.use(
+  "/api/academics/certificate-field-masters",
+  certificateFieldMasterRouter,
+);
+
+app.use(
+  "/api/academics/certificate-field-option-masters",
+  certificateFieldOptionMasterRouter,
+);
 
 app.use("/api/personal-details", personalDetailsRouter);
 
@@ -441,13 +517,15 @@ app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
 
-// app.use("/api/administration/departments", departmentRouter);
-
+app.use("/api/administration/departments", departmentRouter);
+app.use("/api/administration/identity-masters", identityMasterRouter);
+app.use("/api/administration/institutional-roles", institutionalRoleRouter);
 app.use("/api/administration/designations", designationRouter);
 app.use("/api/administration/session-statuses", sessionStatusRouter);
 
 // app.use("/api/administration/sub-departments", subDepartmentRouter);
 app.use("/api/administration/user-types", userTypeRouter);
+app.use("/api/administration/access-groups", accessGroupRouter);
 app.use(
   "/api/administration/access-group-applications",
   accessGroupApplicationRouter,
@@ -455,6 +533,15 @@ app.use(
 app.use(
   "/api/administration/access-group-designations",
   accessGroupDesignationRouter,
+);
+app.use("/api/administration/access-group-modules", accessGroupModuleRouter);
+app.use(
+  "/api/administration/access-group-module-permissions",
+  accessGroupModulePermissionRouter,
+);
+app.use(
+  "/api/administration/access-group-module-program-courses",
+  accessGroupModuleProgramCourseRouter,
 );
 app.use(
   "/api/administration/access-group-user-types",
@@ -488,6 +575,11 @@ app.use("/api/v1/fees/structure", feesStructureRouter);
 
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
 app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
+app.use("/api/v1/fees/receipts", feeReceiptRouter);
+app.use("/api/v1/batches/promotion-clauses", promotionClauseRouter);
+app.use("/api/v1/batches/promotion-builders", promotionBuilderRouter);
+app.use("/api/v1/batches/promotion-roster", promotionRosterRouter);
+app.use("/api/v1/batches/promotion-statuses", promotionStatusRouter);
 app.use("/api/v1/fees/receipt-types", receiptTypeRouter);
 app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/slabs", feeSlabRouter);
@@ -500,6 +592,7 @@ app.use(
 );
 // app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 app.use("/api/v1/fees", feesRouter);
+app.use("/api/v1/bulk-data-uploads", bulkDataUploadsRouter);
 app.use("/api/v1/courses", courseRouter);
 // app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 app.use("/api/exams/floors", floorRouter);
@@ -507,6 +600,7 @@ app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
 app.use("/api/exams/schedule", examScheduleRouter);
 app.use("/api/exam-groups", examGroupRouter);
+app.use("/api/admit-card", admitCardRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/application-forms", applicationFormRouter);
@@ -545,6 +639,24 @@ app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 app.use("/api/admissions", admissionRouter);
 
 app.use("/api/payments", paymentRouter);
+app.use("/api/library/entry-exit", libraryEntryExitRouter);
+app.use("/api/library/book-circulation", bookCirculationRouter);
+app.use("/api/library/journals", journalRouter);
+app.use("/api/library/copy-details", copyDetailsRouter);
+app.use("/api/library/books", bookRouter);
+app.use("/api/library/shelves", shelfRouter);
+app.use("/api/library/racks", rackRouter);
+app.use("/api/library/statuses", statusRouter);
+app.use("/api/library/journal-types", journalTypeRouter);
+app.use("/api/library/articles", libraryArticleRouter);
+app.use("/api/library/document-types", libraryDocumentTypeRouter);
+app.use("/api/library/bindings", bindingRouter);
+app.use("/api/library/borrowing-types", borrowingTypeRouter);
+app.use("/api/library/enclosures", enclosureRouter);
+app.use("/api/library/entry-modes", entryModeRouter);
+app.use("/api/library/periods", libraryPeriodRouter);
+app.use("/api/library/series", seriesRouter);
+app.use("/api/library/publishers", publisherRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 
@@ -853,6 +965,10 @@ app.use("/api/v1/academics", academicYearRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
 app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
+app.use("/api/v1/fees/receipts", feeReceiptRouter);
+app.use("/api/v1/batches/promotion-clauses", promotionClauseRouter);
+app.use("/api/v1/batches/promotion-builders", promotionBuilderRouter);
+app.use("/api/v1/batches/promotion-statuses", promotionStatusRouter);
 app.use("/api/v1/fees/heads", feeHeadRouter);
 app.use("/api/v1/fees", feesRouter);
 

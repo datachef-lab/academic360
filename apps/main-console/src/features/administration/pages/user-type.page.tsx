@@ -307,7 +307,7 @@ export default function UserTypePage() {
   };
 
   return (
-    <div className="p-2 sm:p-4 flex flex-col gap-4 min-h-[calc(100vh-140px)]">
+    <div className="p-2 sm:p-4 flex flex-col gap-4 min-h-[calc(100vh-140px)] overflow-x-hidden">
       <Card className="border-none">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center mb-3 justify-between gap-4 border rounded-md p-4">
           <div className="flex-1 min-w-0">
@@ -350,7 +350,7 @@ export default function UserTypePage() {
           </div>
         </CardHeader>
 
-        <CardContent className="px-0">
+        <CardContent className="px-0 overflow-x-hidden">
           <div className="bg-background p-2 sm:p-4 border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-0">
             <Input
               placeholder="Search..."
@@ -368,9 +368,127 @@ export default function UserTypePage() {
             </Button>
           </div>
 
-          <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
+          {/* Mobile: card layout */}
+          <div className="md:hidden space-y-2 p-2 sm:p-4 overflow-y-auto max-h-[600px]">
+            {loading ? (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                Loading...
+              </div>
+            ) : error ? (
+              <div className="text-center py-12 text-red-500">{error}</div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No sub user types found.
+              </div>
+            ) : (
+              filtered.map((item, idx) => {
+                const parent =
+                  item.parentUserTypeId != null
+                    ? parentUserTypeMap.get(item.parentUserTypeId)
+                    : null;
+                return (
+                  <Card key={item.id ?? idx} className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="font-medium text-slate-800 truncate">{item.name}</span>
+                          {parent && (
+                            <Badge
+                              className="w-fit font-medium border text-xs flex-shrink-0"
+                              style={{
+                                backgroundColor: parent.bgColor ?? "#f1f5f9",
+                                color: parent.color ?? "#64748b",
+                                borderColor: parent.color ?? "#64748b",
+                              }}
+                            >
+                              {parent.name}
+                            </Badge>
+                          )}
+                          {item.code && (
+                            <Badge
+                              className="w-fit font-medium border text-xs flex-shrink-0"
+                              style={{
+                                backgroundColor: item.bgColor ?? parent?.bgColor ?? "#f1f5f9",
+                                color: item.color ?? parent?.color ?? "#64748b",
+                                borderColor: item.color ?? parent?.color ?? "#64748b",
+                              }}
+                            >
+                              {item.code}
+                            </Badge>
+                          )}
+                          <Badge
+                            variant={item.isActive ? "default" : "secondary"}
+                            className={
+                              item.isActive
+                                ? "bg-green-500 text-white hover:bg-green-600 flex-shrink-0"
+                                : "flex-shrink-0"
+                            }
+                          >
+                            {item.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                        {item.description && (
+                          <p className="text-sm text-slate-600 line-clamp-2">{item.description}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setSelected(item);
+                            setIsDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Dialog
+                          open={deleteTarget?.id === item.id}
+                          onOpenChange={(open) => setDeleteTarget(open ? item : null)}
+                        >
+                          <DialogTrigger asChild>
+                            <Button variant="destructive" size="icon" className="h-8 w-8">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-[95vw]">
+                            <DialogHeader>
+                              <DialogTitle>Delete user type?</DialogTitle>
+                            </DialogHeader>
+                            <p className="text-sm text-muted-foreground">
+                              This will permanently remove <strong>{item.name}</strong>.
+                            </p>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={onDelete}
+                                disabled={isDeleting}
+                              >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden md:block relative" style={{ height: "600px" }}>
+            <div className="overflow-y-auto h-full overflow-x-hidden">
+              <Table className="border rounded-md w-full" style={{ tableLayout: "fixed" }}>
                 <TableHeader
                   style={{ position: "sticky", top: 0, zIndex: 30, background: "#f3f4f6" }}
                 >

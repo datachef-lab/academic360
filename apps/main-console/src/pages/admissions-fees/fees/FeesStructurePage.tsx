@@ -41,6 +41,8 @@ import { Label } from "@/components/ui/label";
 import { Class } from "@/types/academics/class";
 import { getAllClasses } from "@/services/classes.service";
 import { getAllShifts } from "@/services/academic";
+import { getProgramCourses } from "@/services/course-design.api";
+import type { ProgramCourse } from "@/types/course-design";
 import { Shift } from "@/types/academics/shift";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useSocket } from "@/hooks/useSocket";
@@ -53,8 +55,115 @@ interface FeeStructureFilters {
   academicYearId: number | null;
   receiptTypeId: number | null;
   classId: number | null;
+  programCourseId: number | null;
   shiftId: number | null;
 }
+
+const DotSpinnerLoader: React.FC = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="dot-spinner" role="status" aria-label="Loading fees structures">
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+    </div>
+    <style>{`
+      .dot-spinner {
+        --uib-size: 2.8rem;
+        --uib-speed: 0.9s;
+        --uib-color: #183153;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        height: var(--uib-size);
+        width: var(--uib-size);
+      }
+
+      .dot-spinner__dot {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        height: 100%;
+        width: 100%;
+      }
+
+      .dot-spinner__dot::before {
+        content: "";
+        height: 20%;
+        width: 20%;
+        border-radius: 50%;
+        background-color: var(--uib-color);
+        transform: scale(0);
+        opacity: 0.5;
+        animation: pulse0112 calc(var(--uib-speed) * 1.111) ease-in-out infinite;
+        box-shadow: 0 0 20px rgba(18, 31, 53, 0.3);
+      }
+
+      .dot-spinner__dot:nth-child(2) {
+        transform: rotate(45deg);
+      }
+      .dot-spinner__dot:nth-child(2)::before {
+        animation-delay: calc(var(--uib-speed) * -0.875);
+      }
+      .dot-spinner__dot:nth-child(3) {
+        transform: rotate(90deg);
+      }
+      .dot-spinner__dot:nth-child(3)::before {
+        animation-delay: calc(var(--uib-speed) * -0.75);
+      }
+      .dot-spinner__dot:nth-child(4) {
+        transform: rotate(135deg);
+      }
+      .dot-spinner__dot:nth-child(4)::before {
+        animation-delay: calc(var(--uib-speed) * -0.625);
+      }
+      .dot-spinner__dot:nth-child(5) {
+        transform: rotate(180deg);
+      }
+      .dot-spinner__dot:nth-child(5)::before {
+        animation-delay: calc(var(--uib-speed) * -0.5);
+      }
+      .dot-spinner__dot:nth-child(6) {
+        transform: rotate(225deg);
+      }
+      .dot-spinner__dot:nth-child(6)::before {
+        animation-delay: calc(var(--uib-speed) * -0.375);
+      }
+      .dot-spinner__dot:nth-child(7) {
+        transform: rotate(270deg);
+      }
+      .dot-spinner__dot:nth-child(7)::before {
+        animation-delay: calc(var(--uib-speed) * -0.25);
+      }
+      .dot-spinner__dot:nth-child(8) {
+        transform: rotate(315deg);
+      }
+      .dot-spinner__dot:nth-child(8)::before {
+        animation-delay: calc(var(--uib-speed) * -0.125);
+      }
+
+      @keyframes pulse0112 {
+        0%,
+        100% {
+          transform: scale(0);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+    `}</style>
+  </div>
+);
 
 const FeesStructurePage: React.FC = () => {
   const { currentAcademicYear } = useAcademicYear();
@@ -114,6 +223,7 @@ const FeesStructurePage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [classes, setClasses] = useState<Class[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [programCourses, setProgramCourses] = useState<ProgramCourse[]>([]);
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
   const [selectedFeeStructureForEdit, setSelectedFeeStructureForEdit] =
     useState<FeeStructureDto | null>(null);
@@ -126,6 +236,7 @@ const FeesStructurePage: React.FC = () => {
     academicYearId: null,
     receiptTypeId: null,
     classId: null,
+    programCourseId: null,
     shiftId: null,
   });
 
@@ -165,6 +276,10 @@ const FeesStructurePage: React.FC = () => {
   useEffect(() => {
     getAllClasses().then((data) => setClasses(data));
     getAllShifts().then((data) => setShifts(data));
+    getProgramCourses().then((data) => {
+      const list = data ?? [];
+      setProgramCourses([...list].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+    });
   }, []);
 
   // Memoize filters object for API call
@@ -185,6 +300,9 @@ const FeesStructurePage: React.FC = () => {
     }
     if (filters.classId) {
       filterObj.classId = filters.classId;
+    }
+    if (filters.programCourseId) {
+      filterObj.programCourseId = filters.programCourseId;
     }
     if (filters.shiftId) {
       filterObj.shiftId = filters.shiftId;
@@ -289,11 +407,7 @@ const FeesStructurePage: React.FC = () => {
   const totalPages = pagination?.totalPages || 1;
 
   if (academicYearsLoading || feesLoading || receiptTypesLoading || feesHeadsLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading fees structures...</div>
-      </div>
-    );
+    return <DotSpinnerLoader />;
   }
 
   return (
@@ -450,6 +564,32 @@ const FeesStructurePage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Course (Program Course) Filter */}
+                  <div className="grid gap-2 col-span-2">
+                    <Label htmlFor="program-course">Program Course</Label>
+                    <Select
+                      value={localFilters.programCourseId?.toString() || "all"}
+                      onValueChange={(value) =>
+                        setLocalFilters({
+                          ...localFilters,
+                          programCourseId: value === "all" ? null : Number(value),
+                        })
+                      }
+                    >
+                      <SelectTrigger id="program-course">
+                        <SelectValue placeholder="All Courses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Courses</SelectItem>
+                        {programCourses.map((pc) => (
+                          <SelectItem key={pc.id} value={pc.id!.toString()}>
+                            {pc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
@@ -461,6 +601,7 @@ const FeesStructurePage: React.FC = () => {
                       academicYearId: defaultAcademicYearId,
                       receiptTypeId: null,
                       classId: null,
+                      programCourseId: null,
                       shiftId: null,
                     });
                   }}
@@ -549,6 +690,24 @@ const FeesStructurePage: React.FC = () => {
                   className="ml-1 hover:text-purple-900"
                   onClick={() => {
                     setFilters({ ...filters, shiftId: null });
+                    setCurrentPage(1);
+                  }}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {filters.programCourseId && (
+              <Badge
+                variant="outline"
+                className="text-xs border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1"
+              >
+                {programCourses.find((c) => c.id === filters.programCourseId)?.name || "Course"}
+                <button
+                  aria-label="Clear course filter"
+                  className="ml-1 hover:text-teal-900"
+                  onClick={() => {
+                    setFilters({ ...filters, programCourseId: null });
                     setCurrentPage(1);
                   }}
                 >

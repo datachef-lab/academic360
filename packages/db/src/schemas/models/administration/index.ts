@@ -1,6 +1,6 @@
 export * from "./access-group-application.model";
 export * from "./access-group-designation.model";
-export * from "./access-group-module-class.model";
+export * from "./access-group-module-program-course-class.model";
 export * from "./access-group-module-permission.model";
 export * from "./access-group-module-program-course.model";
 export * from "./access-group-module.model";

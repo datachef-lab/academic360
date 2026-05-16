@@ -6,6 +6,7 @@ import { feeHeadModel, feeSlabModel, feeStructureModel } from "@/schemas/models/
 
 export const feeStructureComponentModel = pgTable("fee_structure_components", {
     id: serial().primaryKey(),
+    legacyFeeStructureId: integer(), // Refers the table `feesstructuresubtab` in irp db
     feeStructureId:
         integer("fee_structure_id_fk")
             .references(() => feeStructureModel.id)

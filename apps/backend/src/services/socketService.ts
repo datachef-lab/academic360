@@ -47,6 +47,137 @@ export interface MisTableUpdate {
   meta?: Record<string, unknown>;
 }
 
+export interface LibraryEntryExitUpdate {
+  id: string;
+  type: "library_entry_exit_update";
+  action: "CHECKED_IN" | "CHECKED_OUT";
+  userId: number;
+  userName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryJournalUpdate {
+  id: string;
+  type: "library_journal_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  journalId: number;
+  journalTitle: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryCopyDetailsUpdate {
+  id: string;
+  type: "library_copy_details_update";
+  action: "CREATED" | "UPDATED";
+  actorName: string;
+  copyDetailsId: number;
+  bookTitle: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryBookUpdate {
+  id: string;
+  type: "library_book_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  bookId: number;
+  bookTitle: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryBookCirculationUpdate {
+  id: string;
+  type: "library_book_circulation_update";
+  action: "UPSERTED";
+  actorUserId: number | null;
+  actorName: string;
+  userId: number;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryRackUpdate {
+  id: string;
+  type: "library_rack_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  rackId: number;
+  rackName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryShelfUpdate {
+  id: string;
+  type: "library_shelf_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  shelfId: number;
+  shelfName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryStatusUpdate {
+  id: string;
+  type: "library_status_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  statusId: number;
+  statusName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryArticleUpdate {
+  id: string;
+  type: "library_article_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  articleId: number;
+  articleName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryDocumentTypeUpdate {
+  id: string;
+  type: "library_document_type_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  documentTypeId: number;
+  documentTypeName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface LibraryJournalTypeUpdate {
+  id: string;
+  type: "library_journal_type_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  journalTypeId: number;
+  journalTypeName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
 // Active user info interface
 interface ActiveUserInfo {
   id: number;
@@ -167,6 +298,242 @@ class SocketService {
           }
         },
       );
+
+      socket.on("subscribe_library_entry_exit", () => {
+        try {
+          socket.join("library_entry_exit_page");
+          log.debug(`Socket ${socket.id} joined room: library_entry_exit_page`);
+        } catch (error) {
+          log.error("Error subscribing to library entry/exit room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_entry_exit", () => {
+        try {
+          socket.leave("library_entry_exit_page");
+          log.debug(`Socket ${socket.id} left room: library_entry_exit_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library entry/exit room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_journal", () => {
+        try {
+          socket.join("library_journal_page");
+          log.debug(`Socket ${socket.id} joined room: library_journal_page`);
+        } catch (error) {
+          log.error("Error subscribing to library journal room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_journal", () => {
+        try {
+          socket.leave("library_journal_page");
+          log.debug(`Socket ${socket.id} left room: library_journal_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library journal room", { error });
+        }
+      });
+
+      socket.on("subscribe_library_copy_details", () => {
+        try {
+          socket.join("library_copy_details_page");
+          log.debug(
+            `Socket ${socket.id} joined room: library_copy_details_page`,
+          );
+        } catch (error) {
+          log.error("Error subscribing to library copy details room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_library_copy_details", () => {
+        try {
+          socket.leave("library_copy_details_page");
+          log.debug(`Socket ${socket.id} left room: library_copy_details_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library copy details room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_books", () => {
+        try {
+          socket.join("library_books_page");
+          log.debug(`Socket ${socket.id} joined room: library_books_page`);
+        } catch (error) {
+          log.error("Error subscribing to library books room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_books", () => {
+        try {
+          socket.leave("library_books_page");
+          log.debug(`Socket ${socket.id} left room: library_books_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library books room", { error });
+        }
+      });
+
+      socket.on("subscribe_library_book_circulation", () => {
+        try {
+          socket.join("library_book_circulation_page");
+          log.debug(
+            `Socket ${socket.id} joined room: library_book_circulation_page`,
+          );
+        } catch (error) {
+          log.error("Error subscribing to library book circulation room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_library_book_circulation", () => {
+        try {
+          socket.leave("library_book_circulation_page");
+          log.debug(
+            `Socket ${socket.id} left room: library_book_circulation_page`,
+          );
+        } catch (error) {
+          log.error("Error unsubscribing from library book circulation room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_racks", () => {
+        try {
+          socket.join("library_racks_page");
+          log.debug(`Socket ${socket.id} joined room: library_racks_page`);
+        } catch (error) {
+          log.error("Error subscribing to library racks room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_racks", () => {
+        try {
+          socket.leave("library_racks_page");
+          log.debug(`Socket ${socket.id} left room: library_racks_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library racks room", { error });
+        }
+      });
+
+      socket.on("subscribe_library_shelves", () => {
+        try {
+          socket.join("library_shelves_page");
+          log.debug(`Socket ${socket.id} joined room: library_shelves_page`);
+        } catch (error) {
+          log.error("Error subscribing to library shelves room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_shelves", () => {
+        try {
+          socket.leave("library_shelves_page");
+          log.debug(`Socket ${socket.id} left room: library_shelves_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library shelves room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_status", () => {
+        try {
+          socket.join("library_status_page");
+          log.debug(`Socket ${socket.id} joined room: library_status_page`);
+        } catch (error) {
+          log.error("Error subscribing to library status room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_status", () => {
+        try {
+          socket.leave("library_status_page");
+          log.debug(`Socket ${socket.id} left room: library_status_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library status room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_articles", () => {
+        try {
+          socket.join("library_articles_page");
+          log.debug(`Socket ${socket.id} joined room: library_articles_page`);
+        } catch (error) {
+          log.error("Error subscribing to library articles room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_articles", () => {
+        try {
+          socket.leave("library_articles_page");
+          log.debug(`Socket ${socket.id} left room: library_articles_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library articles room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_document_types", () => {
+        try {
+          socket.join("library_document_types_page");
+          log.debug(
+            `Socket ${socket.id} joined room: library_document_types_page`,
+          );
+        } catch (error) {
+          log.error("Error subscribing to library document types room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_library_document_types", () => {
+        try {
+          socket.leave("library_document_types_page");
+          log.debug(
+            `Socket ${socket.id} left room: library_document_types_page`,
+          );
+        } catch (error) {
+          log.error("Error unsubscribing from library document types room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_journal_types", () => {
+        try {
+          socket.join("library_journal_types_page");
+          log.debug(
+            `Socket ${socket.id} joined room: library_journal_types_page`,
+          );
+        } catch (error) {
+          log.error("Error subscribing to library journal types room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_library_journal_types", () => {
+        try {
+          socket.leave("library_journal_types_page");
+          log.debug(
+            `Socket ${socket.id} left room: library_journal_types_page`,
+          );
+        } catch (error) {
+          log.error("Error unsubscribing from library journal types room", {
+            error,
+          });
+        }
+      });
 
       // Handle disconnection
       socket.on("disconnect", () => {
@@ -535,6 +902,493 @@ class SocketService {
       log.debug(`MIS update → all clients (${data.length} records)`);
     } catch (error) {
       log.error("Error sending MIS table update to all", { error });
+    }
+  }
+
+  sendLibraryEntryExitUpdate(payload: {
+    action: "CHECKED_IN" | "CHECKED_OUT";
+    userId: number;
+    userName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library entry/exit update: io is null");
+      return;
+    }
+
+    try {
+      const update: LibraryEntryExitUpdate = {
+        id: `library_entry_exit_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_entry_exit_update",
+        action: payload.action,
+        userId: payload.userId,
+        userName: payload.userName,
+        message:
+          payload.action === "CHECKED_IN"
+            ? `${payload.userName} entered the library`
+            : `${payload.userName} exited the library`,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io
+        .to("library_entry_exit_page")
+        .emit("library_entry_exit_update", update);
+      log.debug(
+        `Library entry/exit update broadcasted to page room: ${update.message}`,
+      );
+    } catch (error) {
+      log.error("Error sending library entry/exit update", { error });
+    }
+  }
+
+  sendLibraryJournalUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    journalId: number;
+    journalTitle: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library journal update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const title = payload.journalTitle.trim() || "Untitled";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} journal "${title}"`;
+
+      const update: LibraryJournalUpdate = {
+        id: `library_journal_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_journal_update",
+        action: payload.action,
+        actorName: actor,
+        journalId: payload.journalId,
+        journalTitle: title,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io.to("library_journal_page").emit("library_journal_update", update);
+      log.debug(`Library journal update broadcasted to page room: ${message}`);
+    } catch (error) {
+      log.error("Error sending library journal update", { error });
+    }
+  }
+
+  sendLibraryCopyDetailsUpdate(payload: {
+    action: "CREATED" | "UPDATED";
+    actorName: string;
+    copyDetailsId: number;
+    bookTitle: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library copy details update: io is null");
+      return;
+    }
+
+    try {
+      const verb = payload.action === "CREATED" ? "added" : "updated";
+      const title = payload.bookTitle.trim() || "Untitled book";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} a copy for "${title}"`;
+
+      const update: LibraryCopyDetailsUpdate = {
+        id: `library_copy_details_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_copy_details_update",
+        action: payload.action,
+        actorName: actor,
+        copyDetailsId: payload.copyDetailsId,
+        bookTitle: title,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io
+        .to("library_copy_details_page")
+        .emit("library_copy_details_update", update);
+      log.debug(
+        `Library copy details update broadcasted to page room: ${message}`,
+      );
+    } catch (error) {
+      log.error("Error sending library copy details update", { error });
+    }
+  }
+
+  sendLibraryBookUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    bookId: number;
+    bookTitle: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library book update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const title = payload.bookTitle.trim() || "Untitled book";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} book "${title}"`;
+
+      const update: LibraryBookUpdate = {
+        id: `library_book_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_book_update",
+        action: payload.action,
+        actorName: actor,
+        bookId: payload.bookId,
+        bookTitle: title,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io.to("library_books_page").emit("library_book_update", update);
+      log.debug(`Library book update broadcasted to page room: ${message}`);
+    } catch (error) {
+      log.error("Error sending library book update", { error });
+    }
+  }
+
+  broadcastAcademicActivityUpdate(payload?: {
+    activityName?: string;
+    masterId?: number;
+    action?: "created" | "updated" | "deleted";
+  }) {
+    if (!this.io) {
+      log.error("Cannot send academic activity update: io is null");
+      return;
+    }
+
+    try {
+      this.io.emit("academic_activity_student_console_updated", {
+        activityName: payload?.activityName,
+        masterId: payload?.masterId,
+        action: payload?.action,
+        timestamp: new Date().toISOString(),
+      });
+      log.debug(
+        `Academic activity update broadcasted: ${payload?.action || "unknown"} (master: ${payload?.masterId || "N/A"})`,
+      );
+    } catch (error) {
+      log.error("Error broadcasting academic activity update", { error });
+    }
+  }
+
+  sendLibraryBookCirculationUpdate(payload: {
+    action: "UPSERTED";
+    actorUserId: number | null;
+    actorName: string;
+    userId: number;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library book circulation update: io is null");
+      return;
+    }
+
+    try {
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} updated book circulation entries`;
+      const update: LibraryBookCirculationUpdate = {
+        id: `library_book_circulation_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_book_circulation_update",
+        action: payload.action,
+        actorUserId: payload.actorUserId,
+        actorName: actor,
+        userId: payload.userId,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io
+        .to("library_book_circulation_page")
+        .emit("library_book_circulation_update", update);
+      log.debug(
+        `Library book circulation update broadcasted to page room: ${message}`,
+      );
+    } catch (error) {
+      log.error("Error sending library book circulation update", { error });
+    }
+  }
+
+  sendLibraryRackUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    rackId: number;
+    rackName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library rack update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const name = payload.rackName.trim() || "Untitled rack";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} rack "${name}"`;
+
+      const update: LibraryRackUpdate = {
+        id: `library_rack_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_rack_update",
+        action: payload.action,
+        actorName: actor,
+        rackId: payload.rackId,
+        rackName: name,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io.to("library_racks_page").emit("library_rack_update", update);
+      log.debug(`Library rack update broadcasted to page room: ${message}`);
+    } catch (error) {
+      log.error("Error sending library rack update", { error });
+    }
+  }
+
+  sendLibraryShelfUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    shelfId: number;
+    shelfName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library shelf update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const name = payload.shelfName.trim() || "Untitled shelf";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} shelf "${name}"`;
+
+      const update: LibraryShelfUpdate = {
+        id: `library_shelf_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_shelf_update",
+        action: payload.action,
+        actorName: actor,
+        shelfId: payload.shelfId,
+        shelfName: name,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io.to("library_shelves_page").emit("library_shelf_update", update);
+      log.debug(`Library shelf update broadcasted to page room: ${message}`);
+    } catch (error) {
+      log.error("Error sending library shelf update", { error });
+    }
+  }
+
+  sendLibraryStatusUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    statusId: number;
+    statusName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library status update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const name = payload.statusName.trim() || "Untitled status";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} status "${name}"`;
+
+      const update: LibraryStatusUpdate = {
+        id: `library_status_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_status_update",
+        action: payload.action,
+        actorName: actor,
+        statusId: payload.statusId,
+        statusName: name,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io.to("library_status_page").emit("library_status_update", update);
+      log.debug(`Library status update broadcasted to page room: ${message}`);
+    } catch (error) {
+      log.error("Error sending library status update", { error });
+    }
+  }
+
+  sendLibraryArticleUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    articleId: number;
+    articleName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library article update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const name = payload.articleName.trim() || "Untitled article";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} article "${name}"`;
+
+      const update: LibraryArticleUpdate = {
+        id: `library_article_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_article_update",
+        action: payload.action,
+        actorName: actor,
+        articleId: payload.articleId,
+        articleName: name,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io
+        .to("library_articles_page")
+        .emit("library_article_update", update);
+      log.debug(`Library article update broadcasted to page room: ${message}`);
+    } catch (error) {
+      log.error("Error sending library article update", { error });
+    }
+  }
+
+  sendLibraryDocumentTypeUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    documentTypeId: number;
+    documentTypeName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library document type update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const name = payload.documentTypeName.trim() || "Untitled document type";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} document type "${name}"`;
+
+      const update: LibraryDocumentTypeUpdate = {
+        id: `library_document_type_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_document_type_update",
+        action: payload.action,
+        actorName: actor,
+        documentTypeId: payload.documentTypeId,
+        documentTypeName: name,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io
+        .to("library_document_types_page")
+        .emit("library_document_type_update", update);
+      log.debug(
+        `Library document type update broadcasted to page room: ${message}`,
+      );
+    } catch (error) {
+      log.error("Error sending library document type update", { error });
+    }
+  }
+
+  sendLibraryJournalTypeUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    journalTypeId: number;
+    journalTypeName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library journal type update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const name = payload.journalTypeName.trim() || "Untitled journal type";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} journal type "${name}"`;
+
+      const update: LibraryJournalTypeUpdate = {
+        id: `library_journal_type_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_journal_type_update",
+        action: payload.action,
+        actorName: actor,
+        journalTypeId: payload.journalTypeId,
+        journalTypeName: name,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io
+        .to("library_journal_types_page")
+        .emit("library_journal_type_update", update);
+      log.debug(
+        `Library journal type update broadcasted to page room: ${message}`,
+      );
+    } catch (error) {
+      log.error("Error sending library journal type update", { error });
     }
   }
 }

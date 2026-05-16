@@ -37,7 +37,7 @@ async function mapMainToDto(
   const [st] = await db
     .select()
     .from(subjectTypeModel)
-    .where(eq(subjectTypeModel.id, main.subjectTypeId));
+    .where(eq(subjectTypeModel.id, main.subjectTypeId!));
 
   if (!ay || !st || !main.id) {
     return null;

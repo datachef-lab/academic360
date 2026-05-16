@@ -48,9 +48,19 @@ export async function getFilteredStudents(
   return res.data.payload;
 }
 
-export async function getSearchedStudentsByRollNumber(rollNumber: string): Promise<StudentDto> {
-  const res = await axiosInstance.get(`/api/students/roll/${rollNumber}`);
-  return res.data.payload as StudentDto;
+/** Same search rules as /api/students/search; used as fallback after UID lookup. */
+export async function getSearchedStudentsByRollNumber(
+  searchText: string,
+): Promise<StudentDto | null> {
+  const res = await axiosInstance.get(`/api/students/search-rollno`, {
+    params: { searchText: searchText.trim(), page: 1, pageSize: 10 },
+  });
+  const payload = res.data?.payload as {
+    content?: Array<{ id: number }>;
+  };
+  const first = payload?.content?.[0];
+  if (!first?.id) return null;
+  return getStudentById(first.id);
 }
 
 // Online students (via WebSocket tracking on backend)

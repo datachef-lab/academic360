@@ -4,7 +4,10 @@ import type { DesignationT } from "@repo/db/schemas";
 
 const BASE_URL = "/api/administration/designations";
 
-export type DesignationPayload = Pick<DesignationT, "name" | "description" | "isActive">;
+export type DesignationPayload = Pick<
+  DesignationT,
+  "name" | "description" | "code" | "color" | "bgColor" | "isActive"
+>;
 
 export async function getAllDesignations() {
   const { data } = await axiosInstance.get<ApiResponse<DesignationT[]>>(BASE_URL);

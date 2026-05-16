@@ -64,3 +64,12 @@ export interface ExamPapersWithStats {
     studentCount: number;
     examSubjectId: number;
 }
+
+/** Row shape for exam form fillup bulk Excel (headers must match exactly). */
+export interface ExamFormFillupExcelUploadRow {
+    "CU Reg Number": string;
+    "CU Roll Number": string;
+    "Appear Type": string; // Promotion Status (name)
+    /** Maps to `exam_form_fillup.status`: PENDING or COMPLETED */
+    "Form Fill Up Status": "PENDING" | "COMPLETED";
+}

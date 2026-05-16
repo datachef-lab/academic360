@@ -1,5 +1,33 @@
 import axiosInstance from "@/utils/api";
 
+/** Optional multi-select filters appended as comma-separated id lists. */
+export type ReportExportQueryFilters = {
+  academicYearId?: number;
+  programCourseIds?: number[];
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  classIds?: number[];
+};
+
+function appendReportFilters(params: URLSearchParams, filters?: ReportExportQueryFilters) {
+  if (!filters) return;
+  if (filters.academicYearId != null) {
+    params.set("academicYearId", String(filters.academicYearId));
+  }
+  if (filters.programCourseIds?.length) {
+    params.set("programCourseIds", filters.programCourseIds.join(","));
+  }
+  if (filters.affiliationIds?.length) {
+    params.set("affiliationIds", filters.affiliationIds.join(","));
+  }
+  if (filters.regulationTypeIds?.length) {
+    params.set("regulationTypeIds", filters.regulationTypeIds.join(","));
+  }
+  if (filters.classIds?.length) {
+    params.set("classIds", filters.classIds.join(","));
+  }
+}
+
 export interface ExportResponse {
   success: boolean;
   message: string;
@@ -18,18 +46,51 @@ export interface ExcelUploadResponse<T = unknown> {
 
 export class ExportService {
   /**
+   * Any subject-selection meta row for the academic year works as the export route param;
+   * the backend resolves all metas for that year from the reference meta.
+   */
+  static async getFirstSubjectSelectionMetaIdForAcademicYear(
+    academicYearId: number,
+  ): Promise<number | null> {
+    try {
+      const response = await axiosInstance.get<unknown>("/api/subject-selection/metas");
+      const raw = response.data as Record<string, unknown> | unknown[];
+      const rows = Array.isArray(raw)
+        ? raw
+        : Array.isArray((raw as { payload?: unknown }).payload)
+          ? ((raw as { payload: unknown[] }).payload as unknown[])
+          : Array.isArray((raw as { data?: unknown }).data)
+            ? ((raw as { data: unknown[] }).data as unknown[])
+            : null;
+      if (!rows?.length) return null;
+      const match = rows.find(
+        (r) =>
+          r &&
+          typeof r === "object" &&
+          "academicYearId" in r &&
+          Number((r as { academicYearId: number }).academicYearId) === academicYearId,
+      ) as { id?: number } | undefined;
+      return match?.id != null ? Number(match.id) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Export student subject selections to Excel
    * @param subjectSelectionMetaId - The subject selection meta ID to export
    * @returns Promise with export response
    */
   static async exportStudentSubjectSelections(
     subjectSelectionMetaId: number,
+    filters?: ReportExportQueryFilters,
   ): Promise<ExportResponse> {
     try {
-      // Backend mounts this router at /api/subject-selection/student-subject-selection
-      // and the route path is GET /export/:subjectSelectionMetaId
+      const params = new URLSearchParams();
+      appendReportFilters(params, filters);
+      const qs = params.toString();
       const response = await axiosInstance.get(
-        `/api/subject-selection/student-subject-selection/export/${subjectSelectionMetaId}`,
+        `/api/subject-selection/student-subject-selection/export/${subjectSelectionMetaId}${qs ? `?${qs}` : ""}`,
         {
           responseType: "blob", // Important for file downloads
         },
@@ -113,12 +174,17 @@ export class ExportService {
     }
   }
 
-  static async exportStudentSubjectsInventory(academicYearId: number): Promise<ExportResponse> {
+  static async exportStudentSubjectsInventory(
+    academicYearId: number,
+    filters?: Omit<ReportExportQueryFilters, "academicYearId">,
+  ): Promise<ExportResponse> {
     try {
+      const params = new URLSearchParams();
+      params.set("academicYearId", String(academicYearId));
+      appendReportFilters(params, { ...filters, academicYearId });
       const response = await axiosInstance.get(
-        `/api/subject-selection/student-subject-selection/exports/subjects`,
+        `/api/subject-selection/student-subject-selection/exports/subjects?${params.toString()}`,
         {
-          params: { academicYearId },
           responseType: "blob",
           timeout: 0,
         },
@@ -244,16 +310,17 @@ export class ExportService {
    * @param academicYearId - The academic year ID to filter by
    * @returns Promise with export response
    */
-  static async exportCuRegistrationCorrections(academicYearId: number): Promise<ExportResponse> {
+  static async exportCuRegistrationCorrections(
+    academicYearId: number,
+    filters?: Omit<ReportExportQueryFilters, "academicYearId">,
+  ): Promise<ExportResponse> {
     try {
-      // Backend mounts this router at /api/admissions/cu-registration-correction-requests
-      // and the route path is GET /export
+      const params = new URLSearchParams();
+      params.set("academicYearId", String(academicYearId));
+      appendReportFilters(params, { ...filters, academicYearId });
       const response = await axiosInstance.get(
-        `/api/admissions/cu-registration-correction-requests/export`,
+        `/api/admissions/cu-registration-correction-requests/export?${params.toString()}`,
         {
-          params: {
-            academicYearId,
-          },
           responseType: "blob", // Important for file downloads
         },
       );
@@ -635,6 +702,42 @@ export class ExportService {
     }
   }
 
+  static async exportEnrolmentMasterReport(
+    academicYearId: number,
+    filters?: Omit<ReportExportQueryFilters, "academicYearId">,
+  ): Promise<ExportResponse> {
+    try {
+      const params = new URLSearchParams();
+      params.set("academicYearId", String(academicYearId));
+      appendReportFilters(params, { ...filters, academicYearId });
+      const response = await axiosInstance.get(
+        `/api/students/export/enrolment-master?${params.toString()}`,
+        { responseType: "blob", timeout: 0 },
+      );
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = `enrolment-master-${academicYearId}.xlsx`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) fileName = match[1];
+      }
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const downloadUrl = URL.createObjectURL(blob);
+      return {
+        success: true,
+        message: "Export completed successfully",
+        data: { downloadUrl, fileName, totalRecords: 0 },
+      };
+    } catch (error: unknown) {
+      console.error("Enrolment master export error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Export failed",
+      };
+    }
+  }
+
   /**
    * Export student detailed data report
    */
@@ -740,11 +843,23 @@ export class ExportService {
   static async exportPromotionStudentsReport(params?: {
     sessionId?: number;
     classId?: number;
+    academicYearId?: number;
+    programCourseIds?: number[];
+    affiliationIds?: number[];
+    regulationTypeIds?: number[];
+    classIds?: number[];
   }): Promise<ExportResponse> {
     try {
       const query = new URLSearchParams();
       if (params?.sessionId != null) query.set("sessionId", String(params.sessionId));
       if (params?.classId != null) query.set("classId", String(params.classId));
+      appendReportFilters(query, {
+        academicYearId: params?.academicYearId,
+        programCourseIds: params?.programCourseIds,
+        affiliationIds: params?.affiliationIds,
+        regulationTypeIds: params?.regulationTypeIds,
+        classIds: params?.classIds,
+      });
       const queryStr = query.toString() ? `?${query.toString()}` : "";
 
       // Backend promotions router is mounted at /api/promotions

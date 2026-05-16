@@ -2,9 +2,14 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
+export type TableProps = React.HTMLAttributes<HTMLTableElement> & {
+  /** Override outer wrapper (default `overflow-auto`). Use `overflow-x-hidden max-w-full` to avoid horizontal scroll when the table is styled to fit. */
+  containerClassName?: string;
+};
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, containerClassName, ...props }, ref) => (
+    <div className={cn("relative w-full min-w-0", containerClassName ?? "overflow-auto")}>
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   ),

@@ -43,6 +43,7 @@ import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model"
 import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model";
 import { StudentType } from "@/types/user/student.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
+import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 import { degreeModel } from "@repo/db/schemas/models/resources";
 import { marksheetModel } from "@repo/db/schemas/models/academics";
 
@@ -275,7 +276,7 @@ export async function findByUid(uid: string): Promise<StudentDto | null> {
       or(ilike(studentModel.uid, uid), ilike(studentModel.rfidNumber, uid)),
     );
 
-  console.log("Found student by UID:", foundStudent);
+  // console.log("Found student by UID:", foundStudent);
   return await modelToDto(foundStudent);
 }
 
@@ -650,20 +651,24 @@ export async function searchStudent(
   const query = searchText.trim();
   const pattern = `%${query}%`;
 
-  // Search by UID, Roll Number, or User Name and return name for UI display
+  // UID, roll / registration on students, display roll / SI roll on promotions, or user name
   const rows = await db
-    .select({
+    .selectDistinct({
       id: studentModel.id,
       uid: studentModel.uid,
       name: userModel.name,
     })
     .from(studentModel)
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
     .where(
       or(
         ilike(studentModel.uid, pattern),
         ilike(studentModel.rollNumber, pattern),
+        ilike(studentModel.registrationNumber, pattern),
         ilike(userModel.name, pattern),
+        ilike(promotionModel.rollNumber, pattern),
+        ilike(promotionModel.rollNumberSI, pattern),
       ),
     )
     .orderBy(desc(studentModel.id))
@@ -739,64 +744,7 @@ export async function searchStudentsByRollNumber(
   page: number = 1,
   pageSize: number = 10,
 ) {
-  // Trim spaces and convert searchText to lowercase
-  searchText = searchText.trim().toLowerCase();
-
-  // Query students based on student roll number (Partial match)
-  // const studentsQuery = db
-  //     .select()
-  //     .from(studentModel)
-  //     .leftJoin(
-  //         academicIdentifierModel,
-  //         eq(academicIdentifierModel.studentId, studentModel.id),
-  //     ) // Join with academic identifiers
-  //     .where(
-  //         ilike(
-  //             sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
-  //             `%${searchText.replace(/[^a-zA-Z0-9]/g, "")}%`,
-  //         ),
-  //     );
-
-  // // Get the paginated students
-  // const students = await studentsQuery
-  //     .limit(pageSize)
-  //     .offset((page - 1) * pageSize);
-
-  // console.log(students);
-
-  // // Get the total count of students matching the filter
-  // const [{ count: countRows }] = await db
-  //     .select({ count: count() })
-  //     .from(studentModel)
-
-  //     .leftJoin(
-  //         academicIdentifierModel,
-  //         eq(academicIdentifierModel.studentId, studentModel.id),
-  //     ) // Join with academic identifiers
-  //     .where(
-  //         or(
-  //             ilike(
-  //                 sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
-  //                 `%${searchText.replace(/[^a-zA-Z0-9]/g, "")}%`,
-  //             ),
-  //         ),
-  //     );
-
-  // // Map the result to a properly formatted response
-  // const content = await Promise.all(
-  //     students.map(async (studentRecord) => {
-  //         const student = studentRecord.students; // Extract the student data
-  //         return await studentResponseFormat(student);
-  //     }),
-  // );
-
-  return {
-    content: [],
-    page,
-    pageSize,
-    totalElements: Number(0), // Now this count is correct!
-    totalPages: Math.ceil(Number(0) / pageSize),
-  };
+  return searchStudent(searchText.trim(), page, pageSize);
 }
 
 export async function findFilteredStudents({
@@ -1036,13 +984,8 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
 
   let currentPromotion = null;
   if (latestPromotion) {
-    const [promStatus, boardResStatus, sess, cls, sec, shf, progCourse] =
-      await Promise.all([
-        db
-          .select()
-          .from(promotionStatusModel)
-          .where(eq(promotionStatusModel.id, latestPromotion.promotionStatusId))
-          .then((r) => r[0] ?? null),
+    const [boardResStatus, sess, cls, sec, shf, progCourse] = await Promise.all(
+      [
         latestPromotion.boardResultStatusId
           ? db
               .select()
@@ -1093,9 +1036,10 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
           .then((r) => r[0] ?? null),
         // Use service for ProgramCourse to build ProgramCourseDto
         programCourseService.findById(latestPromotion.programCourseId),
-      ]);
+      ],
+    );
 
-    if (promStatus && sess && cls && sec && shf && progCourse) {
+    if (sess && cls && sec && shf && progCourse) {
       currentPromotion = {
         id: latestPromotion.id,
         legacyHistoricalRecordId:
@@ -1113,7 +1057,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
         rollNumberSI: latestPromotion.rollNumberSI ?? null,
         examNumber: latestPromotion.examNumber ?? null,
         examSerialNumber: latestPromotion.examSerialNumber ?? null,
-        promotionStatusId: latestPromotion.promotionStatusId,
+        // promotionStatusId: latestPromotion.promotionStatusId,
         boardResultStatusId: latestPromotion.boardResultStatusId ?? null,
         startDate: latestPromotion.startDate ?? null,
         endDate: latestPromotion.endDate ?? null,
@@ -1121,7 +1065,6 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
         createdAt: latestPromotion.createdAt ?? new Date(),
         updatedAt: latestPromotion.updatedAt ?? new Date(),
         // Expanded relations per PromotionDto
-        promotionStatus: promStatus,
         boardResultStatus: boardResStatus!,
         session: sess,
         class: cls,
@@ -1654,41 +1597,7 @@ export async function exportStudentDetailedReport(academicYearId: number) {
       }
     });
 
-    // Style header row
-    const headerRow = sheet.getRow(1);
-    headerRow.font = { bold: true, size: 12 };
-    headerRow.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFD3D3D3" }, // Grey background
-    };
-    headerRow.alignment = { vertical: "middle", horizontal: "left" };
-    headerRow.height = 20;
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    // Add borders to all cells
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: "thin", color: { argb: "FFD3D3D3" } },
-            left: { style: "thin", color: { argb: "FFD3D3D3" } },
-            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-            right: { style: "thin", color: { argb: "FFD3D3D3" } },
-          };
-        });
-      }
-    });
-
-    // Freeze header row
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    applyStandardExcelReportTableStyling(sheet);
   } else {
     sheet.columns = [{ header: "message", key: "message", width: 20 }];
     sheet.addRow({ message: "No data available" });
@@ -1834,41 +1743,7 @@ export async function exportStudentAcademicSubjectsReport(
       }
     });
 
-    // Style header row
-    const headerRow = sheet.getRow(1);
-    headerRow.font = { bold: true, size: 12 };
-    headerRow.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFD3D3D3" }, // Grey background
-    };
-    headerRow.alignment = { vertical: "middle", horizontal: "left" };
-    headerRow.height = 20;
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    // Add borders to all cells
-    sheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: "thin", color: { argb: "FFD3D3D3" } },
-            left: { style: "thin", color: { argb: "FFD3D3D3" } },
-            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-            right: { style: "thin", color: { argb: "FFD3D3D3" } },
-          };
-        });
-      }
-    });
-
-    // Freeze header row
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    applyStandardExcelReportTableStyling(sheet);
   } else {
     sheet.columns = [{ header: "message", key: "message", width: 20 }];
     sheet.addRow({ message: "No data available" });
@@ -2565,6 +2440,7 @@ export async function checkExistingStudentUids(
 export async function updateStudentCuRollAndRegistration(
   rows: StudentCuRollRegRow[],
   progressUserId?: string,
+  options?: { dryRun?: boolean },
 ): Promise<{
   totalRows: number;
   uniqueUids: number;
@@ -2573,12 +2449,21 @@ export async function updateStudentCuRollAndRegistration(
   notFound: string[];
   duplicates: Array<{ uid: string; rowNumbers: number[] }>;
   errors: Array<{ rowNumber: number; uid: string; error: string }>;
+  /** One entry per Excel data row — used by bulk-upload UI to show file contents for valid rows */
+  fileRows: Array<{
+    rowNumber: number;
+    uid: string;
+    cuRegistrationNumber: string | null;
+    cuRollNumber: string | null;
+  }>;
+  dryRun?: boolean;
 }> {
   const errors: Array<{ rowNumber: number; uid: string; error: string }> = [];
   const skipped: Array<{ uid: string; reason: string }> = [];
   const notFound: string[] = [];
   const duplicates: Array<{ uid: string; rowNumbers: number[] }> = [];
   let updated = 0;
+  const dryRun = options?.dryRun === true;
 
   const emitProgress = (
     message: string,
@@ -2656,6 +2541,13 @@ export async function updateStudentCuRollAndRegistration(
       }
     }
 
+    const fileRows = rows.map((r) => ({
+      rowNumber: r.rowNumber,
+      uid: r.uid,
+      cuRegistrationNumber: r.cuRegistrationNumber,
+      cuRollNumber: r.cuRollNumber,
+    }));
+
     const normalizedUids = Array.from(byUid.keys());
     if (normalizedUids.length === 0) {
       emitProgress("No valid UID rows found.", 100, "completed", {
@@ -2671,6 +2563,8 @@ export async function updateStudentCuRollAndRegistration(
         notFound,
         duplicates,
         errors,
+        fileRows,
+        dryRun,
       };
     }
 
@@ -2757,10 +2651,12 @@ export async function updateStudentCuRollAndRegistration(
       }
 
       try {
-        await db
-          .update(studentModel)
-          .set(setObj)
-          .where(eq(studentModel.id, student.id));
+        if (!dryRun) {
+          await db
+            .update(studentModel)
+            .set(setObj)
+            .where(eq(studentModel.id, student.id));
+        }
         updated++;
       } catch (e: any) {
         errors.push({
@@ -2789,15 +2685,23 @@ export async function updateStudentCuRollAndRegistration(
       }
     }
 
-    emitProgress("CU Roll/Registration update completed.", 100, "completed", {
-      totalRows: rows.length,
-      uniqueUids: byUid.size,
-      updated,
-      notFound: notFound.length,
-      skipped: skipped.length,
-      duplicates: duplicates.length,
-      errors: errors.length,
-    });
+    emitProgress(
+      dryRun
+        ? "Dry run completed — no database changes were made."
+        : "CU Roll/Registration update completed.",
+      100,
+      "completed",
+      {
+        totalRows: rows.length,
+        uniqueUids: byUid.size,
+        updated,
+        notFound: notFound.length,
+        skipped: skipped.length,
+        duplicates: duplicates.length,
+        errors: errors.length,
+        dryRun,
+      },
+    );
 
     return {
       totalRows: rows.length,
@@ -2807,6 +2711,8 @@ export async function updateStudentCuRollAndRegistration(
       notFound,
       duplicates,
       errors,
+      fileRows,
+      dryRun,
     };
   } catch (e: any) {
     emitProgress(

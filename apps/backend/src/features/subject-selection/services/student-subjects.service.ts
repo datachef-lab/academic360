@@ -90,10 +90,10 @@ async function findPromotionByStudentId(studentId: number) {
 
   const foundShift = await shiftService.findById(foundPromotion?.shiftId);
 
-  const foundPromotionStatus = await db
-    .select()
-    .from(promotionStatusModel)
-    .where(eq(promotionStatusModel.id, foundPromotion?.promotionStatusId!));
+  // const foundPromotionStatus = await db
+  //   .select()
+  //   .from(promotionStatusModel)
+  //   .where(eq(promotionStatusModel.id, foundPromotion?.promotionStatusId!));
 
   return {
     foundPromotion,
@@ -103,7 +103,7 @@ async function findPromotionByStudentId(studentId: number) {
     foundSection,
     foundClass,
     foundShift,
-    foundPromotionStatus,
+    // foundPromotionStatus,
   };
 }
 

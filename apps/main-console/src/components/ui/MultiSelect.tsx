@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 type Option = { label: string; value: string };
 
@@ -15,12 +16,15 @@ interface ISelectProps {
   options: Option[];
   selectedOptions: string[];
   onChange: (selected: string[]) => void;
+  /** Classes for the dropdown panel (width, max-height, etc.) */
+  contentClassName?: string;
 }
 const MultiSelect = ({
   placeholder,
   options: values,
   selectedOptions: selectedItems,
   onChange,
+  contentClassName,
 }: ISelectProps) => {
   const handleSelectChange = (value: string) => {
     let updated: string[];
@@ -51,7 +55,10 @@ const MultiSelect = ({
             <ChevronDown className="h-4 w-4 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
+        <DropdownMenuContent
+          className={cn("max-h-64 overflow-y-auto", contentClassName ?? "w-56")}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           {values.map((value: ISelectProps["options"][0], index: number) => (
             <DropdownMenuItem
               key={index}

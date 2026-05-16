@@ -1,0 +1,1 @@
+ALTER TABLE "fee_structures" ALTER COLUMN "closing_date" SET DATA TYPE timestamp with time zone;

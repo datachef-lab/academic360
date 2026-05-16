@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
+import { parseReportExportFilters } from "@/utils/report-export-filters.js";
+import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 import * as XLSX from "xlsx";
 import {
   createStudentSubjectSelectionsWithValidation,
@@ -791,6 +793,7 @@ export async function exportStudentSubjectSelectionsHandler(
     const exportResult = await exportStudentSubjectSelections(
       subjectSelectionMetaId,
       userId,
+      parseReportExportFilters(req.query as Record<string, unknown>),
     );
 
     // Check if there was an error in the service
@@ -814,6 +817,7 @@ export async function exportStudentSubjectSelectionsHandler(
         Name: "",
         Session: "",
         "Program-Course": "",
+        Semester: "",
         "Class Roll No.": "",
         Section: "",
       };
@@ -838,6 +842,7 @@ export async function exportStudentSubjectSelectionsHandler(
         width: 20,
       }));
       sheet.addRow(emptyRow);
+      applyStandardExcelReportTableStyling(sheet);
 
       const emptyBuffer = await workbook.xlsx.writeBuffer();
       const buffer = Buffer.isBuffer(emptyBuffer)
@@ -908,7 +913,10 @@ export async function exportStudentSubjectsReportHandler(
       return;
     }
 
-    const buffer = await exportStudentSubjectsReport(academicYearId);
+    const buffer = await exportStudentSubjectsReport(
+      academicYearId,
+      parseReportExportFilters(req.query as Record<string, unknown>),
+    );
     const filename = `student-subjects-${academicYearId}-${
       new Date().toISOString().split("T")[0]
     }.xlsx`;

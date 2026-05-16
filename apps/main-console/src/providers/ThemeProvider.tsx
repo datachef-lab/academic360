@@ -13,6 +13,14 @@ type ThemeProviderState = {
   setTheme: (theme: Theme) => void;
 };
 
+const isTheme = (value: string): value is Theme =>
+  value === "light" || value === "dark" || value === "system";
+
+const normalizeTheme = (value: string | null, fallback: Theme): Theme => {
+  const cleaned = value?.trim();
+  return cleaned && isTheme(cleaned) ? cleaned : fallback;
+};
+
 const initialState: ThemeProviderState = {
   theme: "light",
   setTheme: () => null,
@@ -27,8 +35,8 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
+  const [theme, setTheme] = useState<Theme>(() =>
+    normalizeTheme(localStorage.getItem(storageKey), defaultTheme),
   );
 
   useEffect(() => {
@@ -51,8 +59,9 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
-      setTheme(theme);
+      const normalizedTheme = normalizeTheme(theme, defaultTheme);
+      localStorage.setItem(storageKey, normalizedTheme);
+      setTheme(normalizedTheme);
     },
   };
 

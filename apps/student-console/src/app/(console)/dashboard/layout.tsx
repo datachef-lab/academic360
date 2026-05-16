@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { StudentProvider, useStudent } from "@/providers/student-provider";
+import { FeeSocketProvider } from "@/providers/fee-socket-provider";
 
 import { House, User } from "lucide-react";
 import {
@@ -120,62 +121,66 @@ export default function DashboardLayout({
 
   return (
     <StudentProvider>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset className="flex flex-col h-screen px-2 py-2 md:pr-2 overflow-hidden">
-          {/* Invalid user dialog */}
-          <Dialog open={invalidUserOpen} onOpenChange={setInvalidUserOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <h3 className="text-lg font-semibold">Invalid User</h3>
-                <p className="text-sm text-gray-600">
-                  Your account does not have access to the Student Console. You will be signed out.
-                </p>
-              </DialogHeader>
-            </DialogContent>
-          </Dialog>
-          <header className="flex h-12 md:h-14 shrink-0 mb-3 items-center justify-between transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 rounded-lg border border-border bg-card shadow-sm px-2 md:px-4">
-            <div className="flex items-center gap-3 ">
-              <SidebarTrigger className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800" />
-              <Separator orientation="vertical" className="hidden md:block" />
-              <Breadcrumb>
-                <BreadcrumbList className="text-sm">
-                  <BreadcrumbItem className="hidden md:flex">
-                    <Link
-                      href="/dashboard"
-                      className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                    >
-                      <House size={18} />
-                    </Link>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:flex text-gray-400" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="font-medium text-gray-800 dark:text-gray-200">
-                      {pathname === "/dashboard"
-                        ? "Dashboard"
-                        : pathname
-                            .split("/")
-                            .pop()
-                            ?.split("-")
-                            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                            .join(" ")}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs md:text-sm text-gray-600">{user?.payload?.uid} </span>
-              <Avatar
-              // src={getStudentImage(user?.payload?.uid!)}
-              // alt={user?.name || "User"}
-              // className="h-10 w-10 rounded-full border border-gray-200 ring-1 ring-gray-100 bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm hover:ring-indigo-200 transition"
-              >
-                <AvatarImage
-                  src={user?.payload?.uid ? getStudentImageUrl(user.payload.uid) : undefined}
-                />
-              </Avatar>
-              {/* {(() => {
+      <FeeSocketProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset className="flex flex-col h-screen px-2 py-2 md:pr-2 overflow-hidden">
+            {/* Invalid user dialog */}
+            <Dialog open={invalidUserOpen} onOpenChange={setInvalidUserOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Invalid User</DialogTitle>
+                  <DialogDescription className="text-sm text-gray-600">
+                    Your account does not have access to the Student Console. You will be signed
+                    out.
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+            <header className="flex h-12 md:h-14 shrink-0 mb-3 items-center justify-between transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 rounded-lg border border-border bg-card shadow-sm px-2 md:px-4">
+              <div className="flex items-center gap-3 ">
+                <SidebarTrigger className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800" />
+                <Separator orientation="vertical" className="hidden md:block" />
+                <Breadcrumb>
+                  <BreadcrumbList className="text-sm">
+                    <BreadcrumbItem className="hidden md:flex">
+                      <Link
+                        href="/dashboard"
+                        className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                      >
+                        <House size={18} />
+                      </Link>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="hidden md:flex text-gray-400" />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="font-medium text-gray-800 dark:text-gray-200">
+                        {pathname === "/dashboard"
+                          ? "Dashboard"
+                          : pathname.endsWith("/enrollment-fees")
+                            ? "Enrolment Fees"
+                            : pathname
+                                .split("/")
+                                .pop()
+                                ?.split("-")
+                                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(" ")}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs md:text-sm text-gray-600">{user?.payload?.uid} </span>
+                <Avatar
+                // src={getStudentImage(user?.payload?.uid!)}
+                // alt={user?.name || "User"}
+                // className="h-10 w-10 rounded-full border border-gray-200 ring-1 ring-gray-100 bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm hover:ring-indigo-200 transition"
+                >
+                  <AvatarImage
+                    src={user?.payload?.uid ? getStudentImageUrl(user.payload.uid) : undefined}
+                  />
+                </Avatar>
+                {/* {(() => {
                 const initials = (user?.name || "U")
                   .toString()
                   .split(" ")
@@ -192,15 +197,16 @@ export default function DashboardLayout({
                   </div>
                 );
               })()} */}
+              </div>
+            </header>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="rounded-xl">
+                <SharedArea>{children}</SharedArea>
+              </div>
             </div>
-          </header>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="rounded-xl">
-              <SharedArea>{children}</SharedArea>
-            </div>
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+          </SidebarInset>
+        </SidebarProvider>
+      </FeeSocketProvider>
     </StudentProvider>
   );
 }

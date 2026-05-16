@@ -4,6 +4,7 @@ import {
   deleteFeeGroupHandler,
   getAllFeeGroupsHandler,
   getFeeGroupByIdHandler,
+  getFeeGroupTotalsForPromotionHandler,
   updateFeeGroupHandler,
 } from "../controllers/fee-group.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
@@ -22,6 +23,10 @@ function asyncHandler(
 router.use(verifyJWT);
 
 router.get("/", asyncHandler(getAllFeeGroupsHandler));
+router.get(
+  "/promotion/:promotionId/totals",
+  asyncHandler(getFeeGroupTotalsForPromotionHandler),
+);
 router.get("/:id", asyncHandler(getFeeGroupByIdHandler));
 router.post("/", asyncHandler(createFeeGroupHandler));
 router.put("/:id", asyncHandler(updateFeeGroupHandler));

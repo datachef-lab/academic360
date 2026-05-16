@@ -24,15 +24,11 @@ export async function loadDefaultUserStatusMasters() {
       );
     }
 
+    const parentName = userStatusMaster.parentUserStatusMaster.name.trim();
     const [primaryUserStatusMaster] = await db
       .select()
       .from(userStatusMasterModel)
-      .where(
-        eq(
-          userStatusMasterModel.name,
-          userStatusMaster.parentUserStatusMaster.name,
-        ),
-      );
+      .where(ilike(userStatusMasterModel.name, parentName));
 
     if (!primaryUserStatusMaster) {
       throw new Error(

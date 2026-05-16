@@ -41,6 +41,10 @@ export default function CUFormUploadPage() {
   }, [student?.programCourse?.course?.name]);
 
   useEffect(() => {
+    router.replace("/dashboard");
+  }, [router]);
+
+  useEffect(() => {
     if (!student) return; // wait until student is loaded
 
     const now = Date.now();

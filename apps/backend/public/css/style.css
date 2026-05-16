@@ -39,6 +39,17 @@ body {
   height: 100%;
 }
 
+/* 404 page: center message vertically (global .container height:100% would pin content to top) */
+body.page-404 {
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+body.page-404 .container {
+  height: auto;
+  padding-top: 12px;
+}
+
 .my-2 {
   margin: 8px 0;
 }

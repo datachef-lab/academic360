@@ -2,13 +2,14 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { classTypeEnum } from "@/schemas/enums";
+import { classTrackTypeEnum, classTypeEnum } from "@/schemas/enums";
 
 export const classModel = pgTable('classes', {
     id: serial().primaryKey(),
     name: varchar({ length: 500 }).notNull(),
     shortName: varchar({ length: 255 }),
     type: classTypeEnum().notNull(),
+    track: classTrackTypeEnum(),
     sequence: integer().unique(),
     isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),

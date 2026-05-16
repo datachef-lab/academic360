@@ -13,6 +13,7 @@ import FeesHomePage from "./FeesHomePage";
 import FeesReportsPage from "./FeesReportsPage";
 import FeeGroupPromotionMappingPage from "./FeeCategoryPromotionMappingPage";
 import FeeGroupsPage from "./FeeGroupsPage";
+import FeePaymentMarkingPage from "./FeePaymentMarkingPage";
 
 export {
   AcademicYearPage,
@@ -30,4 +31,5 @@ export {
   FeesReportsPage,
   FeeGroupPromotionMappingPage,
   FeeGroupsPage,
+  FeePaymentMarkingPage,
 };

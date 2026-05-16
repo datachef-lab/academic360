@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
+import axiosInstance from "@/utils/api";
 import {
   Dialog,
   DialogContent,
@@ -153,25 +154,43 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeSection, setActiveSection] = useState<"components" | "slabs">("components");
-  const [hasPaidMappings, setHasPaidMappings] = useState(false);
-  // Check for paid mappings before allowing delete
+  const [lockedSlabIds, setLockedSlabIds] = useState<number[]>([]);
+
+  // Check for locked slabs (payment/challan activity) to disable amount edits on those rows only.
+  // Must clear when switching to create or closing the modal — stale ids would match slab ids and wrongly disable inputs.
   useEffect(() => {
-    const checkPaidMappings = async () => {
-      if (feeStructure?.id) {
-        try {
-          // Call backend API to check for paid mappings
-          const res = await axios.get(`/api/fees/structure/${feeStructure.id}/has-paid-mappings`);
-          setHasPaidMappings(res.data.hasPaidMappings === true);
-        } catch (err) {
-          setHasPaidMappings(false);
+    if (!open) {
+      setLockedSlabIds([]);
+      return;
+    }
+    if (!feeStructure?.id) {
+      setLockedSlabIds([]);
+      return;
+    }
+    let cancelled = false;
+    const checkLockedSlabs = async () => {
+      try {
+        const res = await axiosInstance.get(
+          `/api/v1/fees/structure/${feeStructure.id}/locked-slabs`,
+        );
+        const slabIds = Array.isArray(res.data?.slabIds)
+          ? res.data.slabIds
+          : Array.isArray(res.data?.payload?.slabIds)
+            ? res.data.payload.slabIds
+            : [];
+        if (!cancelled) {
+          setLockedSlabIds(slabIds.filter((x: any) => typeof x === "number"));
         }
-      } else {
-        setHasPaidMappings(false);
+      } catch {
+        if (!cancelled) {
+          setLockedSlabIds([]);
+        }
       }
     };
-    if (open && feeStructure?.id) {
-      checkPaidMappings();
-    }
+    void checkLockedSlabs();
+    return () => {
+      cancelled = true;
+    };
   }, [open, feeStructure?.id]);
 
   // Helper function to check if a concession slab has conflicts
@@ -594,6 +613,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       if (isBaseSlab(slabToRemove)) {
         return prev;
       }
+      // Prevent removing locked slabs (payment/challan activity exists)
+      if (slabToRemove?.id && lockedSlabIds.includes(slabToRemove.id)) {
+        return prev;
+      }
 
       return {
         ...prev,
@@ -636,6 +659,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   };
 
   const addComponent = (feeHeadId: number) => {
+    // If any slab is locked (payment/challan exists), block component changes
+    if (!isCreateMode && lockedSlabIds.length > 0) return;
     const feeHead = feeHeads.find((h) => h.id === feeHeadId);
     if (!feeHead) return;
 
@@ -709,6 +734,11 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   };
 
   const handleAddComponent = () => {
+    // If any slab is locked (payment/challan exists), block component changes
+    if (!isCreateMode && lockedSlabIds.length > 0) {
+      toast.error("Cannot add components: payment/challan exists for this fee structure.");
+      return;
+    }
     if (!selectedFeeHeadId) {
       alert("Please select a fee head");
       return;
@@ -725,6 +755,17 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
 
     const selectedSlab = feeConcessionSlabs.find((fcs) => fcs.id === slabId);
     if (!selectedSlab) return;
+
+    // Check if a fee group exists for this slab
+    const feeGroup = feeGroups.find((fg) => fg.feeSlab?.id === slabId);
+    if (!feeGroup) {
+      const message =
+        'Cannot add slab "' +
+        selectedSlab.name +
+        '": No fee group exists for this slab. Please create a fee group first.';
+      toast.error(message, { duration: 4000 });
+      return;
+    }
 
     // Check if slab is already added
     if (feeStructureRow.concessionSlabs.some((cs) => cs.id === slabId)) {
@@ -913,7 +954,20 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       onClose();
     } catch (error) {
       console.error("Error saving fee structure:", error);
-      toast.error("Failed to save fee structure. Please try again.");
+      // Handle paid mappings error
+      if (error instanceof Error && error.message.includes("PAID_MAPPINGS_EXIST")) {
+        toast.error(
+          "Cannot update fee structure: Some students have already paid for this fee structure. Please contact support if you need to make changes.",
+          { duration: 5000 },
+        );
+      } else if (error instanceof Error && error.message.includes("409")) {
+        toast.error(
+          "Cannot update fee structure: Some students have already paid for this fee structure.",
+          { duration: 5000 },
+        );
+      } else {
+        toast.error("Failed to save fee structure. Please try again.");
+      }
     } finally {
       setSaving(false);
     }
@@ -936,7 +990,20 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       }
     } catch (error) {
       console.error("Error publishing fee structure:", error);
-      toast.error("Failed to publish fee structure. Please try again.");
+      if (
+        error instanceof Error &&
+        (error.message.includes("PAID_MAPPINGS_EXIST") ||
+          (error as any).code === "PAID_MAPPINGS_EXIST")
+      ) {
+        toast.error(
+          "Cannot update fee structure: Some students have already paid for this fee structure. Please contact support if you need to make changes.",
+          { duration: 5000 },
+        );
+      } else if (error instanceof Error && error.message) {
+        toast.error(error.message, { duration: 4000 });
+      } else {
+        toast.error("Failed to publish fee structure. Please try again.");
+      }
     } finally {
       setIsPublishing(false);
     }
@@ -960,7 +1027,20 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       }
     } catch (error) {
       console.error("Error deleting fee structure:", error);
-      toast.error("Failed to delete fee structure. Please try again.");
+      // Handle paid mappings error
+      if (error instanceof Error && error.message.includes("PAID_MAPPINGS_EXIST")) {
+        toast.error(
+          "Cannot delete fee structure: Some students have already paid for this fee structure. Please contact support if deletion is necessary.",
+          { duration: 5000 },
+        );
+      } else if (error instanceof Error && error.message.includes("409")) {
+        toast.error(
+          "Cannot delete fee structure: Some students have already paid for this fee structure.",
+          { duration: 5000 },
+        );
+      } else {
+        toast.error("Failed to delete fee structure. Please try again.");
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -1342,7 +1422,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             {feeConcessionSlabs
                               .filter(
                                 (fcs) =>
-                                  !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id),
+                                  !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
+                                  feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
                               )
                               .map((fcs) => (
                                 <SelectItem key={fcs.id} value={String(fcs.id)}>
@@ -1421,31 +1502,37 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 >
                   <h3 className="text-lg font-semibold">Step 1 : Select Fee Head / Components</h3>
                   <div className="flex gap-2">
-                    {activeSection === "components" && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const availableFeeHead = feeHeads.find(
-                            (head) =>
-                              !feeStructureRow.feeComponents.some((fc) => fc.id === head.id),
-                          );
-                          if (availableFeeHead) {
-                            // Use defaultPercentage from fee head
-                            addComponent(availableFeeHead.id!);
-                          }
-                        }}
-                        className="h-8 bg-white text-gray-900 hover:bg-gray-50 border border-gray-300"
-                        disabled={
-                          feeHeads.filter(
-                            (head) =>
-                              !feeStructureRow.feeComponents.some((fc) => fc.id === head.id),
-                          ).length === 0
-                        }
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Component
-                      </Button>
-                    )}
+                    {activeSection === "components" &&
+                      // Hide the Add button completely if editing a locked fee-structure
+                      (isCreateMode || lockedSlabIds.length === 0) &&
+                      // Hide if no fee heads are left to add
+                      feeHeads.some(
+                        (head) => !feeStructureRow.feeComponents.some((fc) => fc.id === head.id),
+                      ) && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (!isCreateMode && lockedSlabIds.length > 0) {
+                              toast.error(
+                                "Cannot add components: payment/challan exists for this fee structure.",
+                              );
+                              return;
+                            }
+                            const availableFeeHead = feeHeads.find(
+                              (head) =>
+                                !feeStructureRow.feeComponents.some((fc) => fc.id === head.id),
+                            );
+                            if (availableFeeHead) {
+                              // Use defaultPercentage from fee head
+                              addComponent(availableFeeHead.id!);
+                            }
+                          }}
+                          className="h-8 bg-white text-gray-900 hover:bg-gray-50 border border-gray-300"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Component
+                        </Button>
+                      )}
                     <Button
                       size="sm"
                       onClick={() => {
@@ -1462,7 +1549,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                           : "bg-green-700 hover:bg-green-800 text-white"
                       }`}
                     >
-                      {activeSection === "components" ? "Save" : "Show Components"}
+                      {activeSection === "components"
+                        ? "Next: concession slabs →"
+                        : "← Back to components"}
                     </Button>
                   </div>
                 </div>
@@ -1577,10 +1666,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 )}
               </div>
 
-              {/* Concession Slabs Section */}
-              <div
-                className={`flex flex-col space-y-3 min-h-0 ${feeStructureRow.feeComponents.length === 0 ? "opacity-50 pointer-events-none" : ""}`}
-              >
+              {/* Concession Slabs Section — do not use pointer-events-none on this outer block
+                  or the step header stays unclickable; only dim the table body when no components */}
+              <div className="flex flex-col space-y-3 min-h-0">
                 <div
                   className={`flex items-center justify-between flex-shrink-0 px-4 py-3 rounded-md transition-colors ${
                     activeSection === "slabs"
@@ -1588,32 +1676,41 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                       : "bg-gray-200 text-gray-700"
                   }`}
                 >
-                  <h3 className="text-lg font-semibold">Step 2 : Concession Slabs</h3>
-                  <div className="flex gap-2">
+                  <div>
+                    <h3 className="text-lg font-semibold">Step 2 : Concession Slabs</h3>
                     {activeSection === "slabs" && feeStructureRow.feeComponents.length > 0 && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const availableSlab = feeConcessionSlabs.find(
-                            (slab) =>
-                              !feeStructureRow.concessionSlabs.some((cs) => cs.id === slab.id),
-                          );
-                          if (availableSlab) {
-                            addSlab(availableSlab.id!);
-                          }
-                        }}
-                        className="h-8 bg-white text-gray-900 hover:bg-gray-50 border border-gray-300"
-                        disabled={
-                          feeConcessionSlabs.filter(
-                            (fcs) =>
-                              !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id),
-                          ).length === 0
-                        }
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Slab
-                      </Button>
+                      <p className="text-xs font-normal text-gray-600 mt-1 max-w-xl">
+                        Enter <strong>₹ amounts</strong> per fee head for each slab. Use Step 1 only
+                        to add or remove fee heads; amounts are edited here.
+                      </p>
                     )}
+                  </div>
+                  <div className="flex gap-2">
+                    {activeSection === "slabs" &&
+                      feeStructureRow.feeComponents.length > 0 &&
+                      feeConcessionSlabs.some(
+                        (fcs) =>
+                          !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
+                          feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
+                      ) && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const availableSlab = feeConcessionSlabs.find(
+                              (slab) =>
+                                !feeStructureRow.concessionSlabs.some((cs) => cs.id === slab.id) &&
+                                feeGroups.some((fg) => fg.feeSlab?.id === slab.id),
+                            );
+                            if (availableSlab) {
+                              addSlab(availableSlab.id!);
+                            }
+                          }}
+                          className="h-8 bg-white text-gray-900 hover:bg-gray-50 border border-gray-300"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Slab
+                        </Button>
+                      )}
                     <Button
                       size="sm"
                       onClick={() => {
@@ -1628,12 +1725,16 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                           : "bg-green-700 hover:bg-green-800 text-white"
                       }`}
                     >
-                      {activeSection === "slabs" ? "Save" : "Show Slabs"}
+                      {activeSection === "slabs"
+                        ? "← Back to components"
+                        : "Show concession slabs →"}
                     </Button>
                   </div>
                 </div>
                 {activeSection === "slabs" && (
-                  <div className="flex-1 overflow-hidden border-2 border-gray-400 rounded flex flex-col min-h-0">
+                  <div
+                    className={`flex-1 overflow-hidden border-2 border-gray-400 rounded flex flex-col min-h-0 ${feeStructureRow.feeComponents.length === 0 ? "opacity-50 pointer-events-none" : ""}`}
+                  >
                     <div className="flex-1 overflow-x-auto overflow-y-auto">
                       <Table className="w-full">
                         <TableHeader>
@@ -1712,9 +1813,16 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                   : baseSlabTotal > 0
                                     ? (totalPayable / baseSlabTotal) * 100
                                     : 0;
+                                const isLockedSlab =
+                                  typeof slab?.id === "number" && lockedSlabIds.includes(slab.id);
 
                                 return (
-                                  <TableRow key={slab.id} className="border-b-2 border-gray-400">
+                                  <TableRow
+                                    key={slab.id}
+                                    className={`border-b-2 border-gray-400 ${
+                                      isLockedSlab ? "opacity-60" : ""
+                                    }`}
+                                  >
                                     <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[60px] sticky left-0 bg-white">
                                       {index + 1}
                                     </TableCell>
@@ -1727,8 +1835,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                         <Select
                                           value={String(slab.id)}
                                           disabled={
-                                            !!feeStructure && // we're in edit mode
-                                            slab.isNewlyAdded !== true // AND it's NOT a newly added slab
+                                            isLockedSlab ||
+                                            (!!feeStructure && // we're in edit mode
+                                              slab.isNewlyAdded !== true) // AND it's NOT a newly added slab
                                           }
                                           onValueChange={(value) => {
                                             const newSlabId = Number(value);
@@ -1823,6 +1932,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                             value={Number(
                                               (slab.feeHeadAmounts?.[component.id] || 0).toFixed(2),
                                             )}
+                                            disabled={isLockedSlab}
                                             onChange={(e) => {
                                               const newAmount = parseFloat(e.target.value) || 0;
                                               // Only cap amount for non-base slabs (base = full fees reference)
@@ -1852,7 +1962,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                                 ),
                                               }));
                                             }}
-                                            className="w-full h-8 text-sm text-center"
+                                            className="w-full h-8 text-sm text-center bg-white text-gray-900 border border-input shadow-sm disabled:opacity-60"
                                             min="0"
                                             step="0.01"
                                           />
@@ -1877,7 +1987,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                     {/* Action */}
                                     {isCreateMode && (
                                       <TableCell className="text-center p-2 min-h-[60px] sticky right-0 bg-white">
-                                        {!isBaseSlab(slab) ? (
+                                        {!isBaseSlab(slab) && !isLockedSlab ? (
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -1887,7 +1997,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                             <Trash2 className="h-4 w-4" />
                                           </Button>
                                         ) : (
-                                          <span className="text-xs text-gray-400">Default</span>
+                                          <span className="text-xs text-gray-400">
+                                            {isBaseSlab(slab) ? "Default" : "Locked"}
+                                          </span>
                                         )}
                                       </TableCell>
                                     )}
@@ -1925,14 +2037,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
 
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {feeStructure?.id && (
+              {feeStructure?.id && lockedSlabIds.length === 0 && (
                 <Button
                   variant="destructive"
                   onClick={() => setShowDeleteDialog(true)}
-                  disabled={isDeleting || saving || hasPaidMappings}
-                  title={
-                    hasPaidMappings ? "Cannot delete: Some students have already paid." : "Delete"
-                  }
+                  disabled={isDeleting || saving}
+                  title="Delete"
                 >
                   Delete
                 </Button>
@@ -2049,7 +2159,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 <SelectContent>
                   {feeConcessionSlabs
                     .filter(
-                      (fcs) => !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id),
+                      (fcs) =>
+                        !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
+                        feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
                     )
                     .map((fcs) => (
                       <SelectItem key={fcs.id} value={String(fcs.id)}>
@@ -2060,7 +2172,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
               </Select>
             </div>
             {feeConcessionSlabs.filter(
-              (fcs) => !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id),
+              (fcs) =>
+                !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
+                feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
             ).length === 0 && (
               <div className="text-center text-sm text-gray-500 py-4">
                 All concession slabs have been added

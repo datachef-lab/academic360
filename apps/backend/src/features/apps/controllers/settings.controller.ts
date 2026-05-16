@@ -167,6 +167,7 @@ export const downloadSettingFileHandler = async (
 export async function getSettingFileController(req: Request, res: Response) {
   try {
     const { idOrName } = req.params;
+    console.log("idOrName", idOrName);
     const fileStreamData = await getSettingFileService(idOrName as string);
 
     if (!fileStreamData) {

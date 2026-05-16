@@ -6,35 +6,49 @@ declare global {
     Paytm?: {
       CheckoutJS: {
         onLoad: (callback: () => void) => void;
-        init: (config: PaytmCheckoutConfig) => Promise<void>;
+        init: (config: unknown) => Promise<void>;
         invoke: () => void;
       };
     };
   }
 }
 
-interface PaytmCheckoutConfig {
-  root: string;
-  flow: string;
-  data: {
-    orderId: string;
-    token: string;
-    tokenType: string;
-    amount: string;
-  };
-  merchant?: {
-    redirect?: boolean;
-  };
-  handler: {
-    notifyMerchant: (eventName: string, data: unknown) => void;
-    transactionStatus?: (paymentStatus: Record<string, unknown>) => void;
-  };
-}
-
 export function usePaytmCheckout() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scriptLoadedRef = useRef(false);
+
+  const openShowPaymentPageFallback = useCallback(
+    (params: { host: string; mid: string; orderId: string; txnToken: string }) => {
+      // alert("openShowPaymentPageFallback(), params:" + JSON.stringify(params));
+      const paytmHost = params.host?.replace(/^https?:\/\//, "") || "securestage.paytmpayments.com";
+      const showPaymentUrl = `https://${paytmHost}/theia/api/v1/showPaymentPage?mid=${encodeURIComponent(
+        params.mid,
+      )}&orderId=${encodeURIComponent(params.orderId)}`;
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = showPaymentUrl;
+      form.target = "_self";
+      form.style.display = "none";
+
+      const fields = [
+        { name: "mid", value: params.mid },
+        { name: "orderId", value: params.orderId },
+        { name: "txnToken", value: params.txnToken },
+      ];
+      for (const { name, value } of fields) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    },
+    [],
+  );
 
   const loadPaytmScript = useCallback(async (mid: string, host: string): Promise<boolean> => {
     if (scriptLoadedRef.current && window.Paytm?.CheckoutJS) return true;
@@ -79,10 +93,14 @@ export function usePaytmCheckout() {
       studentName?: string;
       studentEmail?: string;
       studentMobile?: string;
+      merchantName?: string;
+      merchantLogoUrl?: string;
       onBeforeInvoke?: () => void;
       onSuccess?: (orderId: string) => void;
       onFailure?: (message: string) => void;
     }) => {
+      console.log("openPaytmCheckout(), params:", params);
+      // alert("openPaytmCheckout(), params:" + JSON.stringify(params));
       setLoading(true);
       setError(null);
 
@@ -112,32 +130,14 @@ export function usePaytmCheckout() {
         }
 
         params.onBeforeInvoke?.();
-
-        const paytmHost =
-          config.host?.replace(/^https?:\/\//, "") || "securestage.paytmpayments.com";
-        const showPaymentUrl = `https://${paytmHost}/theia/api/v1/showPaymentPage?mid=${config.mid}&orderId=${initData.orderId}`;
-
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = showPaymentUrl;
-        form.target = "_blank";
-        form.style.display = "none";
-
-        const fields = [
-          { name: "mid", value: config.mid },
-          { name: "orderId", value: initData.orderId },
-          { name: "txnToken", value: initData.txnToken },
-        ];
-        fields.forEach(({ name, value }) => {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = name;
-          input.value = value;
-          form.appendChild(input);
+        // Use the reliable Paytm hosted checkout page (showPaymentPage) in the same tab.
+        // Paytm hosted page branding is primarily controlled by MID configuration.
+        openShowPaymentPageFallback({
+          host: config.host,
+          mid: config.mid,
+          orderId: initData.orderId,
+          txnToken: initData.txnToken,
         });
-
-        document.body.appendChild(form);
-        form.submit();
         setLoading(false);
       } catch (err: unknown) {
         const axiosData = (err as { response?: { data?: { message?: string } } })?.response?.data;
@@ -148,7 +148,7 @@ export function usePaytmCheckout() {
         setLoading(false);
       }
     },
-    [],
+    [openShowPaymentPageFallback],
   );
 
   const pollPaymentStatus = useCallback(

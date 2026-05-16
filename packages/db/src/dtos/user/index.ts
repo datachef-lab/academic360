@@ -107,3 +107,10 @@ export interface ProfileInfo {
     transportDetails: TransportDetailsDto | null;
     accommodationDetails: AccommodationDto | null;
 }
+
+/** Bulk Excel: match by `students.uid`, update registration + roll. Headers must match exactly. */
+export interface CuRegRollExcelUploadRow {
+    UID: string;
+    "CU Reg Number": string;
+    "CU Roll Number": string;
+}

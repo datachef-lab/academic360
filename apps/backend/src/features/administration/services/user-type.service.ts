@@ -24,10 +24,11 @@ export async function loadDefaultUserTypes() {
       .from(userTypeModel)
       .where(ilike(userTypeModel.name, subUserType.name.trim()));
     if (existingSubUserType) continue;
+    const parentName = subUserType.parentUserType!.name.trim();
     const [primaryUserType] = await db
       .select()
       .from(userTypeModel)
-      .where(eq(userTypeModel.name, subUserType.parentUserType!.name));
+      .where(ilike(userTypeModel.name, parentName));
     if (!primaryUserType) {
       throw new Error(
         `Primary user type ${subUserType.parentUserType!.name} not found`,

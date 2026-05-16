@@ -1,0 +1,1 @@
+ALTER TABLE "book_reissue" ADD COLUMN "return_timestamp" timestamp with time zone NOT NULL;

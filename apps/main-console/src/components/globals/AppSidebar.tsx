@@ -16,17 +16,19 @@ import {
   LayoutDashboard,
   Megaphone,
   UserCog,
-  Plus,
   ChevronDown,
   Calendar,
-  Users,
   GraduationCap,
+  Users,
   ClipboardList,
   IndianRupee,
   CheckSquare,
   Activity,
   FileText,
   BookOpen,
+  Layers,
+  TrendingUp,
+  SlidersHorizontal,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -41,7 +43,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TEMP_USER_EMAILS } from "@/hooks/use-restrict-temp-users";
+import {
+  TEMP_USER_EMAILS,
+  isLibraryOnlyUser,
+  LIBRARY_MODULE_PATH_PREFIX,
+} from "@/hooks/use-restrict-temp-users";
 
 // Remove hardcoded academic years - now using Redux state
 
@@ -79,6 +85,8 @@ const data = {
   navMain: [
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
+    { title: "Promote Students", url: "/dashboard/promote-students", icon: GraduationCap },
+    { title: "Academic Activity", url: "/dashboard/academic-activity", icon: SlidersHorizontal },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
     {
       title: "Admit Card Distributions",
@@ -93,8 +101,11 @@ const data = {
     { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
     { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
     { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
+    { title: "Library", url: "/dashboard/library", icon: BookOpen },
     { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
     { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
+    { title: "Career Progression", url: "/dashboard/career-progression", icon: TrendingUp },
+    { title: "Bulk Data Upload", url: "/dashboard/bulk-upload", icon: Layers },
     {
       title: "Student Console Simulation",
       url: "/dashboard/apps/student-console/simulation",
@@ -195,6 +206,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Always render the sidebar container promptly; show skeleton while auth/user hydrate
   const showSkeleton = !accessToken || !user;
 
+  const libraryRestricted = isLibraryOnlyUser(user?.email);
+  // Library-only accounts: do not duplicate "Library" in the top strip and under MODULES —
+  // only list it once under MODULES (same as other users).
+  const dashNav = libraryRestricted ? [] : data.navDash;
+
+  const collegeLogoSetting = settings?.find((ele) => ele.name === "College Logo Image");
+  const collegeLogoSrc =
+    collegeLogoSetting?.id != null
+      ? `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${collegeLogoSetting.id}${
+          collegeLogoSetting.updatedAt
+            ? `?v=${encodeURIComponent(String(collegeLogoSetting.updatedAt))}`
+            : ""
+        }`
+      : undefined;
+
   return (
     <div className="relative">
       <Sidebar collapsible="icon" {...props} className="bg-white overflow-hidden border-none">
@@ -205,9 +231,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <button className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-purple-700/50 transition-colors">
                   <div className="flex items-center justify-center p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
                     <Avatar className="h-8 w-8 ring-2 ring-white/20 overflow-hidden">
-                      {settings?.find((ele) => ele.name == "College Logo Image")?.id ? (
+                      {collegeLogoSrc ? (
                         <AvatarImage
-                          src={`${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
+                          src={collegeLogoSrc}
                           alt="college-logo"
                           className="object-cover"
                         />
@@ -292,45 +318,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <div className="h-full flex flex-col justify-between ">
               <div className="">
                 <div className="flex flex-col h-full justify-between ">
-                  {/* Academic Year Setup */}
-                  {user?.email && !TEMP_USER_EMAILS.includes(user.email) && (
-                    <div className="my-4 mb-6 border mx-2 rounded-l-md">
-                      <NavItem
-                        key={"Academic Year Setup"}
-                        icon={<Plus className="h-5 w-5" />}
-                        href={"/dashboard/academic-year-setup"}
-                      >
-                        <span className="text">New Academic Setup</span>
-                      </NavItem>
+                  {dashNav.length > 0 ? (
+                    <div className="mb-2">
+                      {dashNav.map((item) => (
+                        <NavItem
+                          key={item.title}
+                          icon={item.icon && <item.icon className="h-5 w-5" />}
+                          href={item.url}
+                          isActive={
+                            !isSearchActive &&
+                            (item.url === "/dashboard"
+                              ? currentPath === "/dashboard"
+                              : isSidebarActive(currentPath, item.url))
+                          }
+                        >
+                          <span className="text-lg">{item.title}</span>
+                        </NavItem>
+                      ))}
                     </div>
-                  )}
-
-                  {/* Dashboard Link */}
-                  <div className="mb-2">
-                    {data.navDash.map((item) => (
-                      <NavItem
-                        key={item.title}
-                        icon={item.icon && <item.icon className="h-5 w-5" />}
-                        href={item.url}
-                        isActive={
-                          !isSearchActive &&
-                          (item.url === "/dashboard"
-                            ? currentPath === "/dashboard"
-                            : isSidebarActive(currentPath, item.url))
-                        }
-                      >
-                        <span className="text-lg">{item.title}</span>
-                      </NavItem>
-                    ))}
-                  </div>
+                  ) : null}
                   {/* Masters Section */}
                   <div className=" ">
                     <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                      Masters
+                      Modules
                     </h3>
                     <div className="space-y-1">
                       {data.navMain
                         .filter((item) => {
+                          if (libraryRestricted) {
+                            return (
+                              item.url === LIBRARY_MODULE_PATH_PREFIX ||
+                              item.url.startsWith(`${LIBRARY_MODULE_PATH_PREFIX}/`)
+                            );
+                          }
                           // For temp users, only show Admit Card Distributions and Physical CUReg Marking
                           if (user?.email && TEMP_USER_EMAILS.includes(user.email)) {
                             return (
@@ -359,55 +379,57 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </div>
 
               {/* Administration */}
-              {user?.email && !TEMP_USER_EMAILS.includes(user.email) && (
-                <div className="my-14">
-                  <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                    Administration
-                  </h3>
-                  <div className="p">
-                    {data.navAdministration.map((item) => {
-                      const url = item.url ?? "";
-                      const isActive = !isSearchActive && isSidebarActive(currentPath, url);
+              {user?.email &&
+                !TEMP_USER_EMAILS.includes(user.email) &&
+                !isLibraryOnlyUser(user.email) && (
+                  <div className="my-14">
+                    <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
+                      Administration
+                    </h3>
+                    <div className="p">
+                      {data.navAdministration.map((item) => {
+                        const url = item.url ?? "";
+                        const isActive = !isSearchActive && isSidebarActive(currentPath, url);
 
-                      //   if (item.isModal) {
-                      //     return (
-                      //       <div
-                      //         key={item.title}
-                      //         onClick={() => {
-                      //           setIsSearchModalOpen(true);
-                      //           setIsSearchActive(true);
-                      //         }}
-                      //         className={cn(
-                      //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
-                      //           isSearchActive
-                      //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-                      //             : "text-white hover:text-white",
-                      //         )}
-                      //       >
-                      //         <div className="flex items-center gap-3">
-                      //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
-                      //             {item.icon && <item.icon className="h-5 w-5" />}
-                      //           </span>
-                      //           <span className="text-base">{item.title}</span>
-                      //         </div>
-                      //       </div>
-                      //     );
-                      //   }
+                        //   if (item.isModal) {
+                        //     return (
+                        //       <div
+                        //         key={item.title}
+                        //         onClick={() => {
+                        //           setIsSearchModalOpen(true);
+                        //           setIsSearchActive(true);
+                        //         }}
+                        //         className={cn(
+                        //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
+                        //           isSearchActive
+                        //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
+                        //             : "text-white hover:text-white",
+                        //         )}
+                        //       >
+                        //         <div className="flex items-center gap-3">
+                        //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
+                        //             {item.icon && <item.icon className="h-5 w-5" />}
+                        //           </span>
+                        //           <span className="text-base">{item.title}</span>
+                        //         </div>
+                        //       </div>
+                        //     );
+                        //   }
 
-                      return (
-                        <NavItem
-                          key={item.title}
-                          icon={item.icon && <item.icon className="h-5 w-5" />}
-                          href={url}
-                          isActive={isActive}
-                        >
-                          <span className="text-base">{item.title}</span>
-                        </NavItem>
-                      );
-                    })}
+                        return (
+                          <NavItem
+                            key={item.title}
+                            icon={item.icon && <item.icon className="h-5 w-5" />}
+                            href={url}
+                            isActive={isActive}
+                          >
+                            <span className="text-base">{item.title}</span>
+                          </NavItem>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           )}
         </SidebarContent>

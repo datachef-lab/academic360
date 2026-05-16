@@ -6,6 +6,7 @@ import { db } from "@/db/index.js";
 import { studentModel } from "@repo/db/schemas/models/user";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { ilike, eq } from "drizzle-orm";
+import { parseReportExportFilters } from "@/utils/report-export-filters.js";
 import { cuRegistrationCorrectionRequestInsertSchema } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import {
   createCuRegistrationCorrectionRequest,
@@ -605,9 +606,10 @@ export const exportCuRegistrationCorrectionRequestsController = async (
         .json(new ApiError(400, "Invalid academicYearId parameter"));
     }
 
-    // Generate Excel buffer
-    const excelBuffer =
-      await exportCuRegistrationCorrectionRequests(academicYearIdNumber);
+    const excelBuffer = await exportCuRegistrationCorrectionRequests(
+      academicYearIdNumber,
+      parseReportExportFilters(req.query as Record<string, unknown>),
+    );
 
     // Set response headers for Excel download
     const filename = `cu-registration-corrections-${new Date().toISOString().split("T")[0]}.xlsx`;

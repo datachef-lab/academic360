@@ -105,6 +105,8 @@ export interface CountStudentsByPapersParams {
   shiftIds?: number[];
   gender: "MALE" | "FEMALE" | "OTHER" | null;
   excelStudents: { foil_number: string; uid: string }[];
+  /** When provided, promotion rows are filtered by [startDate, endDate] for this date. */
+  examCommencementDate?: string | Date | null;
 }
 
 /**
@@ -472,7 +474,14 @@ async function getEligibleStudentIds(
     shiftIds = [],
     gender = "",
     excelStudents = [],
+    examCommencementDate,
   } = params;
+  const parsedExamCommencementDate = examCommencementDate
+    ? new Date(examCommencementDate)
+    : null;
+  const hasValidCommencementDate =
+    !!parsedExamCommencementDate &&
+    Number.isFinite(parsedExamCommencementDate.getTime());
 
   console.log("[EXAM-SCHEDULE] Getting eligible student IDs:", params);
 
@@ -510,6 +519,15 @@ async function getEligibleStudentIds(
     const uids = excelStudents.map((s) => s.uid);
     conditions.push(`AND std.uid = ANY($${paramIndex})`);
     values.push(uids);
+    paramIndex++;
+  }
+
+  if (hasValidCommencementDate) {
+    conditions.push(
+      `AND (pr.start_date IS NULL OR pr.start_date <= $${paramIndex})`,
+      `AND (pr.end_date IS NULL OR pr.end_date >= $${paramIndex})`,
+    );
+    values.push(parsedExamCommencementDate);
     paramIndex++;
   }
 
@@ -624,6 +642,7 @@ export interface CountStudentsBreakdownParams {
   combinations: Array<{ programCourseId: number; shiftId: number }>;
   gender?: string | null;
   excelStudents?: { foil_number: string; uid: string }[];
+  examCommencementDate?: string | Date | null;
 }
 
 export interface StudentCountBreakdownResult {
@@ -881,6 +900,13 @@ export async function getStudentsByPapers(
     number,
     { programCourseId: number | null; shiftId: number | null }
   >();
+  const parsedCommencementDate = params.examCommencementDate
+    ? new Date(params.examCommencementDate)
+    : null;
+  const commencementDate =
+    parsedCommencementDate && Number.isFinite(parsedCommencementDate.getTime())
+      ? parsedCommencementDate
+      : null;
   if (students.length > 0) {
     const promotionSubquery = db
       .select({
@@ -907,6 +933,12 @@ export async function getStudentsByPapers(
           inArray(sessionModel.academicYearId, params.academicYearIds),
           params.shiftIds && params.shiftIds.length > 0
             ? inArray(promotionModel.shiftId, params.shiftIds)
+            : sql`TRUE`,
+          commencementDate
+            ? sql`(${promotionModel.startDate} IS NULL OR ${promotionModel.startDate} <= ${commencementDate})`
+            : sql`TRUE`,
+          commencementDate
+            ? sql`(${promotionModel.endDate} IS NULL OR ${promotionModel.endDate} >= ${commencementDate})`
             : sql`TRUE`,
         ),
       )
@@ -1932,6 +1964,7 @@ export async function createExamAssignment(
         shiftIds: shiftIdsArr.length > 0 ? shiftIdsArr : undefined,
         assignBy: dto.orderType!,
         gender: dto.gender,
+        examCommencementDate: examGroup.examCommencementDate ?? null,
       };
       console.log("[EXAM-SCHEDULE] Seat parameters:", seatParams);
       const roomAssignments = dto.locations.map((l) => ({
@@ -1956,6 +1989,9 @@ export async function createExamAssignment(
     const promotionMap = new Map<number, number>();
     if (studentsWithSeats.length > 0) {
       const studentIds = studentsWithSeats.map((s) => s.studentId);
+      const commencementDate = examGroup.examCommencementDate
+        ? new Date(examGroup.examCommencementDate)
+        : null;
 
       const promotionSubquery = tx
         .select({
@@ -1978,6 +2014,12 @@ export async function createExamAssignment(
             eq(sessionModel.academicYearId, dto.academicYear.id!),
             shiftIds.length > 0
               ? inArray(promotionModel.shiftId, shiftIds)
+              : sql`TRUE`,
+            commencementDate
+              ? sql`(${promotionModel.startDate} IS NULL OR ${promotionModel.startDate} <= ${commencementDate})`
+              : sql`TRUE`,
+            commencementDate
+              ? sql`(${promotionModel.endDate} IS NULL OR ${promotionModel.endDate} >= ${commencementDate})`
               : sql`TRUE`,
           ),
         )
@@ -2300,6 +2342,15 @@ export async function allotExamRoomsAndStudents(
       throw new Error(`Exam with ID ${examId} not found`);
     }
 
+    const examGroupId = exam.examGroupId;
+    const [foundExamGroup] =
+      examGroupId != null
+        ? await tx
+            .select()
+            .from(examGroupModel)
+            .where(eq(examGroupModel.id, examGroupId))
+        : [];
+
     // Check if exam already has rooms assigned
     const existingRooms = await tx
       .select()
@@ -2446,6 +2497,7 @@ export async function allotExamRoomsAndStudents(
       shiftIds: shiftIdsArr.length > 0 ? shiftIdsArr : undefined,
       assignBy: dto.orderType,
       gender: dto.gender,
+      examCommencementDate: foundExamGroup?.examCommencementDate ?? null,
     };
 
     // Fetch full room details for room assignments (only if rooms are selected)
@@ -2491,6 +2543,9 @@ export async function allotExamRoomsAndStudents(
 
     // 7. Batch fetch latest promotion for each student
     const studentIds = studentsWithSeats.map((s) => s.studentId);
+    const commencementDate = foundExamGroup?.examCommencementDate
+      ? new Date(foundExamGroup.examCommencementDate)
+      : null;
 
     const promotionSubquery = tx
       .select({
@@ -2513,6 +2568,12 @@ export async function allotExamRoomsAndStudents(
           eq(sessionModel.academicYearId, exam.academicYearId),
           shiftIds.length > 0
             ? inArray(promotionModel.shiftId, shiftIds)
+            : sql`TRUE`,
+          commencementDate
+            ? sql`(${promotionModel.startDate} IS NULL OR ${promotionModel.startDate} <= ${commencementDate})`
+            : sql`TRUE`,
+          commencementDate
+            ? sql`(${promotionModel.endDate} IS NULL OR ${promotionModel.endDate} >= ${commencementDate})`
             : sql`TRUE`,
         ),
       )
@@ -3989,11 +4050,14 @@ export async function downloadExamCandidatesbyExamId(
       semester: classModel.name,
       orderType: examModel.orderType,
       gender: examModel.gender,
-
       name: userModel.name,
       uid: studentModel.uid,
       roll_number: studentModel.rollNumber,
       registration_number: studentModel.registrationNumber,
+      foilNumber: examCandidateModel.foilNumber,
+      floor: floorModel.name,
+      room: roomModel.name,
+      seat: examCandidateModel.seatNumber,
       email: userModel.email,
       phone: userModel.phone,
       whatsapp_number: userModel.whatsappNumber,
@@ -4011,6 +4075,12 @@ export async function downloadExamCandidatesbyExamId(
       eq(academicYearModel.id, examModel.academicYearId),
     )
     .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
+    .leftJoin(
+      examRoomModel,
+      eq(examRoomModel.id, examCandidateModel.examRoomId),
+    )
+    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
     .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
     .leftJoin(
       promotionModel,
@@ -4127,6 +4197,10 @@ export async function downloadExamCandidatesbyExamId(
     program_course: "Program Course",
     section: "Section",
     shift: "Shift",
+    floor: "Floor",
+    room: "Room",
+    seat: "Seat Number",
+    foilNumber: "Foil Number",
   };
 
   const baseColumns = Object.keys(baseHeaders).map((key) => ({
@@ -4487,6 +4561,10 @@ export async function downloadAdmitCardTrackingByExamId(
       whatsapp_number: userModel.whatsappNumber,
       program_course: programCourseModel.name,
       shift: shiftModel.name,
+      floor: floorModel.name,
+      room: roomModel.name,
+      seat: examCandidateModel.seatNumber,
+      foilNumber: examCandidateModel.foilNumber,
 
       paper: paperModel.name,
       paper_code: paperModel.code,
@@ -4495,6 +4573,13 @@ export async function downloadAdmitCardTrackingByExamId(
       admitCardDownloadedAt: examCandidateModel.admitCardDownloadedAt,
     })
     .from(examCandidateModel)
+    .leftJoin(
+      examRoomModel,
+      eq(examRoomModel.id, examCandidateModel.examRoomId),
+    )
+    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
     .leftJoin(
       examSubjectModel,
@@ -4602,6 +4687,10 @@ export async function downloadAdmitCardTrackingByExamId(
     whatsapp_number: "WhatsApp",
     program_course: "Program Course",
     shift: "Shift",
+    floor: "Floor",
+    room: "Room",
+    seat: "Seat Number",
+    foilNumber: "Foil Number",
   };
 
   const baseColumns = Object.keys(baseHeaders).map((key) => ({
@@ -4911,12 +5000,15 @@ function formatExamDateFromTimestamp(date: Date): string {
 }
 
 function formatExamTimeFromTimestamps(start: Date, end: Date): string {
-  const formatTime = (d: Date) =>
-    d.toLocaleTimeString("en-US", {
+  const formatTime = (d: Date) => {
+    // Normalize 12:00 PM display across the app
+    if (d.getHours() === 12 && d.getMinutes() === 0) return "12 Noon";
+    return d.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     });
+  };
 
   return `${formatTime(start)} - ${formatTime(end)}`;
 }
@@ -6309,10 +6401,14 @@ export async function downloadAttendanceSheetsByExamId(
               d.getMonth() + 1,
             ).padStart(2, "0")}/${d.getFullYear()}`;
 
-            const time = d.toLocaleTimeString("en-IN", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
+            const time =
+              d.getHours() === 12 && d.getMinutes() === 0
+                ? "12 Noon"
+                : d.toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
 
             const paperCode = item.paperCode!;
             const key = `${date}|${time}|${paperCode}`;

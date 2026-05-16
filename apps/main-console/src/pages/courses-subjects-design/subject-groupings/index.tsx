@@ -87,9 +87,8 @@ function SubjectGroupingsPage() {
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   const [editingGroupingId, setEditingGroupingId] = useState<number | null>(null);
 
-  const [filterAcademicYearId, setFilterAcademicYearId] = useState<number | null>(
-    currentAcademicYear?.id ?? null,
-  );
+  /** null = All Academic Years (default), so existing rows are not hidden by year. */
+  const [filterAcademicYearId, setFilterAcademicYearId] = useState<number | null>(null);
   const [filterSubjectTypeId, setFilterSubjectTypeId] = useState<number | null>(null);
 
   const loadGroupings = useCallback(async () => {
@@ -105,8 +104,11 @@ function SubjectGroupingsPage() {
           id: g.id ?? idx,
           name: g.name || "",
           code: (g as SubjectGroupingMainDto & { code?: string | null }).code ?? null,
-          academicYearId: (g.academicYear as AcademicYear | undefined)?.id ?? null,
-          subjectTypeId: g.subjectType?.id ?? null,
+          academicYearId:
+            typeof g.academicYearId === "number"
+              ? g.academicYearId
+              : ((g.academicYear as AcademicYear | undefined)?.id ?? null),
+          subjectTypeId: g.subjectType?.id ?? g.subjectTypeId ?? null,
           programCourses:
             g.subjectGroupingProgramCourses
               ?.map((pc) => pc.programCourse?.name || "")
@@ -138,13 +140,6 @@ function SubjectGroupingsPage() {
   useEffect(() => {
     setAcademicYears(availableAcademicYears || []);
   }, [availableAcademicYears]);
-
-  // Keep list-level academic year filter aligned with currently selected academic year
-  useEffect(() => {
-    if (currentAcademicYear?.id) {
-      setFilterAcademicYearId((prev) => (prev === null ? currentAcademicYear.id! : prev));
-    }
-  }, [currentAcademicYear?.id]);
 
   // Load subject types for filters on first mount
   useEffect(() => {
@@ -821,7 +816,9 @@ function SubjectGroupingsPage() {
                   >
                     {!Array.isArray(pagedRows)
                       ? "Error loading data"
-                      : "No subject groupings found."}
+                      : rows.length > 0
+                        ? "No rows match the current filters or search. Try Academic Year → All Academic Years or clear Subject Type."
+                        : "No subject groupings yet. Use Add to create one."}
                   </div>
                 ) : (
                   pagedRows.map((row, idx) => (

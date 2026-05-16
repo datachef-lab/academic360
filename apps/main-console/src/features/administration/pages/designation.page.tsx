@@ -2,7 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "@/hooks/useToast";
+import { Download, Edit, PlusCircle, Trash2, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -10,29 +25,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ClipboardList, Edit, PlusCircle } from "lucide-react";
-import type { DesignationT } from "@repo/db/schemas";
-
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { DesignationPayload } from "../services/designation.service";
 import {
   createDesignation,
+  deleteDesignation,
   getAllDesignations,
   updateDesignation,
-  type DesignationPayload,
 } from "../services/designation.service";
-import { socketService, type Notification } from "@/services/socketService";
-
-const ITEMS_PER_PAGE = 10;
+import type { DesignationT } from "@repo/db/schemas";
+import * as XLSX from "xlsx";
 
 const designationSchema = z.object({
   name: z
     .string()
     .min(1, "Name is required")
     .transform((value) => value.trim()),
+  code: z
+    .string()
+    .optional()
+    .transform((value) => (value ? value.trim() : "")),
   description: z
     .string()
     .optional()
@@ -60,6 +72,7 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
     resolver: zodResolver(designationSchema),
     defaultValues: {
       name: initialData?.name ?? "",
+      code: initialData?.code ?? "",
       description: initialData?.description ?? "",
       isActive: initialData?.isActive ?? true,
     },
@@ -68,53 +81,49 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
   useEffect(() => {
     reset({
       name: initialData?.name ?? "",
+      code: initialData?.code ?? "",
       description: initialData?.description ?? "",
       isActive: initialData?.isActive ?? true,
     });
   }, [initialData, reset]);
 
-  const handleFormSubmit = async (values: DesignationFormValues) => {
-    const payload: DesignationPayload = {
+  const submit = async (values: DesignationFormValues) => {
+    await onSubmit({
       name: values.name,
-      description: values.description && values.description !== "" ? values.description : null,
+      code: values.code || null,
+      description: values.description || null,
+      color: initialData?.color ?? null,
+      bgColor: initialData?.bgColor ?? null,
       isActive: values.isActive,
-    };
-    await onSubmit(payload);
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(submit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="designation-name">Designation Name</Label>
-        <Input id="designation-name" placeholder="Enter name" {...register("name")} />
+        <Label htmlFor="name">Name</Label>
+        <Input id="name" {...register("name")} />
         {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
       </div>
-
       <div className="space-y-2">
-        <Label htmlFor="designation-description">Description</Label>
-        <Input
-          id="designation-description"
-          placeholder="Optional description"
-          {...register("description")}
-        />
+        <Label htmlFor="code">Code</Label>
+        <Input id="code" {...register("code")} />
       </div>
-
-      <div className="flex items-center space-x-2">
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea id="description" className="min-h-[80px] resize-y" {...register("description")} />
+      </div>
+      <div className="flex items-center gap-2">
         <Controller
           name="isActive"
           control={control}
           render={({ field }) => (
-            <Checkbox
-              id="designation-active"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+            <Checkbox id="isActive" checked={field.value} onCheckedChange={field.onChange} />
           )}
         />
-        <Label htmlFor="designation-active">Active</Label>
+        <Label htmlFor="isActive">Active</Label>
       </div>
-
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
@@ -131,400 +140,417 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
 }
 
 export default function DesignationPage() {
-  const [designations, setDesignations] = useState<DesignationT[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [items, setItems] = useState<DesignationT[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const [selectedDesignation, setSelectedDesignation] = useState<DesignationT | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [search, setSearch] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selected, setSelected] = useState<DesignationT | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DesignationT | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const loadDesignations = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getAllDesignations();
       const payload = Array.isArray(response.payload) ? response.payload : [];
-      setDesignations(payload);
+      setItems(payload);
       setError(null);
     } catch (err) {
       console.error(err);
-      setError("Failed to fetch designations");
-      setDesignations([]);
-      toast({
-        title: "Failed to fetch designations",
-        description: "Unable to load designation data. Please try again.",
-      });
+      setItems([]);
+      setError("Failed to load designations");
+      toast.error("Failed to load designations");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadDesignations();
-  }, [loadDesignations]);
+    void loadData();
+  }, [loadData]);
 
-  useEffect(() => {
-    const handleRealtimeUpdate = (notification: Notification) => {
-      const entity = notification.meta?.entity ?? notification.meta?.resource;
-      if (
-        entity === "designation" ||
-        entity === "designations" ||
-        notification.message?.toLowerCase().includes("designation")
-      ) {
-        void loadDesignations();
-      }
-    };
+  const filteredItems = useMemo(() => {
+    if (!search) return items;
+    const s = search.toLowerCase();
+    return items.filter(
+      (item) =>
+        item.name?.toLowerCase().includes(s) ||
+        item.code?.toLowerCase().includes(s) ||
+        item.description?.toLowerCase().includes(s),
+    );
+  }, [items, search]);
 
-    const unsubscribe = socketService.addNotificationListener(handleRealtimeUpdate);
-    return () => {
-      unsubscribe();
-    };
-  }, [loadDesignations]);
-
-  const filteredDesignations = useMemo(() => {
-    if (!searchTerm) return designations;
-    const normalized = searchTerm.toLowerCase();
-    return designations.filter((designation) => {
-      return (
-        designation.name?.toLowerCase().includes(normalized) ||
-        designation.description?.toLowerCase().includes(normalized)
-      );
-    });
-  }, [designations, searchTerm]);
-
-  const totalItems = filteredDesignations.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [totalPages, currentPage]);
-
-  const paginatedDesignations = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredDesignations.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredDesignations, currentPage]);
-
-  const handleCreateOrUpdate = async (payload: DesignationPayload) => {
+  const onSave = async (payload: DesignationPayload) => {
     setIsSubmitting(true);
     try {
-      if (selectedDesignation) {
-        await updateDesignation(selectedDesignation.id!, payload);
-        toast({
-          title: "Designation updated",
-          description: "The designation details have been updated successfully.",
-        });
+      if (selected?.id) {
+        await updateDesignation(selected.id, payload);
+        toast.success("Designation updated");
       } else {
         await createDesignation(payload);
-        toast({
-          title: "Designation created",
-          description: "A new designation has been added successfully.",
-        });
+        toast.success("Designation created");
       }
       setIsDialogOpen(false);
-      setSelectedDesignation(null);
-      await loadDesignations();
+      setSelected(null);
+      await loadData();
     } catch (err) {
       console.error(err);
-      toast({
-        title: "Save failed",
-        description: "We couldn't save the designation. Please try again.",
-      });
+      toast.error("Save failed", { description: "Please try again." });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const onDelete = async () => {
+    if (!deleteTarget?.id) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteDesignation(deleteTarget.id);
+      toast.success("Designation deleted");
+      setDeleteTarget(null);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      toast.error("Delete failed", { description: "Please try again." });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDownload = () => {
+    const rows = filteredItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      code: item.code,
+      description: item.description,
+      isActive: item.isActive ? "Active" : "Inactive",
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Designations");
+    XLSX.writeFile(workbook, "designations.xlsx");
+  };
+
+  const handleAddClick = () => {
+    setSelected(null);
+    setIsDialogOpen(true);
+  };
+
   return (
-    <div className="p-2 sm:p-4 flex flex-col min-h-[calc(100vh-140px)] gap-4">
-      <Card className="border-none flex flex-col h-full">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border rounded-md p-4 sticky top-0 z-20 bg-background">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-semibold">
-              <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
-              <span className="truncate">Designation Management</span>
-            </CardTitle>
-            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
-              Manage staff designations, descriptions, and activation status.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Dialog
-              open={isDialogOpen}
-              onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                if (!open) {
-                  setSelectedDesignation(null);
-                }
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-none w-full sm:w-auto"
-                  onClick={() => {
-                    setSelectedDesignation(null);
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline">Add Designation</span>
-                  <span className="sm:hidden">Add</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-xl w-[95vw] sm:w-full">
-                <DialogHeader>
-                  <DialogTitle>
-                    {selectedDesignation ? "Edit Designation" : "Add Designation"}
-                  </DialogTitle>
-                </DialogHeader>
-                <DesignationForm
-                  initialData={selectedDesignation}
-                  onSubmit={handleCreateOrUpdate}
-                  onCancel={() => {
-                    setIsDialogOpen(false);
-                    setSelectedDesignation(null);
-                  }}
-                  isSubmitting={isSubmitting}
-                />
-              </DialogContent>
-            </Dialog>
+    <div className="p-2 sm:p-4 flex flex-col gap-4 min-h-[calc(100vh-140px)] overflow-x-hidden">
+      <Card className="border-none">
+        <CardHeader className="flex flex-col gap-4 border rounded-md p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 shrink-0 text-black" />
+                <span className="text-lg font-semibold">Designation Management</span>
+              </div>
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                Manage staff designations, codes, descriptions, and status.
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+              <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="default"
+                    onClick={handleAddClick}
+                    className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="w-[95vw] sm:w-full max-w-lg">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {selected ? "Edit Designation" : "Add New Designation"}
+                    </AlertDialogTitle>
+                  </AlertDialogHeader>
+                  <DesignationForm
+                    initialData={selected}
+                    onSubmit={onSave}
+                    onCancel={() => setIsDialogOpen(false)}
+                    isSubmitting={isSubmitting}
+                  />
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 pt-6 flex-1 flex flex-col">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="w-full sm:w-72">
-              <Input
-                placeholder="Search by name or description..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full"
-              />
-            </div>
-            <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-              Showing {totalItems} of {designations.length} designations
-            </div>
+
+        <CardContent className="px-0 overflow-x-hidden">
+          <div className="bg-background p-2 sm:p-4 border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-0">
+            <Input
+              placeholder="Search by name, code, or description..."
+              className="w-full sm:w-64"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 flex-shrink-0"
+              onClick={handleDownload}
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Download</span>
+            </Button>
           </div>
 
-          <div className="overflow-x-auto flex-1 -mx-2 sm:mx-0">
-            <div className="rounded-md border border-slate-300 h-full max-h-[480px] overflow-y-auto min-w-full">
-              {/* Desktop Table View */}
-              <div className="hidden md:block">
-                <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
-                  <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
-                    <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center w-[8%]">
-                      #
-                    </div>
-                    <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center w-[28%]">
-                      Name
-                    </div>
-                    <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center w-[40%]">
-                      Description
-                    </div>
-                    <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center w-[14%]">
-                      Status
-                    </div>
-                    <div className="flex-shrink-0 px-3 py-2 flex items-center justify-center w-[10%]">
-                      Actions
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white">
-                  {loading ? (
-                    <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
-                      Loading designations...
-                    </div>
-                  ) : error ? (
-                    <div className="flex items-center justify-center h-52 text-red-600 border-b border-slate-200">
-                      {error}
-                    </div>
-                  ) : totalItems === 0 ? (
-                    <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
-                      No designations found. Try adjusting your search.
-                    </div>
-                  ) : (
-                    paginatedDesignations.map((designation, index) => {
-                      const displayIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
-                      return (
-                        <div
-                          key={designation.id ?? displayIndex}
-                          className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
+          {/* Mobile: card layout */}
+          <div className="md:hidden space-y-2 p-2 sm:p-4 overflow-y-auto max-h-[600px]">
+            {loading ? (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                Loading...
+              </div>
+            ) : error ? (
+              <div className="text-center py-12 text-red-500">{error}</div>
+            ) : filteredItems.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No designations found.</div>
+            ) : (
+              filteredItems.map((item, idx) => (
+                <Card key={item.id ?? idx} className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="font-medium text-slate-800 truncate">{item.name}</span>
+                        {item.code && (
+                          <Badge
+                            className="flex-shrink-0 text-xs"
+                            style={{
+                              backgroundColor: item.bgColor ?? "#f1f5f9",
+                              color: item.color ?? "#64748b",
+                              borderColor: item.color ?? "#64748b",
+                            }}
+                          >
+                            {item.code}
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={item.isActive ? "default" : "secondary"}
+                          className={
+                            item.isActive
+                              ? "bg-green-500 text-white hover:bg-green-600 flex-shrink-0"
+                              : "flex-shrink-0"
+                          }
                         >
-                          <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center w-[8%]">
-                            {displayIndex}
-                          </div>
-                          <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center w-[28%] min-w-0">
-                            <span className="font-medium text-slate-800 truncate w-full">
-                              {designation.name}
-                            </span>
-                          </div>
-                          <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center w-[40%] min-w-0">
-                            <span
-                              className="text-slate-600 truncate w-full"
-                              title={designation.description || undefined}
-                            >
-                              {designation.description ?? (
-                                <span className="text-slate-400">No description</span>
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center w-[14%]">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                                designation.isActive
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {designation.isActive ? "Active" : "Inactive"}
-                            </span>
-                          </div>
-                          <div className="flex-shrink-0 px-3 py-3 flex items-center justify-center w-[10%]">
+                          {item.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      {item.description && (
+                        <p className="text-sm text-slate-600 line-clamp-2">{item.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setSelected(item);
+                          setIsDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Dialog
+                        open={deleteTarget?.id === item.id}
+                        onOpenChange={(open) => setDeleteTarget(open ? item : null)}
+                      >
+                        <DialogTrigger asChild>
+                          <Button variant="destructive" size="icon" className="h-8 w-8">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-[95vw]">
+                          <DialogHeader>
+                            <DialogTitle>Delete designation?</DialogTitle>
+                          </DialogHeader>
+                          <p className="text-sm text-muted-foreground">
+                            This will permanently remove <strong>{item.name}</strong>.
+                          </p>
+                          <div className="flex justify-end gap-2">
                             <Button
                               variant="outline"
-                              size="icon"
-                              className="border border-blue-200 text-blue-700 hover:bg-blue-50 h-8 w-8"
+                              onClick={() => setDeleteTarget(null)}
+                              disabled={isDeleting}
+                            >
+                              Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={onDelete} disabled={isDeleting}>
+                              {isDeleting ? "Deleting..." : "Delete"}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden md:block relative" style={{ height: "600px" }}>
+            <div className="overflow-y-auto h-full overflow-x-hidden">
+              <table
+                className="w-full caption-bottom text-sm border rounded-md"
+                style={{ tableLayout: "fixed" }}
+              >
+                <TableHeader>
+                  <TableRow className="sticky top-0 z-30 bg-[#f3f4f6] [&>th]:border-b hover:bg-[#f3f4f6]">
+                    <TableHead
+                      className="sticky top-0 z-30 bg-[#f3f4f6] text-[#374151]"
+                      style={{ width: 80 }}
+                    >
+                      #
+                    </TableHead>
+                    <TableHead
+                      className="sticky top-0 z-30 bg-[#f3f4f6] text-[#374151]"
+                      style={{ width: 200 }}
+                    >
+                      Name
+                    </TableHead>
+                    <TableHead
+                      className="sticky top-0 z-30 bg-[#f3f4f6] text-[#374151]"
+                      style={{ width: 140 }}
+                    >
+                      Code
+                    </TableHead>
+                    <TableHead
+                      className="sticky top-0 z-30 bg-[#f3f4f6] text-[#374151]"
+                      style={{ width: 280 }}
+                    >
+                      Description
+                    </TableHead>
+                    <TableHead
+                      className="sticky top-0 z-30 bg-[#f3f4f6] text-[#374151]"
+                      style={{ width: 120 }}
+                    >
+                      Status
+                    </TableHead>
+                    <TableHead
+                      className="sticky top-0 z-30 bg-[#f3f4f6] text-[#374151]"
+                      style={{ width: 140 }}
+                    >
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : error ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-red-500">
+                        {error}
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">
+                        No designations found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredItems.map((item, idx) => (
+                      <TableRow key={item.id ?? idx}>
+                        <TableCell style={{ width: 80 }}>{idx + 1}.</TableCell>
+                        <TableCell style={{ width: 200 }}>
+                          <span className="font-medium">{item.name}</span>
+                        </TableCell>
+                        <TableCell style={{ width: 140 }}>
+                          {item.code ? (
+                            <Badge
+                              className="w-fit font-medium border text-xs"
+                              style={{
+                                backgroundColor: item.bgColor ?? "#f1f5f9",
+                                color: item.color ?? "#64748b",
+                                borderColor: item.color ?? "#64748b",
+                              }}
+                            >
+                              {item.code}
+                            </Badge>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell style={{ width: 280 }}>{item.description ?? "—"}</TableCell>
+                        <TableCell style={{ width: 120 }}>
+                          {item.isActive ? (
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell style={{ width: 140 }}>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 w-6 p-0"
                               onClick={() => {
-                                setSelectedDesignation(designation);
+                                setSelected(item);
                                 setIsDialogOpen(true);
                               }}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
+                            <Dialog
+                              open={deleteTarget?.id === item.id}
+                              onOpenChange={(open) => setDeleteTarget(open ? item : null)}
+                            >
+                              <DialogTrigger asChild>
+                                <Button variant="destructive" size="sm" className="h-6 w-6 p-0">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Delete designation?</DialogTitle>
+                                </DialogHeader>
+                                <p className="text-sm text-muted-foreground">
+                                  This will permanently remove <strong>{item.name}</strong>.
+                                </p>
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => setDeleteTarget(null)}
+                                    disabled={isDeleting}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    onClick={onDelete}
+                                    disabled={isDeleting}
+                                  >
+                                    {isDeleting ? "Deleting..." : "Delete"}
+                                  </Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                           </div>
-                        </div>
-                      );
-                    })
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
-                </div>
-              </div>
-
-              {/* Mobile Card View */}
-              <div className="md:hidden space-y-3 p-2">
-                {loading ? (
-                  <div className="flex items-center justify-center h-52 text-muted-foreground">
-                    Loading designations...
-                  </div>
-                ) : error ? (
-                  <div className="flex items-center justify-center h-52 text-red-600">{error}</div>
-                ) : totalItems === 0 ? (
-                  <div className="flex items-center justify-center h-52 text-muted-foreground">
-                    No designations found. Try adjusting your search.
-                  </div>
-                ) : (
-                  paginatedDesignations.map((designation, index) => {
-                    const displayIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
-                    return (
-                      <Card key={designation.id ?? displayIndex} className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs text-muted-foreground font-medium">
-                                #{displayIndex}
-                              </span>
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                  designation.isActive
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {designation.isActive ? "Active" : "Inactive"}
-                              </span>
-                            </div>
-                            <h3 className="font-semibold text-slate-800 mb-1 truncate">
-                              {designation.name}
-                            </h3>
-                            <p className="text-sm text-slate-600 line-clamp-2">
-                              {designation.description ?? (
-                                <span className="text-slate-400">No description</span>
-                              )}
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="border border-blue-200 text-blue-700 hover:bg-blue-50 flex-shrink-0 h-9 w-9"
-                            onClick={() => {
-                              setSelectedDesignation(designation);
-                              setIsDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
+                </TableBody>
+              </table>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {!loading && !error && (
-        <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs sm:text-sm text-gray-600">
-            {totalItems === 0
-              ? "Showing 0 results"
-              : `Showing ${(currentPage - 1) * ITEMS_PER_PAGE + 1} to ${Math.min(
-                  currentPage * ITEMS_PER_PAGE,
-                  totalItems,
-                )} of ${totalItems} results`}
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border border-blue-200 text-blue-700 hover:bg-blue-50 flex-shrink-0"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1 || totalItems === 0}
-            >
-              <span className="hidden sm:inline">Previous</span>
-              <span className="sm:hidden">Prev</span>
-            </Button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const startPage = Math.max(1, Math.min(totalPages - 4, currentPage - 2));
-                const pageNum = startPage + i;
-                if (pageNum > totalPages) return null;
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`w-8 h-8 p-0 flex-shrink-0 ${
-                      currentPage === pageNum
-                        ? "bg-blue-600 hover:bg-blue-700 text-white"
-                        : "border border-blue-200 text-blue-700 hover:bg-blue-50"
-                    }`}
-                    disabled={totalItems === 0}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border border-blue-200 text-blue-700 hover:bg-blue-50 flex-shrink-0"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages || totalItems === 0}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

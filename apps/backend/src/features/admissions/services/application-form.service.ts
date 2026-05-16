@@ -38,10 +38,10 @@ import {
   findAdditionalInfoByApplicationFormId,
 } from "./admission-additional-info.service.js";
 import { findAdmCourseDetailsByApplicationFormId } from "./adm-course-details.service.js";
-import {
-  deletePayment,
-  findPaymentInfoByApplicationFormId,
-} from "@/features/payments/services/payment.service.js";
+// import {
+//   deletePayment,
+//   findPaymentInfoByApplicationFormId,
+// } from "@/features/payments/services/payment.service.js";
 import {
   deleteAdmissionCourse,
   findCourseApplicationByApplicationFormId,
@@ -192,10 +192,10 @@ export async function deleteApplicationForm(id: number) {
   }
 
   // Delete the payment info
-  const paymentInfoDeleted = await deletePayment(foundForm.paymentInfo!.id!);
-  if (paymentInfoDeleted !== null && !paymentInfoDeleted) {
-    return { success: false, message: "Failed to delete payemnt info." };
-  }
+  // const paymentInfoDeleted = await deletePayment(foundForm.paymentInfo!.id!);
+  // if (paymentInfoDeleted !== null && !paymentInfoDeleted) {
+  //   return { success: false, message: "Failed to delete payemnt info." };
+  // }
 
   // Delete the application form
   await db.delete(applicationFormModel).where(eq(applicationFormModel.id, id));
@@ -256,13 +256,13 @@ export async function formatAppform(
     form.id!,
   );
 
-  const paymentInfo = await findPaymentInfoByApplicationFormId(form.id!);
-  dto.paymentInfo = paymentInfo
-    ? ({
-        ...paymentInfo,
-        paymentFor: "ADMISSION_APPLICATION_FEE" as const,
-      } as PaymentT)
-    : null;
+  // const paymentInfo = await findPaymentInfoByApplicationFormId(form.id!);
+  // dto.paymentInfo = paymentInfo
+  //   ? ({
+  //       ...paymentInfo,
+  //       paymentFor: "ADMISSION_APPLICATION_FEE" as const,
+  //     } as PaymentT)
+  //   : null;
 
   return dto;
 }

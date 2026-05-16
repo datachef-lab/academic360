@@ -22,6 +22,16 @@ export function setAccessTokenForApi(token: string | null) {
   delete axiosInstance.defaults.headers.common["Authorization"];
 }
 
+// When sending FormData, remove Content-Type so the browser sets multipart/form-data with boundary
+axiosInstance.interceptors.request.use((config) => {
+  if (config.data instanceof FormData && config.headers) {
+    const h = config.headers as Record<string, unknown>;
+    delete h["Content-Type"];
+    delete h["content-type"];
+  }
+  return config;
+});
+
 // Lightweight request interceptor to attach token if available early
 axiosInstance.interceptors.request.use((config) => {
   if (!inMemoryAccessToken) return config;

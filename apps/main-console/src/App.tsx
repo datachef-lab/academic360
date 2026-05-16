@@ -5,8 +5,6 @@ import HomeLayout from "@/features/dashboard/layouts/home-layout";
 import { AuthProvider } from "./features/auth/providers/auth-provider";
 import { NotificationProvider } from "./providers/NotificationProvider";
 // import StudentPage from "./pages/students/StudentPage";
-import BookCatalog from "./components/LibManagement/BookCatalog";
-import IssueRetun from "./components/LibManagement/IssueRetun";
 // import LibFineManagement from "./components/LibManagement/LibFines";
 // import LibReport from "./components/LibManagement/LibReport";
 
@@ -16,7 +14,6 @@ import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActiv
 // import MarksheetPage from "./pages/students/MarksheetPage";
 // import Downloads from "./pages/Downloads";
 import Event from "./pages/events/EventPage";
-import LibraryDashboard from "./pages/library/LibraryDashboard";
 
 import Downloads from "./pages/Downloads";
 
@@ -34,6 +31,7 @@ import GradeCard from "./components/GradeMarks/GradeCard";
 import * as courseSubjectModule from "@/pages/courses-subjects-design";
 import * as admissionFeesModule from "@/pages/admissions-fees";
 import * as documentIssuanceModule from "@/features/document-issuance";
+import * as careerProgressionModule from "@/features/career-progression";
 import * as batchModule from "@/pages/batches";
 import * as studentModule from "@/pages/students";
 import * as attendanceModule from "@/pages/attendance-timetable";
@@ -57,7 +55,7 @@ import StaffAssignmentPage from "./pages/admissions-fees/admissions/[year]/workf
 import EligibilityPage from "./pages/admissions-fees/admissions/[year]/workflows/EligibilityPage";
 import MeritCriteriaPage from "./pages/admissions-fees/admissions/[year]/workflows/MeritCriteriaPage";
 import FeesSlabMappingPage from "./pages/admissions-fees/admissions/[year]/workflows/FeesSlabMappingPage";
-import BulkUploadPage from "./pages/BulkUpload";
+import { BulkDataUploadPage } from "@/features/bulk-upload";
 import Dashboard from "./features/dashboard/pages/dashboard";
 import LoginPage from "./features/auth/pages/login-page";
 import ResetPasswordPage from "./features/auth/pages/reset-password-page";
@@ -82,9 +80,15 @@ import BoardSubjectPage from "./features/academic-year-setup/pages/board-subject
 import ProtectedRouteWrapper from "./components/globals/ProtectedRouteWrapper";
 import CuRegStudentPage from "./features/cu-registration/pages/CuRegStudentPage";
 import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/pages/board-subject-univ-subject-mapping-paper";
+import StudentPromotionLogicMaster from "./features/academic-year-setup/layouts/student-promotion-logic-master";
+import PromotionBuilderPage from "./features/academic-year-setup/pages/promotion-builder-page";
+import PromotionClausesPage from "./features/academic-year-setup/pages/promotion-clauses-page";
+import AppearTypePage from "./features/academic-year-setup/pages/appear-type-page";
 import * as examManagementModule from "@/features/exam-management";
 import RealTimeTrackerPage from "./features/realtime-tracker/pages";
 import ReportsPage from "./features/reports/page";
+import PromoteStudentsPage from "./pages/PromoteStudentsPage";
+import AcademicActivityPage from "./features/administration/pages/academic-activity.page";
 import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalCURegMarkingPage";
 import * as administrationModule from "./features/administration";
 // import * as resourceModule from "@/pages/resources";
@@ -114,6 +118,8 @@ const router = createBrowserRouter(
       ),
       children: [
         { path: "", element: <Dashboard /> },
+        { path: "promote-students", element: <PromoteStudentsPage /> },
+        { path: "academic-activity", element: <AcademicActivityPage /> },
         {
           path: "academic-year-setup",
           element: <Outlet />,
@@ -178,6 +184,16 @@ const router = createBrowserRouter(
                 { path: "restricted-groupings", element: <RestrictedGroupingPage /> },
                 { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
                 { path: "semester-availability", element: <SemesterAvailabilityPage /> },
+              ],
+            },
+            {
+              path: "student-promotion-logic",
+              element: <StudentPromotionLogicMaster />,
+              children: [
+                { path: "", element: <PromotionBuilderPage /> },
+                { path: "classes", element: <courseSubjectModule.ClassesPage /> },
+                { path: "promotion-clauses", element: <PromotionClausesPage /> },
+                { path: "appear-types", element: <AppearTypePage /> },
               ],
             },
           ],
@@ -316,6 +332,7 @@ const router = createBrowserRouter(
             { path: "reports", element: <admissionFeesModule.feesModule.FeesReportsPage /> },
             { path: "structure", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
             { path: "student-fees", element: <admissionFeesModule.feesModule.StudentFees /> },
+            { path: "marking", element: <admissionFeesModule.feesModule.FeePaymentMarkingPage /> },
             {
               path: "fee-group-promotion-mapping",
               element: <admissionFeesModule.feesModule.FeeGroupPromotionMappingPage />,
@@ -348,6 +365,21 @@ const router = createBrowserRouter(
             { path: "types", element: <documentIssuanceModule.DocumentTypesPage /> },
             { path: "templates", element: <documentIssuanceModule.DocumentTemplatesPage /> },
             { path: "logs", element: <documentIssuanceModule.DocumentIssuanceLogsPage /> },
+          ],
+        },
+        {
+          path: "career-progression",
+          element: <careerProgressionModule.CareerProgressionMasterLayout />,
+          children: [
+            { path: "", element: <careerProgressionModule.CareerProgressionHomePage /> },
+            {
+              path: "certificate-master",
+              element: <careerProgressionModule.CertificateMasterPage />,
+            },
+            {
+              path: "certificate-fields",
+              element: <careerProgressionModule.CertificateFieldsPage />,
+            },
           ],
         },
         {
@@ -445,10 +477,25 @@ const router = createBrowserRouter(
           path: "library",
           element: <libraryModule.LibraryMaster />,
           children: [
-            { path: "", element: <LibraryDashboard /> },
-            { path: "archived", element: <div>TODO: Archived Books</div> },
-            { path: "catalog", element: <BookCatalog /> },
-            { path: "issued", element: <IssueRetun /> },
+            { path: "", element: <libraryModule.LibraryHomePage /> },
+            { path: "entry-exit", element: <libraryModule.EntryExitPage /> },
+            { path: "book-circulation", element: <libraryModule.BookCirculationPage /> },
+            { path: "books", element: <libraryModule.BooksPage /> },
+            { path: "copy-details", element: <libraryModule.CopyDetailsPage /> },
+            { path: "journal", element: <libraryModule.JournalPage /> },
+            { path: "series", element: <libraryModule.SeriesPage /> },
+            { path: "publications", element: <libraryModule.PublicationsPage /> },
+            { path: "enclosures", element: <libraryModule.EnclosuresPage /> },
+            { path: "entry-modes", element: <libraryModule.EntryModesPage /> },
+            { path: "journal-types", element: <libraryModule.JournalTypesPage /> },
+            { path: "statuses", element: <libraryModule.StatusesPage /> },
+            { path: "racks", element: <libraryModule.RacksPage /> },
+            { path: "shelves", element: <libraryModule.ShelvesPage /> },
+            { path: "binding-types", element: <libraryModule.BindingTypesPage /> },
+            { path: "periods", element: <libraryModule.PeriodsPage /> },
+            { path: "articles", element: <libraryModule.ArticlesPage /> },
+            { path: "library-documents", element: <libraryModule.LibraryDocumentsPage /> },
+            { path: "borrowing-types", element: <libraryModule.BorrowingTypesPage /> },
             //   { path: "fine-management", element: <LibFineManagement /> },
             //   { path: "lib-report", element: <LibReport /> },
           ],
@@ -517,11 +564,13 @@ const router = createBrowserRouter(
           element: <administrationModule.UserGroupsAccessLayout />,
           children: [
             { path: "", element: <administrationModule.UserGroupsAccessHomePage /> },
+            { path: "app-modules", element: <administrationModule.AppModulePage /> },
             { path: "user-groups", element: <div>TODO: User Groups Master</div> },
             { path: "faculties", element: <div>TODO: User Directory</div> },
             { path: "create", element: <div>TODO: Create User Group</div> },
             { path: "departments", element: <administrationModule.DepartmentPage /> },
             { path: "designations", element: <administrationModule.DesignationPage /> },
+            { path: "access-groups", element: <administrationModule.AccessGroupPage /> },
             { path: "user-types", element: <administrationModule.UserTypePage /> },
             { path: "roles", element: <div>TODO: Roles & Permissions Page</div> },
             { path: "user-statuses", element: <administrationModule.UserStatusPage /> },
@@ -540,7 +589,7 @@ const router = createBrowserRouter(
         },
 
         { path: "profile", element: <UserProfilePage /> },
-        { path: "bulk-upload", element: <BulkUploadPage /> },
+        { path: "bulk-upload", element: <BulkDataUploadPage /> },
       ],
     },
     { path: "*", element: <NotFoundPage /> },

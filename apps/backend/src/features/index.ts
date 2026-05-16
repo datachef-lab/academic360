@@ -79,15 +79,23 @@ import {
   examScheduleRouter,
 } from "./exams/routes/index.js";
 import {
+  accessGroupRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
+  accessGroupModulePermissionRouter,
+  accessGroupModuleProgramCourseRouter,
+  accessGroupModuleRouter,
   accessGroupUserTypeRouter,
+  appModuleRouter,
+  departmentRouter,
   designationRouter,
+  identityMasterRouter,
+  institutionalRoleRouter,
   sessionStatusRouter,
   userStatusMasterRouter,
   userTypeRouter,
 } from "./administration/routes/index.js";
-
+import paymentRouter from "./payments/routes/payment.route.js";
 export {
   documentRouter,
   marksheetRouter,
@@ -155,10 +163,18 @@ export {
   roomRouter,
   examTypeRouter,
   examScheduleRouter,
+  accessGroupRouter,
   accessGroupApplicationRouter,
   accessGroupDesignationRouter,
+  accessGroupModulePermissionRouter,
+  accessGroupModuleProgramCourseRouter,
+  accessGroupModuleRouter,
   accessGroupUserTypeRouter,
+  appModuleRouter,
+  departmentRouter,
   designationRouter,
+  identityMasterRouter,
+  institutionalRoleRouter,
   sessionStatusRouter,
   userStatusMasterRouter,
   userTypeRouter,

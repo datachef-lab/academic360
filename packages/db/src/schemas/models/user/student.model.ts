@@ -37,6 +37,7 @@ export const studentModel = pgTable("students", {
     notes: text(),
     active: boolean(),
     alumni: boolean(),
+    dateOfJoining: timestamp("date_of_joining"),
     leavingDate: timestamp(),
     leavingReason: text(),
     takenTransferCertificate: boolean().default(false),

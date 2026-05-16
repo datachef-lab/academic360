@@ -45,6 +45,10 @@
             "types": "./dist/dtos/exams/index.d.ts",
             "import": "./dist/dtos/exams/index.js"
         },
+        "./dtos/academics": {
+            "types": "./dist/dtos/academics/index.d.ts",
+            "import": "./dist/dtos/academics/index.js"
+        },
         "./dtos/administration": {
             "types": "./dist/dtos/administration/index.d.ts",
             "import": "./dist/dtos/administration/index.js"

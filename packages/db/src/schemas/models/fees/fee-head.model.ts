@@ -13,11 +13,9 @@ export const feeHeadModel = pgTable("fee_heads", {
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
     createdByUserId: integer("created_by_user_id_fk")
-        .references(() => userModel.id)
-        .notNull(),
+        .references(() => userModel.id),
     updatedByUserId: integer("updated_by_user_id_fk")
-        .references(() => userModel.id)
-        .notNull(),
+        .references(() => userModel.id),
 });
 
 export const createFeeHeadSchema = createInsertSchema(feeHeadModel);

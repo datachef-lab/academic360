@@ -40,6 +40,13 @@ import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.
 import { createLogger } from "@/config/logger.js";
 import { loadDefaultUserTypes } from "@/features/administration/services/user-type.service";
 import { loadDefaultUserStatusMasters } from "@/features/administration/services/user-status-master.service";
+import { loadDefaultAppModules } from "@/features/administration/services/app-module.service";
+import { loadDefaultCertificateMasters } from "@/features/academics/services/default-certificate-master-loader.service.js";
+import { loadDefaultPromotionData } from "@/features/batches/default-promotion-data-loader.service.js";
+import { loadStudentFees } from "@/features/fees/services/legacy-fees-data.service";
+import { defaultSetDateOfJoining } from "@/features/user/defaut-set-date-of-joining";
+import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
+import { loadLibrary, loadLibraryUsers } from "@/features/library/old-irp-data";
 const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -75,7 +82,7 @@ export const connectToDatabase = async () => {
     // loadOccupations();
     // loadQualifications();
     // loadNationalities();
-    loadAffiliation();
+    await loadAffiliation();
     loadCourseLevel();
     // loadAllAddress();
     // loadAllPostOffice();
@@ -88,8 +95,20 @@ export const connectToDatabase = async () => {
 
     loadDefaultSubjectSelectionMetas();
 
-    loadDefaultUserTypes();
-    loadDefaultUserStatusMasters();
+    // loadDefaultUserTypes();
+    // loadDefaultUserStatusMasters();
+    loadDefaultAppModules();
+    loadDefaultCertificateMasters().catch((e) => {
+      log.warn("Default certificate master load failed", { error: e });
+    });
+    loadDefaultPromotionData().catch((e) => {
+      log.warn("Default promotion data load failed", { error: e });
+    });
+    loadStudentFees();
+    loadLibrary();
+    initializeAcademicActivities();
+    defaultSetDateOfJoining();
+    loadLibraryUsers();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
@@ -182,6 +201,7 @@ export const connectToMySQL = async () => {
     ); // Simple query to test the connection
     // console.log(rows);
     // exportStaffDataToExcel();
+
     log.info("Connected to MySQL successfully 🎉");
     // getIrpNotFoundCourseDesigns();
   } catch (error) {

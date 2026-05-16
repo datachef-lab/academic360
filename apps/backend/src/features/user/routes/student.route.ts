@@ -19,6 +19,7 @@ import {
   exportStudentDetailedReportController,
   exportStudentAcademicSubjectsReportController,
   downloadStudentImagesController,
+  exportEnrolmentMasterReportController,
 } from "../controllers/student.controller.js";
 
 import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
@@ -93,6 +94,8 @@ router.get(
   "/export/academic-subjects",
   exportStudentAcademicSubjectsReportController,
 );
+
+router.get("/export/enrolment-master", exportEnrolmentMasterReportController);
 
 router.delete("/", deleteStudent);
 

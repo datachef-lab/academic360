@@ -10,6 +10,7 @@ import {
   Users,
   Link2,
   PlusCircle,
+  ClipboardCheck,
 } from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
@@ -18,6 +19,7 @@ const topLinks = [
   { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
   { title: "Student Fee Groups", url: "/dashboard/fees/fee-group-promotion-mapping", icon: Link2 },
   { title: "Student Fees", url: "/dashboard/fees/student-fees", icon: Users },
+  { title: "Fee Marking", url: "/dashboard/fees/marking", icon: ClipboardCheck },
   { title: "Reports", url: "/dashboard/fees/reports", icon: BarChart2 },
 ];
 

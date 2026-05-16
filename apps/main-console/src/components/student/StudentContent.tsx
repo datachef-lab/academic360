@@ -16,6 +16,7 @@ import type { AddressDto, FamilyDto, PersonDto, PersonalDetailsDto } from "@repo
 type StudentContentProps = {
   studentId: number;
   userId?: number;
+  studentUid?: string | null;
   personalEmail?: string | null;
   activeTab: {
     label: string;
@@ -28,6 +29,7 @@ export default function StudentContent({
   activeTab,
   studentId,
   userId,
+  studentUid,
   personalEmail,
 }: StudentContentProps) {
   const { data: profile } = useQuery({
@@ -83,7 +85,9 @@ export default function StudentContent({
   const handleContent = () => {
     switch (activeTab.label) {
       case "Overview":
-        return <OverviewTab studentId={studentId} userId={userId} />;
+        return (
+          <OverviewTab studentId={studentId} userId={userId} studentUid={studentUid ?? null} />
+        );
       case "Personal":
         // Prefer profile API payload when available; it contains personalDetails
         return (

@@ -21,11 +21,13 @@ export const programCourseModel = pgTable("program_courses", {
     courseLevelId: integer("course_level_id_fk").references(() => courseLevelModel.id),
     duration: integer("duration").notNull(),
     totalSemesters: integer("total_semesters").notNull(),
+    validityYears: integer("validity_years").notNull().default(1),
     affiliationId: integer("affiliation_id_fk").references(() => affiliationModel.id),
     regulationTypeId: integer("regulation_type_id_fk").references(() => regulationTypeModel.id),
     codePrefix: varchar("code_prefix", { length: 255 }),
     universityCode: varchar("university_code", { length: 255 }),
     isActive: boolean("is_active").default(true),
+    validYears: integer().default(7).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

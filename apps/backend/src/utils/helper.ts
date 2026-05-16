@@ -560,11 +560,16 @@ export function numberToWords(amount: number): string {
 }
 
 export function formatIndianNumber(amount: number): string {
-  const str = amount.toString();
-  const lastThree = str.slice(-3);
-  const rest = str.slice(0, -3);
+  // Format to 2 decimal places
+  const fixedAmount = amount.toFixed(2);
+  const [integerPart, decimalPart] = fixedAmount.split(".");
+
+  const lastThree = integerPart.slice(-3);
+  const rest = integerPart.slice(0, -3);
   const formatted = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
-  return rest ? formatted + "," + lastThree : lastThree;
+
+  const formattedInteger = rest ? formatted + "," + lastThree : lastThree;
+  return formattedInteger + "." + decimalPart;
 }
 export function toSentenceCase(str: string): string {
   let result = str
@@ -582,4 +587,19 @@ export function toSentenceCase(str: string): string {
   result = result.replace(/^Student Roll Number$/, "Roll Number");
 
   return result;
+}
+
+/**
+ * Like {@link toSentenceCase}, but if the name ends with a Roman numeral
+ * (e.g. "SEMESTER II"), only the text before that suffix is sentence-cased;
+ * the Roman part stays uppercase (avoids "Semester Ii").
+ */
+export function toSentenceCasePreservingTrailingRoman(str: string): string {
+  const trimmed = str.trim();
+  const match = trimmed.match(/^(.+?)(\s+)([IVXLCDM]+)$/i);
+  if (!match) {
+    return toSentenceCase(trimmed);
+  }
+  const [, prefix, space, roman] = match;
+  return `${toSentenceCase(prefix)}${space}${roman.toUpperCase()}`;
 }

@@ -5,6 +5,7 @@ export * from "./auth/index.js";
 export * from "./batches/index.js";
 export * from "./course-design/index.js";
 export * from "./fees/index.js";
+export * from "./library/index.js";
 export * from "./notifications/index.js";
 export * from "./payments/index.js";
 export * from "./process-control/index.js";

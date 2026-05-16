@@ -1,0 +1,1 @@
+CREATE TYPE "public"."academic_activity_audience" AS ENUM('STAFF', 'STUDENT', 'ALL');
