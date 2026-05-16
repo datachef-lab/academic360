@@ -2544,8 +2544,6 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Fee Category",
   "Approval Type",
   "Approved By",
-  "Fee Head (or Components)",
-  "Amount Configured (For Fee Heads / Components)",
   "Total Amount Configured (Per Fee Structure)",
   "Total Amount To Pay",
   "Paid Amount",
@@ -2574,7 +2572,6 @@ const FEE_STRUCTURE_INR_AMOUNT_HEADERS = [
 ] as const;
 
 const FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS = [
-  "Amount Configured (For Fee Heads / Components)",
   "Total Amount Configured (Per Fee Structure)",
   "Total Amount To Pay",
   "Paid Amount",
@@ -2584,7 +2581,6 @@ const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
   "Total Amount Configured (Per Fee Structure)": "FFFFF3E0",
   "Total Amount To Pay": "FFE3F2FD",
   "Paid Amount": "FFC8E6C9",
-  "Amount Configured (For Fee Heads / Components)": "FFF3E5F5",
 };
 
 /** Display timestamps in IST (Asia/Kolkata); UTC instants from DB are converted correctly. */
@@ -3054,6 +3050,33 @@ export async function downloadFeeStudentMappings(
     )
     .as("latest_online_payment_per_mapping");
 
+  /** One linked payment row per mapping (avoids duplicate export rows). */
+  const linkedPaymentSq = db
+    .selectDistinctOn([paymentModel.feeStudentMappingId], {
+      feeStudentMappingId: paymentModel.feeStudentMappingId,
+      amount: paymentModel.amount,
+      status: paymentModel.status,
+      txnId: paymentModel.txnId,
+      txnDate: paymentModel.txnDate,
+      paymentMode: paymentModel.paymentMode,
+      internalRemarks: paymentModel.internalRemarks,
+      paymentGatewayVendor: paymentModel.paymentGatewayVendor,
+      orderId: paymentModel.orderId,
+    })
+    .from(paymentModel)
+    .where(
+      and(
+        isNotNull(paymentModel.feeStudentMappingId),
+        eq(paymentModel.isLinked, true),
+      ),
+    )
+    .orderBy(
+      asc(paymentModel.feeStudentMappingId),
+      desc(paymentModel.createdAt),
+      desc(paymentModel.id),
+    )
+    .as("linked_payment_per_mapping");
+
   /**
    * True when export treats the row as Paid (same as Payment Status = 'Paid').
    *
@@ -3069,12 +3092,12 @@ export async function downloadFeeStudentMappings(
    *    `payments` row with `isLinked = true` yet still show PAID in the UI.
    */
   const feeStudentMappingExportIsPaid = sql`(
-    UPPER(COALESCE(${paymentModel.status}::text, '')) IN (
+    UPPER(COALESCE(${linkedPaymentSq.status}::text, '')) IN (
       'SUCCESS', 'COMPLETED', 'DONE', 'PAID', 'TXN_SUCCESS'
     )
     OR (
-      NULLIF(TRIM(COALESCE(${paymentModel.txnId}::text, '')), '') IS NOT NULL
-      AND NULLIF(TRIM(COALESCE(${paymentModel.txnDate}::text, '')), '') IS NOT NULL
+      NULLIF(TRIM(COALESCE(${linkedPaymentSq.txnId}::text, '')), '') IS NOT NULL
+      AND NULLIF(TRIM(COALESCE(${linkedPaymentSq.txnDate}::text, '')), '') IS NOT NULL
       AND COALESCE(${feeStudentMappingModel.amountPaid}, 0)
         >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)
       AND COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0
@@ -3087,7 +3110,7 @@ export async function downloadFeeStudentMappings(
   )`;
 
   const rowsPromise = db
-    .select({
+    .selectDistinctOn([feeStudentMappingModel.id], {
       // Fee-Student Mapping Id
       "Fee-Student Mapping Id": feeStudentMappingModel.id,
 
@@ -3120,9 +3143,6 @@ export async function downloadFeeStudentMappings(
       "Fee Category": feeCategoryModel.name,
       "Approval Type": feeGroupPromotionMappingModel.approvalType,
       "Approved By": fgpmUser.name,
-      "Fee Head (or Components)": feeHeadModel.name,
-      "Amount Configured (For Fee Heads / Components)":
-        feeStructureComponentModel.amount,
       "Total Amount Configured (Per Fee Structure)": feeSlabTotalsSq.slabTotal,
       "Total Amount To Pay": sql<number>`CASE
         WHEN ${feeStudentMappingExportIsPaid} THEN 0
@@ -3138,7 +3158,7 @@ export async function downloadFeeStudentMappings(
       "Paid Amount": sql<number | null>`CASE
         WHEN ${feeStudentMappingExportIsPaid} THEN COALESCE(
           ${feeStudentMappingModel.amountPaid},
-          ${paymentModel.amount},
+          ${linkedPaymentSq.amount},
           0
         )
         ELSE NULL
@@ -3150,7 +3170,7 @@ export async function downloadFeeStudentMappings(
         WHEN ${feeStudentMappingExportIsPaid}
           THEN TO_CHAR(
             COALESCE(
-              ${paymentModel.txnDate}::date,
+              ${linkedPaymentSq.txnDate}::date,
               ${feeStudentMappingModel.challanGeneratedAt}::date
             ),
             'DD/MM/YYYY'
@@ -3158,14 +3178,14 @@ export async function downloadFeeStudentMappings(
         ELSE NULL
       END`,
       "Payment Mode": sql<string | null>`CASE
-        WHEN ${paymentModel.paymentMode} IS NOT NULL THEN ${paymentModel.paymentMode}::text
+        WHEN ${linkedPaymentSq.paymentMode} IS NOT NULL THEN ${linkedPaymentSq.paymentMode}::text
         WHEN ${latestOnlinePaymentSq.paymentMode} IS NOT NULL THEN ${latestOnlinePaymentSq.paymentMode}::text
         WHEN ${feeStudentMappingExportIsPaid} THEN 'CASH'
         WHEN ${feeStudentMappingModel.receiptNumber} IS NOT NULL
           AND ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL THEN 'CASH'
         ELSE NULL
       END`,
-      "Payment Internal Remarks": paymentModel.internalRemarks,
+      "Payment Internal Remarks": linkedPaymentSq.internalRemarks,
       "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
       "Receipt / Challan Generated At":
         feeStudentMappingModel.challanGeneratedAt,
@@ -3176,19 +3196,19 @@ export async function downloadFeeStudentMappings(
       // historical online attempt.
       "Online Payment Gateway Vendor": sql<string | null>`COALESCE(
         ${latestOnlinePaymentSq.paymentGatewayVendor}::text,
-        ${paymentModel.paymentGatewayVendor}::text
+        ${linkedPaymentSq.paymentGatewayVendor}::text
       )`,
       "Online Payment Order Id": sql<string | null>`COALESCE(
         ${latestOnlinePaymentSq.orderId}::text,
-        ${paymentModel.orderId}::text
+        ${linkedPaymentSq.orderId}::text
       )`,
       "Online Payment Transaction Id": sql<string | null>`COALESCE(
         ${latestOnlinePaymentSq.txnId}::text,
-        ${paymentModel.txnId}::text
+        ${linkedPaymentSq.txnId}::text
       )`,
       "Online Payment Status": sql<string | null>`CASE
         WHEN ${latestOnlinePaymentSq.status} IS NOT NULL THEN ${latestOnlinePaymentSq.status}::text
-        WHEN ${paymentModel.paymentMode} = 'ONLINE' THEN ${paymentModel.status}::text
+        WHEN ${linkedPaymentSq.paymentMode} = 'ONLINE' THEN ${linkedPaymentSq.status}::text
         ELSE NULL
       END`,
     })
@@ -3269,31 +3289,14 @@ export async function downloadFeeStudentMappings(
       ),
     )
     .leftJoin(
-      feeStructureComponentModel,
-      and(
-        eq(feeStructureComponentModel.feeStructureId, feeStructureModel.id),
-        eq(feeStructureComponentModel.feeSlabId, feeSlabModel.id),
-      ),
-    )
-    .leftJoin(
-      feeHeadModel,
-      eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
-    )
-    .leftJoin(
-      paymentModel,
-      and(
-        eq(paymentModel.feeStudentMappingId, feeStudentMappingModel.id),
-        eq(paymentModel.isLinked, true),
-      ),
+      linkedPaymentSq,
+      eq(linkedPaymentSq.feeStudentMappingId, feeStudentMappingModel.id),
     )
     .leftJoin(
       latestOnlinePaymentSq,
       eq(latestOnlinePaymentSq.feeStudentMappingId, feeStudentMappingModel.id),
     )
-    .orderBy(
-      asc(feeStudentMappingModel.id),
-      asc(feeStructureComponentModel.id),
-    );
+    .orderBy(asc(feeStudentMappingModel.id));
 
   const [rows, academicYear] = await Promise.all([
     rowsPromise,

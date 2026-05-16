@@ -10,7 +10,10 @@ export const certificateFieldMasterModel = pgTable("certificate_field_master", {
         .references(() => certificateMasterModel.id)
         .notNull(),
     name: varchar({ length:500 }).notNull(),
+    fieldFontSize: integer("field_font_size").default(16).notNull(),
     type: certificateFieldMasterTypeEnum().default("TEXT").notNull(),
+    description: varchar({ length: 5000 }),
+    descriptionFontSize: integer("description_font_size").default(14).notNull(),
     isQuestion: boolean().default(false).notNull(),
     sequence: integer().notNull(),
     isRequired: boolean().default(false).notNull(),

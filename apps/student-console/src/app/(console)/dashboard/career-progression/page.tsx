@@ -14,7 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CertificateFieldLabel } from "@/components/certificate-field-label";
 import {
+  normalizeCpTemplateMasters,
   orderTableFieldsTypeFirst,
   sortCpCertificateMasters,
   usesInternshipWorkRowLayout,
@@ -30,6 +32,9 @@ type FieldOption = { id?: number; name: string; sequence: number };
 type Field = {
   id?: number;
   name: string;
+  fieldFontSize?: number | null;
+  description?: string | null;
+  descriptionFontSize?: number | null;
   type: string;
   sequence: number;
   isQuestion?: boolean;
@@ -201,7 +206,10 @@ export default function CareerProgressionPage() {
         );
         const payload = data?.payload ?? null;
         if (payload && !payload.hasExistingForms) {
-          setCpData(payload);
+          setCpData({
+            ...payload,
+            certificateMasters: normalizeCpTemplateMasters(payload.certificateMasters),
+          });
           setLoading(false);
           await Swal.fire({
             icon: "info",
@@ -211,7 +219,14 @@ export default function CareerProgressionPage() {
           router.replace("/dashboard/enrollment-fees");
           return;
         }
-        setCpData(payload);
+        setCpData(
+          payload
+            ? {
+                ...payload,
+                certificateMasters: normalizeCpTemplateMasters(payload.certificateMasters),
+              }
+            : null,
+        );
       } catch (e) {
         console.error(e);
         setError("Failed to load career progression form");
@@ -582,14 +597,12 @@ export default function CareerProgressionPage() {
                     return (
                       <div
                         key={`${masterId}-${qfId}`}
-                        className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                        className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start"
                       >
-                        <label className="text-base font-semibold leading-snug text-slate-800">
-                          {qf.name}
-                          {qf.isRequired || qf.isQuestion ? (
-                            <span className="ml-1 text-red-600">*</span>
-                          ) : null}
-                        </label>
+                        <CertificateFieldLabel
+                          field={qf}
+                          required={Boolean(qf.isRequired || qf.isQuestion)}
+                        />
                         {qf.type === "SELECT" ? (
                           <Select
                             value={questionByField[qfId] || ""}
@@ -643,10 +656,9 @@ export default function CareerProgressionPage() {
                         {tableFields.map((f) => (
                           <th
                             key={`${masterId}-${f.id}`}
-                            className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
+                            className="border border-slate-200 px-3 py-3 text-left font-normal whitespace-normal break-words"
                           >
-                            {f.name.toUpperCase()}
-                            {f.isRequired ? <span className="ml-1 text-red-600">*</span> : null}
+                            <CertificateFieldLabel field={f} />
                           </th>
                         ))}
                         <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">

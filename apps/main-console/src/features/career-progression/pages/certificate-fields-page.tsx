@@ -68,7 +68,10 @@ type CertificateFieldMaster = {
   id: number;
   certificateMasterId: number;
   name: string;
+  fieldFontSize: number;
   type: FieldType;
+  description?: string | null;
+  descriptionFontSize: number;
   isQuestion: boolean;
   sequence: number;
   isRequired: boolean;
@@ -120,10 +123,21 @@ function fieldTypeBadgeClass(type: FieldType): string {
   }
 }
 
+const DEFAULT_FIELD_FONT_SIZE = 16;
+const DEFAULT_DESCRIPTION_FONT_SIZE = 14;
+
+function clampFontSize(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(72, Math.max(8, Math.round(value)));
+}
+
 const emptyForm = {
   certificateMasterId: "" as string | number,
   name: "",
+  fieldFontSize: DEFAULT_FIELD_FONT_SIZE,
   type: "TEXT" as FieldType,
+  description: "",
+  descriptionFontSize: DEFAULT_DESCRIPTION_FONT_SIZE,
   isQuestion: false,
   sequence: 0,
   isRequired: false,
@@ -276,7 +290,20 @@ export default function CertificateFieldsPage() {
     setForm({
       certificateMasterId: row.certificateMasterId,
       name: row.name,
+      fieldFontSize: clampFontSize(
+        row.fieldFontSize ??
+          (row as { field_font_size?: number }).field_font_size ??
+          DEFAULT_FIELD_FONT_SIZE,
+        DEFAULT_FIELD_FONT_SIZE,
+      ),
       type: row.type,
+      description: row.description ?? "",
+      descriptionFontSize: clampFontSize(
+        row.descriptionFontSize ??
+          (row as { description_font_size?: number }).description_font_size ??
+          DEFAULT_DESCRIPTION_FONT_SIZE,
+        DEFAULT_DESCRIPTION_FONT_SIZE,
+      ),
       isQuestion: row.isQuestion,
       sequence: row.sequence,
       isRequired: row.isRequired,
@@ -297,10 +324,14 @@ export default function CertificateFieldsPage() {
     const pendingSnapshot = [...pendingOptions];
     setSaving(true);
     try {
+      const descriptionTrimmed = form.description.trim();
       const body = {
         certificateMasterId: mid,
         name: form.name.trim(),
+        fieldFontSize: clampFontSize(form.fieldFontSize, DEFAULT_FIELD_FONT_SIZE),
         type: form.type,
+        description: descriptionTrimmed.length > 0 ? descriptionTrimmed : null,
+        descriptionFontSize: clampFontSize(form.descriptionFontSize, DEFAULT_DESCRIPTION_FONT_SIZE),
         isQuestion: form.isQuestion,
         sequence: Number(form.sequence) || 0,
         isRequired: form.isRequired,
@@ -334,7 +365,16 @@ export default function CertificateFieldsPage() {
         setForm({
           certificateMasterId: created.certificateMasterId,
           name: created.name,
+          fieldFontSize: clampFontSize(
+            created.fieldFontSize ?? DEFAULT_FIELD_FONT_SIZE,
+            DEFAULT_FIELD_FONT_SIZE,
+          ),
           type: created.type,
+          description: created.description ?? "",
+          descriptionFontSize: clampFontSize(
+            created.descriptionFontSize ?? DEFAULT_DESCRIPTION_FONT_SIZE,
+            DEFAULT_DESCRIPTION_FONT_SIZE,
+          ),
           isQuestion: created.isQuestion,
           sequence: created.sequence,
           isRequired: created.isRequired,
@@ -597,6 +637,72 @@ export default function CertificateFieldsPage() {
                     placeholder="Label or question shown to students"
                     rows={4}
                     className="min-h-[100px] resize-y"
+                    style={{ fontSize: clampFontSize(form.fieldFontSize, DEFAULT_FIELD_FONT_SIZE) }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Name preview at {clampFontSize(form.fieldFontSize, DEFAULT_FIELD_FONT_SIZE)}px
+                  </p>
+                </div>
+
+                <div className="space-y-2 max-w-xs">
+                  <Label htmlFor="cf-field-font-size">Field size (px)</Label>
+                  <Input
+                    id="cf-field-font-size"
+                    type="number"
+                    min={8}
+                    max={72}
+                    value={form.fieldFontSize}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        fieldFontSize: clampFontSize(
+                          parseInt(e.target.value, 10),
+                          DEFAULT_FIELD_FONT_SIZE,
+                        ),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="cf-description">Field Description (Optional)</Label>
+                  <Textarea
+                    id="cf-description"
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Helper text shown below the field name on the student career progression form"
+                    rows={3}
+                    className="min-h-[80px] resize-y bg-white text-foreground"
+                    style={{
+                      fontSize: clampFontSize(
+                        form.descriptionFontSize,
+                        DEFAULT_DESCRIPTION_FONT_SIZE,
+                      ),
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Description preview at{" "}
+                    {clampFontSize(form.descriptionFontSize, DEFAULT_DESCRIPTION_FONT_SIZE)}px
+                  </p>
+                </div>
+
+                <div className="space-y-2 max-w-xs">
+                  <Label htmlFor="cf-desc-font-size">Description size (px)</Label>
+                  <Input
+                    id="cf-desc-font-size"
+                    type="number"
+                    min={8}
+                    max={72}
+                    value={form.descriptionFontSize}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        descriptionFontSize: clampFontSize(
+                          parseInt(e.target.value, 10),
+                          DEFAULT_DESCRIPTION_FONT_SIZE,
+                        ),
+                      }))
+                    }
                   />
                 </div>
               </div>
