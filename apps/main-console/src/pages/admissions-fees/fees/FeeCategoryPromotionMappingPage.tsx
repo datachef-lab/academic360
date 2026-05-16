@@ -186,6 +186,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const [religionOptions, setReligionOptions] = useState<string[]>([]);
   const [communityOptions] = useState<Community[]>(["GUJARATI", "NON-GUJARATI"]);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [feeSlabOptions, setFeeSlabOptions] = useState<string[]>([]);
   const [filters, setFilters] = useState<{
     academicYear: string;
     semesterOrClass: string;
@@ -195,6 +196,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     community: string;
     category: string;
     feeCategory: string;
+    feeSlab: string;
   }>({
     academicYear: "",
     semesterOrClass: "",
@@ -204,6 +206,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     community: "",
     category: "",
     feeCategory: "",
+    feeSlab: "",
   });
   const { showError } = useError();
   const { feeCategories } = useFeeCategories();
@@ -219,7 +222,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.religion ||
     !!filters.community ||
     !!filters.category ||
-    !!filters.feeCategory;
+    !!filters.feeCategory ||
+    !!filters.feeSlab;
   const hasSearch = !!searchText.trim();
   const shouldFetchMappings = hasFilters || hasSearch;
   const queryClient = useQueryClient();
@@ -462,6 +466,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     const religions = new Set<string>();
     const communities = new Set<string>();
     const categories = new Set<string>();
+    const feeSlabs = new Set<string>();
 
     mappings.forEach((mapping) => {
       const promo: any = mapping.promotion || {};
@@ -471,6 +476,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       const categoryName = promo.categoryName;
       const communityName = promo.communityName || promo.community;
       const programCourseName = promo.programCourse?.name;
+      const feeSlabName = mapping.feeGroup?.feeSlab?.name;
 
       if (academicYearName) academicYears.add(academicYearName);
       if (semesterName) semestersOrClasses.add(semesterName);
@@ -478,6 +484,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       if (religionName) religions.add(religionName);
       if (categoryName) categories.add(categoryName);
       if (communityName) communities.add(communityName);
+      if (feeSlabName) feeSlabs.add(feeSlabName);
     });
 
     return {
@@ -491,6 +498,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       communities: communityOptions.length > 0 ? communityOptions : Array.from(communities),
       categories: categoryOptions.length > 0 ? categoryOptions : Array.from(categories),
       shifts: shiftOptions,
+      feeSlabs: Array.from(feeSlabs),
     };
   }, [
     mappings,
@@ -500,6 +508,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     religionOptions,
     communityOptions,
     categoryOptions,
+    shiftOptions,
   ]);
 
   // Pre-compute counts of mappings per promotion for delete-visibility logic
@@ -523,6 +532,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       const religionName = promo.religionName || "";
       const categoryName = promo.categoryName || "";
       const communityName = promo.communityName || promo.community || "";
+      const feeSlabName = mapping.feeGroup?.feeSlab?.name || "";
 
       if (filters.academicYear && academicYearName !== filters.academicYear) return false;
       if (filters.semesterOrClass && semesterName !== filters.semesterOrClass) return false;
@@ -537,6 +547,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         mapping.feeCategory?.name !== filters.feeCategory
       )
         return false;
+      if (filters.feeSlab && feeSlabName !== filters.feeSlab) return false;
 
       return true;
     },
@@ -656,6 +667,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       community: "",
       category: "",
       feeCategory: "",
+      feeSlab: "",
     });
   };
 
@@ -1464,6 +1476,14 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     {filters.feeCategory}
                   </Badge>
                 )}
+                {filters.feeSlab && (
+                  <Badge
+                    variant="outline"
+                    className="border-fuchsia-300 text-fuchsia-700 bg-fuchsia-50 flex items-center gap-1"
+                  >
+                    Slab: {filters.feeSlab}
+                  </Badge>
+                )}
               </div>
             </div>
             <Input
@@ -1939,6 +1959,32 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     {feeCategories?.map((fc) => (
                       <SelectItem key={fc.id} value={fc.name}>
                         {fc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fee Slab</Label>
+                <Select
+                  value={filters.feeSlab}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      feeSlab: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All fee slabs" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filterOptions.feeSlabs.map((slab) => (
+                      <SelectItem key={slab} value={slab}>
+                        {slab}
                       </SelectItem>
                     ))}
                   </SelectContent>
