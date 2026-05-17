@@ -2544,9 +2544,7 @@ const FEE_STUDENT_MAPPING_DOWNLOAD_COLUMNS = [
   "Fee Category",
   "Approval Type",
   "Approved By",
-  "Total Amount Configured (Per Fee Structure)",
   "Total Amount To Pay",
-  "Paid Amount",
   "Payment Status",
   "Paid Date",
   "Payment Mode",
@@ -2571,16 +2569,10 @@ const FEE_STRUCTURE_INR_AMOUNT_HEADERS = [
   "Total Amount Configured (Per Fee Slab)",
 ] as const;
 
-const FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS = [
-  "Total Amount Configured (Per Fee Structure)",
-  "Total Amount To Pay",
-  "Paid Amount",
-] as const;
+const FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS = ["Total Amount To Pay"] as const;
 
 const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
-  "Total Amount Configured (Per Fee Structure)": "FFFFF3E0",
   "Total Amount To Pay": "FFE3F2FD",
-  "Paid Amount": "FFC8E6C9",
 };
 
 /** Display timestamps in IST (Asia/Kolkata); UTC instants from DB are converted correctly. */
@@ -2990,21 +2982,6 @@ export async function downloadFeeStudentMappings(
 }> {
   const stdUser = aliasedTable(userModel, "std_user");
   const fgpmUser = aliasedTable(userModel, "fgpm_user");
-  /** Pre-aggregate slab totals once (replaces per-row window SUM). */
-  const feeSlabTotalsSq = db
-    .select({
-      feeStructureId: feeStructureComponentModel.feeStructureId,
-      feeSlabId: feeStructureComponentModel.feeSlabId,
-      slabTotal: sql<number>`sum(${feeStructureComponentModel.amount})`.as(
-        "slab_total",
-      ),
-    })
-    .from(feeStructureComponentModel)
-    .groupBy(
-      feeStructureComponentModel.feeStructureId,
-      feeStructureComponentModel.feeSlabId,
-    )
-    .as("fee_slab_totals");
 
   /** At most one row per (student, academic year) for stable join onto fee mapping rows. */
   const cpFormByStudentYearSq = db
@@ -3025,7 +3002,7 @@ export async function downloadFeeStudentMappings(
    * status / isLinked — so the export can surface orderId / gateway vendor /
    * txnId / mode for pending or failed online attempts as well. The linked
    * payment join below (filtered by isLinked = true) is still the source of
-   * truth for "Paid Amount", "Paid Date", "Payment Status = Paid".
+   * truth for "Paid Date", "Payment Status = Paid".
    */
   const latestOnlinePaymentSq = db
     .selectDistinctOn([paymentModel.feeStudentMappingId], {
@@ -3158,21 +3135,10 @@ export async function downloadFeeStudentMappings(
       "Fee Category": feeCategoryModel.name,
       "Approval Type": feeGroupPromotionMappingModel.approvalType,
       "Approved By": fgpmUser.name,
-      "Total Amount Configured (Per Fee Structure)": feeSlabTotalsSq.slabTotal,
       "Total Amount To Pay": sql<number>`COALESCE(
         ${feeStudentMappingModel.totalPayable},
         0
       )`,
-
-      // Payment Summary — paid mappings show paid amount/status.
-      "Paid Amount": sql<number | null>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN COALESCE(
-          ${feeStudentMappingModel.amountPaid},
-          ${linkedPaymentSq.amount},
-          0
-        )
-        ELSE NULL
-      END`,
       "Payment Status": sql<string>`CASE
         WHEN ${feeStudentMappingExportIsPaid} THEN 'Paid' ELSE 'Pending'
       END`,
@@ -3294,13 +3260,6 @@ export async function downloadFeeStudentMappings(
     .leftJoin(
       fgpmUser,
       eq(fgpmUser.id, feeGroupPromotionMappingModel.approvalUserId),
-    )
-    .leftJoin(
-      feeSlabTotalsSq,
-      and(
-        eq(feeSlabTotalsSq.feeStructureId, feeStructureModel.id),
-        eq(feeSlabTotalsSq.feeSlabId, feeSlabModel.id),
-      ),
     )
     .leftJoin(
       linkedPaymentSq,
