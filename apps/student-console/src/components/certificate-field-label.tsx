@@ -6,6 +6,10 @@ import {
   resolveDescriptionFontSize,
   resolveFieldFontSize,
 } from "@/lib/career-progression-form-utils";
+import {
+  certificateFieldDescriptionDisplayHtml,
+  isCertificateFieldDescriptionEmpty,
+} from "@/lib/certificate-field-html";
 
 type CertificateFieldLabelProps = {
   field: CpCertificateFieldDisplay & { name: string };
@@ -23,8 +27,8 @@ export function CertificateFieldLabel({
   const normalized = normalizeCpFieldForDisplay(field);
   const fieldPx = resolveFieldFontSize(normalized.fieldFontSize);
   const descPx = resolveDescriptionFontSize(normalized.descriptionFontSize);
-  const description =
-    typeof normalized.description === "string" ? normalized.description.trim() : "";
+  const descriptionHtml = certificateFieldDescriptionDisplayHtml(normalized.description);
+  const showDescription = !isCertificateFieldDescriptionEmpty(normalized.description);
   const isRequired = required ?? Boolean(normalized.isRequired);
 
   return (
@@ -33,10 +37,12 @@ export function CertificateFieldLabel({
         {normalized.name}
         {showRequired && isRequired ? <span className="ml-1 text-red-600">*</span> : null}
       </p>
-      {description ? (
-        <p className="mt-1.5 leading-relaxed text-slate-500" style={{ fontSize: descPx }}>
-          {description}
-        </p>
+      {showDescription ? (
+        <div
+          className="certificate-field-description-display mt-1.5 leading-relaxed text-slate-500 [&_a]:text-blue-600 [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-1 [&_ul]:list-disc [&_ul]:pl-5"
+          style={{ fontSize: descPx }}
+          dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+        />
       ) : null}
     </div>
   );

@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { certificateMasterModel } from "./certificate-master.model";
 import { certificateFieldMasterTypeEnum } from "@/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
@@ -12,7 +12,7 @@ export const certificateFieldMasterModel = pgTable("certificate_field_master", {
     name: varchar({ length:500 }).notNull(),
     fieldFontSize: integer("field_font_size").default(16).notNull(),
     type: certificateFieldMasterTypeEnum().default("TEXT").notNull(),
-    description: varchar({ length: 5000 }),
+    description: text(),
     descriptionFontSize: integer("description_font_size").default(14).notNull(),
     isQuestion: boolean().default(false).notNull(),
     sequence: integer().notNull(),

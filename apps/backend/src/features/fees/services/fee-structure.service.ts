@@ -3109,6 +3109,21 @@ export async function downloadFeeStudentMappings(
     )
   )`;
 
+  /** Same resolution order as the "Payment Mode" export column. */
+  const feeStudentMappingExportPaymentMode = sql<string | null>`CASE
+    WHEN ${linkedPaymentSq.paymentMode} IS NOT NULL THEN ${linkedPaymentSq.paymentMode}::text
+    WHEN ${latestOnlinePaymentSq.paymentMode} IS NOT NULL THEN ${latestOnlinePaymentSq.paymentMode}::text
+    WHEN ${feeStudentMappingExportIsPaid} THEN 'CASH'
+    WHEN ${feeStudentMappingModel.receiptNumber} IS NOT NULL
+      AND ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL THEN 'CASH'
+    ELSE NULL
+  END`;
+
+  /** Online columns only when the settled / effective mode is ONLINE (not cash). */
+  const feeStudentMappingExportShowOnlineDetails = sql`UPPER(
+    COALESCE(${feeStudentMappingExportPaymentMode}::text, '')
+  ) = 'ONLINE'`;
+
   const rowsPromise = db
     .selectDistinctOn([feeStudentMappingModel.id], {
       // Fee-Student Mapping Id
@@ -3144,17 +3159,12 @@ export async function downloadFeeStudentMappings(
       "Approval Type": feeGroupPromotionMappingModel.approvalType,
       "Approved By": fgpmUser.name,
       "Total Amount Configured (Per Fee Structure)": feeSlabTotalsSq.slabTotal,
-      "Total Amount To Pay": sql<number>`CASE
-        WHEN ${feeStudentMappingExportIsPaid} THEN 0
-        ELSE GREATEST(
-          COALESCE(${feeStudentMappingModel.totalPayable}, 0)
-            - COALESCE(${feeStudentMappingModel.amountPaid}, 0),
-          0
-        )
-      END`,
+      "Total Amount To Pay": sql<number>`COALESCE(
+        ${feeStudentMappingModel.totalPayable},
+        0
+      )`,
 
-      // Payment Summary — paid mappings show paid amount/status, while
-      // "Total Amount To Pay" above is the remaining payable balance.
+      // Payment Summary — paid mappings show paid amount/status.
       "Paid Amount": sql<number | null>`CASE
         WHEN ${feeStudentMappingExportIsPaid} THEN COALESCE(
           ${feeStudentMappingModel.amountPaid},
@@ -3177,38 +3187,42 @@ export async function downloadFeeStudentMappings(
           )
         ELSE NULL
       END`,
-      "Payment Mode": sql<string | null>`CASE
-        WHEN ${linkedPaymentSq.paymentMode} IS NOT NULL THEN ${linkedPaymentSq.paymentMode}::text
-        WHEN ${latestOnlinePaymentSq.paymentMode} IS NOT NULL THEN ${latestOnlinePaymentSq.paymentMode}::text
-        WHEN ${feeStudentMappingExportIsPaid} THEN 'CASH'
-        WHEN ${feeStudentMappingModel.receiptNumber} IS NOT NULL
-          AND ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL THEN 'CASH'
-        ELSE NULL
-      END`,
+      "Payment Mode": feeStudentMappingExportPaymentMode,
       "Payment Internal Remarks": linkedPaymentSq.internalRemarks,
       "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
       "Receipt / Challan Generated At":
         feeStudentMappingModel.challanGeneratedAt,
 
-      // Online Payment Details — show the LATEST online attempt (including
-      // pending / failed). Coalesce with the linked-payment join so manual
-      // success rows that aren't online (e.g. cash) don't shadow a real
-      // historical online attempt.
-      "Online Payment Gateway Vendor": sql<string | null>`COALESCE(
-        ${latestOnlinePaymentSq.paymentGatewayVendor}::text,
-        ${linkedPaymentSq.paymentGatewayVendor}::text
-      )`,
-      "Online Payment Order Id": sql<string | null>`COALESCE(
-        ${latestOnlinePaymentSq.orderId}::text,
-        ${linkedPaymentSq.orderId}::text
-      )`,
-      "Online Payment Transaction Id": sql<string | null>`COALESCE(
-        ${latestOnlinePaymentSq.txnId}::text,
-        ${linkedPaymentSq.txnId}::text
-      )`,
+      // Online Payment Details — only when effective payment mode is ONLINE.
+      // Cash / manual receipts must not show stale failed gateway attempts.
+      "Online Payment Gateway Vendor": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportShowOnlineDetails} THEN COALESCE(
+          ${latestOnlinePaymentSq.paymentGatewayVendor}::text,
+          ${linkedPaymentSq.paymentGatewayVendor}::text
+        )
+        ELSE NULL
+      END`,
+      "Online Payment Order Id": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportShowOnlineDetails} THEN COALESCE(
+          ${latestOnlinePaymentSq.orderId}::text,
+          ${linkedPaymentSq.orderId}::text
+        )
+        ELSE NULL
+      END`,
+      "Online Payment Transaction Id": sql<string | null>`CASE
+        WHEN ${feeStudentMappingExportShowOnlineDetails} THEN COALESCE(
+          ${latestOnlinePaymentSq.txnId}::text,
+          ${linkedPaymentSq.txnId}::text
+        )
+        ELSE NULL
+      END`,
       "Online Payment Status": sql<string | null>`CASE
-        WHEN ${latestOnlinePaymentSq.status} IS NOT NULL THEN ${latestOnlinePaymentSq.status}::text
-        WHEN ${linkedPaymentSq.paymentMode} = 'ONLINE' THEN ${linkedPaymentSq.status}::text
+        WHEN ${feeStudentMappingExportShowOnlineDetails}
+          AND ${latestOnlinePaymentSq.status} IS NOT NULL
+          THEN ${latestOnlinePaymentSq.status}::text
+        WHEN ${feeStudentMappingExportShowOnlineDetails}
+          AND ${linkedPaymentSq.paymentMode} = 'ONLINE'
+          THEN ${linkedPaymentSq.status}::text
         ELSE NULL
       END`,
     })

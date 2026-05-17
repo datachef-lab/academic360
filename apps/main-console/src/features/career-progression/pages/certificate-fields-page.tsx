@@ -45,6 +45,13 @@ import {
 import { CertificateNameBadge } from "@/features/career-progression/components/certificate-name-badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { CertificateFieldHtmlEditor } from "@/components/certificate-field-html-editor";
+import {
+  certificateFieldDescriptionForEditor,
+  certificateFieldDescriptionPreviewHtml,
+  isCertificateFieldDescriptionEmpty,
+  normalizeCertificateFieldDescriptionForSave,
+} from "@/lib/certificate-field-html";
 
 type CertificateMaster = {
   id: number;
@@ -297,7 +304,7 @@ export default function CertificateFieldsPage() {
         DEFAULT_FIELD_FONT_SIZE,
       ),
       type: row.type,
-      description: row.description ?? "",
+      description: certificateFieldDescriptionForEditor(row.description),
       descriptionFontSize: clampFontSize(
         row.descriptionFontSize ??
           (row as { description_font_size?: number }).description_font_size ??
@@ -324,13 +331,12 @@ export default function CertificateFieldsPage() {
     const pendingSnapshot = [...pendingOptions];
     setSaving(true);
     try {
-      const descriptionTrimmed = form.description.trim();
       const body = {
         certificateMasterId: mid,
         name: form.name.trim(),
         fieldFontSize: clampFontSize(form.fieldFontSize, DEFAULT_FIELD_FONT_SIZE),
         type: form.type,
-        description: descriptionTrimmed.length > 0 ? descriptionTrimmed : null,
+        description: normalizeCertificateFieldDescriptionForSave(form.description),
         descriptionFontSize: clampFontSize(form.descriptionFontSize, DEFAULT_DESCRIPTION_FONT_SIZE),
         isQuestion: form.isQuestion,
         sequence: Number(form.sequence) || 0,
@@ -370,7 +376,7 @@ export default function CertificateFieldsPage() {
             DEFAULT_FIELD_FONT_SIZE,
           ),
           type: created.type,
-          description: created.description ?? "",
+          description: certificateFieldDescriptionForEditor(created.description),
           descriptionFontSize: clampFontSize(
             created.descriptionFontSize ?? DEFAULT_DESCRIPTION_FONT_SIZE,
             DEFAULT_DESCRIPTION_FONT_SIZE,
@@ -666,24 +672,36 @@ export default function CertificateFieldsPage() {
 
                 <div className="grid gap-2">
                   <Label htmlFor="cf-description">Field Description (Optional)</Label>
-                  <Textarea
+                  <CertificateFieldHtmlEditor
                     id="cf-description"
                     value={form.description}
-                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                    placeholder="Helper text shown below the field name on the student career progression form"
-                    rows={3}
-                    className="min-h-[80px] resize-y bg-white text-foreground"
-                    style={{
-                      fontSize: clampFontSize(
-                        form.descriptionFontSize,
-                        DEFAULT_DESCRIPTION_FONT_SIZE,
-                      ),
-                    }}
+                    onChange={(html) => setForm((f) => ({ ...f, description: html }))}
+                    fontSizePx={clampFontSize(
+                      form.descriptionFontSize,
+                      DEFAULT_DESCRIPTION_FONT_SIZE,
+                    )}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Description preview at{" "}
-                    {clampFontSize(form.descriptionFontSize, DEFAULT_DESCRIPTION_FONT_SIZE)}px
-                  </p>
+                  {!isCertificateFieldDescriptionEmpty(form.description) ? (
+                    <div className="rounded-md border border-dashed bg-slate-50/80 px-3 py-2.5">
+                      <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                        Student form preview (
+                        {clampFontSize(form.descriptionFontSize, DEFAULT_DESCRIPTION_FONT_SIZE)}
+                        px)
+                      </p>
+                      <div
+                        className="certificate-field-description-preview leading-relaxed text-slate-600"
+                        style={{
+                          fontSize: clampFontSize(
+                            form.descriptionFontSize,
+                            DEFAULT_DESCRIPTION_FONT_SIZE,
+                          ),
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: certificateFieldDescriptionPreviewHtml(form.description),
+                        }}
+                      />
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2 max-w-xs">
