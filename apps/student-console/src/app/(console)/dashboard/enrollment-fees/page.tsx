@@ -1390,7 +1390,7 @@ export default function EnrollmentFeesPage() {
                                 <li>
                                   For any payment issues,{" "}
                                   <a
-                                    href="https://docs.google.com/forms/d/e/1FAIpQLSfh0tY1CgvWFNJ3SAyJRwAu8C5KkOPdREc7nYW-WqGAhp7GVQ/viewform"
+                                    href="https://docs.google.com/forms/d/1ISp0uOseuBGv_h5cT2LHiDGtu1NZhLkhxtQGXPYcdmo/preview"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="font-semibold underline"
