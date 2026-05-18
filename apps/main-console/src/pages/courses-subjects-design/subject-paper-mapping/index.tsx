@@ -1137,7 +1137,7 @@ const SubjectPaperMappingPage = () => {
                   Add
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="w-[95vw] sm:w-full min-w-[95vw] sm:min-w-[80vw] min-h-[98vh] overflow-auto flex flex-col">
+              <AlertDialogContent className="flex h-[95vh] max-h-[95vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden p-4 sm:p-6">
                 <AlertDialogHeader className="border-b pb-2">
                   <AlertDialogTitle>
                     {selectedPaper ? "Edit Subject Paper Mapping" : "Add New Subject Paper Mapping"}

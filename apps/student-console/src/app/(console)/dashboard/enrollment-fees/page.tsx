@@ -1531,7 +1531,7 @@ export default function EnrollmentFeesPage() {
                                 <li>
                                   For any payment issues,{" "}
                                   <a
-                                    href="https://docs.google.com/forms/d/1ISp0uOseuBGv_h5cT2LHiDGtu1NZhLkhxtQGXPYcdmo/preview"
+                                    href="https://link.thebges.edu.in/otfenrol"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="font-semibold underline"
