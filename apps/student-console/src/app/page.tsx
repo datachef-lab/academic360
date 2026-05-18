@@ -713,11 +713,11 @@ export default function SignInPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10 flex w-full max-w-md md:max-w-5xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
+        className="relative z-10 flex w-full max-w-xl sm:max-w-2xl md:max-w-6xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
       >
         {/* Left section */}
-        <div className="w-full bg-white p-6 sm:p-8 md:w-1/2 md:p-12 flex flex-col min-h-[600px] md:h-[650px]">
-          <div className="mb-8 flex items-center gap-3">
+        <div className="w-full bg-white p-6 sm:p-8 md:w-[58%] md:min-w-[32rem] lg:min-w-[38rem] xl:min-w-[42rem] md:p-12 flex flex-col min-h-[600px] md:h-[680px]">
+          <div className="mb-8 flex items-start gap-3">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -732,24 +732,30 @@ export default function SignInPage() {
                 </span>
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               {abbreviation ? (
                 <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
                   {abbreviation}
                 </p>
               ) : null}
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 truncate">
+              <h1 className="text-xl sm:text-2xl md:text-[1.6rem] font-bold leading-snug text-gray-800">
                 {collegeName ? (
                   <>
-                    {collegeName} <span className="text-indigo-600">Student</span>
+                    {collegeName}{" "}
+                    <span className="whitespace-nowrap">
+                      <span className="text-indigo-600">Student</span>{" "}
+                      <span className="text-sm font-medium text-gray-500 sm:text-base">
+                        CONSOLE
+                      </span>
+                    </span>
                   </>
                 ) : (
-                  <>
-                    <span className="text-indigo-600">Student</span> Console
-                  </>
+                  <span className="whitespace-nowrap">
+                    <span className="text-indigo-600">Student</span>{" "}
+                    <span className="text-sm font-medium text-gray-500 sm:text-base">CONSOLE</span>
+                  </span>
                 )}
               </h1>
-              <p className="text-xs sm:text-sm font-medium text-gray-500">CONSOLE</p>
             </div>
           </div>
 
@@ -1001,7 +1007,7 @@ export default function SignInPage() {
         </div>
 
         {/* Right section */}
-        <div className="hidden w-1/2 md:block">
+        <div className="hidden md:block md:w-[48%] md:flex-1">
           <div className="relative h-full w-full min-h-[400px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={loginHeroSrc} alt="" className="object-cover w-full h-full" />
