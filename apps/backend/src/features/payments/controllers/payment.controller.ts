@@ -210,7 +210,7 @@ export const initiateFeePaymentHandler = async (
     const amountStr = String(amount);
     const orderId = await generateOrderId();
 
-    const payment = await createFeePayment({
+    const { newPayment, userInfo } = await createFeePayment({
       feeStudentMappingId,
       studentId,
       orderId,
@@ -219,15 +219,17 @@ export const initiateFeePaymentHandler = async (
       remarks: returnUrl || undefined,
     });
 
-    const custId = `FEE_${studentId}_${feeStudentMappingId}`;
+    const custId = userInfo.uid!.toString();
+
     const tokenResult = await createPaytmTxnToken({
       orderId,
       amount: amountStr,
       custId,
-      email: email || `student_${studentId}@academic360.local`,
-      mobile: mobile || "9999999999",
-      firstName,
-      lastName,
+      email: userInfo.email?.trim(),
+      mobile: userInfo.phone?.trim(),
+      firstName: userInfo.name?.trim(),
+      lastName: userInfo.name?.trim()?.split(" ")[1],
+      userInfo,
     });
 
     if (!tokenResult.success) {
@@ -251,7 +253,8 @@ export const initiateFeePaymentHandler = async (
         {
           orderId,
           txnToken: tokenResult.txnToken,
-          paymentId: payment?.id,
+          paymentId: newPayment.id,
+          userInfo,
         },
         "Payment initiated successfully",
       ),

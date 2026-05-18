@@ -11,8 +11,6 @@ export interface SettingDto {
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
-console.log("[settings.service] BASE_URL:", BASE_URL);
-
 /**
  * Fetch all settings, optionally filtered by variant
  */
@@ -22,8 +20,6 @@ export const fetchAllSettings = async (variant?: string): Promise<SettingDto[]> 
     if (variant) {
       url.searchParams.append("variant", variant);
     }
-
-    console.log("[settings.service] Fetching settings from:", url.toString());
 
     const response = await fetch(url.toString(), {
       method: "GET",
@@ -38,12 +34,8 @@ export const fetchAllSettings = async (variant?: string): Promise<SettingDto[]> 
     }
 
     const data = await response.json();
-    console.log("[settings.service] Response data:", data);
 
-    const settings = data.payload || [];
-    console.log("[settings.service] Extracted settings:", settings);
-
-    return settings;
+    return data.payload || [];
   } catch (error) {
     console.error("[settings.service] Error fetching settings:", error);
     return [];
@@ -117,8 +109,11 @@ export const fetchCollegeName = async (): Promise<string> => {
 };
 
 /**
- * Get file URL for a setting by name or ID
+ * Get public file URL for a persisted settings FILE row (`/api/v1/settings/file/:id`).
+ * Optional `updatedAt` busts browser cache after uploads (same id, new bytes).
  */
-export const getSettingFileUrl = (idOrName: string): string => {
-  return `${BASE_URL}/api/v1/settings/file/${idOrName}`;
+export const getSettingFileUrl = (id: string | number, updatedAt?: string): string => {
+  const base = `${BASE_URL}/api/v1/settings/file/${id}`;
+  if (updatedAt) return `${base}?v=${encodeURIComponent(updatedAt)}`;
+  return base;
 };

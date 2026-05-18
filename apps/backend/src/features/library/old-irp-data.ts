@@ -1343,3 +1343,15 @@ export async function loadLibrary() {
     console.log("Done data for table:", ele.table);
   }
 }
+
+export async function loadLibraryUsers() {
+  let [[result]] = (await mysqlConnection.query(`
+    SELECT * FROM staffpersonaldetails WHERE id = 68;
+  `)) as [OldStaff[], unknown];
+
+  console.log(`result: `, result);
+  result.email = "library@thebges.edu.in";
+
+  const libraryUser = await upsertUser(result, "STAFF");
+  console.log(`libraryUser: `, libraryUser);
+}

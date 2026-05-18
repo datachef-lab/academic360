@@ -115,7 +115,6 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       line-height: 1.35;
-      mso-line-height-rule: exactly;
       padding-top: 1px;
     }
 
@@ -433,12 +432,15 @@
 
         <p class="greeting">
           Dear <strong><%= displayName %></strong>,<br/><br/>
-          Your fee payment<% if (semesterPhrase) { %> for <strong><%= semesterPhrase %></strong><% } %> has been successfully received. Click on the button below to download the paid copy of the challan.
+        </p>
+
+        <p class="greeting">
+          Your fee payment against challan No. <strong><%= challanDisplay %></strong><% if (semesterPhrase) { %> for <strong><%= semesterPhrase %></strong><% } %> has been successfully received. Click on the button below to download the paid copy of the challan.
         </p>
 
         <!-- CTA: paid challan PDF -->
         <div class="cta-wrap">
-          <a href="<%- pdfUrl %>" class="cta-btn" target="_blank" rel="noopener noreferrer">Download Your Paid Challan</a>
+          <a href="<%- pdfUrl %>" class="cta-btn" target="_blank" rel="noopener   noreferrer">Download Your Paid Challan</a>
         </div>
 
         <p class="greeting" style="margin-bottom:0; padding-top: 30px;">

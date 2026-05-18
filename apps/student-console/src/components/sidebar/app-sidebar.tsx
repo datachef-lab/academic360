@@ -51,7 +51,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { accessControl, student } = useStudent();
   const { invalidateFeeMappings, cpFormVersion } = useFeeSocket();
   const {
-    name: collegeName,
+    collegeName,
+    abbreviation,
     logoUrl: collegeLogoUrl,
     isLoading: isLoadingSettings,
   } = useCollegeSettings();
@@ -389,7 +390,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     width={32}
                     height={32}
                     src={collegeLogoUrl}
-                    alt={collegeName}
+                    alt={collegeName || abbreviation || "College"}
                     className="w-8 h-8 rounded-lg object-cover"
                     unoptimized
                     onError={(e) => {
@@ -400,13 +401,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-purple-400 flex items-center justify-center text-white font-bold text-sm">
-                    {collegeName.charAt(0).toUpperCase()}
+                    {(abbreviation || collegeName || "?").charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
               <div className="grid flex-1 text-left text-sm">
                 <span className="truncate font-semibold text-wrap text-white">
-                  {isLoadingSettings ? "Loading..." : `${collegeName} | Student Console`}
+                  {isLoadingSettings
+                    ? "Loading..."
+                    : `${abbreviation || collegeName || "Student"} | Student Console`}
                 </span>
               </div>
             </SidebarMenuButton>

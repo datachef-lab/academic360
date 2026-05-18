@@ -3,8 +3,15 @@ import {
   paymentModel,
   settlementModel,
 } from "@repo/db/schemas/models/payments";
-import { feeStudentMappingModel } from "@repo/db/schemas/models/fees";
-import { studentModel } from "@repo/db/schemas/models/user";
+import {
+  feeGroupModel,
+  feeGroupPromotionMappingModel,
+  feeSlabModel,
+  feeStructureModel,
+  feeStudentMappingModel,
+  receiptTypeModel,
+} from "@repo/db/schemas/models/fees";
+import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { issueFeeStudentMappingReceiptIfMissing } from "@/features/fees/services/fee-student-mapping.service.js";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { and, eq, sql } from "drizzle-orm";
@@ -23,6 +30,14 @@ import {
   isPaytmConfigured,
   isPaytmSettlementConfigured,
 } from "../config/paytm.config.js";
+import {
+  academicYearModel,
+  classModel,
+  programCourseModel,
+  promotionModel,
+  sectionModel,
+  shiftModel,
+} from "@repo/db/index.js";
 
 type PaymentMeta = {
   applicationFormId?: number;
@@ -466,7 +481,78 @@ export async function createFeePayment(payment: {
       })
       .returning();
 
-    return newPayment;
+    const [userInfo] = await tx
+      .select({
+        uid: studentModel.uid,
+        paymentId: paymentModel.id,
+        feeStudentMappingId: feeStudentMappingModel.id,
+        name: userModel.name,
+        email: userModel.email,
+        phone: userModel.phone,
+        academicYear: academicYearModel.year,
+        receiptType: receiptTypeModel.name,
+        feeSlab: feeSlabModel.name,
+        programCourse: programCourseModel.name,
+        semester: classModel.name,
+        shift: shiftModel.name,
+        section: sectionModel.name,
+      })
+      .from(paymentModel)
+      .leftJoin(
+        feeStudentMappingModel,
+        eq(paymentModel.feeStudentMappingId, feeStudentMappingModel.id),
+      )
+      .leftJoin(
+        studentModel,
+        eq(studentModel.id, feeStudentMappingModel.studentId),
+      )
+      .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+      .leftJoin(
+        feeStructureModel,
+        eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+      )
+      .leftJoin(
+        receiptTypeModel,
+        eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+      )
+      .leftJoin(
+        academicYearModel,
+        eq(academicYearModel.id, feeStructureModel.academicYearId),
+      )
+      .leftJoin(
+        programCourseModel,
+        eq(programCourseModel.id, feeStructureModel.programCourseId),
+      )
+      .leftJoin(classModel, eq(classModel.id, feeStructureModel.classId))
+      .leftJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
+      .leftJoin(
+        promotionModel,
+        and(
+          eq(promotionModel.studentId, studentModel.id),
+          eq(promotionModel.programCourseId, feeStructureModel.programCourseId),
+          eq(promotionModel.classId, feeStructureModel.classId),
+          eq(promotionModel.shiftId, feeStructureModel.shiftId),
+        ),
+      )
+      .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
+      .leftJoin(
+        feeGroupPromotionMappingModel,
+        eq(
+          feeGroupPromotionMappingModel.id,
+          feeStudentMappingModel.feeGroupPromotionMappingId,
+        ),
+      )
+      .leftJoin(
+        feeGroupModel,
+        eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+      )
+      .leftJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
+      .where(eq(paymentModel.id, newPayment.id));
+
+    return {
+      newPayment,
+      userInfo,
+    };
   });
 }
 
