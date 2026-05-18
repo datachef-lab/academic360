@@ -2,7 +2,6 @@ import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import {
   LayoutDashboard,
-  Receipt,
   FileText,
   BarChart2,
   Percent,
