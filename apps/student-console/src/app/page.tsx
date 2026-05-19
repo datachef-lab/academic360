@@ -1,7 +1,7 @@
 "use client";
 
+import React from "react";
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useCollegeSettings } from "@/hooks/use-college-settings";
@@ -9,14 +9,11 @@ import { useCollegeSettings } from "@/hooks/use-college-settings";
 // Force dynamic rendering to prevent prerendering issues
 export const dynamic = "force-dynamic";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 
 import {
   sendOtpRequest,
@@ -41,11 +38,7 @@ export default function SignInPage() {
   const router = useRouter();
   const { login } = useAuth();
   const { collegeName, abbreviation, logoUrl, loginIllustrationUrl } = useCollegeSettings();
-  const loginHeroSrc =
-    loginIllustrationUrl ||
-    (process.env.NEXT_PUBLIC_URL
-      ? `${process.env.NEXT_PUBLIC_URL}/hero-image.jpeg`
-      : "/hero-image.jpeg");
+  const loginHeroSrc = loginIllustrationUrl;
   const [mounted, setMounted] = useState(false);
   const [usermsg, setUsermsg] = useState("");
   const [userPreview, setUserPreview] = useState<{
@@ -92,7 +85,7 @@ export default function SignInPage() {
             simulation = "true";
             console.log("[SIMULATION] In iframe but parameter missing - assuming simulation mode");
           }
-        } catch (e) {
+        } catch {
           // Cross-origin restriction - can't access parent URL
           // If we're in an iframe, assume simulation mode (iframe is only used for simulation)
           simulation = "true";
@@ -182,17 +175,17 @@ export default function SignInPage() {
   }, [otpSent, otpExpiry]);
 
   // Helper functions for persistent timers
-  const getRemainingTime = (timestamp: number, duration: number) => {
-    const now = Date.now();
-    const elapsed = Math.floor((now - timestamp) / 1000);
-    return Math.max(0, duration - elapsed);
-  };
+  // const getRemainingTime = (timestamp: number, duration: number) => {
+  //   const now = Date.now();
+  //   const elapsed = Math.floor((now - timestamp) / 1000);
+  //   return Math.max(0, duration - elapsed);
+  // };
 
-  const setOtpExpiryTimestamp = (duration: number) => {
-    const timestamp = Date.now();
-    localStorage.setItem(OTP_EXPIRY_KEY, timestamp.toString());
-    setOtpExpiry(duration);
-  };
+  // const setOtpExpiryTimestamp = (duration: number) => {
+  //   const timestamp = Date.now();
+  //   localStorage.setItem(OTP_EXPIRY_KEY, timestamp.toString());
+  //   setOtpExpiry(duration);
+  // };
 
   const setResendCooldownTimestamp = (duration: number) => {
     const timestamp = Date.now();
@@ -200,105 +193,105 @@ export default function SignInPage() {
     setResendCooldown(duration);
   };
 
-  const restoreOtpState = async () => {
-    const storedUid = localStorage.getItem(OTP_UID_KEY);
-    const otpExpiryTimestamp = localStorage.getItem(OTP_EXPIRY_KEY);
-    const resendCooldownTimestamp = localStorage.getItem(RESEND_COOLDOWN_KEY);
+  // const restoreOtpState = async () => {
+  //   const storedUid = localStorage.getItem(OTP_UID_KEY);
+  //   const otpExpiryTimestamp = localStorage.getItem(OTP_EXPIRY_KEY);
+  //   const resendCooldownTimestamp = localStorage.getItem(RESEND_COOLDOWN_KEY);
 
-    if (storedUid) {
-      const email = `${storedUid}@thebges.edu.in`;
+  //   if (storedUid) {
+  //     const email = `${storedUid}@thebges.edu.in`;
 
-      try {
-        // Always sync with backend to get accurate OTP status
-        console.log("🔄 Syncing OTP status with backend for:", email);
-        const response = await checkOtpStatus(email);
+  //     try {
+  //       // Always sync with backend to get accurate OTP status
+  //       console.log("🔄 Syncing OTP status with backend for:", email);
+  //       const response = await checkOtpStatus(email);
 
-        if (response.httpStatusCode === 200 && response.payload?.hasValidOtp) {
-          // Use backend's expiresAt timestamp to calculate remaining time
-          const backendExpiresAt = response.payload.expiresAt;
-          if (backendExpiresAt) {
-            const now = Date.now();
-            const expiryTime = new Date(backendExpiresAt).getTime();
-            let calculatedRemainingTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
+  //       if (response.httpStatusCode === 200 && response.payload?.hasValidOtp) {
+  //         // Use backend's expiresAt timestamp to calculate remaining time
+  //         const backendExpiresAt = response.payload.expiresAt;
+  //         if (backendExpiresAt) {
+  //           const now = Date.now();
+  //           const expiryTime = new Date(backendExpiresAt).getTime();
+  //           let calculatedRemainingTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
 
-            console.log("✅ Backend OTP status - Using backend expiry timestamp");
-            console.log("📅 Backend expires at:", backendExpiresAt);
-            console.log("⏰ Current time:", new Date(now).toISOString());
-            console.log("⏱️ Calculated remaining time:", calculatedRemainingTime, "seconds");
+  //           console.log("✅ Backend OTP status - Using backend expiry timestamp");
+  //           console.log("📅 Backend expires at:", backendExpiresAt);
+  //           console.log("⏰ Current time:", new Date(now).toISOString());
+  //           console.log("⏱️ Calculated remaining time:", calculatedRemainingTime, "seconds");
 
-            // Cap the remaining time to maximum 300 seconds (5 minutes)
-            if (calculatedRemainingTime > 300) {
-              console.warn(
-                "⚠️ Calculated time > 300s, capping to 300s. Raw time:",
-                calculatedRemainingTime,
-              );
-              calculatedRemainingTime = 300;
-            }
+  //           // Cap the remaining time to maximum 300 seconds (5 minutes)
+  //           if (calculatedRemainingTime > 300) {
+  //             console.warn(
+  //               "⚠️ Calculated time > 300s, capping to 300s. Raw time:",
+  //               calculatedRemainingTime,
+  //             );
+  //             calculatedRemainingTime = 300;
+  //           }
 
-            if (calculatedRemainingTime > 0) {
-              setUid(storedUid);
-              setOtpSent(true);
-              setOtpExpiry(calculatedRemainingTime);
-              // Store the backend expiry timestamp directly
-              localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
-              console.log("📝 Stored backend expiry timestamp:", expiryTime);
-            } else {
-              // OTP expired, clear storage
-              console.log("⏰ OTP expired, clearing storage");
-              clearOtpStorage();
-            }
-          } else {
-            console.log("❌ No expiry timestamp from backend");
-            clearOtpStorage();
-          }
-        } else {
-          // Backend says no valid OTP, clear storage
-          console.log("❌ Backend says no valid OTP, clearing storage");
-          clearOtpStorage();
-        }
-      } catch (error) {
-        // If backend sync fails, fall back to localStorage
-        console.warn("⚠️ Failed to sync with backend, using localStorage:", error);
-        if (otpExpiryTimestamp) {
-          const now = Date.now();
-          const expiryTime = parseInt(otpExpiryTimestamp);
-          let remainingOtpTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
-          console.log("📱 localStorage fallback - Raw remaining time:", remainingOtpTime);
+  //           if (calculatedRemainingTime > 0) {
+  //             setUid(storedUid);
+  //             setOtpSent(true);
+  //             setOtpExpiry(calculatedRemainingTime);
+  //             // Store the backend expiry timestamp directly
+  //             localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
+  //             console.log("📝 Stored backend expiry timestamp:", expiryTime);
+  //           } else {
+  //             // OTP expired, clear storage
+  //             console.log("⏰ OTP expired, clearing storage");
+  //             clearOtpStorage();
+  //           }
+  //         } else {
+  //           console.log("❌ No expiry timestamp from backend");
+  //           clearOtpStorage();
+  //         }
+  //       } else {
+  //         // Backend says no valid OTP, clear storage
+  //         console.log("❌ Backend says no valid OTP, clearing storage");
+  //         clearOtpStorage();
+  //       }
+  //     } catch (error) {
+  //       // If backend sync fails, fall back to localStorage
+  //       console.warn("⚠️ Failed to sync with backend, using localStorage:", error);
+  //       if (otpExpiryTimestamp) {
+  //         const now = Date.now();
+  //         const expiryTime = parseInt(otpExpiryTimestamp);
+  //         let remainingOtpTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
+  //         console.log("📱 localStorage fallback - Raw remaining time:", remainingOtpTime);
 
-          // Cap the remaining time to maximum 300 seconds (5 minutes)
-          if (remainingOtpTime > 300) {
-            console.warn(
-              "⚠️ localStorage fallback: Time > 300s, capping to 300s. Raw time:",
-              remainingOtpTime,
-            );
-            remainingOtpTime = 300;
-          }
+  //         // Cap the remaining time to maximum 300 seconds (5 minutes)
+  //         if (remainingOtpTime > 300) {
+  //           console.warn(
+  //             "⚠️ localStorage fallback: Time > 300s, capping to 300s. Raw time:",
+  //             remainingOtpTime,
+  //           );
+  //           remainingOtpTime = 300;
+  //         }
 
-          console.log("📱 localStorage fallback - Capped remaining time:", remainingOtpTime);
-          if (remainingOtpTime > 0) {
-            setUid(storedUid);
-            setOtpSent(true);
-            setOtpExpiry(remainingOtpTime);
-          } else {
-            clearOtpStorage();
-          }
-        } else {
-          clearOtpStorage();
-        }
-      }
-    }
+  //         console.log("📱 localStorage fallback - Capped remaining time:", remainingOtpTime);
+  //         if (remainingOtpTime > 0) {
+  //           setUid(storedUid);
+  //           setOtpSent(true);
+  //           setOtpExpiry(remainingOtpTime);
+  //         } else {
+  //           clearOtpStorage();
+  //         }
+  //       } else {
+  //         clearOtpStorage();
+  //       }
+  //     }
+  //   }
 
-    if (resendCooldownTimestamp) {
-      const now = Date.now();
-      const cooldownTime = parseInt(resendCooldownTimestamp);
-      const remainingCooldown = Math.max(0, Math.floor((cooldownTime + 30000 - now) / 1000));
-      if (remainingCooldown > 0) {
-        setResendCooldown(remainingCooldown);
-      } else {
-        localStorage.removeItem(RESEND_COOLDOWN_KEY);
-      }
-    }
-  };
+  //   if (resendCooldownTimestamp) {
+  //     const now = Date.now();
+  //     const cooldownTime = parseInt(resendCooldownTimestamp);
+  //     const remainingCooldown = Math.max(0, Math.floor((cooldownTime + 30000 - now) / 1000));
+  //     if (remainingCooldown > 0) {
+  //       setResendCooldown(remainingCooldown);
+  //     } else {
+  //       localStorage.removeItem(RESEND_COOLDOWN_KEY);
+  //     }
+  //   }
+  // };
 
   const clearOtpStorage = () => {
     localStorage.removeItem(OTP_EXPIRY_KEY);
@@ -410,8 +403,12 @@ export default function SignInPage() {
           const email = `${digits}@thebges.edu.in`;
           const resp = await lookupUser(email);
           if (resp.httpStatusCode === 200 && resp.payload?.name) {
-            const payload: any = resp.payload;
-            setUserPreview({ name: resp.payload.name, email, isActive: payload.isActive });
+            const payload: unknown = resp.payload;
+            setUserPreview({
+              name: (payload as { name: string }).name,
+              email,
+              isActive: (payload as { isActive: boolean }).isActive,
+            });
           } else {
             setUserPreview(null);
           }
@@ -674,15 +671,15 @@ export default function SignInPage() {
     }
   };
 
-  const resetOtpFlow = () => {
-    setError("");
-    setOtpSent(false);
-    setOtp("");
-    setUid("");
-    setOtpExpiry(0);
-    setResendCooldown(0);
-    clearOtpStorage();
-  };
+  // const resetOtpFlow = () => {
+  //   setError("");
+  //   setOtpSent(false);
+  //   setOtp("");
+  //   setUid("");
+  //   setOtpExpiry(0);
+  //   setResendCooldown(0);
+  //   clearOtpStorage();
+  // };
 
   if (!mounted) {
     return (
@@ -695,325 +692,324 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-950 to-indigo-900 px-4 py-6 sm:px-6 overflow-y-auto">
-      {/* Invalid user / credentials dialog */}
-      <Dialog open={invalidOpen} onOpenChange={setInvalidOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <h3 className="text-lg font-semibold">Unable to sign in</h3>
-            <p className="text-sm text-gray-600">
-              {invalidMessage || "Something went wrong while signing in."}
-            </p>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+    collegeName &&
+    abbreviation &&
+    logoUrl &&
+    loginIllustrationUrl && (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-950 to-indigo-900 px-4 py-6 sm:px-6 overflow-y-auto">
+        {/* Invalid user / credentials dialog */}
+        <Dialog open={invalidOpen} onOpenChange={setInvalidOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <h3 className="text-lg font-semibold">Unable to sign in</h3>
+              <p className="text-sm text-gray-600">
+                {invalidMessage || "Something went wrong while signing in."}
+              </p>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
 
-      {/* Floating card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative z-10 flex w-full max-w-xl sm:max-w-2xl md:max-w-6xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
-      >
-        {/* Left section */}
-        <div className="w-full bg-white p-6 sm:p-8 md:w-[58%] md:min-w-[32rem] lg:min-w-[38rem] xl:min-w-[42rem] md:p-12 flex flex-col min-h-[600px] md:h-[680px]">
-          <div className="mb-8 flex items-start gap-3">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt=""
-                className="h-12 w-12 shrink-0 rounded-md object-contain ring-1 ring-gray-200 bg-white"
-              />
-            ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-indigo-600 text-white">
-                <span className="text-lg font-bold">
-                  {(abbreviation || collegeName || "S").charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              {abbreviation ? (
-                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
-                  {abbreviation}
-                </p>
-              ) : null}
-              <h1 className="text-xl sm:text-2xl md:text-[1.6rem] font-bold leading-snug text-gray-800">
-                {collegeName ? (
-                  <>
-                    {collegeName}{" "}
+        {/* Floating card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="relative z-10 flex w-full max-w-xl sm:max-w-2xl md:max-w-6xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
+        >
+          {/* Left section */}
+          <div className="w-full bg-white p-6 sm:p-8 md:w-[58%] md:min-w-[32rem] lg:w-[50%] md:p-12 flex flex-col min-h-[600px] md:h-[680px]">
+            <div className="mb-8 flex items-center gap-3">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt=""
+                  className="h-12 w-12 shrink-0 border-0 object-contain  bg-white"
+                />
+              ) : (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-indigo-600 text-white">
+                  <span className="text-lg font-bold">
+                    {(abbreviation || collegeName || "S").charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                {abbreviation ? (
+                  <p className="text-xs font-semibold  tracking-wide text-indigo-600">
+                    <span className="uppercase">{abbreviation}</span> | <span>Student Console</span>
+                  </p>
+                ) : null}
+                <h1 className="text-xl sm:text-2xl md:text-[1.6rem] font-bold leading-snug text-gray-800">
+                  {collegeName ? (
+                    <>{collegeName}</>
+                  ) : (
                     <span className="whitespace-nowrap">
                       <span className="text-indigo-600">Student</span>{" "}
                       <span className="text-sm font-medium text-gray-500 sm:text-base">
                         CONSOLE
                       </span>
                     </span>
-                  </>
-                ) : (
-                  <span className="whitespace-nowrap">
-                    <span className="text-indigo-600">Student</span>{" "}
-                    <span className="text-sm font-medium text-gray-500 sm:text-base">CONSOLE</span>
-                  </span>
-                )}
-              </h1>
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
-              {otpSent ? "Enter OTP" : "Sign in with UID"}
-            </h2>
-            <p className="mt-2 w-full max-w-full text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left md:whitespace-nowrap break-words">
-              {otpSent
-                ? `OTP sent to ${uid}@thebges.edu.in`
-                : "Enter your 10-digit UID to receive OTP"}
-            </p>
-          </div>
-
-          <form
-            onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit}
-            className="mt-3 flex flex-col flex-1 min-h-0"
-          >
-            {/* Fixed height container for all dynamic content */}
-            <div className="flex flex-col flex-1">
-              {/* Error message area - fixed height */}
-              <div className="h-[40px] flex items-center justify-center">
-                <AnimatePresence>
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    </motion.div>
                   )}
-                </AnimatePresence>
+                </h1>
               </div>
+            </div>
 
-              {/* Input area - fixed height */}
-              <div className="h-[120px] flex flex-col justify-center">
-                {otpSent ? (
-                  <div className="flex flex-col justify-center h-full">
-                    <label className="block text-sm font-medium text-gray-700 mb-4">
-                      Enter the 6-digit OTP sent to your email
-                    </label>
-                    <div className="flex justify-center px-2">
-                      <InputOTP
-                        maxLength={6}
-                        value={otp}
-                        onChange={(value) => setOtp(value)}
-                        className="gap-2 sm:gap-3"
+            <div className="mb-3">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+                {otpSent ? "Enter OTP" : "Sign in with UID"}
+              </h2>
+              <p className="mt-2 w-full max-w-full text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left md:whitespace-nowrap break-words">
+                {otpSent
+                  ? `OTP sent to ${uid}@thebges.edu.in`
+                  : "Enter your 10-digit UID to receive OTP"}
+              </p>
+            </div>
+
+            <form
+              onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit}
+              className="mt-3 flex flex-col flex-1 min-h-0"
+            >
+              {/* Fixed height container for all dynamic content */}
+              <div className="flex flex-col flex-1">
+                {/* Error message area - fixed height */}
+                <div className="h-[40px] flex items-center justify-center">
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.3 }}
                       >
-                        <InputOTPGroup className="gap-2 sm:gap-3">
-                          <InputOTPSlot
-                            index={0}
-                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                          />
-                          <InputOTPSlot
-                            index={1}
-                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                          />
-                          <InputOTPSlot
-                            index={2}
-                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                          />
-                          <InputOTPSlot
-                            index={3}
-                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                          />
-                          <InputOTPSlot
-                            index={4}
-                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                          />
-                          <InputOTPSlot
-                            index={5}
-                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                          />
-                        </InputOTPGroup>
-                      </InputOTP>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col justify-center h-full">
-                    <label htmlFor="uid" className="block text-sm font-medium text-gray-700 pb-3">
-                      Enter Your UID (10 Digits){" "}
-                    </label>
-                    <div className="relative flex items-center justify-center">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
+                        <Alert variant="destructive">
+                          <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Input area - fixed height */}
+                <div className="h-[120px] flex flex-col justify-center">
+                  {otpSent ? (
+                    <div className="flex flex-col justify-center h-full">
+                      <label className="block text-sm font-medium text-gray-700 mb-4">
+                        Enter the 6-digit OTP sent to your email
+                      </label>
+                      <div className="flex justify-center px-2">
+                        <InputOTP
+                          maxLength={6}
+                          value={otp}
+                          onChange={(value) => setOtp(value)}
+                          className="gap-2 sm:gap-3"
                         >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </span>
-                      <Input
-                        id="uid"
-                        placeholder="ENTER 10 DIGIT UID HERE"
-                        value={uid}
-                        onChange={(e) => setUid(formatUid(e.target.value))}
-                        className="block w-full rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400 placeholder:text-base"
-                        style={{ fontSize: "24px" }}
-                        maxLength={10}
-                        required
-                      />
+                          <InputOTPGroup className="gap-2 sm:gap-3">
+                            <InputOTPSlot
+                              index={0}
+                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            />
+                            <InputOTPSlot
+                              index={1}
+                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            />
+                            <InputOTPSlot
+                              index={2}
+                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            />
+                            <InputOTPSlot
+                              index={3}
+                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            />
+                            <InputOTPSlot
+                              index={4}
+                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            />
+                            <InputOTPSlot
+                              index={5}
+                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* OTP expiry message area - fixed height */}
-              <div className="h-[24px] flex items-center justify-center">
-                {otpSent && otpExpiry > 0 && (
-                  <p className="text-xs text-gray-500 text-center">
-                    OTP expires in {formatTime(otpExpiry)}
-                  </p>
-                )}
-              </div>
-
-              {/* User preview area - fixed height */}
-              <div className="h-[80px] flex items-center justify-center">
-                <div className="w-full h-full rounded-lg border border-blue-200 bg-blue-50 px-4 flex items-center justify-center">
-                  {uid.replace(/\D/g, "").length === 10 ? (
-                    lookupPending ? (
-                      <div className="flex items-center gap-2">
-                        <svg className="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24">
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            fill="none"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        <span className="text-sm font-medium text-blue-700">
-                          Looking up user...
-                        </span>
-                      </div>
-                    ) : userPreview ? (
-                      <div className="flex flex-col items-center justify-center leading-none">
-                        <p className="text-sm sm:text-base font-bold text-gray-900 text-center truncate w-full">
-                          {userPreview.name.toUpperCase()}
-                        </p>
-                        <p className="text-xs sm:text-sm text-gray-600 text-center truncate w-full">
-                          We'll send OTP to <span className="font-bold">{userPreview.email}</span>
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-xs sm:text-sm text-red-600  text-center leading-none">
-                        {usermsg}
-                      </p>
-                    )
                   ) : (
-                    <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
-                      Waiting for you to enter UID
+                    <div className="flex flex-col justify-center h-full">
+                      <label htmlFor="uid" className="block text-sm font-medium text-gray-700 pb-3">
+                        Enter Your UID (10 Digits){" "}
+                      </label>
+                      <div className="relative flex items-center justify-center">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                        <Input
+                          id="uid"
+                          placeholder="ENTER 10 DIGIT UID HERE"
+                          value={uid}
+                          onChange={(e) => setUid(formatUid(e.target.value))}
+                          className="block w-full placeholder:leading-[3.5rem] placeholder:italic rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400 placeholder:text-base"
+                          style={{ fontSize: "24px" }}
+                          maxLength={10}
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* OTP expiry message area - fixed height */}
+                <div className="h-[24px] flex items-center justify-center">
+                  {otpSent && otpExpiry > 0 && (
+                    <p className="text-xs text-gray-500 text-center">
+                      OTP expires in {formatTime(otpExpiry)}
                     </p>
                   )}
                 </div>
-              </div>
-            </div>
 
-            {/* Button area - fixed height */}
-            <div className="h-[60px] flex flex-col justify-center">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="submit"
-                disabled={
-                  isLoading ||
-                  (!otpSent && (uid.replace(/\D/g, "").length !== 10 || !userPreview)) ||
-                  (otpSent && (otp.length !== 6 || otpExpiry === 0))
-                }
-                className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    <span className="ml-2">{otpSent ? "Verifying..." : "Sending OTP..."}</span>
+                {/* User preview area - fixed height */}
+                <div className="h-[80px] flex items-center justify-center">
+                  <div className="w-full h-full rounded-lg border border-blue-200 bg-blue-50 px-4 flex items-center justify-center">
+                    {uid.replace(/\D/g, "").length === 10 ? (
+                      lookupPending ? (
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24">
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                          <span className="text-sm font-medium text-blue-700">
+                            Looking up user...
+                          </span>
+                        </div>
+                      ) : userPreview ? (
+                        <div className="flex flex-col items-center justify-center leading-none">
+                          <p className="text-sm sm:text-base font-bold text-gray-900 text-center truncate w-full">
+                            {userPreview.name.toUpperCase()}
+                          </p>
+                          <p className="text-xs sm:text-sm text-gray-600 text-center truncate w-full">
+                            We'll send OTP to <span className="font-bold">{userPreview.email}</span>
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs sm:text-sm text-red-600  text-center leading-none">
+                          {usermsg}
+                        </p>
+                      )
+                    ) : (
+                      <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
+                        Waiting for you to enter UID
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
-                  </>
-                )}
-              </motion.button>
+                </div>
+              </div>
 
-              {otpSent && (
-                <div className="mt-3 flex items-center justify-between text-sm">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      // Clear OTP state and go back to UID input
-                      setOtpSent(false);
-                      setOtp("");
-                      setError("");
-                      setOtpExpiry(0);
-                      setResendCooldown(0);
-                      // Don't clear userPreview - let it stay so name badge remains visible
-                      clearOtpStorage();
-                    }}
-                    className="text-gray-600 hover:text-gray-800"
-                  >
-                    Change UID
-                  </Button>
-                  {otpExpiry === 0 && (
+              {/* Button area - fixed height */}
+              <div className="h-[60px] flex flex-col justify-center">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={
+                    isLoading ||
+                    (!otpSent && (uid.replace(/\D/g, "").length !== 10 || !userPreview)) ||
+                    (otpSent && (otp.length !== 6 || otpExpiry === 0))
+                  }
+                  className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <span className="ml-2">{otpSent ? "Verifying..." : "Sending OTP..."}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
+                    </>
+                  )}
+                </motion.button>
+
+                {otpSent && (
+                  <div className="mt-3 flex items-center justify-between text-sm">
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={handleResendOtp}
-                      disabled={resendCooldown > 0 || isLoading}
-                      className="text-indigo-600 hover:text-indigo-800"
+                      onClick={() => {
+                        // Clear OTP state and go back to UID input
+                        setOtpSent(false);
+                        setOtp("");
+                        setError("");
+                        setOtpExpiry(0);
+                        setResendCooldown(0);
+                        // Don't clear userPreview - let it stay so name badge remains visible
+                        clearOtpStorage();
+                      }}
+                      className="text-gray-600 hover:text-gray-800"
                     >
-                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                      Change UID
                     </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </form>
-        </div>
-
-        {/* Right section */}
-        <div className="hidden md:block md:w-[48%] md:flex-1">
-          <div className="relative h-full w-full min-h-[400px]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={loginHeroSrc} alt="" className="object-cover w-full h-full" />
+                    {otpExpiry === 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleResendOtp}
+                        disabled={resendCooldown > 0 || isLoading}
+                        className="text-indigo-600 hover:text-indigo-800"
+                      >
+                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </form>
           </div>
-        </div>
-      </motion.div>
-    </div>
+
+          {/* Right section */}
+          <div className="hidden md:block md:w-[50%] md:flex-1">
+            <div className="relative h-full w-full min-h-[400px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={loginHeroSrc} alt="" className="object-cover w-full h-full" />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )
   );
 }
