@@ -85,35 +85,81 @@ import { startPaytmDowntimeScheduler } from "@/features/payments/schedulers/payt
 const log = createLogger("db");
 
 const PORT = process.env.PORT || 8080;
-
 const REQUIRED_ENVS = [
   "PORT",
   "NODE_ENV",
-  "STUDY_MATERIAL_BASE_PATH",
+
+  // Paths
+  // "STUDY_MATERIAL_BASE_PATH",
+  "EXAM_FORM_UPLOAD_PATH",
+  "LIBRARY_EXCEL_DATA_PATH",
+  "LOG_DIRECTORY",
+  "SETTINGS_PATH",
+
+  // Database
   "DATABASE_URL",
   "OLD_DB_HOST",
   "OLD_DB_PORT",
   "OLD_DB_USER",
   "OLD_DB_PASSWORD",
   "OLD_DB_NAME",
+
+  // CORS / Backend
   "CORS_ORIGIN",
+  "BACKEND_URL",
+
+  // Auth
   "ACCESS_TOKEN_SECRET",
   "ACCESS_TOKEN_EXPIRY",
   "REFRESH_TOKEN_SECRET",
   "REFRESH_TOKEN_EXPIRY",
+
+  // Developer
+  "DEVELOPER_EMAIL",
+  "DEVELOPER_PHONE",
+
+  // Google Auth
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+
+  // Interakt
+  "INTERAKT_API_KEY",
+  "INTERAKT_BASE_URL",
+
+  // Zepto
+  // "ZEPTO_URL",
+  // "ZEPTO_FROM",
+  // "ZEPTO_TOKEN",
+
+  // AWS
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_REGION",
+  "AWS_S3_BUCKET",
+  "AWS_ROOT_FOLDER",
+
+  // Paytm
+];
+
+// Optional environment variables (production only)
+const PRODUCTION_ONLY_ENVS = [
   "ZEPTO_URL",
   "ZEPTO_FROM",
   "ZEPTO_TOKEN",
-  "DEVELOPER_EMAIL",
-  "INTERAKT_API_KEY",
-  "INTERAKT_BASE_URL",
-  "DEVELOPER_PHONE",
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
+  "STUDY_MATERIAL_BASE_PATH",
+  "DOCUMENT_BASE_PATH",
+  "PAYTM_SETTLEMENT_CLIENT_SECRET",
+  "PAYTM_SETTLEMENT_CLIENT_ID",
+  "PAYTM_SETTLEMENT_JWT_EMAIL",
 ];
 
 function checkRequiredEnvs() {
-  const missing = REQUIRED_ENVS.filter(
+  const isProduction = process.env.NODE_ENV === "production";
+  const envsToCheck = isProduction
+    ? [...REQUIRED_ENVS, ...PRODUCTION_ONLY_ENVS]
+    : REQUIRED_ENVS;
+
+  const missing = envsToCheck.filter(
     (key) => !process.env[key] || process.env[key]?.trim() === "",
   );
   if (missing.length > 0) {
@@ -124,7 +170,7 @@ function checkRequiredEnvs() {
 
 (async () => {
   log.info("Initializing academic360...");
-  // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
+  checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
 
   try {
     await connectToDatabase();
