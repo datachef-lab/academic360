@@ -51,6 +51,8 @@ import { getSearchedStudents, StudentSearchItem } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
 import {
+  FEE_PAYMENT_MARKING_PATH,
+  isFeeMarkingOnlyUser,
   isLibraryOnlyUser,
   LIBRARY_MODULE_PATH_PREFIX,
   useRestrictTempUsers,
@@ -146,6 +148,16 @@ const libraryOnlySearchData = [
   },
 ];
 
+const feeMarkingOnlySearchData = [
+  {
+    title: "Fee Payment Marking",
+    description: "Record cash fee payments against challans",
+    href: FEE_PAYMENT_MARKING_PATH,
+    icon: BadgeIndianRupee,
+    category: "Navigation",
+  },
+];
+
 // Header component that uses useSidebar hook (must be inside SidebarProvider)
 function LayoutHeader({
   pathSegments,
@@ -156,8 +168,14 @@ function LayoutHeader({
 }) {
   const { toggleSidebar } = useSidebar();
   const { user } = useAuth();
-  const hideGlobalSearch = isLibraryOnlyUser(user?.email);
-  const libraryOnly = hideGlobalSearch;
+  const libraryOnly = isLibraryOnlyUser(user?.email);
+  const feeMarkingOnly = isFeeMarkingOnlyUser(user?.email);
+  const hideGlobalSearch = libraryOnly || feeMarkingOnly;
+  const moduleOnlyHomePath = libraryOnly
+    ? LIBRARY_MODULE_PATH_PREFIX
+    : feeMarkingOnly
+      ? FEE_PAYMENT_MARKING_PATH
+      : null;
 
   return (
     <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -183,8 +201,8 @@ function LayoutHeader({
               const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
               // Library-only staff must not hit `/dashboard` (hook redirects → flash).
               const linkTo =
-                libraryOnly && index === 0 && segment === "dashboard"
-                  ? LIBRARY_MODULE_PATH_PREFIX
+                moduleOnlyHomePath && index === 0 && segment === "dashboard"
+                  ? moduleOnlyHomePath
                   : path;
               const Icon = pathIconMap[segment];
               const isLastSegment = index === pathSegments.length - 1;
@@ -248,10 +266,11 @@ export default function HomeLayout() {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
 
-  const commandSearchNavItems = useMemo(
-    () => (isLibraryOnlyUser(user?.email) ? libraryOnlySearchData : searchData),
-    [user?.email],
-  );
+  const commandSearchNavItems = useMemo(() => {
+    if (isLibraryOnlyUser(user?.email)) return libraryOnlySearchData;
+    if (isFeeMarkingOnlyUser(user?.email)) return feeMarkingOnlySearchData;
+    return searchData;
+  }, [user?.email]);
 
   async function fetchSuggestions(q: string) {
     try {
@@ -293,7 +312,7 @@ export default function HomeLayout() {
 
   // Keyboard shortcut handler (disabled for library-only accounts)
   useEffect(() => {
-    if (isLibraryOnlyUser(user?.email)) return;
+    if (isLibraryOnlyUser(user?.email) || isFeeMarkingOnlyUser(user?.email)) return;
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -334,50 +353,54 @@ export default function HomeLayout() {
             />
             <CommandList className="min-h-[160px] max-h-80 overflow-auto">
               <CommandEmpty>No results found.</CommandEmpty>
-              {/\d{6,}/.test(inputValue.trim()) && !isLibraryOnlyUser(user?.email) && (
-                <CommandGroup heading="Quick action">
-                  <CommandItem
-                    value={`open-${inputValue.trim()}`}
-                    onSelect={() => {
-                      setOpen(false);
-                      navigate(`/dashboard/students/${inputValue.trim()}`);
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <span className="font-medium">Open student UID</span>
-                      <span className="text-xs text-muted-foreground">{inputValue.trim()}</span>
-                    </div>
-                  </CommandItem>
-                </CommandGroup>
-              )}
-              {suggestions.length > 0 && !isLibraryOnlyUser(user?.email) && (
-                <CommandGroup heading="Students">
-                  {suggestions.map((s) => (
+              {/\d{6,}/.test(inputValue.trim()) &&
+                !isLibraryOnlyUser(user?.email) &&
+                !isFeeMarkingOnlyUser(user?.email) && (
+                  <CommandGroup heading="Quick action">
                     <CommandItem
-                      key={s.uid}
-                      value={s.uid}
+                      value={`open-${inputValue.trim()}`}
                       onSelect={() => {
                         setOpen(false);
-                        navigate(`/dashboard/students/${s.uid}`);
+                        navigate(`/dashboard/students/${inputValue.trim()}`);
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage
-                            src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`}
-                          />
-                          <AvatarFallback className="text-[10px]">
-                            {(s.name ?? s.uid ?? "?")?.toString().charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{s.uid}</span>
-                        <span className="text-xs text-muted-foreground">{s.name ?? ""}</span>
+                        <Users className="h-4 w-4" />
+                        <span className="font-medium">Open student UID</span>
+                        <span className="text-xs text-muted-foreground">{inputValue.trim()}</span>
                       </div>
                     </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
+                  </CommandGroup>
+                )}
+              {suggestions.length > 0 &&
+                !isLibraryOnlyUser(user?.email) &&
+                !isFeeMarkingOnlyUser(user?.email) && (
+                  <CommandGroup heading="Students">
+                    {suggestions.map((s) => (
+                      <CommandItem
+                        key={s.uid}
+                        value={s.uid}
+                        onSelect={() => {
+                          setOpen(false);
+                          navigate(`/dashboard/students/${s.uid}`);
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage
+                              src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`}
+                            />
+                            <AvatarFallback className="text-[10px]">
+                              {(s.name ?? s.uid ?? "?")?.toString().charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{s.uid}</span>
+                          <span className="text-xs text-muted-foreground">{s.name ?? ""}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
               <CommandGroup heading="Navigation">
                 {commandSearchNavItems.map((item) => (
                   <CommandItem

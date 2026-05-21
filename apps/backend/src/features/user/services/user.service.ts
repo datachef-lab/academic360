@@ -93,13 +93,26 @@ export interface PasswordResetData {
 const passwordResetTokens = new Map<string, PasswordResetData>();
 
 export async function addUser(user: User) {
-  // Hash the password before storing it in the database
-  let hashedPassword = await bcrypt.hash(user.password, 10);
+  const hashedPassword = await bcrypt.hash(user.password, 10);
 
-  user.password = hashedPassword;
-
-  // Create a new user
-  const [newUser] = await db.insert(userModel).values(user).returning();
+  const [newUser] = await db
+    .insert(userModel)
+    .values({
+      name: user.name,
+      email: user.email,
+      password: hashedPassword,
+      phone: user.phone ?? null,
+      whatsappNumber: user.whatsappNumber ?? null,
+      image: user.image ?? null,
+      type: user.type ?? "STAFF",
+      isActive: user.isActive ?? true,
+      isSuspended: user.isSuspended ?? false,
+      suspendedReason: user.suspendedReason ?? null,
+      suspendedTillDate: user.suspendedTillDate ?? null,
+      institutionalRoleId: user.institutionalRoleId ?? null,
+      sendStagingNotifications: user.sendStagingNotifications ?? false,
+    })
+    .returning();
 
   const formattedUser = await modelToDto(newUser);
 

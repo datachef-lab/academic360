@@ -1,5 +1,6 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
-import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { isFeeMarkingOnlyUser, useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import {
   LayoutDashboard,
   FileText,
@@ -35,10 +36,12 @@ const mastersLinks = [
 
 export default function FeesMasterLayout() {
   useRestrictTempUsers();
+  const { user } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
+  const feeMarkingOnly = isFeeMarkingOnlyUser(user?.email);
 
-  const rightBarContent = (
+  const rightBarContent = feeMarkingOnly ? null : (
     <div className="flex flex-col h-full py-3">
       <ul className="mt-2">
         {topLinks.map((link) => (
@@ -53,21 +56,23 @@ export default function FeesMasterLayout() {
         ))}
       </ul>
 
-      <div className="mt-auto">
-        <h3 className="text-lg mx-4 mb-1 font-bold border-b">Masters</h3>
-        <ul>
-          {mastersLinks.map((link) => (
-            <NavItem
-              key={link.title}
-              icon={<link.icon className="h-5 w-5" />}
-              href={link.url}
-              isActive={currentPath === link.url || currentPath.startsWith(link.url)}
-            >
-              {link.title}
-            </NavItem>
-          ))}
-        </ul>
-      </div>
+      {!feeMarkingOnly ? (
+        <div className="mt-auto">
+          <h3 className="text-lg mx-4 mb-1 font-bold border-b">Masters</h3>
+          <ul>
+            {mastersLinks.map((link) => (
+              <NavItem
+                key={link.title}
+                icon={<link.icon className="h-5 w-5" />}
+                href={link.url}
+                isActive={currentPath === link.url || currentPath.startsWith(link.url)}
+              >
+                {link.title}
+              </NavItem>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 

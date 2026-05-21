@@ -5,12 +5,22 @@ import { useLocation, useNavigate } from "react-router-dom";
 /** Main-console routes under `LibraryMaster` (see `LibraryMaster.tsx`). */
 export const LIBRARY_MODULE_PATH_PREFIX = "/dashboard/library";
 
+/** Fee payment marking page only (see `FeePaymentMarkingPage`, `FeesMasterLayout`). */
+export const FEE_PAYMENT_MARKING_PATH = "/dashboard/fees/marking";
+
 const LIBRARY_ONLY_USER_EMAIL = "library@thebges.edu.in";
+const FEE_MARKING_ONLY_USER_EMAIL = "anindita.doe@thebges.edu.in";
 
 /** Staff restricted to library-only UI and routes (see `useRestrictTempUsers`, `AppSidebar`). */
 export function isLibraryOnlyUser(email: string | null | undefined): boolean {
   if (!email) return false;
   return email.trim().toLowerCase() === LIBRARY_ONLY_USER_EMAIL;
+}
+
+/** Staff restricted to fee payment marking (cash only on page). */
+export function isFeeMarkingOnlyUser(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return email.trim().toLowerCase() === FEE_MARKING_ONLY_USER_EMAIL;
 }
 
 export const TEMP_USER_EMAILS: string[] = [
@@ -43,6 +53,17 @@ export const useRestrictTempUsers = () => {
 
       if (!isOnLibraryPath) {
         navigate(LIBRARY_MODULE_PATH_PREFIX);
+      }
+      return;
+    }
+
+    if (isFeeMarkingOnlyUser(user.email)) {
+      const isOnFeeMarkingPath =
+        location.pathname === FEE_PAYMENT_MARKING_PATH ||
+        location.pathname.startsWith(`${FEE_PAYMENT_MARKING_PATH}/`);
+
+      if (!isOnFeeMarkingPath) {
+        navigate(FEE_PAYMENT_MARKING_PATH);
       }
       return;
     }
