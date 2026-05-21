@@ -345,3 +345,40 @@ export interface OldSubjectGroup {
     readonly id: number;
     subjectgroupName: string;
 }
+
+export interface OldAuthor {
+    readonly id: number;
+    authorName: string;
+    authorType: number;
+    shortName: string | null;
+    nationalityid: number | null;
+    notes: string | null;
+}
+
+export interface OldAuthorType {
+    readonly id: number;
+    authortypeName: string;
+}
+
+export interface OldAuthorDetail {
+    readonly id: number;
+    parent_id: number | null; // References to OldBookEntry
+    authorTypeId: number | null; // References to OldAuthorType
+    authorId: number | null; // References to OldAuthor
+}
+
+export interface OldHoliday {
+    readonly id: number;
+    holidayName: string;
+    fromDate: string | Date | null;
+    toDate: string | Date | null;
+    remarks: string | null;
+}
+
+export interface OldClassHoliday {
+    readonly id: number;
+    parent_id: number; // References to OldHoliday
+    courseId: number; // References to OldProgramCourse
+    classId: number; // References to OldClass
+    isHoliday: boolean;
+}

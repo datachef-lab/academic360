@@ -1,0 +1,1 @@
+ALTER TABLE "holidays" RENAME COLUMN "legacy_holidays_id" TO "legacy_holiday_id";
