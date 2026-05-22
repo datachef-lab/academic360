@@ -5,6 +5,9 @@ import {
   BookCopy,
   BookOpenCheck,
   BookText,
+  CalendarDays,
+  CalendarRange,
+  FileText,
   FolderArchive,
   LayoutDashboard,
   LibraryBig,
@@ -13,7 +16,9 @@ import {
   Rows3,
   ScanBarcode,
   ScrollText,
+  Tag,
   Tags,
+  UserPen,
   UserRoundCheck,
   Workflow,
 } from "lucide-react";
@@ -117,6 +122,31 @@ const masterLinks = [
     title: "Borrowing Type",
     url: "/dashboard/library/borrowing-types",
     icon: BookOpenCheck,
+  },
+  {
+    title: "Holiday",
+    url: "/dashboard/library/holidays",
+    icon: CalendarDays,
+  },
+  {
+    title: "Class Holiday",
+    url: "/dashboard/library/class-holidays",
+    icon: CalendarRange,
+  },
+  {
+    title: "Author Type",
+    url: "/dashboard/library/author-types",
+    icon: Tag,
+  },
+  {
+    title: "Author",
+    url: "/dashboard/library/authors",
+    icon: UserPen,
+  },
+  {
+    title: "Author Detail",
+    url: "/dashboard/library/author-details",
+    icon: FileText,
   },
 ];
 

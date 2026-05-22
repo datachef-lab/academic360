@@ -205,6 +205,12 @@ import entryModeRouter from "@/features/library/routes/entry-mode.route.js";
 import libraryPeriodRouter from "@/features/library/routes/library-period.route.js";
 import seriesRouter from "@/features/library/routes/series.route.js";
 import publisherRouter from "@/features/library/routes/publisher.route.js";
+import authorTypeRouter from "@/features/library/routes/author-type.route.js";
+import authorRouter from "@/features/library/routes/author.route.js";
+import authorDetailRouter from "@/features/library/routes/author-detail.route.js";
+import bookReissueRouter from "@/features/library/routes/book-reissue.route.js";
+import classHolidayRouter from "@/features/library/routes/class-holiday.route.js";
+import holidayRouter from "@/features/library/routes/holiday.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -657,6 +663,12 @@ app.use("/api/library/entry-modes", entryModeRouter);
 app.use("/api/library/periods", libraryPeriodRouter);
 app.use("/api/library/series", seriesRouter);
 app.use("/api/library/publishers", publisherRouter);
+app.use("/api/library/author-types", authorTypeRouter);
+app.use("/api/library/authors", authorRouter);
+app.use("/api/library/author-details", authorDetailRouter);
+app.use("/api/library/book-reissues", bookReissueRouter);
+app.use("/api/library/class-holidays", classHolidayRouter);
+app.use("/api/library/holidays", holidayRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 
