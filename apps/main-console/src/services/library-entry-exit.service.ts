@@ -93,9 +93,16 @@ export type LibraryEntryExitPreviewCirculationRow = {
   daysLate: number;
 };
 
+export type LibraryEntryExitBookCirculationSummary = {
+  booksIssued: number;
+  booksReturned: number;
+  totalDaysLate: number;
+};
+
 export type LibraryEntryExitPreviewPayload = {
   user: LibraryEntryExitPreviewUser;
   circulationRows: LibraryEntryExitPreviewCirculationRow[];
+  bookCirculationSummary: LibraryEntryExitBookCirculationSummary;
 };
 
 const BASE_URL = "/api/library/entry-exit";
