@@ -27,6 +27,8 @@ type MasterLayoutProps = {
   rightBarHeader?: React.ReactNode;
   rightBarFooter?: React.ReactNode;
   rightBarContent?: React.ReactNode;
+  /** Full-width content without the right quick-links panel (e.g. fees dashboard home). */
+  hideRightBar?: boolean;
 };
 
 export default function MasterLayout({
@@ -36,6 +38,7 @@ export default function MasterLayout({
   rightBarHeader,
   rightBarFooter,
   rightBarContent,
+  hideRightBar = false,
 }: MasterLayoutProps) {
   const location = useLocation();
   const currentPath = location.pathname;
@@ -158,26 +161,30 @@ export default function MasterLayout({
       >
         <div className="w-full min-w-0 flex-1 overflow-auto">
           {/* Quick Links sheet trigger — tablet & mobile */}
-          <div className="lg:hidden border-b px-4 py-2 bg-background sticky top-0 z-50 shadow-sm">
-            <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" className="h-9 gap-2">
-                  <PanelRight className="h-4 w-4" />
-                  <span className="text-sm font-medium">Quick Links</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[min(100vw-2rem,20rem)] sm:max-w-sm p-0">
-                <div className="h-full flex flex-col min-h-0">
-                  <SidebarContent />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+          {!hideRightBar && (
+            <div className="lg:hidden border-b px-4 py-2 bg-background sticky top-0 z-50 shadow-sm">
+              <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="h-9 gap-2">
+                    <PanelRight className="h-4 w-4" />
+                    <span className="text-sm font-medium">Quick Links</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[min(100vw-2rem,20rem)] sm:max-w-sm p-0">
+                  <div className="h-full flex flex-col min-h-0">
+                    <SidebarContent />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          )}
           {children}
         </div>
-        <div className="hidden lg:flex w-[min(280px,24vw)] shrink-0 xl:w-72 border-l h-full flex-col bg-white min-w-0">
-          <SidebarContent />
-        </div>
+        {!hideRightBar && (
+          <div className="hidden lg:flex w-[min(280px,24vw)] shrink-0 xl:w-72 border-l h-full flex-col bg-white min-w-0">
+            <SidebarContent />
+          </div>
+        )}
       </div>
       {/* Search Student Modal */}
       <SearchStudentModal
