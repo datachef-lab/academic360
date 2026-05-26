@@ -303,6 +303,8 @@ export const userStatusData = {
 const PRIMARY_APP_MODULE = {
   Login: "Login",
   Dashboard: "Dashboard",
+  Exams: "Exams",
+  Fees: "Fees",
 };
 
 const defaultPrimaryAppModules: AppModuleDto[] = [
@@ -341,6 +343,74 @@ const defaultPrimaryAppModules: AppModuleDto[] = [
     isProtected: true,
     isReadOnly: true,
     isMasterModule: false,
+  },
+  {
+    name: PRIMARY_APP_MODULE.Fees,
+    application: "MAIN_CONSOLE",
+    description:
+      "Management of fees structure, payment processing, and financial transactions.",
+    parentAppModule: null,
+    iconType: "lucide",
+    iconValue: "IndianRupee",
+    image: "",
+    componentKey: "FEES_STRUCTURE_HOME_PAGE",
+    routePath: "/dashboard/fees",
+    moduleUrl: "/dashboard/fees",
+    isDynamic: false,
+    isLayout: true,
+    isProtected: true,
+    isReadOnly: true,
+    isMasterModule: false,
+  },
+  {
+    name: PRIMARY_APP_MODULE.Exams,
+    application: "MAIN_CONSOLE",
+    description: "Management of exams, schedules, and results.",
+    parentAppModule: null,
+    iconType: "lucide",
+    iconValue: "ClipboardList",
+    image: "",
+    componentKey: "EXAMS_HOME_PAGE",
+    routePath: "/dashboard/exam-management",
+    moduleUrl: "/dashboard/exam-management",
+    isDynamic: false,
+    isLayout: true,
+    isProtected: true,
+    isReadOnly: true,
+    isMasterModule: false,
+  },
+];
+
+const examManagementSubAppModules: AppModuleDto[] = [
+  {
+    name: "Exams",
+    application: "MAIN_CONSOLE",
+    description: "Schedule exams, allot exam rooms, and manage exam results.",
+    parentAppModule: defaultPrimaryAppModules.find(
+      (m) => m.name === PRIMARY_APP_MODULE.Exams,
+    )!,
+  },
+];
+
+export const feesStructureSubAppModules: AppModuleDto[] = [
+  {
+    name: "Fees Slabs",
+    application: "MAIN_CONSOLE",
+    description: "Manage fees slabs, concession slabs, and fee structure.",
+    parentAppModule: defaultPrimaryAppModules.find(
+      (m) => m.name === PRIMARY_APP_MODULE.Fees,
+    )!,
+    iconType: "lucide",
+    iconValue: "ListOrdered",
+    image: "",
+    componentKey: "FEES_SLABS_HOME_PAGE",
+    routePath: "/dashboard/fees/slabs",
+    moduleUrl: "/dashboard/fees/slabs",
+    isDynamic: false,
+    isLayout: false,
+    isProtected: true,
+    isReadOnly: true,
+    isMasterModule: true,
   },
 ];
 
