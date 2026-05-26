@@ -382,3 +382,19 @@ export interface OldClassHoliday {
     classId: number; // References to OldClass
     isHoliday: boolean;
 }
+
+export interface OldVendor {
+    id: number;
+vendorName: string | null;
+vendoreCode: string | null;
+vendorshortName: string | null;
+vendoraddress: string | null;
+vendorphoneNumber: string | null;
+vendorEmail: string | null;
+vendorWebsite: string | null;
+contactpersonName: string | null;
+contactpersonEmail: string | null;
+contactpersonphnoneNumber: string | null;
+panNumber: string | null;
+
+}

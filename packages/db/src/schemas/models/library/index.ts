@@ -22,3 +22,4 @@ export * from "./rack.model";
 export * from "./series.model";
 export * from "./shelf.model";
 export * from "./status.model";
+export * from "./vendor.model";
