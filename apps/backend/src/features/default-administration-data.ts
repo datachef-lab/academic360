@@ -383,12 +383,23 @@ const defaultPrimaryAppModules: AppModuleDto[] = [
 
 const examManagementSubAppModules: AppModuleDto[] = [
   {
-    name: "Exams",
+    name: "Home",
     application: "MAIN_CONSOLE",
-    description: "Schedule exams, allot exam rooms, and manage exam results.",
+    description: "Home page for exam management.",
     parentAppModule: defaultPrimaryAppModules.find(
       (m) => m.name === PRIMARY_APP_MODULE.Exams,
     )!,
+    iconType: "lucide",
+    iconValue: "LayoutDashboard",
+    image: "",
+    componentKey: "EXAM_MANAGEMENT_HOME_PAGE",
+    routePath: "/dashboard/exam-management",
+    moduleUrl: "/dashboard/exam-management",
+    isDynamic: false,
+    isLayout: true,
+    isProtected: true,
+    isReadOnly: true,
+    isMasterModule: false,
   },
 ];
 
