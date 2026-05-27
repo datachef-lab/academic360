@@ -150,7 +150,6 @@ export const updateAuthorTypeController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    // TODO: Implement updateAuthorTypeController logic
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json(new ApiError(400, "Invalid author type ID"));

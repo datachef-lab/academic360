@@ -24,17 +24,14 @@ export const getAllHolidaysController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const page = Number(req.query.page ?? 1);
-    const limit = Number(req.query.limit ?? 10);
-    const safePage = Number.isNaN(page) || page < 1 ? 1 : page;
-    const safeLimit =
-      Number.isNaN(limit) || limit < 1 ? 10 : Math.min(limit, 100);
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
     const search =
       typeof req.query.search === "string" ? req.query.search : undefined;
 
     const payload = await findHolidaysPaginated({
-      page: safePage,
-      limit: safeLimit,
+      page: page,
+      limit: limit,
       search,
     });
 

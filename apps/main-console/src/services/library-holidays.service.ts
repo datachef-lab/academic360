@@ -38,7 +38,7 @@ export type LibraryHolidaysListQueryParams = {
 const BASE = "/api/library/holidays";
 
 export async function getLibraryHolidays(
-  params: LibraryHolidaysListQueryParams,
+  params?: LibraryHolidaysListQueryParams,
 ): Promise<ApiResponse<LibraryHolidaysListPayload>> {
   const res = await axiosInstance.get<ApiResponse<LibraryHolidaysListPayload>>(BASE, { params });
   return res.data;

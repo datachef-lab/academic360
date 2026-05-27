@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Book, Download, Filter, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Book, Download, Edit, Filter, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
@@ -301,21 +301,21 @@ function BookRowActions({
   onDelete: (row: BookListRow) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
+        size="sm"
+        variant="destructive"
+        className="h-7 w-7 p-0"
         onClick={() => onDelete(row)}
       >
         <Trash2 className="h-4 w-4" />
@@ -771,7 +771,7 @@ export default function BooksPage() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold leading-snug text-slate-900 underline underline-offset-2">
+                          <p className="font-semibold leading-snug text-slate-900 ">
                             {row.title}
                             {row.publishedYear?.trim() ? ` (${row.publishedYear.trim()})` : ""}
                           </p>
@@ -828,14 +828,30 @@ export default function BooksPage() {
                     <Table containerClassName="min-w-[880px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-10 px-2">#</TableHead>
-                          <TableHead className="min-w-[210px]">Title</TableHead>
-                          <TableHead className="min-w-[100px]">ISBN</TableHead>
-                          <TableHead className="min-w-[120px]">Subject group</TableHead>
-                          <TableHead className="min-w-[120px]">Period / frequency</TableHead>
-                          <TableHead className="min-w-[130px]">Doc type</TableHead>
-                          <TableHead className="min-w-[130px]">Journal</TableHead>
-                          <TableHead className="min-w-[72px] text-right">Actions</TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 w-10 px-2">
+                            #
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[210px]">
+                            Title
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[100px]">
+                            ISBN
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[120px]">
+                            Subject group
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[120px]">
+                            Period / frequency
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[130px]">
+                            Doc type
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[130px]">
+                            Journal
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[72px] text-right">
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -860,7 +876,7 @@ export default function BooksPage() {
                                   )}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-slate-900 underline underline-offset-2">
+                                  <p className="font-semibold text-slate-900 ">
                                     {row.title}
                                     {row.publishedYear?.trim()
                                       ? ` (${row.publishedYear.trim()})`
@@ -1049,7 +1065,7 @@ export default function BooksPage() {
               {editingId == null ? (
                 <Plus className="h-4 w-4 text-emerald-600" />
               ) : (
-                <Pencil className="h-4 w-4 text-sky-600" />
+                <Edit className="h-4 w-4 text-sky-600" />
               )}
               <span>{editingId == null ? "Add book" : "Edit book"}</span>
             </DialogTitle>

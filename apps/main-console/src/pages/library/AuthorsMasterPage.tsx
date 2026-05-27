@@ -36,7 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Pencil, Plus, Search, Trash2, UserPen } from "lucide-react";
+import { Edit, Loader2, Plus, Search, Trash2, UserPen } from "lucide-react";
 import { getAllNationalities } from "@/services/nationalities.service";
 import type { LibraryAuthorRow, LibraryAuthorUpsertBody } from "@/services/library-authors.service";
 import {
@@ -97,21 +97,21 @@ function RowActions({
   onDelete: (row: LibraryAuthorRow) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
+        size="sm"
+        variant="destructive"
+        className="h-7 w-7 p-0"
         onClick={() => onDelete(row)}
       >
         <Trash2 className="h-4 w-4" />

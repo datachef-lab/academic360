@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+// import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -36,7 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarRange, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarRange, Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import type {
   LibraryClassHolidayRow,
   LibraryClassHolidayUpsertBody,
@@ -49,6 +48,8 @@ import {
   updateLibraryClassHoliday,
 } from "@/services/library-class-holidays.service";
 import { getLibraryHolidays } from "@/services/library-holidays.service";
+import { getProgramCourses } from "@/services/course-design.api";
+import { findAllClasses } from "@/services/class.service";
 
 type FormState = {
   holidayId: string;
@@ -78,36 +79,38 @@ const formToBody = (f: FormState): LibraryClassHolidayUpsertBody => ({
   isHoliday: f.isHoliday,
 });
 
-const parseDate = (value: string) => {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-};
+// const parseDate = (value: string) => {
+//   const d = new Date(value);
+//   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
+// };
 
+// eslint-disable @typescript-eslint/no-unused-vars
 function RowActions({
   row,
   onEdit,
   onDelete,
 }: {
   row: LibraryClassHolidayRow;
-  onEdit: (id: number) => void;
-  onDelete: (row: LibraryClassHolidayRow) => void;
+  onEdit: (id: number) => void; // eslint-disable-line
+  onDelete: (row: LibraryClassHolidayRow) => void; // eslint-disable-line
 }) {
+  // eslint-enable @typescript-eslint/no-unused-vars
   return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
+        size="sm"
+        variant="destructive"
+        className="h-7 w-7 p-0"
         onClick={() => onDelete(row)}
       >
         <Trash2 className="h-4 w-4" />
@@ -124,7 +127,11 @@ export default function ClassHolidaysMasterPage() {
   const [total, setTotal] = useState(0);
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  const [holidays, setHolidays] = useState<Array<{ id: number; name: string }>>([]);
+  const [holidays, setHolidays] = useState<
+    Array<{ id: number; name: string; from: string; to: string }>
+  >([]);
+  const [programCourses, setProgramCourses] = useState<Array<{ id: number; name: string }>>([]);
+  const [classes, setClasses] = useState<Array<{ id: number; name: string }>>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -134,24 +141,76 @@ export default function ClassHolidaysMasterPage() {
   const [deleteTarget, setDeleteTarget] = useState<LibraryClassHolidayRow | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
 
-  const holidayName = (id: number) => holidays.find((h) => h.id === id)?.name ?? `#${id}`;
+  const holidayName = (id: number) => {
+    const holiday = holidays.find((h) => h.id === id);
+    if (!holiday) return `Holiday #${id}`;
+    const fromDate = new Date(holiday.from).toLocaleDateString();
+    const toDate = new Date(holiday.to).toLocaleDateString();
+    const dateDisplay = fromDate === toDate ? fromDate : `${fromDate} - ${toDate}`;
+    return `${holiday.name} (${dateDisplay})`;
+  };
+
+  const programCourseName = (id: number) => {
+    const pc = programCourses.find((p) => p.id === id);
+    return pc?.name ?? `Course #${id}`;
+  };
+
+  const className = (id: number) => {
+    const c = classes.find((cl) => cl.id === id);
+    return c?.name ?? `Class #${id}`;
+  };
 
   useEffect(() => {
     void (async () => {
       try {
-        const res = await getLibraryHolidays({ page: 1, limit: 500 });
-        setHolidays(res.payload.rows.map((r) => ({ id: r.id, name: r.name })));
+        const res = await getLibraryHolidays();
+        console.log("***holidays", JSON.stringify(res.payload.rows, null, 2));
+        setHolidays(
+          res.payload.rows.map((r) => ({ id: r.id, name: r.name, from: r.from, to: r.to })),
+        );
       } catch (e) {
         console.error(e);
       }
     })();
   }, []);
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        const courses = await getProgramCourses();
+        setProgramCourses(
+          courses.map((c) => ({
+            id: c.id,
+            name: c.name || "Unnamed Course",
+          })) as Array<{ id: number; name: string }>,
+        );
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await findAllClasses();
+        setClasses(
+          res.payload.map((cl) => ({
+            id: cl.id || 0,
+            name: cl.name,
+          })) as Array<{ id: number; name: string }>,
+        );
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
   const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
       const res = await getLibraryClassHolidays({ page, limit });
       setRows(res.payload.rows);
+      // console.log(JSON.stringify(res.payload.rows, null, 2));
       setTotal(res.payload.total);
     } catch (e) {
       console.error(e);
@@ -261,13 +320,19 @@ export default function ClassHolidaysMasterPage() {
                 <Table containerClassName="min-w-[900px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-10">#</TableHead>
-                      <TableHead>Holiday</TableHead>
-                      <TableHead>Program course ID</TableHead>
-                      <TableHead>Class ID</TableHead>
-                      <TableHead>Is holiday</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead className="w-[90px] text-right">Actions</TableHead>
+                      <TableHead className="sticky top-0 z-20 bg-slate-100 w-10">#</TableHead>
+                      <TableHead className="sticky top-0 z-20 bg-slate-100">Holiday</TableHead>
+                      <TableHead className="sticky top-0 z-20 bg-slate-100">
+                        Program Course
+                      </TableHead>
+                      <TableHead className="sticky top-0 z-20 bg-slate-100">Semester</TableHead>
+                      <TableHead className="sticky top-0 z-20 bg-slate-100">
+                        Approved Holiday (Yes/No)
+                      </TableHead>
+
+                      <TableHead className="sticky top-0 z-20 bg-slate-100 w-[90px] text-right">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -275,12 +340,16 @@ export default function ClassHolidaysMasterPage() {
                       <TableRow key={row.id}>
                         <TableCell>{(page - 1) * limit + i + 1}</TableCell>
                         <TableCell className="font-medium">{holidayName(row.holidayId)}</TableCell>
-                        <TableCell>{row.programCourseId}</TableCell>
-                        <TableCell>{row.classId}</TableCell>
-                        <TableCell>{row.isHoliday ? "Yes" : "No"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {parseDate(row.updatedAt)}
+                        <TableCell className="whitespace-nowrap">
+                          {programCourseName(row.programCourseId)}
                         </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {className(row.classId)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {row.isHoliday ? "Yes" : "No"}
+                        </TableCell>
+
                         <TableCell className="text-right">
                           <RowActions row={row} onEdit={openEdit} onDelete={setDeleteTarget} />
                         </TableCell>
@@ -330,8 +399,8 @@ export default function ClassHolidaysMasterPage() {
               {editingId == null ? "Add class holiday" : "Edit class holiday"}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 px-6 py-4 sm:grid-cols-2">
-            <div className="space-y-1.5 sm:col-span-2">
+          <div className="grid gap-4 px-6 py-4 grid-cols-1 sm:grid-cols-2">
+            <div className="space-y-1.5">
               <Label>Holiday *</Label>
               <Select
                 value={form.holidayId}
@@ -341,43 +410,78 @@ export default function ClassHolidaysMasterPage() {
                   <SelectValue placeholder="Select holiday" />
                 </SelectTrigger>
                 <SelectContent>
-                  {holidays.map((h) => (
-                    <SelectItem key={h.id} value={String(h.id)}>
-                      {h.name}
+                  {holidays.map((h) => {
+                    const fromDate = new Date(h.from).toLocaleDateString();
+                    const toDate = new Date(h.to).toLocaleDateString();
+                    const dateDisplay = fromDate === toDate ? fromDate : `${fromDate} - ${toDate}`;
+
+                    return (
+                      <SelectItem key={h.id} value={String(h.id)}>
+                        {h.name} ({dateDisplay})
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Program Course *</Label>
+              <Select
+                value={form.programCourseId}
+                onValueChange={(v) => setForm((f) => ({ ...f, programCourseId: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select program course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {programCourses.map((pc) => (
+                    <SelectItem key={pc.id} value={String(pc.id)}>
+                      {pc.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-1.5">
-              <Label>Program course ID *</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.programCourseId}
-                onChange={(e) => setForm((f) => ({ ...f, programCourseId: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Class ID *</Label>
-              <Input
-                type="number"
-                min={1}
+              <Label>Semester *</Label>
+              <Select
                 value={form.classId}
-                onChange={(e) => setForm((f) => ({ ...f, classId: e.target.value }))}
-              />
+                onValueChange={(v) => setForm((f) => ({ ...f, classId: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-center gap-2 sm:col-span-2">
-              <Checkbox
-                id="isHoliday"
-                checked={form.isHoliday}
-                onCheckedChange={(checked) =>
-                  setForm((f) => ({ ...f, isHoliday: checked === true }))
+
+            <div className="space-y-1.5">
+              <Label>Approved Holiday?</Label>
+              <Select
+                value={form.isHoliday ? "yes" : "no"}
+                onValueChange={(v) =>
+                  setForm((f) => ({
+                    ...f,
+                    isHoliday: v === "yes",
+                  }))
                 }
-              />
-              <Label htmlFor="isHoliday" className="cursor-pointer">
-                Is holiday
-              </Label>
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select option" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter className="border-t bg-muted/30 px-6 py-4">

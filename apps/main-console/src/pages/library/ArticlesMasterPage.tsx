@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Pencil, Plus, ScrollText, Search, Trash2 } from "lucide-react";
+import { Edit, Loader2, Plus, ScrollText, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
 import type {
@@ -171,21 +171,21 @@ function RowActions({
   onDelete: (row: LibraryArticleRow) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
+        size="sm"
+        variant="destructive"
+        className="h-7 w-7 p-0"
         onClick={() => onDelete(row)}
       >
         <Trash2 className="h-4 w-4" />
@@ -417,9 +417,7 @@ export default function ArticlesMasterPage() {
                       </div>
 
                       <div className="space-y-1">
-                        <p className="font-semibold text-slate-900 underline underline-offset-2">
-                          {row.name}
-                        </p>
+                        <p className="font-semibold text-slate-900 ">{row.name}</p>
                         {row.code?.trim() ? (
                           <p className="text-xs text-muted-foreground">Code: {row.code}</p>
                         ) : (
@@ -466,9 +464,7 @@ export default function ArticlesMasterPage() {
                             </TableCell>
                             <TableCell className="align-top">
                               <div className="space-y-1">
-                                <div className="font-semibold text-slate-900 underline underline-offset-2">
-                                  {row.name}
-                                </div>
+                                <div className="font-semibold text-slate-900 ">{row.name}</div>
                                 <div className="text-xs text-muted-foreground">
                                   Author: {row.isAuthor ? "Yes" : "No"}
                                 </div>

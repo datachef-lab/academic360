@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Combobox } from "@/components/ui/combobox";
-import { Book, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Book, Edit, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
 import type {
@@ -95,21 +95,21 @@ function RowActions({
   onDelete: (row: LibraryDocumentTypeRow) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
+        size="sm"
+        variant="destructive"
+        className="h-7 w-7 p-0"
         onClick={() => onDelete(row)}
       >
         <Trash2 className="h-4 w-4" />
@@ -348,9 +348,7 @@ export default function LibraryDocumentsMasterPage() {
                       </div>
 
                       <div className="space-y-1">
-                        <p className="font-semibold text-slate-900 underline underline-offset-2">
-                          {row.name}
-                        </p>
+                        <p className="font-semibold text-slate-900 ">{row.name}</p>
                         <p className="text-xs text-muted-foreground">
                           Article: {row.libraryArticleName?.trim() ? row.libraryArticleName : "—"}
                         </p>
@@ -364,15 +362,23 @@ export default function LibraryDocumentsMasterPage() {
                 </div>
 
                 <div className="hidden min-w-0 pb-2 lg:block">
-                  <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
+                  <div className="rounded-md border bg-background">
                     <Table containerClassName="min-w-[880px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[280px]">Document Type</TableHead>
-                          <TableHead className="min-w-[240px]">Article</TableHead>
-                          <TableHead className="min-w-[120px]">Updated</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 w-10">#</TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[280px]">
+                            Document Type
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[240px]">
+                            Article
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[120px]">
+                            Updated
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 w-[90px] text-right">
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -383,9 +389,7 @@ export default function LibraryDocumentsMasterPage() {
                             </TableCell>
                             <TableCell className="align-top">
                               <div className="space-y-1">
-                                <div className="font-semibold text-slate-900 underline underline-offset-2">
-                                  {row.name}
-                                </div>
+                                <div className="font-semibold text-slate-900 ">{row.name}</div>
                               </div>
                             </TableCell>
                             <TableCell className="align-top">

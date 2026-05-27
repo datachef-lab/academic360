@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarDays, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { CalendarDays, Edit, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import type {
   LibraryHolidayRow,
   LibraryHolidayUpsertBody,
@@ -41,6 +41,7 @@ import {
   getLibraryHolidays,
   updateLibraryHoliday,
 } from "@/services/library-holidays.service";
+import { Badge } from "@/components/ui/badge";
 
 type FormState = {
   name: string;
@@ -96,21 +97,21 @@ function RowActions({
   onDelete: (row: LibraryHolidayRow) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
+        size="sm"
+        variant="destructive"
+        className="h-7 w-7 p-0"
         onClick={() => onDelete(row)}
       >
         <Trash2 className="h-4 w-4" />
@@ -151,6 +152,7 @@ export default function HolidaysMasterPage() {
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
       });
       setRows(res.payload.rows);
+      console.log(JSON.stringify(res.payload.rows, null, 2));
       setTotal(res.payload.total);
     } catch (e) {
       console.error(e);
@@ -280,24 +282,48 @@ export default function HolidaysMasterPage() {
                   <Table containerClassName="min-w-[900px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-10">#</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Short name</TableHead>
-                        <TableHead>From</TableHead>
-                        <TableHead>To</TableHead>
-                        <TableHead>Remarks</TableHead>
-                        <TableHead className="w-[90px] text-right">Actions</TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-slate-100 w-10">#</TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-slate-100">Name</TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-slate-100">Short name</TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-slate-100 w-[190px] text-center">
+                          From - To
+                        </TableHead>
+
+                        <TableHead className="sticky top-0 z-20 bg-slate-100">Remarks</TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-slate-100 w-[90px] text-right">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {rows.map((row, i) => (
                         <TableRow key={row.id}>
-                          <TableCell>{(page - 1) * limit + i + 1}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {(page - 1) * limit + i + 1}
+                          </TableCell>
                           <TableCell className="font-semibold">{row.name}</TableCell>
                           <TableCell>{row.shortName ?? "—"}</TableCell>
-                          <TableCell>{parseDate(row.from)}</TableCell>
-                          <TableCell>{parseDate(row.to)}</TableCell>
-                          <TableCell className="max-w-[200px] truncate">
+                          <TableCell className="font-mono text-xs whitespace-nowrap text-center">
+                            {toDateInput(row.from) === toDateInput(row.to) ? (
+                              <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100">
+                                {parseDate(row.from)}
+                              </Badge>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50">
+                                  {parseDate(row.from)}
+                                </Badge>
+
+                                <span className="text-indigo-500 font-semibold">-</span>
+
+                                <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100">
+                                  {parseDate(row.to)}
+                                </Badge>
+                              </div>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="max-w-[200px] truncate whitespace-nowrap">
                             {row.remarks ?? "—"}
                           </TableCell>
                           <TableCell className="text-right">

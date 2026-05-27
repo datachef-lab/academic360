@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { LibraryBig, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, LibraryBig, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
 import type { LibraryShelfRow, LibraryShelfUpsertBody } from "@/services/library-shelves.service";
@@ -78,21 +78,21 @@ function RowActions({
   onDelete: (row: LibraryShelfRow) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
+        size="sm"
+        variant="destructive"
+        className="h-7 w-7 p-0"
         onClick={() => onDelete(row)}
       >
         <Trash2 className="h-4 w-4" />
@@ -298,9 +298,7 @@ export default function ShelvesMasterPage() {
                       </div>
 
                       <div className="space-y-1">
-                        <p className="font-semibold text-slate-900 underline underline-offset-2">
-                          {row.name}
-                        </p>
+                        <p className="font-semibold text-slate-900 ">{row.name}</p>
                       </div>
 
                       <div className="mt-3 text-xs text-muted-foreground">
@@ -315,10 +313,16 @@ export default function ShelvesMasterPage() {
                     <Table containerClassName="min-w-[720px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[360px]">Name</TableHead>
-                          <TableHead className="min-w-[140px]">Updated</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 w-10">#</TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[360px]">
+                            Name
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 min-w-[140px]">
+                            Updated
+                          </TableHead>
+                          <TableHead className="sticky top-0 z-20 bg-slate-100 w-[90px] text-right">
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -328,9 +332,7 @@ export default function ShelvesMasterPage() {
                               {(page - 1) * limit + i + 1}
                             </TableCell>
                             <TableCell className="align-top">
-                              <div className="font-semibold text-slate-900 underline underline-offset-2">
-                                {row.name}
-                              </div>
+                              <div className="font-semibold text-slate-900 ">{row.name}</div>
                             </TableCell>
                             <TableCell className="align-top text-xs text-muted-foreground">
                               {parseDate(row.updatedAt)}

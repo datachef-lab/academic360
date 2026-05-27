@@ -3,8 +3,8 @@ import { Holiday, holidayModel } from "@repo/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
 
 type HolidayListFilters = {
-  page: number;
-  limit: number;
+  page: number | undefined;
+  limit: number | undefined;
   search?: string;
 };
 
@@ -44,30 +44,50 @@ export async function findHolidaysPaginated(
   filters: HolidayListFilters,
 ): Promise<HolidayListResult> {
   const { page, limit, search } = filters;
-  const offset = (page - 1) * limit;
+
   const whereClause =
     search && search.trim()
       ? ilike(holidayModel.name, `%${search.trim()}%`)
       : undefined;
-
-  const rows = await db
-    .select()
-    .from(holidayModel)
-    .where(whereClause)
-    .orderBy(desc(holidayModel.id))
-    .limit(limit)
-    .offset(offset);
 
   const [{ total }] = await db
     .select({ total: count() })
     .from(holidayModel)
     .where(whereClause);
 
+  if (limit === undefined) {
+    const rows = await db
+      .select()
+      .from(holidayModel)
+      .where(whereClause)
+      .orderBy(desc(holidayModel.id));
+
+    return {
+      rows,
+      total,
+      page: 1,
+      limit: total,
+    };
+  }
+
+  const safePage =
+    page === undefined || Number.isNaN(page) || page < 1 ? 1 : page;
+  const safeLimit =
+    Number.isNaN(limit) || limit < 1 ? 10 : Math.min(limit, 100);
+
+  const rows = await db
+    .select()
+    .from(holidayModel)
+    .where(whereClause)
+    .orderBy(desc(holidayModel.id))
+    .limit(safeLimit)
+    .offset((safePage - 1) * safeLimit);
+
   return {
     rows,
     total,
-    page,
-    limit,
+    page: safePage,
+    limit: safeLimit,
   };
 }
 

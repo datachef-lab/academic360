@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BookCopy, Download, Filter, Loader2, Pencil, Plus, Search } from "lucide-react";
+import { BookCopy, Download, Edit, Filter, Loader2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
@@ -272,15 +272,15 @@ function CopyRowActions({
   onEdit: (id: number) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 justify-end">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
     </div>
   );
