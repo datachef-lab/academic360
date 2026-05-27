@@ -5,7 +5,6 @@
   "exports": {
     "./*": "./src/*"
   },
-  "root": "./",   
   "devDependencies": {
     "@types/node": "^22.15.3",
     "@types/react": "19.1.0",

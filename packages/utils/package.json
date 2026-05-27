@@ -1,19 +1,23 @@
 {
-    "name": "@repo/utils",
-    "version": "1.0.0",
-    "description": "",
-    "exports": "./src/**",
-    "type": "module",
-    "keywords": [
-        "utils"
-    ],
-    "author": "",
-    "license": "ISC",
-    "packageManager": "pnpm@10.15.0",
-    "dependencies": {
-        "@repo/db": "workspace:*"
-    },
-    "devDependencies": {
-        "tsx": "^4.20.4"
+  "name": "@repo/utils",
+  "version": "1.0.0",
+  "description": "Shared utilities for Academic360 apps",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": {
+      "types": "./src/*.ts",
+      "import": "./src/*.ts",
+      "default": "./src/*.ts"
     }
+  },
+  "keywords": ["utils"],
+  "license": "ISC",
+  "dependencies": {
+    "@repo/db": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.4",
+    "typescript": "5.5.4"
+  }
 }

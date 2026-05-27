@@ -6,50 +6,49 @@
     "NODE_ENV",
     "DEVELOPER_EMAIL",
     "DEVELOPER_PHONE",
-
     "DATABASE_URL",
-
     "DB_HOST",
     "DB_PORT",
     "DB_USER",
     "DB_NAME",
     "DB_PASSWORD",
-
     "DOCS_PATH",
-
     "JWT_SECRET",
     "JWT_REFRESH_SECRET",
-
     "COURSE_MATERIAL_PATH",
-
     "INTERAKT_API_KEY",
     "INTERAKT_BASE_URL",
-
     "ZEPTO_URL",
     "ZEPTO_FROM",
     "ZEPTO_TOKEN",
-
     "NEXT_PUBLIC_API_URL",
-    "NEXT_PUBLIC_URL"
+    "NEXT_PUBLIC_URL",
+    "VITE_APP_BACKEND_URL",
+    "VITE_APP_STUDENT_CONSOLE_URL",
+    "VITE_STUDENT_PROFILE_URL",
+    "VITE_STUDENT_IMAGE_BASE_URL"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
-    },
-    "docker:build": {
-      "dependsOn": ["build"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "inputs": ["$TURBO_DEFAULT$"]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types"],
+      "inputs": ["$TURBO_DEFAULT$"]
     },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "docker:build": {
+      "dependsOn": ["build"],
+      "cache": false
     }
   }
 }

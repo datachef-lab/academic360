@@ -2,38 +2,33 @@
 .git
 .gitignore
 
-# Node / pnpm
+# Dependencies (reinstalled in image)
 node_modules
 .pnpm-store
 .pnp*
 
-# Build outputs
+# Turbo / build artifacts (rebuilt in image)
+**/.turbo
+.turbo
 apps/**/dist
 apps/**/.next
-apps/**/.turbo
-.turbo
+packages/**/dist
 
-# Logs
+# Logs & local data
 *.log
 apps/**/logs
+**/uploads
+coverage
 
-# Env files (keep on servers only)
+# Env (inject at runtime / build-args)
 .env
 .env.*
+!.env.example
 
-# Editor/OS
+# Editor / OS
 .DS_Store
 .vscode
 .idea
 
-# Misc
-coverage
-**/uploads
-**/public/temp
-
-
-dist
-.env*
-logs
-.turbo
-!packages/db/dist
+# Mobile / non-docker apps (optional slim context)
+apps/student-console-mobile

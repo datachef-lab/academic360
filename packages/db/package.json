@@ -53,6 +53,35 @@
             "types": "./dist/dtos/administration/index.d.ts",
             "import": "./dist/dtos/administration/index.js"
         },
+        "./dtos/fees": {
+            "types": "./dist/dtos/fees/index.d.ts",
+            "import": "./dist/dtos/fees/index.js"
+        },
+        "./dtos/batches": {
+            "types": "./dist/dtos/batches/index.d.ts",
+            "import": "./dist/dtos/batches/index.js"
+        },
+        "./dtos/library": {
+            "types": "./dist/dtos/library/index.d.ts",
+            "import": "./dist/dtos/library/index.js"
+        },
+        "./dtos/notifications": {
+            "types": "./dist/dtos/notifications/index.d.ts",
+            "import": "./dist/dtos/notifications/index.js"
+        },
+        "./dtos/payments": {
+            "types": "./dist/dtos/payments/index.d.ts",
+            "import": "./dist/dtos/payments/index.js"
+        },
+        "./legacy-system-types/*": {
+            "types": "./dist/legacy-system-types/*/index.d.ts",
+            "import": "./dist/legacy-system-types/*/index.js"
+        },
+        "./schemas/models": {
+            "types": "./dist/schemas/models/index.d.ts",
+            "import": "./dist/schemas/models/index.js"
+        },
+        "./schemas/models/*": "./dist/schemas/models/*",
         "./schemas/enums": {
             "types": "./dist/schemas/enums/index.d.ts",
             "import": "./dist/schemas/enums/index.js"

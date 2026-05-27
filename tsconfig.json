@@ -2,15 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["ES2023", "dom"],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./apps/frontend/src/*"],
-      "@repo/db/*": ["../../packages/db/src/*"]
-    },
+    "lib": ["ES2023", "DOM"],
     "strict": true,
     "skipLibCheck": true,
-    "moduleResolution": "node"
+    "moduleResolution": "bundler",
+    "noEmit": true
   },
-  "include": ["apps/**/*", "packages/**/*"]
+  "exclude": ["node_modules", "**/dist", "**/.next"]
 }
