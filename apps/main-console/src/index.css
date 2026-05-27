@@ -67,7 +67,7 @@ html {
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -102,7 +102,7 @@ html {
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -179,3 +179,42 @@ html {
   background-color: hsl(var(--foreground));
 }
 
+/* Certificate field description rich text editor (Quill) */
+.certificate-field-html-editor .ql-toolbar {
+  border-top-left-radius: calc(var(--radius) - 2px);
+  border-top-right-radius: calc(var(--radius) - 2px);
+  border-color: hsl(var(--border));
+  background: hsl(var(--muted) / 0.35);
+}
+
+.certificate-field-html-editor .ql-container {
+  border-bottom-left-radius: calc(var(--radius) - 2px);
+  border-bottom-right-radius: calc(var(--radius) - 2px);
+  border-color: hsl(var(--border));
+  font-size: var(--cf-desc-font-size, 14px);
+  min-height: 7rem;
+}
+
+.certificate-field-html-editor .ql-editor {
+  min-height: 7rem;
+  color: hsl(var(--foreground));
+}
+
+.certificate-field-html-editor .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+  font-style: normal;
+}
+
+.certificate-field-description-preview p {
+  margin: 0;
+}
+
+.certificate-field-description-preview p + p {
+  margin-top: 0.35em;
+}
+
+.certificate-field-description-preview ul,
+.certificate-field-description-preview ol {
+  margin: 0.25em 0;
+  padding-left: 1.25rem;
+}

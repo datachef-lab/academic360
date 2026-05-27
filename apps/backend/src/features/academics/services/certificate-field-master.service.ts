@@ -19,7 +19,19 @@ async function rowToDto(
     .orderBy(asc(certificateFieldOptionMasterModel.sequence));
 
   return {
-    ...(row as any),
+    id: row.id,
+    certificateMasterId: row.certificateMasterId,
+    name: row.name,
+    fieldFontSize: row.fieldFontSize,
+    type: row.type,
+    description: row.description,
+    descriptionFontSize: row.descriptionFontSize,
+    isQuestion: row.isQuestion,
+    sequence: row.sequence,
+    isRequired: row.isRequired,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
     options: options as any,
   };
 }

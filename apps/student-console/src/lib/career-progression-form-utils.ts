@@ -1,5 +1,60 @@
 /** Display / sort order for career progression certificate sections (student console). */
 
+export const DEFAULT_FIELD_FONT_SIZE = 16;
+export const DEFAULT_DESCRIPTION_FONT_SIZE = 14;
+
+export type CpCertificateFieldDisplay = {
+  name: string;
+  description?: string | null;
+  fieldFontSize?: number | null;
+  descriptionFontSize?: number | null;
+  isRequired?: boolean;
+};
+
+function clampFontSize(value: number | null | undefined, fallback: number): number {
+  if (value == null || !Number.isFinite(value)) return fallback;
+  return Math.min(72, Math.max(8, Math.round(value)));
+}
+
+export function resolveFieldFontSize(value?: number | null): number {
+  return clampFontSize(value, DEFAULT_FIELD_FONT_SIZE);
+}
+
+export function resolveDescriptionFontSize(value?: number | null): number {
+  return clampFontSize(value, DEFAULT_DESCRIPTION_FONT_SIZE);
+}
+
+/** Normalize API field rows (camelCase or snake_case) for display. */
+export function normalizeCpTemplateMasters<T extends { fields: Array<{ name: string }> }>(
+  masters: T[],
+): T[] {
+  return masters.map((cm) => ({
+    ...cm,
+    fields: cm.fields.map((f) => normalizeCpFieldForDisplay(f)),
+  }));
+}
+
+export function normalizeCpFieldForDisplay<T extends { name: string }>(
+  field: T,
+): T & CpCertificateFieldDisplay {
+  const raw = field as T & Record<string, unknown>;
+  const fieldFontSize = raw.fieldFontSize ?? raw.field_font_size;
+  const descriptionFontSize = raw.descriptionFontSize ?? raw.description_font_size;
+  const description = raw.description;
+
+  return {
+    ...field,
+    fieldFontSize: typeof fieldFontSize === "number" ? fieldFontSize : null,
+    descriptionFontSize: typeof descriptionFontSize === "number" ? descriptionFontSize : null,
+    description:
+      typeof description === "string"
+        ? description
+        : description == null
+          ? null
+          : String(description),
+  };
+}
+
 export function sectionPriority(name: string): number {
   const n = name.toLowerCase();
   if (n.includes("work experience") && n.includes("internship")) return 0;

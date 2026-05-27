@@ -244,6 +244,8 @@ export default function AddPaperModal({
     });
   };
 
+  const dropdownZClass = "z-[200]";
+
   const updatePaperComponent = (
     paperIndex: number,
     componentIndex: number,
@@ -280,9 +282,12 @@ export default function AddPaperModal({
   };
 
   return (
-    <form onSubmit={handleFormSubmit} className="h-[80vh] flex flex-col">
-      <div className="flex mb-5 gap-2 items-center">
-        <div className="flex w-[95%] gap-2 items-center">
+    <form
+      onSubmit={handleFormSubmit}
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden"
+    >
+      <div className="mb-5 flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 gap-2">
           <Select
             value={inputPaper[0]?.subjectId ? inputPaper[0].subjectId.toString() : ""}
             onValueChange={(value) => {
@@ -296,7 +301,7 @@ export default function AddPaperModal({
             <SelectTrigger>
               <SelectValue placeholder="Select Subject" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className={dropdownZClass}>
               {subjects.map((subject) => (
                 <SelectItem key={subject.id} value={subject.id!.toString()}>
                   {subject.name}
@@ -317,7 +322,7 @@ export default function AddPaperModal({
             <SelectTrigger>
               <SelectValue placeholder="Select Affiliation" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className={dropdownZClass}>
               {affiliations.map((affiliation) => (
                 <SelectItem key={affiliation.id} value={affiliation.id!.toString()}>
                   {affiliation.name}
@@ -338,7 +343,7 @@ export default function AddPaperModal({
             <SelectTrigger>
               <SelectValue placeholder="Select Regulations" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className={dropdownZClass}>
               {regulationTypes.map((regulationType) => (
                 <SelectItem key={regulationType.id} value={regulationType.id!.toString()}>
                   {regulationType.name} ({regulationType.shortName})
@@ -359,7 +364,7 @@ export default function AddPaperModal({
             <SelectTrigger>
               <SelectValue placeholder="Select Academic Year" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className={dropdownZClass}>
               {academicYears.map((academicYear) => (
                 <SelectItem key={academicYear.id} value={academicYear.id!.toString()}>
                   {academicYear.year}
@@ -391,166 +396,176 @@ export default function AddPaperModal({
           </Button>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden">
-        <div className="h-[500px] overflow-y-auto border border-black rounded-none">
-          <div className="sticky top-0 z-50 bg-white border-b border-black">
-            <div className="flex border-b border-black bg-[#f3f4f6]">
-              {[
-                {
-                  label: "Subject Category",
-                  className:
-                    "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
-                },
-                {
-                  label: "Applicable Program Course",
-                  className:
-                    "w-48 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
-                },
-                {
-                  label: "Semester",
-                  className:
-                    "w-24 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
-                },
-                {
-                  label: "Paper Name",
-                  className:
-                    "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
-                },
-                {
-                  label: "Paper Code",
-                  className:
-                    "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
-                },
-                {
-                  label: "Is Elective",
-                  className:
-                    "w-20 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
-                },
-                {
-                  label: "Paper Component & Marks",
-                  className:
-                    "flex-1 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
-                },
-                {
-                  label: "Actions",
-                  className: "w-20 p-2 font-medium flex items-center justify-center text-sm",
-                },
-              ].map((header) => (
-                <div key={header.label} className={`${header.className}`}>
-                  {header.label}
-                </div>
-              ))}
-              {/* <div className="w-20 p-2 font-medium flex items-center justify-center">Actions</div> */}
-            </div>
-
-            <div className="flex border-b border-black bg-[#f3f4f6]">
-              <div className="w-32 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-48 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-24 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-32 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-32 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-20 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="flex-1 border-r border-black">
-                <div className="flex">
-                  {examComponents.map((component) => (
-                    <div
-                      key={component.id}
-                      className="flex-1 p-2 text-center font-medium text-sm border-r border-black flex items-center justify-center"
-                    >
-                      {component.code}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="w-20 flex items-center justify-center bg-[#f3f4f6]"></div>
-            </div>
-
-            <div className="flex border-b border-black bg-[#f3f4f6]">
-              <div className="w-32 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-48 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-24 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-32 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-32 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="w-20 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
-              <div className="flex-1 border-r border-black">
-                <div className="flex">
-                  {examComponents.map((component) => (
-                    <React.Fragment key={component.id}>
-                      <div className="flex-1 font-medium p-2 text-center border-r border-black flex items-center justify-center text-sm">
-                        Marks
-                      </div>
-                      <div className="flex-1 font-medium p-2 text-center border-r border-black flex items-center justify-center text-sm">
-                        Credit
-                      </div>
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-              <div className="w-20 flex items-center justify-center bg-[#f3f4f6]"></div>
-            </div>
-          </div>
-
-          <div className="bg-white">
-            {inputPaper.map((field, paperIndex) => (
-              <div
-                key={field.id}
-                className={`flex border-b border-black hover:bg-gray-50 ${
-                  selectedRowIndex === paperIndex ? "bg-blue-50 border-blue-200" : ""
-                }`}
-              >
-                <div className="w-32 p-2 border-r border-black flex items-center justify-center">
-                  <Select
-                    value={field.subjectTypeId ? field.subjectTypeId.toString() : ""}
-                    onValueChange={(value) => {
-                      update(paperIndex, { ...field, subjectTypeId: Number(value) });
-                    }}
-                  >
-                    <SelectTrigger className="w-full border-0 p-1 h-8 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">
-                      <SelectValue placeholder="Select Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjectTypes.map((subjectType) => (
-                        <SelectItem key={subjectType.id} value={subjectType.id!.toString()}>
-                          {subjectType.code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="w-48 p-2 border-r border-black">
-                  <MultiSelect
-                    options={
-                      programCourses
-                        .map(
-                          (programCourseItem) =>
-                            programCourseItem.regulationTypeId === field.regulationTypeId && {
-                              label: programCourseItem.name,
-                              value: programCourseItem.id?.toString() || "",
-                            },
-                        )
-                        .filter(Boolean) as { label: string; value: string }[]
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-none border border-black">
+          <div className="w-full min-w-0">
+            <div className="sticky top-0 z-30 bg-white border-b border-black">
+              <div className="flex min-w-0 border-b border-black bg-[#f3f4f6]">
+                {[
+                  {
+                    label: "Subject Category",
+                    className:
+                      "w-40 shrink-0 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  },
+                  {
+                    label: "Applicable Program Course",
+                    className:
+                      "w-56 shrink-0 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  },
+                  {
+                    label: "Semester",
+                    className:
+                      "w-32 shrink-0 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  },
+                  {
+                    label: "Paper Name",
+                    className:
+                      "w-40 shrink-0 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  },
+                  {
+                    label: "Paper Code",
+                    className:
+                      "w-40 shrink-0 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  },
+                  {
+                    label: "Is Elective",
+                    className:
+                      "w-24 shrink-0 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  },
+                  {
+                    label: "Paper Component & Marks",
+                    className:
+                      "p-1.5 border-r border-black font-medium flex items-center justify-center text-xs leading-tight",
+                  },
+                  {
+                    label: "Actions",
+                    className:
+                      "w-24 shrink-0 p-2 font-medium flex items-center justify-center text-sm",
+                  },
+                ].map((header) => (
+                  <div
+                    key={header.label}
+                    className={
+                      header.label === "Paper Component & Marks"
+                        ? `${header.className} flex-1 min-w-0`
+                        : header.className
                     }
-                    defaultValue={field.programCourses.map((prog) => prog.toString())}
-                    onValueChange={(selected: string[]) => {
-                      const selectedCourses = selected.map(Number);
-                      let updatedClasses = [...field.classes];
+                  >
+                    {header.label}
+                  </div>
+                ))}
+                {/* <div className="w-20 p-2 font-medium flex items-center justify-center">Actions</div> */}
+              </div>
 
-                      if (selectedCourses.length > 1 && field.classes.length > 1) {
-                        toast.warning("Multiple courses selected. Restricting classes.");
-                        updatedClasses = []; // force one class
+              <div className="flex min-w-0 border-b border-black bg-[#f3f4f6]">
+                <div className="w-40 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-56 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-32 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-40 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-40 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-24 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="min-w-0 flex-1 border-r border-black">
+                  <div className="flex">
+                    {examComponents.map((component) => (
+                      <div
+                        key={component.id}
+                        className="min-w-0 flex-1 p-1.5 text-center text-xs font-medium border-r border-black flex items-center justify-center last:border-r-0"
+                      >
+                        {component.code}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="w-24 shrink-0 flex items-center justify-center bg-[#f3f4f6]"></div>
+              </div>
+
+              <div className="flex min-w-0 border-b border-black bg-[#f3f4f6]">
+                <div className="w-40 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-56 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-32 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-40 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-40 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="w-24 shrink-0 border-r border-black flex items-center justify-center bg-[#f3f4f6]"></div>
+                <div className="min-w-0 flex-1 border-r border-black">
+                  <div className="flex">
+                    {examComponents.map((component) => (
+                      <React.Fragment key={component.id}>
+                        <div className="min-w-0 flex-1 border-r border-black p-1 text-center text-xs font-medium flex items-center justify-center">
+                          Marks
+                        </div>
+                        <div className="min-w-0 flex-1 border-r border-black p-1 text-center text-xs font-medium flex items-center justify-center">
+                          Credit
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+                <div className="w-24 shrink-0 flex items-center justify-center bg-[#f3f4f6]"></div>
+              </div>
+            </div>
+
+            <div className="bg-white">
+              {inputPaper.map((field, paperIndex) => (
+                <div
+                  key={field.id}
+                  className={`flex min-w-0 border-b border-black hover:bg-gray-50 ${
+                    selectedRowIndex === paperIndex ? "bg-blue-50 border-blue-200" : ""
+                  }`}
+                >
+                  <div className="w-40 shrink-0 p-2 border-r border-black flex items-center justify-center">
+                    <Select
+                      value={field.subjectTypeId ? field.subjectTypeId.toString() : ""}
+                      onValueChange={(value) => {
+                        update(paperIndex, { ...field, subjectTypeId: Number(value) });
+                      }}
+                    >
+                      <SelectTrigger className="w-full border-0 p-1 h-8 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">
+                        <SelectValue placeholder="Select Type" />
+                      </SelectTrigger>
+                      <SelectContent className={dropdownZClass}>
+                        {subjectTypes.map((subjectType) => (
+                          <SelectItem key={subjectType.id} value={subjectType.id!.toString()}>
+                            {subjectType.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="w-56 shrink-0 p-2 border-r border-black">
+                    <MultiSelect
+                      options={
+                        programCourses
+                          .map(
+                            (programCourseItem) =>
+                              programCourseItem.regulationTypeId === field.regulationTypeId && {
+                                label: programCourseItem.name,
+                                value: programCourseItem.id?.toString() || "",
+                              },
+                          )
+                          .filter(Boolean) as { label: string; value: string }[]
                       }
+                      defaultValue={field.programCourses.map((prog) => prog.toString())}
+                      onValueChange={(selected: string[]) => {
+                        const selectedCourses = selected.map(Number);
+                        let updatedClasses = [...field.classes];
 
-                      update(paperIndex, {
-                        ...field,
-                        programCourses: selectedCourses,
-                        classes: updatedClasses,
-                      });
-                    }}
-                    placeholder="Select Program Courses"
-                    modalPopover={true}
-                  />
-                  {/* <Select
+                        if (selectedCourses.length > 1 && field.classes.length > 1) {
+                          toast.warning("Multiple courses selected. Restricting classes.");
+                          updatedClasses = []; // force one class
+                        }
+
+                        update(paperIndex, {
+                          ...field,
+                          programCourses: selectedCourses,
+                          classes: updatedClasses,
+                        });
+                      }}
+                      placeholder="Select Program Courses"
+                      modalPopover={true}
+                      popoverClassName={dropdownZClass}
+                    />
+                    {/* <Select
                     value={field.programCourseId ? field.programCourseId.toString() : ""}
                     onValueChange={(value) => {
                       update(paperIndex, { ...field, programCourseId: Number(value) });
@@ -567,165 +582,167 @@ export default function AddPaperModal({
                       ))}
                     </SelectContent>
                   </Select> */}
-                </div>
+                  </div>
 
-                <div className="w-24 p-2 border-r border-black flex items-center justify-center">
-                  <MultiSelect
-                    options={classes.map((classItem) => ({
-                      label: classItem.name,
-                      value: classItem.id?.toString() || "",
-                    }))}
-                    defaultValue={field.classes.map((cls) => cls.toString())}
-                    onValueChange={(selected: string[]) => {
-                      const selectedClasses = selected.map(Number);
-                      let updatedProgramCourses = [...field.programCourses];
+                  <div className="w-32 shrink-0 p-2 border-r border-black flex items-center justify-center">
+                    <MultiSelect
+                      options={classes.map((classItem) => ({
+                        label: classItem.name,
+                        value: classItem.id?.toString() || "",
+                      }))}
+                      defaultValue={field.classes.map((cls) => cls.toString())}
+                      onValueChange={(selected: string[]) => {
+                        const selectedClasses = selected.map(Number);
+                        let updatedProgramCourses = [...field.programCourses];
 
-                      if (selectedClasses.length > 1 && field.programCourses.length > 1) {
-                        toast.warning("Multiple classes selected. Restricting courses.");
-                        updatedProgramCourses = []; // force one course
-                      }
-
-                      update(paperIndex, {
-                        ...field,
-                        classes: selectedClasses,
-                        programCourses: updatedProgramCourses,
-                      });
-                    }}
-                    placeholder="Select Sems."
-                    modalPopover={true}
-                  />
-                </div>
-
-                <div className="w-32 p-2 border-r border-black flex items-center justify-center">
-                  <textarea
-                    value={field.name}
-                    onChange={(e) => {
-                      update(paperIndex, { ...field, name: e.target.value });
-                    }}
-                    placeholder="Paper Name"
-                    rows={1}
-                    className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none whitespace-pre-wrap break-words text-sm"
-                    style={{ minHeight: "2rem", maxHeight: "6rem", overflow: "auto" }}
-                  />
-                </div>
-
-                <div className="w-32 p-2 border-r border-black flex items-center justify-center">
-                  <Input
-                    value={field.code ?? ""}
-                    onChange={(e) => {
-                      update(paperIndex, { ...field, code: e.target.value });
-                    }}
-                    placeholder="Paper Code"
-                    className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div className="w-20 p-2 border-r border-black flex items-center justify-center">
-                  <Checkbox
-                    checked={field.isOptional ?? false}
-                    onCheckedChange={(checked) => {
-                      update(paperIndex, { ...field, isOptional: checked as boolean });
-                    }}
-                  />
-                </div>
-
-                <div className="flex-1 border-r border-black">
-                  <div className="flex h-full">
-                    {examComponents.map((examComponent) => {
-                      const component = field.components.find(
-                        (c: PaperComponentDto) => c.examComponent.id === examComponent.id,
-                      );
-                      const componentIndex = field.components.findIndex(
-                        (c: PaperComponentDto) => c.examComponent.id === examComponent.id,
-                      );
-
-                      const handleMarksChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-                        const value = e.target.value;
-                        if (value === "" || /^\d+$/.test(value)) {
-                          const numericValue = Number(value) || 0;
-                          if (component?.fullMarks !== numericValue) {
-                            updatePaperComponent(
-                              paperIndex,
-                              componentIndex,
-                              "fullMarks",
-                              numericValue,
-                            );
-                          }
+                        if (selectedClasses.length > 1 && field.programCourses.length > 1) {
+                          toast.warning("Multiple classes selected. Restricting courses.");
+                          updatedProgramCourses = []; // force one course
                         }
-                      };
 
-                      const handleCreditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-                        const value = e.target.value;
-                        if (value === "" || /^\d+$/.test(value)) {
-                          const numericValue = Number(value) || 0;
-                          if (component?.credit !== numericValue) {
-                            updatePaperComponent(
-                              paperIndex,
-                              componentIndex,
-                              "credit",
-                              numericValue,
-                            );
+                        update(paperIndex, {
+                          ...field,
+                          classes: selectedClasses,
+                          programCourses: updatedProgramCourses,
+                        });
+                      }}
+                      placeholder="Select Sems."
+                      modalPopover={true}
+                      popoverClassName={dropdownZClass}
+                    />
+                  </div>
+
+                  <div className="w-40 shrink-0 p-2 border-r border-black flex items-center justify-center">
+                    <textarea
+                      value={field.name}
+                      onChange={(e) => {
+                        update(paperIndex, { ...field, name: e.target.value });
+                      }}
+                      placeholder="Paper Name"
+                      rows={1}
+                      className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none whitespace-pre-wrap break-words text-sm"
+                      style={{ minHeight: "2rem", maxHeight: "6rem", overflow: "auto" }}
+                    />
+                  </div>
+
+                  <div className="w-40 shrink-0 p-2 border-r border-black flex items-center justify-center">
+                    <Input
+                      value={field.code ?? ""}
+                      onChange={(e) => {
+                        update(paperIndex, { ...field, code: e.target.value });
+                      }}
+                      placeholder="Paper Code"
+                      className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+
+                  <div className="w-24 shrink-0 p-2 border-r border-black flex items-center justify-center">
+                    <Checkbox
+                      checked={field.isOptional ?? false}
+                      onCheckedChange={(checked) => {
+                        update(paperIndex, { ...field, isOptional: checked as boolean });
+                      }}
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1 border-r border-black">
+                    <div className="flex h-full">
+                      {examComponents.map((examComponent) => {
+                        const component = field.components.find(
+                          (c: PaperComponentDto) => c.examComponent.id === examComponent.id,
+                        );
+                        const componentIndex = field.components.findIndex(
+                          (c: PaperComponentDto) => c.examComponent.id === examComponent.id,
+                        );
+
+                        const handleMarksChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                          const value = e.target.value;
+                          if (value === "" || /^\d+$/.test(value)) {
+                            const numericValue = Number(value) || 0;
+                            if (component?.fullMarks !== numericValue) {
+                              updatePaperComponent(
+                                paperIndex,
+                                componentIndex,
+                                "fullMarks",
+                                numericValue,
+                              );
+                            }
                           }
-                        }
-                      };
+                        };
 
-                      return (
-                        <div key={examComponent.id} className="flex h-full">
-                          <div className="flex-1 p-1 border-r border-black h-full">
-                            <Input
-                              type="text"
-                              value={component?.fullMarks || 0}
-                              onChange={handleMarksChange}
-                              placeholder="0"
-                              className="w-full h-full text-center border-0 p-1 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                            />
+                        const handleCreditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                          const value = e.target.value;
+                          if (value === "" || /^\d+$/.test(value)) {
+                            const numericValue = Number(value) || 0;
+                            if (component?.credit !== numericValue) {
+                              updatePaperComponent(
+                                paperIndex,
+                                componentIndex,
+                                "credit",
+                                numericValue,
+                              );
+                            }
+                          }
+                        };
+
+                        return (
+                          <div key={examComponent.id} className="flex h-full">
+                            <div className="min-w-0 flex-1 p-0.5 border-r border-black h-full">
+                              <Input
+                                type="text"
+                                value={component?.fullMarks || 0}
+                                onChange={handleMarksChange}
+                                placeholder="0"
+                                className="w-full h-full text-center border-0 p-1 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                              />
+                            </div>
+                            <div
+                              className={`min-w-0 flex-1 p-0.5 border-r border-black h-full ${componentIndex === examComponents.length - 1 ? "border-r-0" : ""}`}
+                            >
+                              <Input
+                                type="text"
+                                value={component?.credit || 0}
+                                onChange={handleCreditChange}
+                                placeholder="0"
+                                className="w-full h-full text-center border-0 p-1 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                              />
+                            </div>
                           </div>
-                          <div
-                            className={`flex-1 p-1 border-r border-black h-full ${componentIndex === examComponents.length - 1 ? "border-r-0" : ""}`}
-                          >
-                            <Input
-                              type="text"
-                              value={component?.credit || 0}
-                              onChange={handleCreditChange}
-                              placeholder="0"
-                              className="w-full h-full text-center border-0 p-1 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="w-24 shrink-0 p-2 flex items-center justify-center space-x-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEyeClick(paperIndex)}
+                      className={`h-8 w-8 p-0 ${
+                        selectedRowIndex === paperIndex
+                          ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                          : "hover:bg-gray-100"
+                      }`}
+                      title="View selected courses and classes"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePaper(paperIndex)}
+                      // disabled={fields.length <= 1}
+                      className="h-8 w-8 p-0"
+                      title="Remove paper"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-
-                <div className="w-20 p-2 flex items-center justify-center space-x-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEyeClick(paperIndex)}
-                    className={`h-8 w-8 p-0 ${
-                      selectedRowIndex === paperIndex
-                        ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
-                        : "hover:bg-gray-100"
-                    }`}
-                    title="View selected courses and classes"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removePaper(paperIndex)}
-                    // disabled={fields.length <= 1}
-                    className="h-8 w-8 p-0"
-                    title="Remove paper"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

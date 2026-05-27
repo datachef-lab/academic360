@@ -1,0 +1,1 @@
+ALTER TABLE "certificate_field_master" ALTER COLUMN "description" SET DATA TYPE text;

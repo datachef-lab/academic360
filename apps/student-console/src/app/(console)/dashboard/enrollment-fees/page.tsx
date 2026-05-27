@@ -17,7 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CertificateFieldLabel } from "@/components/certificate-field-label";
 import {
+  normalizeCpTemplateMasters,
   orderTableFieldsTypeFirst,
   sortCpCertificateMasters,
   usesInternshipWorkRowLayout,
@@ -95,6 +97,9 @@ type FieldOption = { id?: number; name: string; sequence: number };
 type Field = {
   id?: number;
   name: string;
+  fieldFontSize?: number | null;
+  description?: string | null;
+  descriptionFontSize?: number | null;
   type: string;
   sequence: number;
   isQuestion?: boolean;
@@ -429,8 +434,16 @@ export default function EnrollmentFeesPage() {
             careerProgressionTemplateUrl(studentId, ayId),
           )
           .then(({ data }) => {
-            setCpData(data?.payload ?? null);
-            setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
+            const payload = data?.payload ?? null;
+            setCpData(
+              payload
+                ? {
+                    ...payload,
+                    certificateMasters: normalizeCpTemplateMasters(payload.certificateMasters),
+                  }
+                : null,
+            );
+            setHasExistingCpForm(Boolean(payload?.hasExistingForms));
           })
           .catch(() => {});
       } catch {
@@ -682,8 +695,16 @@ export default function EnrollmentFeesPage() {
           careerProgressionTemplateUrl(student.id, fee.academicYearId),
         )
         .then(({ data }) => {
-          setCpData(data?.payload ?? null);
-          setHasExistingCpForm(Boolean(data?.payload?.hasExistingForms));
+          const payload = data?.payload ?? null;
+          setCpData(
+            payload
+              ? {
+                  ...payload,
+                  certificateMasters: normalizeCpTemplateMasters(payload.certificateMasters),
+                }
+              : null,
+          );
+          setHasExistingCpForm(Boolean(payload?.hasExistingForms));
         })
         .catch(() => {});
       return;
@@ -722,7 +743,14 @@ export default function EnrollmentFeesPage() {
       setMappings(freshMappings);
       const freshMapping = freshMappings.find((m) => m.id === fee.id) ?? mappingRow;
       const payload = cpRes.data?.payload ?? null;
-      setCpData(payload);
+      setCpData(
+        payload
+          ? {
+              ...payload,
+              certificateMasters: normalizeCpTemplateMasters(payload.certificateMasters),
+            }
+          : null,
+      );
       const cpExists = Boolean(payload?.hasExistingForms);
       setHasExistingCpForm(cpExists);
       if (cpExists) {
@@ -1503,7 +1531,7 @@ export default function EnrollmentFeesPage() {
                                 <li>
                                   For any payment issues,{" "}
                                   <a
-                                    href="https://docs.google.com/forms/d/e/1FAIpQLSfh0tY1CgvWFNJ3SAyJRwAu8C5KkOPdREc7nYW-WqGAhp7GVQ/viewform"
+                                    href="https://link.thebges.edu.in/otfenrol"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="font-semibold underline"
@@ -1584,14 +1612,12 @@ export default function EnrollmentFeesPage() {
                                   return (
                                     <div
                                       key={`${masterId}-${qfId}`}
-                                      className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                                      className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start"
                                     >
-                                      <label className="text-base font-semibold leading-snug text-slate-800">
-                                        {qf.name}
-                                        {qf.isRequired || qf.isQuestion ? (
-                                          <span className="ml-1 text-red-600">*</span>
-                                        ) : null}
-                                      </label>
+                                      <CertificateFieldLabel
+                                        field={qf}
+                                        required={Boolean(qf.isRequired || qf.isQuestion)}
+                                      />
                                       {qf.type === "SELECT" ? (
                                         <Select
                                           value={questionByField[qfId] || ""}
@@ -1654,12 +1680,9 @@ export default function EnrollmentFeesPage() {
                                       {tableFields.map((f) => (
                                         <th
                                           key={`${masterId}-${f.id}`}
-                                          className="border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words"
+                                          className="border border-slate-200 px-3 py-3 text-left font-normal whitespace-normal break-words"
                                         >
-                                          {f.name.toUpperCase()}
-                                          {f.isRequired ? (
-                                            <span className="ml-1 text-red-600">*</span>
-                                          ) : null}
+                                          <CertificateFieldLabel field={f} />
                                         </th>
                                       ))}
                                       <th className="w-[120px] border border-slate-200 px-3 py-3 text-left text-sm font-semibold whitespace-normal break-words">

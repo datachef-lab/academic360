@@ -44,7 +44,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  FEE_PAYMENT_MARKING_PATH,
   TEMP_USER_EMAILS,
+  isFeeMarkingOnlyUser,
   isLibraryOnlyUser,
   LIBRARY_MODULE_PATH_PREFIX,
 } from "@/hooks/use-restrict-temp-users";
@@ -207,9 +209,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const showSkeleton = !accessToken || !user;
 
   const libraryRestricted = isLibraryOnlyUser(user?.email);
+  const feeMarkingRestricted = isFeeMarkingOnlyUser(user?.email);
+  const moduleOnlyRestricted = libraryRestricted || feeMarkingRestricted;
   // Library-only accounts: do not duplicate "Library" in the top strip and under MODULES —
   // only list it once under MODULES (same as other users).
-  const dashNav = libraryRestricted ? [] : data.navDash;
+  const dashNav = moduleOnlyRestricted ? [] : data.navDash;
 
   const collegeLogoSetting = settings?.find((ele) => ele.name === "College Logo Image");
   const collegeLogoSrc =
@@ -351,6 +355,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               item.url.startsWith(`${LIBRARY_MODULE_PATH_PREFIX}/`)
                             );
                           }
+                          if (feeMarkingRestricted) {
+                            return item.title === "Fees Module";
+                          }
                           // For temp users, only show Admit Card Distributions and Physical CUReg Marking
                           if (user?.email && TEMP_USER_EMAILS.includes(user.email)) {
                             return (
@@ -362,14 +369,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           return true;
                         })
                         .map((item) => {
+                          const href =
+                            feeMarkingRestricted && item.title === "Fees Module"
+                              ? FEE_PAYMENT_MARKING_PATH
+                              : item.url;
                           return (
                             <NavItem
                               key={item.title}
                               icon={item.icon && <item.icon className="h-5 w-5" />}
-                              href={item.url}
-                              isActive={!isSearchActive && isSidebarActive(currentPath, item.url)}
+                              href={href}
+                              isActive={!isSearchActive && isSidebarActive(currentPath, href)}
                             >
-                              <span className="text-[14px]">{item.title}</span>
+                              <span className="text-[14px]">
+                                {feeMarkingRestricted && item.title === "Fees Module"
+                                  ? "Fee Payment Marking"
+                                  : item.title}
+                              </span>
                             </NavItem>
                           );
                         })}
@@ -381,7 +396,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {/* Administration */}
               {user?.email &&
                 !TEMP_USER_EMAILS.includes(user.email) &&
-                !isLibraryOnlyUser(user.email) && (
+                !isLibraryOnlyUser(user.email) &&
+                !isFeeMarkingOnlyUser(user.email) && (
                   <div className="my-14">
                     <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
                       Administration

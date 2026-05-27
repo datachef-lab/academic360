@@ -43,7 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { Textarea } from "@/components/ui/textarea";
-import { useFeeCategories, useFeeGroups } from "@/hooks/useFees";
+import { useFeeCategories, useFeeGroups, useFeesSlabs } from "@/hooks/useFees";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { FeeGroupPromotionMappingDto, type FeeGroupDto } from "@repo/db/dtos/fees";
@@ -186,6 +186,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const [religionOptions, setReligionOptions] = useState<string[]>([]);
   const [communityOptions] = useState<Community[]>(["GUJARATI", "NON-GUJARATI"]);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [feeSlabOptions, setFeeSlabOptions] = useState<string[]>([]);
   const [filters, setFilters] = useState<{
     academicYear: string;
     semesterOrClass: string;
@@ -195,6 +196,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     community: string;
     category: string;
     feeCategory: string;
+    feeSlab: string;
   }>({
     academicYear: "",
     semesterOrClass: "",
@@ -204,10 +206,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     community: "",
     category: "",
     feeCategory: "",
+    feeSlab: "",
   });
   const { showError } = useError();
   const { feeCategories } = useFeeCategories();
   const { feeGroups } = useFeeGroups();
+  const { feesSlabs } = useFeesSlabs();
   const { currentAcademicYear } = useAcademicYear();
 
   // Fetch when user has applied filters OR typed search text
@@ -219,7 +223,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.religion ||
     !!filters.community ||
     !!filters.category ||
-    !!filters.feeCategory;
+    !!filters.feeCategory ||
+    !!filters.feeSlab;
   const hasSearch = !!searchText.trim();
   const shouldFetchMappings = hasFilters || hasSearch;
   const queryClient = useQueryClient();
@@ -462,6 +467,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     const religions = new Set<string>();
     const communities = new Set<string>();
     const categories = new Set<string>();
+    const feeSlabs = new Set<string>();
 
     mappings.forEach((mapping) => {
       const promo: any = mapping.promotion || {};
@@ -471,6 +477,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       const categoryName = promo.categoryName;
       const communityName = promo.communityName || promo.community;
       const programCourseName = promo.programCourse?.name;
+      const feeSlabName = mapping.feeGroup?.feeSlab?.name;
 
       if (academicYearName) academicYears.add(academicYearName);
       if (semesterName) semestersOrClasses.add(semesterName);
@@ -478,6 +485,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       if (religionName) religions.add(religionName);
       if (categoryName) categories.add(categoryName);
       if (communityName) communities.add(communityName);
+      if (feeSlabName) feeSlabs.add(feeSlabName);
     });
 
     return {
@@ -491,6 +499,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       communities: communityOptions.length > 0 ? communityOptions : Array.from(communities),
       categories: categoryOptions.length > 0 ? categoryOptions : Array.from(categories),
       shifts: shiftOptions,
+      feeSlabs: Array.from(feeSlabs),
     };
   }, [
     mappings,
@@ -500,6 +509,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     religionOptions,
     communityOptions,
     categoryOptions,
+    shiftOptions,
   ]);
 
   // Pre-compute counts of mappings per promotion for delete-visibility logic
@@ -523,6 +533,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       const religionName = promo.religionName || "";
       const categoryName = promo.categoryName || "";
       const communityName = promo.communityName || promo.community || "";
+      const feeSlabName = mapping.feeGroup?.feeSlab?.name || "";
 
       if (filters.academicYear && academicYearName !== filters.academicYear) return false;
       if (filters.semesterOrClass && semesterName !== filters.semesterOrClass) return false;
@@ -537,6 +548,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         mapping.feeCategory?.name !== filters.feeCategory
       )
         return false;
+      if (filters.feeSlab && mapping.feeGroup?.feeSlab?.name !== filters.feeSlab) return false;
 
       return true;
     },
@@ -656,6 +668,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       community: "",
       category: "",
       feeCategory: "",
+      feeSlab: "",
     });
   };
 
@@ -1061,14 +1074,14 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     return typeof v === "number" ? v : null;
   }, [editForm.feeGroupId, editingItem?.feeGroup?.id, feeGroupTotalsById]);
 
-  /** Sum from fee_student_mappings, else slab total for mapped fee group */
+  /** Slab total for this promotion + fee group (aligned with table Amt and slab line). */
   const editReadOnlyTotalPayable = useMemo(() => {
-    const tp = editingItem?.totalPayableAmount;
-    if (tp != null && tp > 0) return tp;
     const fgId = editingItem?.feeGroup?.id;
     if (fgId != null && typeof feeGroupTotalsById[fgId] === "number") {
       return feeGroupTotalsById[fgId] as number;
     }
+    const tp = editingItem?.totalPayableAmount;
+    if (tp != null && tp > 0) return tp;
     return null;
   }, [editingItem?.totalPayableAmount, editingItem?.feeGroup?.id, feeGroupTotalsById]);
 
@@ -1464,6 +1477,14 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     {filters.feeCategory}
                   </Badge>
                 )}
+                {filters.feeSlab && (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-300 text-amber-800 bg-amber-50 flex items-center gap-1"
+                  >
+                    Slab: {filters.feeSlab}
+                  </Badge>
+                )}
               </div>
             </div>
             <Input
@@ -1552,9 +1573,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
                       const shiftName = promo.shift?.name || "-";
                       const paymentStatus = paymentStatusLabel(mapping.paymentStatus);
-                      const amountToPay = mapping.amountToPay ?? 0;
-                      const totalPayableAmt = mapping.totalPayableAmount ?? 0;
-                      const displayAmount = totalPayableAmt > 0 ? totalPayableAmt : amountToPay;
+                      const displayAmount = mapping.totalPayableAmount ?? 0;
 
                       const globalIndex = (currentPage - 1) * pageSize + index + 1;
 
@@ -1939,6 +1958,30 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     {feeCategories?.map((fc) => (
                       <SelectItem key={fc.id} value={fc.name}>
                         {fc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Fee Slab</Label>
+                <Select
+                  value={filters.feeSlab}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      feeSlab: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All fee slabs" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {feesSlabs?.map((slab) => (
+                      <SelectItem key={slab.id} value={slab.name}>
+                        {slab.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

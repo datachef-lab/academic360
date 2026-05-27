@@ -1,8 +1,8 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
-import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { isFeeMarkingOnlyUser, useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import {
   LayoutDashboard,
-  Receipt,
   FileText,
   BarChart2,
   Percent,
@@ -11,12 +11,14 @@ import {
   Link2,
   PlusCircle,
   ClipboardCheck,
+  Layers,
+  Tag,
 } from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
 const topLinks = [
   { title: "Home", url: "/dashboard/fees", icon: LayoutDashboard },
-  { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
+  { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Layers },
   { title: "Student Fee Groups", url: "/dashboard/fees/fee-group-promotion-mapping", icon: Link2 },
   { title: "Student Fees", url: "/dashboard/fees/student-fees", icon: Users },
   { title: "Fee Marking", url: "/dashboard/fees/marking", icon: ClipboardCheck },
@@ -27,17 +29,19 @@ const mastersLinks = [
   { title: "Fee Categories", url: "/dashboard/fees/fee-category", icon: FolderTree },
   { title: "Fee Slabs", url: "/dashboard/fees/fee-slabs", icon: Percent },
   { title: "Fee Groups", url: "/dashboard/fees/fee-groups", icon: Users },
-  { title: "Receipt Type", url: "/dashboard/fees/receipt-types", icon: Receipt },
+  { title: "Receipt Type", url: "/dashboard/fees/receipt-types", icon: Tag },
   { title: "Fee Heads/Components", url: "/dashboard/fees/heads", icon: FileText },
   { title: "Addon", url: "/dashboard/fees/addon", icon: PlusCircle },
 ];
 
 export default function FeesMasterLayout() {
   useRestrictTempUsers();
+  const { user } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
+  const feeMarkingOnly = isFeeMarkingOnlyUser(user?.email);
 
-  const rightBarContent = (
+  const rightBarContent = feeMarkingOnly ? null : (
     <div className="flex flex-col h-full py-3">
       <ul className="mt-2">
         {topLinks.map((link) => (
@@ -52,21 +56,23 @@ export default function FeesMasterLayout() {
         ))}
       </ul>
 
-      <div className="mt-auto">
-        <h3 className="text-lg mx-4 mb-1 font-bold border-b">Masters</h3>
-        <ul>
-          {mastersLinks.map((link) => (
-            <NavItem
-              key={link.title}
-              icon={<link.icon className="h-5 w-5" />}
-              href={link.url}
-              isActive={currentPath === link.url || currentPath.startsWith(link.url)}
-            >
-              {link.title}
-            </NavItem>
-          ))}
-        </ul>
-      </div>
+      {!feeMarkingOnly ? (
+        <div className="mt-auto">
+          <h3 className="text-lg mx-4 mb-1 font-bold border-b">Masters</h3>
+          <ul>
+            {mastersLinks.map((link) => (
+              <NavItem
+                key={link.title}
+                icon={<link.icon className="h-5 w-5" />}
+                href={link.url}
+                isActive={currentPath === link.url || currentPath.startsWith(link.url)}
+              >
+                {link.title}
+              </NavItem>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 
