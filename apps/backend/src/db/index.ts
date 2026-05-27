@@ -97,7 +97,7 @@ export const connectToDatabase = async () => {
 
     // loadDefaultUserTypes();
     // loadDefaultUserStatusMasters();
-    loadDefaultAppModules();
+    // loadDefaultAppModules();
     loadDefaultCertificateMasters().catch((e) => {
       log.warn("Default certificate master load failed", { error: e });
     });
