@@ -1,12 +1,15 @@
+import { GlassSurface } from "@/components/ui/glass-surface";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import { getStudentImageUrl } from "@/lib/student-image";
+import { usePathname, useRouter } from "expo-router";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { Moon, Sun } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-// Cohesive palette aligned with app theme (indigo/violet) - soft, professional
+export const CONSOLE_HEADER_HEIGHT = 72;
+
 const AVATAR_COLORS_LIGHT = [
   "#4F46E5",
   "#6366F1",
@@ -53,11 +56,14 @@ function getAvatarColorForChar(char: string, isDark: boolean): string {
 
 export function Header() {
   const navigation: any = useNavigation();
+  const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const { theme, colorScheme, toggleTheme } = useTheme();
   const [imageError, setImageError] = useState(false);
   const uid = (user?.payload as { uid?: string })?.uid;
   const studentImageUrl = getStudentImageUrl(uid);
+  const isDark = colorScheme === "dark";
 
   useEffect(() => {
     setImageError(false);
@@ -76,59 +82,116 @@ export function Header() {
     console.log("Drawer navigator not found in parent chain");
   };
 
-  return (
-    <View
-      style={{ backgroundColor: theme.background, borderColor: theme.border }}
-      className="min-h-10 flex-row items-center justify-between p-4  border-b"
-    >
-      {/* Left: Logo + Title */}
-      <View className="flex-row items-center gap-2">
-        <Image
-          source={{
-            uri: "https://besc.academic360.app/api/api/v1/settings/file/4",
-          }}
-          className="h-9 w-9 rounded-full"
-        />
-        <View>
-          <Text style={{ color: theme.text }} className="text-base font-semibold">
-            BESC Console
-          </Text>
-          <Text style={{ color: theme.text }}>{user?.payload?.uid}</Text>
-        </View>
-      </View>
+  const iconSize = 20;
+  const avatarSize = 36;
+  const isHome =
+    pathname === "/console" || pathname === "/console/" || pathname === "/console/(tabs)";
 
-      {/* Right: Avatar */}
-      <View className="flex-row items-center gap-6">
-        <TouchableOpacity onPress={() => toggleTheme()}>
-          {colorScheme == "dark" ? <Sun color={theme.text} /> : <Moon color={theme.text} />}
-        </TouchableOpacity>
-        {/* <Pressable>
-          <Bell color={theme.text} />
-        </Pressable> */}
-        <TouchableOpacity onPress={openDrawer} className="h-9 w-9">
-          {studentImageUrl && !imageError ? (
-            <Image
-              source={{ uri: studentImageUrl }}
-              className="h-9 w-9 rounded-full"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <View
-              className="h-9 w-9 items-center justify-center rounded-full"
-              style={{
-                backgroundColor: getAvatarColorForChar(
-                  user?.name?.charAt(0) || "?",
-                  colorScheme === "dark",
-                ),
-              }}
-            >
-              <Text className="text-sm font-semibold" style={{ color: "#ffffff" }}>
-                {(user?.name?.charAt(0) || "?").toUpperCase()}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+  return (
+    <View style={styles.shell}>
+      <GlassSurface isDark={isDark} />
+      <View style={styles.content}>
+        <View style={styles.sideSlot}>
+          {!isHome ? (
+            <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
+              <Text style={{ color: theme.text, fontSize: 24, lineHeight: 24 }}>‹</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        <View style={[styles.centerBrand, isHome && styles.centerBrandHome]} pointerEvents="none">
+          <Image
+            source={{
+              uri: "https://besc.academic360.app/api/api/v1/settings/file/4",
+            }}
+            style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+          />
+          <View>
+            <Text style={{ color: theme.text, fontSize: 15, fontWeight: "700" }}>BESC Console</Text>
+            {uid ? (
+              <Text style={{ color: theme.text, fontSize: 12, opacity: 0.65 }}>{uid}</Text>
+            ) : null}
+          </View>
+        </View>
+
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity onPress={() => toggleTheme()} hitSlop={8}>
+            {colorScheme == "dark" ? (
+              <Sun color={theme.text} size={iconSize} />
+            ) : (
+              <Moon color={theme.text} size={iconSize} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={openDrawer} style={{ width: avatarSize, height: avatarSize }}>
+            {studentImageUrl && !imageError ? (
+              <Image
+                source={{ uri: studentImageUrl }}
+                style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <View
+                style={{
+                  width: avatarSize,
+                  height: avatarSize,
+                  borderRadius: avatarSize / 2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: getAvatarColorForChar(
+                    user?.name?.charAt(0) || "?",
+                    colorScheme === "dark",
+                  ),
+                }}
+              >
+                <Text style={{ color: "#ffffff", fontSize: 13, fontWeight: "600" }}>
+                  {(user?.name?.charAt(0) || "?").toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  shell: {
+    height: CONSOLE_HEADER_HEIGHT,
+    overflow: "hidden",
+  },
+  content: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    zIndex: 1,
+  },
+  sideSlot: {
+    width: 40,
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  centerBrand: {
+    position: "absolute",
+    left: 56,
+    right: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  centerBrandHome: {
+    left: 12,
+    right: 88,
+    justifyContent: "flex-start",
+  },
+});

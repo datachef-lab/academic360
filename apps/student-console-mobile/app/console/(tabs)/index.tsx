@@ -312,7 +312,7 @@ export default function ConsoleScreen() {
   return (
     <ScrollView
       style={{ backgroundColor: theme.background }}
-      contentContainerStyle={{ padding: 12, paddingBottom: 24 }}
+      contentContainerStyle={{ padding: 12, paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
     >
       {/* Header: Greeting + Academic Details */}

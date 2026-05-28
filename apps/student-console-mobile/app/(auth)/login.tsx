@@ -20,7 +20,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getApiBaseUrl } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 // Web student console theme colors (indigo gradient, purple accent)
 const WEB_BG_TOP = "#1e1b4b"; // indigo-950
@@ -104,13 +104,13 @@ export default function LoginScreen() {
       try {
         // First check in-memory state
         if (accessToken && user?.type === "STUDENT") {
-          if (!cancelled) router.replace("/console");
+          if (!cancelled) router.replace("/console/(tabs)");
           return;
         }
         // Try refresh (e.g. stored token from previous session)
         const result = await tryRefresh();
         if (!cancelled && result.token && result.user?.type === "STUDENT") {
-          router.replace("/console");
+          router.replace("/console/(tabs)");
         }
       } catch (error) {
         console.error("[Login] Auth check error:", error);
@@ -286,7 +286,7 @@ export default function LoginScreen() {
         await clearOtpStorage();
         await login(token, userData, refreshToken);
         // Use push instead of replace to get slide animation
-        router.push("/console");
+        router.push("/console/(tabs)");
       } else {
         throw new Error(response.message || "OTP verification failed");
       }
@@ -479,7 +479,7 @@ export default function LoginScreen() {
 
               {/* Form */}
               <View className="gap-4">
-                <Text>{getApiBaseUrl()}</Text>
+                <Text>{API_BASE_URL}</Text>
                 {otpSent ? (
                   <>
                     {/* OTP Input - 6 separate digit boxes */}

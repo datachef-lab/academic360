@@ -16,11 +16,11 @@ const getApiBaseUrl = () => {
   }
 };
 
-type ExamSocketRefreshCallback = () => void;
+type SocketRefreshCallback = () => void;
 
 interface ExamSocketContextValue {
   isConnected: boolean;
-  subscribe: (callback: ExamSocketRefreshCallback) => () => void;
+  subscribe: (callback: SocketRefreshCallback) => () => void;
 }
 
 const ExamSocketContext = createContext<ExamSocketContextValue | null>(null);
@@ -36,7 +36,21 @@ export function useExamSocket() {
  * the provided refetch callback will be invoked.
  * Returns an unsubscribe function.
  */
-export function useExamSocketRefresh(refetch: ExamSocketRefreshCallback) {
+export function useExamSocketRefresh(refetch: SocketRefreshCallback) {
+  const ctx = useExamSocket();
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
+  useEffect(() => {
+    if (!ctx) return;
+    return ctx.subscribe(() => {
+      refetchRef.current?.();
+    });
+  }, [ctx]);
+}
+
+/** Reuse the same socket channel for fee updates. */
+export function useFeeSocketRefresh(refetch: SocketRefreshCallback) {
   const ctx = useExamSocket();
   const refetchRef = useRef(refetch);
   refetchRef.current = refetch;
@@ -51,11 +65,12 @@ export function useExamSocketRefresh(refetch: ExamSocketRefreshCallback) {
 
 export function ExamSocketProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const userId = user?.id;
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
-  const callbacksRef = useRef<Set<ExamSocketRefreshCallback>>(new Set());
+  const callbacksRef = useRef<Set<SocketRefreshCallback>>(new Set());
 
-  const subscribe = useCallback((callback: ExamSocketRefreshCallback) => {
+  const subscribe = useCallback((callback: SocketRefreshCallback) => {
     callbacksRef.current.add(callback);
     return () => {
       callbacksRef.current.delete(callback);
@@ -73,7 +88,7 @@ export function ExamSocketProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     let mounted = true;
 
@@ -113,7 +128,7 @@ export function ExamSocketProvider({ children }: { children: React.ReactNode }) 
         socket.on("connect", () => {
           if (!mounted) return;
           setIsConnected(true);
-          socket.emit("authenticate", user.id.toString());
+          socket.emit("authenticate", String(userId));
         });
 
         socket.on("disconnect", () => {
@@ -131,6 +146,14 @@ export function ExamSocketProvider({ children }: { children: React.ReactNode }) 
         socket.on("exam_updated", () => {
           if (mounted) notifySubscribers();
         });
+
+        socket.on("fee_student_mapping_updated", () => {
+          if (mounted) notifySubscribers();
+        });
+
+        socket.on("academic_activity_student_console_updated", () => {
+          if (mounted) notifySubscribers();
+        });
       } catch (err) {
         console.error("[ExamSocket] Failed to load socket:", err);
       }
@@ -146,7 +169,7 @@ export function ExamSocketProvider({ children }: { children: React.ReactNode }) 
       }
       setIsConnected(false);
     };
-  }, [user?.id, notifySubscribers]);
+  }, [userId, notifySubscribers]);
 
   const value: ExamSocketContextValue = {
     isConnected,

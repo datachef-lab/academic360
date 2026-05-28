@@ -7,29 +7,30 @@ import { Image, Text, TouchableOpacity, View } from "react-native";
 export default function SidebarHeader() {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const avatarSize = 36;
 
   return (
     <View
-      className="flex-row items-center gap-3 p-2  "
-      style={{ borderColor: theme.border, borderBottomWidth: 1 }}
+      className="flex-row items-center justify-between border-b px-4 py-4"
+      style={{ borderColor: theme.border }}
     >
-      <Image
-        source={{
-          uri: "https://besc.academic360.app/api/api/v1/settings/file/4",
-        }}
-        className="h-9 w-9 rounded-full"
-      />
-      <View className="mb-4">
-        <Text style={{ color: theme.text }} className="text-base font-semibold">
-          BESC Console
-        </Text>
-        <View className="flex-row gap-3 items-center">
-          <Text style={{ color: theme.text }}>{user?.payload?.uid}</Text>
-          <TouchableOpacity>
-            <Copy size={15} color={theme.text} />
-          </TouchableOpacity>
+      <View className="flex-row items-center gap-2">
+        <Image
+          source={{
+            uri: "https://besc.academic360.app/api/api/v1/settings/file/4",
+          }}
+          style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+        />
+        <View>
+          <Text style={{ color: theme.text, fontSize: 15, fontWeight: "700" }}>BESC Console</Text>
+          <Text style={{ color: theme.text, fontSize: 12, opacity: 0.65 }}>
+            {user?.payload?.uid}
+          </Text>
         </View>
       </View>
+      <TouchableOpacity>
+        <Copy size={16} color={theme.text} />
+      </TouchableOpacity>
     </View>
   );
 }

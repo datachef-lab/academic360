@@ -45,7 +45,11 @@ export default function SidebarItem({
     setImageError(false);
   }, [uid]);
 
-  const isActive = pathname.endsWith(item.path as string);
+  const itemPath = String(item.path);
+  const isHomeItem = itemPath === "/console";
+  const isActive = isHomeItem
+    ? pathname === "/console" || pathname === "/console/" || pathname === "/console/(tabs)"
+    : pathname === itemPath || pathname.startsWith(`${itemPath}/`);
   const isProfile = item.path === "/console/profile";
   const showProfileImage = isProfile && studentImageUrl && !imageError;
   const initial = user?.name?.charAt(0) || "?";

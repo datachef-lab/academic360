@@ -12,6 +12,7 @@ declare module "expo-router" {
         | { pathname: `/_sitemap`; params?: Router.UnknownInputParams }
         | { pathname: `${"/(auth)"}/login` | `/login`; params?: Router.UnknownInputParams }
         | { pathname: `${"/(root)"}` | `/`; params?: Router.UnknownInputParams }
+        | { pathname: `/console`; params?: Router.UnknownInputParams }
         | { pathname: `/console/profile`; params?: Router.UnknownInputParams }
         | {
             pathname: `/console${"/(tabs)"}/exam-papers-modal` | `/console/exam-papers-modal`;
@@ -61,6 +62,7 @@ declare module "expo-router" {
         | { pathname: `/_sitemap`; params?: Router.UnknownOutputParams }
         | { pathname: `${"/(auth)"}/login` | `/login`; params?: Router.UnknownOutputParams }
         | { pathname: `${"/(root)"}` | `/`; params?: Router.UnknownOutputParams }
+        | { pathname: `/console`; params?: Router.UnknownOutputParams }
         | { pathname: `/console/profile`; params?: Router.UnknownOutputParams }
         | {
             pathname: `/console${"/(tabs)"}/exam-papers-modal` | `/console/exam-papers-modal`;
@@ -112,6 +114,7 @@ declare module "expo-router" {
         | `/login${`?${string}` | `#${string}` | ""}`
         | `${"/(root)"}${`?${string}` | `#${string}` | ""}`
         | `/${`?${string}` | `#${string}` | ""}`
+        | `/console${`?${string}` | `#${string}` | ""}`
         | `/console/profile${`?${string}` | `#${string}` | ""}`
         | `/console${"/(tabs)"}/exam-papers-modal${`?${string}` | `#${string}` | ""}`
         | `/console/exam-papers-modal${`?${string}` | `#${string}` | ""}`
@@ -144,6 +147,7 @@ declare module "expo-router" {
         | { pathname: `/_sitemap`; params?: Router.UnknownInputParams }
         | { pathname: `${"/(auth)"}/login` | `/login`; params?: Router.UnknownInputParams }
         | { pathname: `${"/(root)"}` | `/`; params?: Router.UnknownInputParams }
+        | { pathname: `/console`; params?: Router.UnknownInputParams }
         | { pathname: `/console/profile`; params?: Router.UnknownInputParams }
         | {
             pathname: `/console${"/(tabs)"}/exam-papers-modal` | `/console/exam-papers-modal`;

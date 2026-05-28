@@ -118,9 +118,16 @@ function CustomDrawerNavigation() {
       />
       <GestureHandlerRootView className="flex-1">
         <Drawer
+          initialRouteName="(root)/index"
           screenOptions={{
             headerShown: false,
+            drawerType: "front",
+            drawerStatusBarAnimation: "fade",
             drawerStyle: {
+              backgroundColor: theme.background,
+            },
+            overlayColor: colorScheme === "dark" ? "rgba(2,6,23,0.35)" : "rgba(15,23,42,0.14)",
+            sceneStyle: {
               backgroundColor: theme.background,
             },
             drawerActiveTintColor: colorScheme == "dark" ? "white" : "#007aff",
@@ -128,28 +135,24 @@ function CustomDrawerNavigation() {
           drawerContent={SidebarContent}
         >
           <Drawer.Screen
-            name="(root)"
+            name="(root)/index"
             options={{
               drawerLabel: "Onboarding",
               drawerItemStyle: { display: "none" },
             }}
           />
           <Drawer.Screen
-            name="(auth)"
+            name="(auth)/login"
             options={{
               drawerLabel: "Login",
-              drawerItemStyle: {
-                display: "none",
-              },
+              drawerItemStyle: { display: "none" },
             }}
           />
           <Drawer.Screen
-            name="/console"
+            name="console"
             options={{
               drawerLabel: "Home",
-              drawerItemStyle: {
-                display: "none",
-              },
+              drawerItemStyle: { display: "none" },
             }}
           />
         </Drawer>

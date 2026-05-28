@@ -150,20 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           hasUser: !!tokenResult.user,
         });
 
-        // If token refresh was successful and user is a STUDENT, navigate to console
-        if (tokenResult.token && tokenResult.user?.type === "STUDENT" && !cancelled) {
-          console.log("[Auth] Navigating to /console...");
-          // Small delay to ensure state is updated and navigation happens smoothly
-          setTimeout(() => {
-            if (!cancelled) {
-              try {
-                router.push("/console");
-              } catch (navError) {
-                console.error("[Auth] Navigation error:", navError);
-              }
-            }
-          }, 100);
-        }
+        // Auth state is restored here; onboarding/login screens decide where to navigate.
       } catch (error) {
         // Log but don't crash - network errors are expected if backend is down
         console.error("[Auth] Bootstrap error:", error);

@@ -1,7 +1,10 @@
+import { GlassSurface } from "@/components/ui/glass-surface";
 import { useTheme } from "@/hooks/use-theme";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+export const CONSOLE_BREADCRUMB_HEIGHT = 36;
 
 const SEGMENT_LABELS: Record<string, string> = {
   console: "Home",
@@ -33,10 +36,11 @@ function segmentToLabel(segment: string): string {
     .join(" ");
 }
 
-export function Breadcrumb() {
-  const { theme } = useTheme();
+export function Breadcrumb({ glass = false }: { glass?: boolean }) {
+  const { theme, colorScheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+  const isDark = colorScheme === "dark";
 
   const segments = pathname
     .split("/")
@@ -55,12 +59,9 @@ export function Breadcrumb() {
 
   if (segments.length === 0) {
     return (
-      <View
-        className="px-4 py-2 flex-row items-center"
-        style={{ borderBottomWidth: 1, borderColor: theme.border }}
-      >
+      <BreadcrumbShell glass={glass} isDark={isDark}>
         <Text style={{ color: theme.text, opacity: 0.7, fontSize: 13 }}>Home</Text>
-      </View>
+      </BreadcrumbShell>
     );
   }
 
@@ -72,10 +73,7 @@ export function Breadcrumb() {
   }));
 
   return (
-    <View
-      className="px-4 py-2 flex-row items-center flex-wrap gap-1"
-      style={{ borderBottomWidth: 1, borderColor: theme.border }}
-    >
+    <BreadcrumbShell glass={glass} isDark={isDark}>
       {breadcrumbs.map((crumb, i) => (
         <React.Fragment key={crumb.path}>
           {i > 0 && (
@@ -104,6 +102,48 @@ export function Breadcrumb() {
           )}
         </React.Fragment>
       ))}
+    </BreadcrumbShell>
+  );
+}
+
+function BreadcrumbShell({
+  glass,
+  isDark,
+  children,
+}: {
+  glass: boolean;
+  isDark: boolean;
+  children: React.ReactNode;
+}) {
+  const { theme } = useTheme();
+
+  return (
+    <View style={styles.shell}>
+      {glass ? <GlassSurface isDark={isDark} /> : null}
+      <View
+        className="flex-row items-center flex-wrap gap-1 px-4 py-2"
+        style={[
+          styles.inner,
+          !glass && {
+            borderBottomWidth: 1,
+            borderColor: theme.border,
+            backgroundColor: theme.background,
+          },
+        ]}
+      >
+        {children}
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  shell: {
+    height: CONSOLE_BREADCRUMB_HEIGHT,
+    overflow: "hidden",
+  },
+  inner: {
+    flex: 1,
+    zIndex: 1,
+  },
+});
