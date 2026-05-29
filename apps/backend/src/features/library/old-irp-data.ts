@@ -25,6 +25,7 @@ import {
   OldShelf,
   OldStatus,
   OldSubjectGroup,
+  OldVendor,
 } from "@repo/db/dtos/library";
 import {
   academicYearModel,
@@ -65,6 +66,8 @@ import {
   shelfModel,
   statusModel,
   holidayModel,
+  VendorT,
+  vendorModel,
 } from "@repo/db/schemas/models/library";
 import { and, eq, ilike } from "drizzle-orm";
 import ExcelJS from "exceljs";
@@ -1097,6 +1100,7 @@ async function getCopyDetailsByOldId(oldCopyId: number | null) {
     statusId: (await getLibraryStatusByOldId(oldCopy.statusId))?.id,
     suffix: oldCopy.suffixid,
     type: oldCopy.copyTypeId,
+    vendorId: (await getVendorByOldId(oldCopy.vendorid))?.id,
     volumeInfo: oldCopy.volInfo,
     voucherNumber: oldCopy.voucherNo,
     updatedById: (await getUserByOldId(oldCopy.modifiedById))?.id,
@@ -1227,6 +1231,62 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
   }
 
   return newIssueReturn;
+}
+
+async function getVendorByOldId(oldVendorId: number | null) {
+  if (!oldVendorId) return null;
+
+  const [[oldVendor]] = (await mysqlConnection.query(`
+    SELECT * FROM procurementvendordetailmaintab WHERE id = ${oldVendorId}
+    `)) as [OldVendor[], unknown];
+
+  if (!oldVendor) return null;
+
+  const payload = {
+    legacyVendorId: oldVendorId!,
+    name: oldVendor.vendorName,
+    code: oldVendor.vendoreCode,
+    email: oldVendor.vendorEmail,
+    phone: oldVendor.vendorphoneNumber,
+    website: oldVendor.vendorWebsite,
+    personOfContact: oldVendor.contactpersonName,
+    personOfContactEmail: oldVendor.contactpersonEmail,
+    personOfContactPhone: oldVendor.contactpersonphnoneNumber,
+    pan: oldVendor.panNumber,
+  } as VendorT;
+  const [existingVendor] = await db
+    .select()
+    .from(vendorModel)
+    .where(eq(vendorModel.legacyVendorId, oldVendorId));
+  if (existingVendor) {
+    return (
+      await db
+        .update(vendorModel)
+        .set(payload)
+        .where(eq(vendorModel.id, existingVendor.id))
+        .returning()
+    )[0];
+  }
+  const newVendor = (
+    await db.insert(vendorModel).values(payload).returning()
+  )[0];
+  if (newVendor) {
+    const [existingAddress] = await db
+      .select()
+      .from(addressModel)
+      .where(eq(addressModel.vendorId, newVendor.id!));
+    if (existingAddress) {
+      await db
+        .update(addressModel)
+        .set({ address: oldVendor.vendoraddress })
+        .where(eq(addressModel.id, existingAddress.id));
+    } else {
+      await db
+        .insert(addressModel)
+        .values({ address: oldVendor.vendoraddress, vendorId: newVendor.id! });
+    }
+  }
+  return newVendor;
 }
 
 /** Legacy IRP MySQL stores naive date/datetime in India (IST, UTC+5:30). */
@@ -1361,6 +1421,11 @@ const arr: {
     table: "authortype",
     fn: getAuthorTypeByOldId,
     sql: `SELECT id FROM authortype;`,
+  },
+  {
+    table: "procurementvendordetailmaintab",
+    fn: getVendorByOldId,
+    sql: `SELECT id FROM procurementvendordetailmaintab;`,
   },
   {
     table: "issuereturn",

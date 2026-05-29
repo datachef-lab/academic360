@@ -1009,6 +1009,20 @@
       "when": 1779338648954,
       "tag": "0143_reflective_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 144,
+      "version": "7",
+      "when": 1779787520284,
+      "tag": "0144_burly_silverclaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 145,
+      "version": "7",
+      "when": 1779787571175,
+      "tag": "0145_medical_proudstar",
+      "breakpoints": true
     }
   ]
 }
