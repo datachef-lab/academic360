@@ -29,7 +29,7 @@ export function parseSemesterClassName(name: string): ParsedSemesterClassName {
   if (!trimmed) return { label: "Semester", numeral: null };
 
   const explicit = trimmed.match(/^semester\s*([IVXLCDM]+|\d+)\s*$/i);
-  if (explicit) {
+  if (explicit?.[1]) {
     const token = explicit[1].toUpperCase();
     return {
       label: "Semester",
@@ -38,7 +38,7 @@ export function parseSemesterClassName(name: string): ParsedSemesterClassName {
   }
 
   const abbreviated = trimmed.match(/^sem\.?\s*([IVXLCDM]+|\d+)\s*$/i);
-  if (abbreviated) {
+  if (abbreviated?.[1]) {
     const token = abbreviated[1].toUpperCase();
     return {
       label: "Semester",
@@ -47,7 +47,7 @@ export function parseSemesterClassName(name: string): ParsedSemesterClassName {
   }
 
   const trailingRoman = trimmed.match(/^(.+?)\s+([IVXLCDM]+)$/i);
-  if (trailingRoman) {
+  if (trailingRoman?.[1] && trailingRoman[2]) {
     const prefix = trailingRoman[1].trim();
     const word = prefix.replace(/\s+/g, " ");
     const label =

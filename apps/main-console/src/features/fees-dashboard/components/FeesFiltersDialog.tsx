@@ -70,6 +70,10 @@ const TRANSACTION_STATUS_OPTIONS = [
   { value: "PENDING", label: "Pending" },
 ];
 
+function rowsWithId<T extends { id?: number | null }>(rows: T[]): Array<T & { id: number }> {
+  return rows.filter((row): row is T & { id: number } => row.id != null);
+}
+
 export function FeesFiltersDialog({
   open,
   onOpenChange,
@@ -84,7 +88,7 @@ export function FeesFiltersDialog({
   const [programCourses, setProgramCourses] = useState<ProgramCourseDto[]>([]);
   const [courseLevels, setCourseLevels] = useState<{ id: number; name: string }[]>([]);
   const [regulations, setRegulations] = useState<
-    { id: number; name: string; shortName?: string }[]
+    { id: number; name: string; shortName?: string | null }[]
   >([]);
   const [affiliations, setAffiliations] = useState<{ id: number; name: string }[]>([]);
   const [streams, setStreams] = useState<{ id: number; name: string }[]>([]);
@@ -131,12 +135,12 @@ export function FeesFiltersDialog({
           setClasses(classRows.filter((c) => !c.disabled && c.type === "SEMESTER"));
           setShifts(shiftRows.filter((s) => !s.disabled));
           setProgramCourses(Array.isArray(courseRows) ? courseRows : []);
-          setCourseLevels(Array.isArray(levelRows) ? levelRows : []);
-          setRegulations(Array.isArray(regulationRows) ? regulationRows : []);
-          setAffiliations(Array.isArray(affiliationRows) ? affiliationRows : []);
-          setStreams(Array.isArray(streamRows) ? streamRows : []);
-          setCategories(Array.isArray(categoryRows) ? categoryRows : []);
-          setReligions(Array.isArray(religionRows) ? religionRows : []);
+          setCourseLevels(rowsWithId(Array.isArray(levelRows) ? levelRows : []));
+          setRegulations(rowsWithId(Array.isArray(regulationRows) ? regulationRows : []));
+          setAffiliations(rowsWithId(Array.isArray(affiliationRows) ? affiliationRows : []));
+          setStreams(rowsWithId(Array.isArray(streamRows) ? streamRows : []));
+          setCategories(rowsWithId(Array.isArray(categoryRows) ? categoryRows : []));
+          setReligions(rowsWithId(Array.isArray(religionRows) ? religionRows : []));
         },
       )
       .catch(console.error)
@@ -160,11 +164,17 @@ export function FeesFiltersDialog({
     let list = programCourses.filter((pc) => pc.id != null);
     if (form.affiliationIds.length) {
       const allowed = new Set(form.affiliationIds.map(Number));
-      list = list.filter((pc) => pc.affiliationId != null && allowed.has(pc.affiliationId));
+      list = list.filter((pc) => {
+        const id = pc.affiliation?.id;
+        return id != null && allowed.has(id);
+      });
     }
     if (form.regulationTypeIds.length) {
       const allowed = new Set(form.regulationTypeIds.map(Number));
-      list = list.filter((pc) => pc.regulationTypeId != null && allowed.has(pc.regulationTypeId));
+      list = list.filter((pc) => {
+        const id = pc.regulationType?.id;
+        return id != null && allowed.has(id);
+      });
     }
     return list.map((pc) => ({
       value: String(pc.id),

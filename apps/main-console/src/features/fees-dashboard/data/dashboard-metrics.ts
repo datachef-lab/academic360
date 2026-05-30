@@ -40,7 +40,10 @@ export type FeesDashboardTab =
   | "transactions"
   | "challans"
   | "structures"
-  | "slabs";
+  | "slabs"
+  | "realtime"
+  | "receipts"
+  | "reports";
 
 export interface DashboardMetric {
   id: MetricId;
@@ -161,6 +164,9 @@ export const TAB_METRICS: Record<FeesDashboardTab, MetricId[]> = {
     "eligible_students",
   ],
   slabs: ["fee_slabs_registered", "fee_categories_count", "eligible_students", "fee_groups_count"],
+  realtime: ["today_collected", "today_failed_payments", "failed_payments", "fee_collected"],
+  receipts: ["receipts_issued", "online_receipts", "cash_receipts", "cheque_receipts"],
+  reports: ["fee_receivable", "fee_collected", "fee_pending", "collection_rate"],
 };
 
 /** Shown below main KPI row — enrollment tab only */

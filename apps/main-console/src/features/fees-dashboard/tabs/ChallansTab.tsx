@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { TabPanel } from "../components/TabPanel";
 import { SemesterBreakdownPanel } from "../components/SemesterBreakdownPanel";
 import { PaymentChannelsPanel } from "../components/PaymentChannelsPanel";

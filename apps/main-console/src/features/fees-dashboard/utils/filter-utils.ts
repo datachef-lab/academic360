@@ -1,6 +1,23 @@
 import type { FeesDashboardFilters } from "../types/dashboard-api";
 
-export type FeesDashboardFilterLabels = Record<string, string>;
+export type FeesDashboardFilterLabels = {
+  academicYear: string;
+  program: string;
+  programCourse: string;
+  semester: string;
+  shift: string;
+  regulation: string;
+  affiliation: string;
+  stream: string;
+  category: string;
+  religion: string;
+  gender: string;
+  paymentStatus: string;
+  paymentMode: string;
+  transactionStatus: string;
+  dateRange: string;
+  studentSearch: string;
+};
 
 export const DEFAULT_FILTER_LABELS: FeesDashboardFilterLabels = {
   academicYear: "All academic years",
@@ -25,7 +42,7 @@ export function buildFilterChips(labels: FeesDashboardFilterLabels): string[] {
   return Object.entries(labels)
     .filter(([key, value]) => {
       if (key === "studentSearch") return Boolean(value?.trim());
-      const defaultValue = DEFAULT_FILTER_LABELS[key];
+      const defaultValue = DEFAULT_FILTER_LABELS[key as keyof FeesDashboardFilterLabels];
       return defaultValue != null && value !== defaultValue;
     })
     .map(([, value]) => value);
