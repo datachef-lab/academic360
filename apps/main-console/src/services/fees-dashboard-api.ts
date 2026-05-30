@@ -3,6 +3,7 @@ import type { ApiResponse } from "@/types/api-response";
 import type {
   FeesDashboardFilters,
   FeesDashboardPayload,
+  FeesDashboardSection,
 } from "@/features/fees-dashboard/types/dashboard-api";
 
 const BASE_PATH = "/api/v1/fees/dashboard";
@@ -23,6 +24,7 @@ function appendStringList(params: URLSearchParams, key: string, values?: string[
 
 export async function getFeesDashboard(
   rawFilters: FeesDashboardFilters = {},
+  section: FeesDashboardSection = "all",
 ): Promise<FeesDashboardPayload> {
   const filters = rawFilters ?? {};
   const params = new URLSearchParams();
@@ -43,6 +45,7 @@ export async function getFeesDashboard(
   if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
   if (filters.dateTo) params.set("dateTo", filters.dateTo);
   if (filters.studentSearch) params.set("studentSearch", filters.studentSearch);
+  if (section !== "all") params.set("section", section);
 
   const qs = params.toString();
   const url = qs ? `${BASE_PATH}?${qs}` : BASE_PATH;

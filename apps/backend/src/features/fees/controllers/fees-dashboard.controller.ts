@@ -4,6 +4,7 @@ import { handleError } from "@/utils";
 import {
   getFeesDashboardData,
   type FeesDashboardFilters,
+  type FeesDashboardSection,
 } from "../services/fees-dashboard.service.js";
 
 function parseIntList(value: unknown): number[] | undefined {
@@ -49,7 +50,11 @@ export async function getFeesDashboardHandler(req: Request, res: Response) {
       studentSearch: parseOptionalString(q.studentSearch),
     };
 
-    const payload = await getFeesDashboardData(filters);
+    const sectionRaw = parseOptionalString(q.section)?.toLowerCase();
+    const section: FeesDashboardSection =
+      sectionRaw === "core" || sectionRaw === "reports" ? sectionRaw : "all";
+
+    const payload = await getFeesDashboardData(filters, section);
     return res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", payload, "Fees dashboard loaded"));

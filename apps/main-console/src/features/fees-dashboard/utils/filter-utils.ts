@@ -1,5 +1,28 @@
 import type { FeesDashboardFilters } from "../types/dashboard-api";
 
+export function hasDashboardScope(filters?: FeesDashboardFilters | null): boolean {
+  const f = filters ?? {};
+  return Boolean(
+    f.academicYearIds?.length ||
+    f.programCourseIds?.length ||
+    f.classIds?.length ||
+    f.shiftIds?.length ||
+    f.streamIds?.length ||
+    f.courseLevelIds?.length ||
+    f.regulationTypeIds?.length ||
+    f.affiliationIds?.length ||
+    f.categoryIds?.length ||
+    f.religionIds?.length ||
+    f.genders?.length ||
+    f.paymentStatuses?.length ||
+    f.paymentModes?.length ||
+    f.transactionStatuses?.length ||
+    f.dateFrom ||
+    f.dateTo ||
+    f.studentSearch?.trim(),
+  );
+}
+
 export type FeesDashboardFilterLabels = {
   academicYear: string;
   program: string;
@@ -38,14 +61,48 @@ export const DEFAULT_FILTER_LABELS: FeesDashboardFilterLabels = {
   studentSearch: "",
 };
 
-export function buildFilterChips(labels: FeesDashboardFilterLabels): string[] {
-  return Object.entries(labels)
-    .filter(([key, value]) => {
+export const FILTER_DIMENSION_LABELS: Record<keyof FeesDashboardFilterLabels, string> = {
+  academicYear: "Academic year",
+  program: "Program",
+  programCourse: "Course",
+  semester: "Semester",
+  shift: "Shift",
+  regulation: "Regulation",
+  affiliation: "Affiliation",
+  stream: "Stream",
+  category: "Category",
+  religion: "Religion",
+  gender: "Gender",
+  paymentStatus: "Payment status",
+  paymentMode: "Payment mode",
+  transactionStatus: "Transaction status",
+  dateRange: "Date range",
+  studentSearch: "Student search",
+};
+
+export type ActiveFilterChip = {
+  key: keyof FeesDashboardFilterLabels;
+  label: string;
+  value: string;
+};
+
+export function buildActiveFilterChips(labels: FeesDashboardFilterLabels): ActiveFilterChip[] {
+  return (Object.keys(labels) as Array<keyof FeesDashboardFilterLabels>)
+    .filter((key) => {
+      const value = labels[key];
       if (key === "studentSearch") return Boolean(value?.trim());
-      const defaultValue = DEFAULT_FILTER_LABELS[key as keyof FeesDashboardFilterLabels];
+      const defaultValue = DEFAULT_FILTER_LABELS[key];
       return defaultValue != null && value !== defaultValue;
     })
-    .map(([, value]) => value);
+    .map((key) => ({
+      key,
+      label: FILTER_DIMENSION_LABELS[key],
+      value: labels[key],
+    }));
+}
+
+export function buildFilterChips(labels: FeesDashboardFilterLabels): string[] {
+  return buildActiveFilterChips(labels).map((chip) => chip.value);
 }
 
 export type FeesDashboardFilterForm = {

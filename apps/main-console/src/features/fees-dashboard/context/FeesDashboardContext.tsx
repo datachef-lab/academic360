@@ -9,11 +9,13 @@ const FeesDashboardContext = createContext<FeesDashboardContextValue | null>(nul
 export function FeesDashboardProvider({
   children,
   filters = {},
+  enabled = true,
 }: {
   children: ReactNode;
   filters?: FeesDashboardFilters;
+  enabled?: boolean;
 }) {
-  const value = useFeesDashboardData(filters);
+  const value = useFeesDashboardData(filters, { enabled });
   return <FeesDashboardContext.Provider value={value}>{children}</FeesDashboardContext.Provider>;
 }
 

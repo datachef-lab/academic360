@@ -25,6 +25,7 @@ import type {
   FeesDashboardPayload,
   FeesDashboardSocketUpdate,
 } from "../types/dashboard-api";
+import { hasDashboardScope } from "../utils/filter-utils";
 
 export function countOpenSemesterFeeScopes(
   activities: AcademicActivityDto[],
@@ -95,13 +96,23 @@ export function isStructureOnlineWindowOpen(structure: FeeStructureDto): boolean
   return now >= start && now <= end;
 }
 
-export function useFeesDashboardData(rawFilters: FeesDashboardFilters = {}) {
+type UseFeesDashboardDataOptions = {
+  /** When false, dashboard API is not called (e.g. filters still initializing). */
+  enabled?: boolean;
+};
+
+export function useFeesDashboardData(
+  rawFilters: FeesDashboardFilters = {},
+  options: UseFeesDashboardDataOptions = {},
+) {
   const filters = rawFilters ?? {};
+  const enabled = options.enabled ?? true;
+  const canFetchDashboard = enabled && hasDashboardScope(filters);
   const { user } = useAuth();
   const userId = user?.id?.toString();
 
   const [loading, setLoading] = useState(true);
-  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardLoading, setDashboardLoading] = useState(canFetchDashboard);
   const [error, setError] = useState<string | null>(null);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [slabs, setSlabs] = useState<FeesSlab[]>([]);
@@ -116,24 +127,50 @@ export function useFeesDashboardData(rawFilters: FeesDashboardFilters = {}) {
   const fetchSeq = useRef(0);
 
   const fetchDashboard = useCallback(async () => {
+    if (!canFetchDashboard) {
+      setDashboard(null);
+      setDashboardLoading(false);
+      setDashboardError(null);
+      return;
+    }
+
     const seq = ++fetchSeq.current;
     setDashboardLoading(true);
     setDashboardError(null);
     try {
-      const payload = await getFeesDashboard(filters);
+      const corePayload = await getFeesDashboard(filters, "core");
       if (seq !== fetchSeq.current) return;
-      setDashboard(payload);
+      setDashboard(corePayload);
+      setDashboardLoading(false);
+
+      void getFeesDashboard(filters, "reports")
+        .then((reportsPayload) => {
+          if (seq !== fetchSeq.current) return;
+          setDashboard((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  challansByProgram: reportsPayload.challansByProgram,
+                  enrollmentMatrix: reportsPayload.enrollmentMatrix,
+                  slabBreakdown: reportsPayload.slabBreakdown,
+                  promotionBreakdown: reportsPayload.promotionBreakdown,
+                  updatedAt: reportsPayload.updatedAt,
+                }
+              : reportsPayload,
+          );
+        })
+        .catch((e) => {
+          if (seq !== fetchSeq.current) return;
+          console.error("Fees dashboard reports section failed:", e);
+        });
     } catch (e) {
       if (seq !== fetchSeq.current) return;
       console.error(e);
       setDashboard(null);
       setDashboardError("Could not load dashboard metrics");
-    } finally {
-      if (seq === fetchSeq.current) {
-        setDashboardLoading(false);
-      }
+      setDashboardLoading(false);
     }
-  }, [filtersKey, filters]);
+  }, [filtersKey, filters, canFetchDashboard]);
 
   useEffect(() => {
     let cancelled = false;
@@ -184,13 +221,17 @@ export function useFeesDashboardData(rawFilters: FeesDashboardFilters = {}) {
   }, []);
 
   useEffect(() => {
+    if (!canFetchDashboard) {
+      setDashboardLoading(false);
+      return;
+    }
     void fetchDashboard();
-  }, [fetchDashboard]);
+  }, [fetchDashboard, canFetchDashboard]);
 
   const { socket, isConnected } = useSocket({ userId });
 
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socket || !isConnected || !canFetchDashboard) return;
 
     socket.emit("subscribe_fees_dashboard");
 
@@ -205,7 +246,7 @@ export function useFeesDashboardData(rawFilters: FeesDashboardFilters = {}) {
       socket.off("fees_dashboard_updated", handleDashboardUpdate);
       socket.emit("unsubscribe_fees_dashboard");
     };
-  }, [socket, isConnected, fetchDashboard]);
+  }, [socket, isConnected, fetchDashboard, canFetchDashboard]);
 
   const openScopes = countOpenSemesterFeeScopes(semesterFeeActivities, filters.academicYearIds);
 
@@ -303,7 +344,8 @@ export function useFeesDashboardData(rawFilters: FeesDashboardFilters = {}) {
   ]);
 
   return {
-    loading: loading || dashboardLoading,
+    loading: dashboardLoading,
+    masterLoading: loading,
     error: error ?? dashboardError,
     slabs,
     categories,

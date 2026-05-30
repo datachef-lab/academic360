@@ -20,6 +20,8 @@ export type FeesDashboardFilters = {
   studentSearch?: string;
 };
 
+export type FeesDashboardSection = "core" | "reports" | "all";
+
 export type PaymentStatusRow = {
   status: string;
   count: number;
@@ -46,7 +48,10 @@ export type SemesterBreakdownRow = {
 
 export type HourlyActivityRow = {
   hour: string;
+  /** Successful linked payments (chart line). */
   txns: number;
+  success: number;
+  failed: number;
 };
 
 export type MixRow = {

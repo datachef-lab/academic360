@@ -18,7 +18,7 @@ import { FeesDashboardProvider, useFeesDashboard } from "./context/FeesDashboard
 import { LiveUpdatesBadge } from "./components/LiveUpdatesBadge";
 import type { FeesDashboardFilters } from "./types/dashboard-api";
 import {
-  buildFilterChips,
+  buildActiveFilterChips,
   DEFAULT_FILTER_LABELS,
   type FeesDashboardFilterLabels,
 } from "./utils/filter-utils";
@@ -29,7 +29,7 @@ import {
 } from "./utils/scope-filter-defaults";
 
 const DASHBOARD_TABS = [
-  { value: "overview", label: "Overview & live" },
+  { value: "overview", label: "Overview" },
   { value: "enrollment", label: "Enrolment & fees" },
   { value: "collections", label: "Collections" },
   { value: "transactions", label: "Transactions" },
@@ -37,6 +37,15 @@ const DASHBOARD_TABS = [
   { value: "structures", label: "Structures" },
   { value: "slabs", label: "Slabs" },
 ] as const;
+
+function DashboardBootScreen({ message }: { message: string }) {
+  return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 bg-[#eaeaea] p-8">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#7c3aed] border-t-transparent" />
+      <p className="text-sm text-[#555]">{message}</p>
+    </div>
+  );
+}
 
 type FeesDashboardContentProps = {
   filters: FeesDashboardFilters;
@@ -54,13 +63,13 @@ function FeesDashboardContent({
   const { isSocketConnected } = useFeesDashboard();
   const [activeTab, setActiveTab] = useState("overview");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const filterChips = buildFilterChips(filterLabels);
+  const activeFilters = buildActiveFilterChips(filterLabels);
 
   return (
     <div className="min-h-full bg-[#eaeaea]">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <header className="border-b border-[#d1d1d1] bg-gradient-to-r from-[#f5f3ff] via-[#faf5ff] to-white">
-          <div className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[#7c3aed]">
                 Fees module
@@ -68,27 +77,37 @@ function FeesDashboardContent({
               <h1 className="text-xl font-bold text-[#1a1a1a]">Fees dashboard</h1>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {filterChips.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => setFiltersOpen(true)}
-                  className="inline-flex items-center rounded-md border border-[#d4d4d4] bg-white px-2.5 py-1.5 text-xs text-[#333] shadow-sm hover:border-[#7c3aed]/40"
-                >
-                  {chip}
-                  <ChevronDown className="ml-1 h-3.5 w-3.5 text-[#666]" />
-                </button>
-              ))}
-              <Button
-                size="sm"
-                className="h-8 rounded-md bg-[#7c3aed] text-xs text-white hover:bg-[#6d28d9]"
-                onClick={() => setFiltersOpen(true)}
-              >
-                <Filter className="mr-1.5 h-3.5 w-3.5" />
-                Filters
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              className="h-8 shrink-0 rounded-md bg-[#7c3aed] text-xs text-white hover:bg-[#6d28d9]"
+              onClick={() => setFiltersOpen(true)}
+            >
+              <Filter className="mr-1.5 h-3.5 w-3.5" />
+              Filters
+            </Button>
+          </div>
+
+          <div className="border-t border-[#e5e5e5] bg-white/90 px-4 py-2.5">
+            {activeFilters.length === 0 ? (
+              <p className="text-xs text-[#888]">No filters applied — showing all data in scope.</p>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                {activeFilters.map((chip) => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    onClick={() => setFiltersOpen(true)}
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-[#d4d4d4] bg-white px-2.5 py-1.5 text-left shadow-sm hover:border-[#7c3aed]/40"
+                  >
+                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[#888]">
+                      {chip.label}
+                    </span>
+                    <span className="truncate text-xs font-medium text-[#333]">{chip.value}</span>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#666]" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="overflow-x-auto border-t border-[#e5e5e5] bg-white/80 px-2">
@@ -148,7 +167,8 @@ export default function FeesDashboardPage() {
   const [filters, setFilters] = useState<FeesDashboardFilters>({});
   const [filterLabels, setFilterLabels] =
     useState<FeesDashboardFilterLabels>(DEFAULT_FILTER_LABELS);
-  const [filtersInitialized, setFiltersInitialized] = useState(false);
+  const [filtersReady, setFiltersReady] = useState(false);
+  const [filtersInitError, setFiltersInitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (availableAcademicYears.length === 0) {
@@ -194,35 +214,47 @@ export default function FeesDashboardPage() {
   };
 
   useEffect(() => {
-    if (filtersInitialized) return;
+    if (filtersReady) return;
 
     let cancelled = false;
 
     async function initFilters() {
+      setFiltersInitError(null);
       const defaultYear =
         currentAcademicYear ?? availableAcademicYears.find((y) => y.isCurrentYear);
       if (!defaultYear?.id) return;
 
       const yearLabel = defaultYear.year ?? "Current academic year";
-      const resolved = await resolveSmartDefaults(defaultYear.id, yearLabel);
-
-      if (cancelled) return;
-      setFilters(resolved.filters);
-      setFilterLabels(resolved.labels);
-      setFiltersInitialized(true);
+      try {
+        const resolved = await resolveSmartDefaults(defaultYear.id, yearLabel);
+        if (cancelled) return;
+        setFilters(resolved.filters);
+        setFilterLabels(resolved.labels);
+        setFiltersReady(true);
+      } catch {
+        if (cancelled) return;
+        setFiltersInitError("Could not prepare dashboard filters.");
+        setFilters({ academicYearIds: [defaultYear.id] });
+        setFilterLabels({
+          ...DEFAULT_FILTER_LABELS,
+          academicYear: yearLabel,
+        });
+        setFiltersReady(true);
+      }
     }
 
     void initFilters();
     return () => {
       cancelled = true;
     };
-  }, [currentAcademicYear, availableAcademicYears, filtersInitialized]);
+  }, [currentAcademicYear, availableAcademicYears, filtersReady]);
 
   const applySmartDefaults = async () => {
     const defaultYear = currentAcademicYear ?? availableAcademicYears.find((y) => y.isCurrentYear);
     if (!defaultYear?.id) {
       setFilters({});
       setFilterLabels(DEFAULT_FILTER_LABELS);
+      setFiltersReady(false);
       return;
     }
 
@@ -230,6 +262,7 @@ export default function FeesDashboardPage() {
     const resolved = await resolveSmartDefaults(defaultYear.id, yearLabel);
     setFilters(resolved.filters);
     setFilterLabels(resolved.labels);
+    setFiltersReady(true);
   };
 
   const handleFiltersChange = (
@@ -244,8 +277,21 @@ export default function FeesDashboardPage() {
     void applySmartDefaults();
   };
 
+  if (!filtersReady) {
+    return (
+      <DashboardBootScreen
+        message={
+          filtersInitError ??
+          (availableAcademicYears.length === 0
+            ? "Loading academic year…"
+            : "Preparing dashboard filters…")
+        }
+      />
+    );
+  }
+
   return (
-    <FeesDashboardProvider filters={filters}>
+    <FeesDashboardProvider filters={filters} enabled={filtersReady}>
       <FeesDashboardContent
         filters={filters}
         filterLabels={filterLabels}
