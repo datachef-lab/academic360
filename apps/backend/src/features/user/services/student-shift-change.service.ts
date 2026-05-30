@@ -35,9 +35,12 @@ import * as userService from "./user.service.js";
 
 const STUDENT_EMAIL_DOMAIN = "thebges.edu.in";
 
-/** Active promotion = no end date set (open semester / current placement row). */
+/** Active promotion = no end date and not deprecated. */
 function activePromotionCondition(...extra: SQL[]): SQL {
-  const parts: SQL[] = [isNull(promotionModel.endDate)];
+  const parts: SQL[] = [
+    isNull(promotionModel.endDate),
+    sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+  ];
   if (extra.length) parts.push(...extra);
   return and(...parts)!;
 }
@@ -259,6 +262,7 @@ function buildClonedPromotionInsert(
     startDate: closedAt,
     endDate: null,
     remarks: source.remarks,
+    isDeprecated: false,
     examFormSubmissionTimeStamp: null,
   };
 }
@@ -899,7 +903,6 @@ export async function getStudentShiftChangePreview(
 
   const promotionIdsWithExamHistory =
     await getPromotionIdsWithExamCandidates(activePromotionIds);
-  const examHistorySet = new Set(promotionIdsWithExamHistory);
 
   const oldRows = await Promise.all(
     activePromotions.map(async (p) => {
@@ -922,22 +925,17 @@ export async function getStudentShiftChangePreview(
       activePromotions.map(async (p) => {
         const oldRow = await loadFeeGroupPreviewForPromotion(p);
         let projectedRow: ShiftChangeFeeGroupPreviewRow;
-        if (examHistorySet.has(p.id!)) {
-          // Close + clone: new promotion gets fgpm via ensureDefault (General or carry-forward)
-          if (oldRow.feeCategory) {
-            projectedRow = {
-              ...oldRow,
-              promotionLabel: `${oldRow.promotionLabel} (new row)`,
-              approvalType: oldRow.approvalType ?? "SYSTEM",
-              totalPayable: null,
-              receiptType: null,
-              generatedDocumentType: null,
-            };
-          } else {
-            projectedRow = await loadDefaultGeneralFeeGroupPreview(p);
-          }
+        if (oldRow.feeCategory) {
+          projectedRow = {
+            ...oldRow,
+            promotionLabel: `${oldRow.promotionLabel} (new row)`,
+            approvalType: oldRow.approvalType ?? "SYSTEM",
+            totalPayable: null,
+            receiptType: null,
+            generatedDocumentType: null,
+          };
         } else {
-          projectedRow = oldRow;
+          projectedRow = await loadDefaultGeneralFeeGroupPreview(p);
         }
         return enrichFeePreviewWithProjectedPayable(
           studentId,
@@ -1134,13 +1132,11 @@ export async function changeStudentShift(
 
   let feeMappingsDeleted = 0;
   let feeStructuresProcessed = 0;
-  let promotionsClosedForExamHistory = 0;
-  let promotionsClonedForExamHistory = 0;
-  let promotionsUpdatedInPlace = 0;
+  let promotionsClosed = 0;
+  let promotionsCloned = 0;
 
   const promotionIdsWithExamHistory =
     await getPromotionIdsWithExamCandidates(activePromotionIds);
-  const examHistorySet = new Set(promotionIdsWithExamHistory);
 
   const closedAt = new Date();
 
@@ -1169,41 +1165,25 @@ export async function changeStudentShift(
     for (const promo of activePromotions) {
       if (promo.id == null) continue;
 
-      if (examHistorySet.has(promo.id)) {
-        // Close historical row (keeps old shift + exam_candidates integrity)
-        await tx
-          .update(promotionModel)
-          .set({ endDate: closedAt, updatedAt: closedAt })
-          .where(
-            and(
-              eq(promotionModel.id, promo.id),
-              activePromotionCondition(eq(promotionModel.studentId, studentId)),
-            ),
-          );
+      await tx
+        .update(promotionModel)
+        .set({ endDate: closedAt, isDeprecated: true, updatedAt: closedAt })
+        .where(
+          and(
+            eq(promotionModel.id, promo.id),
+            activePromotionCondition(eq(promotionModel.studentId, studentId)),
+          ),
+        );
 
-        await tx
-          .insert(promotionModel)
-          .values(buildClonedPromotionInsert(promo, newShiftId, closedAt));
+      await tx
+        .insert(promotionModel)
+        .values(buildClonedPromotionInsert(promo, newShiftId, closedAt));
 
-        promotionsClosedForExamHistory++;
-        promotionsClonedForExamHistory++;
-      } else {
-        const [updated] = await tx
-          .update(promotionModel)
-          .set({ shiftId: newShiftId, updatedAt: closedAt })
-          .where(
-            and(
-              eq(promotionModel.id, promo.id),
-              activePromotionCondition(eq(promotionModel.studentId, studentId)),
-            ),
-          )
-          .returning({ id: promotionModel.id });
-
-        if (updated) promotionsUpdatedInPlace++;
-      }
+      promotionsClosed++;
+      promotionsCloned++;
     }
 
-    if (promotionsClosedForExamHistory + promotionsUpdatedInPlace === 0) {
+    if (promotionsClosed === 0) {
       throw new Error(
         "Failed to update any active promotion (endDate IS NULL)",
       );
@@ -1247,10 +1227,9 @@ export async function changeStudentShift(
     oldShiftId,
     newShiftId,
     feesPaid,
-    promotionsUpdated:
-      promotionsUpdatedInPlace + promotionsClonedForExamHistory,
-    promotionsClosedForExamHistory,
-    promotionsClonedForExamHistory,
+    promotionsUpdated: promotionsCloned,
+    promotionsClosedForExamHistory: promotionsClosed,
+    promotionsClonedForExamHistory: promotionsCloned,
     promotionIdsWithExamHistory,
     feeMappingsDeleted,
     feeStructuresProcessed,

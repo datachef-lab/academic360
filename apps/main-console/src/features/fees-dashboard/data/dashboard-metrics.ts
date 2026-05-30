@@ -15,6 +15,10 @@ export type MetricId =
   | "challans_pending"
   | "today_collected"
   | "today_challans"
+  | "today_receipts"
+  | "today_failed_payments"
+  | "receipts_issued"
+  | "challan_only"
   | "online_receipts"
   | "cash_receipts"
   | "cheque_receipts"
@@ -36,10 +40,7 @@ export type FeesDashboardTab =
   | "transactions"
   | "challans"
   | "structures"
-  | "slabs"
-  | "receipts"
-  | "reports"
-  | "realtime";
+  | "slabs";
 
 export interface DashboardMetric {
   id: MetricId;
@@ -69,16 +70,40 @@ export const ALL_METRICS: Record<MetricId, DashboardMetric> = {
     label: "Challans issued",
     hint: "challanGeneratedAt set",
   },
-  challans_pending: { id: "challans_pending", label: "Challan pending", hint: "no challan yet" },
+  challans_pending: {
+    id: "challans_pending",
+    label: "Challan pending",
+    hint: "eligible − challans issued",
+  },
   today_collected: {
     id: "today_collected",
     label: "Collected today",
-    hint: "payments SUCCESS · today",
+    hint: "linked payments SUCCESS · today",
   },
   today_challans: {
     id: "today_challans",
     label: "Challans today",
     hint: "challanGeneratedAt · today",
+  },
+  today_receipts: {
+    id: "today_receipts",
+    label: "Receipts today",
+    hint: "receipt issued · today",
+  },
+  today_failed_payments: {
+    id: "today_failed_payments",
+    label: "Failed today",
+    hint: "payments FAILED · today",
+  },
+  receipts_issued: {
+    id: "receipts_issued",
+    label: "Receipts issued",
+    hint: "receipt number set",
+  },
+  challan_only: {
+    id: "challan_only",
+    label: "Challan only",
+    hint: "challan without receipt",
   },
   online_receipts: {
     id: "online_receipts",
@@ -127,8 +152,8 @@ export const TAB_METRICS: Record<FeesDashboardTab, MetricId[]> = {
   overview: ["fee_receivable", "fee_collected", "fee_pending", "total_students"],
   enrollment: ["fee_receivable", "fee_collected", "challans_generated", "challans_pending"],
   collections: ["fee_receivable", "fee_collected", "fee_pending", "collection_rate"],
-  transactions: ["online_collected", "cash_collected", "cash_receipts", "cheque_receipts"],
-  challans: ["challans_generated", "challans_pending", "eligible_students", "fee_pending"],
+  transactions: ["fee_collected", "online_collected", "cash_collected", "failed_payments"],
+  challans: ["challans_generated", "challans_pending", "receipts_issued", "fee_collected"],
   structures: [
     "fee_structures_total",
     "semester_fee_scopes_open",
@@ -136,15 +161,11 @@ export const TAB_METRICS: Record<FeesDashboardTab, MetricId[]> = {
     "eligible_students",
   ],
   slabs: ["fee_slabs_registered", "fee_categories_count", "eligible_students", "fee_groups_count"],
-  receipts: ["fee_collected", "online_collected", "cash_collected", "online_receipts"],
-  reports: ["fee_receivable", "fee_collected", "fee_pending", "total_students"],
-  realtime: ["eligible_students", "online_receipts", "cash_receipts", "cheque_receipts"],
 };
 
-/** Shown below main KPI row on selected tabs */
+/** Shown below main KPI row — enrollment tab only */
 export const TAB_TODAY_METRICS: Partial<Record<FeesDashboardTab, MetricId[]>> = {
-  overview: ["today_collected", "today_challans"],
-  transactions: ["today_collected", "today_challans"],
+  enrollment: ["today_collected", "today_challans"],
 };
 
 export interface MetricValues {
@@ -160,6 +181,10 @@ export interface MetricValues {
   challans_pending: number;
   today_collected: number;
   today_challans: number;
+  today_receipts: number;
+  today_failed_payments: number;
+  receipts_issued: number;
+  challan_only: number;
   online_receipts: number;
   cash_receipts: number;
   cheque_receipts: number;
@@ -175,33 +200,40 @@ export interface MetricValues {
   fee_groups_count: number;
 }
 
-export const MOCK_METRIC_VALUES: MetricValues = {
-  fee_receivable: 375_740_000,
-  fee_collected: 309_030_000,
-  fee_pending: 66_710_000,
-  total_students: 10023,
-  eligible_students: 10023,
-  fully_paid: 6542,
-  partial_or_unpaid: 3481,
-  collection_rate: 82.3,
-  challans_generated: 9842,
-  challans_pending: 1181,
-  today_collected: 18_450_000,
-  today_challans: 142,
-  online_receipts: 8412,
-  cash_receipts: 612,
-  cheque_receipts: 148,
-  cash_collected: 18_400_000,
-  online_collected: 290_630_000,
-  failed_payments: 127,
-  waived_amount: 4_200_000,
-  late_fee_due: 1_850_000,
-  fee_structures_total: 48,
-  semester_fee_scopes_open: 12,
-  fee_slabs_registered: 8,
-  fee_categories_count: 6,
-  fee_groups_count: 24,
+export const EMPTY_METRIC_VALUES: MetricValues = {
+  fee_receivable: 0,
+  fee_collected: 0,
+  fee_pending: 0,
+  total_students: 0,
+  eligible_students: 0,
+  fully_paid: 0,
+  partial_or_unpaid: 0,
+  collection_rate: 0,
+  challans_generated: 0,
+  challans_pending: 0,
+  today_collected: 0,
+  today_challans: 0,
+  today_receipts: 0,
+  today_failed_payments: 0,
+  receipts_issued: 0,
+  challan_only: 0,
+  online_receipts: 0,
+  cash_receipts: 0,
+  cheque_receipts: 0,
+  cash_collected: 0,
+  online_collected: 0,
+  failed_payments: 0,
+  waived_amount: 0,
+  late_fee_due: 0,
+  fee_structures_total: 0,
+  semester_fee_scopes_open: 0,
+  fee_slabs_registered: 0,
+  fee_categories_count: 0,
+  fee_groups_count: 0,
 };
+
+/** @deprecated Use live API data only */
+export const MOCK_METRIC_VALUES: MetricValues = EMPTY_METRIC_VALUES;
 
 const INR_METRIC_IDS: Set<MetricId> = new Set([
   "fee_receivable",

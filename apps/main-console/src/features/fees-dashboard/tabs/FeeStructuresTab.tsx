@@ -52,7 +52,7 @@ export function FeeStructuresTab() {
       {error && <p className="text-sm text-red-600">{error} Showing cached or sample metrics.</p>}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <SemesterBreakdownPanel variant="structures" />
+        <SemesterBreakdownPanel variant="structures" semesterNumeralOnly />
         <StructureSlabChartWidget />
       </div>
 

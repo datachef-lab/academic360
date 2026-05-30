@@ -178,6 +178,13 @@ export interface LibraryJournalTypeUpdate {
   meta?: Record<string, unknown>;
 }
 
+export interface FeesDashboardUpdate {
+  id: string;
+  type: "fees_dashboard_update";
+  updatedAt: string;
+  reason: string;
+}
+
 // Active user info interface
 interface ActiveUserInfo {
   id: number;
@@ -298,6 +305,24 @@ class SocketService {
           }
         },
       );
+
+      socket.on("subscribe_fees_dashboard", () => {
+        try {
+          socket.join("fees_dashboard");
+          log.debug(`Socket ${socket.id} joined room: fees_dashboard`);
+        } catch (error) {
+          log.error("Error subscribing to fees dashboard room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_fees_dashboard", () => {
+        try {
+          socket.leave("fees_dashboard");
+          log.debug(`Socket ${socket.id} left room: fees_dashboard`);
+        } catch (error) {
+          log.error("Error unsubscribing from fees dashboard room", { error });
+        }
+      });
 
       socket.on("subscribe_library_entry_exit", () => {
         try {
@@ -1389,6 +1414,27 @@ class SocketService {
       );
     } catch (error) {
       log.error("Error sending library journal type update", { error });
+    }
+  }
+
+  sendFeesDashboardUpdate(payload: { updatedAt: string; reason: string }) {
+    if (!this.io) {
+      log.error("Cannot send fees dashboard update: io is null");
+      return;
+    }
+
+    try {
+      const update: FeesDashboardUpdate = {
+        id: `fees_dashboard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "fees_dashboard_update",
+        updatedAt: payload.updatedAt,
+        reason: payload.reason,
+      };
+
+      this.io.to("fees_dashboard").emit("fees_dashboard_updated", update);
+      log.debug(`Fees dashboard update → fees_dashboard (${payload.reason})`);
+    } catch (error) {
+      log.error("Error sending fees dashboard update", { error });
     }
   }
 }
