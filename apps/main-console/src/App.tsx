@@ -501,6 +501,7 @@ const router = createBrowserRouter(
             { path: "author-types", element: <libraryModule.AuthorTypesPage /> },
             { path: "authors", element: <libraryModule.AuthorsPage /> },
             { path: "author-details", element: <libraryModule.AuthorDetailsPage /> },
+            { path: "vendors", element: <libraryModule.VendorPage /> },
             //   { path: "fine-management", element: <LibFineManagement /> },
             //   { path: "lib-report", element: <LibReport /> },
           ],

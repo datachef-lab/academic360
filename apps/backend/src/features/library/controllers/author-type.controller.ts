@@ -229,16 +229,18 @@ export const deleteAuthorTypeController = async (
       return;
     }
     const deleted = await deleteAuthorType(id);
-    res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          null,
-          "Author type deleted successfully.",
-        ),
-      );
+    if (deleted) {
+      res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            "SUCCESS",
+            null,
+            "Author type deleted successfully.",
+          ),
+        );
+    }
   } catch (error) {
     handleError(error, res, next);
   }

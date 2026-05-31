@@ -129,6 +129,17 @@ export interface LibraryShelfUpdate {
   updatedAt: string;
   meta?: Record<string, unknown>;
 }
+export interface LibraryVendorUpdate {
+  id: string;
+  type: "library_vendor_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  vendorId: number;
+  vendorName: string;
+  message: string;
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
 
 export interface LibraryStatusUpdate {
   id: string;
@@ -532,6 +543,24 @@ class SocketService {
           log.error("Error unsubscribing from library journal types room", {
             error,
           });
+        }
+      });
+
+      socket.on("subscribe_library_vendors", () => {
+        try {
+          socket.join("library_vendors_page");
+          log.debug(`Socket ${socket.id} joined room: library_vendors_page`);
+        } catch (error) {
+          log.error("Error subscribing to library vendors room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_vendors", () => {
+        try {
+          socket.leave("library_vendors_page");
+          log.debug(`Socket ${socket.id} left room: library_vendors_page`);
+        } catch (error) {
+          log.error("Error unsubscribing from library vendors room", { error });
         }
       });
 
@@ -1169,6 +1198,48 @@ class SocketService {
       log.debug(`Library rack update broadcasted to page room: ${message}`);
     } catch (error) {
       log.error("Error sending library rack update", { error });
+    }
+  }
+
+  sendLibraryVendorUpdate(payload: {
+    action: "CREATED" | "UPDATED" | "DELETED";
+    actorName: string;
+    vendorId: number;
+    vendorName: string;
+    meta?: Record<string, unknown>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send library vendor update: io is null");
+      return;
+    }
+
+    try {
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "UPDATED"
+            ? "updated"
+            : "deleted";
+      const name = payload.vendorName.trim() || "Untitled vendor";
+      const actor = payload.actorName.trim() || "Someone";
+      const message = `${actor} ${verb} vendor "${name}"`;
+
+      const update: LibraryVendorUpdate = {
+        id: `library_vendor_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "library_vendor_update",
+        action: payload.action,
+        actorName: actor,
+        vendorId: payload.vendorId,
+        vendorName: name,
+        message,
+        updatedAt: new Date().toISOString(),
+        meta: payload.meta,
+      };
+
+      this.io.to("library_vendors_page").emit("library_vendor_update", update);
+      log.debug(`Library vendor update broadcasted to page room: ${message}`);
+    } catch (error) {
+      log.error("Error sending library vendor update", { error });
     }
   }
 

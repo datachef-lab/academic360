@@ -148,6 +148,12 @@ const masterLinks = [
     url: "/dashboard/library/author-details",
     icon: FileText,
   },
+
+  {
+    title: "Vendor",
+    url: "/dashboard/library/vendors",
+    icon: UserPen,
+  },
 ];
 
 export default function LibraryMaster() {

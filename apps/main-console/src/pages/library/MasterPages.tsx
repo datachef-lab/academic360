@@ -9,6 +9,7 @@ import JournalTypesMasterPage from "./JournalTypesMasterPage";
 import RacksMasterPage from "./RacksMasterPage";
 import ShelvesMasterPage from "./ShelvesMasterPage";
 import StatusesMasterPage from "./StatusesMasterPage";
+import VenderPage from "./VendorPage";
 
 // function LibraryMasterPlaceholderPage({
 //   title,
@@ -67,4 +68,8 @@ export function AuthorDetailsPage() {
 
 export function ClassHolidaysPage() {
   return <ClassHolidaysMasterPage />;
+}
+
+export function VendorPage() {
+  return <VenderPage />;
 }

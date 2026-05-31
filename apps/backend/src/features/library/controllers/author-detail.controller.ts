@@ -154,6 +154,7 @@ export const updateAuthorDetailController = async (
 
     const { legacyAuthorDetailsId, bookId, authorTypeId, authorId, remarks } =
       req.body;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = { updatedAt: new Date() };
 
     if (legacyAuthorDetailsId !== undefined) {

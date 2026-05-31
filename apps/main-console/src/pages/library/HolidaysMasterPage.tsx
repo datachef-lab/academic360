@@ -277,7 +277,7 @@ export default function HolidaysMasterPage() {
                 No holidays found.
               </div>
             ) : (
-              <div className="hidden min-w-0 pb-2 lg:block">
+              <div className=" min-w-0 pb-2">
                 <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
                   <Table containerClassName="min-w-[900px]">
                     <TableHeader>

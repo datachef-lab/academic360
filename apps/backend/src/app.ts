@@ -211,6 +211,7 @@ import authorDetailRouter from "@/features/library/routes/author-detail.route.js
 import bookReissueRouter from "@/features/library/routes/book-reissue.route.js";
 import classHolidayRouter from "@/features/library/routes/class-holiday.route.js";
 import holidayRouter from "@/features/library/routes/holiday.route.js";
+import vendorRouter from "@/features/library/routes/vendor.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -669,6 +670,7 @@ app.use("/api/library/author-details", authorDetailRouter);
 app.use("/api/library/book-reissues", bookReissueRouter);
 app.use("/api/library/class-holidays", classHolidayRouter);
 app.use("/api/library/holidays", holidayRouter);
+app.use("/api/library/vendors", vendorRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 
