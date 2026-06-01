@@ -164,17 +164,18 @@ function EntryExitUserCard({
       ? previewStatusBadgeMap.CHECKED_OUT
       : "bg-blue-100 text-blue-800 border-blue-200";
 
-  const userDetailColumns: { label: string; value: string; mono?: boolean }[] = [];
-  if (user.uid) userDetailColumns.push({ label: "UID", value: user.uid, mono: true });
-  if (user.rollNumber) userDetailColumns.push({ label: "Roll Number", value: user.rollNumber });
-  if (programLabel) userDetailColumns.push({ label: "Program", value: programLabel });
-  if (user.classOrSemester) {
-    userDetailColumns.push({ label: "Class / Semester", value: user.classOrSemester });
-  }
-  if (user.shift) userDetailColumns.push({ label: "Shift", value: user.shift });
-  if (user.userType === "STUDENT" || user.rfid) {
-    userDetailColumns.push({ label: "RFID Card", value: user.rfid ?? "N/A", mono: true });
-  }
+  const userDetailColumns: { label: string; value: string; mono?: boolean }[] = [
+    { label: "UID", value: user.uid ?? "-", mono: true },
+    { label: "Program Course", value: programLabel ?? "-" },
+    { label: "Shift", value: user.shift ?? "-" },
+    { label: "Semester", value: user.classOrSemester ?? "-" },
+    { label: "RFID No.", value: user.rfid ?? "N/A", mono: true },
+  ];
+
+  const booksIssued = preview.bookCirculationSummary?.booksIssued ?? preview.circulationRows.length;
+  const booksDueForReturn =
+    preview.bookCirculationSummary?.booksDueForReturn ??
+    preview.circulationRows.filter((r) => r.status !== "RETURNED").length;
 
   return (
     <Card className="border-0 shadow-md overflow-hidden">
@@ -204,9 +205,6 @@ function EntryExitUserCard({
                     {prettyLabel(user.userType)}
                   </Badge>
                 </CardTitle>
-                {programLabel && (
-                  <p className="text-sm text-slate-600 mt-1 truncate">{programLabel}</p>
-                )}
               </div>
 
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -277,35 +275,6 @@ function EntryExitUserCard({
           </div>
         )}
 
-        {todayEntry && (
-          <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="font-semibold text-slate-600">Entry Time</p>
-              <p className="font-medium text-slate-900 mt-1">
-                {formatDateTime(todayEntry.entryTimestamp)}
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold text-slate-600">Exit Time</p>
-              <p className="font-medium text-slate-900 mt-1">
-                {formatDateTime(todayEntry.exitTimestamp)}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {isInactive && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-red-900">User Inactive</p>
-              <p className="text-sm text-red-800 mt-1">
-                This user is inactive. Entry / exit may be restricted.
-              </p>
-            </div>
-          </div>
-        )}
-
         <div className="mb-6 rounded-lg border border-slate-200 overflow-hidden">
           {preview.circulationRows.length > 0 ? (
             <>
@@ -322,39 +291,24 @@ function EntryExitUserCard({
                 )}
               </button>
               {booksExpanded && (
-                <div className="overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-100">
-                        <TableHead className="whitespace-nowrap text-center">
-                          No. of Books Issued
-                        </TableHead>
-                        <TableHead className="whitespace-nowrap text-center">
-                          No. of Books Returned
-                        </TableHead>
-                        <TableHead className="whitespace-nowrap text-center">
-                          No. of Days Late
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="text-center font-semibold text-slate-900">
-                          {preview.bookCirculationSummary?.booksIssued ??
-                            preview.circulationRows.length}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold text-slate-900">
-                          {preview.bookCirculationSummary?.booksReturned ??
-                            preview.circulationRows.filter((r) => r.status === "RETURNED").length}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold text-slate-900">
-                          {preview.bookCirculationSummary?.totalDaysLate ??
-                            preview.circulationRows.reduce((sum, r) => sum + (r.daysLate ?? 0), 0)}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
+                <Table>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="whitespace-nowrap text-center font-semibold text-slate-600 bg-slate-50">
+                        No. of books issued
+                      </TableCell>
+                      <TableCell className="text-center font-semibold text-slate-900">
+                        {booksIssued}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-center font-semibold text-slate-600 bg-slate-50">
+                        No. of books due for return
+                      </TableCell>
+                      <TableCell className="text-center font-semibold text-slate-900">
+                        {booksDueForReturn}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               )}
             </>
           ) : (
@@ -373,6 +327,41 @@ function EntryExitUserCard({
             </div>
           )}
         </div>
+
+        {todayEntry && (
+          <div className="mb-6 rounded-lg border border-slate-200 overflow-hidden">
+            <Table>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="whitespace-nowrap text-center font-semibold text-slate-600 bg-slate-50">
+                    Library Entry Date &amp; Time
+                  </TableCell>
+                  <TableCell className="text-center font-medium text-slate-900">
+                    {formatDateTime(todayEntry.entryTimestamp)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-center font-semibold text-slate-600 bg-slate-50">
+                    Library Exit Date &amp; Time
+                  </TableCell>
+                  <TableCell className="text-center font-medium text-slate-900">
+                    {formatDateTime(todayEntry.exitTimestamp)}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {isInactive && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-900">User Inactive</p>
+              <p className="text-sm text-red-800 mt-1">
+                This user is inactive. Entry / exit may be restricted.
+              </p>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

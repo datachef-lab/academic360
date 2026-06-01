@@ -95,6 +95,7 @@ export type LibraryEntryExitPreviewCirculationRow = {
 
 export type LibraryEntryExitBookCirculationSummary = {
   booksIssued: number;
+  booksDueForReturn: number;
   booksReturned: number;
   totalDaysLate: number;
 };

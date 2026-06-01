@@ -113,6 +113,7 @@ export type LibraryEntryExitPreviewCirculationRow = {
 
 export type LibraryEntryExitBookCirculationSummary = {
   booksIssued: number;
+  booksDueForReturn: number;
   booksReturned: number;
   totalDaysLate: number;
 };
@@ -674,6 +675,9 @@ export async function getLibraryEntryExitPreviewByUserId(
     circulationRows,
     bookCirculationSummary: {
       booksIssued: circulationRows.length,
+      booksDueForReturn: circulationRows.filter(
+        (row) => row.status !== "RETURNED",
+      ).length,
       booksReturned: circulationRows.filter((row) => row.status === "RETURNED")
         .length,
       totalDaysLate: circulationRows.reduce(
