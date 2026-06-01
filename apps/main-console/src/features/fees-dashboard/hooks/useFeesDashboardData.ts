@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
 import type { FeeStructureDto } from "@repo/db/dtos/fees";
@@ -11,27 +11,27 @@ import {
   getAllFeesSlabs,
   getAllFeesStructures,
 } from "@/services/fees-api";
-import { SEMESTER_FEE_PAYMENT_MASTER_NAME } from "../data/fees-domain";
-import { MOCK_METRIC_VALUES, type MetricValues } from "../data/dashboard-metrics";
+import { getFeesDashboard } from "@/services/fees-dashboard-api";
+import { useAuth } from "@/features/auth/providers/auth-provider";
+import { useSocket } from "@/hooks/useSocket";
+import {
+  countInProcessSemesterFeeScopes,
+  isScopeInProcess,
+  isSemesterFeePaymentActivity,
+} from "../utils/academic-scope-utils";
+import { EMPTY_METRIC_VALUES, type MetricValues } from "../data/dashboard-metrics";
+import type {
+  FeesDashboardFilters,
+  FeesDashboardPayload,
+  FeesDashboardSocketUpdate,
+} from "../types/dashboard-api";
+import { hasDashboardScope } from "../utils/filter-utils";
 
-function isSemesterFeePaymentActivity(activity: AcademicActivityDto): boolean {
-  return (
-    Boolean(activity.master?.isActive) &&
-    (activity.master?.name || "").trim().toLowerCase() === SEMESTER_FEE_PAYMENT_MASTER_NAME
-  );
-}
-
-export function countOpenSemesterFeeScopes(activities: AcademicActivityDto[]): number {
-  const now = Date.now();
-  return activities
-    .filter(isSemesterFeePaymentActivity)
-    .flatMap((a) => a.scopes || [])
-    .filter((scope) => {
-      if (!scope.isEnabled) return false;
-      const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
-      const end = scope.endDate ? new Date(scope.endDate).getTime() : Infinity;
-      return now >= start && now <= end;
-    }).length;
+export function countOpenSemesterFeeScopes(
+  activities: AcademicActivityDto[],
+  academicYearIds?: number[],
+): number {
+  return countInProcessSemesterFeeScopes(activities, academicYearIds);
 }
 
 export type StructurePaymentWindowStatus = "open" | "scheduled" | "closed" | "no_rule";
@@ -58,7 +58,6 @@ export function getStructurePaymentWindowStatus(
 
   if (!matchingActivities.length) return "no_rule";
 
-  const now = Date.now();
   let anyOpen = false;
   let anyFuture = false;
 
@@ -68,10 +67,12 @@ export function getStructurePaymentWindowStatus(
       if (scope.class?.id !== classId) continue;
       if (streamId != null && scope.stream?.id != null && scope.stream.id !== streamId) continue;
 
-      const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
-      const end = scope.endDate ? new Date(scope.endDate).getTime() : Infinity;
-      if (now >= start && now <= end) anyOpen = true;
-      if (now < start) anyFuture = true;
+      if (isScopeInProcess(scope)) {
+        anyOpen = true;
+      } else {
+        const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
+        if (Date.now() < start) anyFuture = true;
+      }
     }
   }
 
@@ -95,19 +96,86 @@ export function isStructureOnlineWindowOpen(structure: FeeStructureDto): boolean
   return now >= start && now <= end;
 }
 
-export function useFeesDashboardData() {
+type UseFeesDashboardDataOptions = {
+  /** When false, dashboard API is not called (e.g. filters still initializing). */
+  enabled?: boolean;
+};
+
+export function useFeesDashboardData(
+  rawFilters: FeesDashboardFilters = {},
+  options: UseFeesDashboardDataOptions = {},
+) {
+  const filters = rawFilters ?? {};
+  const enabled = options.enabled ?? true;
+  const canFetchDashboard = enabled && hasDashboardScope(filters);
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+
   const [loading, setLoading] = useState(true);
+  const [dashboardLoading, setDashboardLoading] = useState(canFetchDashboard);
   const [error, setError] = useState<string | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [slabs, setSlabs] = useState<FeesSlab[]>([]);
   const [categories, setCategories] = useState<FeeCategoryDto[]>([]);
   const [groups, setGroups] = useState<FeeGroupDto[]>([]);
   const [structures, setStructures] = useState<FeeStructureDto[]>([]);
   const [semesterFeeActivities, setSemesterFeeActivities] = useState<AcademicActivityDto[]>([]);
+  const [dashboard, setDashboard] = useState<FeesDashboardPayload | null>(null);
+  const [lastSocketUpdate, setLastSocketUpdate] = useState<string | null>(null);
+
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const fetchSeq = useRef(0);
+
+  const fetchDashboard = useCallback(async () => {
+    if (!canFetchDashboard) {
+      setDashboard(null);
+      setDashboardLoading(false);
+      setDashboardError(null);
+      return;
+    }
+
+    const seq = ++fetchSeq.current;
+    setDashboardLoading(true);
+    setDashboardError(null);
+    try {
+      const corePayload = await getFeesDashboard(filters, "core");
+      if (seq !== fetchSeq.current) return;
+      setDashboard(corePayload);
+      setDashboardLoading(false);
+
+      void getFeesDashboard(filters, "reports")
+        .then((reportsPayload) => {
+          if (seq !== fetchSeq.current) return;
+          setDashboard((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  challansByProgram: reportsPayload.challansByProgram,
+                  enrollmentMatrix: reportsPayload.enrollmentMatrix,
+                  slabBreakdown: reportsPayload.slabBreakdown,
+                  promotionBreakdown: reportsPayload.promotionBreakdown,
+                  updatedAt: reportsPayload.updatedAt,
+                }
+              : reportsPayload,
+          );
+        })
+        .catch((e) => {
+          if (seq !== fetchSeq.current) return;
+          console.error("Fees dashboard reports section failed:", e);
+        });
+    } catch (e) {
+      if (seq !== fetchSeq.current) return;
+      console.error(e);
+      setDashboard(null);
+      setDashboardError("Could not load dashboard metrics");
+      setDashboardLoading(false);
+    }
+  }, [filtersKey, filters, canFetchDashboard]);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function loadMaster() {
       setLoading(true);
       setError(null);
       try {
@@ -146,37 +214,151 @@ export function useFeesDashboardData() {
       }
     }
 
-    load();
+    void loadMaster();
     return () => {
       cancelled = true;
     };
   }, []);
 
+  useEffect(() => {
+    if (!canFetchDashboard) {
+      setDashboardLoading(false);
+      return;
+    }
+    void fetchDashboard();
+  }, [fetchDashboard, canFetchDashboard]);
+
+  const { socket, isConnected } = useSocket({ userId });
+
+  useEffect(() => {
+    if (!socket || !isConnected || !canFetchDashboard) return;
+
+    socket.emit("subscribe_fees_dashboard");
+
+    const handleDashboardUpdate = (data: FeesDashboardSocketUpdate) => {
+      setLastSocketUpdate(data.updatedAt);
+      void fetchDashboard();
+    };
+
+    socket.on("fees_dashboard_updated", handleDashboardUpdate);
+
+    return () => {
+      socket.off("fees_dashboard_updated", handleDashboardUpdate);
+      socket.emit("unsubscribe_fees_dashboard");
+    };
+  }, [socket, isConnected, fetchDashboard, canFetchDashboard]);
+
+  const openScopes = countOpenSemesterFeeScopes(semesterFeeActivities, filters.academicYearIds);
+
+  const filteredStructures = useMemo(() => {
+    return structures.filter((s) => {
+      if (
+        filters.academicYearIds?.length &&
+        s.academicYear?.id != null &&
+        !filters.academicYearIds.includes(s.academicYear.id)
+      ) {
+        return false;
+      }
+      if (
+        filters.programCourseIds?.length &&
+        s.programCourse?.id != null &&
+        !filters.programCourseIds.includes(s.programCourse.id)
+      ) {
+        return false;
+      }
+      if (
+        filters.classIds?.length &&
+        s.class?.id != null &&
+        !filters.classIds.includes(s.class.id)
+      ) {
+        return false;
+      }
+      if (
+        filters.shiftIds?.length &&
+        s.shift?.id != null &&
+        !filters.shiftIds.includes(s.shift.id)
+      ) {
+        return false;
+      }
+      if (
+        filters.streamIds?.length &&
+        s.programCourse?.stream?.id != null &&
+        !filters.streamIds.includes(s.programCourse.stream.id)
+      ) {
+        return false;
+      }
+      if (
+        filters.courseLevelIds?.length &&
+        s.programCourse?.courseLevel?.id != null &&
+        !filters.courseLevelIds.includes(s.programCourse.courseLevel.id)
+      ) {
+        return false;
+      }
+      if (
+        filters.regulationTypeIds?.length &&
+        s.programCourse?.regulationType?.id != null &&
+        !filters.regulationTypeIds.includes(s.programCourse.regulationType.id)
+      ) {
+        return false;
+      }
+      if (
+        filters.affiliationIds?.length &&
+        s.programCourse?.affiliation?.id != null &&
+        !filters.affiliationIds.includes(s.programCourse.affiliation.id)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [structures, filters]);
+
   const metrics: MetricValues = useMemo(() => {
-    if (loading || error) {
-      return MOCK_METRIC_VALUES;
+    if (dashboard?.metrics) {
+      return {
+        ...dashboard.metrics,
+        semester_fee_scopes_open: openScopes,
+      };
     }
 
-    const openScopes = countOpenSemesterFeeScopes(semesterFeeActivities);
+    if (loading || dashboardLoading) {
+      return EMPTY_METRIC_VALUES;
+    }
 
     return {
-      ...MOCK_METRIC_VALUES,
-      fee_structures_total: structures.length,
+      ...EMPTY_METRIC_VALUES,
+      fee_structures_total: filteredStructures.length,
       semester_fee_scopes_open: openScopes,
       fee_slabs_registered: slabs.length,
       fee_categories_count: categories.length,
       fee_groups_count: groups.length,
     };
-  }, [loading, error, structures, slabs, categories, groups, semesterFeeActivities]);
-
-  return {
+  }, [
+    dashboard,
     loading,
-    error,
+    dashboardLoading,
+    filteredStructures.length,
     slabs,
     categories,
     groups,
-    structures,
+    openScopes,
+  ]);
+
+  return {
+    loading: dashboardLoading,
+    masterLoading: loading,
+    error: error ?? dashboardError,
+    slabs,
+    categories,
+    groups,
+    structures: filteredStructures,
     semesterFeeActivities,
     metrics,
+    dashboard,
+    dashboardLoading,
+    dashboardError,
+    isSocketConnected: isConnected,
+    lastSocketUpdate,
+    refetchDashboard: fetchDashboard,
+    filters,
   };
 }

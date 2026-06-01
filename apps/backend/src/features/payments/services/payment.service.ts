@@ -13,6 +13,7 @@ import {
 } from "@repo/db/schemas/models/fees";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { issueFeeStudentMappingReceiptIfMissing } from "@/features/fees/services/fee-student-mapping.service.js";
+import { scheduleFeesDashboardBroadcast } from "@/features/fees/fees-dashboard.socket.js";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { and, eq, sql } from "drizzle-orm";
 import type {
@@ -804,6 +805,7 @@ export async function updatePaymentByOrderId(
   });
 
   await ensureFeeReceiptAfterSuccessfulFeePayment(updatedPayment);
+  scheduleFeesDashboardBroadcast("payment_updated");
 
   return updatedPayment;
 }

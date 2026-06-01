@@ -1,5 +1,7 @@
 import { CompactPanel } from "../CompactPanel";
 import { formatInr } from "../../data/dashboard-metrics";
+import { useFeesDashboard } from "../../context/FeesDashboardContext";
+import { DashboardEmptyState } from "../DashboardEmptyState";
 import {
   FeesTable,
   FeesTableBody,
@@ -9,40 +11,40 @@ import {
   FeesTableRow,
 } from "../FeesTable";
 
-const ROWS = [
-  { status: "SUCCESS", count: 8412, amount: 298_400_000, pct: 94.2 },
-  { status: "PENDING", count: 84, amount: 2_100_000, pct: 0.9 },
-  { status: "FAILED", count: 127, amount: 4_800_000, pct: 1.4 },
-  { status: "REFUNDED", count: 23, amount: 1_200_000, pct: 0.3 },
-];
-
 export function PaymentStatusWidget() {
+  const { dashboard, dashboardLoading } = useFeesDashboard();
+  const rows = dashboard?.paymentStatus ?? [];
+
   return (
     <CompactPanel title="Payment status" noPadding>
-      <FeesTable>
-        <FeesTableHeader>
-          <FeesTableHead>Status</FeesTableHead>
-          <FeesTableHead className="text-right">Count</FeesTableHead>
-          <FeesTableHead className="text-right">Amount</FeesTableHead>
-          <FeesTableHead className="text-right">Share</FeesTableHead>
-        </FeesTableHeader>
-        <FeesTableBody>
-          {ROWS.map((r) => (
-            <FeesTableRow key={r.status}>
-              <FeesTableCell className="font-medium">{r.status}</FeesTableCell>
-              <FeesTableCell className="text-right">
-                {r.count.toLocaleString("en-IN")}
-              </FeesTableCell>
-              <FeesTableCell className="text-right font-semibold">
-                {formatInr(r.amount)}
-              </FeesTableCell>
-              <FeesTableCell className="text-right">{r.pct}%</FeesTableCell>
-            </FeesTableRow>
-          ))}
-        </FeesTableBody>
-      </FeesTable>
+      {rows.length === 0 && !dashboardLoading ? (
+        <DashboardEmptyState message="No fee collection records for active students in this scope." />
+      ) : (
+        <FeesTable>
+          <FeesTableHeader>
+            <FeesTableHead>Status</FeesTableHead>
+            <FeesTableHead className="text-right">Count</FeesTableHead>
+            <FeesTableHead className="text-right">Amount</FeesTableHead>
+            <FeesTableHead className="text-right">Share</FeesTableHead>
+          </FeesTableHeader>
+          <FeesTableBody>
+            {rows.map((r) => (
+              <FeesTableRow key={r.status}>
+                <FeesTableCell className="font-medium">{r.status}</FeesTableCell>
+                <FeesTableCell className="text-right">
+                  {r.count.toLocaleString("en-IN")}
+                </FeesTableCell>
+                <FeesTableCell className="text-right font-semibold">
+                  {formatInr(r.amount)}
+                </FeesTableCell>
+                <FeesTableCell className="text-right">{r.sharePct}%</FeesTableCell>
+              </FeesTableRow>
+            ))}
+          </FeesTableBody>
+        </FeesTable>
+      )}
       <p className="border-t border-[#b8b8b8] px-3 py-2 text-sm text-[#1a1a1a]">
-        Source: payments · context FEE
+        Source: fee_student_mappings · active users · paid / partial / unpaid
       </p>
     </CompactPanel>
   );

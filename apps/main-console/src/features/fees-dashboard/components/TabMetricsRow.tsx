@@ -14,14 +14,8 @@ type TabMetricsRowProps = {
   compact?: boolean;
 };
 
-const TRENDS: Partial<Record<string, number>> = {
-  fee_receivable: 3.2,
-  fee_collected: 8.4,
-  collection_rate: 2.1,
-};
-
 export function TabMetricsRow({ tab, metricIds, compact }: TabMetricsRowProps) {
-  const { metrics } = useFeesDashboard();
+  const { metrics, dashboardLoading } = useFeesDashboard();
   const ids = metricIds ?? (tab ? TAB_METRICS[tab] : []);
 
   return (
@@ -39,10 +33,15 @@ export function TabMetricsRow({ tab, metricIds, compact }: TabMetricsRowProps) {
             key={id}
             id={id}
             label={m.label}
-            value={formatMetricValue(id, metrics)}
-            hint={m.hint}
-            trend={TRENDS[id]}
-            progress={id === "collection_rate" ? metrics.collection_rate : undefined}
+            value={dashboardLoading ? "…" : formatMetricValue(id, metrics)}
+            hint={dashboardLoading ? "Loading dashboard data" : m.hint}
+            progress={
+              dashboardLoading
+                ? undefined
+                : id === "collection_rate"
+                  ? metrics.collection_rate
+                  : undefined
+            }
             compact={compact}
           />
         );

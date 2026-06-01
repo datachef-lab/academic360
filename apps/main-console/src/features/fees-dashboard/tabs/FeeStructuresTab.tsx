@@ -36,7 +36,7 @@ const PAYMENT_STATUS_STYLE: Record<string, string> = {
 };
 
 export function FeeStructuresTab() {
-  const { structures, semesterFeeActivities, loading, error } = useFeesDashboard();
+  const { structures, semesterFeeActivities, masterLoading, error } = useFeesDashboard();
   const tableRows = flattenStructuresBySlab(structures);
 
   return (
@@ -52,7 +52,7 @@ export function FeeStructuresTab() {
       {error && <p className="text-sm text-red-600">{error} Showing cached or sample metrics.</p>}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <SemesterBreakdownPanel variant="structures" />
+        <SemesterBreakdownPanel variant="structures" semesterNumeralOnly />
         <StructureSlabChartWidget />
       </div>
 
@@ -67,7 +67,7 @@ export function FeeStructuresTab() {
         }
         noPadding
       >
-        {loading ? (
+        {masterLoading ? (
           <p className="p-4 text-sm text-[#1a1a1a]">Loading structures…</p>
         ) : (
           <div className="max-h-[min(520px,60vh)] overflow-auto">

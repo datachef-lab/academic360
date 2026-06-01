@@ -71,6 +71,26 @@ const CARD_THEME: Record<MetricId, { gradient: string; icon: LucideIcon; ring: s
     icon: Receipt,
     ring: "bg-white/20",
   },
+  today_receipts: {
+    gradient: "from-[#1e3a8a] via-[#2563eb] to-[#60a5fa]",
+    icon: FileText,
+    ring: "bg-white/20",
+  },
+  today_failed_payments: {
+    gradient: "from-[#991b1b] via-[#b91c1c] to-[#dc2626]",
+    icon: XCircle,
+    ring: "bg-white/20",
+  },
+  receipts_issued: {
+    gradient: "from-[#065f46] via-[#0d9488] to-[#14b8a6]",
+    icon: Receipt,
+    ring: "bg-white/20",
+  },
+  challan_only: {
+    gradient: "from-[#92400e] via-[#b45309] to-[#d97706]",
+    icon: FileText,
+    ring: "bg-white/20",
+  },
   fully_paid: {
     gradient: "from-[#15803d] via-[#16a34a] to-[#22c55e]",
     icon: Wallet,
