@@ -3,8 +3,9 @@ import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
 import type { AcademicActivityDto } from "@repo/db/dtos/academics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Filter } from "lucide-react";
+import { Filter } from "lucide-react";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { FeesFiltersDialog } from "./components/FeesFiltersDialog";
 import { OverviewTab } from "./tabs/OverviewTab";
@@ -18,7 +19,7 @@ import { FeesDashboardProvider, useFeesDashboard } from "./context/FeesDashboard
 import { LiveUpdatesBadge } from "./components/LiveUpdatesBadge";
 import type { FeesDashboardFilters } from "./types/dashboard-api";
 import {
-  buildActiveFilterChips,
+  countActiveDashboardFilters,
   DEFAULT_FILTER_LABELS,
   type FeesDashboardFilterLabels,
 } from "./utils/filter-utils";
@@ -60,10 +61,10 @@ function FeesDashboardContent({
   onFiltersChange,
   onFiltersReset,
 }: FeesDashboardContentProps) {
-  const { isSocketConnected } = useFeesDashboard();
+  const { isSocketConnected, dashboardLoading, masterLoading } = useFeesDashboard();
   const [activeTab, setActiveTab] = useState("overview");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const activeFilters = buildActiveFilterChips(filterLabels);
+  const activeFilterCount = countActiveDashboardFilters(filterLabels);
 
   return (
     <div className="min-h-full bg-[#eaeaea]">
@@ -79,35 +80,20 @@ function FeesDashboardContent({
 
             <Button
               size="sm"
-              className="h-8 shrink-0 rounded-md bg-[#7c3aed] text-xs text-white hover:bg-[#6d28d9]"
+              className="relative h-8 shrink-0 rounded-md bg-[#7c3aed] pr-3 text-xs text-white hover:bg-[#6d28d9]"
               onClick={() => setFiltersOpen(true)}
             >
               <Filter className="mr-1.5 h-3.5 w-3.5" />
               Filters
+              {activeFilterCount > 0 ? (
+                <Badge
+                  variant="secondary"
+                  className="ml-1.5 h-5 min-w-5 justify-center rounded-full border-0 bg-white px-1.5 text-[10px] font-bold text-[#7c3aed]"
+                >
+                  {activeFilterCount}
+                </Badge>
+              ) : null}
             </Button>
-          </div>
-
-          <div className="border-t border-[#e5e5e5] bg-white/90 px-4 py-2.5">
-            {activeFilters.length === 0 ? (
-              <p className="text-xs text-[#888]">No filters applied — showing all data in scope.</p>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                {activeFilters.map((chip) => (
-                  <button
-                    key={chip.key}
-                    type="button"
-                    onClick={() => setFiltersOpen(true)}
-                    className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-[#d4d4d4] bg-white px-2.5 py-1.5 text-left shadow-sm hover:border-[#7c3aed]/40"
-                  >
-                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[#888]">
-                      {chip.label}
-                    </span>
-                    <span className="truncate text-xs font-medium text-[#333]">{chip.value}</span>
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#666]" />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="overflow-x-auto border-t border-[#e5e5e5] bg-white/80 px-2">
@@ -157,7 +143,7 @@ function FeesDashboardContent({
           </TabsContent>
         </div>
       </Tabs>
-      <LiveUpdatesBadge connected={isSocketConnected} />
+      <LiveUpdatesBadge connected={isSocketConnected} loading={dashboardLoading || masterLoading} />
     </div>
   );
 }
@@ -216,34 +202,33 @@ export default function FeesDashboardPage() {
   useEffect(() => {
     if (filtersReady) return;
 
+    const defaultYear = currentAcademicYear ?? availableAcademicYears.find((y) => y.isCurrentYear);
+    if (!defaultYear?.id) return;
+
+    const academicYearId = defaultYear.id;
+    const yearLabel = defaultYear.year ?? "Current academic year";
     let cancelled = false;
 
-    async function initFilters() {
+    void (async () => {
       setFiltersInitError(null);
-      const defaultYear =
-        currentAcademicYear ?? availableAcademicYears.find((y) => y.isCurrentYear);
-      if (!defaultYear?.id) return;
-
-      const yearLabel = defaultYear.year ?? "Current academic year";
       try {
-        const resolved = await resolveSmartDefaults(defaultYear.id, yearLabel);
+        const resolved = await resolveSmartDefaults(academicYearId, yearLabel);
         if (cancelled) return;
         setFilters(resolved.filters);
         setFilterLabels(resolved.labels);
         setFiltersReady(true);
       } catch {
         if (cancelled) return;
-        setFiltersInitError("Could not prepare dashboard filters.");
-        setFilters({ academicYearIds: [defaultYear.id] });
+        setFiltersInitError("Could not load semester fee scopes from academic activities.");
+        setFilters({ academicYearIds: [academicYearId] });
         setFilterLabels({
           ...DEFAULT_FILTER_LABELS,
           academicYear: yearLabel,
         });
         setFiltersReady(true);
       }
-    }
+    })();
 
-    void initFilters();
     return () => {
       cancelled = true;
     };
@@ -258,8 +243,9 @@ export default function FeesDashboardPage() {
       return;
     }
 
+    const academicYearId = defaultYear.id;
     const yearLabel = defaultYear.year ?? "Current academic year";
-    const resolved = await resolveSmartDefaults(defaultYear.id, yearLabel);
+    const resolved = await resolveSmartDefaults(academicYearId, yearLabel);
     setFilters(resolved.filters);
     setFilterLabels(resolved.labels);
     setFiltersReady(true);
@@ -284,14 +270,22 @@ export default function FeesDashboardPage() {
           filtersInitError ??
           (availableAcademicYears.length === 0
             ? "Loading academic year…"
-            : "Preparing dashboard filters…")
+            : "Loading filters from academic activity scopes…")
         }
       />
     );
   }
 
   return (
-    <FeesDashboardProvider filters={filters} enabled={filtersReady}>
+    <FeesDashboardProvider
+      filters={filters}
+      enabled={filtersReady}
+      academicYearLabel={filterLabels.academicYear}
+      onScopeFiltersRefresh={(resolved) => {
+        setFilters(resolved.filters);
+        setFilterLabels(resolved.labels);
+      }}
+    >
       <FeesDashboardContent
         filters={filters}
         filterLabels={filterLabels}

@@ -16,8 +16,8 @@ import { DashboardEmptyState } from "../components/DashboardEmptyState";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 const CHALLAN_CHART_CONFIG = {
-  generated: { label: "Generated", color: "#10b981" },
-  pending: { label: "Not generated", color: "#f43f5e" },
+  generated: { label: "Generated", color: "#4f46e5" },
+  pending: { label: "Not generated", color: "#f59e0b" },
 } satisfies ChartConfig;
 
 export function ChallansTab() {
@@ -26,7 +26,7 @@ export function ChallansTab() {
   const yMax = Math.max(maxFromKeys(chartData, ["generated", "pending"]), 1);
 
   return (
-    <TabPanel tab="challans">
+    <TabPanel tab="challans" metricTheme="challans">
       <div className="grid gap-3 lg:grid-cols-2">
         <SemesterBreakdownPanel variant="challans" semesterNumeralOnly />
         <SemesterBreakdownPanel variant="receipts" semesterNumeralOnly />
@@ -35,7 +35,7 @@ export function ChallansTab() {
         title="Challans by program"
         description="Student count"
         config={CHALLAN_CHART_CONFIG}
-        xAxisTitle="Program"
+        xAxisTitle="Program course"
         yAxisTitle="Student count"
         xTickLabels={chartData.map((d) => d.program)}
         yTickLabels={buildYTickLabels(yMax)}

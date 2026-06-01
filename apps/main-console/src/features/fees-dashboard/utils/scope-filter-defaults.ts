@@ -7,7 +7,7 @@ import {
   type FeesDashboardFilterLabels,
 } from "./filter-utils";
 import {
-  listInProcessSemesterFeeScopes,
+  listDefaultSemesterFeeScopeEntries,
   programCourseIdsForInProcessScopes,
 } from "./academic-scope-utils";
 
@@ -36,7 +36,7 @@ export function deriveDefaultFiltersFromInProcessScopes(
   academicYearLabel: string,
   programCourses: ProgramCourseDto[] = [],
 ): DefaultDashboardFiltersResult | null {
-  const inProcessEntries = listInProcessSemesterFeeScopes(activities, academicYearId);
+  const inProcessEntries = listDefaultSemesterFeeScopeEntries(activities, academicYearId);
   if (!inProcessEntries.length) return null;
 
   const classIds = uniqueIds(inProcessEntries.map((e) => e.scope.class?.id));

@@ -57,7 +57,7 @@ export function OverviewTab() {
       <PaymentStatusWidget />
       <ChartCard
         title="Hourly activity"
-        description="Today · fee payments · hover for success / failed"
+        description="Today · all fee payments (not filtered) · hover for success / failed"
         config={HOURLY_CHART_CONFIG}
         xAxisTitle="Time (12-hour)"
         yAxisTitle="Successful"

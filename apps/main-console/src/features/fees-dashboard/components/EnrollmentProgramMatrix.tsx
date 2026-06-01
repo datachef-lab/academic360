@@ -41,20 +41,20 @@ export function EnrollmentProgramMatrix() {
   const semTotals = semesters.map((sem) => {
     let paid = 0;
     let notPaid = 0;
-    let challanGenerated = 0;
+    let eligible = 0;
     rows.forEach((r) => {
       const c = r.bySemester[sem];
       if (c) {
         paid += c.paid;
         notPaid += c.notPaid;
-        challanGenerated += c.challanGenerated;
+        eligible += c.eligible;
       }
     });
-    return { sem, paid, notPaid, challanGenerated };
+    return { sem, paid, notPaid, eligible };
   });
 
   return (
-    <CompactPanel title="Program × semester (paid / not paid / challan generated)" noPadding>
+    <CompactPanel title="Program course × semester (paid / due / eligible students)" noPadding>
       {rows.length === 0 && !dashboardLoading ? (
         <DashboardEmptyState message="No enrollment fee mappings found." />
       ) : (
@@ -62,7 +62,7 @@ export function EnrollmentProgramMatrix() {
           <FeesTableHeader multiRow>
             <FeesTableHeaderRow>
               <FeesTableHead rowSpan={2} className="w-[22%] align-bottom">
-                Program
+                Program course
               </FeesTableHead>
               {semesters.map((sem) => (
                 <FeesTableHead key={sem} colSpan={3} className="border-b-0 text-center">
@@ -78,8 +78,8 @@ export function EnrollmentProgramMatrix() {
                 <FeesTableHead key={`${sem}-u`} className="text-center">
                   Due
                 </FeesTableHead>,
-                <FeesTableHead key={`${sem}-c`} className="text-center">
-                  Challan gen.
+                <FeesTableHead key={`${sem}-e`} className="text-center">
+                  Eligible
                 </FeesTableHead>,
               ])}
             </FeesTableHeaderRow>
@@ -104,10 +104,10 @@ export function EnrollmentProgramMatrix() {
                       {formatCount(cell?.notPaid)}
                     </FeesTableCell>,
                     <FeesTableCell
-                      key={`${row.program}-${sem}-c`}
+                      key={`${row.program}-${sem}-e`}
                       className="text-center tabular-nums"
                     >
-                      {formatCount(cell?.challanGenerated)}
+                      {formatCount(cell?.eligible)}
                     </FeesTableCell>,
                   ];
                 })}
@@ -132,10 +132,10 @@ export function EnrollmentProgramMatrix() {
                       {t.notPaid.toLocaleString("en-IN")}
                     </FeesTableCell>,
                     <FeesTableCell
-                      key={`t-${sem}-c`}
+                      key={`t-${sem}-e`}
                       className="text-center font-semibold tabular-nums"
                     >
-                      {t.challanGenerated.toLocaleString("en-IN")}
+                      {t.eligible.toLocaleString("en-IN")}
                     </FeesTableCell>,
                   ];
                 })}

@@ -139,6 +139,7 @@ async function persistReceiptIssuanceIfNeeded(params: {
         .set({ challanGeneratedAt: now })
         .where(eq(feeStudentMappingModel.id, mappingId));
       cg = now;
+      scheduleFeesDashboardBroadcast("fee_receipt_issued");
     }
     return { challanNumber: existingRn, challanGeneratedAt: cg };
   }
@@ -159,6 +160,7 @@ async function persistReceiptIssuanceIfNeeded(params: {
     })
     .where(eq(feeStudentMappingModel.id, mappingId));
 
+  scheduleFeesDashboardBroadcast("fee_receipt_issued");
   return { challanNumber, challanGeneratedAt: now };
 }
 

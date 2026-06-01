@@ -52,22 +52,17 @@ const GENDER_OPTIONS = [
   { value: "OTHER", label: "Other" },
 ];
 
+/** Fee mapping collection state (paid vs not fully paid) and failed online/cash attempts. */
 const PAYMENT_STATUS_OPTIONS = [
-  { value: "PAID", label: "Paid" },
-  { value: "PARTIAL", label: "Partial" },
-  { value: "UNPAID", label: "Unpaid" },
+  { value: "PAID", label: "Paid (fully collected)" },
+  { value: "UNPAID", label: "Unpaid / due" },
+  { value: "FAILED", label: "Failed (payment attempt)" },
 ];
 
 const PAYMENT_MODE_OPTIONS = [
   { value: "ONLINE", label: "Online" },
   { value: "CASH", label: "Cash" },
   { value: "CHEQUE", label: "Cheque" },
-];
-
-const TRANSACTION_STATUS_OPTIONS = [
-  { value: "SUCCESS", label: "Success" },
-  { value: "FAILED", label: "Failed" },
-  { value: "PENDING", label: "Pending" },
 ];
 
 function rowsWithId<T extends { id?: number | null }>(rows: T[]): Array<T & { id: number }> {
@@ -176,11 +171,40 @@ export function FeesFiltersDialog({
         return id != null && allowed.has(id);
       });
     }
+    if (form.courseLevelIds.length) {
+      const allowed = new Set(form.courseLevelIds.map(Number));
+      list = list.filter((pc) => {
+        const id = pc.courseLevel?.id;
+        return id != null && allowed.has(id);
+      });
+    }
+    if (form.streamIds.length) {
+      const allowed = new Set(form.streamIds.map(Number));
+      list = list.filter((pc) => {
+        const id = pc.stream?.id;
+        return id != null && allowed.has(id);
+      });
+    }
     return list.map((pc) => ({
       value: String(pc.id),
-      label: pc.shortName?.trim() ? `${pc.shortName} · ${pc.name}` : (pc.name ?? "Course"),
+      label: pc.shortName?.trim() ? `${pc.shortName} · ${pc.name}` : (pc.name ?? "Program course"),
     }));
-  }, [programCourses, form.affiliationIds, form.regulationTypeIds]);
+  }, [
+    programCourses,
+    form.affiliationIds,
+    form.regulationTypeIds,
+    form.courseLevelIds,
+    form.streamIds,
+  ]);
+
+  useEffect(() => {
+    if (!open) return;
+    const allowed = new Set(programCourseOptions.map((o) => o.value));
+    const pruned = form.programCourseIds.filter((id) => allowed.has(id));
+    if (pruned.length !== form.programCourseIds.length) {
+      setForm((prev) => ({ ...prev, programCourseIds: pruned }));
+    }
+  }, [open, programCourseOptions, form.programCourseIds]);
   const classOptions = classes.map((cls) => ({
     value: String(cls.id),
     label: formatSemesterClassOptionLabel(cls.name),
@@ -269,11 +293,6 @@ export function FeesFiltersDialog({
         PAYMENT_MODE_OPTIONS,
         DEFAULT_FILTER_LABELS.paymentMode,
       ),
-      transactionStatus: formatMultiSelectLabel(
-        form.transactionStatuses,
-        TRANSACTION_STATUS_OPTIONS,
-        DEFAULT_FILTER_LABELS.transactionStatus,
-      ),
       dateRange: formatDateRangeLabel(form.dateFrom, form.dateTo),
       studentSearch: form.studentSearch.trim(),
     };
@@ -309,9 +328,9 @@ export function FeesFiltersDialog({
             />
           </FilterField>
 
-          <FilterField label="Program (level)">
+          <FilterField label="Course level">
             <MultiSelectDropdown
-              placeholder="All programs"
+              placeholder="All course levels"
               options={courseLevelOptions}
               selectedOptions={form.courseLevelIds}
               onChange={(selected) => updateForm("courseLevelIds", selected)}
@@ -349,9 +368,9 @@ export function FeesFiltersDialog({
             />
           </FilterField>
 
-          <FilterField label="Course">
+          <FilterField label="Program course">
             <MultiSelectDropdown
-              placeholder="All courses"
+              placeholder="All program courses"
               options={programCourseOptions}
               selectedOptions={form.programCourseIds}
               onChange={(selected) => updateForm("programCourseIds", selected)}
@@ -425,16 +444,6 @@ export function FeesFiltersDialog({
               options={PAYMENT_MODE_OPTIONS}
               selectedOptions={form.paymentModes}
               onChange={(selected) => updateForm("paymentModes", selected)}
-              contentClassName="min-w-[280px]"
-            />
-          </FilterField>
-
-          <FilterField label="Transaction status">
-            <MultiSelectDropdown
-              placeholder="All transaction statuses"
-              options={TRANSACTION_STATUS_OPTIONS}
-              selectedOptions={form.transactionStatuses}
-              onChange={(selected) => updateForm("transactionStatuses", selected)}
               contentClassName="min-w-[280px]"
             />
           </FilterField>

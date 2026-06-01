@@ -31,6 +31,7 @@ import XLSX from "xlsx";
 import fs from "fs";
 import * as studentService from "@/features/user/services/student.service.js";
 import { socketService } from "@/services/socketService.js";
+import { scheduleFeesDashboardBroadcast } from "../fees-dashboard.socket.js";
 import { feeStudentMappingModel } from "@repo/db/schemas";
 import { FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
 import { PromotionDto } from "@repo/db/dtos/batches";
@@ -967,6 +968,8 @@ async function recalculateFeeStudentMappingsForPromotionMapping(
         ? "Unpaid"
         : "Pending";
     const saveBlockedForEdit = hasSuccessfulPayment;
+
+    scheduleFeesDashboardBroadcast("fee_group_promotion_mapping_updated");
 
     const io = socketService.getIO();
     if (io) {
