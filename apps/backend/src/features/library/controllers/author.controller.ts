@@ -10,6 +10,8 @@ import {
   findAuthorsPaginated,
   updateAuthor,
 } from "@/features/library/services/author.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -122,6 +124,19 @@ export const createAuthorController = async (
       updatedAt: new Date(),
     });
 
+    const authorId = created.id;
+    if (authorId == null) {
+      throw new ApiError(500, "Failed to create author");
+    }
+
+    socketService.sendLibraryAuthorUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      authorId,
+      authorName: normalisedName,
+      meta: { authorId },
+    });
+
     res
       .status(201)
       .json(
@@ -203,6 +218,15 @@ export const updateAuthorController = async (
     }
 
     const updated = await updateAuthor(id, updateData);
+    const authorName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryAuthorUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      authorId: id,
+      authorName,
+      meta: { authorId: id },
+    });
     res
       .status(200)
       .json(
@@ -236,7 +260,15 @@ export const deleteAuthorController = async (
       return;
     }
 
+    const authorName = existing.name;
     await deleteAuthor(id);
+    socketService.sendLibraryAuthorUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      authorId: id,
+      authorName,
+      meta: { authorId: id },
+    });
     res
       .status(200)
       .json(

@@ -28,7 +28,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Loader2, Plus, Search, Tag, Trash2 } from "lucide-react";
+import { Edit, Loader2, Search, Tag, Trash2 } from "lucide-react";
+import { LibraryMasterHeaderActions } from "@/pages/library/components/LibraryMasterHeaderActions";
+import { downloadCsv, formatCsvDate } from "@/pages/library/utils/download-csv";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type {
   LibraryAuthorTypeRow,
   LibraryAuthorTypeUpsertBody,
@@ -40,6 +44,17 @@ import {
   getLibraryAuthorTypes,
   updateLibraryAuthorType,
 } from "@/services/library-author-types.service";
+
+type LibraryAuthorTypeSocketUpdate = {
+  id: string;
+  type: "library_author_type_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  authorTypeId: number;
+  authorTypeName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = { name: string };
 
@@ -88,6 +103,10 @@ function RowActions({
 }
 
 export default function AuthorTypesMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryAuthorTypeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -131,6 +150,24 @@ export default function AuthorTypesMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_author_types");
+
+    const handleUpdate = (data: LibraryAuthorTypeSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_author_type_update", handleUpdate);
+
+    return () => {
+      socket.off("library_author_type_update", handleUpdate);
+      socket.emit("unsubscribe_library_author_types");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -191,12 +228,24 @@ export default function AuthorTypesMasterPage() {
     }
   };
 
+  const handleDownload = () => {
+    downloadCsv(
+      "library-author-types.csv",
+      ["#", "Name", "Updated At"],
+      rows.map((row, i) => [
+        String((page - 1) * limit + i + 1),
+        row.name,
+        formatCsvDate(row.updatedAt),
+      ]),
+    );
+  };
+
   return (
     <div className="min-w-0 p-2 sm:p-4">
       <Card className="min-w-0 border-none">
         <CardHeader className="mb-3 rounded-md border bg-background p-3 sm:p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <CardTitle className="flex items-center text-lg sm:text-xl">
                 <Tag className="mr-2 h-8 w-8 rounded-md border p-1" />
                 Author Types
@@ -205,15 +254,12 @@ export default function AuthorTypesMasterPage() {
                 Manage author type master data.
               </p>
             </div>
-            <Button type="button" size="sm" onClick={openCreate}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add author type
-            </Button>
+            <LibraryMasterHeaderActions onDownload={handleDownload} onAdd={openCreate} />
           </div>
         </CardHeader>
 
         <CardContent className="min-w-0 px-0">
-          <div className="mb-3 border-b bg-background px-2 py-3 sm:px-4">
+          <div className="mb-3 border-b bg-background px-0 py-3 sm:px-0">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -228,7 +274,7 @@ export default function AuthorTypesMasterPage() {
             </div>
           </div>
 
-          <div className="relative min-w-0 px-2 sm:px-4" style={{ minHeight: "400px" }}>
+          <div className="relative min-w-0 px-0 sm:px-0" style={{ minHeight: "400px" }}>
             {loading ? (
               <div className="flex min-h-[320px] items-center justify-center text-slate-500">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -243,10 +289,10 @@ export default function AuthorTypesMasterPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-10">#</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead className="w-[90px] text-right">Actions</TableHead>
+                      <TableHead className="bg-slate-100 w-10">#</TableHead>
+                      <TableHead className="bg-slate-100">Name</TableHead>
+                      <TableHead className="bg-slate-100">Updated</TableHead>
+                      <TableHead className="bg-slate-100 w-[90px] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

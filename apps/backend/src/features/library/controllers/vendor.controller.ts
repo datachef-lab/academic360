@@ -11,6 +11,13 @@ import {
   updateVendor,
   deleteVendor,
 } from "../services/vendor.service";
+import { socketService } from "@/services/socketService.js";
+
+const vendorActorName = (req: Request): string => {
+  const u = req.user as { name?: string | null } | undefined;
+  const n = typeof u?.name === "string" ? u.name.trim() : "";
+  return n || "Someone";
+};
 
 const parseId = (value?: string | string[]) => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -73,6 +80,19 @@ export const createVendorController = async (
       pan,
       createdAt: new Date(),
       updatedAt: new Date(),
+    });
+
+    const vendorId = created.id;
+    if (vendorId == null) {
+      throw new ApiError(500, "Failed to create vendor");
+    }
+
+    socketService.sendLibraryVendorUpdate({
+      action: "CREATED",
+      actorName: vendorActorName(req),
+      vendorId,
+      vendorName: normalisedName,
+      meta: { vendorId },
     });
 
     res
@@ -231,6 +251,15 @@ export const updateVendorController = async (
     }
 
     const updated = await updateVendor(id, updateData);
+    const vendorName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryVendorUpdate({
+      action: "UPDATED",
+      actorName: vendorActorName(req),
+      vendorId: id,
+      vendorName,
+      meta: { vendorId: id },
+    });
     res
       .status(200)
       .json(
@@ -264,7 +293,15 @@ export const deleteVendorController = async (
       return;
     }
 
+    const vendorName = existing.name;
     await deleteVendor(id);
+    socketService.sendLibraryVendorUpdate({
+      action: "DELETED",
+      actorName: vendorActorName(req),
+      vendorId: id,
+      vendorName,
+      meta: { vendorId: id },
+    });
     res
       .status(200)
       .json(

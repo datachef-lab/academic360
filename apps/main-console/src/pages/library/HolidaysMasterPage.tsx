@@ -29,7 +29,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarDays, Edit, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { CalendarDays, Edit, Loader2, Search, Trash2 } from "lucide-react";
+import { LibraryMasterHeaderActions } from "@/pages/library/components/LibraryMasterHeaderActions";
+import { downloadCsv } from "@/pages/library/utils/download-csv";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type {
   LibraryHolidayRow,
   LibraryHolidayUpsertBody,
@@ -42,6 +46,17 @@ import {
   updateLibraryHoliday,
 } from "@/services/library-holidays.service";
 import { Badge } from "@/components/ui/badge";
+
+type LibraryHolidaySocketUpdate = {
+  id: string;
+  type: "library_holiday_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  holidayId: number;
+  holidayName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   name: string;
@@ -121,6 +136,10 @@ function RowActions({
 }
 
 export default function HolidaysMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryHolidayRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -165,6 +184,24 @@ export default function HolidaysMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_holidays");
+
+    const handleUpdate = (data: LibraryHolidaySocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_holiday_update", handleUpdate);
+
+    return () => {
+      socket.off("library_holiday_update", handleUpdate);
+      socket.emit("unsubscribe_library_holidays");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -229,12 +266,27 @@ export default function HolidaysMasterPage() {
     }
   };
 
+  const handleDownload = () => {
+    downloadCsv(
+      "library-holidays.csv",
+      ["#", "Name", "Short Name", "From", "To", "Remarks"],
+      rows.map((row, i) => [
+        String((page - 1) * limit + i + 1),
+        row.name,
+        row.shortName ?? "—",
+        row.from ? parseDate(row.from) : "—",
+        row.to ? parseDate(row.to) : "—",
+        row.remarks ?? "—",
+      ]),
+    );
+  };
+
   return (
     <div className="min-w-0 p-2 sm:p-4">
       <Card className="min-w-0 border-none">
         <CardHeader className="mb-3 rounded-md border bg-background p-3 sm:p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <CardTitle className="flex items-center text-lg sm:text-xl">
                 <CalendarDays className="mr-2 h-8 w-8 rounded-md border p-1" />
                 Holidays
@@ -243,15 +295,12 @@ export default function HolidaysMasterPage() {
                 Manage library holiday master data.
               </p>
             </div>
-            <Button type="button" size="sm" onClick={openCreate}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add holiday
-            </Button>
+            <LibraryMasterHeaderActions onDownload={handleDownload} onAdd={openCreate} />
           </div>
         </CardHeader>
 
         <CardContent className="min-w-0 px-0">
-          <div className="mb-3 border-b bg-background px-2 py-3 sm:px-4">
+          <div className="mb-3 border-b bg-background px-0 py-3 sm:px-0">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -266,7 +315,7 @@ export default function HolidaysMasterPage() {
             </div>
           </div>
 
-          <div className="relative min-w-0 px-2 sm:px-4" style={{ minHeight: "400px" }}>
+          <div className="relative min-w-0 px-0 sm:px-0" style={{ minHeight: "400px" }}>
             {loading ? (
               <div className="flex min-h-[320px] items-center justify-center text-slate-500">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />

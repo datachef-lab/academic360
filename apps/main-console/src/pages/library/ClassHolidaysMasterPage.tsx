@@ -35,7 +35,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarRange, Edit, Loader2, Plus, Trash2 } from "lucide-react";
+import { CalendarRange, Edit, Loader2, Trash2 } from "lucide-react";
+import { LibraryMasterHeaderActions } from "@/pages/library/components/LibraryMasterHeaderActions";
+import { downloadCsv } from "@/pages/library/utils/download-csv";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import type {
   LibraryClassHolidayRow,
   LibraryClassHolidayUpsertBody,
@@ -50,6 +54,17 @@ import {
 import { getLibraryHolidays } from "@/services/library-holidays.service";
 import { getProgramCourses } from "@/services/course-design.api";
 import { findAllClasses } from "@/services/class.service";
+
+type LibraryClassHolidaySocketUpdate = {
+  id: string;
+  type: "library_class_holiday_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  classHolidayId: number;
+  classHolidayName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   holidayId: string;
@@ -120,6 +135,10 @@ function RowActions({
 }
 
 export default function ClassHolidaysMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryClassHolidayRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -224,6 +243,24 @@ export default function ClassHolidaysMasterPage() {
     void fetchRows();
   }, [fetchRows]);
 
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_class_holidays");
+
+    const handleUpdate = (data: LibraryClassHolidaySocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_class_holiday_update", handleUpdate);
+
+    return () => {
+      socket.off("library_class_holiday_update", handleUpdate);
+      socket.emit("unsubscribe_library_class_holidays");
+    };
+  }, [socket, isConnected, fetchRows]);
+
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm());
@@ -283,12 +320,26 @@ export default function ClassHolidaysMasterPage() {
     }
   };
 
+  const handleDownload = () => {
+    downloadCsv(
+      "library-class-holidays.csv",
+      ["#", "Holiday", "Program Course", "Semester", "Approved Holiday"],
+      rows.map((row, i) => [
+        String((page - 1) * limit + i + 1),
+        holidayName(row.holidayId),
+        programCourseName(row.programCourseId),
+        className(row.classId),
+        row.isHoliday ? "Yes" : "No",
+      ]),
+    );
+  };
+
   return (
     <div className="min-w-0 p-2 sm:p-4">
       <Card className="min-w-0 border-none">
         <CardHeader className="mb-3 rounded-md border bg-background p-3 sm:p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <CardTitle className="flex items-center text-lg sm:text-xl">
                 <CalendarRange className="mr-2 h-8 w-8 rounded-md border p-1" />
                 Class Holidays
@@ -297,15 +348,12 @@ export default function ClassHolidaysMasterPage() {
                 Map holidays to program courses and classes.
               </p>
             </div>
-            <Button type="button" size="sm" onClick={openCreate}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add class holiday
-            </Button>
+            <LibraryMasterHeaderActions onDownload={handleDownload} onAdd={openCreate} />
           </div>
         </CardHeader>
 
         <CardContent className="min-w-0 px-0">
-          <div className="relative min-w-0 px-2 sm:px-4" style={{ minHeight: "400px" }}>
+          <div className="relative min-w-0 px-0 sm:px-0" style={{ minHeight: "400px" }}>
             {loading ? (
               <div className="flex min-h-[320px] items-center justify-center text-slate-500">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />

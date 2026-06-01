@@ -10,6 +10,8 @@ import {
   findAuthorTypesPaginated,
   updateAuthorType,
 } from "@/features/library/services/author-type.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]) => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -60,6 +62,20 @@ export const createAuthorTypeController = async (
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    const authorTypeId = created.id;
+    if (authorTypeId == null) {
+      throw new ApiError(500, "Failed to create author type");
+    }
+
+    socketService.sendLibraryAuthorTypeUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      authorTypeId,
+      authorTypeName: normalisedName,
+      meta: { authorTypeId },
+    });
+
     res
       .status(201)
       .json(
@@ -197,6 +213,13 @@ export const updateAuthorTypeController = async (
       name: normalisedName,
       updatedAt: new Date(),
     });
+    socketService.sendLibraryAuthorTypeUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      authorTypeId: id,
+      authorTypeName: normalisedName,
+      meta: { authorTypeId: id },
+    });
     res
       .status(200)
       .json(
@@ -228,19 +251,25 @@ export const deleteAuthorTypeController = async (
       res.status(404).json(new ApiError(404, "Author type not found"));
       return;
     }
-    const deleted = await deleteAuthorType(id);
-    if (deleted) {
-      res
-        .status(200)
-        .json(
-          new ApiResponse(
-            200,
-            "SUCCESS",
-            null,
-            "Author type deleted successfully.",
-          ),
-        );
-    }
+    const authorTypeName = existing.name;
+    await deleteAuthorType(id);
+    socketService.sendLibraryAuthorTypeUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      authorTypeId: id,
+      authorTypeName,
+      meta: { authorTypeId: id },
+    });
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          null,
+          "Author type deleted successfully.",
+        ),
+      );
   } catch (error) {
     handleError(error, res, next);
   }

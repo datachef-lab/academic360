@@ -10,6 +10,8 @@ import {
   findPublishersPaginated,
   updatePublisher,
 } from "@/features/library/services/publisher.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -122,6 +124,19 @@ export const createPublisherController = async (
       updatedAt: new Date(),
     });
 
+    const publisherId = created.id;
+    if (publisherId == null) {
+      throw new ApiError(500, "Failed to create publisher");
+    }
+
+    socketService.sendLibraryPublisherUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      publisherId,
+      publisherName: normalisedName,
+      meta: { publisherId },
+    });
+
     res
       .status(201)
       .json(
@@ -194,6 +209,15 @@ export const updatePublisherController = async (
     }
 
     const updated = await updatePublisher(id, updateData);
+    const publisherName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryPublisherUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      publisherId: id,
+      publisherName,
+      meta: { publisherId: id },
+    });
     res
       .status(200)
       .json(
@@ -227,14 +251,22 @@ export const deletePublisherController = async (
       return;
     }
 
-    const deleted = await deletePublisher(id);
+    const publisherName = existing.name;
+    await deletePublisher(id);
+    socketService.sendLibraryPublisherUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      publisherId: id,
+      publisherName,
+      meta: { publisherId: id },
+    });
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          deleted,
+          null,
           "Publisher deleted successfully.",
         ),
       );

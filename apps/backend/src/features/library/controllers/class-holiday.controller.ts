@@ -9,6 +9,8 @@ import {
   findClassHolidaysPaginated,
   updateClassHoliday,
 } from "@/features/library/services/class-holiday.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -127,6 +129,19 @@ export const createClassHolidayController = async (
       updatedAt: new Date(),
     });
 
+    const classHolidayId = created.id;
+    if (classHolidayId == null) {
+      throw new ApiError(500, "Failed to create class holiday");
+    }
+
+    socketService.sendLibraryClassHolidayUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      classHolidayId,
+      classHolidayName: `Class holiday #${classHolidayId}`,
+      meta: { classHolidayId },
+    });
+
     res
       .status(201)
       .json(
@@ -207,6 +222,13 @@ export const updateClassHolidayController = async (
     }
 
     const updated = await updateClassHoliday(id, updateData);
+    socketService.sendLibraryClassHolidayUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      classHolidayId: id,
+      classHolidayName: `Class holiday #${id}`,
+      meta: { classHolidayId: id },
+    });
     res
       .status(200)
       .json(
@@ -240,7 +262,15 @@ export const deleteClassHolidayController = async (
       return;
     }
 
+    const classHolidayName = `Class holiday #${id}`;
     await deleteClassHoliday(id);
+    socketService.sendLibraryClassHolidayUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      classHolidayId: id,
+      classHolidayName,
+      meta: { classHolidayId: id },
+    });
     res
       .status(200)
       .json(

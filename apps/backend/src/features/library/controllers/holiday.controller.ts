@@ -11,6 +11,8 @@ import {
   findHolidaysPaginated,
   updateHoliday,
 } from "@/features/library/services/holiday.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -123,6 +125,19 @@ export const createHolidayController = async (
       updatedAt: new Date(),
     });
 
+    const holidayId = created.id;
+    if (holidayId == null) {
+      throw new ApiError(500, "Failed to create holiday");
+    }
+
+    socketService.sendLibraryHolidayUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      holidayId,
+      holidayName: normalisedName,
+      meta: { holidayId },
+    });
+
     res
       .status(201)
       .json(
@@ -197,6 +212,15 @@ export const updateHolidayController = async (
     }
 
     const updated = await updateHoliday(id, updateData);
+    const holidayName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryHolidayUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      holidayId: id,
+      holidayName,
+      meta: { holidayId: id },
+    });
     res
       .status(200)
       .json(
@@ -230,7 +254,15 @@ export const deleteHolidayController = async (
       return;
     }
 
+    const holidayName = existing.name;
     await deleteHoliday(id);
+    socketService.sendLibraryHolidayUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      holidayId: id,
+      holidayName,
+      meta: { holidayId: id },
+    });
     res
       .status(200)
       .json(

@@ -10,6 +10,8 @@ import {
   findBindingsPaginated,
   updateBinding,
 } from "@/features/library/services/binding.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -116,6 +118,19 @@ export const createBindingController = async (
       updatedAt: new Date(),
     });
 
+    const bindingId = created.id;
+    if (bindingId == null) {
+      throw new ApiError(500, "Failed to create binding type");
+    }
+
+    socketService.sendLibraryBindingUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      bindingId,
+      bindingName: normalisedName,
+      meta: { bindingId },
+    });
+
     res
       .status(201)
       .json(
@@ -178,6 +193,15 @@ export const updateBindingController = async (
     }
 
     const updated = await updateBinding(id, updateData);
+    const bindingName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryBindingUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      bindingId: id,
+      bindingName,
+      meta: { bindingId: id },
+    });
     res
       .status(200)
       .json(
@@ -211,14 +235,22 @@ export const deleteBindingController = async (
       return;
     }
 
-    const deleted = await deleteBinding(id);
+    const bindingName = existing.name;
+    await deleteBinding(id);
+    socketService.sendLibraryBindingUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      bindingId: id,
+      bindingName,
+      meta: { bindingId: id },
+    });
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          deleted,
+          null,
           "Binding type deleted successfully.",
         ),
       );

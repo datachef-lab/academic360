@@ -649,7 +649,7 @@ export default function JournalPage() {
         </CardHeader>
 
         <CardContent className="min-w-0 px-0">
-          <div className="mb-3 border-b bg-background px-2 py-3 sm:px-4">
+          <div className="mb-3 border-b bg-background px-0 py-3 sm:px-0">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -664,7 +664,7 @@ export default function JournalPage() {
             </div>
           </div>
 
-          <div className="relative min-w-0 px-2 sm:px-4" style={{ minHeight: "400px" }}>
+          <div className="relative min-w-0 px-0 sm:px-0" style={{ minHeight: "400px" }}>
             {loading ? (
               <div className="flex min-h-[320px] items-center justify-center text-slate-500">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />

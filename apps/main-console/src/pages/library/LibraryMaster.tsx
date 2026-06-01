@@ -1,26 +1,28 @@
 import { Outlet, useLocation } from "react-router-dom";
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import {
-  Book,
-  BookCopy,
-  BookOpenCheck,
+  Workflow,
+  ScrollText,
+  FolderArchive,
+  Rows3,
   BookText,
+  Tags,
+  Package2,
+  LibraryBig,
+  ScanBarcode,
+  Book,
+  BookOpenCheck,
   CalendarDays,
   CalendarRange,
-  FileText,
-  FolderArchive,
-  LayoutDashboard,
-  LibraryBig,
-  Newspaper,
-  Package2,
-  Rows3,
-  ScanBarcode,
-  ScrollText,
   Tag,
-  Tags,
   UserPen,
+  FileText,
+  Building2,
+  Newspaper,
+  LayoutDashboard,
   UserRoundCheck,
-  Workflow,
+  Clock3,
+  BookCopy,
 } from "lucide-react";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
@@ -59,14 +61,39 @@ const quickLinks = [
 
 const masterLinks = [
   {
-    title: "Series",
-    url: "/dashboard/library/series",
-    icon: Workflow,
+    title: "Article",
+    url: "/dashboard/library/articles",
+    icon: Newspaper,
   },
   {
-    title: "Publications",
-    url: "/dashboard/library/publications",
-    icon: ScrollText,
+    title: "Author",
+    url: "/dashboard/library/authors",
+    icon: UserPen,
+  },
+  {
+    title: "Author Detail",
+    url: "/dashboard/library/author-details",
+    icon: FileText,
+  },
+  {
+    title: "Author Type",
+    url: "/dashboard/library/author-types",
+    icon: Tag,
+  },
+  {
+    title: "Binding Type",
+    url: "/dashboard/library/binding-types",
+    icon: ScanBarcode,
+  },
+  {
+    title: "Borrowing Type",
+    url: "/dashboard/library/borrowing-types",
+    icon: BookOpenCheck,
+  },
+  {
+    title: "Class Holiday",
+    url: "/dashboard/library/class-holidays",
+    icon: CalendarRange,
   },
   {
     title: "Enclosure / Attachments",
@@ -79,39 +106,14 @@ const masterLinks = [
     icon: Rows3,
   },
   {
+    title: "Holiday",
+    url: "/dashboard/library/holidays",
+    icon: CalendarDays,
+  },
+  {
     title: "Journal Type",
     url: "/dashboard/library/journal-types",
     icon: BookText,
-  },
-  {
-    title: "Status",
-    url: "/dashboard/library/statuses",
-    icon: Tags,
-  },
-  {
-    title: "Rack",
-    url: "/dashboard/library/racks",
-    icon: Package2,
-  },
-  {
-    title: "Shelf",
-    url: "/dashboard/library/shelves",
-    icon: LibraryBig,
-  },
-  {
-    title: "Binding Type",
-    url: "/dashboard/library/binding-types",
-    icon: ScanBarcode,
-  },
-  {
-    title: "Period / Frequency",
-    url: "/dashboard/library/periods",
-    icon: Rows3,
-  },
-  {
-    title: "Article",
-    url: "/dashboard/library/articles",
-    icon: ScrollText,
   },
   {
     title: "Library Document",
@@ -119,40 +121,39 @@ const masterLinks = [
     icon: Book,
   },
   {
-    title: "Borrowing Type",
-    url: "/dashboard/library/borrowing-types",
-    icon: BookOpenCheck,
+    title: "Period / Frequency",
+    url: "/dashboard/library/periods",
+    icon: Clock3,
   },
   {
-    title: "Holiday",
-    url: "/dashboard/library/holidays",
-    icon: CalendarDays,
+    title: "Publications",
+    url: "/dashboard/library/publications",
+    icon: ScrollText,
   },
   {
-    title: "Class Holiday",
-    url: "/dashboard/library/class-holidays",
-    icon: CalendarRange,
+    title: "Rack",
+    url: "/dashboard/library/racks",
+    icon: Package2,
   },
   {
-    title: "Author Type",
-    url: "/dashboard/library/author-types",
-    icon: Tag,
+    title: "Series",
+    url: "/dashboard/library/series",
+    icon: Workflow,
   },
   {
-    title: "Author",
-    url: "/dashboard/library/authors",
-    icon: UserPen,
+    title: "Shelf",
+    url: "/dashboard/library/shelves",
+    icon: LibraryBig,
   },
   {
-    title: "Author Detail",
-    url: "/dashboard/library/author-details",
-    icon: FileText,
+    title: "Status",
+    url: "/dashboard/library/statuses",
+    icon: Tags,
   },
-
   {
     title: "Vendor",
     url: "/dashboard/library/vendors",
-    icon: UserPen,
+    icon: Building2,
   },
 ];
 

@@ -9,6 +9,8 @@ import {
   findAuthorDetailsPaginated,
   updateAuthorDetail,
 } from "@/features/library/services/author-detail.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -119,6 +121,19 @@ export const createAuthorDetailController = async (
       updatedAt: new Date(),
     });
 
+    const authorDetailId = created.id;
+    if (authorDetailId == null) {
+      throw new ApiError(500, "Failed to create author detail");
+    }
+
+    socketService.sendLibraryAuthorDetailUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      authorDetailId,
+      authorDetailName: `Author detail #${authorDetailId}`,
+      meta: { authorDetailId },
+    });
+
     res
       .status(201)
       .json(
@@ -193,6 +208,13 @@ export const updateAuthorDetailController = async (
     }
 
     const updated = await updateAuthorDetail(id, updateData);
+    socketService.sendLibraryAuthorDetailUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      authorDetailId: id,
+      authorDetailName: `Author detail #${id}`,
+      meta: { authorDetailId: id },
+    });
     res
       .status(200)
       .json(
@@ -226,7 +248,15 @@ export const deleteAuthorDetailController = async (
       return;
     }
 
+    const authorDetailName = `Author detail #${id}`;
     await deleteAuthorDetail(id);
+    socketService.sendLibraryAuthorDetailUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      authorDetailId: id,
+      authorDetailName,
+      meta: { authorDetailId: id },
+    });
     res
       .status(200)
       .json(

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,8 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Edit, Loader2, PlusCircle, ScrollText, Search, Trash2 } from "lucide-react";
+import { Edit, Loader2, ScrollText, Search, Trash2 } from "lucide-react";
+import { LibraryMasterHeaderActions } from "@/pages/library/components/LibraryMasterHeaderActions";
+import { downloadCsv, formatCsvDate } from "@/pages/library/utils/download-csv";
 import { toast } from "sonner";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import {
   createLibraryPublisher,
   deleteLibraryPublisher,
@@ -34,7 +38,22 @@ import {
 
 const DEFAULT_LIMIT = 10;
 
+type LibraryPublisherSocketUpdate = {
+  id: string;
+  type: "library_publisher_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  publisherId: number;
+  publisherName: string;
+  message: string;
+  updatedAt: string;
+};
+
 export default function PublicationsPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryPublisher[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -57,7 +76,7 @@ export default function PublicationsPage() {
   );
   const activeTo = useMemo(() => Math.min(page * limit, total), [page, limit, total]);
 
-  const fetchRows = async () => {
+  const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getLibraryPublishers({
@@ -73,7 +92,7 @@ export default function PublicationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, limit, debouncedSearch]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -85,7 +104,25 @@ export default function PublicationsPage() {
 
   useEffect(() => {
     void fetchRows();
-  }, [page, limit, debouncedSearch]);
+  }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_publishers");
+
+    const handleUpdate = (data: LibraryPublisherSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_publisher_update", handleUpdate);
+
+    return () => {
+      socket.off("library_publisher_update", handleUpdate);
+      socket.emit("unsubscribe_library_publishers");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const resetForm = () => {
     setSelectedRow(null);
@@ -153,52 +190,33 @@ export default function PublicationsPage() {
   };
 
   const handleDownload = () => {
-    const headers = ["#", "Name", "Code", "Updated At"];
-    const csvRows = rows.map((row, index) => [
-      String((page - 1) * limit + index + 1),
-      row.name,
-      row.code ?? "-",
-      new Date(row.updatedAt).toLocaleString(),
-    ]);
-    const csv = [headers, ...csvRows]
-      .map((line) => line.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "library-publications.csv";
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
+    downloadCsv(
+      "library-publications.csv",
+      ["#", "Name", "Code", "Updated At"],
+      rows.map((row, index) => [
+        String((page - 1) * limit + index + 1),
+        row.name,
+        row.code ?? "-",
+        formatCsvDate(row.updatedAt),
+      ]),
+    );
   };
 
   return (
     <div className="p-2 sm:p-4">
       <Card className="border-none">
-        <CardHeader className="sticky top-0 z-30 mb-3 flex flex-col items-start justify-between gap-4 rounded-md border bg-background p-4 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
-            <CardTitle className="flex items-center text-lg sm:text-xl">
-              <ScrollText className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
-              <span className="truncate">Publications</span>
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Manage library publication/publisher master entries.
-            </p>
-          </div>
-          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
-            <Button variant="outline" onClick={handleDownload} className="flex-shrink-0">
-              <Download className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Download</span>
-            </Button>
-            <Button
-              className="bg-purple-600 text-white hover:bg-purple-700"
-              onClick={openCreateDialog}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add
-            </Button>
+        <CardHeader className="sticky top-0 z-30 mb-3 rounded-md border bg-background p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="flex items-center text-lg sm:text-xl">
+                <ScrollText className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
+                <span className="truncate">Publications</span>
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                Manage library publication/publisher master entries.
+              </p>
+            </div>
+            <LibraryMasterHeaderActions onDownload={handleDownload} onAdd={openCreateDialog} />
           </div>
         </CardHeader>
         <CardContent className="px-0">

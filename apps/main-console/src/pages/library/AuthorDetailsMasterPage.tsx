@@ -35,7 +35,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, FileText, Loader2, Plus, Trash2 } from "lucide-react";
+import { Edit, FileText, Loader2, Trash2 } from "lucide-react";
+import { LibraryMasterHeaderActions } from "@/pages/library/components/LibraryMasterHeaderActions";
+import { downloadCsv, formatCsvDate } from "@/pages/library/utils/download-csv";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import { getBookList } from "@/services/books.service";
 import type {
   LibraryAuthorDetailRow,
@@ -50,6 +54,17 @@ import {
 } from "@/services/library-author-details.service";
 import { getLibraryAuthorTypes } from "@/services/library-author-types.service";
 import { getLibraryAuthors } from "@/services/library-authors.service";
+
+type LibraryAuthorDetailSocketUpdate = {
+  id: string;
+  type: "library_author_detail_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  authorDetailId: number;
+  authorDetailName: string;
+  message: string;
+  updatedAt: string;
+};
 
 type FormState = {
   bookId: string;
@@ -118,6 +133,10 @@ function RowActions({
 }
 
 export default function AuthorDetailsMasterPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryAuthorDetailRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -175,6 +194,24 @@ export default function AuthorDetailsMasterPage() {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_author_details");
+
+    const handleUpdate = (data: LibraryAuthorDetailSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_author_detail_update", handleUpdate);
+
+    return () => {
+      socket.off("library_author_detail_update", handleUpdate);
+      socket.emit("unsubscribe_library_author_details");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -235,12 +272,27 @@ export default function AuthorDetailsMasterPage() {
     }
   };
 
+  const handleDownload = () => {
+    downloadCsv(
+      "library-author-details.csv",
+      ["#", "Book", "Author Type", "Author", "Remarks", "Updated At"],
+      rows.map((row, i) => [
+        String((page - 1) * limit + i + 1),
+        bookTitle(row.bookId),
+        authorTypeName(row.authorTypeId),
+        authorName(row.authorId),
+        row.remarks ?? "—",
+        formatCsvDate(row.updatedAt),
+      ]),
+    );
+  };
+
   return (
     <div className="min-w-0 p-2 sm:p-4">
       <Card className="min-w-0 border-none">
         <CardHeader className="mb-3 rounded-md border bg-background p-3 sm:p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <CardTitle className="flex items-center text-lg sm:text-xl">
                 <FileText className="mr-2 h-8 w-8 rounded-md border p-1" />
                 Author Details
@@ -249,15 +301,12 @@ export default function AuthorDetailsMasterPage() {
                 Link books with authors and author types.
               </p>
             </div>
-            <Button type="button" size="sm" onClick={openCreate}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add author detail
-            </Button>
+            <LibraryMasterHeaderActions onDownload={handleDownload} onAdd={openCreate} />
           </div>
         </CardHeader>
 
         <CardContent className="min-w-0 px-0">
-          <div className="relative min-w-0 px-2 sm:px-4" style={{ minHeight: "400px" }}>
+          <div className="relative min-w-0 px-0 sm:px-0" style={{ minHeight: "400px" }}>
             {loading ? (
               <div className="flex min-h-[320px] items-center justify-center text-slate-500">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -272,13 +321,13 @@ export default function AuthorDetailsMasterPage() {
                 <Table containerClassName="min-w-[960px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-10">#</TableHead>
-                      <TableHead>Book</TableHead>
-                      <TableHead>Author type</TableHead>
-                      <TableHead>Author</TableHead>
-                      <TableHead>Remarks</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead className="w-[90px] text-right">Actions</TableHead>
+                      <TableHead className="bg-slate-100 w-10">#</TableHead>
+                      <TableHead className="bg-slate-100">Book</TableHead>
+                      <TableHead className="bg-slate-100">Author type</TableHead>
+                      <TableHead className="bg-slate-100">Author</TableHead>
+                      <TableHead className="bg-slate-100">Remarks</TableHead>
+                      <TableHead className="bg-slate-100">Updated</TableHead>
+                      <TableHead className="bg-slate-100 w-[90px] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

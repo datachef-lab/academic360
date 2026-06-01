@@ -1,14 +1,7 @@
 import React, { useCallback, useEffect, memo, useState } from "react";
-import {
-  Building2,
-  Plus,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { Building2, Search, ChevronLeft, ChevronRight, Loader2, Edit, Trash2 } from "lucide-react";
+import { LibraryMasterHeaderActions } from "@/pages/library/components/LibraryMasterHeaderActions";
+import { downloadCsv } from "@/pages/library/utils/download-csv";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +32,6 @@ import {
 import useDebounce from "@/components/Hooks/useDebounce";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -375,11 +367,9 @@ const VendorPage = () => {
 
   const { socket, isConnected } = useSocket({ userId });
 
-  const queryClient = useQueryClient();
-
   const debouncedSearch = useDebounce(search, 500);
 
-  const { data, isLoading, isFetching, isError } = useVendorsData({
+  const { data, isLoading, isFetching, isError, refetch } = useVendorsData({
     page,
     limit: LIMIT,
     search: debouncedSearch,
@@ -412,16 +402,13 @@ const VendorPage = () => {
   const closeDelete = useCallback(() => setDeleteTarget(null), []);
 
   useEffect(() => {
-    if (!socket || !isConnected || !userId) return;
-
-    // Wait until socket is truly ready with an id
-    if (!socket.id) return;
+    if (!socket || !isConnected) return;
 
     socket.emit("subscribe_library_vendors");
 
     const handleVendorUpdate = (data: LibraryVendorSocketUpdate) => {
       toast.info(data.message);
-      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      void refetch();
     };
 
     socket.on("library_vendor_update", handleVendorUpdate);
@@ -430,23 +417,53 @@ const VendorPage = () => {
       socket.off("library_vendor_update", handleVendorUpdate);
       socket.emit("unsubscribe_library_vendors");
     };
-  }, [socket, socket?.id, isConnected, userId, queryClient]);
+  }, [socket, isConnected, refetch]);
+
+  const handleDownload = () => {
+    downloadCsv(
+      "library-vendors.csv",
+      [
+        "#",
+        "Name",
+        "Code",
+        "Email",
+        "Phone",
+        "Website",
+        "PAN",
+        "Person of Contact",
+        "Person of Contact Email",
+        "Person of Contact Phone",
+      ],
+      vendorsData.map((vendor, index) => [
+        String((page - 1) * LIMIT + index + 1),
+        vendor.name,
+        vendor.code ?? "—",
+        vendor.email,
+        vendor.phone,
+        vendor.website ?? "—",
+        vendor.pan,
+        vendor.personOfContact ?? "—",
+        vendor.personOfContactEmail ?? "—",
+        vendor.personOfContactPhone ?? "—",
+      ]),
+    );
+  };
 
   return (
     <div className="min-w-0 p-2 sm:p-4">
       {/* Header */}
-      <div className="mb-3 rounded-md border bg-background p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex items-center text-xl font-semibold">
-              <Building2 className="mr-2 h-8 w-8 rounded-md border p-1" />
-              Vendors
+      <div className="mb-3 rounded-md border bg-background p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center text-lg font-semibold sm:text-xl">
+              <Building2 className="mr-2 h-8 w-8 shrink-0 rounded-md border p-1" />
+              <span className="truncate">Vendors</span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Manage vendor master data.</p>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Manage vendor master data.
+            </p>
           </div>
-          <Button className="w-full sm:w-auto" onClick={openAdd}>
-            <Plus className="mr-1 h-4 w-4" /> Add Vendor
-          </Button>
+          <LibraryMasterHeaderActions onDownload={handleDownload} onAdd={openAdd} />
         </div>
       </div>
 
