@@ -401,14 +401,14 @@ export default function ArticlesMasterPage() {
               </div>
             ) : (
               <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
-                <Table containerClassName="min-w-[980px]">
+                <Table containerClassName="min-w-[900px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="bg-slate-100 w-10">#</TableHead>
-                      <TableHead className="bg-slate-100">Name</TableHead>
+                      <TableHead className="bg-slate-100  w-10">#</TableHead>
+                      <TableHead className="bg-slate-100 ">Name</TableHead>
                       <TableHead className="bg-slate-100">Code</TableHead>
                       <TableHead className="bg-slate-100">Doc type</TableHead>
-                      <TableHead className="bg-slate-100">Unique #</TableHead>
+                      <TableHead className="bg-slate-100 ">Unique #</TableHead>
                       <TableHead className="bg-slate-100">Journal</TableHead>
                       <TableHead className="bg-slate-100">Updated</TableHead>
                       <TableHead className="bg-slate-100 w-[90px] text-right">Actions</TableHead>

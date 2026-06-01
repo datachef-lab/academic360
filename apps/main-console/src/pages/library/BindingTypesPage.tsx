@@ -235,23 +235,15 @@ export default function BindingTypesPage() {
             </div>
           </div>
 
-          <div className="relative" style={{ height: "600px" }}>
-            <div className="h-full overflow-y-auto overflow-x-auto">
+          <div className="relative ">
+            <div className="h-full overflow-y-auto overflow-x-auto rounded-md mt-2">
               <Table className="min-w-[900px] rounded-md border" style={{ tableLayout: "fixed" }}>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 70 }}>
-                      #
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 260 }}>
-                      Name
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 190 }}>
-                      Updated At
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 130 }}>
-                      Actions
-                    </TableHead>
+                    <TableHead className=" bg-slate-100">#</TableHead>
+                    <TableHead className=" bg-slate-100">Name</TableHead>
+                    <TableHead className=" bg-slate-100">Updated At</TableHead>
+                    <TableHead className=" text-center bg-slate-100">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -276,7 +268,7 @@ export default function BindingTypesPage() {
                         <TableCell>{(page - 1) * limit + index + 1}</TableCell>
                         <TableCell className="font-medium">{row.name}</TableCell>
                         <TableCell>{new Date(row.updatedAt).toLocaleString()}</TableCell>
-                        <TableCell>
+                        <TableCell className="flex justify-center">
                           <div className="flex gap-2">
                             <Button
                               type="button"
