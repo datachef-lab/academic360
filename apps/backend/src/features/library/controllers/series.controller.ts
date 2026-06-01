@@ -10,6 +10,8 @@ import {
   findSeriesPaginated,
   updateSeries,
 } from "@/features/library/services/series.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -111,6 +113,19 @@ export const createSeriesController = async (
       updatedAt: new Date(),
     });
 
+    const seriesId = created.id;
+    if (seriesId == null) {
+      throw new ApiError(500, "Failed to create series");
+    }
+
+    socketService.sendLibrarySeriesUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      seriesId,
+      seriesName: normalisedName,
+      meta: { seriesId },
+    });
+
     res
       .status(201)
       .json(
@@ -173,6 +188,15 @@ export const updateSeriesController = async (
     }
 
     const updated = await updateSeries(id, updateData);
+    const seriesName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibrarySeriesUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      seriesId: id,
+      seriesName,
+      meta: { seriesId: id },
+    });
     res
       .status(200)
       .json(
@@ -206,16 +230,19 @@ export const deleteSeriesController = async (
       return;
     }
 
-    const deleted = await deleteSeries(id);
+    const seriesName = existing.name;
+    await deleteSeries(id);
+    socketService.sendLibrarySeriesUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      seriesId: id,
+      seriesName,
+      meta: { seriesId: id },
+    });
     res
       .status(200)
       .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          deleted,
-          "Series deleted successfully.",
-        ),
+        new ApiResponse(200, "SUCCESS", null, "Series deleted successfully."),
       );
   } catch (error) {
     handleError(error, res, next);

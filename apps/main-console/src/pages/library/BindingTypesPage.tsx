@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,8 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BookType, Download, Edit, Loader2, PlusCircle, Search, Trash2 } from "lucide-react";
+import { BookType, Edit, Loader2, Search, Trash2 } from "lucide-react";
+import { LibraryMasterHeaderActions } from "@/pages/library/components/LibraryMasterHeaderActions";
+import { downloadCsv, formatCsvDate } from "@/pages/library/utils/download-csv";
 import { toast } from "sonner";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useSocket } from "@/hooks/useSocket";
 import {
   createLibraryBinding,
   deleteLibraryBinding,
@@ -34,7 +38,22 @@ import {
 
 const DEFAULT_LIMIT = 10;
 
+type LibraryBindingSocketUpdate = {
+  id: string;
+  type: "library_binding_update";
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actorName: string;
+  bindingId: number;
+  bindingName: string;
+  message: string;
+  updatedAt: string;
+};
+
 export default function BindingTypesPage() {
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+
   const [rows, setRows] = useState<LibraryBinding[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -59,7 +78,7 @@ export default function BindingTypesPage() {
   );
   const activeTo = useMemo(() => Math.min(page * limit, total), [page, limit, total]);
 
-  const fetchRows = async () => {
+  const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getLibraryBindings({
@@ -75,7 +94,7 @@ export default function BindingTypesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, limit, debouncedSearch]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -87,7 +106,25 @@ export default function BindingTypesPage() {
 
   useEffect(() => {
     void fetchRows();
-  }, [page, limit, debouncedSearch]);
+  }, [fetchRows]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("subscribe_library_bindings");
+
+    const handleUpdate = (data: LibraryBindingSocketUpdate) => {
+      toast.info(data.message);
+      void fetchRows();
+    };
+
+    socket.on("library_binding_update", handleUpdate);
+
+    return () => {
+      socket.off("library_binding_update", handleUpdate);
+      socket.emit("unsubscribe_library_bindings");
+    };
+  }, [socket, isConnected, fetchRows]);
 
   const resetForm = () => {
     setSelectedRow(null);
@@ -154,57 +191,34 @@ export default function BindingTypesPage() {
   };
 
   const handleDownload = () => {
-    const headers = ["#", "Name", "Legacy Binding ID", "Created At", "Updated At"];
-    const csvRows = rows.map((row, index) => [
-      String((page - 1) * limit + index + 1),
-      row.name,
-      row.legacyBindingId === null ? "-" : String(row.legacyBindingId),
-      new Date(row.createdAt).toLocaleString(),
-      new Date(row.updatedAt).toLocaleString(),
-    ]);
-
-    const csv = [headers, ...csvRows]
-      .map((line) => line.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "library-binding-types.csv";
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
+    downloadCsv(
+      "library-binding-types.csv",
+      ["#", "Name", "Legacy Binding ID", "Created At", "Updated At"],
+      rows.map((row, index) => [
+        String((page - 1) * limit + index + 1),
+        row.name,
+        row.legacyBindingId === null ? "-" : String(row.legacyBindingId),
+        formatCsvDate(row.createdAt),
+        formatCsvDate(row.updatedAt),
+      ]),
+    );
   };
 
   return (
     <div className="p-2 sm:p-4">
       <Card className="border-none">
-        <CardHeader className="sticky top-0 z-30 mb-3 flex flex-col items-start justify-between gap-4 rounded-md border bg-background p-4 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
-            <CardTitle className="flex items-center text-lg sm:text-xl">
-              <BookType className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
-              <span className="truncate">Binding Types</span>
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Manage library binding types used across records.
-            </p>
-          </div>
-
-          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
-            <Button variant="outline" onClick={handleDownload} className="flex-shrink-0">
-              <Download className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Download</span>
-            </Button>
-            <Button
-              className="bg-purple-600 text-white hover:bg-purple-700"
-              onClick={openCreateDialog}
-              type="button"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add
-            </Button>
+        <CardHeader className="sticky top-0 z-30 mb-3 rounded-md border bg-background p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="flex items-center text-lg sm:text-xl">
+                <BookType className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
+                <span className="truncate">Binding Types</span>
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                Manage library binding types used across records.
+              </p>
+            </div>
+            <LibraryMasterHeaderActions onDownload={handleDownload} onAdd={openCreateDialog} />
           </div>
         </CardHeader>
 
@@ -221,23 +235,15 @@ export default function BindingTypesPage() {
             </div>
           </div>
 
-          <div className="relative" style={{ height: "600px" }}>
-            <div className="h-full overflow-y-auto overflow-x-auto">
+          <div className="relative ">
+            <div className="h-full overflow-y-auto overflow-x-auto rounded-md mt-2">
               <Table className="min-w-[900px] rounded-md border" style={{ tableLayout: "fixed" }}>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 70 }}>
-                      #
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 260 }}>
-                      Name
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 190 }}>
-                      Updated At
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 130 }}>
-                      Actions
-                    </TableHead>
+                    <TableHead className=" bg-slate-100">#</TableHead>
+                    <TableHead className=" bg-slate-100">Name</TableHead>
+                    <TableHead className=" bg-slate-100">Updated At</TableHead>
+                    <TableHead className=" text-center bg-slate-100">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -262,7 +268,7 @@ export default function BindingTypesPage() {
                         <TableCell>{(page - 1) * limit + index + 1}</TableCell>
                         <TableCell className="font-medium">{row.name}</TableCell>
                         <TableCell>{new Date(row.updatedAt).toLocaleString()}</TableCell>
-                        <TableCell>
+                        <TableCell className="flex justify-center">
                           <div className="flex gap-2">
                             <Button
                               type="button"

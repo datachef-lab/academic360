@@ -10,6 +10,8 @@ import {
   findBorrowingTypesPaginated,
   updateBorrowingType,
 } from "@/features/library/services/borrowing-type.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -118,6 +120,19 @@ export const createBorrowingTypeController = async (
       updatedAt: new Date(),
     });
 
+    const borrowingTypeId = created.id;
+    if (borrowingTypeId == null) {
+      throw new ApiError(500, "Failed to create borrowing type");
+    }
+
+    socketService.sendLibraryBorrowingTypeUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      borrowingTypeId,
+      borrowingTypeName: normalisedName,
+      meta: { borrowingTypeId },
+    });
+
     res
       .status(201)
       .json(
@@ -187,6 +202,15 @@ export const updateBorrowingTypeController = async (
     }
 
     const updated = await updateBorrowingType(id, updateData);
+    const borrowingTypeName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryBorrowingTypeUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      borrowingTypeId: id,
+      borrowingTypeName,
+      meta: { borrowingTypeId: id },
+    });
     res
       .status(200)
       .json(
@@ -220,14 +244,22 @@ export const deleteBorrowingTypeController = async (
       return;
     }
 
-    const deleted = await deleteBorrowingType(id);
+    const borrowingTypeName = existing.name;
+    await deleteBorrowingType(id);
+    socketService.sendLibraryBorrowingTypeUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      borrowingTypeId: id,
+      borrowingTypeName,
+      meta: { borrowingTypeId: id },
+    });
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          deleted,
+          null,
           "Borrowing type deleted successfully.",
         ),
       );

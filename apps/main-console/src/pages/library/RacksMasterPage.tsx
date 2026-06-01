@@ -28,7 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Package2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Loader2, Package2, Search, Trash2 } from "lucide-react";
+import { LibraryMasterHeaderActions } from "@/pages/library/components/LibraryMasterHeaderActions";
+import { downloadCsv, formatCsvDate } from "@/pages/library/utils/download-csv";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
 import type { LibraryRackRow, LibraryRackUpsertBody } from "@/services/library-racks.service";
@@ -78,21 +80,21 @@ function RowActions({
   onDelete: (_row: LibraryRackRow) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
+        size="sm"
+        variant="destructive"
+        className="h-7 w-7 p-0"
         onClick={() => onDelete(row)}
       >
         <Trash2 className="h-4 w-4" />
@@ -233,12 +235,24 @@ export default function RacksMasterPage() {
     }
   };
 
+  const handleDownload = () => {
+    downloadCsv(
+      "library-racks.csv",
+      ["#", "Name", "Updated At"],
+      rows.map((row, i) => [
+        String((page - 1) * limit + i + 1),
+        row.name,
+        formatCsvDate(row.updatedAt),
+      ]),
+    );
+  };
+
   return (
     <div className="min-w-0 p-2 sm:p-4">
       <Card className="min-w-0 border-none">
         <CardHeader className="mb-3 rounded-md border bg-background p-3 sm:p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <CardTitle className="flex items-center text-lg sm:text-xl">
                 <Package2 className="mr-2 h-8 w-8 rounded-md border p-1" />
                 Racks
@@ -247,17 +261,12 @@ export default function RacksMasterPage() {
                 Manage rack master data.
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <Button type="button" size="sm" onClick={openCreate}>
-                <Plus className="mr-1 h-4 w-4" />
-                Add rack
-              </Button>
-            </div>
+            <LibraryMasterHeaderActions onDownload={handleDownload} onAdd={openCreate} />
           </div>
         </CardHeader>
 
         <CardContent className="min-w-0 px-0">
-          <div className="mb-3 border-b bg-background px-2 py-3 sm:px-4">
+          <div className="mb-3 border-b bg-background px-0 py-3 sm:px-0">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -272,7 +281,7 @@ export default function RacksMasterPage() {
             </div>
           </div>
 
-          <div className="relative min-w-0 px-2 sm:px-4" style={{ minHeight: "400px" }}>
+          <div className="relative min-w-0 px-0 sm:px-0" style={{ minHeight: "400px" }}>
             {loading ? (
               <div className="flex min-h-[320px] items-center justify-center text-slate-500">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -283,68 +292,32 @@ export default function RacksMasterPage() {
                 No racks found.
               </div>
             ) : (
-              <>
-                <div className="max-h-[70vh] space-y-3 overflow-y-auto pb-2 lg:hidden">
-                  {rows.map((row, i) => (
-                    <div
-                      key={row.id}
-                      className="rounded-lg border border-slate-200 bg-card p-3 shadow-sm"
-                    >
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <span className="text-xs font-medium text-slate-500">
-                          #{(page - 1) * limit + i + 1}
-                        </span>
-                        <RowActions row={row} onEdit={openEdit} onDelete={openDeleteDialog} />
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="font-semibold text-slate-900 underline underline-offset-2">
-                          {row.name}
-                        </p>
-                      </div>
-
-                      <div className="mt-3 text-xs text-muted-foreground">
-                        Updated: {parseDate(row.updatedAt)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="hidden min-w-0 pb-2 lg:block">
-                  <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
-                    <Table containerClassName="min-w-[720px]">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[360px]">Name</TableHead>
-                          <TableHead className="min-w-[140px]">Updated</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {rows.map((row, i) => (
-                          <TableRow key={row.id}>
-                            <TableCell className="align-top whitespace-nowrap">
-                              {(page - 1) * limit + i + 1}
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="font-semibold text-slate-900 underline underline-offset-2">
-                                {row.name}
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top text-xs text-muted-foreground">
-                              {parseDate(row.updatedAt)}
-                            </TableCell>
-                            <TableCell className="text-right align-top">
-                              <RowActions row={row} onEdit={openEdit} onDelete={openDeleteDialog} />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </>
+              <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
+                <Table containerClassName="min-w-[720px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="bg-slate-100 w-10">#</TableHead>
+                      <TableHead className="bg-slate-100">Name</TableHead>
+                      <TableHead className="bg-slate-100">Updated</TableHead>
+                      <TableHead className="bg-slate-100 w-[90px] text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((row, i) => (
+                      <TableRow key={row.id}>
+                        <TableCell>{(page - 1) * limit + i + 1}</TableCell>
+                        <TableCell className="font-semibold">{row.name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {parseDate(row.updatedAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <RowActions row={row} onEdit={openEdit} onDelete={openDeleteDialog} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </div>
 

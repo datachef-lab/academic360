@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BookCopy, Download, Filter, Loader2, Pencil, Plus, Search } from "lucide-react";
+import { BookCopy, Download, Edit, Filter, Loader2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
@@ -272,15 +272,15 @@ function CopyRowActions({
   onEdit: (id: number) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 justify-end">
+    <div className="flex gap-2">
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
         onClick={() => onEdit(row.id)}
       >
-        <Pencil className="h-4 w-4" />
+        <Edit className="h-4 w-4" />
       </Button>
     </div>
   );
@@ -630,7 +630,7 @@ export default function CopyDetailsPage() {
         </CardHeader>
 
         <CardContent className="min-w-0 px-0">
-          <div className="mb-3 border-b bg-background px-2 py-3 sm:px-4">
+          <div className="mb-3 border-b bg-background px-0 py-3 sm:px-0">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -645,7 +645,7 @@ export default function CopyDetailsPage() {
             </div>
           </div>
 
-          <div className="relative min-w-0 px-2 sm:px-4" style={{ minHeight: "400px" }}>
+          <div className="relative min-w-0 px-0 sm:px-0" style={{ minHeight: "400px" }}>
             {loading ? (
               <div className="flex min-h-[320px] items-center justify-center text-slate-500">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />

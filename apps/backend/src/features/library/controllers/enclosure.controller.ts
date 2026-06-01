@@ -10,6 +10,8 @@ import {
   findEnclosuresPaginated,
   updateEnclosure,
 } from "@/features/library/services/enclosure.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -116,6 +118,19 @@ export const createEnclosureController = async (
       updatedAt: new Date(),
     });
 
+    const enclosureId = created.id;
+    if (enclosureId == null) {
+      throw new ApiError(500, "Failed to create enclosure");
+    }
+
+    socketService.sendLibraryEnclosureUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      enclosureId,
+      enclosureName: normalisedName,
+      meta: { enclosureId },
+    });
+
     res
       .status(201)
       .json(
@@ -178,6 +193,15 @@ export const updateEnclosureController = async (
     }
 
     const updated = await updateEnclosure(id, updateData);
+    const enclosureName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryEnclosureUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      enclosureId: id,
+      enclosureName,
+      meta: { enclosureId: id },
+    });
     res
       .status(200)
       .json(
@@ -211,14 +235,22 @@ export const deleteEnclosureController = async (
       return;
     }
 
-    const deleted = await deleteEnclosure(id);
+    const enclosureName = existing.name;
+    await deleteEnclosure(id);
+    socketService.sendLibraryEnclosureUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      enclosureId: id,
+      enclosureName,
+      meta: { enclosureId: id },
+    });
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          deleted,
+          null,
           "Enclosure deleted successfully.",
         ),
       );

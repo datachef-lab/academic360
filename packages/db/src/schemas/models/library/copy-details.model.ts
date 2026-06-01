@@ -9,6 +9,7 @@ import { shelfModel } from "./shelf.model";
 import { enclosureModel } from "./enclosure.model";
 import { bindingModel } from "./binding.model";
 import { personModel, userModel } from "../user";
+import { vendorModel } from "./vendor.model";
 
 export const copyDetailsModel = pgTable("copy_details", {
     id: serial().primaryKey(),
@@ -47,6 +48,8 @@ export const copyDetailsModel = pgTable("copy_details", {
     volumeInfo: varchar({ length: 255 }),
     remarks: varchar({ length: 1000 }),
     legacyVendorId: integer(),
+    vendorId: integer("vendor_id_fk")
+        .references(() => vendorModel.id),
     donorPersonId: integer("donor_person_id_fk")
         .references(() => personModel.id),
     prefix: varchar({ length: 255 }),

@@ -12,13 +12,20 @@ import EntryModesPage from "./EntryModesPage";
 import PeriodsPage from "./PeriodsPage";
 import BindingTypesPage from "./BindingTypesPage";
 import BorrowingTypesPage from "./BorrowingTypesPage";
+
 import {
   ArticlesPage,
+  AuthorDetailsPage,
+  AuthorsPage,
+  AuthorTypesPage,
+  ClassHolidaysPage,
+  HolidaysPage,
   JournalTypesPage,
   LibraryDocumentsPage,
   RacksPage,
   ShelvesPage,
   StatusesPage,
+  VendorPage,
 } from "./MasterPages";
 
 export {
@@ -42,4 +49,10 @@ export {
   ArticlesPage,
   LibraryDocumentsPage,
   BorrowingTypesPage,
+  HolidaysPage,
+  AuthorTypesPage,
+  AuthorsPage,
+  AuthorDetailsPage,
+  ClassHolidaysPage,
+  VendorPage,
 };

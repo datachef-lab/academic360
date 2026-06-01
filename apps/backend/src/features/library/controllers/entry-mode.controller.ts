@@ -10,6 +10,8 @@ import {
   findEntryModesPaginated,
   updateEntryMode,
 } from "@/features/library/services/entry-mode.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -116,6 +118,19 @@ export const createEntryModeController = async (
       updatedAt: new Date(),
     });
 
+    const entryModeId = created.id;
+    if (entryModeId == null) {
+      throw new ApiError(500, "Failed to create entry mode");
+    }
+
+    socketService.sendLibraryEntryModeUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      entryModeId,
+      entryModeName: normalisedName,
+      meta: { entryModeId },
+    });
+
     res
       .status(201)
       .json(
@@ -178,6 +193,15 @@ export const updateEntryModeController = async (
     }
 
     const updated = await updateEntryMode(id, updateData);
+    const entryModeName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryEntryModeUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      entryModeId: id,
+      entryModeName,
+      meta: { entryModeId: id },
+    });
     res
       .status(200)
       .json(
@@ -211,14 +235,22 @@ export const deleteEntryModeController = async (
       return;
     }
 
-    const deleted = await deleteEntryMode(id);
+    const entryModeName = existing.name;
+    await deleteEntryMode(id);
+    socketService.sendLibraryEntryModeUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      entryModeId: id,
+      entryModeName,
+      meta: { entryModeId: id },
+    });
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          deleted,
+          null,
           "Entry mode deleted successfully.",
         ),
       );

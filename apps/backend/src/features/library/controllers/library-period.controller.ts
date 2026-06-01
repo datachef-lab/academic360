@@ -10,6 +10,8 @@ import {
   findLibraryPeriodsPaginated,
   updateLibraryPeriod,
 } from "@/features/library/services/library-period.service.js";
+import { socketService } from "@/services/socketService.js";
+import { libraryActorName } from "@/features/library/utils/library-socket.util.js";
 
 const parseId = (value?: string | string[]): number | null => {
   const input = Array.isArray(value) ? value[0] : value;
@@ -116,6 +118,19 @@ export const createLibraryPeriodController = async (
       updatedAt: new Date(),
     });
 
+    const periodId = created.id;
+    if (periodId == null) {
+      throw new ApiError(500, "Failed to create library period");
+    }
+
+    socketService.sendLibraryPeriodUpdate({
+      action: "CREATED",
+      actorName: libraryActorName(req),
+      periodId,
+      periodName: normalisedName,
+      meta: { periodId },
+    });
+
     res
       .status(201)
       .json(
@@ -180,6 +195,15 @@ export const updateLibraryPeriodController = async (
     }
 
     const updated = await updateLibraryPeriod(id, updateData);
+    const periodName =
+      typeof updateData.name === "string" ? updateData.name : existing.name;
+    socketService.sendLibraryPeriodUpdate({
+      action: "UPDATED",
+      actorName: libraryActorName(req),
+      periodId: id,
+      periodName,
+      meta: { periodId: id },
+    });
     res
       .status(200)
       .json(
@@ -213,14 +237,22 @@ export const deleteLibraryPeriodController = async (
       return;
     }
 
-    const deleted = await deleteLibraryPeriod(id);
+    const periodName = existing.name;
+    await deleteLibraryPeriod(id);
+    socketService.sendLibraryPeriodUpdate({
+      action: "DELETED",
+      actorName: libraryActorName(req),
+      periodId: id,
+      periodName,
+      meta: { periodId: id },
+    });
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          deleted,
+          null,
           "Library period deleted successfully.",
         ),
       );
