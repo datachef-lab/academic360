@@ -34,14 +34,65 @@ function isStudentConsoleRequest(req: Request): boolean {
   return result;
 }
 
+/** Map API/Postman body (`disabled`, optional `type`) to `users` insert shape. */
+function normalizeCreateUserBody(body: Record<string, unknown>): User {
+  const disabled = body.disabled as boolean | undefined;
+  const isActive =
+    body.isActive !== undefined
+      ? Boolean(body.isActive)
+      : disabled !== undefined
+        ? !disabled
+        : true;
+
+  const rawType = body.type as User["type"] | undefined;
+  const allowedTypes = userTypeEnum.enumValues;
+  const type =
+    rawType && allowedTypes.includes(rawType)
+      ? rawType
+      : ("STAFF" as User["type"]);
+
+  return {
+    name: String(body.name ?? "").trim(),
+    email: String(body.email ?? "")
+      .trim()
+      .toLowerCase(),
+    password: String(body.password ?? ""),
+    phone: body.phone != null ? String(body.phone) : undefined,
+    whatsappNumber:
+      body.whatsappNumber != null ? String(body.whatsappNumber) : undefined,
+    image: body.image != null ? String(body.image) : undefined,
+    type,
+    isActive,
+    isSuspended:
+      body.isSuspended != null ? Boolean(body.isSuspended) : undefined,
+    institutionalRoleId:
+      body.institutionalRoleId != null
+        ? Number(body.institutionalRoleId)
+        : undefined,
+    sendStagingNotifications:
+      body.sendStagingNotifications != null
+        ? Boolean(body.sendStagingNotifications)
+        : undefined,
+  };
+}
+
 export const createUser = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  const givenUser = req.body as User;
+  const givenUser = normalizeCreateUserBody(
+    req.body as Record<string, unknown>,
+  );
 
   try {
+    if (!givenUser.name || !givenUser.email || !givenUser.password) {
+      res
+        .status(400)
+        .json(new ApiError(400, "name, email, and password are required."));
+      return;
+    }
+
     // Create a new user
     const newUser = await addUser(givenUser);
 
