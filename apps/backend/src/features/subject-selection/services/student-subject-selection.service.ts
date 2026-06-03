@@ -2122,6 +2122,9 @@ export async function getSubjectSelectionMetaForStudent(
   };
 }
 
+const STUDENT_SUBJECTS_FINAL_WHERE_PROMOTED = `WHERE promotion_id IS NOT NULL
+  AND NULLIF(TRIM(COALESCE(promotion_academic_year, '')), '') IS NOT NULL`;
+
 const STUDENT_SUBJECTS_FINAL_SELECT_FULL = `SELECT
     student_id,
     uid,
@@ -2151,7 +2154,8 @@ FROM (
   SELECT * FROM mandatory
   UNION ALL
   SELECT * FROM optional
-) final`;
+) final
+${STUDENT_SUBJECTS_FINAL_WHERE_PROMOTED}`;
 
 /** Enrolment master: papers scoped to a promotion in the report year (promotion_id + class match). */
 const STUDENT_SUBJECTS_FINAL_SELECT_PAPER = `SELECT promotion_id, student_id, paper, paper_code
@@ -2160,8 +2164,7 @@ FROM (
   UNION ALL
   SELECT * FROM optional
 ) final
-WHERE promotion_id IS NOT NULL
-  AND NULLIF(TRIM(COALESCE(promotion_academic_year, '')), '') IS NOT NULL`;
+${STUDENT_SUBJECTS_FINAL_WHERE_PROMOTED}`;
 
 const STUDENT_SUBJECTS_EXPORT_SQL = `
 WITH students_in_report_year AS (
