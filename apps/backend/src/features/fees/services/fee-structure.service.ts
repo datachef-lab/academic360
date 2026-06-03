@@ -144,7 +144,6 @@ type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
 /** Open, non-deprecated promotion — aligned with fees dashboard and shift change. */
 function activePromotionCondition(...extra: SQL[]): SQL {
   const parts: SQL[] = [
-    isNull(promotionModel.endDate),
     sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
   ];
   if (extra.length) parts.push(...extra);
