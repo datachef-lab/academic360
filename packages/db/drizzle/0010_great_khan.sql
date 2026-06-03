@@ -1,0 +1,1 @@
+ALTER TABLE "board_subject_univ_subject_mappings" ADD COLUMN "is_active" boolean DEFAULT true;

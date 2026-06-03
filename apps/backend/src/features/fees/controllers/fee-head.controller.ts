@@ -6,7 +6,7 @@ import {
   updateFeeHead,
   deleteFeeHead,
 } from "../services/fee-head.service";
-import { createFeeHeadSchema } from "@repo/db/schemas";
+import { createFeeHeadSchema } from "@academic/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 

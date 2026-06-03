@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { createCareerProgressionFormFieldSchema } from "@repo/db/schemas";
+import { createCareerProgressionFormFieldSchema } from "@academic/db/schemas";
 import { ApiResponse, handleError } from "@/utils/index.js";
 import * as careerProgressionFormFieldService from "../services/career-progression-form-field.service.js";
 

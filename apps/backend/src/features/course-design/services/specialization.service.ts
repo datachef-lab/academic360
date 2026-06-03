@@ -2,11 +2,11 @@ import { db } from "@/db/index.js";
 import {
   Specialization,
   specializationModel,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import { countDistinct, eq } from "drizzle-orm";
 import { SpecializationSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
-import { studentModel } from "@repo/db/schemas/models/user";
+import { studentModel } from "@academic/db/schemas/models/user";
 
 // Types
 export type SpecializationData = z.infer<typeof SpecializationSchema>;

@@ -32,7 +32,7 @@
     "@radix-ui/react-toast": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.1.6",
     "@reduxjs/toolkit": "^2.8.2",
-    "@repo/db": "workspace:*",
+    "@academic/db": "workspace:*",
     "@tanstack/react-query": "4.36.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -78,7 +78,7 @@
   "devDependencies": {
     "@eslint/js": "^9.33.0",
     "@repo/eslint-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
+    "@academic/typescript-config": "workspace:*",
     "@types/dompurify": "^3.2.0",
     "@types/lodash": "^4.17.15",
     "@types/node": "^22.10.3",

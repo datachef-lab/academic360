@@ -1,5 +1,5 @@
 // Import DTOs from shared package
-import type { SubjectSelectionMetaDto } from "@repo/db/dtos/subject-selection";
+import type { SubjectSelectionMetaDto } from "@academic/db/dtos/subject-selection";
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
 
@@ -79,9 +79,9 @@ export interface SaveSelectionsResponse {
 export async function fetchStudentSubjectSelections(
   studentId: number,
 ): Promise<StudentSubjectSelectionApiResponse> {
-  const res = await axiosInstance.get<ApiResponse<StudentSubjectSelectionApiResponse>>(
-    `/api/subject-selection/students/${studentId}/selections`,
-  );
+  const res = await axiosInstance.get<
+    ApiResponse<StudentSubjectSelectionApiResponse>
+  >(`/api/subject-selection/students/${studentId}/selections`);
 
   // Backward compatibility: if old payload shape (array), map into new structure
   const payload = res.data.payload;
@@ -103,10 +103,9 @@ export async function saveStudentSubjectSelectionsAdmin(
   selections: AdminStudentSubjectSelectionForSave[],
 ): Promise<SaveSelectionsResponse> {
   try {
-    const res = await axiosInstance.post<ApiResponse<StudentSubjectSelectionForSave[]>>(
-      "/api/subject-selection/student-subject-selection/admin",
-      selections,
-    );
+    const res = await axiosInstance.post<
+      ApiResponse<StudentSubjectSelectionForSave[]>
+    >("/api/subject-selection/student-subject-selection/admin", selections);
 
     return {
       success: true,
@@ -125,14 +124,22 @@ export async function saveStudentSubjectSelectionsAdmin(
       message?: string;
     };
 
-    if (maybeAxios.response?.status === 400 && maybeAxios.response?.data?.payload?.errors) {
+    if (
+      maybeAxios.response?.status === 400 &&
+      maybeAxios.response?.data?.payload?.errors
+    ) {
       return {
         success: false,
         errors: maybeAxios.response.data.payload.errors,
       };
     }
     const status = maybeAxios.response?.status ?? 500;
-    const message = maybeAxios.response?.data?.message ?? maybeAxios.message ?? "Unknown error";
-    throw new Error(`Failed to save subject selections (${status}): ${message}`);
+    const message =
+      maybeAxios.response?.data?.message ??
+      maybeAxios.message ??
+      "Unknown error";
+    throw new Error(
+      `Failed to save subject selections (${status}): ${message}`,
+    );
   }
 }

@@ -1,10 +1,12 @@
 import { ApiResponse } from "@/types/api-response";
-import type { AccommodationDto } from "@repo/db/dtos/user";
+import type { AccommodationDto } from "@academic/db/dtos/user";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/accommodations";
 
-export async function getAllAccommodations(): Promise<ApiResponse<AccommodationDto[]>> {
+export async function getAllAccommodations(): Promise<
+  ApiResponse<AccommodationDto[]>
+> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data;
@@ -28,7 +30,9 @@ export async function getAccommodationByStudentId(
   studentId: number,
 ): Promise<ApiResponse<AccommodationDto | null>> {
   try {
-    const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
+    const response = await axiosInstance.get(
+      `${BASE_URL}/student/${studentId}`,
+    );
     return response.data;
   } catch (err) {
     if ((err as { response?: { status: number } })?.response?.status === 404) {
@@ -61,7 +65,9 @@ export async function updateAccommodation(
   }
 }
 
-export async function deleteAccommodation(id: number): Promise<ApiResponse<null>> {
+export async function deleteAccommodation(
+  id: number,
+): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
     return response.data;
@@ -74,9 +80,13 @@ export async function deleteAccommodationByStudentId(
   studentId: number,
 ): Promise<ApiResponse<null>> {
   try {
-    const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
+    const response = await axiosInstance.delete(
+      `${BASE_URL}/student/${studentId}`,
+    );
     return response.data;
   } catch {
-    throw new Error(`Failed to delete accommodation for studentId ${studentId}`);
+    throw new Error(
+      `Failed to delete accommodation for studentId ${studentId}`,
+    );
   }
 }

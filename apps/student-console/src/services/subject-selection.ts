@@ -2,7 +2,7 @@
 import type {
   SubjectSelectionMetaDto,
   StudentSubjectSelectionDto as DbStudentSubjectSelectionDto,
-} from "@repo/db/dtos/subject-selection";
+} from "@academic/db/dtos/subject-selection";
 import { axiosInstance as api } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api-response";
 
@@ -128,7 +128,10 @@ export async function saveStudentSubjectSelections(
     };
   } catch (error: any) {
     // Handle validation errors
-    if (error.response?.status === 400 && error.response?.data?.payload?.errors) {
+    if (
+      error.response?.status === 400 &&
+      error.response?.data?.payload?.errors
+    ) {
       return {
         success: false,
         errors: error.response.data.payload.errors,

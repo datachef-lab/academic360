@@ -3,9 +3,9 @@ import {
   certificateFieldMasterModel,
   certificateFieldOptionMasterModel,
   createCertificateFieldMasterSchema,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { asc, eq } from "drizzle-orm";
-import type { CertificateFieldMasterDto } from "@repo/db/dtos/academics";
+import type { CertificateFieldMasterDto } from "@academic/db/dtos/academics";
 
 async function rowToDto(
   row: typeof certificateFieldMasterModel.$inferSelect,

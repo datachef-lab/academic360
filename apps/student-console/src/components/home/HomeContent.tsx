@@ -12,7 +12,7 @@ import SubjectSelectionCard from "./SubjectSelectionCard";
 import ExamWidget from "./ExamWidget";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 import { ExamDto, ExamGroupDto } from "@/dtos";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { toast } from "sonner";

@@ -11,7 +11,7 @@ import {
   shiftModel,
   studentModel,
   userModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { socketService } from "@/services/socketService.js";
 import { alias } from "drizzle-orm/pg-core";
 import {
@@ -29,8 +29,8 @@ import {
 
 import { precomputeBuilderPolicy } from "./promotion-builder-policy.service.js";
 import type { PrecomputedBuilderPolicy } from "./promotion-builder-policy.service.js";
-import { feeStructureModel } from "@repo/db/schemas/models/fees";
-import { paperModel } from "@repo/db/schemas";
+import { feeStructureModel } from "@academic/db/schemas/models/fees";
+import { paperModel } from "@academic/db/schemas";
 import { ensureDefaultFeeStudentMappingsForFeeStructure } from "@/features/fees/services/fee-structure.service.js";
 
 /** Must match `SEMESTER_PROMOTION_SOCKET_OP` in `apps/main-console/src/services/promotion-roster.api.ts`. */

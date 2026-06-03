@@ -1,10 +1,10 @@
 import { db, mysqlConnection } from "@/db";
-import { StaffDto } from "@repo/db/dtos";
-import { Staff, staffModel } from "@repo/db/schemas";
+import { StaffDto } from "@academic/db/dtos";
+import { Staff, staffModel } from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 
 import * as shiftService from "@/features/academics/services/shift.service";
-import { OldStaff } from "@repo/db/legacy-system-types/users";
+import { OldStaff } from "@academic/db/legacy-system-types/users";
 import { upsertUser } from "./refactor-old-migration.service";
 
 const BATCH_SIZE = 500;

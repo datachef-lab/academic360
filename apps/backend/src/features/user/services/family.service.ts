@@ -3,7 +3,7 @@ import {
   Family,
   familyModel,
   createFamilySchema,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import {
   addPerson,
@@ -15,7 +15,7 @@ import {
 import { FamilyType } from "@/types/user/family.js";
 import { findAnnualIncomeById } from "@/features/resources/services/annualIncome.service.js";
 import { z } from "zod";
-import { FamilyDto } from "@repo/db/index.js";
+import { FamilyDto } from "@academic/db/index.js";
 
 // Validate input using Zod schema
 function validateFamilyInput(data: Omit<FamilyType, "id">) {

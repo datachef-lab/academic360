@@ -3,7 +3,7 @@ import type { ApiResponse } from "@/types/api-response";
 import type {
   CuRegistrationCorrectionRequestDto,
   CuRegistrationDocumentUploadDto,
-} from "@repo/db/dtos/admissions";
+} from "@academic/db/dtos/admissions";
 
 export interface CreateCuCorrectionPayload {
   studentId: number;
@@ -25,24 +25,35 @@ export interface CreateCuCorrectionPayload {
 
 const BASE = "/api/admissions/cu-registration-correction-requests";
 
-export async function createCuCorrectionRequest(data: CreateCuCorrectionPayload) {
+export async function createCuCorrectionRequest(
+  data: CreateCuCorrectionPayload,
+) {
   console.info(`[CU-REG FRONTEND] Creating correction request:`, data);
   try {
-    const res = await api.post<ApiResponse<CuRegistrationCorrectionRequestDto>>(BASE, data);
+    const res = await api.post<ApiResponse<CuRegistrationCorrectionRequestDto>>(
+      BASE,
+      data,
+    );
     console.info(`[CU-REG FRONTEND] Correction request created:`, res.data);
     return res.data.payload as CuRegistrationCorrectionRequestDto;
   } catch (error) {
-    console.error(`[CU-REG FRONTEND] Error creating correction request:`, error);
+    console.error(
+      `[CU-REG FRONTEND] Error creating correction request:`,
+      error,
+    );
     throw error;
   }
 }
 
 export async function getStudentCuCorrectionRequests(studentId: number) {
-  console.info(`[CU-REG FRONTEND] Fetching correction requests for student: ${studentId}`);
+  console.info(
+    `[CU-REG FRONTEND] Fetching correction requests for student: ${studentId}`,
+  );
   try {
     const res = await api.get<
       ApiResponse<
-        CuRegistrationCorrectionRequestDto[] | { content: CuRegistrationCorrectionRequestDto[] }
+        | CuRegistrationCorrectionRequestDto[]
+        | { content: CuRegistrationCorrectionRequestDto[] }
       >
     >(BASE, {
       params: { studentId },
@@ -55,7 +66,10 @@ export async function getStudentCuCorrectionRequests(studentId: number) {
     console.info(`[CU-REG FRONTEND] Parsed correction requests:`, result);
     return result;
   } catch (error) {
-    console.error(`[CU-REG FRONTEND] Error fetching correction requests:`, error);
+    console.error(
+      `[CU-REG FRONTEND] Error fetching correction requests:`,
+      error,
+    );
     throw error;
   }
 }
@@ -63,11 +77,16 @@ export async function getStudentCuCorrectionRequests(studentId: number) {
 export async function getCuCorrectionRequestById(id: number) {
   console.info(`[CU-REG FRONTEND] Fetching correction request by ID: ${id}`);
   try {
-    const res = await api.get<ApiResponse<CuRegistrationCorrectionRequestDto>>(`${BASE}/${id}`);
+    const res = await api.get<ApiResponse<CuRegistrationCorrectionRequestDto>>(
+      `${BASE}/${id}`,
+    );
     console.info(`[CU-REG FRONTEND] Correction request response:`, res.data);
     return res.data.payload as CuRegistrationCorrectionRequestDto;
   } catch (error) {
-    console.error(`[CU-REG FRONTEND] Error fetching correction request:`, error);
+    console.error(
+      `[CU-REG FRONTEND] Error fetching correction request:`,
+      error,
+    );
     throw error;
   }
 }
@@ -115,7 +134,10 @@ export async function submitCuRegistrationCorrectionRequestWithDocuments(data: {
   formData.append("correctionRequestId", String(data.correctionRequestId));
   formData.append("flags", JSON.stringify(data.flags));
   formData.append("payload", JSON.stringify(data.payload));
-  formData.append("documentNames", JSON.stringify(data.documents.map((d) => d.documentName)));
+  formData.append(
+    "documentNames",
+    JSON.stringify(data.documents.map((d) => d.documentName)),
+  );
 
   // Add files to form data
   data.documents.forEach((doc, index) => {
@@ -155,10 +177,16 @@ export async function submitPersonalInfoDeclaration(data: {
       }>
     >(`${BASE}/personal-declaration`, data);
 
-    console.info(`[CU-REG FRONTEND] Personal info declaration submitted:`, res.data);
+    console.info(
+      `[CU-REG FRONTEND] Personal info declaration submitted:`,
+      res.data,
+    );
     return res.data.payload;
   } catch (error) {
-    console.error(`[CU-REG FRONTEND] Error submitting personal info declaration:`, error);
+    console.error(
+      `[CU-REG FRONTEND] Error submitting personal info declaration:`,
+      error,
+    );
     throw error;
   }
 }
@@ -175,10 +203,16 @@ export async function submitAddressInfoDeclaration(data: {
       }>
     >(`${BASE}/address-declaration`, data);
 
-    console.info(`[CU-REG FRONTEND] Address info declaration submitted:`, res.data);
+    console.info(
+      `[CU-REG FRONTEND] Address info declaration submitted:`,
+      res.data,
+    );
     return res.data.payload;
   } catch (error) {
-    console.error(`[CU-REG FRONTEND] Error submitting address info declaration:`, error);
+    console.error(
+      `[CU-REG FRONTEND] Error submitting address info declaration:`,
+      error,
+    );
     throw error;
   }
 }
@@ -198,12 +232,17 @@ export async function submitSubjectsDeclaration(data: {
     console.info(`[CU-REG FRONTEND] Subjects declaration submitted:`, res.data);
     return res.data.payload;
   } catch (error) {
-    console.error(`[CU-REG FRONTEND] Error submitting subjects declaration:`, error);
+    console.error(
+      `[CU-REG FRONTEND] Error submitting subjects declaration:`,
+      error,
+    );
     throw error;
   }
 }
 
-export async function submitDocumentsDeclaration(data: { correctionRequestId: number }) {
+export async function submitDocumentsDeclaration(data: {
+  correctionRequestId: number;
+}) {
   console.info(`[CU-REG FRONTEND] Submitting documents declaration:`, data);
   try {
     const res = await api.post<
@@ -212,10 +251,16 @@ export async function submitDocumentsDeclaration(data: { correctionRequestId: nu
       }>
     >(`${BASE}/documents-declaration`, data);
 
-    console.info(`[CU-REG FRONTEND] Documents declaration submitted:`, res.data);
+    console.info(
+      `[CU-REG FRONTEND] Documents declaration submitted:`,
+      res.data,
+    );
     return res.data.payload;
   } catch (error) {
-    console.error(`[CU-REG FRONTEND] Error submitting documents declaration:`, error);
+    console.error(
+      `[CU-REG FRONTEND] Error submitting documents declaration:`,
+      error,
+    );
     throw error;
   }
 }

@@ -1,4 +1,4 @@
-import type { ExamCandidateDto, ExamDto } from "@repo/db/dtos/exams";
+import type { ExamCandidateDto, ExamDto } from "@academic/db/dtos/exams";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import { API_BASE_URL } from "@/lib/api";

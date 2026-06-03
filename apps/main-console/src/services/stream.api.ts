@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
-import type { Stream } from "@repo/db/schemas";
+import type { Stream } from "@academic/db/schemas";
 
 export interface BulkUploadResult {
   success: Stream[];
@@ -31,14 +31,22 @@ export const getStreamById = async (id: number): Promise<Stream> => {
 };
 
 // Create stream
-export const createStream = async (data: Record<string, unknown>): Promise<Stream> => {
+export const createStream = async (
+  data: Record<string, unknown>,
+): Promise<Stream> => {
   const res = await axiosInstance.post<ApiResponse<Stream>>(BASE, data);
   return res.data.payload;
 };
 
 // Update stream
-export const updateStream = async (id: number, data: Record<string, unknown>): Promise<Stream> => {
-  const res = await axiosInstance.put<ApiResponse<Stream>>(`${BASE}/${id}`, data);
+export const updateStream = async (
+  id: number,
+  data: Record<string, unknown>,
+): Promise<Stream> => {
+  const res = await axiosInstance.put<ApiResponse<Stream>>(
+    `${BASE}/${id}`,
+    data,
+  );
   return res.data.payload;
 };
 
@@ -61,7 +69,9 @@ export const deleteStream = async (
 };
 
 // Bulk upload streams
-export const bulkUploadStreams = async (file: File): Promise<BulkUploadResult> => {
+export const bulkUploadStreams = async (
+  file: File,
+): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
 

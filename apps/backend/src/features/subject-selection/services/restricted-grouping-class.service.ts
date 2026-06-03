@@ -1,12 +1,12 @@
 import { db } from "@/db/index.js";
-import { restrictedGroupingClassModel } from "@repo/db/schemas/models/subject-selection";
+import { restrictedGroupingClassModel } from "@academic/db/schemas/models/subject-selection";
 import {
   RestrictedGroupingClass,
   RestrictedGroupingClassT,
-} from "@repo/db/schemas/models/subject-selection/restricted-grouping-class.model";
+} from "@academic/db/schemas/models/subject-selection/restricted-grouping-class.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
-import { RestrictedGroupingClassDto } from "@repo/db/dtos/subject-selection";
-import { classModel } from "@repo/db/schemas/models/academics";
+import { RestrictedGroupingClassDto } from "@academic/db/dtos/subject-selection";
+import { classModel } from "@academic/db/schemas/models/academics";
 import XLSX from "xlsx";
 import fs from "fs";
 

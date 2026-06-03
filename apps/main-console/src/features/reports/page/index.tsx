@@ -47,7 +47,7 @@ import {
   getAffiliations,
   getProgramCourses,
 } from "@/services/course-design.api";
-import type { RegulationType, Affiliation, ProgramCourse } from "@repo/db/index";
+import type { RegulationType, Affiliation, ProgramCourse } from "@academic/db/index";
 import { getAllClasses } from "@/services/classes.service";
 import type { Class } from "@/types/academics/class";
 import {

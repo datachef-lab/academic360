@@ -1,0 +1,1 @@
+ALTER TABLE "promotions" ALTER COLUMN "date_of_joining" DROP NOT NULL;

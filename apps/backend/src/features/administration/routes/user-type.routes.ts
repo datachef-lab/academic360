@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createUserTypeSchema } from "@repo/db/schemas/models/administration";
+import { createUserTypeSchema } from "@academic/db/schemas/models/administration";
 import {
   createUserType,
   deleteUserType,

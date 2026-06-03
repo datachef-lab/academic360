@@ -1,4 +1,4 @@
-import { userTypeEnum } from "@repo/db/schemas/enums";
+import { userTypeEnum } from "@academic/db/schemas/enums";
 import "dotenv/config";
 
 import jwt from "jsonwebtoken";

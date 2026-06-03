@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { LibraryPeriod, libraryPeriodModel } from "@repo/db/schemas";
+import { LibraryPeriod, libraryPeriodModel } from "@academic/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
 
 type LibraryPeriodListFilters = {

@@ -4,7 +4,7 @@ import {
   FloorT,
   floorModel,
   roomModel,
-} from "@repo/db/schemas/models/exams";
+} from "@academic/db/schemas/models/exams";
 import { and, countDistinct, eq, ilike, ne, sql } from "drizzle-orm";
 
 function normaliseFloorPayload<T extends Partial<Floor | FloorT>>(data: T) {

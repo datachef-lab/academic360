@@ -4,7 +4,7 @@ import {
   IdentityMaster,
   IdentityMasterT,
   identityMasterModel,
-} from "@repo/db/schemas/models/administration";
+} from "@academic/db/schemas/models/administration";
 
 function normaliseIdentityMasterPayload<
   T extends Partial<IdentityMaster | IdentityMasterT>,

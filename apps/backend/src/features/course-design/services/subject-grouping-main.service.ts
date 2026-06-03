@@ -7,9 +7,9 @@ import {
   subjectTypeModel,
   programCourseModel,
   subjectModel,
-} from "@repo/db/schemas/models";
-import type { SubjectGroupingMainDto } from "@repo/db/dtos/course-design";
-import type { SubjectGroupingMainT } from "@repo/db/schemas/models/course-design/subject-grouping-main.model";
+} from "@academic/db/schemas/models";
+import type { SubjectGroupingMainDto } from "@academic/db/dtos/course-design";
+import type { SubjectGroupingMainT } from "@academic/db/schemas/models/course-design/subject-grouping-main.model";
 import { and, eq, notInArray } from "drizzle-orm";
 
 // DTO-shaped input used by frontend

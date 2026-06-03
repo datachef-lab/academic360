@@ -4,8 +4,8 @@ import {
   UserStatusMaster,
   UserStatusMasterT,
   userStatusMasterModel,
-} from "@repo/db/schemas/models/administration";
-import { UserStatusMasterDto } from "@repo/db/dtos/administration";
+} from "@academic/db/schemas/models/administration";
+import { UserStatusMasterDto } from "@academic/db/dtos/administration";
 import { userStatusData } from "@/features/default-administration-data";
 
 export async function loadDefaultUserStatusMasters() {

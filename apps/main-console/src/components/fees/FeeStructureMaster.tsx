@@ -36,8 +36,8 @@ import { FeesReceiptType } from "@/types/fees";
 import type { FeeConcessionSlabT } from "@/schemas";
 import type { FeesHead } from "@/types/fees";
 import { Class } from "@/types/academics/class";
-import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
-import type { FeeStructureComponentT } from "@repo/db/schemas";
+import { CreateFeeStructureDto, FeeStructureDto } from "@academic/db/dtos/fees";
+import type { FeeStructureComponentT } from "@academic/db/schemas";
 import { getProgramCourses, getAcademicYears } from "@/services/course-design.api";
 import { getAllShifts } from "@/services/academic";
 import {
@@ -384,7 +384,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
         if (concessionSlabsResponse.status === "fulfilled") {
           const concessionSlabsArray =
             concessionSlabsResponse.value?.payload &&
-            Array.isArray(concessionSlabsResponse.value.payload)
+              Array.isArray(concessionSlabsResponse.value.payload)
               ? concessionSlabsResponse.value.payload
               : [];
           setFeeConcessionSlabs(concessionSlabsArray);
@@ -1324,11 +1324,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                     <Badge
                                       key={idx}
                                       variant="outline"
-                                      className={`text-xs py-0.5 px-2 flex items-center gap-1 ${
-                                        hasConflict
+                                      className={`text-xs py-0.5 px-2 flex items-center gap-1 ${hasConflict
                                           ? "bg-red-100 text-red-800 border-red-400"
                                           : "bg-indigo-100 text-indigo-800 border-indigo-300"
-                                      }`}
+                                        }`}
                                     >
                                       <span>{prog}</span>
                                       <button
@@ -1362,11 +1361,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                     <Badge
                                       key={idx}
                                       variant="outline"
-                                      className={`text-xs py-0.5 px-2 flex items-center gap-1 ${
-                                        hasConflict
+                                      className={`text-xs py-0.5 px-2 flex items-center gap-1 ${hasConflict
                                           ? "bg-red-100 text-red-800 border-red-400"
                                           : "bg-orange-100 text-orange-800 border-orange-300"
-                                      }`}
+                                        }`}
                                     >
                                       <span>{shift}</span>
                                       <button
@@ -1494,11 +1492,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
               {/* Fee Structure Components Section */}
               <div className="flex flex-col space-y-3 min-h-0">
                 <div
-                  className={`flex items-center justify-between flex-shrink-0 px-4 py-3 rounded-md transition-colors ${
-                    activeSection === "components"
+                  className={`flex items-center justify-between flex-shrink-0 px-4 py-3 rounded-md transition-colors ${activeSection === "components"
                       ? "bg-green-100 text-green-900 border-2 border-green-300"
                       : "bg-gray-200 text-gray-700"
-                  }`}
+                    }`}
                 >
                   <h3 className="text-lg font-semibold">Step 1 : Select Fee Head / Components</h3>
                   <div className="flex gap-2">
@@ -1543,11 +1540,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                       disabled={
                         feeStructureRow.feeComponents.length === 0 && activeSection === "components"
                       }
-                      className={`h-8 ${
-                        activeSection === "components"
+                      className={`h-8 ${activeSection === "components"
                           ? "bg-white text-gray-900 hover:bg-gray-50 border border-gray-300"
                           : "bg-green-700 hover:bg-green-800 text-white"
-                      }`}
+                        }`}
                     >
                       {activeSection === "components"
                         ? "Next: concession slabs →"
@@ -1612,12 +1608,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                             feeComponents: prev.feeComponents.map((comp, idx) =>
                                               idx === index
                                                 ? {
-                                                    ...comp,
-                                                    id: newFeeHeadId,
-                                                    name: newFeeHead.name,
-                                                    amount: 0,
-                                                    percentage: 0,
-                                                  }
+                                                  ...comp,
+                                                  id: newFeeHeadId,
+                                                  name: newFeeHead.name,
+                                                  amount: 0,
+                                                  percentage: 0,
+                                                }
                                                 : comp,
                                             ),
                                           }));
@@ -1670,11 +1666,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                   or the step header stays unclickable; only dim the table body when no components */}
               <div className="flex flex-col space-y-3 min-h-0">
                 <div
-                  className={`flex items-center justify-between flex-shrink-0 px-4 py-3 rounded-md transition-colors ${
-                    activeSection === "slabs"
+                  className={`flex items-center justify-between flex-shrink-0 px-4 py-3 rounded-md transition-colors ${activeSection === "slabs"
                       ? "bg-green-100 text-green-900 border-2 border-green-300"
                       : "bg-gray-200 text-gray-700"
-                  }`}
+                    }`}
                 >
                   <div>
                     <h3 className="text-lg font-semibold">Step 2 : Concession Slabs</h3>
@@ -1719,11 +1714,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                         }
                       }}
                       disabled={feeStructureRow.feeComponents.length === 0}
-                      className={`h-8 ${
-                        activeSection === "slabs"
+                      className={`h-8 ${activeSection === "slabs"
                           ? "bg-white text-gray-900 hover:bg-gray-50 border border-gray-300"
                           : "bg-green-700 hover:bg-green-800 text-white"
-                      }`}
+                        }`}
                     >
                       {activeSection === "slabs"
                         ? "← Back to components"
@@ -1804,9 +1798,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                 );
                                 const baseSlabTotal = baseSlab
                                   ? Object.values(baseSlab.feeHeadAmounts || {}).reduce(
-                                      (sum, amt) => sum + amt,
-                                      0,
-                                    )
+                                    (sum, amt) => sum + amt,
+                                    0,
+                                  )
                                   : 0;
                                 const allocation = isBaseSlab(slab)
                                   ? 100
@@ -1819,9 +1813,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                 return (
                                   <TableRow
                                     key={slab.id}
-                                    className={`border-b-2 border-gray-400 ${
-                                      isLockedSlab ? "opacity-60" : ""
-                                    }`}
+                                    className={`border-b-2 border-gray-400 ${isLockedSlab ? "opacity-60" : ""
+                                      }`}
                                   >
                                     <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[60px] sticky left-0 bg-white">
                                       {index + 1}
@@ -1876,14 +1869,14 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                                     (s, idx) =>
                                                       idx === index
                                                         ? {
-                                                            ...s,
-                                                            id: newSlab.id!,
-                                                            name: newSlab.name,
-                                                            defaultConcessionRate: concessionRate,
-                                                            concessionAmount,
-                                                            payableAmount: totalPayable,
-                                                            feeHeadAmounts,
-                                                          }
+                                                          ...s,
+                                                          id: newSlab.id!,
+                                                          name: newSlab.name,
+                                                          defaultConcessionRate: concessionRate,
+                                                          concessionAmount,
+                                                          payableAmount: totalPayable,
+                                                          feeHeadAmounts,
+                                                        }
                                                         : s,
                                                   ),
                                                 };
@@ -1952,12 +1945,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                                   (s, idx) =>
                                                     idx === index
                                                       ? {
-                                                          ...s,
-                                                          feeHeadAmounts: {
-                                                            ...s.feeHeadAmounts,
-                                                            [component.id]: finalAmount,
-                                                          },
-                                                        }
+                                                        ...s,
+                                                        feeHeadAmounts: {
+                                                          ...s.feeHeadAmounts,
+                                                          [component.id]: finalAmount,
+                                                        },
+                                                      }
                                                       : s,
                                                 ),
                                               }));
@@ -2176,10 +2169,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 !feeStructureRow.concessionSlabs.some((cs) => cs.id === fcs.id) &&
                 feeGroups.some((fg) => fg.feeSlab?.id === fcs.id),
             ).length === 0 && (
-              <div className="text-center text-sm text-gray-500 py-4">
-                All concession slabs have been added
-              </div>
-            )}
+                <div className="text-center text-sm text-gray-500 py-4">
+                  All concession slabs have been added
+                </div>
+              )}
           </div>
           <DialogFooter>
             <Button
@@ -2559,9 +2552,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                           );
                           const baseSlabTotal = baseSlab
                             ? Object.values(baseSlab.feeHeadAmounts || {}).reduce(
-                                (sum, amt) => sum + amt,
-                                0,
-                              )
+                              (sum, amt) => sum + amt,
+                              0,
+                            )
                             : 0;
                           const allocation = isBaseSlab(slab)
                             ? 100

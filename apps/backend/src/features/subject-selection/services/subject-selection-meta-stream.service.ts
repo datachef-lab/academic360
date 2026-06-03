@@ -3,9 +3,9 @@ import { db } from "@/db/index.js";
 import {
   subjectSelectionMetaStreamModel,
   subjectSelectionMetaModel,
-} from "@repo/db/schemas/models/subject-selection";
-import { streamModel } from "@repo/db/schemas/models/course-design";
-import { SubjectSelectionMetaStreamDto } from "@repo/db/dtos/subject-selection";
+} from "@academic/db/schemas/models/subject-selection";
+import { streamModel } from "@academic/db/schemas/models/course-design";
+import { SubjectSelectionMetaStreamDto } from "@academic/db/dtos/subject-selection";
 
 // Use DTOs only for service I/O types per requirement
 

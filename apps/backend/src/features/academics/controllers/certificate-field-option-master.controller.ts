@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { createCertificateFieldOptionMasterSchema } from "@repo/db/schemas";
+import { createCertificateFieldOptionMasterSchema } from "@academic/db/schemas";
 import { ApiResponse, handleError } from "@/utils/index.js";
 import * as certificateFieldOptionMasterService from "../services/certificate-field-option-master.service.js";
 

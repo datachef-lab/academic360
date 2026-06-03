@@ -3,7 +3,7 @@ import type { StringValue } from "ms";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { userModel, User } from "@repo/db/schemas/models/user";
+import { userModel, User } from "@academic/db/schemas/models/user";
 import { handleError } from "@/utils/handleError.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { generateToken } from "@/utils/generateToken.js";
 import { addUser } from "@/features/user/services/user.service.js";
-import { userTypeEnum } from "@repo/db/schemas/enums";
+import { userTypeEnum } from "@academic/db/schemas/enums";
 
 import * as userService from "@/features/user/services/user.service.js";
 import { randomBytes } from "crypto";

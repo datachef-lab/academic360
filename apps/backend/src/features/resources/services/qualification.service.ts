@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { eq, ilike } from "drizzle-orm";
-import { Qualification, qualificationModel } from "@repo/db/schemas";
+import { Qualification, qualificationModel } from "@academic/db/schemas";
 
 export const loadQualifications = async () => {
   const qualifications = [

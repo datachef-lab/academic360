@@ -9,7 +9,7 @@ import type {
   RegulationType,
   Subject,
   SubjectType,
-} from "@repo/db/index";
+} from "@academic/db/index";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { createPaper } from "@/services/course-design.api";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { MultiSelect } from "@/components/ui/AdvancedMultiSelect";
-import { CourseType } from "@repo/db/schemas";
+import { CourseType } from "@academic/db/schemas";
 interface InputPaper {
   id?: number;
   name: string;
@@ -508,9 +508,8 @@ export default function AddPaperModal({
               {inputPaper.map((field, paperIndex) => (
                 <div
                   key={field.id}
-                  className={`flex min-w-0 border-b border-black hover:bg-gray-50 ${
-                    selectedRowIndex === paperIndex ? "bg-blue-50 border-blue-200" : ""
-                  }`}
+                  className={`flex min-w-0 border-b border-black hover:bg-gray-50 ${selectedRowIndex === paperIndex ? "bg-blue-50 border-blue-200" : ""
+                    }`}
                 >
                   <div className="w-40 shrink-0 p-2 border-r border-black flex items-center justify-center">
                     <Select
@@ -719,11 +718,10 @@ export default function AddPaperModal({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEyeClick(paperIndex)}
-                      className={`h-8 w-8 p-0 ${
-                        selectedRowIndex === paperIndex
+                      className={`h-8 w-8 p-0 ${selectedRowIndex === paperIndex
                           ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
                           : "hover:bg-gray-100"
-                      }`}
+                        }`}
                       title="View selected courses and classes"
                     >
                       <Eye className="h-4 w-4" />

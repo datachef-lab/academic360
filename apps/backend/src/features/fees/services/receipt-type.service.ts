@@ -1,5 +1,8 @@
 import { db } from "@/db/index.js";
-import { receiptTypeModel, ReceiptType } from "@repo/db/schemas/models/fees";
+import {
+  receiptTypeModel,
+  ReceiptType,
+} from "@academic/db/schemas/models/fees";
 import { eq } from "drizzle-orm";
 import { socketService } from "@/services/socketService.js";
 import * as userService from "@/features/user/services/user.service.js";

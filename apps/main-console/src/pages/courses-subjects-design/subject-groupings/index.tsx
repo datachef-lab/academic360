@@ -20,7 +20,7 @@ import type {
   Subject,
   SubjectGroupingMainDto,
   SubjectType,
-} from "@repo/db/index";
+} from "@academic/db/index";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { Edit, FileText, PlusCircle } from "lucide-react";
 import {
@@ -461,8 +461,8 @@ function SubjectGroupingsPage() {
                               .filter((pc) =>
                                 programCourseSearch.trim()
                                   ? (pc.name || "")
-                                      .toLowerCase()
-                                      .includes(programCourseSearch.trim().toLowerCase())
+                                    .toLowerCase()
+                                    .includes(programCourseSearch.trim().toLowerCase())
                                   : true,
                               )
                               .map((pc) => (
@@ -554,8 +554,8 @@ function SubjectGroupingsPage() {
                               .filter((s) =>
                                 subjectSearch.trim()
                                   ? ((s.code || s.name || "") as string)
-                                      .toLowerCase()
-                                      .includes(subjectSearch.trim().toLowerCase())
+                                    .toLowerCase()
+                                    .includes(subjectSearch.trim().toLowerCase())
                                   : true,
                               )
                               .map((s) => (

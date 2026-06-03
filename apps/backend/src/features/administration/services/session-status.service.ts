@@ -5,12 +5,12 @@ import {
   sessionStatusModel,
   SessionStatus,
   SessionStatusT,
-} from "@repo/db/schemas/models/administration";
-import { userStatusMasterModel } from "@repo/db/schemas/models/administration";
-import { userModel } from "@repo/db/schemas/models/user";
-import type { UserT } from "@repo/db/schemas/models/user";
-import type { UserStatusMasterT } from "@repo/db/schemas/models/administration";
-import type { UserStatusMaster } from "@repo/db/schemas/models/administration";
+} from "@academic/db/schemas/models/administration";
+import { userStatusMasterModel } from "@academic/db/schemas/models/administration";
+import { userModel } from "@academic/db/schemas/models/user";
+import type { UserT } from "@academic/db/schemas/models/user";
+import type { UserStatusMasterT } from "@academic/db/schemas/models/administration";
+import type { UserStatusMaster } from "@academic/db/schemas/models/administration";
 
 interface SessionStatusExpandedDto extends SessionStatusT {
   userStatusMaster: UserStatusMasterT;

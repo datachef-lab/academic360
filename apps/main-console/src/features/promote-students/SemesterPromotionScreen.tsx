@@ -18,8 +18,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Affiliation, ProgramCourse, PromotionBuilderDto, RegulationType } from "@repo/db";
-import type { AcademicYear } from "@repo/db/schemas";
+import type { Affiliation, ProgramCourse, PromotionBuilderDto, RegulationType } from "@academic/db";
+import type { AcademicYear } from "@academic/db/schemas";
 
 import {
   AlertDialog,
@@ -1343,12 +1343,12 @@ export function SemesterPromotionScreen() {
 
   const counts = bucketCounts ??
     roster?.counts ?? {
-      all: 0,
-      eligible: 0,
-      ineligible: 0,
-      suspended: 0,
-      promoted: 0,
-    };
+    all: 0,
+    eligible: 0,
+    ineligible: 0,
+    suspended: 0,
+    promoted: 0,
+  };
 
   const startIndex = roster ? (roster.page - 1) * roster.pageSize : 0;
   const endIndex = roster ? startIndex + roster.content.length : 0;
@@ -2224,41 +2224,41 @@ export function SemesterPromotionScreen() {
 
                 {(promotionModal === "selectAllScope"
                   ? selectAllScopeBreakdownLoading ||
-                    (selectAllScopeBreakdown != null && selectAllScopeBreakdown.rows.length > 0)
+                  (selectAllScopeBreakdown != null && selectAllScopeBreakdown.rows.length > 0)
                   : promoteConfirmBreakdownLoading || promoteBreakdownView.rows.length > 0) && (
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Breakdown by program course and shift
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Breakdown by program course and shift
+                      </div>
+                      <PromotionShiftBreakdownTable
+                        breakdown={
+                          promotionModal === "selectAllScope"
+                            ? (selectAllScopeBreakdown ?? { shiftColumns: [], rows: [] })
+                            : promoteBreakdownView
+                        }
+                        loading={
+                          promotionModal === "selectAllScope"
+                            ? selectAllScopeBreakdownLoading
+                            : promoteConfirmBreakdownLoading
+                        }
+                        maxHeightClass={
+                          promotionModal === "selectAllScope" ? "max-h-[220px]" : "max-h-[260px]"
+                        }
+                      />
+                      {promotionModal === "selectAllScope" &&
+                        selectAllScopeBreakdown != null &&
+                        selectAllScopeBreakdown.totalSelectable > 0 &&
+                        selectAllScopeBreakdown.totalSelectable !== selectableScopeEstimate ? (
+                        <p className="text-xs tabular-nums text-muted-foreground">
+                          Server count:{" "}
+                          <strong className="text-foreground">
+                            {selectAllScopeBreakdown.totalSelectable.toLocaleString()}
+                          </strong>{" "}
+                          selectable (totals above are cached; use this breakdown as the live check).
+                        </p>
+                      ) : null}
                     </div>
-                    <PromotionShiftBreakdownTable
-                      breakdown={
-                        promotionModal === "selectAllScope"
-                          ? (selectAllScopeBreakdown ?? { shiftColumns: [], rows: [] })
-                          : promoteBreakdownView
-                      }
-                      loading={
-                        promotionModal === "selectAllScope"
-                          ? selectAllScopeBreakdownLoading
-                          : promoteConfirmBreakdownLoading
-                      }
-                      maxHeightClass={
-                        promotionModal === "selectAllScope" ? "max-h-[220px]" : "max-h-[260px]"
-                      }
-                    />
-                    {promotionModal === "selectAllScope" &&
-                    selectAllScopeBreakdown != null &&
-                    selectAllScopeBreakdown.totalSelectable > 0 &&
-                    selectAllScopeBreakdown.totalSelectable !== selectableScopeEstimate ? (
-                      <p className="text-xs tabular-nums text-muted-foreground">
-                        Server count:{" "}
-                        <strong className="text-foreground">
-                          {selectAllScopeBreakdown.totalSelectable.toLocaleString()}
-                        </strong>{" "}
-                        selectable (totals above are cached; use this breakdown as the live check).
-                      </p>
-                    ) : null}
-                  </div>
-                )}
+                  )}
               </div>
             </AlertDialogDescription>
           </div>

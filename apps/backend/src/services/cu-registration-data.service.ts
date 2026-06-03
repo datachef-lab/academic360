@@ -5,9 +5,9 @@ import {
   userModel,
   personalDetailsModel,
   addressModel,
-} from "@repo/db/schemas/models/user";
-import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
-import { specializationModel } from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/user";
+import { cuRegistrationCorrectionRequestModel } from "@academic/db/schemas/models/admissions/cu-registration-correction-request.model.js";
+import { specializationModel } from "@academic/db/schemas/models/course-design";
 import {
   nationalityModel,
   religionModel,
@@ -17,26 +17,26 @@ import {
   cityModel,
   districtModel,
   boardModel,
-} from "@repo/db/schemas/models/resources";
+} from "@academic/db/schemas/models/resources";
 import {
   postOfficeModel,
   policeStationModel,
   disabilityCodeModel,
-} from "@repo/db/schemas/models/user";
-import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
-import { subjectSelectionMetaModel } from "@repo/db/schemas/models/subject-selection/subject-selection-meta.model";
-import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions/admission-academic-info.model.js";
-import { admissionCourseDetailsModel } from "@repo/db/schemas/models/admissions/adm-course-details.model";
-import { familyModel } from "@repo/db/schemas/models/user/family.model";
-import { personModel } from "@repo/db/schemas/models/user/person.model";
-import { annualIncomeModel } from "@repo/db/schemas/models/resources/annualIncome.model";
+} from "@academic/db/schemas/models/user";
+import { studentSubjectSelectionModel } from "@academic/db/schemas/models/subject-selection/student-subject-selection.model";
+import { subjectSelectionMetaModel } from "@academic/db/schemas/models/subject-selection/subject-selection-meta.model";
+import { admissionAcademicInfoModel } from "@academic/db/schemas/models/admissions/admission-academic-info.model.js";
+import { admissionCourseDetailsModel } from "@academic/db/schemas/models/admissions/adm-course-details.model";
+import { familyModel } from "@academic/db/schemas/models/user/family.model";
+import { personModel } from "@academic/db/schemas/models/user/person.model";
+import { annualIncomeModel } from "@academic/db/schemas/models/resources/annualIncome.model";
 import {
   sessionModel,
   academicYearModel,
   classModel,
   shiftModel,
-} from "@repo/db/schemas/models/academics";
-import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
+} from "@academic/db/schemas/models/academics";
+import { promotionModel } from "@academic/db/schemas/models/batches/promotions.model";
 import {
   paperModel,
   subjectModel,
@@ -44,14 +44,14 @@ import {
   streamModel,
   programCourseModel,
   courseModel,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import { CuRegistrationFormData } from "./pdf-generation.service.js";
 import path from "path";
 import fs from "fs/promises";
 import { CuRegistrationExcelService } from "./cu-registration-excel.service.js";
 // QR code no longer required for physical submission schedule
 import { fileURLToPath } from "url";
-import { cuPhysicalRegModel } from "@repo/db/schemas/models/admissions/cu-physical-reg-model.js";
+import { cuPhysicalRegModel } from "@academic/db/schemas/models/admissions/cu-physical-reg-model.js";
 
 export interface CuRegistrationDataOptions {
   studentId: number;

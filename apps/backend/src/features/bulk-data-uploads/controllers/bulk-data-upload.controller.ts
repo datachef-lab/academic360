@@ -4,7 +4,7 @@ import fs from "fs";
 import type {
   CuRegRollExcelUploadRow,
   ExamFormFillupExcelUploadRow,
-} from "@repo/db/dtos";
+} from "@academic/db/dtos";
 import {
   bulkUploadCuRegRoll,
   bulkUploadExamFormFillup,

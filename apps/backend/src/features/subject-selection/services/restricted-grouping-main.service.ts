@@ -1,25 +1,25 @@
 import { db } from "@/db/index.js";
-import { restrictedGroupingMainModel } from "@repo/db/schemas/models/subject-selection";
+import { restrictedGroupingMainModel } from "@academic/db/schemas/models/subject-selection";
 import {
   RestrictedGroupingMain,
   RestrictedGroupingMainT,
-} from "@repo/db/schemas/models/subject-selection/restricted-grouping-main.model";
+} from "@academic/db/schemas/models/subject-selection/restricted-grouping-main.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
 import {
   RestrictedGroupingMainDto,
   RestrictedGroupingClassDto,
   RestrictedGroupingSubjectDto,
   RestrictedGroupingProgramCourseDto,
-} from "@repo/db/dtos/subject-selection";
+} from "@academic/db/dtos/subject-selection";
 import {
   subjectModel,
   subjectTypeModel,
-} from "@repo/db/schemas/models/course-design";
-import { restrictedGroupingClassModel } from "@repo/db/schemas/models/subject-selection";
-import { restrictedGroupingSubjectModel } from "@repo/db/schemas/models/subject-selection";
-import { restrictedGroupingProgramCourseModel } from "@repo/db/schemas/models/subject-selection";
-import { classModel } from "@repo/db/schemas/models/academics";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
+import { restrictedGroupingClassModel } from "@academic/db/schemas/models/subject-selection";
+import { restrictedGroupingSubjectModel } from "@academic/db/schemas/models/subject-selection";
+import { restrictedGroupingProgramCourseModel } from "@academic/db/schemas/models/subject-selection";
+import { classModel } from "@academic/db/schemas/models/academics";
+import { programCourseModel } from "@academic/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { DoorOpen, Download, Loader2, PlusCircle, Search } from "lucide-react";
 import { toast } from "sonner";
-import { userTypeEnum } from "@repo/db/schemas/enums";
+import { userTypeEnum } from "@academic/db/schemas/enums";
 import { getColorFromName } from "@/utils/avatar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
@@ -824,11 +824,10 @@ export default function EntryExitPage() {
                     <div
                       className="h-full w-full rounded-sm bg-cover bg-center"
                       style={{
-                        backgroundImage: `url("${
-                          previewUser.userType === "STUDENT" && previewUser.uid
+                        backgroundImage: `url("${previewUser.userType === "STUDENT" && previewUser.uid
                             ? getStudentAvatarUrl(previewUser.uid)
                             : previewUser.image || ""
-                        }")`,
+                          }")`,
                         backgroundSize: "cover",
                         objectFit: "contain",
                         backgroundRepeat: "no-repeat",
@@ -839,12 +838,12 @@ export default function EntryExitPage() {
                         (previewUser.userType === "STUDENT" && previewUser.uid) ||
                         previewUser.image
                       ) && (
-                        <div
-                          className={`flex h-full w-full items-center justify-center text-4xl font-semibold text-white ${fallbackAvatarBg}`}
-                        >
-                          {getInitials(previewUser.name)}
-                        </div>
-                      )}
+                          <div
+                            className={`flex h-full w-full items-center justify-center text-4xl font-semibold text-white ${fallbackAvatarBg}`}
+                          >
+                            {getInitials(previewUser.name)}
+                          </div>
+                        )}
                     </div>
                   </div>
 
@@ -1010,9 +1009,8 @@ export default function EntryExitPage() {
                       previewData.circulationRows.map((item, index) => (
                         <TableRow
                           key={item.id}
-                          className={`[&>td]:border-b [&>td]:border-slate-200 ${
-                            item.status === "RETURNED" ? "bg-green-100" : ""
-                          }`}
+                          className={`[&>td]:border-b [&>td]:border-slate-200 ${item.status === "RETURNED" ? "bg-green-100" : ""
+                            }`}
                         >
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>{item.accessNumber || "-"}</TableCell>

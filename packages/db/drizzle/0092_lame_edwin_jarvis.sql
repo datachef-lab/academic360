@@ -1,0 +1,1 @@
+ALTER TABLE "fee_group_promotion_mappings" ADD COLUMN "remarks" varchar(5000);

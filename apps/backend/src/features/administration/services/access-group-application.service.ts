@@ -4,8 +4,8 @@ import {
   accessGroupApplicationModel,
   AccessGroupApplication,
   AccessGroupApplicationT,
-} from "@repo/db/schemas/models/administration";
-import { academic360ApplicationDomainEnum } from "@repo/db/schemas/enums";
+} from "@academic/db/schemas/models/administration";
+import { academic360ApplicationDomainEnum } from "@academic/db/schemas/enums";
 
 type Academic360ApplicationDomainType =
   (typeof academic360ApplicationDomainEnum.enumValues)[number];

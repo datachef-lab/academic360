@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiResponse } from "@/types/api-response";
-import type { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@academic/db/dtos/user";
 
 // Query keys for React Query
 const AUTH_QUERY_KEY = ["auth", "token"] as const;

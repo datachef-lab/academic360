@@ -2,15 +2,15 @@ import ExcelJS from "exceljs";
 import { db } from "@/db/index.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
-import { bindingModel } from "@repo/db/schemas/models/library/binding.model.js";
-import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
-import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
-import { enclosureModel } from "@repo/db/schemas/models/library/enclosure.model.js";
-import { entryModeModel } from "@repo/db/schemas/models/library/entry-mode.model.js";
-import { publisherModel } from "@repo/db/schemas/models/library/publisher.model.js";
-import { rackModel } from "@repo/db/schemas/models/library/rack.model.js";
-import { shelfModel } from "@repo/db/schemas/models/library/shelf.model.js";
-import { statusModel } from "@repo/db/schemas/models/library/status.model.js";
+import { bindingModel } from "@academic/db/schemas/models/library/binding.model.js";
+import { bookModel } from "@academic/db/schemas/models/library/book.model.js";
+import { copyDetailsModel } from "@academic/db/schemas/models/library/copy-details.model.js";
+import { enclosureModel } from "@academic/db/schemas/models/library/enclosure.model.js";
+import { entryModeModel } from "@academic/db/schemas/models/library/entry-mode.model.js";
+import { publisherModel } from "@academic/db/schemas/models/library/publisher.model.js";
+import { rackModel } from "@academic/db/schemas/models/library/rack.model.js";
+import { shelfModel } from "@academic/db/schemas/models/library/shelf.model.js";
+import { statusModel } from "@academic/db/schemas/models/library/status.model.js";
 
 export type CopyDetailsListFilters = {
   page: number;

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { documentModel, DocumentT } from "@repo/db/schemas";
+import { documentModel, DocumentT } from "@academic/db/schemas";
 import "dotenv/config";
 import { ilike } from "drizzle-orm";
 import { promises as fs } from "fs";

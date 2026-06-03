@@ -12,7 +12,7 @@ import {
 } from "@/services/student-subject-selection";
 import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
 import { fetchStudentByUid } from "@/services/student";
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 
 interface SubjectSelectionFormProps {
   uid: string;
@@ -898,7 +898,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       } else {
         setSaveError(
           "Validation failed: " +
-            (result.errors?.map((e) => e.message).join(", ") || "Unknown error"),
+          (result.errors?.map((e) => e.message).join(", ") || "Unknown error"),
         );
       }
     } catch (error: unknown) {
@@ -1192,28 +1192,28 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
                 // Dynamic grid based on available Minor options
                 (hasActualOptions(admissionMinor1Subjects) ? 1 : 0) +
                   (hasActualOptions(admissionMinor1Subjects) &&
-                  hasActualOptions(admissionMinor2Subjects)
+                    hasActualOptions(admissionMinor2Subjects)
                     ? 1
                     : 0) +
                   (!hasActualOptions(admissionMinor1Subjects) &&
-                  hasActualOptions(admissionMinor3Subjects)
+                    hasActualOptions(admissionMinor3Subjects)
                     ? 1
                     : 0) ===
-                3
+                  3
                   ? "lg:grid-cols-3"
                   : (hasActualOptions(admissionMinor1Subjects) ? 1 : 0) +
-                        (hasActualOptions(admissionMinor1Subjects) &&
-                        hasActualOptions(admissionMinor2Subjects)
-                          ? 1
-                          : 0) +
-                        (!hasActualOptions(admissionMinor1Subjects) &&
-                        hasActualOptions(admissionMinor3Subjects)
-                          ? 1
-                          : 0) ===
-                      2
+                    (hasActualOptions(admissionMinor1Subjects) &&
+                      hasActualOptions(admissionMinor2Subjects)
+                      ? 1
+                      : 0) +
+                    (!hasActualOptions(admissionMinor1Subjects) &&
+                      hasActualOptions(admissionMinor3Subjects)
+                      ? 1
+                      : 0) ===
+                    2
                     ? "lg:grid-cols-2"
                     : "lg:grid-cols-1"
-              }`}
+                }`}
             >
               {loading ? (
                 <>

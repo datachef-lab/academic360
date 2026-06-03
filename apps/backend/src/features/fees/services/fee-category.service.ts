@@ -1,7 +1,10 @@
 import { db } from "@/db";
-import { feeCategoryModel, createFeeCategorySchema } from "@repo/db/schemas";
+import {
+  feeCategoryModel,
+  createFeeCategorySchema,
+} from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
-import { FeeCategoryDto } from "@repo/db/dtos/fees";
+import { FeeCategoryDto } from "@academic/db/dtos/fees";
 import { socketService } from "@/services/socketService.js";
 import * as userService from "@/features/user/services/user.service.js";
 

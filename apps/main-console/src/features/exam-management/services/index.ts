@@ -1,5 +1,5 @@
 import type { ExamDto } from "@/dtos";
-import type { ExamT } from "@repo/db/schemas";
+import type { ExamT } from "@academic/db/schemas";
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 
@@ -78,7 +78,10 @@ export async function doAssignExam(
 
     // ✅ Build examGroup object from examGroupData
     if (examGroupData) {
-      console.log("[SCHEDULE-EXAM] Appending exam group data to formData:", examGroupData);
+      console.log(
+        "[SCHEDULE-EXAM] Appending exam group data to formData:",
+        examGroupData,
+      );
 
       let examGroup: any = {};
 
@@ -86,7 +89,8 @@ export async function doAssignExam(
         // For new group, use the provided name and commencement date
         examGroup = {
           name: examGroupData.newGroupName || "",
-          examCommencementDate: examGroupData.examCommencementDate || new Date().toISOString(),
+          examCommencementDate:
+            examGroupData.examCommencementDate || new Date().toISOString(),
         };
       } else if (examGroupData.examGroupMode === "existing") {
         // For existing group, will be handled separately
@@ -119,10 +123,13 @@ export async function doAssignExam(
     return response.data;
   } catch (error: unknown) {
     console.error("Error assigning exam:", error);
-    const axiosError = error as { response?: { data?: { message?: string }; status?: number } };
+    const axiosError = error as {
+      response?: { data?: { message?: string }; status?: number };
+    };
     const backendMessage = axiosError.response?.data?.message;
     const message =
-      backendMessage || (error instanceof Error ? error.message : "Failed to assign exam");
+      backendMessage ||
+      (error instanceof Error ? error.message : "Failed to assign exam");
     throw new Error(message);
   }
 }
@@ -162,7 +169,10 @@ export async function allotExamRoomsAndStudents(
   try {
     const formData = new FormData();
 
-    console.log("in ui, allotExamRoomsAndStudents(), sending params + file:", params);
+    console.log(
+      "in ui, allotExamRoomsAndStudents(), sending params + file:",
+      params,
+    );
 
     // Send locations, orderType, and gender as JSON
     formData.append("locations", JSON.stringify(params.locations));
@@ -171,10 +181,16 @@ export async function allotExamRoomsAndStudents(
     formData.append("gender", params.gender || "");
     // Send admit card dates if provided
     if (params.admitCardStartDownloadDate) {
-      formData.append("admitCardStartDownloadDate", params.admitCardStartDownloadDate);
+      formData.append(
+        "admitCardStartDownloadDate",
+        params.admitCardStartDownloadDate,
+      );
     }
     if (params.admitCardLastDownloadDate) {
-      formData.append("admitCardLastDownloadDate", params.admitCardLastDownloadDate);
+      formData.append(
+        "admitCardLastDownloadDate",
+        params.admitCardLastDownloadDate,
+      );
     }
 
     // Send file
@@ -182,11 +198,15 @@ export async function allotExamRoomsAndStudents(
       formData.append("file", file);
     }
 
-    const response = await axiosInstance.post(`${BASE_URL}/${examId}/allot`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
+    const response = await axiosInstance.post(
+      `${BASE_URL}/${examId}/allot`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       },
-    });
+    );
 
     console.log("In allotExamRoomsAndStudents(), response:", response);
     return response.data;

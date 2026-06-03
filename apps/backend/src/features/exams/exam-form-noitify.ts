@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { enqueueNotification } from "@/services/notificationClient";
-import { notificationMasterModel } from "@repo/db/schemas";
+import { notificationMasterModel } from "@academic/db/schemas";
 import { and, eq } from "drizzle-orm";
 
 export async function notifyExamForm(userId: number) {

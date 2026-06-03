@@ -3,7 +3,7 @@ import {
   ExamType,
   ExamTypeT,
   examTypeModel,
-} from "@repo/db/schemas/models/exams";
+} from "@academic/db/schemas/models/exams";
 import { and, eq, ilike, ne } from "drizzle-orm";
 
 function normaliseExamTypePayload<T extends Partial<ExamType | ExamTypeT>>(

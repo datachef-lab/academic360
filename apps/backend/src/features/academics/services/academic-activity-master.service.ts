@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { academicActivityMasterModel } from "@repo/db/schemas/models/academics/academic-activity-master.model.js";
-import { AcademicActivityMasterT } from "@repo/db/schemas/models/academics/academic-activity-master.model.js";
+import { academicActivityMasterModel } from "@academic/db/schemas/models/academics/academic-activity-master.model.js";
+import { AcademicActivityMasterT } from "@academic/db/schemas/models/academics/academic-activity-master.model.js";
 
 export type CreateMasterPayload = {
   type: string;

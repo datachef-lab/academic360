@@ -17,7 +17,7 @@ import { Student } from "@/types/user/student";
 import { Framework } from "@/types/enums";
 // import { Stream } from "@/types/academics/stream";
 import { InputBox } from "./InputBox";
-import type { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@academic/db/dtos/user";
 
 const columns = [
   "Course Code (Course Type)",
@@ -290,7 +290,7 @@ const MarksheetCCF = () => {
           </div>
         </div>
       </div>
-      <Footer onSave={() => {}} />
+      <Footer onSave={() => { }} />
     </div>
   );
 };

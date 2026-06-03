@@ -7,7 +7,7 @@ import {
   deleteFeeGroup,
   getFeeGroupTotalsForPromotion,
 } from "../services/fee-group.service.js";
-import { createFeeGroupSchema, feeGroupModel } from "@repo/db/schemas";
+import { createFeeGroupSchema, feeGroupModel } from "@academic/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 import { db } from "@/db";

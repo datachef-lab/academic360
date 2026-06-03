@@ -2,14 +2,14 @@ import { db, mysqlConnection } from "@/db/index.js";
 import {
   SubjectType,
   subjectTypeModel,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import { and, countDistinct, eq, ilike } from "drizzle-orm";
-import { paperModel } from "@repo/db/schemas/models/course-design";
+import { paperModel } from "@academic/db/schemas/models/course-design";
 import { SubjectTypeSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 import XLSX from "xlsx";
 import fs from "fs";
-import { OldSubjectType } from "@repo/db/legacy-system-types/admissions";
+import { OldSubjectType } from "@academic/db/legacy-system-types/admissions";
 
 // Types
 export type SubjectTypeData = z.infer<typeof SubjectTypeSchema>;

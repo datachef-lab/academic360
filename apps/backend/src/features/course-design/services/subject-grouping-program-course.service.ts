@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import {
   SubjectGroupingProgramCourse,
   subjectGroupingProgramCourseModel,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import { eq } from "drizzle-orm";
 
 export type SubjectGroupingProgramCourseData = SubjectGroupingProgramCourse;

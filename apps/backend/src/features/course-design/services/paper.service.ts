@@ -7,9 +7,9 @@ import {
   RegulationType,
   Subject,
   SubjectType,
-} from "@repo/db/schemas/models/course-design";
-import { PaperDto, ProgramCourseDto } from "@repo/db/dtos/course-design";
-import { ProgramCourse } from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
+import { PaperDto, ProgramCourseDto } from "@academic/db/dtos/course-design";
+import { ProgramCourse } from "@academic/db/schemas/models/course-design";
 import {
   createPaperComponent,
   // updatePaperComponent,
@@ -23,16 +23,16 @@ import {
   getTopicsByPaperId,
   updateTopic,
 } from "./topic.service.js";
-import { paperComponentModel } from "@repo/db/schemas/models/course-design";
-import { examComponentModel } from "@repo/db/schemas/models/course-design";
+import { paperComponentModel } from "@academic/db/schemas/models/course-design";
+import { examComponentModel } from "@academic/db/schemas/models/course-design";
 import {
   AcademicYear,
   Class,
   classModel,
-} from "@repo/db/schemas/models/academics";
-import { topicModel } from "@repo/db/schemas/models/course-design";
-import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
-import { batchStudentPaperModel } from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/academics";
+import { topicModel } from "@academic/db/schemas/models/course-design";
+import { marksheetPaperMappingModel } from "@academic/db/schemas/models/academics";
+import { batchStudentPaperModel } from "@academic/db/schemas/models/course-design";
 import { getSubjectById } from "./subject.service";
 import { findById as findAffiliationById } from "@/features/course-design/services/affiliation.service.js";
 import { findById as findRegulationTypeById } from "@/features/course-design/services/regulation-type.service.js";
@@ -436,18 +436,18 @@ export async function getPapersFilteredPaginated(
 
   // Import models only when needed
   const { subjectModel } =
-    await import("@repo/db/schemas/models/course-design");
+    await import("@academic/db/schemas/models/course-design");
   const { affiliationModel } =
-    await import("@repo/db/schemas/models/course-design");
+    await import("@academic/db/schemas/models/course-design");
   const { regulationTypeModel } =
-    await import("@repo/db/schemas/models/course-design");
+    await import("@academic/db/schemas/models/course-design");
   const { academicYearModel } =
-    await import("@repo/db/schemas/models/academics");
+    await import("@academic/db/schemas/models/academics");
   const { subjectTypeModel } =
-    await import("@repo/db/schemas/models/course-design");
+    await import("@academic/db/schemas/models/course-design");
   const { programCourseModel } =
-    await import("@repo/db/schemas/models/course-design");
-  const { classModel } = await import("@repo/db/schemas/models/academics");
+    await import("@academic/db/schemas/models/course-design");
+  const { classModel } = await import("@academic/db/schemas/models/academics");
 
   // Add search conditions if searchText is provided
   let searchConditions: SQL[] = [];

@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import {
   paymentModel,
   settlementModel,
-} from "@repo/db/schemas/models/payments";
+} from "@academic/db/schemas/models/payments";
 import {
   feeGroupModel,
   feeGroupPromotionMappingModel,
@@ -10,8 +10,8 @@ import {
   feeStructureModel,
   feeStudentMappingModel,
   receiptTypeModel,
-} from "@repo/db/schemas/models/fees";
-import { studentModel, userModel } from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/fees";
+import { studentModel, userModel } from "@academic/db/schemas/models/user";
 import { issueFeeStudentMappingReceiptIfMissing } from "@/features/fees/services/fee-student-mapping.service.js";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { and, eq, sql } from "drizzle-orm";
@@ -19,7 +19,7 @@ import type {
   PaytmPCFDetailsRequest,
   PaytmPCFDetailsResponse,
   PaytmTransactionStatusResponse,
-} from "@repo/db/dtos/payments";
+} from "@academic/db/dtos/payments";
 import {
   getPaytmMerchantDetails,
   getPaytmPCFDetails,
@@ -37,7 +37,7 @@ import {
   promotionModel,
   sectionModel,
   shiftModel,
-} from "@repo/db/index.js";
+} from "@academic/db/index.js";
 
 type PaymentMeta = {
   applicationFormId?: number;

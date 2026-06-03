@@ -1,12 +1,12 @@
 import { db } from "@/db/index.js";
-import { relatedSubjectSubModel } from "@repo/db/schemas/models/subject-selection";
+import { relatedSubjectSubModel } from "@academic/db/schemas/models/subject-selection";
 import {
   RelatedSubjectSub,
   RelatedSubjectSubT,
-} from "@repo/db/schemas/models/subject-selection/related-subject-sub.model";
+} from "@academic/db/schemas/models/subject-selection/related-subject-sub.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
-import { RelatedSubjectSubDto } from "@repo/db/dtos/subject-selection";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
+import { RelatedSubjectSubDto } from "@academic/db/dtos/subject-selection";
+import { boardSubjectNameModel } from "@academic/db/schemas/models/admissions/board-subject-name.model";
 import XLSX from "xlsx";
 import fs from "fs";
 

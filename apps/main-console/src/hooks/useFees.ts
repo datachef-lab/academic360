@@ -72,13 +72,13 @@ import {
   FeesSlabMapping,
   CreateFeesStructureDto,
 } from "@/types/fees";
-import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import { FeeStudentMappingDto } from "@academic/db/dtos/fees";
 import {
   CreateFeeStructureDto,
   FeeStructureDto,
   FeeCategoryDto,
   FeeGroupDto,
-} from "@repo/db/dtos/fees";
+} from "@academic/db/dtos/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Course } from "@/types/course-design";
 import {
@@ -133,20 +133,30 @@ export const useFeesStructures = (
       };
 
   const addFeesStructure = useCallback(
-    async (newFeesStructure: CreateFeesStructureDto | CreateFeeStructureDto) => {
+    async (
+      newFeesStructure: CreateFeesStructureDto | CreateFeeStructureDto,
+    ) => {
       try {
         // Check if it's the new CreateFeeStructureDto format (has programCourseIds and shiftIds arrays)
-        const isNewDto = "programCourseIds" in newFeesStructure && "shiftIds" in newFeesStructure;
+        const isNewDto =
+          "programCourseIds" in newFeesStructure &&
+          "shiftIds" in newFeesStructure;
 
         if (isNewDto) {
           // Use the new bulk creation endpoint
-          const response = await createFeeStructureByDto(newFeesStructure as CreateFeeStructureDto);
-          await queryClient.invalidateQueries({ queryKey: ["fees-structures"] });
+          const response = await createFeeStructureByDto(
+            newFeesStructure as CreateFeeStructureDto,
+          );
+          await queryClient.invalidateQueries({
+            queryKey: ["fees-structures"],
+          });
           return response.payload;
         } else {
           // Use the old single creation endpoint
           const response = await createFeesStructure(newFeesStructure);
-          await queryClient.invalidateQueries({ queryKey: ["fees-structures"] });
+          await queryClient.invalidateQueries({
+            queryKey: ["fees-structures"],
+          });
           return response.payload;
         }
       } catch (error) {
@@ -208,7 +218,9 @@ export const useAcademicYearsFromFeesStructures = () => {
       const data = await getAcademicYearsFromFeesStructures();
       setAcademicYears(data);
     } catch {
-      showError({ message: "Failed to fetch academic years from fees structures" });
+      showError({
+        message: "Failed to fetch academic years from fees structures",
+      });
     } finally {
       setLoading(false);
     }
@@ -265,10 +277,16 @@ export const useFeesStructuresByAcademicYearAndCourse = (
       }
       try {
         setLoading(true);
-        const data = await getFeesStructuresByAcademicYearAndCourse(academicYearId, courseId);
+        const data = await getFeesStructuresByAcademicYearAndCourse(
+          academicYearId,
+          courseId,
+        );
         setFeesStructures(data);
       } catch {
-        showError({ message: "Failed to fetch fees structures by academic year and course" });
+        showError({
+          message:
+            "Failed to fetch fees structures by academic year and course",
+        });
       } finally {
         setLoading(false);
       }
@@ -309,7 +327,10 @@ export const useFeesHeads = () => {
       } catch (error) {
         console.error("Error creating fees head:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to create fees head",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to create fees head",
         });
         return null;
       }
@@ -326,7 +347,10 @@ export const useFeesHeads = () => {
       } catch (error) {
         console.error("Error updating fees head:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to update fees head",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update fees head",
         });
         return null;
       }
@@ -343,7 +367,10 @@ export const useFeesHeads = () => {
       } catch (error) {
         console.error("Error deleting fees head:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to delete fees head",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to delete fees head",
         });
         return false;
       }
@@ -451,7 +478,9 @@ export const useFeesSlabs = () => {
 // ==================== FEES RECEIPT TYPES HOOKS ====================
 
 export const useFeesReceiptTypes = () => {
-  const [feesReceiptTypes, setFeesReceiptTypes] = useState<FeesReceiptType[]>([]);
+  const [feesReceiptTypes, setFeesReceiptTypes] = useState<FeesReceiptType[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
@@ -581,7 +610,8 @@ export const useAddons = () => {
         showError({ message: response.message || "Failed to delete addon" });
         return false;
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Failed to delete addon";
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to delete addon";
         showError({ message: errorMessage });
         console.error("Error deleting addon:", error);
         return false;
@@ -607,7 +637,9 @@ export const useAddons = () => {
 // ==================== STUDENT FEES MAPPING HOOKS ====================
 
 export const useStudentFeesMappings = () => {
-  const [studentFeesMappings, setStudentFeesMappings] = useState<FeeStudentMappingDto[]>([]);
+  const [studentFeesMappings, setStudentFeesMappings] = useState<
+    FeeStudentMappingDto[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
@@ -680,7 +712,9 @@ export const useStudentFeesMappings = () => {
 };
 
 export const useFeesSlabMappings = () => {
-  const [FeesSlabMappings, setFeesSlabMappings] = useState<FeesSlabMapping[]>([]);
+  const [FeesSlabMappings, setFeesSlabMappings] = useState<FeesSlabMapping[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
@@ -739,7 +773,8 @@ export const useFeeConcessionSlabs = () => {
         // Map defaultRate to defaultConcessionRate for frontend compatibility
         const mappedSlabs = response.payload.map((slab: any) => ({
           ...slab,
-          defaultConcessionRate: slab.defaultRate ?? slab.defaultConcessionRate ?? 0,
+          defaultConcessionRate:
+            slab.defaultRate ?? slab.defaultConcessionRate ?? 0,
         }));
         setConcessionSlabs(mappedSlabs);
       } else {
@@ -771,7 +806,10 @@ export const useFeeConcessionSlabs = () => {
       } catch (error) {
         console.error("Error creating fee concession slab:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to create fee concession slab",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to create fee concession slab",
         });
         return null;
       }
@@ -785,13 +823,18 @@ export const useFeeConcessionSlabs = () => {
         // Map Partial<FeeConcessionSlabT> to Partial<NewFeeConcessionSlab> format
         const mappedSlab: Partial<NewFeeConcessionSlab> = {
           ...(slab.name !== undefined && { name: slab.name }),
-          ...(slab.description !== undefined && { description: slab.description }),
+          ...(slab.description !== undefined && {
+            description: slab.description,
+          }),
           ...(slab.defaultRate !== undefined &&
             slab.defaultRate !== null && {
               defaultRate: slab.defaultRate,
             }),
-          ...(slab.sequence !== undefined && slab.sequence !== null && { sequence: slab.sequence }),
-          ...(slab.legacyFeeSlabId !== undefined && { legacyFeeSlabId: slab.legacyFeeSlabId }),
+          ...(slab.sequence !== undefined &&
+            slab.sequence !== null && { sequence: slab.sequence }),
+          ...(slab.legacyFeeSlabId !== undefined && {
+            legacyFeeSlabId: slab.legacyFeeSlabId,
+          }),
         };
         const response = await updateFeeConcessionSlab(id, mappedSlab);
         await fetchFeeConcessionSlabs();
@@ -799,7 +842,10 @@ export const useFeeConcessionSlabs = () => {
       } catch (error) {
         console.error("Error updating fee concession slab:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to update fee concession slab",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update fee concession slab",
         });
         return null;
       }
@@ -816,7 +862,10 @@ export const useFeeConcessionSlabs = () => {
       } catch (error) {
         console.error("Error deleting fee concession slab:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to delete fee concession slab",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to delete fee concession slab",
         });
         return false;
       }
@@ -872,7 +921,10 @@ export const useFeeCategories = () => {
       } catch (error) {
         console.error("Error creating fee category:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to create fee category",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to create fee category",
         });
         return null;
       }
@@ -889,7 +941,10 @@ export const useFeeCategories = () => {
       } catch (error) {
         console.error("Error updating fee category:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to update fee category",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update fee category",
         });
         return null;
       }
@@ -906,7 +961,10 @@ export const useFeeCategories = () => {
       } catch (error) {
         console.error("Error deleting fee category:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to delete fee category",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to delete fee category",
         });
         return false;
       }
@@ -962,7 +1020,10 @@ export const useFeeGroups = () => {
       } catch (error) {
         console.error("Error creating fee group:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to create fee group",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to create fee group",
         });
         return null;
       }
@@ -979,7 +1040,10 @@ export const useFeeGroups = () => {
       } catch (error) {
         console.error("Error updating fee group:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to update fee group",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update fee group",
         });
         return null;
       }
@@ -996,7 +1060,10 @@ export const useFeeGroups = () => {
       } catch (error) {
         console.error("Error deleting fee group:", error);
         showError({
-          message: error instanceof Error ? error.message : "Failed to delete fee group",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to delete fee group",
         });
         return false;
       }

@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { BorrowingType, borrowingTypeModel } from "@repo/db/schemas";
+import { BorrowingType, borrowingTypeModel } from "@academic/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
 
 type BorrowingTypeListFilters = {

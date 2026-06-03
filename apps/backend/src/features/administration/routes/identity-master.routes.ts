@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createIdentityMasterSchema } from "@repo/db/schemas/models/administration";
+import { createIdentityMasterSchema } from "@academic/db/schemas/models/administration";
 import {
   createIdentityMaster,
   deleteIdentityMaster,

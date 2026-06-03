@@ -29,7 +29,7 @@ import {
 } from "../services/exam-schedule.service.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { handleError } from "@/utils/handleError.js";
-import { ExamDto } from "@repo/db/dtos/exams";
+import { ExamDto } from "@academic/db/dtos/exams";
 
 export const countStudentsForExam = async (req: Request, res: Response) => {
   try {

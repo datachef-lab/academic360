@@ -16,11 +16,11 @@ import { corsOptions } from "@/config/corsOptions.js";
 import { socketService } from "./services/socketService.js";
 import settingsRouter from "@/features/apps/routes/settings.route.js";
 import { errorHandler, logger } from "@/middlewares/index.js";
-import { districtModel } from "@repo/db/schemas/models/resources/district.model.js";
-import { cityModel } from "@repo/db/schemas/models/resources/city.model.js";
-import { stateModel } from "@repo/db/schemas/models/resources/state.model.js";
-import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model.js";
-import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model.js";
+import { districtModel } from "@academic/db/schemas/models/resources/district.model.js";
+import { cityModel } from "@academic/db/schemas/models/resources/city.model.js";
+import { stateModel } from "@academic/db/schemas/models/resources/state.model.js";
+import { policeStationModel } from "@academic/db/schemas/models/user/police-station.model.js";
+import { postOfficeModel } from "@academic/db/schemas/models/user/post-office.model.js";
 
 import { generateToken } from "./utils/index.js";
 import userStatusOverviewRouter from "@/features/user/routes/user-status-overview.routes.js";
@@ -43,7 +43,7 @@ import {
   academicActivityRouter,
   academicActivityMasterRouter,
 } from "@/features/academics/routes/index.js";
-import { User, userModel } from "@repo/db/schemas/models/user";
+import { User, userModel } from "@academic/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
   accommodationRouter,

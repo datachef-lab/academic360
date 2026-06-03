@@ -1,5 +1,5 @@
 import { ApiResponse } from "@/types/api-response";
-import type { HealthDto } from "@repo/db/dtos/user";
+import type { HealthDto } from "@academic/db/dtos/user";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/health";
@@ -13,7 +13,9 @@ export async function getAllHealthDetails(): Promise<ApiResponse<HealthDto[]>> {
   }
 }
 
-export async function getHealthDetailById(id: number): Promise<ApiResponse<HealthDto | null>> {
+export async function getHealthDetailById(
+  id: number,
+): Promise<ApiResponse<HealthDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -26,7 +28,9 @@ export async function getHealthDetailByStudentId(
   studentId: number,
 ): Promise<ApiResponse<HealthDto | null>> {
   try {
-    const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
+    const response = await axiosInstance.get(
+      `${BASE_URL}/student/${studentId}`,
+    );
     return response.data;
   } catch (err) {
     if ((err as { response: { status: number } })?.response?.status === 404) {
@@ -59,7 +63,9 @@ export async function updateHealthDetail(
   }
 }
 
-export async function deleteHealthDetail(id: number): Promise<ApiResponse<null>> {
+export async function deleteHealthDetail(
+  id: number,
+): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
     return response.data;
@@ -68,11 +74,17 @@ export async function deleteHealthDetail(id: number): Promise<ApiResponse<null>>
   }
 }
 
-export async function deleteHealthDetailByStudentId(studentId: number): Promise<ApiResponse<null>> {
+export async function deleteHealthDetailByStudentId(
+  studentId: number,
+): Promise<ApiResponse<null>> {
   try {
-    const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
+    const response = await axiosInstance.delete(
+      `${BASE_URL}/student/${studentId}`,
+    );
     return response.data;
   } catch {
-    throw new Error(`Failed to delete health detail for studentId ${studentId}`);
+    throw new Error(
+      `Failed to delete health detail for studentId ${studentId}`,
+    );
   }
 }

@@ -2,15 +2,15 @@ import ExcelJS from "exceljs";
 import { db } from "@/db/index.js";
 import { and, asc, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
-import { journalModel } from "@repo/db/schemas/models/library/journal.model.js";
-import { journalTypeModel } from "@repo/db/schemas/models/library/journal-type.model.js";
-import { entryModeModel } from "@repo/db/schemas/models/library/entry-mode.model.js";
-import { publisherModel } from "@repo/db/schemas/models/library/publisher.model.js";
-import { bindingModel } from "@repo/db/schemas/models/library/binding.model.js";
-import { libraryPeriodModel } from "@repo/db/schemas/models/library/library-period.model.js";
-import { languageMediumModel } from "@repo/db/schemas/models/resources/languageMedium.model.js";
-import { subjectGroupingMainModel } from "@repo/db/schemas/models/course-design/subject-grouping-main.model.js";
-import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
+import { journalModel } from "@academic/db/schemas/models/library/journal.model.js";
+import { journalTypeModel } from "@academic/db/schemas/models/library/journal-type.model.js";
+import { entryModeModel } from "@academic/db/schemas/models/library/entry-mode.model.js";
+import { publisherModel } from "@academic/db/schemas/models/library/publisher.model.js";
+import { bindingModel } from "@academic/db/schemas/models/library/binding.model.js";
+import { libraryPeriodModel } from "@academic/db/schemas/models/library/library-period.model.js";
+import { languageMediumModel } from "@academic/db/schemas/models/resources/languageMedium.model.js";
+import { subjectGroupingMainModel } from "@academic/db/schemas/models/course-design/subject-grouping-main.model.js";
+import { bookModel } from "@academic/db/schemas/models/library/book.model.js";
 
 export type JournalListFilters = {
   page: number;

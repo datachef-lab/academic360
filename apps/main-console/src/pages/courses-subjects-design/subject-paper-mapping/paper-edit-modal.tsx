@@ -32,7 +32,7 @@ import type {
   Class,
   PaperDto,
   PaperComponentDto,
-} from "@repo/db/index";
+} from "@academic/db/index";
 import { toast } from "sonner";
 import { getPaperById } from "@/services/course-design.api";
 // import { Class } from "@/types/academics/class";

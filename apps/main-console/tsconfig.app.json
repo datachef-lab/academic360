@@ -1,5 +1,5 @@
 {
-  "extends": "@repo/typescript-config/react-library.json",
+  "extends": "@academic/typescript-config/react-library.json",
   "compilerOptions": {
     "baseUrl": ".",
     "target": "ES2020",
@@ -9,8 +9,8 @@
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*", "../../packages/db/src/*"],
-      "@repo/db": ["../../packages/db/src"],
-      "@repo/db/*": ["../../packages/db/src/*"]
+      "@academic/db": ["../../packages/db/src"],
+      "@academic/db/*": ["../../packages/db/src/*"]
     },
     /* Bundler mode */
     "moduleResolution": "bundler",

@@ -1,7 +1,7 @@
 import axiosInstance, { setAccessTokenForApi } from "@/lib/api";
 import type { ApiResponse } from "@/lib/auth-service";
 import { deleteRefreshToken, getRefreshToken, setRefreshToken } from "@/lib/secure-storage";
-import type { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@academic/db/dtos/user";
 import { router } from "expo-router";
 import React, {
   createContext,

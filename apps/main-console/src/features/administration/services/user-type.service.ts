@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
-import type { UserTypeT } from "@repo/db/schemas/models/administration";
+import type { UserTypeT } from "@academic/db/schemas/models/administration";
 
 const BASE_URL = "/api/administration/user-types";
 
@@ -15,16 +15,24 @@ export async function getAllUserTypes() {
 }
 
 export async function createUserType(payload: UserTypePayload) {
-  const { data } = await axiosInstance.post<ApiResponse<UserTypeT>>(BASE_URL, payload);
+  const { data } = await axiosInstance.post<ApiResponse<UserTypeT>>(
+    BASE_URL,
+    payload,
+  );
   return data;
 }
 
 export async function updateUserType(id: number, payload: UserTypePayload) {
-  const { data } = await axiosInstance.put<ApiResponse<UserTypeT>>(`${BASE_URL}/${id}`, payload);
+  const { data } = await axiosInstance.put<ApiResponse<UserTypeT>>(
+    `${BASE_URL}/${id}`,
+    payload,
+  );
   return data;
 }
 
 export async function deleteUserType(id: number) {
-  const { data } = await axiosInstance.delete<ApiResponse<UserTypeT | null>>(`${BASE_URL}/${id}`);
+  const { data } = await axiosInstance.delete<ApiResponse<UserTypeT | null>>(
+    `${BASE_URL}/${id}`,
+  );
   return data;
 }

@@ -12,11 +12,11 @@ import {
   sectionModel,
   sessionModel,
   studentModel,
-} from "@repo/db/schemas";
-import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
-// import { subjectSelectionMetaModel } from "@repo/db/schemas/models/subject-selection/subject-selection-meta.model";
-// import { subjectModel } from "@repo/db/schemas/models/course-design";
-import { classModel } from "@repo/db/schemas/models/academics";
+} from "@academic/db/schemas";
+import { studentSubjectSelectionModel } from "@academic/db/schemas/models/subject-selection/student-subject-selection.model";
+// import { subjectSelectionMetaModel } from "@academic/db/schemas/models/subject-selection/subject-selection-meta.model";
+// import { subjectModel } from "@academic/db/schemas/models/course-design";
+import { classModel } from "@academic/db/schemas/models/academics";
 import * as classService from "@/features/academics/services/class.service";
 import * as shiftService from "@/features/academics/services/shift.service";
 import * as paperService from "@/features/course-design/services/paper.service";
@@ -24,21 +24,21 @@ import {
   paperModel,
   subjectModel,
   subjectTypeModel,
-} from "@repo/db/schemas/models/course-design";
-import { promotionModel } from "@repo/db/schemas/models/batches";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
+import { promotionModel } from "@academic/db/schemas/models/batches";
+import { programCourseModel } from "@academic/db/schemas/models/course-design";
 import * as relatedSubjectService from "@/features/subject-selection/services/related-subject-main.service";
 import * as studentAcademicSubjectService from "@/features/admissions/services/student-academic-subject.service";
-import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
+import { promotionStatusModel } from "@academic/db/schemas/models/batches/promotion-status.model";
 import * as stringSimilarity from "string-similarity";
 import { PaperDetailedDto } from "@/features/course-design/services/paper.service";
 import {
   subjectSelectionMetaModel,
   subjectSelectionMetaStreamModel,
   subjectSelectionMetaClassModel,
-} from "@repo/db/schemas/models/subject-selection";
-import { streamModel } from "@repo/db/schemas/models/course-design";
-import { SubjectSelectionMetaDto } from "@repo/db/dtos/subject-selection";
+} from "@academic/db/schemas/models/subject-selection";
+import { streamModel } from "@academic/db/schemas/models/course-design";
+import { SubjectSelectionMetaDto } from "@academic/db/dtos/subject-selection";
 
 // Helper function for fuzzy string matching
 function isSubjectMatch(

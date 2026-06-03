@@ -7,7 +7,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { admissionModel } from "./admission.model.js";
-import { courseModel } from "@repo/db/schemas/models/course-design";
+import { courseModel } from "@academic/db/schemas/models/course-design";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 

@@ -6,9 +6,9 @@ import {
   createPersonalDetailsSchema,
   studentModel,
   userModel,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import { eq } from "drizzle-orm";
-import { PersonalDetailsDto } from "@repo/db/index.js";
+import { PersonalDetailsDto } from "@academic/db/index.js";
 import { addAddress, findAddressById, saveAddress } from "./address.service.js";
 import { findDisabilityCodeById } from "@/features/resources/services/disabilityCode.service.js";
 import { findNationalityById } from "@/features/resources/services/nationality.service.js";

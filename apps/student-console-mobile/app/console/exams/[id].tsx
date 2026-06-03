@@ -1,5 +1,5 @@
-import type { ExamDto } from "@repo/db/dtos/exams";
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { ExamDto } from "@academic/db/dtos/exams";
+import type { StudentDto } from "@academic/db/dtos/user";
 import { examDetailsImage } from "@/constants/Images";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";

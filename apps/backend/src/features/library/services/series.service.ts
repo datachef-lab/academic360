@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { Series, seriesModel } from "@repo/db/schemas";
+import { Series, seriesModel } from "@academic/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
 
 type SeriesListFilters = {

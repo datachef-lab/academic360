@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFamilyDetail, updateFamilyDetail } from "@/services/family-details.service";
 import { createPerson, updatePerson } from "@/services/person.service";
-import type { FamilyDetailDto } from "@repo/db/dtos/user";
+import type { FamilyDetailDto } from "@academic/db/dtos/user";
 import type { AnnualIncome } from "@/types/resources/annual-income.types";
 import { ParentType } from "@/types/enums";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Save, CheckCircle } from "lucide-react";
 import { getAllAnnualIncomes } from "@/services/annual-income.service";
 import { getAllOccupations } from "@/services/occupation.service";
-import { personTitleType } from "@repo/db/schemas/enums";
+import { personTitleType } from "@academic/db/schemas/enums";
 
 interface FamilyDetailsProps {
   studentId: number;
@@ -77,42 +77,42 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
       parentType: initialData?.parentType ?? null,
       fatherDetails: initialData?.father
         ? {
-            name: initialData.father.name ?? null,
-            email: initialData.father.email ?? null,
-            phone: initialData.father.phone ?? null,
-            aadhaarCardNumber: initialData.father.aadhaarCardNumber ?? null,
-            qualification: initialData.father.qualification ?? null,
-            occupation: initialData.father.occupation ?? null,
-            title: (initialData.father as { title?: PersonTitle })?.title ?? null,
-          }
+          name: initialData.father.name ?? null,
+          email: initialData.father.email ?? null,
+          phone: initialData.father.phone ?? null,
+          aadhaarCardNumber: initialData.father.aadhaarCardNumber ?? null,
+          qualification: initialData.father.qualification ?? null,
+          occupation: initialData.father.occupation ?? null,
+          title: (initialData.father as { title?: PersonTitle })?.title ?? null,
+        }
         : null,
       motherDetails: initialData?.mother
         ? {
-            name: initialData.mother.name ?? null,
-            email: initialData.mother.email ?? null,
-            phone: initialData.mother.phone ?? null,
-            aadhaarCardNumber: initialData.mother.aadhaarCardNumber ?? null,
-            qualification: initialData.mother.qualification ?? null,
-            occupation: initialData.mother.occupation ?? null,
-            title: (initialData.mother as { title?: PersonTitle })?.title ?? null,
-          }
+          name: initialData.mother.name ?? null,
+          email: initialData.mother.email ?? null,
+          phone: initialData.mother.phone ?? null,
+          aadhaarCardNumber: initialData.mother.aadhaarCardNumber ?? null,
+          qualification: initialData.mother.qualification ?? null,
+          occupation: initialData.mother.occupation ?? null,
+          title: (initialData.mother as { title?: PersonTitle })?.title ?? null,
+        }
         : null,
       guardianDetails: initialData?.guardian
         ? {
-            name: initialData.guardian.name ?? null,
-            email: initialData.guardian.email ?? null,
-            phone: initialData.guardian.phone ?? null,
-            aadhaarCardNumber: initialData.guardian.aadhaarCardNumber ?? null,
-            qualification: initialData.guardian.qualification ?? null,
-            occupation: initialData.guardian.occupation ?? null,
-            title: (initialData.guardian as { title?: PersonTitle })?.title ?? null,
-          }
+          name: initialData.guardian.name ?? null,
+          email: initialData.guardian.email ?? null,
+          phone: initialData.guardian.phone ?? null,
+          aadhaarCardNumber: initialData.guardian.aadhaarCardNumber ?? null,
+          qualification: initialData.guardian.qualification ?? null,
+          occupation: initialData.guardian.occupation ?? null,
+          title: (initialData.guardian as { title?: PersonTitle })?.title ?? null,
+        }
         : null,
       annualIncome: initialData?.annualIncome
         ? {
-            id: initialData.annualIncome.id,
-            range: (initialData.annualIncome as { range?: string } | null)?.range,
-          }
+          id: initialData.annualIncome.id,
+          range: (initialData.annualIncome as { range?: string } | null)?.range,
+        }
         : null,
     };
   });
@@ -142,45 +142,45 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
       parentType: initialData.parentType ?? null,
       annualIncome: initialData.annualIncome
         ? {
-            id: initialData.annualIncome.id,
-            range: (initialData.annualIncome as { range?: string } | null)?.range,
-          }
+          id: initialData.annualIncome.id,
+          range: (initialData.annualIncome as { range?: string } | null)?.range,
+        }
         : null,
       fatherDetails: initialData.father
         ? {
-            id: (initialData.father as { id?: number })?.id,
-            name: initialData.father.name ?? null,
-            email: initialData.father.email ?? null,
-            phone: initialData.father.phone ?? null,
-            aadhaarCardNumber: initialData.father.aadhaarCardNumber ?? null,
-            qualification: initialData.father.qualification ?? null,
-            occupation: initialData.father.occupation ?? null,
-            title: (initialData.father as { title?: PersonTitle })?.title ?? null,
-          }
+          id: (initialData.father as { id?: number })?.id,
+          name: initialData.father.name ?? null,
+          email: initialData.father.email ?? null,
+          phone: initialData.father.phone ?? null,
+          aadhaarCardNumber: initialData.father.aadhaarCardNumber ?? null,
+          qualification: initialData.father.qualification ?? null,
+          occupation: initialData.father.occupation ?? null,
+          title: (initialData.father as { title?: PersonTitle })?.title ?? null,
+        }
         : null,
       motherDetails: initialData.mother
         ? {
-            id: (initialData.mother as { id?: number })?.id,
-            name: initialData.mother.name ?? null,
-            email: initialData.mother.email ?? null,
-            phone: initialData.mother.phone ?? null,
-            aadhaarCardNumber: initialData.mother.aadhaarCardNumber ?? null,
-            qualification: initialData.mother.qualification ?? null,
-            occupation: initialData.mother.occupation ?? null,
-            title: (initialData.mother as { title?: PersonTitle })?.title ?? null,
-          }
+          id: (initialData.mother as { id?: number })?.id,
+          name: initialData.mother.name ?? null,
+          email: initialData.mother.email ?? null,
+          phone: initialData.mother.phone ?? null,
+          aadhaarCardNumber: initialData.mother.aadhaarCardNumber ?? null,
+          qualification: initialData.mother.qualification ?? null,
+          occupation: initialData.mother.occupation ?? null,
+          title: (initialData.mother as { title?: PersonTitle })?.title ?? null,
+        }
         : null,
       guardianDetails: initialData.guardian
         ? {
-            id: (initialData.guardian as { id?: number })?.id,
-            name: initialData.guardian.name ?? null,
-            email: initialData.guardian.email ?? null,
-            phone: initialData.guardian.phone ?? null,
-            aadhaarCardNumber: initialData.guardian.aadhaarCardNumber ?? null,
-            qualification: initialData.guardian.qualification ?? null,
-            occupation: initialData.guardian.occupation ?? null,
-            title: (initialData.guardian as { title?: PersonTitle })?.title ?? null,
-          }
+          id: (initialData.guardian as { id?: number })?.id,
+          name: initialData.guardian.name ?? null,
+          email: initialData.guardian.email ?? null,
+          phone: initialData.guardian.phone ?? null,
+          aadhaarCardNumber: initialData.guardian.aadhaarCardNumber ?? null,
+          qualification: initialData.guardian.qualification ?? null,
+          occupation: initialData.guardian.occupation ?? null,
+          title: (initialData.guardian as { title?: PersonTitle })?.title ?? null,
+        }
         : null,
     }));
   }, [initialData]);

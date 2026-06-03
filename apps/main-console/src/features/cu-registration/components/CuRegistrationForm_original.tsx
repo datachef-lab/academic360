@@ -15,8 +15,8 @@ import {
   fetchStudentSubjectSelections,
   fetchMandatorySubjects,
 } from "@/services/subject-selection";
-import type { CuRegistrationCorrectionRequestDto } from "@repo/db/dtos/admissions";
-import type { StudentDto, ProfileInfo } from "@repo/db/dtos/user";
+import type { CuRegistrationCorrectionRequestDto } from "@academic/db/dtos/admissions";
+import type { StudentDto, ProfileInfo } from "@academic/db/dtos/user";
 
 interface CuRegistrationFormProps {
   studentId: number;
@@ -588,44 +588,40 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               <div className="flex w-full overflow-x-auto no-scrollbar">
                 <button
                   onClick={() => setActiveTab("personal")}
-                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "personal"
+                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "personal"
                       ? "text-blue-600 border-blue-600 bg-transparent"
                       : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                  } cursor-pointer`}
+                    } cursor-pointer`}
                 >
                   <span className="hidden sm:inline">Personal Info</span>
                   <span className="sm:hidden">Personal</span>
                 </button>
                 <button
                   onClick={() => setActiveTab("address")}
-                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "address"
+                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "address"
                       ? "text-blue-600 border-blue-600 bg-transparent"
                       : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                  } cursor-pointer`}
+                    } cursor-pointer`}
                 >
                   <span className="hidden sm:inline">Address Info</span>
                   <span className="sm:hidden">Address</span>
                 </button>
                 <button
                   onClick={() => setActiveTab("subjects")}
-                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "subjects"
+                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "subjects"
                       ? "text-blue-600 border-blue-600 bg-transparent"
                       : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                  } cursor-pointer`}
+                    } cursor-pointer`}
                 >
                   <span className="hidden sm:inline">Subjects Overview</span>
                   <span className="sm:hidden">Subjects</span>
                 </button>
                 <button
                   onClick={() => setActiveTab("documents")}
-                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "documents"
+                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "documents"
                       ? "text-blue-600 border-blue-600 bg-transparent"
                       : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                  } cursor-pointer`}
+                    } cursor-pointer`}
                 >
                   Documents
                 </button>

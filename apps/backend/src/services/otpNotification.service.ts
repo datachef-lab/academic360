@@ -1,6 +1,6 @@
 import { enqueueNotification } from "./notificationClient.js";
 import { db } from "@/db/index.js";
-import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
+import { notificationMasterModel } from "@academic/db/schemas/models/notifications";
 import { eq, and } from "drizzle-orm";
 
 export interface OtpNotificationData {
@@ -54,7 +54,7 @@ const isStaffWithStagingNotification = async (
 ): Promise<boolean> => {
   try {
     // Import user model
-    const { userModel } = await import("@repo/db/schemas/models/user");
+    const { userModel } = await import("@academic/db/schemas/models/user");
 
     const [user] = await db
       .select({
@@ -174,7 +174,7 @@ export const sendOtpEmailNotification = async (
     }
 
     // Resolve userId from email if available
-    const { userModel } = await import("@repo/db/schemas/models/user");
+    const { userModel } = await import("@academic/db/schemas/models/user");
     const [foundUser] = await db
       .select({ id: userModel.id })
       .from(userModel)
@@ -278,7 +278,7 @@ export const sendOtpWhatsAppNotification = async (
     }
 
     // Resolve userId from email if available
-    const { userModel } = await import("@repo/db/schemas/models/user");
+    const { userModel } = await import("@academic/db/schemas/models/user");
     const [foundUser] = await db
       .select({ id: userModel.id })
       .from(userModel)

@@ -2,10 +2,10 @@ import { db } from "@/db/index.js";
 import {
   regulationTypeModel,
   RegulationType,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import { countDistinct, eq, ilike } from "drizzle-orm";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
-import { paperModel } from "@repo/db/schemas/models/course-design";
+import { programCourseModel } from "@academic/db/schemas/models/course-design";
+import { paperModel } from "@academic/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 

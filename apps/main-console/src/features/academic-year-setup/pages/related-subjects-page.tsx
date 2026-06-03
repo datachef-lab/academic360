@@ -54,10 +54,10 @@ import {
   type CreateRelatedSubjectMainInput,
   type UpdateRelatedSubjectMainInput,
 } from "@/services/subject-selection.api";
-import type { RelatedSubjectMainDto } from "@repo/db/dtos/subject-selection";
+import type { RelatedSubjectMainDto } from "@academic/db/dtos/subject-selection";
 import { getProgramCourses, getSubjectTypes } from "@/services/course-design.api";
 import { getActiveBoardSubjectNames, type BoardSubjectName } from "@/services/admissions.service";
-import type { ProgramCourse, SubjectType } from "@repo/db/index";
+import type { ProgramCourse, SubjectType } from "@academic/db/index";
 import { toast as sonnerToast } from "sonner";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -477,10 +477,9 @@ export default function AlternativeSubjectsPage() {
           if (!subjectTypeId) missing.push("category");
           if (!targetId) missing.push("subject");
           skipped.push(
-            `${row.programCourse || "—"} | ${row.subjectCategory || "—"} | ${
-              (row.targetedSubject && String(row.targetedSubject).split("::")[1]) ||
-              row.targetedSubject ||
-              "—"
+            `${row.programCourse || "—"} | ${row.subjectCategory || "—"} | ${(row.targetedSubject && String(row.targetedSubject).split("::")[1]) ||
+            row.targetedSubject ||
+            "—"
             } — missing: ${missing.join(", ")}`,
           );
           continue; // skip invalid row, but allow others to proceed

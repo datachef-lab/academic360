@@ -8,7 +8,7 @@ import {
   deleteFeeStudentMapping,
   generateFeeReceiptByFeeStructureIdAndStudentId,
 } from "../services/fee-student-mapping.service";
-import { createFeeStudentMappingSchema } from "@repo/db/schemas";
+import { createFeeStudentMappingSchema } from "@academic/db/schemas";
 import { ApiError, handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 import { buildFeeReceiptPdfContentDisposition } from "@/utils/fee-receipt-content-disposition.js";

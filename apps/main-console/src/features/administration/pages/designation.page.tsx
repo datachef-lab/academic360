@@ -33,7 +33,7 @@ import {
   getAllDesignations,
   updateDesignation,
 } from "../services/designation.service";
-import type { DesignationT } from "@repo/db/schemas";
+import type { DesignationT } from "@academic/db/schemas";
 import * as XLSX from "xlsx";
 
 const designationSchema = z.object({

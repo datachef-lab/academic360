@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { ilike } from "drizzle-orm";
 import { createLogger } from "@/config/logger.js";
-import { academicActivityMasterModel } from "@repo/db/schemas/models/academics/academic-activity-master.model";
+import { academicActivityMasterModel } from "@academic/db/schemas/models/academics/academic-activity-master.model";
 
 const log = createLogger("default-academic-activity");
 

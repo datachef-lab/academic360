@@ -1,9 +1,9 @@
 import { db } from "@/db/index.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
-import { libraryDocumentTypeModel } from "@repo/db/schemas/models/library/library-document-type.model.js";
-import { libraryArticleModel } from "@repo/db/schemas/models/library/library-article.model.js";
-import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
+import { libraryDocumentTypeModel } from "@academic/db/schemas/models/library/library-document-type.model.js";
+import { libraryArticleModel } from "@academic/db/schemas/models/library/library-article.model.js";
+import { bookModel } from "@academic/db/schemas/models/library/book.model.js";
 
 export type LibraryDocumentTypeListFilters = {
   page: number;

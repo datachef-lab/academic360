@@ -4,7 +4,7 @@ import {
   accommodationModel,
   createAccommodationSchema,
   AccommodationT,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import { addAddress, findAddressById, saveAddress } from "./address.service.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";

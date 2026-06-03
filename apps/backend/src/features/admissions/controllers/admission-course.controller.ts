@@ -7,7 +7,7 @@ import { handleError } from "@/utils/handleError.js";
 //   findAdmissionCoursesByAdmissionId,
 //   updateAdmissionCourse,
 //   deleteAdmissionCourse
-// } from "@repo/db/schemas/models/admissions";
+// } from "@academic/db/schemas/models/admissions";
 
 export const createAdmissionCourseHandler = async (
   req: Request,

@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { promotionStatusInsertSchema } from "@repo/db/schemas";
+import { promotionStatusInsertSchema } from "@academic/db/schemas";
 import { ApiResponse, handleError } from "@/utils/index.js";
 import * as promotionStatusService from "../services/promotion-status.service.js";
 

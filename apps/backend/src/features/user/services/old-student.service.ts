@@ -15,7 +15,7 @@ import {
   OldBoardSubjectName,
   OldBoardSubjectMapping,
   OldBoardResultStatus,
-} from "@repo/db/legacy-system-types/admissions";
+} from "@academic/db/legacy-system-types/admissions";
 import {
   OldCityMaintab,
   OldCitySubtab,
@@ -26,7 +26,7 @@ import {
   OldInstitution,
   OldPoliceStation,
   OldPostOffice,
-} from "@repo/db/legacy-system-types/resources";
+} from "@academic/db/legacy-system-types/resources";
 
 interface OldLanguageMedium {
   readonly id: number;
@@ -36,7 +36,7 @@ import {
   OldHistoricalRecord,
   OldStaff,
   OldStudent,
-} from "@repo/db/legacy-system-types/users";
+} from "@academic/db/legacy-system-types/users";
 import {
   addressModel,
   annualIncomeModel,
@@ -134,8 +134,8 @@ import {
   Section,
   Family,
   Person,
-} from "@repo/db/schemas";
-import { AdmissionCourseDetailsT } from "@repo/db/schemas/models/admissions/adm-course-details.model";
+} from "@academic/db/schemas";
+import { AdmissionCourseDetailsT } from "@academic/db/schemas/models/admissions/adm-course-details.model";
 // import { processStudent } from "../controllers/oldStudent.controller"; // Removed to avoid conflict
 import {
   OldClass,
@@ -143,28 +143,31 @@ import {
   OldEligibilityCriteria,
   OldSubject,
   OldSubjectType,
-} from "@repo/db/legacy-system-types/course-design";
+} from "@academic/db/legacy-system-types/course-design";
 import { OldShift } from "@/types/old-data/old-shift";
-import { OldBank, OldBankBranch } from "@repo/db/legacy-system-types/payment";
-import { staffModel } from "@repo/db/schemas/models/user/staff.model";
+import {
+  OldBank,
+  OldBankBranch,
+} from "@academic/db/legacy-system-types/payment";
+import { staffModel } from "@academic/db/schemas/models/user/staff.model";
 import {
   OldAcademicDetails,
   OldAcademicYear,
   OldBoard,
   OldSection,
   OldSession,
-} from "@repo/db/legacy-system-types/academics";
+} from "@academic/db/legacy-system-types/academics";
 import { addDegree } from "@/features/resources/services/degree.service";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
+import { boardSubjectNameModel } from "@academic/db/schemas/models/admissions/board-subject-name.model";
 import {
   PromotionInsertSchema,
   promotionModel,
   PromotionT,
-} from "@repo/db/schemas/models/batches/promotions.model";
-import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
-import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
-import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model";
-import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model";
+} from "@academic/db/schemas/models/batches/promotions.model";
+import { OldPromotionStatus } from "@academic/db/legacy-system-types/batches";
+import { promotionStatusModel } from "@academic/db/schemas/models/batches/promotion-status.model";
+import { postOfficeModel } from "@academic/db/schemas/models/user/post-office.model";
+import { policeStationModel } from "@academic/db/schemas/models/user/police-station.model";
 import { upsertUser } from "./refactor-old-migration.service";
 import { CLIENT_RENEG_LIMIT } from "tls";
 

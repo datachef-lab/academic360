@@ -1,17 +1,17 @@
 import { db } from "@/db";
-import { otpModel } from "@repo/db/schemas/models/auth/otp.model.js";
-import { userModel } from "@repo/db/schemas/models/user";
+import { otpModel } from "@academic/db/schemas/models/auth/otp.model.js";
+import { userModel } from "@academic/db/schemas/models/user";
 import {
   notificationMasterModel,
   notificationMasterFieldModel,
   notificationMasterMetaModel,
-} from "@repo/db/schemas/models/notifications";
+} from "@academic/db/schemas/models/notifications";
 import { eq, and, gt, ilike, desc } from "drizzle-orm";
 import { generateToken } from "@/utils/generateToken.js";
 import type { StringValue } from "ms";
 import * as userService from "@/features/user/services/user.service.js";
-import { NotificationMasterDto } from "@repo/db/dtos/notifications";
-import { notificationVariantEnum } from "@repo/db/schemas";
+import { NotificationMasterDto } from "@academic/db/dtos/notifications";
+import { notificationVariantEnum } from "@academic/db/schemas";
 
 const defaultNotificationMasters = [
   {

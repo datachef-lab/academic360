@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Banknote, PlusCircle, Pencil, Filter, X } from "lucide-react";
 import FeeStructureMaster from "@/components/fees/FeeStructureMaster";
-import { FeeStructureDto, CreateFeeStructureDto } from "@repo/db/dtos/fees";
+import { FeeStructureDto, CreateFeeStructureDto } from "@academic/db/dtos/fees";
 // import { AcademicYear } from "@/types/academics/academic-year";
 import { updateFeeStructureByDto } from "@/services/fees-api";
 import {
@@ -986,13 +986,13 @@ const FeesStructurePage: React.FC = () => {
               setCurrentProgressUpdate((prev) =>
                 prev
                   ? {
-                      ...prev,
-                      message: selectedFeeStructureForEdit?.id
-                        ? "Updating fee structure..."
-                        : "Creating fee structure...",
-                      progress: 5,
-                      status: "in_progress",
-                    }
+                    ...prev,
+                    message: selectedFeeStructureForEdit?.id
+                      ? "Updating fee structure..."
+                      : "Creating fee structure...",
+                    progress: 5,
+                    status: "in_progress",
+                  }
                   : null,
               );
 
@@ -1017,11 +1017,11 @@ const FeesStructurePage: React.FC = () => {
               setCurrentProgressUpdate((prev) =>
                 prev
                   ? {
-                      ...prev,
-                      message: "Fee structure saved. Processing student mappings...",
-                      progress: 10,
-                      status: "in_progress",
-                    }
+                    ...prev,
+                    message: "Fee structure saved. Processing student mappings...",
+                    progress: 10,
+                    status: "in_progress",
+                  }
                   : null,
               );
 
@@ -1038,11 +1038,11 @@ const FeesStructurePage: React.FC = () => {
                   setCurrentProgressUpdate((prev) =>
                     prev
                       ? {
-                          ...prev,
-                          message: "Fee structure saved successfully.",
-                          progress: 100,
-                          status: "completed",
-                        }
+                        ...prev,
+                        message: "Fee structure saved successfully.",
+                        progress: 100,
+                        status: "completed",
+                      }
                       : null,
                   );
                   setTimeout(() => {
@@ -1059,12 +1059,12 @@ const FeesStructurePage: React.FC = () => {
               setCurrentProgressUpdate((prev) =>
                 prev
                   ? {
-                      ...prev,
-                      status: "error",
-                      progress: 0,
-                      message: "Failed to save fee structure. Please try again.",
-                      error: error instanceof Error ? error.message : "Unknown error",
-                    }
+                    ...prev,
+                    status: "error",
+                    progress: 0,
+                    message: "Failed to save fee structure. Please try again.",
+                    error: error instanceof Error ? error.message : "Unknown error",
+                  }
                   : null,
               );
               setTimeout(() => {
@@ -1213,12 +1213,11 @@ const FeesStructurePage: React.FC = () => {
                                 return (
                                   <TableHead
                                     key={slabMapping.id || slabIndex}
-                                    className={`w-[150px] p-2 text-center text-base font-semibold whitespace-nowrap ${
-                                      slabIndex <
-                                      selectedConcessionSlabModal.feeStructureSlabs.length - 1
+                                    className={`w-[150px] p-2 text-center text-base font-semibold whitespace-nowrap ${slabIndex <
+                                        selectedConcessionSlabModal.feeStructureSlabs.length - 1
                                         ? "border-r-2 border-gray-400"
                                         : ""
-                                    }`}
+                                      }`}
                                     style={{
                                       backgroundColor:
                                         slabIndex % 4 === 0
@@ -1242,7 +1241,7 @@ const FeesStructurePage: React.FC = () => {
                             const componentAmount = Math.round(
                               ((selectedConcessionSlabModal.baseAmount || 0) *
                                 (component.feeHeadPercentage || 0)) /
-                                100,
+                              100,
                             );
                             return (
                               <TableRow
@@ -1278,9 +1277,8 @@ const FeesStructurePage: React.FC = () => {
                                     return (
                                       <TableCell
                                         key={slabMapping.id || slabIndex}
-                                        className={`text-center p-2 font-semibold ${
-                                          !isLastColumn ? "border-r-2 border-gray-400" : ""
-                                        }`}
+                                        className={`text-center p-2 font-semibold ${!isLastColumn ? "border-r-2 border-gray-400" : ""
+                                          }`}
                                         style={{
                                           backgroundColor:
                                             slabIndex % 4 === 0
@@ -1320,7 +1318,7 @@ const FeesStructurePage: React.FC = () => {
                                     const componentAmount = Math.round(
                                       ((selectedConcessionSlabModal.baseAmount || 0) *
                                         (component.feeHeadPercentage || 0)) /
-                                        100,
+                                      100,
                                     );
                                     const concessionAmount = Math.round(
                                       (componentAmount * concessionRate) / 100,
@@ -1336,9 +1334,8 @@ const FeesStructurePage: React.FC = () => {
                                 return (
                                   <TableCell
                                     key={slabMapping.id || slabIndex}
-                                    className={`text-center p-2 font-bold text-base ${
-                                      !isLastColumn ? "border-r-2 border-gray-400" : ""
-                                    }`}
+                                    className={`text-center p-2 font-bold text-base ${!isLastColumn ? "border-r-2 border-gray-400" : ""
+                                      }`}
                                     style={{
                                       backgroundColor:
                                         slabIndex % 4 === 0

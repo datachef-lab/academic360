@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { BloodGroup, bloodGroupModel } from "@repo/db/schemas";
+import { BloodGroup, bloodGroupModel } from "@academic/db/schemas";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import { count, desc, eq, ilike } from "drizzle-orm";
 

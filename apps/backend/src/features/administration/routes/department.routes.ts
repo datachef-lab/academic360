@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createDepartmentSchema } from "@repo/db/schemas/models/administration";
+import { createDepartmentSchema } from "@academic/db/schemas/models/administration";
 import {
   createDepartment,
   deleteDepartment,

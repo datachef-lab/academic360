@@ -1,11 +1,11 @@
-import { Marksheet } from "@repo/db/schemas/models/academics";
+import { Marksheet } from "@academic/db/schemas/models/academics";
 
-import { Class } from "@repo/db/schemas/models/academics";
+import { Class } from "@academic/db/schemas/models/academics";
 import { BatchDto } from "./batch.type.js";
-import { MarksheetPaperMapping } from "@repo/db/schemas/models/academics";
-import { MarksheetPaperComponentMapping } from "@repo/db/schemas/models/academics";
+import { MarksheetPaperMapping } from "@academic/db/schemas/models/academics";
+import { MarksheetPaperComponentMapping } from "@academic/db/schemas/models/academics";
 import { PaperComponentDto } from "../course-design/index.type.js";
-import { Paper } from "@repo/db/schemas/models/course-design";
+import { Paper } from "@academic/db/schemas/models/course-design";
 
 export interface MarksheetPaperComponentMappingDto extends Omit<
   MarksheetPaperComponentMapping,

@@ -45,7 +45,7 @@ import {
   updatePromotionStatusApi,
   deletePromotionStatusApi,
 } from "@/services/promotion-status.api";
-import type { PromotionStatusT } from "@repo/db";
+import type { PromotionStatusT } from "@academic/db";
 
 const APPEAR_TYPES = ["REGULAR", "READMISSION", "CASUAL"] as const;
 

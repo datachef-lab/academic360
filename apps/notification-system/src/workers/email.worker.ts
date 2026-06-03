@@ -3,16 +3,16 @@ import {
   notificationQueueModel,
   notificationModel,
   notificationContentModel,
-} from "@repo/db/schemas/models/notifications";
+} from "@academic/db/schemas/models/notifications";
 import { and, eq, inArray } from "drizzle-orm";
 import { sendZeptoMail } from "@/providers/zepto.js";
-import type { NotificationEventDto } from "@repo/db/dtos/notifications";
+import type { NotificationEventDto } from "@academic/db/dtos/notifications";
 import { renderTemplateFile, renderTemplateString } from "@/utils/templates.js";
 import {
   notificationMasterModel,
   notificationMasterMetaModel,
   notificationMasterFieldModel,
-} from "@repo/db/schemas/models/notifications";
+} from "@academic/db/schemas/models/notifications";
 import { db } from "@/db";
 import { readFileSync, existsSync } from "fs";
 import { join, resolve } from "path";
@@ -168,7 +168,7 @@ async function processBatch() {
         userId: notif?.userId,
       });
       // Fetch user to allow STAFF bypass for devOnly
-      const { userModel } = await import("@repo/db/schemas/models/user");
+      const { userModel } = await import("@academic/db/schemas/models/user");
       const [user] = await db
         .select()
         .from(userModel)

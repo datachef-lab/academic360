@@ -1,4 +1,4 @@
-import type { ClassT } from "@repo/db/schemas/models/academics";
+import type { ClassT } from "@academic/db/schemas/models/academics";
 
 /** Resolved against `classes.type` + `classes.name` */
 export type ClassRef = { type: ClassT["type"]; name: string };

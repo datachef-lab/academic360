@@ -1,4 +1,4 @@
-import type { FeeStructureDto } from "@repo/db/dtos/fees";
+import type { FeeStructureDto } from "@academic/db/dtos/fees";
 
 type ComponentWithSlab = FeeStructureDto["components"][number] & {
   feeSlab?: { name?: string } | null;
@@ -13,14 +13,18 @@ export type StructureSlabAmount = {
 };
 
 /** Group components by fee slab; amount = sum per slab (not sum of all heads flat). */
-export function getStructureSlabAmounts(structure: FeeStructureDto): StructureSlabAmount[] {
+export function getStructureSlabAmounts(
+  structure: FeeStructureDto,
+): StructureSlabAmount[] {
   const components = (structure.components || []) as ComponentWithSlab[];
   const bySlab = new Map<string, StructureSlabAmount>();
 
   for (const c of components) {
     const slabId = c.feeSlabId;
-    const slabKey = slabId != null ? `id:${slabId}` : `name:${c.feeSlab?.name ?? "unknown"}`;
-    const slabLabel = c.feeSlab?.name?.trim() || (slabId != null ? `Slab #${slabId}` : "—");
+    const slabKey =
+      slabId != null ? `id:${slabId}` : `name:${c.feeSlab?.name ?? "unknown"}`;
+    const slabLabel =
+      c.feeSlab?.name?.trim() || (slabId != null ? `Slab #${slabId}` : "—");
     const existing = bySlab.get(slabKey);
     const amount = Number(c.amount ?? 0);
     if (existing) {
@@ -30,7 +34,9 @@ export function getStructureSlabAmounts(structure: FeeStructureDto): StructureSl
     }
   }
 
-  return [...bySlab.values()].sort((a, b) => a.slabLabel.localeCompare(b.slabLabel));
+  return [...bySlab.values()].sort((a, b) =>
+    a.slabLabel.localeCompare(b.slabLabel),
+  );
 }
 
 export type StructureTableRow = {
@@ -39,7 +45,9 @@ export type StructureTableRow = {
 };
 
 /** One table row per structure × fee slab (amount is slab total only). */
-export function flattenStructuresBySlab(structures: FeeStructureDto[]): StructureTableRow[] {
+export function flattenStructuresBySlab(
+  structures: FeeStructureDto[],
+): StructureTableRow[] {
   const rows: StructureTableRow[] = [];
   for (const structure of structures) {
     const slabs = getStructureSlabAmounts(structure);

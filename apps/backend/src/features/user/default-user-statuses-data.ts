@@ -1,4 +1,4 @@
-// import { UserStatusMasterDto } from "@repo/db/dtos";
+// import { UserStatusMasterDto } from "@academic/db/dtos";
 
 // export const defaultUserStatusesMastersDtos: UserStatusMasterDto[] = [
 //   {

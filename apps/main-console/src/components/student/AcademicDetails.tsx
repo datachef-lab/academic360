@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import type {
   AdmissionAcademicInfoDto,
   StudentAcademicSubjectsDto,
-} from "@repo/db/dtos/admissions";
+} from "@academic/db/dtos/admissions";
 import {
   Select,
   SelectContent,
@@ -404,8 +404,8 @@ export default function AcademicDetails({
       // Auto-calc result (PASS/FAIL) based on board subject passing marks and total marks
       const bsId = Number(
         (current as unknown as { boardSubjectId?: number }).boardSubjectId ??
-          (current as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
-          0,
+        (current as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
+        0,
       );
       const bs = boardSubjects.find((b) => Number(b.id) === bsId);
       const theory = Number((current as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
@@ -425,7 +425,7 @@ export default function AcademicDetails({
         const pass =
           hasTheoryRule && hasPracRule
             ? theory >= Number(bs?.passingMarksTheory ?? 0) &&
-              practical >= Number(bs?.passingMarksPractical ?? 0)
+            practical >= Number(bs?.passingMarksPractical ?? 0)
             : total >= requiredTotal;
         (current as unknown as { resultStatus?: string }).resultStatus = pass ? "PASS" : "FAIL";
       }
@@ -921,9 +921,9 @@ export default function AcademicDetails({
             <Select
               value={String(
                 info?.previouslyRegisteredProgramCourse?.id ??
-                  (info as unknown as { previouslyRegisteredProgramCourseId?: number } | null)
-                    ?.previouslyRegisteredProgramCourseId ??
-                  "",
+                (info as unknown as { previouslyRegisteredProgramCourseId?: number } | null)
+                  ?.previouslyRegisteredProgramCourseId ??
+                "",
               )}
               onValueChange={(val) => {
                 const selected = programCourses.find((p) => String(p.id) === val);
@@ -998,9 +998,9 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          addressLine: e.target.value,
-                        }))
+                        ...a,
+                        addressLine: e.target.value,
+                      }))
                       : prev,
                   )
                 }
@@ -1015,9 +1015,9 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          landmark: e.target.value,
-                        }))
+                        ...a,
+                        landmark: e.target.value,
+                      }))
                       : prev,
                   )
                 }
@@ -1032,9 +1032,9 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          localityType: val as "RURAL" | "URBAN",
-                        }))
+                        ...a,
+                        localityType: val as "RURAL" | "URBAN",
+                      }))
                       : prev,
                   )
                 }
@@ -1058,12 +1058,12 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          country: {
-                            id: Number(val),
-                            name: countries.find((c) => String(c.id) === val)?.name || "",
-                          },
-                        }))
+                        ...a,
+                        country: {
+                          id: Number(val),
+                          name: countries.find((c) => String(c.id) === val)?.name || "",
+                        },
+                      }))
                       : prev,
                   )
                 }
@@ -1093,12 +1093,12 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          state: {
-                            id: Number(val),
-                            name: states.find((s) => String(s.id) === val)?.name || "",
-                          },
-                        }))
+                        ...a,
+                        state: {
+                          id: Number(val),
+                          name: states.find((s) => String(s.id) === val)?.name || "",
+                        },
+                      }))
                       : prev,
                   )
                 }
@@ -1128,12 +1128,12 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          city: {
-                            id: Number(val),
-                            name: cities.find((c) => String(c.id) === val)?.name || "",
-                          },
-                        }))
+                        ...a,
+                        city: {
+                          id: Number(val),
+                          name: cities.find((c) => String(c.id) === val)?.name || "",
+                        },
+                      }))
                       : prev,
                   )
                 }
@@ -1166,12 +1166,12 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          district: {
-                            id: Number(val),
-                            name: districts.find((d) => String(d.id) === val)?.name || "",
-                          },
-                        }))
+                        ...a,
+                        district: {
+                          id: Number(val),
+                          name: districts.find((d) => String(d.id) === val)?.name || "",
+                        },
+                      }))
                       : prev,
                   )
                 }
@@ -1203,9 +1203,9 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          pincode: e.target.value,
-                        }))
+                        ...a,
+                        pincode: e.target.value,
+                      }))
                       : prev,
                   )
                 }
@@ -1220,9 +1220,9 @@ export default function AcademicDetails({
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          phone: e.target.value,
-                        }))
+                        ...a,
+                        phone: e.target.value,
+                      }))
                       : prev,
                   )
                 }
@@ -1332,9 +1332,9 @@ export default function AcademicDetails({
                         {(() => {
                           const bsId = Number(
                             (s as unknown as { boardSubjectId?: number }).boardSubjectId ??
-                              (s as unknown as { boardSubject?: { id?: number } }).boardSubject
-                                ?.id ??
-                              0,
+                            (s as unknown as { boardSubject?: { id?: number } }).boardSubject
+                              ?.id ??
+                            0,
                           );
                           const bs = boardSubjects.find((b) => Number(b.id) === bsId);
                           const fullMarks =

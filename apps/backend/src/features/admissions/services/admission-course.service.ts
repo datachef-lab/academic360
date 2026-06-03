@@ -2,11 +2,11 @@
 // import {
 //     admissionCourseModel,
 //     AdmissionCourse,
-// } from "@repo/db/schemas/models/admissions";
-// import { courseModel } from "@repo/db/schemas/models/course-design";
-// import { admissionModel } from "@repo/db/schemas/models/admissions";
+// } from "@academic/db/schemas/models/admissions";
+// import { courseModel } from "@academic/db/schemas/models/course-design";
+// import { admissionModel } from "@academic/db/schemas/models/admissions";
 // import { and, eq } from "drizzle-orm";
-// import { academicYearModel } from "@repo/db/schemas/models/academics";
+// import { academicYearModel } from "@academic/db/schemas/models/academics";
 
 // // CREATE
 // export async function createAdmissionCourse(givenAdmCourse: AdmissionCourse) {

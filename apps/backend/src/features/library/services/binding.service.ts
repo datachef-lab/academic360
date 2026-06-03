@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { Binding, bindingModel } from "@repo/db/schemas";
+import { Binding, bindingModel } from "@academic/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
 
 type BindingListFilters = {

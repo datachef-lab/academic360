@@ -26,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import type { Stream } from "@repo/db/index";
+import type { Stream } from "@academic/db/index";
 import {
   getAllStreams,
   createStream,

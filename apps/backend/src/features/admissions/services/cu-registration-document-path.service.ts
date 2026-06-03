@@ -5,7 +5,7 @@ import {
   academicYearModel,
   programCourseModel,
   regulationTypeModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 
 /**

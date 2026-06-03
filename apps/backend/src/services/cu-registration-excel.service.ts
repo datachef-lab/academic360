@@ -1,9 +1,9 @@
 import { readExcelFile } from "../utils/readExcel.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { studentModel } from "@repo/db/schemas/models/user";
-import { cuPhysicalRegModel } from "@repo/db/schemas/models/admissions/cu-physical-reg-model.js";
-import { classModel } from "@repo/db/schemas/models/academics";
+import { studentModel } from "@academic/db/schemas/models/user";
+import { cuPhysicalRegModel } from "@academic/db/schemas/models/admissions/cu-physical-reg-model.js";
+import { classModel } from "@academic/db/schemas/models/academics";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";

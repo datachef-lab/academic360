@@ -1,5 +1,5 @@
 import { InstitutionType } from "@/types/resources/institution.js";
-import { Institution, institutionModel } from "@repo/db/schemas";
+import { Institution, institutionModel } from "@academic/db/schemas";
 import { findDegreeById } from "@/features/resources/services/degree.service.js";
 import { findAddressById } from "@/features/user/services/address.service.js";
 import { db } from "@/db/index.js";

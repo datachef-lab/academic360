@@ -1,0 +1,2 @@
+ALTER TABLE "notifications" ADD COLUMN "notification_master_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_notification_master_id_fk_notification_masters_id_fk" FOREIGN KEY ("notification_master_id_fk") REFERENCES "public"."notification_masters"("id") ON DELETE no action ON UPDATE no action;

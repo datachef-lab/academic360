@@ -1,13 +1,13 @@
 // // import { AcademicYear, Class, FeesComponent, FeesSlabMapping, FeesStructure, Instalment, Shift, StudentFeesMapping } from "@/db/schema";
-// import { FeesStructure } from "@repo/db/schemas/models/fees";
+// import { FeesStructure } from "@academic/db/schemas/models/fees";
 // // import { CourseDto } from "../academics";
-// import { Shift } from "@repo/db/schemas/models/academics";
-// import { AcademicYear } from "@repo/db/schemas/models/academics";
-// import { Class } from "@repo/db/schemas/models/academics";
-// import { FeesComponent } from "@repo/db/schemas/models/fees";
-// import { FeesSlabMapping } from "@repo/db/schemas/models/fees";
-// import { Instalment } from "@repo/db/schemas/models/fees";
-// import { StudentFeesMapping } from "@repo/db/schemas/models/fees";
+// import { Shift } from "@academic/db/schemas/models/academics";
+// import { AcademicYear } from "@academic/db/schemas/models/academics";
+// import { Class } from "@academic/db/schemas/models/academics";
+// import { FeesComponent } from "@academic/db/schemas/models/fees";
+// import { FeesSlabMapping } from "@academic/db/schemas/models/fees";
+// import { Instalment } from "@academic/db/schemas/models/fees";
+// import { StudentFeesMapping } from "@academic/db/schemas/models/fees";
 // import { CourseDto } from "@/types/course-design/index.type";
 
 // export interface FeesStructureDto

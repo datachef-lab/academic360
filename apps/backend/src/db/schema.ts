@@ -3,7 +3,7 @@ import { defineConfig } from "drizzle-kit";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-export * from "@repo/db/schemas/index";
+export * from "@academic/db/schemas/index";
 
 export default defineConfig({
   out: "./drizzle",

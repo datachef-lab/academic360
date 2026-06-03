@@ -3,13 +3,13 @@ import { db } from "@/db/index.js";
 import {
   paymentVendorDowntimeEntityModel,
   paymentVendorDowntimeModel,
-} from "@repo/db/schemas/models/payments";
+} from "@academic/db/schemas/models/payments";
 import type {
   PaytmCurrentDowntimeStateItem,
   PaytmDowntimeEntity,
   PaytmDowntimeWebhookPayload,
   PaymentVendorDowntimeNormalizedRow,
-} from "@repo/db/dtos/payments";
+} from "@academic/db/dtos/payments";
 
 const VENDOR_PAYTM = "paytm";
 

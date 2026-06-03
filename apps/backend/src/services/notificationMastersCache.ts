@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
+import { notificationMasterModel } from "@academic/db/schemas/models/notifications";
 import { eq } from "drizzle-orm";
 
 const cache = new Map<string, number>();

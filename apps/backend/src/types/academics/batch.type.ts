@@ -8,12 +8,12 @@
 // import { SubjectMetadataType } from "./subject-metadata.js";
 // import { frameworkTypeEnum, programmeTypeEnum } from "@/features/user/models/helper.js";
 
-import { Batch } from "@repo/db/schemas/models/academics";
+import { Batch } from "@academic/db/schemas/models/academics";
 import { CourseDto } from "../course-design/index.type";
-import { Class } from "@repo/db/schemas/models/academics";
-import { Section } from "@repo/db/schemas/models/academics";
-import { Shift } from "@repo/db/schemas/models/academics";
-import { Session } from "@repo/db/schemas/models/academics";
+import { Class } from "@academic/db/schemas/models/academics";
+import { Section } from "@academic/db/schemas/models/academics";
+import { Shift } from "@academic/db/schemas/models/academics";
+import { Session } from "@academic/db/schemas/models/academics";
 
 // export interface BatchType extends Omit<Batch, "courseId" | "classId" | "sectionId" | "shiftId" | "sessionId"> {
 //     course: CourseType | null;

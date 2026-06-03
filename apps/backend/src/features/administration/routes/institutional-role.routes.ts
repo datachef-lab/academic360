@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createUserInstitutionalRoleModelSchema } from "@repo/db/schemas/models/administration";
+import { createUserInstitutionalRoleModelSchema } from "@academic/db/schemas/models/administration";
 import {
   createInstitutionalRole,
   deleteInstitutionalRole,

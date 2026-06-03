@@ -1,6 +1,6 @@
 import { axiosInstance as api } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api-response";
-import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
+import type { RestrictedGroupingMainDto } from "@academic/db/dtos/subject-selection";
 
 const BASE = "/api/subject-selection/restricted-grouping-mains";
 
@@ -12,7 +12,9 @@ export async function fetchRestrictedGroupings(params?: {
   programCourseId?: number;
 }) {
   const res = await api.get<
-    ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>
+    ApiResponse<
+      RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }
+    >
   >(BASE, {
     params,
   });

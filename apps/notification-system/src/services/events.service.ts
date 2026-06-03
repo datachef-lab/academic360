@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { notificationEventModel } from "@repo/db/schemas/models/notifications";
+import { notificationEventModel } from "@academic/db/schemas/models/notifications";
 import { eq } from "drizzle-orm";
 
 export class NotificationEventsService {

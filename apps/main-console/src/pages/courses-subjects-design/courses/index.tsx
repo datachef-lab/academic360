@@ -31,7 +31,7 @@ import {
   TableCell,
   TableHead,
 } from "@/components/ui/table";
-import type { Course } from "@repo/db/index";
+import type { Course } from "@academic/db/index";
 import {
   Dialog,
   DialogContent,

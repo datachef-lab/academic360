@@ -1,4 +1,4 @@
-import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
+import type { RestrictedGroupingMainDto } from "@academic/db/dtos/subject-selection";
 import axiosInstance from "@/lib/api";
 import type { ApiResponse } from "@/lib/types";
 
@@ -12,9 +12,13 @@ export async function fetchRestrictedGroupings(params?: {
   programCourseId?: number;
 }): Promise<RestrictedGroupingMainDto[]> {
   const res = await axiosInstance.get<
-    ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>
+    ApiResponse<
+      RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }
+    >
   >(BASE, { params });
 
   const p = res.data.payload as any;
-  return (Array.isArray(p) ? p : (p?.content ?? [])) as RestrictedGroupingMainDto[];
+  return (
+    Array.isArray(p) ? p : (p?.content ?? [])
+  ) as RestrictedGroupingMainDto[];
 }

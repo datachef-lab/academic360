@@ -3,12 +3,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AddressDto, PersonalDetailsDto } from "@repo/db/dtos";
+import type { AddressDto, PersonalDetailsDto } from "@academic/db/dtos";
 import type {
   ReligionT as UiReligion,
   CategoryT as UiCategory,
   NationalityT as UiNationality,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import {
   Select,
   SelectContent,
@@ -47,8 +47,8 @@ type IdName = { id: number; name: string };
 type PersonalDetailProps = {
   studentId: number;
   initialData?:
-    | (PersonalDetailsDto & { residentialAddress?: AddressDto; mailingAddress?: AddressDto })
-    | null;
+  | (PersonalDetailsDto & { residentialAddress?: AddressDto; mailingAddress?: AddressDto })
+  | null;
   personalEmail?: string | null;
 };
 
@@ -742,12 +742,12 @@ export default function PersonalDetailsReadOnly({
                     setPd((prev) =>
                       prev
                         ? ({
-                            ...prev,
-                            residentialAddress: {
-                              ...ensureAddress(prev.residentialAddress),
-                              addressLine: e.target.value,
-                            },
-                          } as PersonalDetailsDto)
+                          ...prev,
+                          residentialAddress: {
+                            ...ensureAddress(prev.residentialAddress),
+                            addressLine: e.target.value,
+                          },
+                        } as PersonalDetailsDto)
                         : prev,
                     )
                   }
@@ -761,12 +761,12 @@ export default function PersonalDetailsReadOnly({
                     setPd((prev) =>
                       prev
                         ? ({
-                            ...prev,
-                            residentialAddress: {
-                              ...ensureAddress(prev.residentialAddress),
-                              pincode: e.target.value,
-                            },
-                          } as PersonalDetailsDto)
+                          ...prev,
+                          residentialAddress: {
+                            ...ensureAddress(prev.residentialAddress),
+                            pincode: e.target.value,
+                          },
+                        } as PersonalDetailsDto)
                         : prev,
                     )
                   }
@@ -780,12 +780,12 @@ export default function PersonalDetailsReadOnly({
                     setPd((prev) =>
                       prev
                         ? ({
-                            ...prev,
-                            residentialAddress: {
-                              ...ensureAddress(prev.residentialAddress),
-                              phone: e.target.value,
-                            },
-                          } as PersonalDetailsDto)
+                          ...prev,
+                          residentialAddress: {
+                            ...ensureAddress(prev.residentialAddress),
+                            phone: e.target.value,
+                          },
+                        } as PersonalDetailsDto)
                         : prev,
                     )
                   }
@@ -903,12 +903,12 @@ export default function PersonalDetailsReadOnly({
                     setPd((prev) =>
                       prev
                         ? ({
-                            ...prev,
-                            mailingAddress: {
-                              ...ensureAddress(prev.mailingAddress),
-                              addressLine: e.target.value,
-                            },
-                          } as PersonalDetailsDto)
+                          ...prev,
+                          mailingAddress: {
+                            ...ensureAddress(prev.mailingAddress),
+                            addressLine: e.target.value,
+                          },
+                        } as PersonalDetailsDto)
                         : prev,
                     )
                   }
@@ -922,12 +922,12 @@ export default function PersonalDetailsReadOnly({
                     setPd((prev) =>
                       prev
                         ? ({
-                            ...prev,
-                            mailingAddress: {
-                              ...ensureAddress(prev.mailingAddress),
-                              pincode: e.target.value,
-                            },
-                          } as PersonalDetailsDto)
+                          ...prev,
+                          mailingAddress: {
+                            ...ensureAddress(prev.mailingAddress),
+                            pincode: e.target.value,
+                          },
+                        } as PersonalDetailsDto)
                         : prev,
                     )
                   }
@@ -941,12 +941,12 @@ export default function PersonalDetailsReadOnly({
                     setPd((prev) =>
                       prev
                         ? ({
-                            ...prev,
-                            mailingAddress: {
-                              ...ensureAddress(prev.mailingAddress),
-                              phone: e.target.value,
-                            },
-                          } as PersonalDetailsDto)
+                          ...prev,
+                          mailingAddress: {
+                            ...ensureAddress(prev.mailingAddress),
+                            phone: e.target.value,
+                          },
+                        } as PersonalDetailsDto)
                         : prev,
                     )
                   }

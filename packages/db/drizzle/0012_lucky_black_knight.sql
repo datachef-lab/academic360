@@ -1,0 +1,1 @@
+ALTER TABLE "papers" ADD COLUMN "auto_assign" boolean DEFAULT false;

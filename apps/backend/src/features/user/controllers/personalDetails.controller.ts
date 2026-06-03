@@ -9,7 +9,7 @@ import {
   removePersonalDetailsByStudentId,
   getAllPersonalDetails,
 } from "../services/personalDetails.service.js";
-import { createPersonalDetailsSchema } from "@repo/db/schemas/models/user";
+import { createPersonalDetailsSchema } from "@academic/db/schemas/models/user";
 import { ApiResponse, handleError } from "@/utils/index.js";
 
 // Create Personal Details

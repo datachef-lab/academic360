@@ -1,5 +1,5 @@
 import { db, mysqlConnection } from "@/db";
-import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
+import { OldStaff, OldStudent } from "@academic/db/legacy-system-types/users";
 import {
   academicYearModel,
   addressModel,
@@ -18,7 +18,7 @@ import {
   User,
   userModel,
   userTypeEnum,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, count, eq, ilike, inArray, or } from "drizzle-orm";
 import * as oldStudentPersonalDetailsHelper from "./old-student-helper";
 import * as oldStudentAdmissionServices from "./old-student.service";
@@ -27,8 +27,8 @@ import {
   OldAcademicYear,
   OldSession,
   OldShift,
-} from "@repo/db/legacy-system-types/academics";
-import { OldAdmissionStats } from "@repo/db/legacy-system-types/admissions";
+} from "@academic/db/legacy-system-types/academics";
+import { OldAdmissionStats } from "@academic/db/legacy-system-types/admissions";
 import ExcelJS from "exceljs";
 
 const BATCH_SIZE = 500;

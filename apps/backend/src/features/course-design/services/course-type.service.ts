@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { CourseType, courseTypeModel } from "@repo/db/schemas";
+import { CourseType, courseTypeModel } from "@academic/db/schemas";
 import { countDistinct, eq, ilike } from "drizzle-orm";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import { programCourseModel } from "@academic/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 import { recomposeProgramCourseNamesFor } from "./program-course.service.js";

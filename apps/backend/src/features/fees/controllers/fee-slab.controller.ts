@@ -6,7 +6,7 @@ import {
   updateFeeSlab,
   deleteFeeSlab,
 } from "../services/fee-slab.service.js";
-import { createFeeSlabSchema } from "@repo/db/schemas";
+import { createFeeSlabSchema } from "@academic/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 import { z } from "zod";

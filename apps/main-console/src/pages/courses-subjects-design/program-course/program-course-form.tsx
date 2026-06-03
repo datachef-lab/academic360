@@ -30,7 +30,7 @@ import type {
   CourseLevel,
   Affiliation,
   RegulationType,
-} from "@repo/db/index";
+} from "@academic/db/index";
 import {
   getStreams,
   getCourses,

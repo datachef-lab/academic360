@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/api";
-import type { City, State, Country } from "@repo/db/schemas";
+import type { City, State, Country } from "@academic/db/schemas";
 
 export interface BoardSubjectDto {
   id: number;
@@ -90,7 +90,9 @@ export const boardSubjectService = {
       }
 
       const response = await axiosInstance.get(API_BASE_URL, { params });
-      return response.data.payload || { data: [], total: 0, page: 1, pageSize: 10 };
+      return (
+        response.data.payload || { data: [], total: 0, page: 1, pageSize: 10 }
+      );
     } catch (error) {
       console.error("Error fetching board subjects:", error);
       throw error;
@@ -115,7 +117,9 @@ export const boardSubjectService = {
 
   async getByBoardId(boardId: number): Promise<BoardSubjectDto[]> {
     try {
-      const response = await axiosInstance.get(`${API_BASE_URL}/board/${boardId}`);
+      const response = await axiosInstance.get(
+        `${API_BASE_URL}/board/${boardId}`,
+      );
       return response.data.payload || [];
     } catch (error) {
       console.error("Error fetching board subjects by board ID:", error);

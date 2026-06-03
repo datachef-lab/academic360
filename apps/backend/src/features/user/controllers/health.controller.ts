@@ -8,7 +8,7 @@ import {
   removeHealthByStudentId,
   getAllHealths,
 } from "../services/health.service.js";
-import { createHealthSchema } from "@repo/db/schemas/models/user";
+import { createHealthSchema } from "@academic/db/schemas/models/user";
 import { HealthType } from "@/types/user/health.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";

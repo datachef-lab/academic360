@@ -4,8 +4,8 @@ import {
   AccessGroupModulePermission,
   AccessGroupModulePermissionT,
   accessGroupModulePermissionModel,
-} from "@repo/db/schemas/models/administration";
-import { accessGroupModulePermissionEnum } from "@repo/db/schemas/enums";
+} from "@academic/db/schemas/models/administration";
+import { accessGroupModulePermissionEnum } from "@academic/db/schemas/enums";
 
 type AccessGroupModulePermissionType =
   (typeof accessGroupModulePermissionEnum.enumValues)[number];

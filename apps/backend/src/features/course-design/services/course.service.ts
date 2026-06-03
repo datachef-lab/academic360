@@ -1,6 +1,6 @@
 import { db, mysqlConnection } from "@/db/index.js";
 import { CourseDto } from "@/types/course-design/index.type.js";
-import { Course, courseModel, createCourseModel } from "@repo/db/schemas";
+import { Course, courseModel, createCourseModel } from "@academic/db/schemas";
 import { recomposeProgramCourseNamesFor } from "./program-course.service.js";
 import { and, count, countDistinct, eq, ilike, sql } from "drizzle-orm";
 // import { StreamType } from "@/types/academics/stream.js";
@@ -15,11 +15,11 @@ import { OldStudent } from "@/types/old-student.js";
 import { admissionCourseModel } from "@/features/admissions/models/admission-course.model.js";
 import { admissionAcademicInfoModel } from "@/features/admissions/models/admission-academic-info.model.js";
 import { admissionCourseApplication } from "@/features/admissions/models/admission-course-application.model.js";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
-import { batchModel } from "@repo/db/schemas/models/academics";
+import { programCourseModel } from "@academic/db/schemas/models/course-design";
+import { batchModel } from "@academic/db/schemas/models/academics";
 import XLSX from "xlsx";
 import fs from "fs";
-import { studentModel } from "@repo/db/schemas/index.js";
+import { studentModel } from "@academic/db/schemas/index.js";
 
 export interface BulkUploadResult {
   success: Course[];

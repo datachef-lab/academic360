@@ -5,9 +5,9 @@ import {
   serial,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions";
-import { boardSubjectModel } from "@repo/db/schemas/models/admissions";
-import { subjectResultStatusType } from "@repo/db/schemas/enums";
+import { admissionAcademicInfoModel } from "@academic/db/schemas/models/admissions";
+import { boardSubjectModel } from "@academic/db/schemas/models/admissions";
+import { subjectResultStatusType } from "@academic/db/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

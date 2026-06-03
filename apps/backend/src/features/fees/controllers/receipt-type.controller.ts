@@ -4,7 +4,7 @@ import * as receiptTypeService from "../services/receipt-type.service.js";
 import {
   createReceiptTypeSchema,
   ReceiptType,
-} from "@repo/db/schemas/models/fees";
+} from "@academic/db/schemas/models/fees";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 

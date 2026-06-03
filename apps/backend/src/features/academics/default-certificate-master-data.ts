@@ -1,4 +1,4 @@
-import { CertificateMasterDto } from "@repo/db/dtos";
+import { CertificateMasterDto } from "@academic/db/dtos";
 
 export const defaultCertificateMasterData: CertificateMasterDto[] = [
   {

@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { Transport, transportModel } from "@repo/db/schemas";
+import { Transport, transportModel } from "@academic/db/schemas";
 
 export async function findAllTransports(): Promise<Transport[]> {
   return await db.select().from(transportModel).orderBy(transportModel.id);

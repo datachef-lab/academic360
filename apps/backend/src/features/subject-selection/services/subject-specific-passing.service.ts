@@ -1,11 +1,11 @@
 import { db } from "@/db/index.js";
-import { subjectSpecificPassingModel } from "@repo/db/schemas/models/subject-selection";
+import { subjectSpecificPassingModel } from "@academic/db/schemas/models/subject-selection";
 import {
   SubjectSpecificPassing,
   SubjectSpecificPassingT,
-} from "@repo/db/schemas/models/subject-selection/subject-specific-passing.model";
+} from "@academic/db/schemas/models/subject-selection/subject-specific-passing.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
-import { subjectModel } from "@repo/db/schemas/models/course-design";
+import { subjectModel } from "@academic/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 

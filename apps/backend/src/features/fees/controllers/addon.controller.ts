@@ -91,7 +91,7 @@
 // };
 
 import { Request, Response } from "express";
-import { AddOn, addonModel } from "@repo/db/schemas";
+import { AddOn, addonModel } from "@academic/db/schemas";
 import { createInsertSchema } from "drizzle-zod";
 import * as addonService from "../services/addon.service";
 import { handleError } from "@/utils";

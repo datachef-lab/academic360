@@ -3,7 +3,7 @@ import {
   EmergencyContact,
   emergencyContactModel,
   createEmergencyContactSchema,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 

@@ -1,9 +1,9 @@
-import { Board, boardModel, BoardT } from "@repo/db/schemas";
+import { Board, boardModel, BoardT } from "@academic/db/schemas";
 import { findDegreeById } from "@/features/resources/services/degree.service.js";
 import { findAddressById } from "@/features/user/services/address.service.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { BoardDto } from "@repo/db/dtos";
+import { BoardDto } from "@academic/db/dtos";
 
 export async function findBoardUniversityById(
   id: number,

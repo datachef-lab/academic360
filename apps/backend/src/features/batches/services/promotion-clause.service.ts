@@ -5,12 +5,12 @@ import {
   promotionBuilderClauseMappingModel,
   promotionClauseClassMappingModel,
   promotionClauseModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { asc, eq } from "drizzle-orm";
 
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-import type { PromotionClauseDto } from "@repo/db/dtos/batches";
-import type { ClassT } from "@repo/db/schemas/models/academics";
+import type { PromotionClauseDto } from "@academic/db/dtos/batches";
+import type { ClassT } from "@academic/db/schemas/models/academics";
 
 export async function findAllPromotionClauses(opts?: {
   isActive?: boolean;

@@ -2,7 +2,7 @@ import "dotenv/config";
 import { app } from "@/app.js";
 
 import { db } from "./db";
-import { userModel } from "@repo/db/schemas";
+import { userModel } from "@academic/db/schemas";
 
 const PORT = process.env.NOTIFICATION_SYSTEM_PORT || process.env.PORT || 8080;
 

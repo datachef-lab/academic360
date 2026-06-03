@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
   createAccommodationSchema,
   AccommodationT,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import {
   addAccommodation,
   findAccommotionById,

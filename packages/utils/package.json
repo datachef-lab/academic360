@@ -11,10 +11,12 @@
       "default": "./src/*.ts"
     }
   },
-  "keywords": ["utils"],
+  "keywords": [
+    "utils"
+  ],
   "license": "ISC",
   "dependencies": {
-    "@repo/db": "workspace:*"
+    "@academic360/db": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.20.4",

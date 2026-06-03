@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createSessionStatusSchema } from "@repo/db/schemas/models/administration";
+import { createSessionStatusSchema } from "@academic/db/schemas/models/administration";
 import {
   createSessionStatus,
   deleteSessionStatus,

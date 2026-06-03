@@ -6,8 +6,8 @@ import {
   AccessGroupUserTypeT,
   userTypeModel,
   UserTypeT,
-} from "@repo/db/schemas/models/administration";
-import { AccessGroupUserTypeDto } from "@repo/db/dtos/administration";
+} from "@academic/db/schemas/models/administration";
+import { AccessGroupUserTypeDto } from "@academic/db/dtos/administration";
 
 async function ensureUniqueAccessGroupIdAndUserTypeId(
   accessGroupId: number,

@@ -1,13 +1,13 @@
 import { db } from "@/db/index.js";
 import { and, eq, inArray } from "drizzle-orm";
-import { boardSubjectUnivSubjectMappingModel } from "@repo/db/schemas/models/admissions/board-subject-univ-subject-mapping.model";
-import { subjectModel } from "@repo/db/schemas/models/course-design";
+import { boardSubjectUnivSubjectMappingModel } from "@academic/db/schemas/models/admissions/board-subject-univ-subject-mapping.model";
+import { subjectModel } from "@academic/db/schemas/models/course-design";
 import {
   boardSubjectModel,
   boardSubjectNameModel,
-} from "@repo/db/schemas/models/admissions";
-import { boardModel } from "@repo/db/schemas/models/resources";
-import type { BoardSubjectUnivSubjectMappingDto } from "@repo/db/dtos/admissions";
+} from "@academic/db/schemas/models/admissions";
+import { boardModel } from "@academic/db/schemas/models/resources";
+import type { BoardSubjectUnivSubjectMappingDto } from "@academic/db/dtos/admissions";
 
 type MappingInsert = typeof boardSubjectUnivSubjectMappingModel.$inferInsert;
 

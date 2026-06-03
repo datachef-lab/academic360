@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { BatchCustom } from "@/types/academics/batch";
 import { StudentAccessControl } from "@/types/academics/access-control";
-import type { UserDto, StudentDto } from "@repo/db/dtos/user";
+import type { UserDto, StudentDto } from "@academic/db/dtos/user";
 
 interface StudentContextType {
   student: StudentDto | null;
@@ -20,7 +20,7 @@ const StudentContext = createContext<StudentContextType>({
   loading: false,
   accessControl: null,
   error: null,
-  refetch: async () => {},
+  refetch: async () => { },
 });
 
 export const useStudent = () => useContext(StudentContext);

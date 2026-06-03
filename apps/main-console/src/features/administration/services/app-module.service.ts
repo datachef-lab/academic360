@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
-import type { AppModuleDto } from "@repo/db/dtos/administration";
+import type { AppModuleDto } from "@academic/db/dtos/administration";
 
 const BASE_URL = "/api/administration/app-modules";
 
@@ -24,16 +24,23 @@ export type AppModulePayload = {
 };
 
 export async function getAllAppModules() {
-  const { data } = await axiosInstance.get<ApiResponse<AppModuleDto[]>>(BASE_URL);
+  const { data } =
+    await axiosInstance.get<ApiResponse<AppModuleDto[]>>(BASE_URL);
   return data;
 }
 
-export async function createAppModule(payload: AppModulePayload, imageFile?: File) {
+export async function createAppModule(
+  payload: AppModulePayload,
+  imageFile?: File,
+) {
   const formData = new FormData();
   formData.append("data", JSON.stringify(payload));
   if (imageFile) formData.append("image", imageFile);
 
-  const { data } = await axiosInstance.post<ApiResponse<AppModuleDto>>(BASE_URL, formData);
+  const { data } = await axiosInstance.post<ApiResponse<AppModuleDto>>(
+    BASE_URL,
+    formData,
+  );
   return data;
 }
 

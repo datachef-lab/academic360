@@ -1,12 +1,12 @@
 import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { userModel } from "@repo/db/schemas/models/user";
+import { userModel } from "@academic/db/schemas/models/user";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.js";
 // import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
-import { userTypeEnum } from "@repo/db/schemas/enums";
+import { userTypeEnum } from "@academic/db/schemas/enums";
 import * as userService from "@/features/user/services/user.service.js";
 import {
   getUserStats,

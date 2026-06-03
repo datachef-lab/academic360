@@ -1,20 +1,20 @@
 import { db } from "@/db/index.js";
-import { relatedSubjectMainModel } from "@repo/db/schemas/models/subject-selection";
+import { relatedSubjectMainModel } from "@academic/db/schemas/models/subject-selection";
 import {
   RelatedSubjectMain,
   RelatedSubjectMainT,
-} from "@repo/db/schemas/models/subject-selection/related-subject-main.model";
+} from "@academic/db/schemas/models/subject-selection/related-subject-main.model";
 import { and, or, countDistinct, eq, ilike, ne, desc } from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import {
   RelatedSubjectMainDto,
   RelatedSubjectSubDto,
-} from "@repo/db/dtos/subject-selection";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
-import { subjectTypeModel } from "@repo/db/schemas/models/course-design";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
-import { relatedSubjectSubModel } from "@repo/db/schemas/models/subject-selection";
-import { academicYearModel } from "@repo/db/schemas/models/academics";
+} from "@academic/db/dtos/subject-selection";
+import { programCourseModel } from "@academic/db/schemas/models/course-design";
+import { subjectTypeModel } from "@academic/db/schemas/models/course-design";
+import { boardSubjectNameModel } from "@academic/db/schemas/models/admissions/board-subject-name.model";
+import { relatedSubjectSubModel } from "@academic/db/schemas/models/subject-selection";
+import { academicYearModel } from "@academic/db/schemas/models/academics";
 import XLSX from "xlsx";
 import fs from "fs";
 

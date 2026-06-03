@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { Country, countryModel } from "@repo/db/schemas";
+import { Country, countryModel } from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 
 export async function findCountryById(id: number): Promise<Country | null> {

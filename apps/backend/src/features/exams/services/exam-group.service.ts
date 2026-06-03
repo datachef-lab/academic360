@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { PaginatedResponse } from "@/utils/PaginatedResponse";
-import { ExamGroupDto } from "@repo/db/dtos";
+import { ExamGroupDto } from "@academic/db/dtos";
 import {
   examCandidateModel,
   examGroupModel,
@@ -13,11 +13,11 @@ import {
   paperModel,
   promotionModel,
   studentModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import {
   paperComponentModel,
   examComponentModel,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import * as examScheduleService from "./exam-schedule.service";
 import { socketService } from "@/services/socketService";

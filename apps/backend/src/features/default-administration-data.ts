@@ -1,5 +1,9 @@
-import { AppModuleDto, UserStatusMasterDto, UserTypeDto } from "@repo/db/dtos";
-import { UserStatusMasterT, UserTypeT } from "@repo/db/schemas";
+import {
+  AppModuleDto,
+  UserStatusMasterDto,
+  UserTypeDto,
+} from "@academic/db/dtos";
+import { UserStatusMasterT, UserTypeT } from "@academic/db/schemas";
 
 // --------------------------------- User Types ---------------------------------
 const PRIMARY_USER_TYPE = {

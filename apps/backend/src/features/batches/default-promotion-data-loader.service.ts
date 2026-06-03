@@ -6,7 +6,7 @@ import {
   promotionClauseClassMappingModel,
   promotionClauseModel,
   promotionBuilderModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, eq, ilike } from "drizzle-orm";
 import {
   defaultPromotionBuilderSeeds,

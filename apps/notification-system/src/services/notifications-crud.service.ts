@@ -3,7 +3,7 @@ import {
   notificationContentModel,
   notificationModel,
   notificationQueueModel,
-} from "@repo/db/schemas/models/notifications";
+} from "@academic/db/schemas/models/notifications";
 import { eq } from "drizzle-orm";
 
 export class NotificationsCrudService {

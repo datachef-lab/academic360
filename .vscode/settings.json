@@ -1,16 +1,33 @@
 {
-  "eslint.run": "onSave",
-  "eslint.lintTask.enable": true,
-
+  // Editor
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
 
-  // 🔥 REQUIRED for ESLint v9/v10 flat config
+  // ESLint - flat config + monorepo
+  "eslint.run": "onSave",
   "eslint.useFlatConfig": true,
-
-  // 🔥 REQUIRED for monorepos
   "eslint.workingDirectories": [{ "mode": "auto" }],
 
+  // Prettier - only run when config found
+  "prettier.requireConfig": true,
+
+  // TypeScript - use workspace version
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "js/ts.tsserver.maxMemory": 4096,
+
+  // Per language formatters
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[javascriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+
+  // Performance
   "files.watcherExclude": {
     "**/node_modules/**": true,
     "**/dist/**": true,
@@ -24,12 +41,8 @@
     "**/build": true
   },
 
-  "typescript.tsserver.maxTsServerMemory": 4096,
-
+  // Git
   "git.pullRebase": false,
   "git.rebaseWhenSync": false,
-  "git.confirmSync": false,
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+  "git.confirmSync": false
 }

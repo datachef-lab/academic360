@@ -1,4 +1,4 @@
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import { useProfile } from "@/hooks/use-profile";
@@ -278,8 +278,8 @@ export default function CuRegistrationScreen() {
       const docId = DOCUMENT_IDS[key];
       const hasUploaded = Array.isArray(form.uploadedDocuments)
         ? (form.uploadedDocuments as { document?: { id?: number }; documentId?: number }[]).some(
-            (d) => (d.document?.id ?? d.documentId) === docId,
-          )
+          (d) => (d.document?.id ?? d.documentId) === docId,
+        )
         : false;
       return !hasLocal && !hasUploaded;
     });
@@ -844,7 +844,7 @@ export default function CuRegistrationScreen() {
                   style={{
                     backgroundColor:
                       form.personalInfo.apaarId.trim() === "" ||
-                      form.personalInfo.apaarId.replace(/\D/g, "").length !== 12
+                        form.personalInfo.apaarId.replace(/\D/g, "").length !== 12
                         ? "rgba(79,70,229,0.5)"
                         : accent,
                   }}
@@ -1485,7 +1485,7 @@ export default function CuRegistrationScreen() {
                                   ? await getCuRegistrationDocumentSignedUrl(doc.id)
                                   : null;
                                 if (url) await Linking.openURL(url);
-                              } catch {}
+                              } catch { }
                             }}
                             style={{
                               paddingVertical: 4,
@@ -1526,11 +1526,11 @@ export default function CuRegistrationScreen() {
                     const docId = DOCUMENT_IDS[key];
                     const uploaded = Array.isArray(form.uploadedDocuments)
                       ? (
-                          form.uploadedDocuments as {
-                            documentId?: number;
-                            document?: { id?: number };
-                          }[]
-                        ).find((d) => (d.document?.id ?? d.documentId) === docId)
+                        form.uploadedDocuments as {
+                          documentId?: number;
+                          document?: { id?: number };
+                        }[]
+                      ).find((d) => (d.document?.id ?? d.documentId) === docId)
                       : null;
                     const isRequired = getRequiredDocuments().includes(key);
                     const localFile = form.documents[key];

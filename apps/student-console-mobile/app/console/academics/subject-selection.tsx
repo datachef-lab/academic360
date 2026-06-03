@@ -1,4 +1,4 @@
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 import { useTheme } from "@/hooks/use-theme";
 import { useSubjectSelectionForm } from "@/hooks/use-subject-selection-form";
 import { useAuth } from "@/providers/auth-provider";

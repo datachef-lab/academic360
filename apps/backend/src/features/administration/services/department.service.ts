@@ -4,8 +4,8 @@ import {
   Department,
   DepartmentT,
   departmentModel,
-} from "@repo/db/schemas/models/administration";
-import { DepartmentDto } from "@repo/db/dtos/administration";
+} from "@academic/db/schemas/models/administration";
+import { DepartmentDto } from "@academic/db/dtos/administration";
 
 function normaliseDepartmentPayload<
   T extends Partial<Department | DepartmentT>,

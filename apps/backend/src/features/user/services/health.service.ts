@@ -3,7 +3,7 @@ import {
   Health,
   healthModel,
   createHealthSchema,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { findBloodGroupById } from "@/features/resources/services/bloodGroup.service.js";

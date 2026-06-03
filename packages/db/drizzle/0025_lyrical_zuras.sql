@@ -1,0 +1,1 @@
+ALTER TABLE "subject_selection_meta" ADD COLUMN "sequence" integer;

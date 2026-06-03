@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Download, FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
-import type { CareerProgressionFormDto } from "@repo/db/dtos/academics";
+import type { CareerProgressionFormDto } from "@academic/db/dtos/academics";
 import axiosInstance from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

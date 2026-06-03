@@ -3,17 +3,17 @@ import { db } from "@/db/index.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
-import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
-import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
-import { enclosureModel } from "@repo/db/schemas/models/library/enclosure.model.js";
-import { journalModel } from "@repo/db/schemas/models/library/journal.model.js";
-import { libraryArticleModel } from "@repo/db/schemas/models/library/library-article.model.js";
-import { libraryDocumentTypeModel } from "@repo/db/schemas/models/library/library-document-type.model.js";
-import { libraryPeriodModel } from "@repo/db/schemas/models/library/library-period.model.js";
-import { publisherModel } from "@repo/db/schemas/models/library/publisher.model.js";
-import { seriesModel } from "@repo/db/schemas/models/library/series.model.js";
-import { subjectGroupingMainModel } from "@repo/db/schemas/models/course-design/subject-grouping-main.model.js";
-import { languageMediumModel } from "@repo/db/schemas/models/resources/languageMedium.model.js";
+import { bookModel } from "@academic/db/schemas/models/library/book.model.js";
+import { copyDetailsModel } from "@academic/db/schemas/models/library/copy-details.model.js";
+import { enclosureModel } from "@academic/db/schemas/models/library/enclosure.model.js";
+import { journalModel } from "@academic/db/schemas/models/library/journal.model.js";
+import { libraryArticleModel } from "@academic/db/schemas/models/library/library-article.model.js";
+import { libraryDocumentTypeModel } from "@academic/db/schemas/models/library/library-document-type.model.js";
+import { libraryPeriodModel } from "@academic/db/schemas/models/library/library-period.model.js";
+import { publisherModel } from "@academic/db/schemas/models/library/publisher.model.js";
+import { seriesModel } from "@academic/db/schemas/models/library/series.model.js";
+import { subjectGroupingMainModel } from "@academic/db/schemas/models/course-design/subject-grouping-main.model.js";
+import { languageMediumModel } from "@academic/db/schemas/models/resources/languageMedium.model.js";
 
 export type BookListFilters = {
   page: number;

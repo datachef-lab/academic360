@@ -1,0 +1,1 @@
+ALTER TABLE "promotions" ALTER COLUMN "section_id_fk" DROP NOT NULL;

@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import { User } from "@repo/db/schemas";
+import { User } from "@academic/db/schemas";
 import { socketService } from "@/services/socketService.js";
 import * as feeStructureService from "../services/fee-structure.service.js";
 import {
   FeeStructure,
   createFeeStructureSchema,
-} from "@repo/db/schemas/models/fees";
-import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
+} from "@academic/db/schemas/models/fees";
+import { CreateFeeStructureDto, FeeStructureDto } from "@academic/db/dtos/fees";
 import { handleError } from "@/utils/handleError.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";

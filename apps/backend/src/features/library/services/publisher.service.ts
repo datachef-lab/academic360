@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
-import { PublisherDto } from "@repo/db/dtos/library";
-import { Publisher, publisherModel } from "@repo/db/schemas";
+import { PublisherDto } from "@academic/db/dtos/library";
+import { Publisher, publisherModel } from "@academic/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
 
 type PublisherListFilters = {

@@ -458,11 +458,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           source: "repo.tar.gz,env.deploy"
-          target: "${{ steps.host.outputs.remotedir }}"   # unchanged
+          target: "${{ steps.host.outputs.remotedir }}" # unchanged
           strip_components: 0
-          tar_tmp_path: /var/tmp   # ← add this line
-          debug: true              # keep for troubleshooting
-          overwrite: true          # optional but useful
+          tar_tmp_path: /var/tmp # ← add this line
+          debug: true # keep for troubleshooting
+          overwrite: true # optional but useful
 
       - name: Verify file transfer (staging)
         uses: appleboy/ssh-action@v1.0.3
@@ -614,7 +614,7 @@ jobs:
             pnpm install --frozen-lockfile
 
             echo "🏗️ Build shared DB and apps"
-            pnpm --filter @repo/db... build
+            pnpm --filter @academic/db... build
             pnpm --filter backend... build
             pnpm --filter main-console... build
             pnpm --filter student-console... build || true

@@ -26,7 +26,7 @@ import {
   type PaytmTransactionStatusRequest,
   type PaytmTransactionStatusResponse,
   type TmpPaytmPaymentOptionResponse,
-} from "@repo/db/dtos/payments";
+} from "@academic/db/dtos/payments";
 
 const require = createRequire(import.meta.url);
 const PaytmChecksum = require("paytmchecksum");

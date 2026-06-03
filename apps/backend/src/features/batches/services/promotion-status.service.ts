@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import {
   promotionStatusModel,
   promotionStatusInsertSchema,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { asc, eq } from "drizzle-orm";
 
 type PromotionStatusInsert = typeof promotionStatusInsertSchema._type;

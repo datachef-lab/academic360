@@ -6,8 +6,8 @@ import {
   AccessGroupDesignationT,
   designationModel,
   DesignationT,
-} from "@repo/db/schemas/models/administration";
-import { AccessGroupDesignationDto } from "@repo/db/dtos/administration";
+} from "@academic/db/schemas/models/administration";
+import { AccessGroupDesignationDto } from "@academic/db/dtos/administration";
 
 async function ensureUniqueAccessGroupIdAndDesignationId(
   accessGroupId: number,

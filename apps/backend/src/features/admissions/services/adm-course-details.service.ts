@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { AdmissionCourseDetailsDto } from "@repo/db/dtos/admissions";
-import { ProgramCourseDto } from "@repo/db/dtos/course-design";
+import { AdmissionCourseDetailsDto } from "@academic/db/dtos/admissions";
+import { ProgramCourseDto } from "@academic/db/dtos/course-design";
 import {
   AdmissionCourseDetails,
   admissionCourseDetailsModel,
@@ -26,7 +26,7 @@ import {
   streamModel,
   StudentCategory,
   studentCategoryModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 
 export async function findAdmCourseDetailsByStudentId(

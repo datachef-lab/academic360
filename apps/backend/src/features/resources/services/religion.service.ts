@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import {
   religionModel,
   type Religion,
-} from "@repo/db/schemas/models/resources/religion.model";
+} from "@academic/db/schemas/models/resources/religion.model";
 const religions = [
   "Hindu",
   "Muslim",

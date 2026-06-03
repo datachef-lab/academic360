@@ -10,7 +10,7 @@ import {
   AdmissionCourse,
   admissionCourseModel,
 } from "../models/admission-course.model.js";
-import { courseModel } from "@repo/db/schemas/models/course-design";
+import { courseModel } from "@academic/db/schemas/models/course-design";
 // import { boardModel } from "../models/board-university.model.js";
 import { admissionAcademicInfoModel } from "../models/admission-academic-info.model.js";
 import { admissionCourseApplication } from "../models/admission-course-application.model.js";
@@ -19,15 +19,15 @@ import { count, desc, eq, and, sql, ilike, or, SQL } from "drizzle-orm";
 //     createAdmissionCourse,
 //     findAdmissionCoursesByAdmissionId,
 //     updateAdmissionCourse,
-// } from "@repo/db/schemas/models/admissions";
+// } from "@academic/db/schemas/models/admissions";
 import { AdmissionDto } from "@/types/admissions/index.js";
-import { categoryModel } from "@repo/db/schemas/models/resources";
+import { categoryModel } from "@academic/db/schemas/models/resources";
 // import { admissionAdditionalInfoModel } from "../models/admission-additional-info.model.js";
-import { admissionAdditionalInfoModel } from "@repo/db/schemas/models/admissions";
-import { annualIncomeModel } from "@repo/db/schemas/models/resources";
-import { boardModel } from "@repo/db/schemas/models/resources";
-import { religionModel } from "@repo/db/schemas/models/resources";
-import { academicYearModel } from "@repo/db/schemas/models/academics";
+import { admissionAdditionalInfoModel } from "@academic/db/schemas/models/admissions";
+import { annualIncomeModel } from "@academic/db/schemas/models/resources";
+import { boardModel } from "@academic/db/schemas/models/resources";
+import { religionModel } from "@academic/db/schemas/models/resources";
+import { academicYearModel } from "@academic/db/schemas/models/academics";
 import { findAcademicYearById } from "@/features/academics/services/academic-year.service.js";
 
 // CREATE

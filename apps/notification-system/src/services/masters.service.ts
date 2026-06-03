@@ -3,7 +3,7 @@ import {
   notificationMasterModel,
   notificationMasterFieldModel,
   notificationMasterMetaModel,
-} from "@repo/db/schemas/models/notifications";
+} from "@academic/db/schemas/models/notifications";
 import { and, eq } from "drizzle-orm";
 
 export class NotificationMastersService {

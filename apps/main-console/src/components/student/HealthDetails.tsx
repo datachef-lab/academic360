@@ -1,7 +1,7 @@
 import { useEffect, useState, type FC } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { HealthDto } from "@repo/db/dtos/user";
-import type { BloodGroupDto } from "@repo/db/dtos/resources";
+import type { HealthDto } from "@academic/db/dtos/user";
+import type { BloodGroupDto } from "@academic/db/dtos/resources";
 import {
   getHealthDetailById,
   createHealthDetail,

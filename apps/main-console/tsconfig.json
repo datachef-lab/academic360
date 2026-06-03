@@ -11,8 +11,8 @@
     "noUnusedParameters": false,
     "paths": {
       "@/*": ["./src/*", "../../packages/db/src/*"],
-      "@repo/db": ["../../packages/db/src"],
-      "@repo/db/*": ["../../packages/db/src/*"]
+      "@academic/db": ["../../packages/db/src"],
+      "@academic/db/*": ["../../packages/db/src/*"]
     }
   }
 }

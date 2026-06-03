@@ -1,17 +1,17 @@
 import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/index.js";
-import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
-import { userModel } from "@repo/db/schemas/models/user/user.model.js";
-import { programCourseModel } from "@repo/db/schemas/models/course-design/program-course.model.js";
-import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model.js";
+import { studentModel } from "@academic/db/schemas/models/user/student.model.js";
+import { userModel } from "@academic/db/schemas/models/user/user.model.js";
+import { programCourseModel } from "@academic/db/schemas/models/course-design/program-course.model.js";
+import { promotionModel } from "@academic/db/schemas/models/batches/promotions.model.js";
 import {
   classModel,
   sectionModel,
   shiftModel,
-} from "@repo/db/schemas/models/academics";
-import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions/admission-academic-info.model.js";
-import { tempAdmitCardDistributionsModel } from "@repo/db/schemas/models/exams/index.js";
+} from "@academic/db/schemas/models/academics";
+import { admissionAcademicInfoModel } from "@academic/db/schemas/models/admissions/admission-academic-info.model.js";
+import { tempAdmitCardDistributionsModel } from "@academic/db/schemas/models/exams/index.js";
 import type { AdmitCardSearchResponse } from "@/types/exams/admit-card.type.js";
 
 export async function searchCandidate(

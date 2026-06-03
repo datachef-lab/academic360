@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "subject_grouping_main_ac_year_sub_type_name_uq" ON "subject_grouping_main" USING btree ("academic_year_id_fk","subject_type_id_fk","name");

@@ -10,7 +10,7 @@ import {
   receiptTypeModel,
   studentModel,
   userModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { enqueueNotification } from "@/services/notificationClient.js";
 
 const DEFAULT_COLLEGE_LOGO_URL =

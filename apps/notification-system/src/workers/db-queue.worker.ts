@@ -1,7 +1,7 @@
 import {
   notificationQueueModel,
   notificationModel,
-} from "@repo/db/schemas/models/notifications";
+} from "@academic/db/schemas/models/notifications";
 import { and, eq, inArray } from "drizzle-orm";
 import { sendWhatsAppMessage } from "@/providers/interakt.js";
 import { db } from "@/db";

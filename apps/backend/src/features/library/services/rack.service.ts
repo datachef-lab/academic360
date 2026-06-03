@@ -1,8 +1,8 @@
 import { db } from "@/db/index.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, SQL } from "drizzle-orm";
-import { rackModel } from "@repo/db/schemas/models/library/rack.model.js";
-import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
+import { rackModel } from "@academic/db/schemas/models/library/rack.model.js";
+import { copyDetailsModel } from "@academic/db/schemas/models/library/copy-details.model.js";
 
 export type RackListFilters = {
   page: number;

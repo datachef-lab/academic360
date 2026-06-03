@@ -38,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import { FeeStudentMappingDto } from "@academic/db/dtos/fees";
 import { toast } from "sonner";
 import {
   getFeeStudentMappingsByStudentId,
@@ -48,7 +48,7 @@ import {
 import { usePaytmCheckout } from "@/hooks/usePaytmCheckout";
 import { useError } from "@/hooks/useError";
 import { fetchStudentByUid, getSearchedStudents, getStudentById } from "@/services/student";
-import { StudentDto } from "@repo/db/dtos/user";
+import { StudentDto } from "@academic/db/dtos/user";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { openFeeReceiptPdfInNewTab } from "@/services/fee-student-mapping.service";
@@ -224,7 +224,7 @@ const StudentFeesPage: React.FC = () => {
                 fetchStudentMappings(student.id);
               }
             })
-            .catch(() => {});
+            .catch(() => { });
         }
       }
       params.delete("payment");
@@ -949,10 +949,10 @@ const StudentFeesPage: React.FC = () => {
                     <p className="text-sm font-semibold text-gray-900">
                       {selectedSummaryItem.waivedOffDate
                         ? new Date(selectedSummaryItem.waivedOffDate).toLocaleDateString("en-IN", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
                         : "-"}
                     </p>
                   </div>
@@ -963,10 +963,10 @@ const StudentFeesPage: React.FC = () => {
                     <p className="text-sm font-semibold text-gray-900">
                       {selectedSummaryItem.updatedAt
                         ? new Date(selectedSummaryItem.updatedAt).toLocaleDateString("en-IN", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
                         : "-"}
                     </p>
                   </div>
@@ -1346,10 +1346,10 @@ const StudentFeesPage: React.FC = () => {
                           value={
                             editingItem.waivedOffDate
                               ? new Date(editingItem.waivedOffDate).toLocaleDateString("en-IN", {
-                                  year: "numeric",
-                                  month: "long",
-                                  day: "numeric",
-                                })
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })
                               : "Will be set automatically on save"
                           }
                           disabled
@@ -1383,7 +1383,7 @@ const StudentFeesPage: React.FC = () => {
                   implemented in a future update.
                 </p>
                 {editingItem.feeStructure?.installments &&
-                editingItem.feeStructure.installments.length > 0 ? (
+                  editingItem.feeStructure.installments.length > 0 ? (
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>
@@ -1412,40 +1412,40 @@ const StudentFeesPage: React.FC = () => {
                             <TableCell className="text-center">
                               {installment.startDate
                                 ? new Date(installment.startDate).toLocaleDateString("en-IN", {
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                })
                                 : "-"}
                             </TableCell>
                             <TableCell className="text-center">
                               {installment.endDate
                                 ? new Date(installment.endDate).toLocaleDateString("en-IN", {
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                })
                                 : "-"}
                             </TableCell>
                             <TableCell className="text-center">
                               {installment.onlineStartDate
                                 ? new Date(installment.onlineStartDate).toLocaleDateString(
-                                    "en-IN",
-                                    {
-                                      year: "numeric",
-                                      month: "long",
-                                      day: "numeric",
-                                    },
-                                  )
+                                  "en-IN",
+                                  {
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                  },
+                                )
                                 : "-"}
                             </TableCell>
                             <TableCell className="text-center">
                               {installment.onlineEndDate
                                 ? new Date(installment.onlineEndDate).toLocaleDateString("en-IN", {
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                })
                                 : "-"}
                             </TableCell>
                           </TableRow>

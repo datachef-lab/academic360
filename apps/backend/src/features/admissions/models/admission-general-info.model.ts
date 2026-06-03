@@ -1,8 +1,11 @@
-import { applicationFormModel } from "@repo/db/schemas/models/admissions";
-import { categoryModel } from "@repo/db/schemas/models/resources";
-import { nationalityModel } from "@repo/db/schemas/models/resources";
-import { religionModel } from "@repo/db/schemas/models/resources";
-import { degreeLevelTypeEnum, genderTypeEnum } from "@repo/db/schemas/enums";
+import { applicationFormModel } from "@academic/db/schemas/models/admissions";
+import { categoryModel } from "@academic/db/schemas/models/resources";
+import { nationalityModel } from "@academic/db/schemas/models/resources";
+import { religionModel } from "@academic/db/schemas/models/resources";
+import {
+  degreeLevelTypeEnum,
+  genderTypeEnum,
+} from "@academic/db/schemas/enums";
 import {
   boolean,
   date,

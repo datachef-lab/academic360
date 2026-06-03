@@ -5,7 +5,7 @@ import {
   CreateBloodGroupPayload,
   UpdateBloodGroupPayload,
 } from "@/types/resources/blood-group.types";
-import type { BloodGroupDto } from "@repo/db/dtos/resources";
+import type { BloodGroupDto } from "@academic/db/dtos/resources";
 
 // ============================================================================
 // BLOOD GROUP SERVICE
@@ -61,7 +61,9 @@ export async function getBloodGroupById(id: number): Promise<BloodGroup> {
  */
 export async function getActiveBloodGroups(): Promise<BloodGroup[]> {
   try {
-    const response = await axiosInstance.get("/api/blood-groups?disabled=false");
+    const response = await axiosInstance.get(
+      "/api/blood-groups?disabled=false",
+    );
     const bloodGroupDtos: BloodGroupDto[] = response.data.payload;
     return bloodGroupDtos.map((dto) => ({
       id: dto.id,
@@ -86,7 +88,9 @@ export async function getActiveBloodGroups(): Promise<BloodGroup[]> {
  * @param payload - Blood group creation data
  * @returns Promise<BloodGroup> - Created blood group data
  */
-export async function createBloodGroup(payload: CreateBloodGroupPayload): Promise<BloodGroup> {
+export async function createBloodGroup(
+  payload: CreateBloodGroupPayload,
+): Promise<BloodGroup> {
   try {
     if (!payload.type || payload.type.trim().length === 0) {
       throw new Error("Blood group type is required");
@@ -123,7 +127,10 @@ export async function updateBloodGroup(
       throw new Error("Blood group type cannot be empty");
     }
 
-    const response = await axiosInstance.put(`/api/blood-groups/${id}`, payload);
+    const response = await axiosInstance.put(
+      `/api/blood-groups/${id}`,
+      payload,
+    );
     return response.data.payload;
   } catch (error) {
     console.error(`Error updating blood group with ID ${id}:`, error);
@@ -142,7 +149,10 @@ export async function updateBloodGroupType(data: {
 }): Promise<ApiResponse<BloodGroup[]>> {
   try {
     console.log("blood group is coming....", data);
-    const response = await axiosInstance.put(`/api/blood-groups/${data.id}`, data);
+    const response = await axiosInstance.put(
+      `/api/blood-groups/${data.id}`,
+      data,
+    );
     return response.data;
   } catch (error) {
     console.error(`Error updating blood group type for ID ${data.id}:`, error);
@@ -189,7 +199,10 @@ export async function createMultipleBloodGroups(
       throw new Error("At least one blood group payload is required");
     }
 
-    const response = await axiosInstance.post("/api/blood-groups/bulk", payloads);
+    const response = await axiosInstance.post(
+      "/api/blood-groups/bulk",
+      payloads,
+    );
     const bloodGroupDtos: BloodGroupDto[] = response.data.payload;
     return bloodGroupDtos.map((dto) => ({
       id: dto.id,
@@ -243,7 +256,9 @@ export async function updateMultipleBloodGroups(
  * @param searchTerm - Search term for blood group type
  * @returns Promise<BloodGroup[]> - Array of matching blood groups
  */
-export async function searchBloodGroups(searchTerm: string): Promise<BloodGroup[]> {
+export async function searchBloodGroups(
+  searchTerm: string,
+): Promise<BloodGroup[]> {
   try {
     if (!searchTerm || searchTerm.trim().length === 0) {
       const bloodGroupDtos = await getAllBloodGroups();
@@ -286,7 +301,9 @@ export async function getBloodGroupsPaginated(
   limit: number = 10,
 ): Promise<{ data: BloodGroup[]; total: number; page: number; limit: number }> {
   try {
-    const response = await axiosInstance.get(`/api/blood-groups?page=${page}&limit=${limit}`);
+    const response = await axiosInstance.get(
+      `/api/blood-groups?page=${page}&limit=${limit}`,
+    );
 
     // Extract pagination info from response headers or data
     const total = parseInt(response.headers["x-total-count"] || "0");

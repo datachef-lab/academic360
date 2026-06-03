@@ -8,9 +8,9 @@ import {
   sessionModel,
   feeStructureModel,
   feeStructureComponentModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { eq, and, ne, inArray, sql } from "drizzle-orm";
-import { FeeGroupDto } from "@repo/db/dtos/fees";
+import { FeeGroupDto } from "@academic/db/dtos/fees";
 
 /**
  * Converts a FeeGroup model to FeeGroupDto

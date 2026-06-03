@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { LanguageMedium, languageMediumModel } from "@repo/db/schemas";
+import { LanguageMedium, languageMediumModel } from "@academic/db/schemas";
 import { eq, ilike } from "drizzle-orm";
 
 export const loadLanguages = async () => {

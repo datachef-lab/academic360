@@ -7,12 +7,12 @@ import {
   accessGroupModuleProgramCourseModel,
   accessGroupModuleProgramCourseClassModel,
   appModuleModel,
-} from "@repo/db/schemas/models/administration";
-import { classModel } from "@repo/db/schemas/models/academics";
+} from "@academic/db/schemas/models/administration";
+import { classModel } from "@academic/db/schemas/models/academics";
 import {
   AccessGroupModuleDto,
   AccessGroupModuleProgramCourseDto,
-} from "@repo/db/dtos/administration";
+} from "@academic/db/dtos/administration";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 
 async function ensureUniqueAccessGroupAndAppModule(

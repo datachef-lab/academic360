@@ -11,7 +11,7 @@ import PersonalDetailsReadOnly from "./PersonalDetails";
 import { useQuery } from "@tanstack/react-query";
 import { fetchUserProfile } from "@/services/student";
 import { TabsContent } from "../ui/tabs";
-import type { AddressDto, FamilyDto, PersonDto, PersonalDetailsDto } from "@repo/db/dtos";
+import type { AddressDto, FamilyDto, PersonDto, PersonalDetailsDto } from "@academic/db/dtos";
 
 type StudentContentProps = {
   studentId: number;
@@ -44,9 +44,9 @@ export default function StudentContent({
   // Shape helpers to adapt Profile API payload to UI components' expected props (no "any")
   const getShapedPersonalDetails = ():
     | (PersonalDetailsDto & {
-        residentialAddress?: AddressDto;
-        mailingAddress?: AddressDto;
-      })
+      residentialAddress?: AddressDto;
+      mailingAddress?: AddressDto;
+    })
     | null => {
     const pd = profile?.personalDetails as PersonalDetailsDto | undefined;
     if (!pd) return null;
@@ -64,10 +64,10 @@ export default function StudentContent({
 
   const getShapedFamilyDetails = ():
     | (FamilyDto & {
-        father?: PersonDto;
-        mother?: PersonDto;
-        guardian?: PersonDto;
-      })
+      father?: PersonDto;
+      mother?: PersonDto;
+      guardian?: PersonDto;
+    })
     | null => {
     const fam = profile?.studentFamily as FamilyDto | undefined;
     if (!fam) return null;

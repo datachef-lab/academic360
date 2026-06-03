@@ -6,7 +6,7 @@ import {
   updateFeeCategory,
   deleteFeeCategory,
 } from "../services/fee-category.service.js";
-import { createFeeCategorySchema } from "@repo/db/schemas";
+import { createFeeCategorySchema } from "@academic/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 

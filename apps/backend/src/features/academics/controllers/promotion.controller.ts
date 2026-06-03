@@ -5,7 +5,7 @@ import {
   findPromotionByStudentIdAndClassId,
   markExamFormSubmission,
 } from "../services/promotion.service";
-import { User, userModel } from "@repo/db/schemas";
+import { User, userModel } from "@academic/db/schemas";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { exportPromotionStudentsReport } from "../services/promotion.service";

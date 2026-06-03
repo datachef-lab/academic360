@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AppModulePayload } from "../services/app-module.service";
-import type { AppModuleDto } from "@repo/db/dtos/administration";
+import type { AppModuleDto } from "@academic/db/dtos/administration";
 import {
   createAppModule,
   deleteAppModule,
@@ -157,8 +157,8 @@ function ModuleNameCell({
   const IconComp =
     item.iconType === "lucide" && item.iconValue && item.iconValue in LucideIcons
       ? (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[
-          item.iconValue
-        ]
+      item.iconValue
+      ]
       : null;
   const defaultPlaceholder = (
     <div className="w-full h-full flex items-center justify-center bg-muted/50 border border-dashed border-muted-foreground/20">
@@ -767,9 +767,8 @@ function AppModuleForm({
                           />
                           <Label
                             htmlFor={key}
-                            className={`flex min-w-0 flex-1 items-start gap-2 text-sm leading-snug ${
-                              key === "isActive" ? "cursor-pointer" : "cursor-default"
-                            }`}
+                            className={`flex min-w-0 flex-1 items-start gap-2 text-sm leading-snug ${key === "isActive" ? "cursor-pointer" : "cursor-default"
+                              }`}
                           >
                             <span className="min-w-36 shrink-0 font-semibold text-foreground">
                               {title}
@@ -1056,10 +1055,9 @@ export default function AppModulePage() {
                         <ModuleNameCell item={item} onImageClick={handleImagePreview} />
                         <Badge
                           variant="outline"
-                          className={`flex-shrink-0 text-xs ${
-                            APPLICATION_BADGE_COLORS[item.application] ??
+                          className={`flex-shrink-0 text-xs ${APPLICATION_BADGE_COLORS[item.application] ??
                             "bg-slate-100 text-slate-800 border-slate-200"
-                          }`}
+                            }`}
                         >
                           {toSentenceCase(item.application)}
                         </Badge>
@@ -1222,10 +1220,9 @@ export default function AppModulePage() {
                         <TableCell style={{ width: 130 }}>
                           <Badge
                             variant="outline"
-                            className={`text-xs font-medium ${
-                              APPLICATION_BADGE_COLORS[item.application] ??
+                            className={`text-xs font-medium ${APPLICATION_BADGE_COLORS[item.application] ??
                               "bg-slate-100 text-slate-800 border-slate-200"
-                            }`}
+                              }`}
                           >
                             {toSentenceCase(item.application)}
                           </Badge>

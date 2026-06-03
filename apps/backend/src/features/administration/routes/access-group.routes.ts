@@ -9,7 +9,7 @@ import {
   createAccessGroupModulePermissionSchema,
   createAccessGroupModuleProgramCourseSchema,
   createAccessGroupModuleProgramCourseClassSchema,
-} from "@repo/db/schemas/models/administration";
+} from "@academic/db/schemas/models/administration";
 import {
   createAccessGroup,
   deleteAccessGroup,

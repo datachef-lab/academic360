@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { feeSlabModel, createFeeSlabSchema } from "@repo/db/schemas";
+import { feeSlabModel, createFeeSlabSchema } from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 import { socketService } from "@/services/socketService.js";
 import * as userService from "@/features/user/services/user.service.js";

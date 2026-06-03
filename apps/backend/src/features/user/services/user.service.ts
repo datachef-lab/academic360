@@ -3,11 +3,11 @@ import { eq, count, desc, or, ilike, and, isNull, is, sql } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import crypto from "crypto";
 
-import { User, userModel } from "@repo/db/schemas/models/user";
+import { User, userModel } from "@academic/db/schemas/models/user";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 // import { findStudentByUserId } from "./student.service.js";
 import { findAll } from "@/utils/helper.js";
-import { userTypeEnum } from "@repo/db/schemas/enums";
+import { userTypeEnum } from "@academic/db/schemas/enums";
 import { number } from "zod";
 import { UserType } from "@/types/user/user.js";
 
@@ -21,13 +21,13 @@ import {
   AccommodationDto,
   AddressDto,
   PersonDto,
-} from "@repo/db/index.js";
+} from "@academic/db/index.js";
 import {
   AdmissionCourseDetailsDto,
   AdmissionGeneralInfoDto,
   ApplicationFormDto,
   StudentAcademicSubjectsDto,
-} from "@repo/db/dtos/admissions";
+} from "@academic/db/dtos/admissions";
 import {
   admissionGeneralInfoModel,
   admissionAcademicInfoModel,
@@ -61,25 +61,25 @@ import {
   StudentAcademicSubjects,
   boardSubjectModel,
   subjectModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import {
   personModel,
   familyModel,
   transportDetailsModel,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import {
   qualificationModel,
   occupationModel,
   districtModel,
   pickupPointModel,
   transportModel,
-} from "@repo/db/schemas/models/resources";
-import { annualIncomeModel } from "@repo/db/schemas/models/resources";
-import { userModel as coreUserModel } from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/resources";
+import { annualIncomeModel } from "@academic/db/schemas/models/resources";
+import { userModel as coreUserModel } from "@academic/db/schemas/models/user";
 import * as studentService from "./student.service.js";
 import * as staffService from "./staff.service.js";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model.js";
-import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
+import { boardSubjectNameModel } from "@academic/db/schemas/models/admissions/board-subject-name.model.js";
+import { notificationMasterModel } from "@academic/db/schemas/models/notifications";
 import { verifyOtp } from "@/features/auth/services/otp.service.js";
 
 // Password reset interfaces and storage
@@ -761,7 +761,7 @@ async function mapGeneralInfoToDto(
 
 async function mapAcademicInfoToDto(
   a: AdmissionAcademicInfo,
-): Promise<import("@repo/db/dtos/admissions").AdmissionAcademicInfoDto> {
+): Promise<import("@academic/db/dtos/admissions").AdmissionAcademicInfoDto> {
   const [board, lastSchoolAddress] = await Promise.all([
     a.boardId
       ? db
@@ -859,7 +859,7 @@ async function mapStudentAcademicSubjectToDto(
 
 async function mapAdditionalInfoToDto(
   ad: AdmissionAdditionalInfo,
-): Promise<import("@repo/db/dtos/admissions").AdmissionAdditionalInfoDto> {
+): Promise<import("@academic/db/dtos/admissions").AdmissionAdditionalInfoDto> {
   return {
     ...ad,
     annualIncome: undefined,
@@ -869,7 +869,7 @@ async function mapAdditionalInfoToDto(
 
 async function mapCourseDetailsToDto(
   cd: AdmissionCourseDetails,
-): Promise<import("@repo/db/dtos/admissions").AdmissionCourseDetailsDto> {
+): Promise<import("@academic/db/dtos/admissions").AdmissionCourseDetailsDto> {
   return {
     ...cd,
     stream: undefined,

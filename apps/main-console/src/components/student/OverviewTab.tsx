@@ -6,7 +6,7 @@ import { Badge } from "../ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/utils/api";
 import { getFeeStudentMappingsByStudentId } from "@/services/fees-api";
-import type { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import type { FeeStudentMappingDto } from "@academic/db/dtos/fees";
 import { cn } from "@/lib/utils";
 import { ExternalLink, Loader2, Plus, Pencil } from "lucide-react";
 import { Button } from "../ui/button";
@@ -116,8 +116,8 @@ function computeFeeCardSummary(mappings: FeeStudentMappingDto[]): {
       headline: "Paid latest",
       detail: latest
         ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(
-            latest,
-          )
+          latest,
+        )
         : null,
       focusMapping,
     };
@@ -325,11 +325,11 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
                     className={cn(
                       "text-[10px] sm:text-xs font-medium",
                       feeCardSummary.headline === "Pending" &&
-                        "bg-yellow-50 text-yellow-900 border-yellow-300",
+                      "bg-yellow-50 text-yellow-900 border-yellow-300",
                       feeCardSummary.headline === "Paid latest" &&
-                        "bg-green-50 text-green-900 border-green-300",
+                      "bg-green-50 text-green-900 border-green-300",
                       feeCardSummary.headline === "Upcoming latest" &&
-                        "bg-sky-50 text-sky-900 border-sky-300",
+                      "bg-sky-50 text-sky-900 border-sky-300",
                     )}
                   >
                     {feeCardSummary.headline}
@@ -686,11 +686,10 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
                       </TableCell>
                       <TableCell style={{ padding: "12px 8px" }} className="text-center">
                         <button
-                          className={`p-1.5 rounded-md transition-colors ${
-                            !mapping.isActive
+                          className={`p-1.5 rounded-md transition-colors ${!mapping.isActive
                               ? "cursor-not-allowed opacity-40"
                               : "hover:bg-gray-100 cursor-pointer"
-                          }`}
+                            }`}
                           onClick={() => {
                             if (mapping.isActive) {
                               setEditingMapping(mapping);

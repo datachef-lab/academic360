@@ -5,9 +5,9 @@ import {
   AccessGroupModuleProgramCourseT,
   accessGroupModuleProgramCourseModel,
   accessGroupModuleProgramCourseClassModel,
-} from "@repo/db/schemas/models/administration";
-import { classModel } from "@repo/db/schemas/models/academics";
-import { AccessGroupModuleProgramCourseDto } from "@repo/db/dtos/administration";
+} from "@academic/db/schemas/models/administration";
+import { classModel } from "@academic/db/schemas/models/academics";
+import { AccessGroupModuleProgramCourseDto } from "@academic/db/dtos/administration";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 
 async function ensureUniqueAccessGroupModuleAndProgramCourse(

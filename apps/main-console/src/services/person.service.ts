@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
-import type { PersonT } from "@repo/db/schemas/models";
+import type { PersonT } from "@academic/db/schemas/models";
 
 const BASE_URL = "/api/persons";
 
@@ -8,7 +8,13 @@ const BASE_URL = "/api/persons";
 export type PersonUpdateRequest = Partial<
   Pick<
     PersonT,
-    "title" | "name" | "email" | "phone" | "aadhaarCardNumber" | "gender" | "maritalStatus"
+    | "title"
+    | "name"
+    | "email"
+    | "phone"
+    | "aadhaarCardNumber"
+    | "gender"
+    | "maritalStatus"
   >
 > & {
   occupationId?: number | null;

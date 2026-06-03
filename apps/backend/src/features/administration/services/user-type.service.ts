@@ -4,7 +4,7 @@ import {
   UserType,
   UserTypeT,
   userTypeModel,
-} from "@repo/db/schemas/models/administration";
+} from "@academic/db/schemas/models/administration";
 import { userTypeData } from "@/features/default-administration-data";
 
 export async function loadDefaultUserTypes() {

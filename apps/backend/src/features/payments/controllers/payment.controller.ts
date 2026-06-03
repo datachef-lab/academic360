@@ -2,12 +2,12 @@ import type { Request, Response, NextFunction } from "express";
 import { createRequire } from "module";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/index.js";
-import type { PaytmDowntimeWebhookPayload } from "@repo/db/dtos/payments";
+import type { PaytmDowntimeWebhookPayload } from "@academic/db/dtos/payments";
 import {
   feeStudentMappingModel,
   studentModel,
   userModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {

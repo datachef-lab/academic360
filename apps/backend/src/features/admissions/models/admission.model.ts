@@ -1,4 +1,4 @@
-import { academicYearModel } from "@repo/db/schemas/models/academics";
+import { academicYearModel } from "@academic/db/schemas/models/academics";
 import {
   boolean,
   date,

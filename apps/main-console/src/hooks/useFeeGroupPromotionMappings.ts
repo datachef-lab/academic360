@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
+import type { FeeGroupPromotionMappingDto } from "@academic/db/dtos/fees";
 import {
   getAllFeeGroupPromotionMappings,
   createFeeGroupPromotionMapping,
@@ -17,7 +17,8 @@ export const feeGroupPromotionMappingKeys = {
   list: (filters?: Record<string, unknown>) =>
     [...feeGroupPromotionMappingKeys.lists(), filters] as const,
   details: () => [...feeGroupPromotionMappingKeys.all, "detail"] as const,
-  detail: (id: number) => [...feeGroupPromotionMappingKeys.details(), id] as const,
+  detail: (id: number) =>
+    [...feeGroupPromotionMappingKeys.details(), id] as const,
 };
 
 /**
@@ -25,7 +26,10 @@ export const feeGroupPromotionMappingKeys = {
  * @param limit - Max number of rows to fetch (default 10000)
  * @param enabled - If false, query won't run (e.g. until filters are applied)
  */
-export const useFeeGroupPromotionMappings = (limit: number = 10000, enabled: boolean = true) => {
+export const useFeeGroupPromotionMappings = (
+  limit: number = 10000,
+  enabled: boolean = true,
+) => {
   return useQuery({
     queryKey: [...feeGroupPromotionMappingKeys.lists(), { limit, enabled }],
     queryFn: async () => {
@@ -86,7 +90,10 @@ export const useUpdateFeeGroupPromotionMapping = () => {
       // PUT returns modelToDto — it does not include list-only fields (totalPayableAmount, paymentStatus, …)
       // that getAllFeeGroupPromotionMappings computes. A plain { ...m, ...dto } merge leaves stale amounts
       // until refetch finishes, which feels like a "late" table update.
-      if (data && typeof (data as FeeGroupPromotionMappingDto).id === "number") {
+      if (
+        data &&
+        typeof (data as FeeGroupPromotionMappingDto).id === "number"
+      ) {
         const dto = data as FeeGroupPromotionMappingDto;
         queryClient.setQueriesData<FeeGroupPromotionMappingDto[]>(
           { queryKey: feeGroupPromotionMappingKeys.lists() },
@@ -161,7 +168,10 @@ export const useBulkUploadFeeGroupPromotionMappings = () => {
       });
     },
     onError: (error: Error) => {
-      console.error("Error bulk uploading fee group promotion mappings:", error);
+      console.error(
+        "Error bulk uploading fee group promotion mappings:",
+        error,
+      );
       toast.error("Failed to bulk upload fee group promotion mappings");
     },
   });

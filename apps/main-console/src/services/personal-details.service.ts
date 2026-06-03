@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
-import type { PersonalDetailsDto } from "@repo/db/dtos/user";
+import type { PersonalDetailsDto } from "@academic/db/dtos/user";
 
 // Type for API payloads without auto-generated fields
 // Allow flexible payload shape from DTO mapping
@@ -9,7 +9,9 @@ type PersonalDetailsPayload = Record<string, any>;
 
 const BASE_URL = "/api/personal-details";
 
-export async function getAllPersonalDetails(): Promise<ApiResponse<PersonalDetailsDto[]>> {
+export async function getAllPersonalDetails(): Promise<
+  ApiResponse<PersonalDetailsDto[]>
+> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data;
@@ -33,10 +35,14 @@ export async function getPersonalDetailByStudentId(
   studentId: string,
 ): Promise<ApiResponse<PersonalDetailsDto | null>> {
   try {
-    const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
+    const response = await axiosInstance.get(
+      `${BASE_URL}/student/${studentId}`,
+    );
     return response.data;
   } catch {
-    throw new Error(`Failed to fetch personal detail for studentId ${studentId}`);
+    throw new Error(
+      `Failed to fetch personal detail for studentId ${studentId}`,
+    );
   }
 }
 
@@ -68,14 +74,21 @@ export async function updatePersonalDetailByStudentId(
   payload: PersonalDetailsPayload,
 ): Promise<ApiResponse<PersonalDetailsDto>> {
   try {
-    const response = await axiosInstance.put(`${BASE_URL}/student/${studentId}`, payload);
+    const response = await axiosInstance.put(
+      `${BASE_URL}/student/${studentId}`,
+      payload,
+    );
     return response.data;
   } catch {
-    throw new Error(`Failed to update personal detail for studentId ${studentId}`);
+    throw new Error(
+      `Failed to update personal detail for studentId ${studentId}`,
+    );
   }
 }
 
-export async function deletePersonalDetail(id: string): Promise<ApiResponse<null>> {
+export async function deletePersonalDetail(
+  id: string,
+): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
     return response.data;
@@ -88,9 +101,13 @@ export async function deletePersonalDetailByStudentId(
   studentId: string,
 ): Promise<ApiResponse<null>> {
   try {
-    const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
+    const response = await axiosInstance.delete(
+      `${BASE_URL}/student/${studentId}`,
+    );
     return response.data;
   } catch {
-    throw new Error(`Failed to delete personal detail for studentId ${studentId}`);
+    throw new Error(
+      `Failed to delete personal detail for studentId ${studentId}`,
+    );
   }
 }

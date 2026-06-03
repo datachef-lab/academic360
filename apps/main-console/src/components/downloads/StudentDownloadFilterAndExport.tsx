@@ -30,7 +30,7 @@ import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Specialization } from "@/types/resources/specialization";
 import { Community, Level, Shift } from "@/types/enums";
 import { findAllDegrees } from "@/services/degree.service";
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
 type Framework = "CCF" | "CBCS";
@@ -285,14 +285,14 @@ const StudentDownloadFilterAndExport: React.FC = () => {
             <DropdownMenuContent className="max-h-60 overflow-y-auto shadow-lg rounded-xl border border-slate-200 bg-white">
               {Array.isArray(streamMemo)
                 ? streamMemo.map((option) => (
-                    <DropdownMenuItem
-                      key={option.id}
-                      onClick={() => handleStreamSelect(option)}
-                      className="hover:bg-slate-100"
-                    >
-                      {option.name}
-                    </DropdownMenuItem>
-                  ))
+                  <DropdownMenuItem
+                    key={option.id}
+                    onClick={() => handleStreamSelect(option)}
+                    className="hover:bg-slate-100"
+                  >
+                    {option.name}
+                  </DropdownMenuItem>
+                ))
                 : null}
             </DropdownMenuContent>
           </DropdownMenu>

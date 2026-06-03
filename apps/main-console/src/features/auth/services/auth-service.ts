@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
-import type { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@academic/db/dtos/user";
 
 export interface LoginCredential {
   email: string;

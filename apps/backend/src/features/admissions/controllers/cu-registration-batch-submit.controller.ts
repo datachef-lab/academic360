@@ -22,7 +22,7 @@ import {
 } from "@/services/filesystem-storage.service.js";
 import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
 import { db } from "@/db/index.js";
-import { documentModel } from "@repo/db/schemas";
+import { documentModel } from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 import multer from "multer";
 import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
@@ -32,7 +32,7 @@ import {
 } from "@/services/image-conversion.service.js";
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
 import { sendAdmissionRegistrationNotification } from "../services/cu-registration-correction-request.service.js";
-import { UserDto } from "@repo/db/index.js";
+import { UserDto } from "@academic/db/index.js";
 
 // Configure multer for handling multiple files
 const upload = multer({

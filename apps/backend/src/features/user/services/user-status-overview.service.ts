@@ -1,13 +1,13 @@
 import { db } from "@/db/index.js";
-import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
-import { academicYearModel } from "@repo/db/schemas/models/academics/academic-year.model.js";
-import { sessionModel } from "@repo/db/schemas/models/academics/session.model.js";
-import { userStatusMasterModel } from "@repo/db/schemas/models/administration/user-status-master.model.js";
-import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model.js";
-import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model.js";
-import { programCourseModel } from "@repo/db/schemas/models/course-design/program-course.model.js";
-import { examFormFillupModel } from "@repo/db/schemas/models/exams/exam-form-fillup.model.js";
-import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
+import { classModel } from "@academic/db/schemas/models/academics/class.model.js";
+import { academicYearModel } from "@academic/db/schemas/models/academics/academic-year.model.js";
+import { sessionModel } from "@academic/db/schemas/models/academics/session.model.js";
+import { userStatusMasterModel } from "@academic/db/schemas/models/administration/user-status-master.model.js";
+import { promotionStatusModel } from "@academic/db/schemas/models/batches/promotion-status.model.js";
+import { promotionModel } from "@academic/db/schemas/models/batches/promotions.model.js";
+import { programCourseModel } from "@academic/db/schemas/models/course-design/program-course.model.js";
+import { examFormFillupModel } from "@academic/db/schemas/models/exams/exam-form-fillup.model.js";
+import { studentModel } from "@academic/db/schemas/models/user/student.model.js";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { userStatusMappingOverview } from "../models/user-status-overview.models.js";
 

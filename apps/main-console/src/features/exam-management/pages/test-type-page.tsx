@@ -19,7 +19,7 @@ import {
   updateExamType,
   deleteExamType,
 } from "@/services/exam-type.service";
-import type { ExamTypeT } from "@repo/db/schemas/models/exams";
+import type { ExamTypeT } from "@academic/db/schemas/models/exams";
 
 type ExamTypeFormValues = Pick<ExamTypeT, "name" | "shortName" | "isActive" | "foilNumberRequired">;
 
@@ -400,11 +400,10 @@ export default function TestTypePage() {
                         </td>
                         <td className="px-3 py-3 border-r border-slate-200 text-center">
                           <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                              examType.foilNumberRequired
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${examType.foilNumberRequired
                                 ? "bg-purple-100 text-purple-800"
                                 : "bg-gray-100 text-gray-600"
-                            }`}
+                              }`}
                           >
                             {examType.foilNumberRequired ? "Yes" : "No"}
                           </span>
@@ -414,11 +413,10 @@ export default function TestTypePage() {
                         </td>
                         <td className="px-3 py-3 border-r border-slate-200 text-center">
                           <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                              examType.isActive
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${examType.isActive
                                 ? "bg-green-100 text-green-800"
                                 : "bg-red-100 text-red-800"
-                            }`}
+                              }`}
                           >
                             {examType.isActive ? "Active" : "Inactive"}
                           </span>

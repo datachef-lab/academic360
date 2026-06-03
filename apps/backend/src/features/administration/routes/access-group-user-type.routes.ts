@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createAccessGroupUserTypeSchema } from "@repo/db/schemas/models/administration";
+import { createAccessGroupUserTypeSchema } from "@academic/db/schemas/models/administration";
 import {
   createAccessGroupUserType,
   deleteAccessGroupUserType,

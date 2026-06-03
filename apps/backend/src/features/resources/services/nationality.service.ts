@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import {
   nationalityModel,
   type Nationality,
-} from "@repo/db/schemas/models/resources/nationality.model";
+} from "@academic/db/schemas/models/resources/nationality.model";
 import { eq, ilike } from "drizzle-orm";
 
 export const loadNationalities = async () => {

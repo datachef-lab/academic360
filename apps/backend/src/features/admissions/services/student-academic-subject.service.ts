@@ -1,11 +1,11 @@
 import { db } from "@/db/index.js";
-import { StudentAcademicSubjectsDto } from "@repo/db/dtos";
+import { StudentAcademicSubjectsDto } from "@academic/db/dtos";
 import {
   academicYearModel,
   paperModel,
   sessionModel,
   studentModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import {
   admissionAcademicInfoModel,
   admissionModel,
@@ -14,8 +14,8 @@ import {
   boardSubjectNameModel,
   studentAcademicSubjectModel,
   StudentAcademicSubjects,
-} from "@repo/db/schemas/models/admissions";
-import { boardModel } from "@repo/db/schemas";
+} from "@academic/db/schemas/models/admissions";
+import { boardModel } from "@academic/db/schemas";
 import { and, eq, asc } from "drizzle-orm";
 import * as relatedSubjectService from "../../subject-selection/services/related-subject-main.service";
 

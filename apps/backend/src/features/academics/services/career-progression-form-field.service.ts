@@ -6,9 +6,9 @@ import {
   certificateFieldMasterModel,
   certificateFieldOptionMasterModel,
   createCareerProgressionFormFieldSchema,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, asc, eq } from "drizzle-orm";
-import type { CareerProgressionFormFieldDto } from "@repo/db/dtos/academics";
+import type { CareerProgressionFormFieldDto } from "@academic/db/dtos/academics";
 
 async function rowToDto(
   row: typeof careerProgressionFormFieldModel.$inferSelect,

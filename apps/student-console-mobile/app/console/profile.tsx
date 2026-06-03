@@ -1,4 +1,4 @@
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 import { useTheme } from "@/hooks/use-theme";
 import { useProfile } from "@/hooks/use-profile";
 import { getStudentImageUrl } from "@/lib/student-image";

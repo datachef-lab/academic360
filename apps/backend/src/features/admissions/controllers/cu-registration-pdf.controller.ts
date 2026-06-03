@@ -12,7 +12,7 @@ import {
   academicYearModel,
   programCourseModel,
   regulationTypeModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 import { getCuRegPdfPathDynamic } from "../services/cu-registration-document-path.service.js";
 import { getSignedUrlForFile, getFileFromS3 } from "@/services/s3.service.js";

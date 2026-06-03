@@ -22,7 +22,7 @@ const nextConfig = {
   ...baseConfig,
   output: "standalone",
 
-  transpilePackages: ["@repo/db", "@repo/utils", "@repo/ui"],
+  transpilePackages: ["@academic/db", "@repo/utils", "@repo/ui"],
 
   images: {
     remotePatterns: [

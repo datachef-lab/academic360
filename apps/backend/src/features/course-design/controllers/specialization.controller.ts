@@ -3,7 +3,7 @@ import { db } from "@/db/index.js";
 import {
   specializationModel,
   createSpecializationSchema,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import { deleteSpecializationSafe } from "@/features/course-design/services/specialization.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";

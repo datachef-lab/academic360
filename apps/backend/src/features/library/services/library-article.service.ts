@@ -1,8 +1,8 @@
 import { db } from "@/db/index.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
-import { libraryArticleModel } from "@repo/db/schemas/models/library/library-article.model.js";
-import { libraryDocumentTypeModel } from "@repo/db/schemas/models/library/library-document-type.model.js";
+import { libraryArticleModel } from "@academic/db/schemas/models/library/library-article.model.js";
+import { libraryDocumentTypeModel } from "@academic/db/schemas/models/library/library-document-type.model.js";
 
 export type LibraryArticleListFilters = {
   page: number;

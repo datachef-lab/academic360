@@ -7,40 +7,40 @@ import {
   feeSlabModel,
   promotionModel,
   boardResultStatusModel,
-} from "@repo/db/schemas";
-import { promotionStatusModel } from "@repo/db/schemas/models/batches";
+} from "@academic/db/schemas";
+import { promotionStatusModel } from "@academic/db/schemas/models/batches";
 import {
   sessionModel,
   classModel,
   sectionModel,
   shiftModel,
   academicYearModel,
-} from "@repo/db/schemas/models/academics";
+} from "@academic/db/schemas/models/academics";
 import {
   studentModel,
   personalDetailsModel,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import { and, inArray, or, ilike, desc, eq } from "drizzle-orm";
-import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import { programCourseModel } from "@academic/db/schemas/models/course-design";
 import {
   feeStructureModel,
   feeStructureComponentModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import XLSX from "xlsx";
 import fs from "fs";
 import * as studentService from "@/features/user/services/student.service.js";
 import * as classService from "@/features/academics/services/class.service.js";
 import { socketService } from "@/services/socketService.js";
-import { feeStudentMappingModel } from "@repo/db/schemas";
+import { feeStudentMappingModel } from "@academic/db/schemas";
 import {
   FeeGroupPromotionMappingDto,
   FeeCategoryDto,
-} from "@repo/db/dtos/fees";
-import { PromotionDto } from "@repo/db/dtos/batches";
+} from "@academic/db/dtos/fees";
+import { PromotionDto } from "@academic/db/dtos/batches";
 import {
   religionModel,
   categoryModel,
-} from "@repo/db/schemas/models/resources";
+} from "@academic/db/schemas/models/resources";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 import * as feeCategoryService from "./fee-category.service.js";
 

@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { Enclosure, enclosureModel } from "@repo/db/schemas";
+import { Enclosure, enclosureModel } from "@academic/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
 
 type EnclosureListFilters = {

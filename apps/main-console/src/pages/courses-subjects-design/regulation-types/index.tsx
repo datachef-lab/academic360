@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import type { RegulationType } from "@repo/db/index";
+import type { RegulationType } from "@academic/db/index";
 import {
   getRegulationTypes,
   createRegulationType,

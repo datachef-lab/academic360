@@ -1,5 +1,5 @@
 // import { db } from "@/db";
-// import { UserStatusMappingDto, UserStatusMasterDto } from "@repo/db/dtos";
+// import { UserStatusMappingDto, UserStatusMasterDto } from "@academic/db/dtos";
 // import {
 //   academicYearModel,
 //   promotionModel,
@@ -14,10 +14,10 @@
 //   userStatusMasterLevelModel,
 //   userStatusMasterModel,
 //   UserT,
-// } from "@repo/db/schemas";
+// } from "@academic/db/schemas";
 // import { and, count, eq, ilike, ne, desc } from "drizzle-orm";
-// import { classModel } from "@repo/db/schemas/models/academics";
-// import { programCourseModel } from "@repo/db/schemas/models/course-design";
+// import { classModel } from "@academic/db/schemas/models/academics";
+// import { programCourseModel } from "@academic/db/schemas/models/course-design";
 // import { defaultUserStatusesMastersDtos } from "../default-user-statuses-data";
 
 // export async function loadDefaultUserStatusMaster() {
@@ -767,7 +767,7 @@
 //       promotionData = prom ?? null;
 //       if (prom?.classId) {
 //         const { classModel } =
-//           await import("@repo/db/schemas/models/academics");
+//           await import("@academic/db/schemas/models/academics");
 //         const [cls] = await db
 //           .select()
 //           .from(classModel)

@@ -38,7 +38,7 @@ import {
   studentModel,
   userModel,
   UserT,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, eq, ilike } from "drizzle-orm";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";

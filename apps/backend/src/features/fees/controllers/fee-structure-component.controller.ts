@@ -6,7 +6,7 @@ import {
   updateFeeStructureComponent,
   deleteFeeStructureComponent,
 } from "../services/fee-structure-component.service";
-import { createFeeStructureComponentSchema } from "@repo/db/schemas";
+import { createFeeStructureComponentSchema } from "@academic/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 

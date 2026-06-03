@@ -3,7 +3,7 @@ import * as instalmentService from "../services/fee-structure-installment.servic
 import {
   FeeStructureInstallment,
   createFeeStructureInstallmentSchema,
-} from "@repo/db/schemas/models/fees";
+} from "@academic/db/schemas/models/fees";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 

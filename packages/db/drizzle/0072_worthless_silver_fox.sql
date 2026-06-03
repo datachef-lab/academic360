@@ -1,0 +1,2 @@
+ALTER TABLE "exam_subjects" ADD COLUMN "paper_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "exam_subjects" ADD CONSTRAINT "exam_subjects_paper_id_fk_papers_id_fk" FOREIGN KEY ("paper_id_fk") REFERENCES "public"."papers"("id") ON DELETE no action ON UPDATE no action;

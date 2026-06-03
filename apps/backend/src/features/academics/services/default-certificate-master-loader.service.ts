@@ -3,9 +3,9 @@ import {
   certificateFieldMasterModel,
   certificateFieldOptionMasterModel,
   certificateMasterModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import type { CertificateMasterDto } from "@repo/db/dtos";
+import type { CertificateMasterDto } from "@academic/db/dtos";
 import { defaultCertificateMasterData } from "@/features/academics/default-certificate-master-data.js";
 
 /** Rename legacy combined master and align field sequences with the Internship template. */

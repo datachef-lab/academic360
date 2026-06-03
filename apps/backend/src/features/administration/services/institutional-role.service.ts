@@ -4,7 +4,7 @@ import {
   UserInstitutionalRole,
   UserInstitutionalRoleT,
   institutionalRoleModel,
-} from "@repo/db/schemas/models/administration";
+} from "@academic/db/schemas/models/administration";
 
 export async function createInstitutionalRole(data: UserInstitutionalRole) {
   const {

@@ -44,8 +44,8 @@ import { restrictedGroupingApi } from "@/services/restricted-grouping.api";
 import { getSubjects, getProgramCourses, getSubjectTypes } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 import { toast } from "sonner";
-import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
-import type { SubjectDto } from "@repo/db/dtos/course-design";
+import type { RestrictedGroupingMainDto } from "@academic/db/dtos/subject-selection";
+import type { SubjectDto } from "@academic/db/dtos/course-design";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 // Class DTO is not used directly here
@@ -973,11 +973,10 @@ export default function RestrictedGroupingPage() {
                                                 className="text-gray-700"
                                               >
                                                 <Check
-                                                  className={`mr-2 h-4 w-4 ${
-                                                    rule.cannotCombineWith.includes(subject)
+                                                  className={`mr-2 h-4 w-4 ${rule.cannotCombineWith.includes(subject)
                                                       ? "opacity-100"
                                                       : "opacity-0"
-                                                  }`}
+                                                    }`}
                                                 />
                                                 {subject}
                                               </CommandItem>
@@ -1042,11 +1041,10 @@ export default function RestrictedGroupingPage() {
                                               className="text-gray-700"
                                             >
                                               <Check
-                                                className={`mr-2 h-4 w-4 ${
-                                                  rule.semesters.includes(semester)
+                                                className={`mr-2 h-4 w-4 ${rule.semesters.includes(semester)
                                                     ? "opacity-100"
                                                     : "opacity-0"
-                                                }`}
+                                                  }`}
                                               />
                                               {semester}
                                             </CommandItem>
@@ -1111,11 +1109,10 @@ export default function RestrictedGroupingPage() {
                                               className="text-gray-700"
                                             >
                                               <Check
-                                                className={`mr-2 h-4 w-4 ${
-                                                  rule.applicableProgramCourses.includes(course)
+                                                className={`mr-2 h-4 w-4 ${rule.applicableProgramCourses.includes(course)
                                                     ? "opacity-100"
                                                     : "opacity-0"
-                                                }`}
+                                                  }`}
                                               />
                                               {course}
                                             </CommandItem>
@@ -1213,9 +1210,8 @@ export default function RestrictedGroupingPage() {
                                     />
                                     <Label
                                       htmlFor={`studied-12th-${rule.id}`}
-                                      className={`text-sm font-medium ${
-                                        rule.studiedIn12th ? "text-green-600" : "text-gray-700"
-                                      }`}
+                                      className={`text-sm font-medium ${rule.studiedIn12th ? "text-green-600" : "text-gray-700"
+                                        }`}
                                     >
                                       {rule.studiedIn12th ? "Yes" : "No"}
                                     </Label>
@@ -1235,11 +1231,10 @@ export default function RestrictedGroupingPage() {
                                     />
                                     <Label
                                       htmlFor={`board-pass-${rule.id}`}
-                                      className={`text-sm font-medium ${
-                                        rule.class12thBoardPassMarks
+                                      className={`text-sm font-medium ${rule.class12thBoardPassMarks
                                           ? "text-green-600"
                                           : "text-gray-700"
-                                      }`}
+                                        }`}
                                     >
                                       {rule.class12thBoardPassMarks ? "Yes" : "No"}
                                     </Label>
@@ -1277,9 +1272,8 @@ export default function RestrictedGroupingPage() {
                                     />
                                     <Label
                                       htmlFor={`status-${rule.id}`}
-                                      className={`text-sm font-medium ${
-                                        rule.isActive ? "text-green-600" : "text-red-600"
-                                      }`}
+                                      className={`text-sm font-medium ${rule.isActive ? "text-green-600" : "text-red-600"
+                                        }`}
                                     >
                                       {rule.isActive ? "Active" : "Inactive"}
                                     </Label>

@@ -14,12 +14,12 @@ import {
   shiftModel,
   studentModel,
   userModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type {
   CareerProgressionFormCertificateDto,
   CareerProgressionFormDto,
-} from "@repo/db/dtos/academics";
+} from "@academic/db/dtos/academics";
 import { findCareerProgressionFormFieldsByCertificateId } from "./career-progression-form-field.service.js";
 
 function computeCareerExportStudentStatus(student: {

@@ -1,0 +1,2 @@
+DO $$ BEGIN ALTER TABLE "user_types" ADD COLUMN "color" varchar(255); EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "user_types" ADD COLUMN "bg_color" varchar(255); EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;

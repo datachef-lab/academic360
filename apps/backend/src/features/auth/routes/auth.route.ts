@@ -14,7 +14,7 @@ import otpRouter from "./otp.routes.js";
 
 import { loginLimiter } from "@/middlewares/loginLimiter.middleware.js";
 import { validateData } from "@/middlewares/validation.middleware.js";
-import { createUserSchema } from "@repo/db/schemas/models/user";
+import { createUserSchema } from "@academic/db/schemas/models/user";
 import passport from "passport";
 import { setService } from "@/utils/setService.js";
 

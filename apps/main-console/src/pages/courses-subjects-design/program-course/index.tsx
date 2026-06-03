@@ -36,7 +36,7 @@ import type {
   CourseLevel,
   Affiliation,
   RegulationType,
-} from "@repo/db/index";
+} from "@academic/db/index";
 import {
   getProgramCourses,
   createProgramCourse,
@@ -966,8 +966,8 @@ const ProgramCoursesPage = () => {
                                 ? `${pc.totalSemesters} semester${pc.totalSemesters !== 1 ? "s" : ""}`
                                 : null,
                               pc.validityYears != null &&
-                              typeof pc.validityYears === "number" &&
-                              Number.isFinite(pc.validityYears)
+                                typeof pc.validityYears === "number" &&
+                                Number.isFinite(pc.validityYears)
                                 ? `Validity: ${pc.validityYears} year${pc.validityYears !== 1 ? "s" : ""}`
                                 : null,
                             ]

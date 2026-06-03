@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createDesignationSchema } from "@repo/db/schemas/models/administration";
+import { createDesignationSchema } from "@academic/db/schemas/models/administration";
 import {
   createDesignation,
   deleteDesignation,

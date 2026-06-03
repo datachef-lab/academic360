@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { Request } from "express";
 import { db } from "@/db";
-import { studentModel } from "@repo/db/schemas";
+import { studentModel } from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 
 const baseUploadPath = process.env.EXAM_FORM_UPLOAD_PATH;

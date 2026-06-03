@@ -46,7 +46,7 @@ import {
   submitSubjectsDeclaration,
   submitDocumentsDeclaration,
 } from "@/services/cu-registration";
-import type { CuRegistrationCorrectionRequestDto } from "@repo/db/dtos/admissions";
+import type { CuRegistrationCorrectionRequestDto } from "@academic/db/dtos/admissions";
 import {
   uploadCuRegistrationDocument,
   getCuRegistrationDocuments,
@@ -422,7 +422,7 @@ export default function CURegistrationPage() {
       try {
         const [cityList] = await Promise.all([fetchCities().catch(() => [])]);
         setCities(cityList || []);
-      } catch {}
+      } catch { }
     })();
   }, []);
 
@@ -439,7 +439,7 @@ export default function CURegistrationPage() {
           const d = await fetchDistricts({ cityId }).catch(() => []);
           setDistricts(d || []);
         }
-      } catch {}
+      } catch { }
     })();
   }, [addressData.residential.city, cities]);
 
@@ -455,7 +455,7 @@ export default function CURegistrationPage() {
           const d = await fetchDistricts({ cityId }).catch(() => []);
           setMailingDistricts(d || []);
         }
-      } catch {}
+      } catch { }
     })();
   }, [addressData.mailing.city, cities]);
 
@@ -860,23 +860,23 @@ export default function CURegistrationPage() {
       console.log("🔍 Address data debug:", {
         resAddr: resAddr
           ? {
-              districtId: resAddr?.districtId,
-              district: resAddr?.district?.name,
-              otherDistrict: resAddr?.otherDistrict,
-              cityId: resAddr?.cityId,
-              city: resAddr?.city?.name,
-              otherCity: resAddr?.otherCity,
-            }
+            districtId: resAddr?.districtId,
+            district: resAddr?.district?.name,
+            otherDistrict: resAddr?.otherDistrict,
+            cityId: resAddr?.cityId,
+            city: resAddr?.city?.name,
+            otherCity: resAddr?.otherCity,
+          }
           : null,
         mailAddr: mailAddr
           ? {
-              districtId: mailAddr?.districtId,
-              district: mailAddr?.district?.name,
-              otherDistrict: mailAddr?.otherDistrict,
-              cityId: mailAddr?.cityId,
-              city: mailAddr?.city?.name,
-              otherCity: mailAddr?.otherCity,
-            }
+            districtId: mailAddr?.districtId,
+            district: mailAddr?.district?.name,
+            otherDistrict: mailAddr?.otherDistrict,
+            cityId: mailAddr?.cityId,
+            city: mailAddr?.city?.name,
+            otherCity: mailAddr?.otherCity,
+          }
           : null,
       });
 
@@ -1788,7 +1788,7 @@ export default function CURegistrationPage() {
             status: updated.status,
             personalInfoDeclaration: updated.personalInfoDeclaration,
           });
-        } catch {}
+        } catch { }
 
         // Check if declaration was already completed
         const isAlreadyCompleted = correctionRequest?.personalInfoDeclaration;
@@ -2046,7 +2046,7 @@ export default function CURegistrationPage() {
               status: updated.status,
               addressInfoDeclaration: updated.addressInfoDeclaration,
             });
-          } catch {}
+          } catch { }
 
           // Check if declaration was already completed
           const isAlreadyCompleted = correctionRequest?.addressInfoDeclaration;
@@ -2165,7 +2165,7 @@ export default function CURegistrationPage() {
             status: updated.status,
             subjectsDeclaration: updated.subjectsDeclaration,
           });
-        } catch {}
+        } catch { }
 
         // Check if declaration was already completed
         const isAlreadyCompleted = correctionRequest?.subjectsDeclaration;
@@ -2389,7 +2389,7 @@ export default function CURegistrationPage() {
               status: updated.status,
               documentsDeclaration: updated.documentsDeclaration,
             });
-          } catch {}
+          } catch { }
 
           // Check if declaration was already completed
           const isAlreadyCompleted = correctionRequest?.documentsDeclaration;
@@ -2857,11 +2857,10 @@ export default function CURegistrationPage() {
 
   return (
     <div
-      className={`bg-gray-50 ${
-        correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone
+      className={`bg-gray-50 ${correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone
           ? "h-screen py-2"
           : "min-h-screen py-4 sm:py-8"
-      }`}
+        }`}
     >
       <h1 className="text-2xl text-center font-bold text-gray-800 mb-2">
         Admission & Registration Online Data Submission (Part 1 of 2)
@@ -2869,11 +2868,10 @@ export default function CURegistrationPage() {
       {/* Only show form content if subject selection is completed */}
       {isSubjectSelectionCompleted && (
         <div
-          className={`mx-auto px-3 sm:px-4 ${
-            correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone
+          className={`mx-auto px-3 sm:px-4 ${correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone
               ? "max-w-7xl h-full"
               : "max-w-6xl"
-          }`}
+            }`}
         >
           {/* Header */}
           {/* Dynamic heading - Hide for final submission statuses */}
@@ -2899,40 +2897,37 @@ export default function CURegistrationPage() {
             correctionRequest?.onlineRegistrationDone && (
               <div className="mb-8">
                 <Card
-                  className={`border-2 ${
-                    correctionRequestStatus === "REQUEST_CORRECTION"
+                  className={`border-2 ${correctionRequestStatus === "REQUEST_CORRECTION"
                       ? "border-yellow-200 bg-yellow-50"
                       : correctionRequestStatus === "APPROVED"
                         ? "border-green-200 bg-green-50"
                         : correctionRequestStatus === "REJECTED"
                           ? "border-red-200 bg-red-50"
                           : "border-blue-200 bg-blue-50"
-                  }`}
+                    }`}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            correctionRequestStatus === "REQUEST_CORRECTION"
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${correctionRequestStatus === "REQUEST_CORRECTION"
                               ? "bg-yellow-100"
                               : correctionRequestStatus === "APPROVED"
                                 ? "bg-green-100"
                                 : correctionRequestStatus === "REJECTED"
                                   ? "bg-red-100"
                                   : "bg-blue-100"
-                          }`}
+                            }`}
                         >
                           <svg
-                            className={`w-5 h-5 ${
-                              correctionRequestStatus === "REQUEST_CORRECTION"
+                            className={`w-5 h-5 ${correctionRequestStatus === "REQUEST_CORRECTION"
                                 ? "text-yellow-600"
                                 : correctionRequestStatus === "APPROVED"
                                   ? "text-green-600"
                                   : correctionRequestStatus === "REJECTED"
                                     ? "text-red-600"
                                     : "text-blue-600"
-                            }`}
+                              }`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -2964,15 +2959,14 @@ export default function CURegistrationPage() {
                       </div>
                       <div>
                         <h3
-                          className={`text-lg font-medium ${
-                            correctionRequestStatus === "REQUEST_CORRECTION"
+                          className={`text-lg font-medium ${correctionRequestStatus === "REQUEST_CORRECTION"
                               ? "text-yellow-800"
                               : correctionRequestStatus === "APPROVED"
                                 ? "text-green-800"
                                 : correctionRequestStatus === "REJECTED"
                                   ? "text-red-800"
                                   : "text-blue-800"
-                          }`}
+                            }`}
                         >
                           {correctionRequestStatus === "REQUEST_CORRECTION"
                             ? "Correction Request Submitted"
@@ -2983,15 +2977,14 @@ export default function CURegistrationPage() {
                                 : "Request Status: " + correctionRequestStatus}
                         </h3>
                         <p
-                          className={`${
-                            correctionRequestStatus === "REQUEST_CORRECTION"
+                          className={`${correctionRequestStatus === "REQUEST_CORRECTION"
                               ? "text-yellow-700"
                               : correctionRequestStatus === "APPROVED"
                                 ? "text-green-700"
                                 : correctionRequestStatus === "REJECTED"
                                   ? "text-red-700"
                                   : "text-blue-700"
-                          }`}
+                            }`}
                         >
                           {correctionRequestStatus === "REQUEST_CORRECTION"
                             ? "Your correction request has been submitted and is under review."
@@ -3177,11 +3170,10 @@ export default function CURegistrationPage() {
                       <button
                         onClick={() => handleTabChange("introductory")}
                         disabled={!canNavigateToTab("introductory")}
-                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                          activeTab === "introductory"
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "introductory"
                             ? "text-blue-600 border-blue-600 bg-transparent"
                             : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                        } ${!canNavigateToTab("introductory") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          } ${!canNavigateToTab("introductory") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                       >
                         <span className="hidden sm:inline">Instructions</span>
                         <span className="sm:hidden">Intro</span>
@@ -3189,11 +3181,10 @@ export default function CURegistrationPage() {
                       <button
                         onClick={() => handleTabChange("personal")}
                         disabled={!canNavigateToTab("personal")}
-                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                          activeTab === "personal"
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "personal"
                             ? "text-blue-600 border-blue-600 bg-transparent"
                             : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                        } ${!canNavigateToTab("personal") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          } ${!canNavigateToTab("personal") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                       >
                         <span className="hidden sm:inline">Personal Info</span>
                         <span className="sm:hidden">Personal</span>
@@ -3201,11 +3192,10 @@ export default function CURegistrationPage() {
                       <button
                         onClick={() => handleTabChange("address")}
                         disabled={!canNavigateToTab("address")}
-                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                          activeTab === "address"
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "address"
                             ? "text-blue-600 border-blue-600 bg-transparent"
                             : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                        } ${!canNavigateToTab("address") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          } ${!canNavigateToTab("address") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                       >
                         <span className="hidden sm:inline">Address Info</span>
                         <span className="sm:hidden">Address</span>
@@ -3213,11 +3203,10 @@ export default function CURegistrationPage() {
                       <button
                         onClick={() => handleTabChange("subjects")}
                         disabled={!canNavigateToTab("subjects")}
-                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                          activeTab === "subjects"
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "subjects"
                             ? "text-blue-600 border-blue-600 bg-transparent"
                             : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                        } ${!canNavigateToTab("subjects") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          } ${!canNavigateToTab("subjects") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                       >
                         <span className="hidden sm:inline">Subjects Overview</span>
                         <span className="sm:hidden">Subjects</span>
@@ -3225,11 +3214,10 @@ export default function CURegistrationPage() {
                       <button
                         onClick={() => handleTabChange("documents")}
                         disabled={!canNavigateToTab("documents")}
-                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                          activeTab === "documents"
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "documents"
                             ? "text-blue-600 border-blue-600 bg-transparent"
                             : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                        } ${!canNavigateToTab("documents") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          } ${!canNavigateToTab("documents") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                       >
                         Documents
                       </button>
@@ -3675,12 +3663,11 @@ export default function CURegistrationPage() {
                               />
                               <Label
                                 htmlFor="personalDeclaration"
-                                className={`text-sm text-gray-700 leading-relaxed ${
-                                  personalInfo.apaarId.trim() === "" ||
-                                  personalInfo.apaarId.replace(/\D/g, "").length !== 12
+                                className={`text-sm text-gray-700 leading-relaxed ${personalInfo.apaarId.trim() === "" ||
+                                    personalInfo.apaarId.replace(/\D/g, "").length !== 12
                                     ? "cursor-not-allowed opacity-50"
                                     : "cursor-pointer"
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   if (
                                     personalInfo.apaarId.trim() !== "" &&
@@ -3701,7 +3688,7 @@ export default function CURegistrationPage() {
                                 <p className="text-sm text-blue-700">
                                   <span className="font-medium">Note:</span>
                                   {personalInfo.apaarId.trim() === "" ||
-                                  personalInfo.apaarId.replace(/\D/g, "").length !== 12 ? (
+                                    personalInfo.apaarId.replace(/\D/g, "").length !== 12 ? (
                                     <>
                                       {" "}
                                       Please fill in your APAAR ID with exactly 12 digits and check
@@ -4088,9 +4075,8 @@ export default function CURegistrationPage() {
                             />
                             <Label
                               htmlFor="addressDeclaration"
-                              className={`text-sm text-gray-700 leading-relaxed ${
-                                isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
-                              }`}
+                              className={`text-sm text-gray-700 leading-relaxed ${isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                                }`}
                               onClick={() => handleAddressDeclarationChange(true)}
                             >
                               I declare that the addresses provided are correct (all fields
@@ -4347,9 +4333,8 @@ export default function CURegistrationPage() {
                             />
                             <Label
                               htmlFor="subjectsDeclaration"
-                              className={`text-sm text-gray-700 leading-relaxed ${
-                                isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
-                              }`}
+                              className={`text-sm text-gray-700 leading-relaxed ${isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                                }`}
                               onClick={() => handleSubjectsDeclarationChange(true)}
                             >
                               {correctionFlags.subjects && shouldShowSubjectsCorrectionFlag()
@@ -4485,7 +4470,7 @@ export default function CURegistrationPage() {
                                                           [doc.id]: url,
                                                         }));
                                                       }
-                                                    } catch {}
+                                                    } catch { }
                                                   }}
                                                 />
                                               ) : (
@@ -4507,7 +4492,7 @@ export default function CURegistrationPage() {
                                                         doc.id,
                                                       );
                                                     window.open(url, "_blank");
-                                                  } catch {}
+                                                  } catch { }
                                                 }}
                                               >
                                                 Open
@@ -5153,99 +5138,99 @@ export default function CURegistrationPage() {
                                 boardCode && !migratoryBoards.includes(boardCode);
                               return isMigratoryBoard;
                             })() && (
-                              <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                                <div className="flex items-center justify-between mb-3">
-                                  <Label className="text-sm font-medium text-gray-700">
-                                    Migration Certificate
-                                  </Label>
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs text-red-600 border-red-600"
-                                  >
-                                    Required
-                                  </Badge>
-                                </div>
-                                <div className="relative">
-                                  <Input
-                                    value={documents.migrationCertificate?.name || "No file chosen"}
-                                    readOnly
-                                    className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                                  />
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Max {getFileSizeLimit("Migration Certificate").maxSizeMB}MB •
-                                    JPEG / JPG /PNG
-                                  </p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      document.getElementById("migrationCertificate")?.click()
-                                    }
-                                    className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
-                                  >
-                                    Upload
-                                  </Button>
-                                  <input
-                                    id="migrationCertificate"
-                                    type="file"
-                                    accept=".jpg,.jpeg,.png"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      const f = e.target.files?.[0] || null;
-                                      console.info(
-                                        `[CU-REG FRONTEND] Migration Certificate file selected:`,
-                                        {
-                                          name: f?.name,
-                                          size: f?.size,
-                                          sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                          type: f?.type,
-                                        },
-                                      );
-                                      handleFileUpload("migrationCertificate", f);
-                                    }}
-                                  />
-                                </div>
-                                {documents.migrationCertificate && (
-                                  <div className="mt-3">
-                                    <div className="flex items-center space-x-2">
-                                      <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                        {documents.migrationCertificate?.type.startsWith(
-                                          "image/",
-                                        ) ? (
-                                          <img
-                                            src={getFilePreviewUrl(documents.migrationCertificate)}
-                                            alt="Preview"
-                                            className="w-full h-full object-cover cursor-pointer"
-                                            onClick={() =>
-                                              documents.migrationCertificate &&
-                                              handleFilePreview(documents.migrationCertificate)
-                                            }
-                                          />
-                                        ) : (
-                                          <div
-                                            className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                            onClick={() =>
-                                              documents.migrationCertificate &&
-                                              handleFilePreview(documents.migrationCertificate)
-                                            }
-                                          >
-                                            PDF
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="flex-1">
-                                        <p className="text-xs text-gray-600 truncate">
-                                          {documents.migrationCertificate.name}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                          {formatFileSize(documents.migrationCertificate.size)}
-                                        </p>
+                                <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <Label className="text-sm font-medium text-gray-700">
+                                      Migration Certificate
+                                    </Label>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs text-red-600 border-red-600"
+                                    >
+                                      Required
+                                    </Badge>
+                                  </div>
+                                  <div className="relative">
+                                    <Input
+                                      value={documents.migrationCertificate?.name || "No file chosen"}
+                                      readOnly
+                                      className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Max {getFileSizeLimit("Migration Certificate").maxSizeMB}MB •
+                                      JPEG / JPG /PNG
+                                    </p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        document.getElementById("migrationCertificate")?.click()
+                                      }
+                                      className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
+                                    >
+                                      Upload
+                                    </Button>
+                                    <input
+                                      id="migrationCertificate"
+                                      type="file"
+                                      accept=".jpg,.jpeg,.png"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0] || null;
+                                        console.info(
+                                          `[CU-REG FRONTEND] Migration Certificate file selected:`,
+                                          {
+                                            name: f?.name,
+                                            size: f?.size,
+                                            sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                            type: f?.type,
+                                          },
+                                        );
+                                        handleFileUpload("migrationCertificate", f);
+                                      }}
+                                    />
+                                  </div>
+                                  {documents.migrationCertificate && (
+                                    <div className="mt-3">
+                                      <div className="flex items-center space-x-2">
+                                        <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                          {documents.migrationCertificate?.type.startsWith(
+                                            "image/",
+                                          ) ? (
+                                            <img
+                                              src={getFilePreviewUrl(documents.migrationCertificate)}
+                                              alt="Preview"
+                                              className="w-full h-full object-cover cursor-pointer"
+                                              onClick={() =>
+                                                documents.migrationCertificate &&
+                                                handleFilePreview(documents.migrationCertificate)
+                                              }
+                                            />
+                                          ) : (
+                                            <div
+                                              className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                              onClick={() =>
+                                                documents.migrationCertificate &&
+                                                handleFilePreview(documents.migrationCertificate)
+                                              }
+                                            >
+                                              PDF
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="text-xs text-gray-600 truncate">
+                                            {documents.migrationCertificate.name}
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            {formatFileSize(documents.migrationCertificate.size)}
+                                          </p>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                                  )}
+                                </div>
+                              )}
                           </div>
                         )}
 
@@ -5267,11 +5252,10 @@ export default function CURegistrationPage() {
                             />
                             <Label
                               htmlFor="documentsConfirmation"
-                              className={`text-sm text-gray-700 leading-relaxed ${
-                                isDeclarationInteractive() && canCheckDocumentsDeclaration()
+                              className={`text-sm text-gray-700 leading-relaxed ${isDeclarationInteractive() && canCheckDocumentsDeclaration()
                                   ? "cursor-pointer"
                                   : "cursor-default"
-                              }`}
+                                }`}
                             >
                               I confirm that the uploaded documents correspond to the data provided.
                             </Label>
@@ -5306,11 +5290,10 @@ export default function CURegistrationPage() {
                             <Button
                               onClick={handleReviewConfirm}
                               disabled={!canReviewConfirm()}
-                              className={`w-full py-2 text-sm font-medium rounded-md border ${
-                                canReviewConfirm()
+                              className={`w-full py-2 text-sm font-medium rounded-md border ${canReviewConfirm()
                                   ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
                                   : "bg-blue-200 text-white border-blue-200 cursor-not-allowed"
-                              }`}
+                                }`}
                             >
                               Review & Confirm
                             </Button>

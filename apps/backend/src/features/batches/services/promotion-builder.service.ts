@@ -8,15 +8,15 @@ import {
   promotionBuilderModel,
   promotionClauseClassMappingModel,
   promotionClauseModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import type {
   PromotionBuilderClauseClassMappingDto,
   PromotionBuilderClauseDto,
   PromotionBuilderDto,
-} from "@repo/db/dtos/batches";
-import type { ClassT } from "@repo/db/schemas/models/academics";
-import type { AffiliationT } from "@repo/db/schemas/models/course-design";
-import type { PromotionClauseT } from "@repo/db/schemas/models/batches/promotion-clause.model";
+} from "@academic/db/dtos/batches";
+import type { ClassT } from "@academic/db/schemas/models/academics";
+import type { AffiliationT } from "@academic/db/schemas/models/course-design";
+import type { PromotionClauseT } from "@academic/db/schemas/models/batches/promotion-clause.model";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 type BuilderInsert = typeof createPromotionBuilderSchema._type;

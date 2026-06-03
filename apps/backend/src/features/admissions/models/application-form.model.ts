@@ -7,7 +7,10 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { admissionModel } from "./admission.model.js";
-import { admissionFormStatus, admissionSteps } from "@repo/db/schemas/enums";
+import {
+  admissionFormStatus,
+  admissionSteps,
+} from "@academic/db/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useFeeGroups, useFeeCategories, useFeesSlabs } from "@/hooks/useFees";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
-import { FeeGroupDto } from "@repo/db/dtos/fees";
+import { FeeGroupDto } from "@academic/db/dtos/fees";
 import { toast } from "sonner";
 import { NewFeeGroup } from "@/services/fees-api";
 import * as XLSX from "xlsx";

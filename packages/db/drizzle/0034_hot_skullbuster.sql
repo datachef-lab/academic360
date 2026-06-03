@@ -1,0 +1,2 @@
+ALTER TABLE "cu_registration_correction_requests" ADD COLUMN "online_registration_number_done" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "cu_registration_correction_requests" ADD COLUMN "physical_registration_number_done" boolean DEFAULT false NOT NULL;

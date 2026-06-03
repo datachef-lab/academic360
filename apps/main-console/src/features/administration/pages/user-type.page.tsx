@@ -40,7 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { UserTypeT } from "@repo/db/schemas/models/administration";
+import type { UserTypeT } from "@academic/db/schemas/models/administration";
 import {
   createUserType,
   deleteUserType,
@@ -582,43 +582,43 @@ export default function UserTypePage() {
                         <TableCell style={{ width: 180 }}>
                           {item.code
                             ? (() => {
-                                const parent =
-                                  item.parentUserTypeId != null
-                                    ? parentUserTypeMap.get(item.parentUserTypeId)
-                                    : null;
-                                const staffColor = "#6366f1";
-                                const staffBg = "#e0e7ff";
-                                const studentColor = "#059669";
-                                const studentBg = "#d1fae5";
-                                const codeColor =
-                                  item.color ??
-                                  parent?.color ??
-                                  (parent?.name?.toLowerCase() === "staff"
-                                    ? staffColor
-                                    : parent?.name?.toLowerCase() === "student"
-                                      ? studentColor
-                                      : "#64748b");
-                                const codeBg =
-                                  item.bgColor ??
-                                  parent?.bgColor ??
-                                  (parent?.name?.toLowerCase() === "staff"
-                                    ? staffBg
-                                    : parent?.name?.toLowerCase() === "student"
-                                      ? studentBg
-                                      : "#f1f5f9");
-                                return (
-                                  <Badge
-                                    className="w-fit font-medium border text-xs"
-                                    style={{
-                                      backgroundColor: codeBg,
-                                      color: codeColor,
-                                      borderColor: codeColor,
-                                    }}
-                                  >
-                                    {item.code}
-                                  </Badge>
-                                );
-                              })()
+                              const parent =
+                                item.parentUserTypeId != null
+                                  ? parentUserTypeMap.get(item.parentUserTypeId)
+                                  : null;
+                              const staffColor = "#6366f1";
+                              const staffBg = "#e0e7ff";
+                              const studentColor = "#059669";
+                              const studentBg = "#d1fae5";
+                              const codeColor =
+                                item.color ??
+                                parent?.color ??
+                                (parent?.name?.toLowerCase() === "staff"
+                                  ? staffColor
+                                  : parent?.name?.toLowerCase() === "student"
+                                    ? studentColor
+                                    : "#64748b");
+                              const codeBg =
+                                item.bgColor ??
+                                parent?.bgColor ??
+                                (parent?.name?.toLowerCase() === "staff"
+                                  ? staffBg
+                                  : parent?.name?.toLowerCase() === "student"
+                                    ? studentBg
+                                    : "#f1f5f9");
+                              return (
+                                <Badge
+                                  className="w-fit font-medium border text-xs"
+                                  style={{
+                                    backgroundColor: codeBg,
+                                    color: codeColor,
+                                    borderColor: codeColor,
+                                  }}
+                                >
+                                  {item.code}
+                                </Badge>
+                              );
+                            })()
                             : "—"}
                         </TableCell>
                         <TableCell style={{ width: 260 }}>{item.description ?? "—"}</TableCell>

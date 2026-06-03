@@ -6,10 +6,10 @@ import {
   getSettingFileService,
   save,
 } from "../service/settings.service.js";
-import { settingsVariantEnum } from "@repo/db/schemas/enums";
+import { settingsVariantEnum } from "@academic/db/schemas/enums";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/index.js";
-import { Settings } from "@repo/db/schemas/models/app";
+import { Settings } from "@academic/db/schemas/models/app";
 import path from "path";
 import fs from "fs";
 

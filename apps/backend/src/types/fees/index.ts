@@ -1,11 +1,11 @@
-// import { AcademicYear } from "@repo/db/schemas/models/academics";
-// import { Class } from "@repo/db/schemas/models/academics";
-// import { Course } from "@repo/db/schemas/models/course-design";
-// import { Shift } from "@repo/db/schemas/models/academics";
-// // import { FeesComponent } from "@repo/db/schemas/models/fees";
-// // import { FeesSlabMapping } from "@repo/db/schemas/models/fees";
+// import { AcademicYear } from "@academic/db/schemas/models/academics";
+// import { Class } from "@academic/db/schemas/models/academics";
+// import { Course } from "@academic/db/schemas/models/course-design";
+// import { Shift } from "@academic/db/schemas/models/academics";
+// // import { FeesComponent } from "@academic/db/schemas/models/fees";
+// // import { FeesSlabMapping } from "@academic/db/schemas/models/fees";
 // // import { FeesStructure } from "@/features/fees/models/fees-structure.model.js";
-// // import { Instalment } from "@repo/db/schemas/models/fees";
+// // import { Instalment } from "@academic/db/schemas/models/fees";
 
 // export interface FeesStructureDto
 //   extends Omit<

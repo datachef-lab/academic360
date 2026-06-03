@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { createCertificateMasterSchema } from "@repo/db/schemas";
+import { createCertificateMasterSchema } from "@academic/db/schemas";
 import { ApiResponse, handleError } from "@/utils/index.js";
 import * as certificateMasterService from "../services/certificate-master.service.js";
 

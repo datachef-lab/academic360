@@ -3,17 +3,17 @@ import {
   notificationQueueModel,
   notificationModel,
   notificationContentModel,
-} from "@repo/db/schemas/models/notifications";
+} from "@academic/db/schemas/models/notifications";
 import { and, eq, inArray } from "drizzle-orm";
 import { sendWhatsAppMessage } from "@/providers/interakt.js";
 import type {
   NotificationEventDto,
   TemplateData,
-} from "@repo/db/dtos/notifications";
+} from "@academic/db/dtos/notifications";
 import {
   notificationMasterModel,
   notificationMasterMetaModel,
-} from "@repo/db/schemas/models/notifications";
+} from "@academic/db/schemas/models/notifications";
 import { db } from "@/db";
 
 const POLL_MS = Number(process.env.WHATSAPP_POLL_MS ?? 3000);
@@ -69,7 +69,7 @@ async function processBatch() {
           .from(notificationModel)
           .where(eq(notificationModel.id, row.notificationId))
           .limit(1);
-        const { userModel } = await import("@repo/db/schemas/models/user");
+        const { userModel } = await import("@academic/db/schemas/models/user");
         const [user] = await db
           .select()
           .from(userModel)

@@ -20,8 +20,8 @@ import type { PromotionBuilderRulePayload } from "@/services/promotion-logic.api
 import { getAffiliations } from "@/services/course-design.api";
 import { fetchAllClasses } from "@/services/classes.api";
 import type { ClassRow } from "@/services/classes.api";
-import type { PromotionBuilderDto, PromotionClauseDto } from "@repo/db";
-import type { Affiliation, ClassT } from "@repo/db/schemas";
+import type { PromotionBuilderDto, PromotionClauseDto } from "@academic/db";
+import type { Affiliation, ClassT } from "@academic/db/schemas";
 import {
   ArrowRight,
   Check,
@@ -617,12 +617,12 @@ function BuilderRuleCard({
       const rules: PromotionBuilderRulePayload[] = isAuto
         ? []
         : draftRules
-            .filter((r) => r.clauseId != null)
-            .map((r) => ({
-              promotionClauseId: r.clauseId!,
-              operator: r.operator,
-              classIds: r.classIds,
-            }));
+          .filter((r) => r.clauseId != null)
+          .map((r) => ({
+            promotionClauseId: r.clauseId!,
+            operator: r.operator,
+            classIds: r.classIds,
+          }));
 
       await updatePromotionBuilder(builder.id, {
         logic: draftLogic,
@@ -740,21 +740,21 @@ function BuilderRuleCard({
                             fontFamily: "'Sora', sans-serif",
                             ...(c.variant === "odd"
                               ? {
-                                  background: ui.amberBg,
-                                  borderColor: ui.amberBorder,
-                                  color: ui.amber,
-                                }
+                                background: ui.amberBg,
+                                borderColor: ui.amberBorder,
+                                color: ui.amber,
+                              }
                               : c.variant === "even"
                                 ? {
-                                    background: ui.tealBg,
-                                    borderColor: ui.tealBorder,
-                                    color: ui.teal,
-                                  }
+                                  background: ui.tealBg,
+                                  borderColor: ui.tealBorder,
+                                  color: ui.teal,
+                                }
                                 : {
-                                    background: ui.roseBg,
-                                    borderColor: ui.roseBorder,
-                                    color: ui.rose,
-                                  }),
+                                  background: ui.roseBg,
+                                  borderColor: ui.roseBorder,
+                                  color: ui.rose,
+                                }),
                           }}
                         >
                           <span
@@ -858,17 +858,17 @@ function BuilderRuleCard({
                 style={
                   isAuto
                     ? {
-                        borderColor: ui.green,
-                        background: ui.greenBg,
-                        color: ui.green,
-                        fontFamily: "'Sora', sans-serif",
-                      }
+                      borderColor: ui.green,
+                      background: ui.greenBg,
+                      color: ui.green,
+                      fontFamily: "'Sora', sans-serif",
+                    }
                     : {
-                        borderColor: ui.greenBorder,
-                        background: "transparent",
-                        color: ui.text2,
-                        fontFamily: "'Sora', sans-serif",
-                      }
+                      borderColor: ui.greenBorder,
+                      background: "transparent",
+                      color: ui.text2,
+                      fontFamily: "'Sora', sans-serif",
+                    }
                 }
               >
                 <span
@@ -892,17 +892,17 @@ function BuilderRuleCard({
                 style={
                   !isAuto
                     ? {
-                        borderColor: ui.violet,
-                        background: ui.violetBg,
-                        color: ui.violet,
-                        fontFamily: "'Sora', sans-serif",
-                      }
+                      borderColor: ui.violet,
+                      background: ui.violetBg,
+                      color: ui.violet,
+                      fontFamily: "'Sora', sans-serif",
+                    }
                     : {
-                        borderColor: ui.violetBorder,
-                        background: "transparent",
-                        color: ui.text2,
-                        fontFamily: "'Sora', sans-serif",
-                      }
+                      borderColor: ui.violetBorder,
+                      background: "transparent",
+                      color: ui.text2,
+                      fontFamily: "'Sora', sans-serif",
+                    }
                 }
               >
                 <span

@@ -46,7 +46,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFeeCategories, useFeeGroups, useFeesSlabs } from "@/hooks/useFees";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
-import { FeeGroupPromotionMappingDto, type FeeGroupDto } from "@repo/db/dtos/fees";
+import { FeeGroupPromotionMappingDto, type FeeGroupDto } from "@academic/db/dtos/fees";
 import { toast } from "sonner";
 import { NewFeeGroupPromotionMapping, BulkUploadResult, BulkUploadRow } from "@/services/fees-api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -59,7 +59,7 @@ import {
   useBulkUploadFeeGroupPromotionMappings,
 } from "@/hooks/useFeeGroupPromotionMappings";
 import { useError } from "@/hooks/useError";
-import { PromotionDto } from "@repo/db/dtos/user";
+import { PromotionDto } from "@academic/db/dtos/user";
 import { getAcademicYears, getProgramCourses } from "@/services/course-design.api";
 import { getAllReligions } from "@/services/religion.service";
 import { getAllCategories } from "@/services/categories.service";
@@ -297,12 +297,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             return old.map((m) =>
               m.id === data.mappingId
                 ? {
-                    ...m,
-                    paymentStatus: data.paymentStatus ?? m.paymentStatus,
-                    amountToPay: data.amountToPay ?? m.amountToPay,
-                    totalPayableAmount: data.totalPayableAmount ?? m.totalPayableAmount,
-                    saveBlockedForEdit: data.saveBlockedForEdit ?? m.saveBlockedForEdit,
-                  }
+                  ...m,
+                  paymentStatus: data.paymentStatus ?? m.paymentStatus,
+                  amountToPay: data.amountToPay ?? m.amountToPay,
+                  totalPayableAmount: data.totalPayableAmount ?? m.totalPayableAmount,
+                  saveBlockedForEdit: data.saveBlockedForEdit ?? m.saveBlockedForEdit,
+                }
                 : m,
             );
           },
@@ -607,13 +607,13 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       if (da !== db) return da - db;
       const na = String(
         (a.promotion as { studentName?: string; name?: string } | undefined)?.studentName ||
-          (a.promotion as { name?: string } | undefined)?.name ||
-          "",
+        (a.promotion as { name?: string } | undefined)?.name ||
+        "",
       ).toLowerCase();
       const nb = String(
         (b.promotion as { studentName?: string; name?: string } | undefined)?.studentName ||
-          (b.promotion as { name?: string } | undefined)?.name ||
-          "",
+        (b.promotion as { name?: string } | undefined)?.name ||
+        "",
       ).toLowerCase();
       const c = na.localeCompare(nb);
       if (c !== 0) return c;
@@ -1167,19 +1167,19 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       feeGroups && feeGroups.length > 0
         ? feeGroups
         : (() => {
-            const seen = new Set<number>();
-            const out: FeeGroupDto[] = [];
-            for (const m of mappings) {
-              if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
-                seen.add(m.feeGroup.id);
-                out.push(m.feeGroup);
-              }
+          const seen = new Set<number>();
+          const out: FeeGroupDto[] = [];
+          for (const m of mappings) {
+            if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
+              seen.add(m.feeGroup.id);
+              out.push(m.feeGroup);
             }
-            if (editingItem?.feeGroup?.id && !seen.has(editingItem.feeGroup.id)) {
-              out.unshift(editingItem.feeGroup);
-            }
-            return out;
-          })();
+          }
+          if (editingItem?.feeGroup?.id && !seen.has(editingItem.feeGroup.id)) {
+            out.unshift(editingItem.feeGroup);
+          }
+          return out;
+        })();
 
     const allowedIds = new Set(
       Object.keys(feeGroupTotalsById)
@@ -1661,7 +1661,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                           </TableCell>
                           <TableCell className="min-w-0 align-top">
                             {mapping.feeGroup?.feeCategory?.name &&
-                            mapping.feeGroup?.feeSlab?.name ? (
+                              mapping.feeGroup?.feeSlab?.name ? (
                               <div className="flex min-w-0 flex-wrap content-start gap-1">
                                 <Badge
                                   variant="outline"
@@ -2241,20 +2241,20 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   <div className="rounded-md border border-input bg-muted/40 px-3 py-2.5 text-sm">
                     {editingItem?.feeGroup
                       ? (() => {
-                          const fg = editingItem.feeGroup;
-                          const amt = feeGroupTotalsById[fg.id as number];
-                          return (
-                            <span className="font-medium text-foreground">
-                              {fg.feeSlab?.name ?? "—"}
-                              <span className="text-muted-foreground"> | </span>₹
-                              {Number(amt ?? 0).toLocaleString("en-IN")}
-                              <span className="text-muted-foreground">
-                                {" "}
-                                ({fg.feeCategory?.name ?? "—"})
-                              </span>
+                        const fg = editingItem.feeGroup;
+                        const amt = feeGroupTotalsById[fg.id as number];
+                        return (
+                          <span className="font-medium text-foreground">
+                            {fg.feeSlab?.name ?? "—"}
+                            <span className="text-muted-foreground"> | </span>₹
+                            {Number(amt ?? 0).toLocaleString("en-IN")}
+                            <span className="text-muted-foreground">
+                              {" "}
+                              ({fg.feeCategory?.name ?? "—"})
                             </span>
-                          );
-                        })()
+                          </span>
+                        );
+                      })()
                       : "—"}
                   </div>
                 </div>

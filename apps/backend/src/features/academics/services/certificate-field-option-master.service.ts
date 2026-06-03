@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import {
   certificateFieldOptionMasterModel,
   createCertificateFieldOptionMasterSchema,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { asc, eq } from "drizzle-orm";
 
 export type CertificateFieldOptionRow =

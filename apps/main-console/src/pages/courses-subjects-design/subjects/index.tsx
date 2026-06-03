@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { Button } from "@/components/ui/button";
-import { Subject } from "@repo/db/schemas";
+import { Subject } from "@academic/db/schemas";
 import {
   getAllSubjects,
   createSubject,

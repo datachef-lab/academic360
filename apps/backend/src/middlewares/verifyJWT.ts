@@ -3,7 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "@/utils/verifyToken.js";
 import { db } from "@/db/index.js";
-import { userModel } from "@repo/db/schemas/models/user";
+import { userModel } from "@academic/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.js";
 import { createLogger } from "@/config/logger";

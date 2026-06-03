@@ -1,5 +1,5 @@
 import fetch from "node-fetch";
-import type { NotificationDto } from "@repo/db/dtos/notifications";
+import type { NotificationDto } from "@academic/db/dtos/notifications";
 
 export async function enqueueNotification(dto: NotificationDto) {
   console.log("🚨 [notif-client] enqueueNotification function called!");

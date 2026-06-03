@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { ProfileInfo } from "@repo/db/dtos/user";
+import type { ProfileInfo } from "@academic/db/dtos/user";
 import { useAuth } from "./use-auth";
 
 import { axiosInstance } from "@/lib/utils";
@@ -21,12 +21,16 @@ export function useProfile() {
         setLoading(true);
         setError(null);
 
-        const response = await axiosInstance.get(`/api/users/${user.id}/profile`);
+        const response = await axiosInstance.get(
+          `/api/users/${user.id}/profile`,
+        );
 
         const data = await response.data;
         setProfileInfo(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch profile");
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch profile",
+        );
         console.error("Profile fetch error:", err);
       } finally {
         setLoading(false);
@@ -52,7 +56,9 @@ export function useProfile() {
           setProfileInfo(data);
         })
         .catch((err) => {
-          setError(err instanceof Error ? err.message : "Failed to fetch profile");
+          setError(
+            err instanceof Error ? err.message : "Failed to fetch profile",
+          );
           console.error("Profile fetch error:", err);
         })
         .finally(() => {

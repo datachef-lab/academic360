@@ -2,7 +2,7 @@ import {
   paymentModeEnum,
   paymentStatusEnum,
   studentFeesMappingEnum,
-} from "@repo/db/schemas/enums";
+} from "@academic/db/schemas/enums";
 
 export type StudentFeesMapping = {
   id: number;

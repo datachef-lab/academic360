@@ -11,7 +11,7 @@ import {
   FeeGroupPromotionFilter,
   bulkUploadFeeGroupPromotionMappings,
 } from "../services/fee-group-promotion-mapping.service.js";
-import { createFeeGroupPromotionMappingSchema } from "@repo/db/schemas";
+import { createFeeGroupPromotionMappingSchema } from "@academic/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 

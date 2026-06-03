@@ -60,7 +60,7 @@ import type {
   AccessGroupDto,
   AccessGroupCreateInput,
   AccessGroupModuleInput,
-} from "@repo/db/dtos/administration";
+} from "@academic/db/dtos/administration";
 import {
   createAccessGroup,
   deleteAccessGroup,
@@ -71,13 +71,13 @@ import { getAllDesignations } from "../services/designation.service";
 import { getAllUserTypes } from "../services/user-type.service";
 import { getAllUserStatusMasters } from "../services/user-status.service";
 import { getAllAppModules } from "../services/app-module.service";
-import type { DesignationT } from "@repo/db/schemas";
-import type { UserTypeT } from "@repo/db/schemas/models/administration";
+import type { DesignationT } from "@academic/db/schemas";
+import type { UserTypeT } from "@academic/db/schemas/models/administration";
 import type { UserStatusMasterDto } from "../services/user-status.service";
-import type { AppModuleDto } from "@repo/db/dtos/administration";
-import type { ProgramCourseDto } from "@repo/db/dtos/course-design";
+import type { AppModuleDto } from "@academic/db/dtos/administration";
+import type { ProgramCourseDto } from "@academic/db/dtos/course-design";
 import type { Class } from "@/types/academics/class";
-import type { Affiliation, RegulationType } from "@repo/db";
+import type { Affiliation, RegulationType } from "@academic/db";
 
 const APPLICATION_OPTIONS = [
   "MAIN_CONSOLE",
@@ -169,10 +169,10 @@ function ModuleConfigDialog({
   const toProgramCourseSelections = (
     arr:
       | {
-          programCourseId: number;
-          isAllowed?: boolean;
-          classes?: { classId: number; isAllowed?: boolean }[];
-        }[]
+        programCourseId: number;
+        isAllowed?: boolean;
+        classes?: { classId: number; isAllowed?: boolean }[];
+      }[]
       | undefined,
   ) =>
     (arr ?? []).map((x) => ({
@@ -188,8 +188,8 @@ function ModuleConfigDialog({
     () =>
       selectedApplicationTypes.length > 0
         ? appModules.filter(
-            (m) => m.application && selectedApplicationTypes.includes(m.application),
-          )
+          (m) => m.application && selectedApplicationTypes.includes(m.application),
+        )
         : appModules,
     [appModules, selectedApplicationTypes],
   );
@@ -262,10 +262,10 @@ function ModuleConfigDialog({
       programCourses:
         type === "CONDITIONAL"
           ? programCourseSelections.map((pc) => ({
-              programCourseId: pc.programCourseId,
-              isAllowed: pc.isAllowed,
-              classes: pc.classes.length > 0 ? pc.classes : undefined,
-            }))
+            programCourseId: pc.programCourseId,
+            isAllowed: pc.isAllowed,
+            classes: pc.classes.length > 0 ? pc.classes : undefined,
+          }))
           : undefined,
     });
     onOpenChange(false);
@@ -845,30 +845,30 @@ function AccessGroupForm({
       features:
         (values.features?.length ?? 0) > 0
           ? (values.features ?? []).map(
-              (f): AccessGroupModuleInput => ({
-                appModuleId: f.appModuleId,
-                type: f.type,
-                isAllowed: f.isAllowed,
-                permissions:
-                  (f.permissions?.length ?? 0) > 0
-                    ? (f.permissions ?? []).map((p) => ({ type: p }))
-                    : undefined,
-                programCourses:
-                  (f.programCourses?.length ?? 0) > 0
-                    ? (f.programCourses ?? []).map((pc) => ({
-                        programCourseId: pc.programCourseId,
-                        isAllowed: pc.isAllowed,
-                        classes:
-                          (pc.classes?.length ?? 0) > 0
-                            ? (pc.classes ?? []).map((c) => ({
-                                classId: c.classId,
-                                isAllowed: c.isAllowed,
-                              }))
-                            : undefined,
-                      }))
-                    : undefined,
-              }),
-            )
+            (f): AccessGroupModuleInput => ({
+              appModuleId: f.appModuleId,
+              type: f.type,
+              isAllowed: f.isAllowed,
+              permissions:
+                (f.permissions?.length ?? 0) > 0
+                  ? (f.permissions ?? []).map((p) => ({ type: p }))
+                  : undefined,
+              programCourses:
+                (f.programCourses?.length ?? 0) > 0
+                  ? (f.programCourses ?? []).map((pc) => ({
+                    programCourseId: pc.programCourseId,
+                    isAllowed: pc.isAllowed,
+                    classes:
+                      (pc.classes?.length ?? 0) > 0
+                        ? (pc.classes ?? []).map((c) => ({
+                          classId: c.classId,
+                          isAllowed: c.isAllowed,
+                        }))
+                        : undefined,
+                  }))
+                  : undefined,
+            }),
+          )
           : undefined,
     };
     await onSubmit(payload);
@@ -1310,8 +1310,8 @@ function AccessGroupForm({
             usedModuleIds={
               featureDialogIndex != null
                 ? usedModuleIds.filter(
-                    (id) => id !== watch(`features.${featureDialogIndex}`)?.appModuleId,
-                  )
+                  (id) => id !== watch(`features.${featureDialogIndex}`)?.appModuleId,
+                )
                 : usedModuleIds
             }
             selectedApplicationTypes={(watch("applications") ?? []).map((a) => a.type)}

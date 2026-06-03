@@ -1,4 +1,4 @@
-import type { ProfileInfo } from "@repo/db/dtos/user";
+import type { ProfileInfo } from "@academic/db/dtos/user";
 import { useState, useEffect, useCallback } from "react";
 import axiosInstance from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";

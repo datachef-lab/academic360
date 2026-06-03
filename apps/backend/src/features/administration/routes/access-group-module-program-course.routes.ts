@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createAccessGroupModuleProgramCourseSchema } from "@repo/db/schemas/models/administration";
+import { createAccessGroupModuleProgramCourseSchema } from "@academic/db/schemas/models/administration";
 import {
   createAccessGroupModuleProgramCourse,
   deleteAccessGroupModuleProgramCourse,

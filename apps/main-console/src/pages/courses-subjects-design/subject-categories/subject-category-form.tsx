@@ -12,7 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { SubjectType } from "@repo/db/index";
+import type { SubjectType } from "@academic/db/index";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({

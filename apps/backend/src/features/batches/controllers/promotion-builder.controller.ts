@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { createPromotionBuilderSchema } from "@repo/db/schemas";
+import { createPromotionBuilderSchema } from "@academic/db/schemas";
 import { ApiResponse, handleError } from "@/utils/index.js";
 import * as promotionBuilderService from "../services/promotion-builder.service.js";
 import { z } from "zod";

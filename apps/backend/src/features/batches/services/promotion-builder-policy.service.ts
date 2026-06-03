@@ -6,7 +6,7 @@ import {
   promotionBuilderModel,
   promotionClauseClassMappingModel,
   promotionClauseModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, eq } from "drizzle-orm";
 
 import { primaryPromotionClause } from "../default-promotion-clause-data.js";

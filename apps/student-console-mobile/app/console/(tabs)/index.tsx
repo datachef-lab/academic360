@@ -1,6 +1,6 @@
 import { useAuth } from "@/providers/auth-provider";
 import { useTheme } from "@/hooks/use-theme";
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 import {
   Calendar,
   CalendarCheck,

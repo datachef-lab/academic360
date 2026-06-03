@@ -1,0 +1,1 @@
+ALTER TABLE "subject_selection_meta" ADD COLUMN "is_active" boolean DEFAULT true;

@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { AnnualIncome, annualIncomeModel } from "@repo/db/schemas";
+import { AnnualIncome, annualIncomeModel } from "@academic/db/schemas";
 
 import { eq } from "drizzle-orm";
 

@@ -8,7 +8,7 @@ import {
   sessionModel,
   studentModel,
   userModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import XLSX from "xlsx";

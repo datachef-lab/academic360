@@ -1,12 +1,15 @@
 import { db } from "@/db/index.js";
-import { boardModel } from "@repo/db/schemas/models/resources";
-import { Board, BoardT } from "@repo/db/schemas/models/resources/board.model";
+import { boardModel } from "@academic/db/schemas/models/resources";
+import {
+  Board,
+  BoardT,
+} from "@academic/db/schemas/models/resources/board.model";
 import { and, countDistinct, eq, ilike, ne, sql } from "drizzle-orm";
-import { degreeModel } from "@repo/db/schemas/models/resources";
-// import { addressModel } from "@repo/db/schemas/models/user";
+import { degreeModel } from "@academic/db/schemas/models/resources";
+// import { addressModel } from "@academic/db/schemas/models/user";
 import XLSX from "xlsx";
 import fs from "fs";
-import { BoardDto } from "@repo/db/dtos";
+import { BoardDto } from "@academic/db/dtos";
 
 // Bulk upload interface
 export interface BulkUploadResult {

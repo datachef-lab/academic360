@@ -64,9 +64,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { RoomDto, ExamDto } from "@repo/db/index";
+import type { RoomDto, ExamDto } from "@academic/db/index";
 import { getPapersPaginated } from "@/services/course-design.api";
-import type { PaperDto } from "@repo/db/index";
+import type { PaperDto } from "@academic/db/index";
 
 interface SelectedRoom extends RoomDto {
   capacity: number;
@@ -630,21 +630,21 @@ export default function AllotExamPage() {
       // If room selection is disabled, use empty roomAssignments
       const roomAssignments = enableRoomSelection
         ? selectedRooms.map((room) => {
-            const floor = floors.find((f) => f.id === room.floor.id);
-            const maxStudentsPerBench =
-              room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-            const numberOfBenches = room.numberOfBenches || 0;
-            const capacity = room.capacity || numberOfBenches * maxStudentsPerBench;
-            return {
-              roomId: room.id!,
-              floorId: room.floor.id,
-              floorName: floor?.name || null,
-              roomName: room.name || `Room ${room.id}`,
-              maxStudentsPerBench,
-              numberOfBenches,
-              capacity,
-            };
-          })
+          const floor = floors.find((f) => f.id === room.floor.id);
+          const maxStudentsPerBench =
+            room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+          const numberOfBenches = room.numberOfBenches || 0;
+          const capacity = room.capacity || numberOfBenches * maxStudentsPerBench;
+          return {
+            roomId: room.id!,
+            floorId: room.floor.id,
+            floorName: floor?.name || null,
+            roomName: room.name || `Room ${room.id}`,
+            maxStudentsPerBench,
+            numberOfBenches,
+            capacity,
+          };
+        })
         : [];
 
       const response = await getStudentsForExam(
@@ -761,15 +761,15 @@ export default function AllotExamPage() {
 
       const locations = enableRoomSelection
         ? selectedRooms.map((room) => ({
-            roomId: room.id!,
-            studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
-            capacity: room.capacity,
-            room: {
-              id: room.id!,
-              name: room.name,
-              floor: room.floor,
-            },
-          }))
+          roomId: room.id!,
+          studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
+          capacity: room.capacity,
+          room: {
+            id: room.id!,
+            name: room.name,
+            floor: room.floor,
+          },
+        }))
         : [];
 
       const params: AllotExamParams = {
@@ -901,8 +901,8 @@ export default function AllotExamPage() {
   // Exams available for allotment, filtered by selected exam group
   const examsForSelectedGroup = selectedExamGroupId
     ? (examGroupsData?.find((g) => g.id === selectedExamGroupId)?.exams || []).filter(
-        isExamAvailableForAllotment,
-      )
+      isExamAvailableForAllotment,
+    )
     : [];
 
   return (
@@ -1901,22 +1901,20 @@ export default function AllotExamPage() {
                                     return (
                                       <td
                                         key={shiftId}
-                                        className={`border border-blue-200 px-3 py-2 text-sm text-center ${
-                                          shiftHasMismatch
+                                        className={`border border-blue-200 px-3 py-2 text-sm text-center ${shiftHasMismatch
                                             ? "bg-yellow-100 text-orange-800 font-semibold"
                                             : "text-gray-700 font-medium"
-                                        }`}
+                                          }`}
                                       >
                                         {shiftData ? shiftData.count : "-"}
                                       </td>
                                     );
                                   })}
                                   <td
-                                    className={`border border-blue-200 px-3 py-2 text-sm font-bold text-center ${
-                                      hasMismatch
+                                    className={`border border-blue-200 px-3 py-2 text-sm font-bold text-center ${hasMismatch
                                         ? "bg-yellow-100 text-orange-800"
                                         : "text-blue-900"
-                                    }`}
+                                      }`}
                                   >
                                     {rowTotal}
                                   </td>
@@ -1924,11 +1922,10 @@ export default function AllotExamPage() {
                                     {rowAllottedTotal}
                                   </td>
                                   <td
-                                    className={`border border-blue-200 px-3 py-2 text-sm font-bold text-center ${
-                                      insufficientSeats > 0
+                                    className={`border border-blue-200 px-3 py-2 text-sm font-bold text-center ${insufficientSeats > 0
                                         ? "bg-red-100 text-red-800"
                                         : "text-gray-600"
-                                    }`}
+                                      }`}
                                   >
                                     {insufficientSeats > 0 ? insufficientSeats : "-"}
                                   </td>

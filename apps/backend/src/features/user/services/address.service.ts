@@ -3,20 +3,20 @@ import {
   Address,
   addressModel,
   createAddressSchema,
-} from "@repo/db/schemas/models/user";
-// Use shared resource models from @repo/db to ensure column names match DB schema
-import { countryModel } from "@repo/db/schemas/models/resources/country.model.js";
+} from "@academic/db/schemas/models/user";
+// Use shared resource models from @academic/db to ensure column names match DB schema
+import { countryModel } from "@academic/db/schemas/models/resources/country.model.js";
 import { eq } from "drizzle-orm";
-import { stateModel } from "@repo/db/schemas/models/resources/state.model.js";
-import { cityModel } from "@repo/db/schemas/models/resources/city.model.js";
+import { stateModel } from "@academic/db/schemas/models/resources/state.model.js";
+import { cityModel } from "@academic/db/schemas/models/resources/city.model.js";
 import { removePersonByAddressId } from "./person.service.js";
 import { removePersonalDetailsByAddressId } from "./personalDetails.service.js";
 import { z } from "zod";
-import { AddressDto } from "@repo/db/index.js";
-import { districtModel } from "@repo/db/schemas/models/resources/district.model.js";
-import { districtT } from "@repo/db/schemas/models/resources/district.model.js";
-import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model.js";
-import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model.js";
+import { AddressDto } from "@academic/db/index.js";
+import { districtModel } from "@academic/db/schemas/models/resources/district.model.js";
+import { districtT } from "@academic/db/schemas/models/resources/district.model.js";
+import { postOfficeModel } from "@academic/db/schemas/models/user/post-office.model.js";
+import { policeStationModel } from "@academic/db/schemas/models/user/police-station.model.js";
 
 // Validate input using Zod schema for creation
 function validateAddressInput(data: Omit<Address, "id">) {

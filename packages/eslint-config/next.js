@@ -20,7 +20,6 @@ export const nextJsConfig = [
       globals: {
         ...globals.browser,
         ...globals.serviceworker,
-        ...globals.node,
       },
     },
   },

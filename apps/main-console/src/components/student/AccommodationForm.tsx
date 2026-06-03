@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { AccommodationDto, AddressDto } from "@repo/db/dtos/user";
+import type { AccommodationDto, AddressDto } from "@academic/db/dtos/user";
 import { PlaceOfStay } from "@/types/enums";
 import {
   getAccommodationById,

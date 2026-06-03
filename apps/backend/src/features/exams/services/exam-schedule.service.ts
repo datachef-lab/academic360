@@ -10,8 +10,8 @@ import { getPaperComponentById } from "@/features/course-design/services/paper-c
 import { findExamComponentById } from "@/features/course-design/services/exam-component.service";
 import * as shiftService from "@/features/academics/services/shift.service";
 import * as roomServices from "./room.service";
-import { studentModel, userModel } from "@repo/db/schemas/models/user";
-import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
+import { studentModel, userModel } from "@academic/db/schemas/models/user";
+import { cuRegistrationCorrectionRequestModel } from "@academic/db/schemas/models/admissions/cu-registration-correction-request.model";
 import {
   and,
   asc,
@@ -34,7 +34,7 @@ import {
   ExamSubjectDto,
   ExamSubjectTypeDto,
   RoomDto,
-} from "@repo/db/dtos/exams";
+} from "@academic/db/dtos/exams";
 import {
   academicYearModel,
   affiliationModel,
@@ -73,7 +73,7 @@ import {
   streamModel,
   subjectModel,
   subjectTypeModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { CLIENT_RENEG_LIMIT } from "tls";
 import { QRCodeService } from "@/services/qr-code.service";
 import path from "path";
@@ -83,19 +83,19 @@ import { findClassById } from "@/features/academics/services/class.service";
 import { getShiftById } from "@/features/academics/controllers/shift.controller";
 import { PaginatedResponse } from "@/utils/PaginatedResponse";
 import { socketService } from "@/services/socketService";
-import { PaperDto } from "@repo/db/dtos";
+import { PaperDto } from "@academic/db/dtos";
 import { io } from "@/app";
 import { enqueueNotification } from "@/services/notificationClient";
 import pLimit from "p-limit";
 import {
   OldSubject,
   OldSubjectType,
-} from "@repo/db/legacy-system-types/admissions";
+} from "@academic/db/legacy-system-types/admissions";
 import {
   OldClass,
   OldCourse,
   OldPaperList,
-} from "@repo/db/legacy-system-types/course-design";
+} from "@academic/db/legacy-system-types/course-design";
 
 export interface CountStudentsByPapersParams {
   classId: number;

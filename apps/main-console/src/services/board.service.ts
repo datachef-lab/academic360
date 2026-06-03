@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/api";
-import type { City, State, Country } from "@repo/db/schemas";
+import type { City, State, Country } from "@academic/db/schemas";
 
 export interface BoardDto {
   id: number;
@@ -51,7 +51,10 @@ export interface PaginatedResponse<T> {
 }
 
 // Simple in-memory cache for boards
-const boardsCache = new Map<string, { data: PaginatedResponse<BoardDto>; timestamp: number }>();
+const boardsCache = new Map<
+  string,
+  { data: PaginatedResponse<BoardDto>; timestamp: number }
+>();
 const CACHE_DURATION = 30000; // 30 seconds cache
 
 export const boardService = {
@@ -95,7 +98,12 @@ export const boardService = {
         timeout: 30000, // 30 second timeout for this specific request
       });
 
-      const result = response.data.payload || { data: [], total: 0, page: 1, pageSize: 10 };
+      const result = response.data.payload || {
+        data: [],
+        total: 0,
+        page: 1,
+        pageSize: 10,
+      };
 
       // Cache the result
       boardsCache.set(cacheKey, { data: result, timestamp: Date.now() });
@@ -105,10 +113,21 @@ export const boardService = {
       console.error("Error fetching boards:", error);
 
       // Retry logic for timeout errors
-      if ((error as { code: string }).code === "ECONNABORTED" && retryCount < 2) {
+      if (
+        (error as { code: string }).code === "ECONNABORTED" &&
+        retryCount < 2
+      ) {
         console.log(`Retrying boards request (attempt ${retryCount + 1})`);
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
-        return this.getAllBoards(page, pageSize, search, degreeId, retryCount + 1);
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * (retryCount + 1)),
+        ); // Exponential backoff
+        return this.getAllBoards(
+          page,
+          pageSize,
+          search,
+          degreeId,
+          retryCount + 1,
+        );
       }
 
       // If all retries failed, return empty data instead of throwing

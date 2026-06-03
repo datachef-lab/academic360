@@ -4,9 +4,9 @@ import {
   AdmissionAcademicInfo,
   studentAcademicSubjectModel,
   boardSubjectModel,
-} from "@repo/db/schemas/models/admissions";
-import { boardModel } from "@repo/db/schemas";
-import { AdmissionAcademicInfoDto } from "@repo/db/dtos/admissions";
+} from "@academic/db/schemas/models/admissions";
+import { boardModel } from "@academic/db/schemas";
+import { AdmissionAcademicInfoDto } from "@academic/db/dtos/admissions";
 type AcademicInfoInsert = typeof admissionAcademicInfoModel.$inferInsert;
 import { and, eq, ilike } from "drizzle-orm";
 // import { createSubject, getAllSubjects, getSubjectById } from "./academic-subject.service.js";

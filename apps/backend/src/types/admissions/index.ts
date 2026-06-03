@@ -10,8 +10,8 @@ import { SportsInfo } from "@/features/admissions/models/sports-info.model.js";
 import { StudentAcademicSubjects } from "@/features/admissions/models/student-academic-subject.model.js";
 import { BoardUniversity } from "@/features/resources/models/boardUniversity.model.js";
 import { Admission } from "@/features/admissions/models/admission.model";
-import { AcademicYear } from "@repo/db/schemas/models/academics";
-import { Payment } from "@repo/db/schemas";
+import { AcademicYear } from "@academic/db/schemas/models/academics";
+import { Payment } from "@academic/db/schemas";
 // import { Admission } from "@/features/user/models/admission.model.js";
 
 export interface AdmissionAcademicInfoDto extends AdmissionAcademicInfo {

@@ -1,4 +1,7 @@
-import type { ProcessControl, NewProcessControl } from "@repo/db/schemas/models/process-control";
+import type {
+  ProcessControl,
+  NewProcessControl,
+} from "@academic/db/schemas/models/process-control";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -31,12 +34,16 @@ export class ProcessControlService {
     };
   }
 
-  static async getProcessControls(filters?: ProcessControlFilters): Promise<ProcessControl[]> {
+  static async getProcessControls(
+    filters?: ProcessControlFilters,
+  ): Promise<ProcessControl[]> {
     const params = new URLSearchParams();
-    if (filters?.academicYearId) params.append("academicYearId", filters.academicYearId.toString());
+    if (filters?.academicYearId)
+      params.append("academicYearId", filters.academicYearId.toString());
     if (filters?.programCourseId)
       params.append("programCourseId", filters.programCourseId.toString());
-    if (filters?.semester) params.append("semester", filters.semester.toString());
+    if (filters?.semester)
+      params.append("semester", filters.semester.toString());
     if (filters?.processType) params.append("processType", filters.processType);
     if (filters?.status) params.append("status", filters.status);
 
@@ -45,7 +52,9 @@ export class ProcessControlService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch process controls: ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch process controls: ${response.statusText}`,
+      );
     }
 
     const data = await response.json();
@@ -58,14 +67,18 @@ export class ProcessControlService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch process control: ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch process control: ${response.statusText}`,
+      );
     }
 
     const data = await response.json();
     return data.payload;
   }
 
-  static async createProcessControl(processControl: NewProcessControl): Promise<ProcessControl> {
+  static async createProcessControl(
+    processControl: NewProcessControl,
+  ): Promise<ProcessControl> {
     const response = await fetch(`${API_BASE}/api/process-controls`, {
       method: "POST",
       headers: this.getAuthHeaders(),
@@ -73,7 +86,9 @@ export class ProcessControlService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to create process control: ${response.statusText}`);
+      throw new Error(
+        `Failed to create process control: ${response.statusText}`,
+      );
     }
 
     const data = await response.json();
@@ -91,7 +106,9 @@ export class ProcessControlService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to update process control: ${response.statusText}`);
+      throw new Error(
+        `Failed to update process control: ${response.statusText}`,
+      );
     }
 
     const data = await response.json();
@@ -105,7 +122,9 @@ export class ProcessControlService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to delete process control: ${response.statusText}`);
+      throw new Error(
+        `Failed to delete process control: ${response.statusText}`,
+      );
     }
   }
 
@@ -126,7 +145,9 @@ export class ProcessControlService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to bulk update process controls: ${response.statusText}`);
+      throw new Error(
+        `Failed to bulk update process controls: ${response.statusText}`,
+      );
     }
 
     const data = await response.json();

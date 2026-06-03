@@ -3,7 +3,7 @@ import {
   transportDetailsModel,
   createTransportDetailsSchema,
   TransportDetails,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 

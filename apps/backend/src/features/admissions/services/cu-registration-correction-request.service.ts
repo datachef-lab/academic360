@@ -2,22 +2,22 @@ import { db, pool } from "@/db/index.js";
 import {
   CuRegistrationCorrectionRequest,
   cuRegistrationCorrectionRequestModel,
-} from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
-import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
-import { studentModel } from "@repo/db/schemas/models/user";
-import { userModel } from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/admissions/cu-registration-correction-request.model.js";
+import { cuRegistrationDocumentUploadModel } from "@academic/db/schemas/models/admissions/cu-registration-document-upload.model.js";
+import { studentModel } from "@academic/db/schemas/models/user";
+import { userModel } from "@academic/db/schemas/models/user";
 import {
   personalDetailsModel,
   addressModel,
   personModel,
   familyModel,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import {
   documentModel,
   sessionModel,
   academicYearModel,
-} from "@repo/db/schemas/models/academics";
-import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
+} from "@academic/db/schemas/models/academics";
+import { promotionModel } from "@academic/db/schemas/models/batches/promotions.model";
 import {
   eq,
   and,
@@ -29,15 +29,15 @@ import {
   isNotNull,
   sql,
 } from "drizzle-orm";
-import { CuRegistrationCorrectionRequestInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
-import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
+import { CuRegistrationCorrectionRequestInsertTypeT } from "@academic/db/schemas/models/admissions/cu-registration-correction-request.model.js";
+import { cuRegistrationDocumentUploadInsertTypeT } from "@academic/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import {
   CuRegistrationCorrectionRequestDto,
   CuRegistrationDocumentUploadDto,
-} from "@repo/db/dtos/admissions/index.js";
+} from "@academic/db/dtos/admissions/index.js";
 import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
-import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
+import { notificationMasterModel } from "@academic/db/schemas/models/notifications";
 import { enqueueNotification } from "@/services/notificationClient.js";
 import { socketService } from "@/services/socketService.js";
 import { getMisTableData } from "@/features/subject-selection/services/student-subject-selection.service.js";
@@ -48,27 +48,27 @@ import {
   religionModel,
   categoryModel,
   languageMediumModel,
-} from "@repo/db/schemas/models/resources";
+} from "@academic/db/schemas/models/resources";
 import {
   countryModel,
   stateModel,
   cityModel,
   districtModel,
-} from "@repo/db/schemas/models/resources";
+} from "@academic/db/schemas/models/resources";
 import {
   programCourseModel,
   regulationTypeModel,
   specializationModel,
   affiliationModel,
-} from "@repo/db/schemas/models/course-design";
-import { classModel } from "@repo/db/schemas/models/academics/class.model";
+} from "@academic/db/schemas/models/course-design";
+import { classModel } from "@academic/db/schemas/models/academics/class.model";
 import type { ReportExportFilters } from "@/utils/report-export-filters.js";
-import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions";
+import { admissionAcademicInfoModel } from "@academic/db/schemas/models/admissions";
 import ExcelJS from "exceljs";
 import { getCuRegPdfPathDynamic } from "./cu-registration-document-path.service.js";
 import { getSignedUrlForFile } from "@/services/s3.service.js";
 import axios from "axios";
-import { UserDto } from "@repo/db/index.js";
+import { UserDto } from "@academic/db/index.js";
 
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
@@ -2758,9 +2758,9 @@ export const sendAdmissionRegistrationNotification = async (
 
     // Get student details with user info, personal details, board, and category (studentId -> student -> user -> personal details -> admission academic info -> board/category/nationality)
     const { personalDetailsModel, boardModel, admissionAcademicInfoModel } =
-      await import("@repo/db/schemas/models");
+      await import("@academic/db/schemas/models");
     const { categoryModel, nationalityModel } =
-      await import("@repo/db/schemas/models/resources");
+      await import("@academic/db/schemas/models/resources");
     const [studentData] = await db
       .select({
         studentId: studentModel.id,

@@ -12,24 +12,24 @@ import {
   designationModel,
   userTypeModel,
   appModuleModel,
-} from "@repo/db/schemas/models/administration";
-import { classModel } from "@repo/db/schemas/models/academics";
+} from "@academic/db/schemas/models/administration";
+import { classModel } from "@academic/db/schemas/models/academics";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 import type {
   AccessGroupDto,
   AccessGroupCreateInput,
   AccessGroupUpdateInput,
-} from "@repo/db/dtos/administration";
+} from "@academic/db/dtos/administration";
 import type {
   AccessGroupApplicationT,
   AccessGroupDesignationT,
   AccessGroupUserTypeT,
   AccessGroupModulePermissionT,
-} from "@repo/db/schemas/models/administration";
+} from "@academic/db/schemas/models/administration";
 import type {
   DesignationT,
   UserTypeT,
-} from "@repo/db/schemas/models/administration";
+} from "@academic/db/schemas/models/administration";
 
 async function modelToDto(
   model: typeof accessGroupModel.$inferSelect | null,

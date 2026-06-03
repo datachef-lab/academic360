@@ -1,9 +1,9 @@
 import { db } from "@/db/index.js";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
+import { boardSubjectNameModel } from "@academic/db/schemas/models/admissions";
 import {
   BoardSubjectName,
   BoardSubjectNameT,
-} from "@repo/db/schemas/models/admissions/board-subject-name.model";
+} from "@academic/db/schemas/models/admissions/board-subject-name.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
 import XLSX from "xlsx";
 import fs from "fs";

@@ -7,7 +7,7 @@ import {
   affiliationModel,
   paperModel,
   programCourseModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { countDistinct, eq, ilike } from "drizzle-orm";
 
 const defaultAffiliation: Affiliation[] = [

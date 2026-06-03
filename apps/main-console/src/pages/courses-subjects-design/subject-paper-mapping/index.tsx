@@ -62,7 +62,7 @@ import type {
   ProgramCourse,
   Course,
   CourseType,
-} from "@repo/db/index";
+} from "@academic/db/index";
 import { Class } from "@/types/academics/class";
 import { AxiosError } from "axios";
 import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
@@ -280,8 +280,8 @@ const SubjectPaperMappingPage = () => {
           Array.isArray(classesRes)
             ? classesRes.filter((cls: Class) => cls.type === "SEMESTER")
             : (classesRes as unknown as { payload: Class[] })?.payload?.filter(
-                (cls: Class) => cls.type === "SEMESTER",
-              ) || [],
+              (cls: Class) => cls.type === "SEMESTER",
+            ) || [],
         );
 
         // Only set filters on initial load, preserve them otherwise

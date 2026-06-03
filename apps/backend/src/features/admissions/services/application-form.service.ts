@@ -7,7 +7,7 @@ import {
   ApplicationFormDto,
   AdmissionGeneralInfoDto,
   AdmissionAdditionalInfoDto,
-} from "@repo/db/dtos/admissions";
+} from "@academic/db/dtos/admissions";
 import {
   EligibilityCriteriaT,
   StudentCategoryT,
@@ -21,7 +21,7 @@ import {
   AnnualIncomeT,
   FamilyT,
   PaymentT,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 import {
   checkExistingEntry,

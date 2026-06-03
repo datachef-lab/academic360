@@ -1,7 +1,7 @@
 import "dotenv/config";
 import type { StringValue } from "ms";
 import jwt from "jsonwebtoken";
-import { User } from "@repo/db/schemas/models/user";
+import { User } from "@academic/db/schemas/models/user";
 
 type PayloadType = {
   id: number;

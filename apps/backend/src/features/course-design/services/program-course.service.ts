@@ -4,18 +4,18 @@ import {
   ProgramCourse,
   NewProgramCourse,
   ProgramCourseT,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import { and, countDistinct, eq, ilike, ne, inArray } from "drizzle-orm";
 import XLSX from "xlsx";
 import fs from "fs";
-import { streamModel } from "@repo/db/schemas/models/course-design";
-import { courseModel } from "@repo/db/schemas/models/course-design";
-import { courseTypeModel } from "@repo/db/schemas/models/course-design";
-import { courseLevelModel } from "@repo/db/schemas/models/course-design";
-import { affiliationModel } from "@repo/db/schemas/models/course-design";
-import { regulationTypeModel } from "@repo/db/schemas/models/course-design";
-import { paperModel } from "@repo/db/schemas/models/course-design";
-import { ProgramCourseDto } from "@repo/db/dtos";
+import { streamModel } from "@academic/db/schemas/models/course-design";
+import { courseModel } from "@academic/db/schemas/models/course-design";
+import { courseTypeModel } from "@academic/db/schemas/models/course-design";
+import { courseLevelModel } from "@academic/db/schemas/models/course-design";
+import { affiliationModel } from "@academic/db/schemas/models/course-design";
+import { regulationTypeModel } from "@academic/db/schemas/models/course-design";
+import { paperModel } from "@academic/db/schemas/models/course-design";
+import { ProgramCourseDto } from "@academic/db/dtos";
 
 import * as courseService from "./course.service.js";
 import * as courseTypeService from "./course-type.service.js";

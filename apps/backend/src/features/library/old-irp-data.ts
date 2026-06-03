@@ -20,7 +20,7 @@ import {
   OldShelf,
   OldStatus,
   OldSubjectGroup,
-} from "@repo/db/dtos/library";
+} from "@academic/db/dtos/library";
 import {
   academicYearModel,
   addressModel,
@@ -29,7 +29,7 @@ import {
   studentModel,
   subjectGroupingMainModel,
   userModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import {
   bindingModel,
   bookCirculationModel,
@@ -52,7 +52,7 @@ import {
   seriesModel,
   shelfModel,
   statusModel,
-} from "@repo/db/schemas/models/library";
+} from "@academic/db/schemas/models/library";
 import { and, eq, ilike } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import fs from "fs";
@@ -61,8 +61,8 @@ import {
   bitToBool,
   upsertUser,
 } from "../user/services/refactor-old-migration.service";
-import { OldStaff } from "@repo/db/legacy-system-types/users";
-import { bookReissueModel } from "@repo/db/schemas/models/library/book-reissue.model";
+import { OldStaff } from "@academic/db/legacy-system-types/users";
+import { bookReissueModel } from "@academic/db/schemas/models/library/book-reissue.model";
 
 const MIGRATION_LOG_SHEET = "migration_log";
 

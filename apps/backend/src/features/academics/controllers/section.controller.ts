@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "@/db/index.js";
-import { sectionModel } from "@repo/db/schemas/models/academics";
+import { sectionModel } from "@academic/db/schemas/models/academics";
 
 export const getAllSectionsController = async (
   req: Request,

@@ -1,0 +1,1 @@
+ALTER TABLE "cu_registration_correction_requests" ADD CONSTRAINT "cu_registration_correction_requests_cu_registration_application_number_unique" UNIQUE("cu_registration_application_number");

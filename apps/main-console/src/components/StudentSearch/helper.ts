@@ -44,7 +44,7 @@
 
 import { Student } from "@/types/user/student";
 import { StudentSearchType } from "../tables/users/student-search-column";
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 import { StudentSearchItem } from "@/services/student";
 // import { Religion } from "@/types/resources/religion.types";
 // import { Category } from "@/types/resources/category.types";
@@ -55,7 +55,8 @@ type StudentInput = Student | StudentDto | StudentSearchItem;
 export function formattedStudent(content: StudentInput[]) {
   const formattedArr: StudentSearchType[] = [];
   const profileBaseUrl =
-    import.meta.env.VITE_STUDENT_PROFILE_URL || "https://74.207.233.48:8443/hrclIRP/studentimages";
+    import.meta.env.VITE_STUDENT_PROFILE_URL ||
+    "https://74.207.233.48:8443/hrclIRP/studentimages";
 
   //console.log("Profile base URL being used:", profileBaseUrl);
 
@@ -70,7 +71,10 @@ export function formattedStudent(content: StudentInput[]) {
     if ("name" in item && item.name) {
       name = item.name;
     } else if ("personalDetails" in item && item.personalDetails) {
-      const personalDetails = item.personalDetails as unknown as Record<string, unknown>; // Type assertion for database schema properties
+      const personalDetails = item.personalDetails as unknown as Record<
+        string,
+        unknown
+      >; // Type assertion for database schema properties
       if (personalDetails.firstName) {
         name = String(personalDetails.firstName);
         if (personalDetails.lastName) {

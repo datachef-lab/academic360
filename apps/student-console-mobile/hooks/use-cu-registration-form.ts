@@ -1,4 +1,4 @@
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@academic/db/dtos/user";
 import { useCallback, useEffect, useState } from "react";
 import {
   createCuCorrectionRequest,
@@ -20,7 +20,11 @@ import {
   fetchMandatorySubjects,
 } from "@/services/subject-selection";
 import { fetchPersonalDetailsByStudentId } from "@/services/personal-details";
-import { fetchCities, fetchDistricts, type IdNameDto } from "@/services/resources";
+import {
+  fetchCities,
+  fetchDistricts,
+  type IdNameDto,
+} from "@/services/resources";
 import { useProfile } from "@/hooks/use-profile";
 
 export interface PersonalInfoData {
@@ -76,7 +80,9 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
 
   const [correctionRequest, setCorrectionRequest] =
     useState<CuRegistrationCorrectionRequestDto | null>(null);
-  const [correctionRequestId, setCorrectionRequestId] = useState<number | null>(null);
+  const [correctionRequestId, setCorrectionRequestId] = useState<number | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,9 +144,24 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
       sem3: [] as string[],
       sem4: [] as string[],
     },
-    IDC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    SEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    AEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    IDC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
+    SEC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
+    AEC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
     CVAC: {
       sem1: [] as string[],
       sem2: [] as string[],
@@ -149,14 +170,18 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     },
   });
 
-  const [subjectsData, setSubjectsData] =
-    useState<Record<string, Record<string, string[]>>>(createInitialSubjects);
-  const [mandatorySubjects, setMandatorySubjects] =
-    useState<Record<string, Record<string, string[]>>>(createInitialSubjects);
+  const [subjectsData, setSubjectsData] = useState<
+    Record<string, Record<string, string[]>>
+  >(createInitialSubjects);
+  const [mandatorySubjects, setMandatorySubjects] = useState<
+    Record<string, Record<string, string[]>>
+  >(createInitialSubjects);
   const [subjectsDeclared, setSubjectsDeclared] = useState(false);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
 
-  const [documents, setDocuments] = useState<Partial<Record<DocumentKey, DocumentFile>>>({});
+  const [documents, setDocuments] = useState<
+    Partial<Record<DocumentKey, DocumentFile>>
+  >({});
   const [uploadedDocuments, setUploadedDocuments] = useState<unknown[]>([]);
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState<DocumentKey | null>(null);
@@ -178,7 +203,9 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
         setCorrectionRequestId(existing.id);
         return existing;
       }
-      const created = await createCuCorrectionRequest({ studentId: student.id });
+      const created = await createCuCorrectionRequest({
+        studentId: student.id,
+      });
       setCorrectionRequest(created);
       setCorrectionRequestId(created.id ?? null);
       return created;
@@ -208,7 +235,9 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
         ]);
         if (cancelled) return;
         if (pd) {
-          const fullName = [pd.firstName, pd.middleName, pd.lastName].filter(Boolean).join(" ");
+          const fullName = [pd.firstName, pd.middleName, pd.lastName]
+            .filter(Boolean)
+            .join(" ");
           setPersonalInfo((prev) => ({
             ...prev,
             fullName: fullName || prev.fullName,
@@ -222,17 +251,29 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
           studentFamily?: { members?: { type: string; name?: string }[] };
         } | null;
         if (profile?.name)
-          setPersonalInfo((p) => ({ ...p, fullName: p.fullName || profile.name! }));
+          setPersonalInfo((p) => ({
+            ...p,
+            fullName: p.fullName || profile.name!,
+          }));
         const family = profile?.studentFamily?.members;
         const father = family?.find((m) => m.type === "FATHER");
         const mother = family?.find((m) => m.type === "MOTHER");
         if (father?.name)
-          setPersonalInfo((p) => ({ ...p, parentName: p.parentName || father.name! }));
+          setPersonalInfo((p) => ({
+            ...p,
+            parentName: p.parentName || father.name!,
+          }));
         else if (mother?.name)
-          setPersonalInfo((p) => ({ ...p, parentName: p.parentName || mother.name! }));
+          setPersonalInfo((p) => ({
+            ...p,
+            parentName: p.parentName || mother.name!,
+          }));
         const studentWithApaar = student as { apaarId?: string };
         if (studentWithApaar?.apaarId)
-          setPersonalInfo((p) => ({ ...p, apaarId: studentWithApaar.apaarId! }));
+          setPersonalInfo((p) => ({
+            ...p,
+            apaarId: studentWithApaar.apaarId!,
+          }));
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed");
       } finally {
@@ -247,7 +288,9 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
   useEffect(() => {
     if (!residentialAddress.city) return;
     const cityId = cities.find(
-      (c) => c.name.trim().toLowerCase() === residentialAddress.city.trim().toLowerCase(),
+      (c) =>
+        c.name.trim().toLowerCase() ===
+        residentialAddress.city.trim().toLowerCase(),
     )?.id;
     if (cityId) fetchDistricts({ cityId }).then((d) => setDistricts(d));
   }, [residentialAddress.city, cities]);
@@ -255,7 +298,9 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
   useEffect(() => {
     if (!mailingAddress.city) return;
     const cityId = cities.find(
-      (c) => c.name.trim().toLowerCase() === mailingAddress.city.trim().toLowerCase(),
+      (c) =>
+        c.name.trim().toLowerCase() ===
+        mailingAddress.city.trim().toLowerCase(),
     )?.id;
     if (cityId) fetchDistricts({ cityId }).then((d) => setMailingDistricts(d));
   }, [mailingAddress.city, cities]);
@@ -275,7 +320,9 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
       ]);
 
       const programName =
-        student?.programCourse?.name || student?.currentPromotion?.programCourse?.name || "";
+        student?.programCourse?.name ||
+        student?.currentPromotion?.programCourse?.name ||
+        "";
       const normalizedName = programName
         .normalize("NFKD")
         .replace(/[^A-Za-z]/g, "")
@@ -291,7 +338,14 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
       };
       const toSemNumsFromClasses = (forClasses?: unknown[]) => {
         if (!Array.isArray(forClasses)) return [] as number[];
-        const map: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6 };
+        const map: Record<string, number> = {
+          I: 1,
+          II: 2,
+          III: 3,
+          IV: 4,
+          V: 5,
+          VI: 6,
+        };
         const nums: number[] = [];
         forClasses.forEach((c: unknown) => {
           const obj = c as {
@@ -300,7 +354,11 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
             class?: { name?: string; shortName?: string };
           };
           const label = String(
-            obj?.name || obj?.shortName || obj?.class?.name || obj?.class?.shortName || "",
+            obj?.name ||
+              obj?.shortName ||
+              obj?.class?.name ||
+              obj?.class?.shortName ||
+              "",
           );
           const roman = /\b(I|II|III|IV|V|VI)\b/i.exec(label);
           if (roman) {
@@ -315,8 +373,16 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
 
       type CategoryKey = "DSCC" | "Minor" | "IDC" | "SEC" | "AEC" | "CVAC";
       const getCategoryKey = (label: string): CategoryKey | undefined => {
-        if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) return "DSCC";
-        if (isBbaProgram && (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label))) return "DSCC";
+        if (
+          /Discipline Specific Core Courses/i.test(label) ||
+          /DSCC/i.test(label)
+        )
+          return "DSCC";
+        if (
+          isBbaProgram &&
+          (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label))
+        )
+          return "DSCC";
         if (/Minor/i.test(label)) return "Minor";
         if (isMdcProgramForDisplay) {
           if (
@@ -325,23 +391,30 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
             /MDC/i.test(label)
           )
             return "IDC";
-          if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) return undefined;
+          if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label))
+            return undefined;
         } else {
-          if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) return "IDC";
+          if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label))
+            return "IDC";
         }
-        if (/Ability Enhancement Course/i.test(label) || /AEC/i.test(label)) return "AEC";
-        if (/Common Value Added Course/i.test(label) || /CVAC/i.test(label)) return "CVAC";
+        if (/Ability Enhancement Course/i.test(label) || /AEC/i.test(label))
+          return "AEC";
+        if (/Common Value Added Course/i.test(label) || /CVAC/i.test(label))
+          return "CVAC";
         return undefined;
       };
 
       const next = createInitialSubjects();
       const mandatoryNext = createInitialSubjects();
 
-      const actualSelections = ((studentRows as { actualStudentSelections?: unknown[] })
-        ?.actualStudentSelections || []) as Record<string, unknown>[];
+      const actualSelections = ((
+        studentRows as { actualStudentSelections?: unknown[] }
+      )?.actualStudentSelections || []) as Record<string, unknown>[];
       actualSelections.forEach((r) => {
         const label = String(
-          r?.metaLabel || (r?.subjectSelectionMeta as { label?: string })?.label || "",
+          r?.metaLabel ||
+            (r?.subjectSelectionMeta as { label?: string })?.label ||
+            "",
         );
         const name = String(
           r?.subjectName ||
@@ -353,11 +426,15 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
         const key = getCategoryKey(label);
         if (!key || !next[key]) return;
 
-        const forClasses = (r?.subjectSelectionMeta as { forClasses?: unknown[] })?.forClasses;
+        const forClasses = (
+          r?.subjectSelectionMeta as { forClasses?: unknown[] }
+        )?.forClasses;
         let semesters: number[] = toSemNumsFromClasses(forClasses);
 
-        if (semesters.length === 0 && /Minor\s*1/i.test(label)) semesters = [1, 2];
-        if (semesters.length === 0 && /Minor\s*2/i.test(label)) semesters = [3, 4];
+        if (semesters.length === 0 && /Minor\s*1/i.test(label))
+          semesters = [1, 2];
+        if (semesters.length === 0 && /Minor\s*2/i.test(label))
+          semesters = [3, 4];
         if (semesters.length === 0 && /Minor\s*3/i.test(label)) semesters = [3];
         if (isMdcProgramForDisplay) {
           if (semesters.length === 0 && /MDC\s*1/i.test(label)) semesters = [1];
@@ -365,7 +442,10 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
           if (semesters.length === 0 && /MDC\s*3/i.test(label)) semesters = [3];
           if (semesters.length === 0 && /Major Discipline Course/i.test(label))
             semesters = [1, 2, 3];
-          if (semesters.length === 0 && /Multi Disciplinary Course/i.test(label))
+          if (
+            semesters.length === 0 &&
+            /Multi Disciplinary Course/i.test(label)
+          )
             semesters = [1, 2, 3];
         } else {
           if (semesters.length === 0 && /IDC\s*1/i.test(label)) semesters = [1];
@@ -396,7 +476,9 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
 
       const mandatoryList = mandatoryRows as Record<string, unknown>[];
       mandatoryList.forEach((r) => {
-        const subjectTypeName = String((r?.subjectType as { name?: string })?.name || "");
+        const subjectTypeName = String(
+          (r?.subjectType as { name?: string })?.name || "",
+        );
         const subjectName = String(
           (r?.subject as { name?: string; code?: string })?.name ||
             (r?.subject as { name?: string; code?: string })?.code ||
@@ -430,7 +512,8 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
         if (semesters.length === 0) {
           if (
             isBbaProgram &&
-            (/Core\s*Course/i.test(subjectTypeName) || /\bCC\b/i.test(subjectTypeName))
+            (/Core\s*Course/i.test(subjectTypeName) ||
+              /\bCC\b/i.test(subjectTypeName))
           )
             semesters = [1, 2, 3, 4];
           if (/Minor\s*1/i.test(subjectTypeName)) semesters = [1, 2];
@@ -440,8 +523,10 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
             if (/MDC\s*1/i.test(subjectTypeName)) semesters = [1];
             else if (/MDC\s*2/i.test(subjectTypeName)) semesters = [2];
             else if (/MDC\s*3/i.test(subjectTypeName)) semesters = [3];
-            else if (/Major Discipline Course/i.test(subjectTypeName)) semesters = [1, 2, 3];
-            else if (/Multi Disciplinary Course/i.test(subjectTypeName)) semesters = [1, 2, 3];
+            else if (/Major Discipline Course/i.test(subjectTypeName))
+              semesters = [1, 2, 3];
+            else if (/Multi Disciplinary Course/i.test(subjectTypeName))
+              semesters = [1, 2, 3];
           } else {
             if (/IDC\s*1/i.test(subjectTypeName)) semesters = [1];
             else if (/IDC\s*2/i.test(subjectTypeName)) semesters = [2];
@@ -466,14 +551,19 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     } finally {
       setSubjectsLoading(false);
     }
-  }, [student?.id, student?.programCourse?.name, student?.currentPromotion?.programCourse?.name]);
+  }, [
+    student?.id,
+    student?.programCourse?.name,
+    student?.currentPromotion?.programCourse?.name,
+  ]);
 
   useEffect(() => {
     if (correctionRequest?.subjectsDeclaration) setSubjectsDeclared(true);
     if (correctionRequest?.personalInfoDeclaration) setPersonalDeclared(true);
     if (correctionRequest?.addressInfoDeclaration) setAddressDeclared(true);
     if (correctionRequest?.documentsDeclaration) setDocumentsConfirmed(true);
-    if (correctionRequest?.introductoryDeclaration) setInstructionsConfirmed(true);
+    if (correctionRequest?.introductoryDeclaration)
+      setInstructionsConfirmed(true);
   }, [correctionRequest]);
 
   // Populate address from profile personalDetails (like web)
@@ -499,13 +589,18 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     const addresses = pd?.address || [];
     const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL");
     const mailAddr = addresses.find((a) => a?.type === "MAILING");
-    const get = (p: string | undefined, o: string | undefined, f: string | undefined, d = "") =>
-      p || o || f || d;
+    const get = (
+      p: string | undefined,
+      o: string | undefined,
+      f: string | undefined,
+      d = "",
+    ) => p || o || f || d;
     if (resAddr || mailAddr) {
       setResidentialAddress((prev) => ({
         ...prev,
         addressLine:
-          get(resAddr?.addressLine, mailAddr?.addressLine, prev.addressLine) || prev.addressLine,
+          get(resAddr?.addressLine, mailAddr?.addressLine, prev.addressLine) ||
+          prev.addressLine,
         city:
           get(
             resAddr?.city?.name,
@@ -548,14 +643,17 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
             mailAddr?.country?.name || mailAddr?.otherCountry,
             "India",
           ) || prev.country,
-        pinCode: get(resAddr?.pincode, mailAddr?.pincode, prev.pinCode) || prev.pinCode,
+        pinCode:
+          get(resAddr?.pincode, mailAddr?.pincode, prev.pinCode) ||
+          prev.pinCode,
       }));
     }
     if (mailAddr || resAddr) {
       setMailingAddress((prev) => ({
         ...prev,
         addressLine:
-          get(mailAddr?.addressLine, resAddr?.addressLine, prev.addressLine) || prev.addressLine,
+          get(mailAddr?.addressLine, resAddr?.addressLine, prev.addressLine) ||
+          prev.addressLine,
         city:
           get(
             mailAddr?.city?.name,
@@ -598,12 +696,17 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
             resAddr?.country?.name || resAddr?.otherCountry,
             "India",
           ) || prev.country,
-        pinCode: get(mailAddr?.pincode, resAddr?.pincode, prev.pinCode) || prev.pinCode,
+        pinCode:
+          get(mailAddr?.pincode, resAddr?.pincode, prev.pinCode) ||
+          prev.pinCode,
       }));
     }
   }, [profileInfo]);
 
-  const handlePersonalInfoChange = (field: keyof PersonalInfoData, value: string) => {
+  const handlePersonalInfoChange = (
+    field: keyof PersonalInfoData,
+    value: string,
+  ) => {
     setPersonalInfo((p) => ({ ...p, [field]: value }));
   };
 
@@ -638,7 +741,12 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     setPersonalDeclared(true);
     const updated = await getCuCorrectionRequestById(id);
     setCorrectionRequest(updated);
-  }, [correctionRequestId, personalInfo, correctionFlags, ensureCorrectionRequest]);
+  }, [
+    correctionRequestId,
+    personalInfo,
+    correctionFlags,
+    ensureCorrectionRequest,
+  ]);
 
   const handleSubmitAddress = useCallback(async () => {
     const req = await ensureCorrectionRequest();
@@ -664,7 +772,12 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     setAddressDeclared(true);
     const updated = await getCuCorrectionRequestById(id);
     setCorrectionRequest(updated);
-  }, [correctionRequestId, residentialAddress, mailingAddress, ensureCorrectionRequest]);
+  }, [
+    correctionRequestId,
+    residentialAddress,
+    mailingAddress,
+    ensureCorrectionRequest,
+  ]);
 
   const handleSubmitSubjects = useCallback(async () => {
     const req = await ensureCorrectionRequest();
@@ -679,7 +792,10 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     setCorrectionRequest(updated);
   }, [correctionRequestId, correctionFlags.subjects, ensureCorrectionRequest]);
 
-  const handleDocumentSelect = (key: DocumentKey, file: DocumentFile | null) => {
+  const handleDocumentSelect = (
+    key: DocumentKey,
+    file: DocumentFile | null,
+  ) => {
     if (file) setDocuments((d) => ({ ...d, [key]: file }));
     else
       setDocuments((d) => {
@@ -754,7 +870,12 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     } finally {
       setSubmitting(false);
     }
-  }, [correctionRequestId, submitting, finalDeclaration, ensureCorrectionRequest]);
+  }, [
+    correctionRequestId,
+    submitting,
+    finalDeclaration,
+    ensureCorrectionRequest,
+  ]);
 
   const handleInstructionsConfirm = useCallback(
     async (checked: boolean) => {

@@ -1,10 +1,10 @@
 import { db } from "@/db/index.js";
-import { feeStudentMappingModel } from "@repo/db/schemas/models/fees";
-import { paymentModel } from "@repo/db/schemas/models/payments";
-import { studentModel } from "@repo/db/schemas/models/user";
-import { userModel } from "@repo/db/schemas/models/user/user.model";
-import { familyModel } from "@repo/db/schemas/models/user";
-import { personModel } from "@repo/db/schemas/models/user/person.model";
+import { feeStudentMappingModel } from "@academic/db/schemas/models/fees";
+import { paymentModel } from "@academic/db/schemas/models/payments";
+import { studentModel } from "@academic/db/schemas/models/user";
+import { userModel } from "@academic/db/schemas/models/user/user.model";
+import { familyModel } from "@academic/db/schemas/models/user";
+import { personModel } from "@academic/db/schemas/models/user/person.model";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { getFeeStudentMappingById } from "@/features/fees/services/fee-student-mapping.service.js";
 import {

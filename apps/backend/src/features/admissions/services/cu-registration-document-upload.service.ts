@@ -1,9 +1,9 @@
 import { db } from "@/db/index.js";
-import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
-import { documentModel } from "@repo/db/schemas/models/academics";
+import { cuRegistrationDocumentUploadModel } from "@academic/db/schemas/models/admissions/cu-registration-document-upload.model.js";
+import { documentModel } from "@academic/db/schemas/models/academics";
 import { eq, and, desc, count } from "drizzle-orm";
-import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
-import { CuRegistrationDocumentUploadDto } from "@repo/db/dtos/admissions/index.js";
+import { cuRegistrationDocumentUploadInsertTypeT } from "@academic/db/schemas/models/admissions/cu-registration-document-upload.model.js";
+import { CuRegistrationDocumentUploadDto } from "@academic/db/dtos/admissions/index.js";
 import {
   listFilesInFolder,
   getSignedUrlForFile,

@@ -1,4 +1,4 @@
-import type { SubjectSelectionMetaDto } from "@repo/db/dtos/subject-selection";
+import type { SubjectSelectionMetaDto } from "@academic/db/dtos/subject-selection";
 import axiosInstance from "@/lib/api";
 import type { ApiResponse } from "@/lib/types";
 
@@ -46,9 +46,9 @@ export interface SaveSelectionsResponse {
 export async function fetchStudentSubjectSelections(
   studentId: number,
 ): Promise<StudentSubjectSelectionApiResponse> {
-  const res = await axiosInstance.get<ApiResponse<StudentSubjectSelectionApiResponse>>(
-    `/api/subject-selection/students/${studentId}/selections`,
-  );
+  const res = await axiosInstance.get<
+    ApiResponse<StudentSubjectSelectionApiResponse>
+  >(`/api/subject-selection/students/${studentId}/selections`);
 
   const payload = res.data.payload;
   if (Array.isArray(payload)) {
@@ -64,7 +64,9 @@ export async function fetchStudentSubjectSelections(
   return payload as StudentSubjectSelectionApiResponse;
 }
 
-export async function fetchMandatorySubjects(studentId: number): Promise<unknown[]> {
+export async function fetchMandatorySubjects(
+  studentId: number,
+): Promise<unknown[]> {
   try {
     const res = await axiosInstance.get<ApiResponse<unknown[]>>(
       `/api/subject-selection/students/${studentId}/mandatory-papers`,
@@ -79,17 +81,19 @@ export async function saveStudentSubjectSelections(
   selections: StudentSubjectSelectionForSave[],
 ): Promise<SaveSelectionsResponse> {
   try {
-    const res = await axiosInstance.post<ApiResponse<StudentSubjectSelectionForSave[]>>(
-      "/api/subject-selection/student-subject-selection/",
-      selections,
-    );
+    const res = await axiosInstance.post<
+      ApiResponse<StudentSubjectSelectionForSave[]>
+    >("/api/subject-selection/student-subject-selection/", selections);
 
     return {
       success: true,
       data: res.data.payload,
     };
   } catch (error: any) {
-    if (error.response?.status === 400 && error.response?.data?.payload?.errors) {
+    if (
+      error.response?.status === 400 &&
+      error.response?.data?.payload?.errors
+    ) {
       return {
         success: false,
         errors: error.response.data.payload.errors,

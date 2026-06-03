@@ -6,13 +6,13 @@ import {
   notificationMasterMetaModel,
   notificationMasterFieldModel,
   NotificationT,
-} from "@repo/db/schemas/models/notifications";
-import { notificationContentModel } from "@repo/db/schemas/models/notifications/notification-content.model";
+} from "@academic/db/schemas/models/notifications";
+import { notificationContentModel } from "@academic/db/schemas/models/notifications/notification-content.model";
 
 // no FK imports needed here
-import type { NotificationDto } from "@repo/db/dtos/notifications";
+import type { NotificationDto } from "@academic/db/dtos/notifications";
 import { eq, inArray, and } from "drizzle-orm";
-import { userModel } from "@repo/db/schemas/models/user";
+import { userModel } from "@academic/db/schemas/models/user";
 import { db } from "@/db";
 
 function resolveNotificationMasterId(dto: NotificationDto): number | null {

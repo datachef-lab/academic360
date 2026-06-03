@@ -17,9 +17,9 @@ import {
   feeStructureComponentModel,
   receiptTypeModel,
   feeCategoryModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { and, asc, eq, sql } from "drizzle-orm";
-import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import { FeeStudentMappingDto } from "@academic/db/dtos/fees";
 import { socketService } from "@/services/socketService.js";
 import * as feeStructureService from "./fee-structure.service.js";
 import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";

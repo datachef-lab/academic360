@@ -1,18 +1,21 @@
 import { db } from "@/db/index.js";
 import { eq, inArray } from "drizzle-orm";
-import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
-import { streamModel } from "@repo/db/schemas/models/course-design/stream.model.js";
-import { academicYearModel } from "@repo/db/schemas/models/academics/academic-year.model.js";
-import { affiliationModel } from "@repo/db/schemas/models/course-design/affiliation.model.js";
-import { regulationTypeModel } from "@repo/db/schemas/models/course-design/regulation-type.model.js";
-import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model.js";
-import { AcademicActivityDto, AcademicActivityScopeDto } from "@repo/db/dtos";
+import { classModel } from "@academic/db/schemas/models/academics/class.model.js";
+import { streamModel } from "@academic/db/schemas/models/course-design/stream.model.js";
+import { academicYearModel } from "@academic/db/schemas/models/academics/academic-year.model.js";
+import { affiliationModel } from "@academic/db/schemas/models/course-design/affiliation.model.js";
+import { regulationTypeModel } from "@academic/db/schemas/models/course-design/regulation-type.model.js";
+import { promotionStatusModel } from "@academic/db/schemas/models/batches/promotion-status.model.js";
+import {
+  AcademicActivityDto,
+  AcademicActivityScopeDto,
+} from "@academic/db/dtos";
 import {
   academicActivityModel,
   AcademicActivityT,
-} from "@repo/db/schemas/models/academics/academic-activity.model.js";
-import { academicActivityScopeModel } from "@repo/db/schemas/models/academics/academic-activity-scope.model.js";
-import { academicActivityMasterModel } from "@repo/db/schemas/models/academics/academic-activity-master.model.js";
+} from "@academic/db/schemas/models/academics/academic-activity.model.js";
+import { academicActivityScopeModel } from "@academic/db/schemas/models/academics/academic-activity-scope.model.js";
+import { academicActivityMasterModel } from "@academic/db/schemas/models/academics/academic-activity-master.model.js";
 
 export type CreateAcademicActivityPayload = Omit<
   AcademicActivityT,

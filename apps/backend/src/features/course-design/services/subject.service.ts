@@ -1,11 +1,11 @@
 import { db } from "@/db/index.js";
-import { subjectModel } from "@repo/db/schemas/models/course-design";
+import { subjectModel } from "@academic/db/schemas/models/course-design";
 import {
   Subject,
   SubjectT,
-} from "@repo/db/schemas/models/course-design/subject.model";
+} from "@academic/db/schemas/models/course-design/subject.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
-import { SubjectDto } from "@repo/db/dtos/course-design";
+import { SubjectDto } from "@academic/db/dtos/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";

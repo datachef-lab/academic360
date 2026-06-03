@@ -1,12 +1,32 @@
 packages:
-  - apps/*
+  # - apps/* # temporarily excluded during refactor
   - packages/*
 
-# Shared dependency versions (use "catalog:" in package.json — e.g. "drizzle-orm": "catalog:")
+allowBuilds:
+  esbuild: true
+
 catalog:
-  drizzle-orm: 0.44.5
+  # Language
   typescript: 5.5.4
+
+  # Formatting
+  prettier: ^3.6.2
+
+  # Validation
   zod: ^3.24.1
+
+  # Database
+  drizzle-orm: 0.44.5
+  drizzle-zod: ^0.7.0
+  drizzle-kit: ^0.30.1
+
+  # Runtime utils
+  dotenv: ^16.4.7
+  tsx: ^4.20.4
+
+  # Build tools
+  rimraf: ^6.0.1
+  tsc-alias: ^1.8.16
 
 ignoredBuiltDependencies:
   - bcrypt

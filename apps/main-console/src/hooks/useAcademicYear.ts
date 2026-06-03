@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { AcademicYear } from "@repo/db/index";
+import type { AcademicYear } from "@academic/db/index";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getAllAcademicYears } from "@/services/academic-year-api";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -90,7 +90,9 @@ export const useAcademicYear = () => {
   const loadAcademicYears = useCallback(async () => {
     // Only load if access token is available
     if (!accessToken) {
-      console.log("Academic Year Hook: Access token not available, skipping academic year load");
+      console.log(
+        "Academic Year Hook: Access token not available, skipping academic year load",
+      );
       return;
     }
 
@@ -115,7 +117,9 @@ export const useAcademicYear = () => {
       }
     } catch (err) {
       console.error("Academic Year Hook: Error loading academic years:", err);
-      setErrorState(err instanceof Error ? err.message : "Failed to load academic years");
+      setErrorState(
+        err instanceof Error ? err.message : "Failed to load academic years",
+      );
     } finally {
       setLoadingState(false);
     }
@@ -136,7 +140,9 @@ export const useAcademicYear = () => {
         // await academicYearService.setCurrentAcademicYear(academicYear.id);
         setCurrentYear(academicYear);
       } catch (err) {
-        setErrorState(err instanceof Error ? err.message : "Failed to switch academic year");
+        setErrorState(
+          err instanceof Error ? err.message : "Failed to switch academic year",
+        );
       } finally {
         setLoadingState(false);
       }

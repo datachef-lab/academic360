@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse, handleError } from "@/utils/index.js";
-import type { User } from "@repo/db/schemas";
+import type { User } from "@academic/db/schemas";
 import {
   bulkPromoteSemesterStudents,
   checkCourseDesignForTarget,

@@ -5,7 +5,7 @@
 // import { findStudentByEmail, findStudentByUid } from './student.service';
 // import { ApplicationFormDto } from '@/types/admissions';
 // import { axiosInstance } from '../utils';
-import type { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@academic/db/dtos/user";
 import { ApiResponse } from "@/types/api-response";
 import { axiosInstance } from "@/lib/utils";
 
@@ -303,7 +303,9 @@ import { axiosInstance } from "@/lib/utils";
 export async function doLogin(
   email: string,
   password: string,
-): Promise<ApiResponse<{ accessToken: string; user: UserDto; redirectTo?: string }>> {
+): Promise<
+  ApiResponse<{ accessToken: string; user: UserDto; redirectTo?: string }>
+> {
   const response = await axiosInstance.post("/auth/login", { email, password });
   return response.data;
 }
@@ -311,7 +313,11 @@ export async function doLogin(
 export async function sendOtpRequest(
   email: string,
 ): Promise<
-  ApiResponse<{ message: string; expiresIn: string; sentTo: { email: boolean; whatsapp: boolean } }>
+  ApiResponse<{
+    message: string;
+    expiresIn: string;
+    sentTo: { email: boolean; whatsapp: boolean };
+  }>
 > {
   const response = await axiosInstance.post("/auth/otp/send-email", { email });
   return response.data;
@@ -321,7 +327,9 @@ export async function verifyOtpAndLogin(
   email: string,
   otp: string,
   app?: string,
-): Promise<ApiResponse<{ accessToken: string; user: UserDto; redirectTo?: string }>> {
+): Promise<
+  ApiResponse<{ accessToken: string; user: UserDto; redirectTo?: string }>
+> {
   const response = await axiosInstance.post("/auth/otp/verify", {
     email,
     otp,
@@ -332,21 +340,35 @@ export async function verifyOtpAndLogin(
 
 export async function checkOtpStatus(
   email: string,
-): Promise<ApiResponse<{ hasValidOtp: boolean; expiresAt?: string; remainingTime?: number }>> {
-  const response = await axiosInstance.get(`/auth/otp/status?email=${encodeURIComponent(email)}`);
+): Promise<
+  ApiResponse<{
+    hasValidOtp: boolean;
+    expiresAt?: string;
+    remainingTime?: number;
+  }>
+> {
+  const response = await axiosInstance.get(
+    `/auth/otp/status?email=${encodeURIComponent(email)}`,
+  );
   return response.data;
 }
 
 export async function lookupUser(
   email: string,
-): Promise<ApiResponse<{ id: number; name: string; email: string; uid?: string }>> {
-  const response = await axiosInstance.get(`/auth/otp/lookup?email=${encodeURIComponent(email)}`);
+): Promise<
+  ApiResponse<{ id: number; name: string; email: string; uid?: string }>
+> {
+  const response = await axiosInstance.get(
+    `/auth/otp/lookup?email=${encodeURIComponent(email)}`,
+  );
   return response.data;
 }
 
 export async function lookupUsersByPrefix(
   prefix: string,
-): Promise<ApiResponse<{ users: { id: number; name: string; email: string }[] }>> {
+): Promise<
+  ApiResponse<{ users: { id: number; name: string; email: string }[] }>
+> {
   const response = await axiosInstance.get(
     `/auth/otp/lookup-prefix?prefix=${encodeURIComponent(prefix)}`,
   );
@@ -357,7 +379,9 @@ export async function adminBypassOtpLogin(
   uid: string,
   adminToken?: string,
   isSimulationMode?: boolean,
-): Promise<ApiResponse<{ accessToken: string; refreshToken: string; user: UserDto }>> {
+): Promise<
+  ApiResponse<{ accessToken: string; refreshToken: string; user: UserDto }>
+> {
   const headers: Record<string, string> = {};
   // Only add header if token is provided (backend will check cookie if not provided)
   if (adminToken) {
@@ -366,7 +390,9 @@ export async function adminBypassOtpLogin(
   // Add simulation mode header to help backend detect iframe context
   if (isSimulationMode) {
     headers["X-Simulation-Mode"] = "true";
-    console.log("[SIMULATION] Sending X-Simulation-Mode header with admin bypass request");
+    console.log(
+      "[SIMULATION] Sending X-Simulation-Mode header with admin bypass request",
+    );
   } else {
     console.log("[SIMULATION] NOT in simulation mode, not sending header");
   }

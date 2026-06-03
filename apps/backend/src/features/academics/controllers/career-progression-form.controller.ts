@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { createCareerProgressionFormSchema } from "@repo/db/schemas";
+import { createCareerProgressionFormSchema } from "@academic/db/schemas";
 import { ApiResponse, handleError } from "@/utils/index.js";
 import * as careerProgressionFormService from "../services/career-progression-form.service.js";
 import {
@@ -7,7 +7,7 @@ import {
   findCurrentAcademicYear,
 } from "../services/academic-year.service.js";
 import { db } from "@/db/index.js";
-import { careerProgressionFormModel } from "@repo/db/schemas";
+import { careerProgressionFormModel } from "@academic/db/schemas";
 import { and, eq } from "drizzle-orm";
 import { listCertificateMastersWithFields } from "../services/default-certificate-master-loader.service.js";
 

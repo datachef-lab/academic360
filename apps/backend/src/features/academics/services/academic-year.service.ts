@@ -2,15 +2,15 @@ import { db } from "@/db/index.js";
 import {
   academicYearModel,
   AcademicYear,
-} from "@repo/db/schemas/models/academics";
+} from "@academic/db/schemas/models/academics";
 import { eq, and, desc, or, count, countDistinct } from "drizzle-orm";
-import { Session, sessionModel } from "@repo/db/schemas/models/academics";
-import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
-import { noticeModel } from "@repo/db/schemas/models/academics";
+import { Session, sessionModel } from "@academic/db/schemas/models/academics";
+import { marksheetPaperMappingModel } from "@academic/db/schemas/models/academics";
+import { noticeModel } from "@academic/db/schemas/models/academics";
 
-import { paperModel } from "@repo/db/schemas/models/course-design";
-// import { feesStructureModel } from "@repo/db/schemas/models/fees";
-import { admissionModel } from "@repo/db/schemas";
+import { paperModel } from "@academic/db/schemas/models/course-design";
+// import { feesStructureModel } from "@academic/db/schemas/models/fees";
+import { admissionModel } from "@academic/db/schemas";
 
 export async function createAcademicYear(
   academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">,

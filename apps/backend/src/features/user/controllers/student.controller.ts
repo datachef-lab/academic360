@@ -12,7 +12,7 @@ import {
 } from "../services/student.service.js";
 import { readExcelFromBuffer } from "@/utils/readExcel.js";
 import XLSX from "xlsx";
-import { academicYearModel } from "@repo/db/index.js";
+import { academicYearModel } from "@academic/db/index.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { socketService } from "@/services/socketService.js";

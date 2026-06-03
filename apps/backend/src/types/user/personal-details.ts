@@ -1,10 +1,10 @@
-import { PersonalDetails } from "@repo/db/schemas/models/user";
+import { PersonalDetails } from "@academic/db/schemas/models/user";
 import { AddressType } from "./address.js";
-import { Nationality } from "@repo/db/schemas/models/resources";
-import { Religion } from "@repo/db/schemas/models/resources";
-import { Category } from "@repo/db/schemas/models/resources";
-import { LanguageMedium } from "@repo/db/schemas/models/resources";
-import { Disability } from "@repo/db/schemas/models/user";
+import { Nationality } from "@academic/db/schemas/models/resources";
+import { Religion } from "@academic/db/schemas/models/resources";
+import { Category } from "@academic/db/schemas/models/resources";
+import { LanguageMedium } from "@academic/db/schemas/models/resources";
+import { Disability } from "@academic/db/schemas/models/user";
 
 export interface PersonalDetailsType extends Omit<
   PersonalDetails,

@@ -1,5 +1,8 @@
 import { db } from "@/db/index.js";
-import { Disability, disabilityCodeModel } from "@repo/db/schemas/models/user";
+import {
+  Disability,
+  disabilityCodeModel,
+} from "@academic/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 
 export async function addDisabilityCode(

@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { PickupPoint, pickupPointModel } from "@repo/db/schemas";
+import { PickupPoint, pickupPointModel } from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 
 export async function findAllPickupPoints(): Promise<PickupPoint[]> {

@@ -4,7 +4,7 @@ import {
   designationModel,
   Designation,
   DesignationT,
-} from "@repo/db/schemas/models/administration";
+} from "@academic/db/schemas/models/administration";
 
 function normaliseDesignationPayload<
   T extends Partial<Designation | DesignationT>,

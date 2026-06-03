@@ -44,8 +44,8 @@ import type {
   PersonalDetailsDto,
   PersonDto,
   AddressDto,
-} from "@repo/db/dtos/user";
-import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@repo/db/index";
+} from "@academic/db/dtos/user";
+import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@academic/db/index";
 import axiosInstance from "@/utils/api";
 
 interface CuRegistrationFormProps {
@@ -1106,9 +1106,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         // Fire core requests in parallel for speed
         const profilePromise: Promise<ProfileInfo | null> = studentData.userId
           ? fetchUserProfile(studentData.userId).catch((e) => {
-              console.error(`[CU-REG MAIN-CONSOLE] Error fetching profile:`, e);
-              return null;
-            })
+            console.error(`[CU-REG MAIN-CONSOLE] Error fetching profile:`, e);
+            return null;
+          })
           : Promise.resolve(null);
 
         const correctionReqPromise = getStudentCuCorrectionRequests(studentId)
@@ -1522,10 +1522,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 const classObj = c as ClassObject;
                 const label = String(
                   classObj?.name ||
-                    classObj?.shortName ||
-                    classObj?.class?.name ||
-                    classObj?.class?.shortName ||
-                    "",
+                  classObj?.shortName ||
+                  classObj?.class?.name ||
+                  classObj?.class?.shortName ||
+                  "",
                 );
                 const roman = /\b(I|II|III|IV|V|VI)\b/i.exec(label);
                 if (roman && roman[1]) {
@@ -1790,9 +1790,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             <Select
               value={
                 correctionRequestStatus?.status &&
-                cuRegistrationCorrectionRequestStatusEnum.enumValues.includes(
-                  correctionRequestStatus.status as (typeof cuRegistrationCorrectionRequestStatusEnum.enumValues)[number],
-                )
+                  cuRegistrationCorrectionRequestStatusEnum.enumValues.includes(
+                    correctionRequestStatus.status as (typeof cuRegistrationCorrectionRequestStatusEnum.enumValues)[number],
+                  )
                   ? correctionRequestStatus.status
                   : ""
               }
@@ -1870,44 +1870,40 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 <div className="flex w-full overflow-x-auto no-scrollbar">
                   <button
                     onClick={() => setActiveTab("personal")}
-                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                      activeTab === "personal"
+                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "personal"
                         ? "text-blue-600 border-blue-600 bg-transparent"
                         : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                    } cursor-pointer`}
+                      } cursor-pointer`}
                   >
                     <span className="hidden sm:inline">Personal Info</span>
                     <span className="sm:hidden">Personal</span>
                   </button>
                   <button
                     onClick={() => setActiveTab("address")}
-                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                      activeTab === "address"
+                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "address"
                         ? "text-blue-600 border-blue-600 bg-transparent"
                         : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                    } cursor-pointer`}
+                      } cursor-pointer`}
                   >
                     <span className="hidden sm:inline">Address Info</span>
                     <span className="sm:hidden">Address</span>
                   </button>
                   <button
                     onClick={() => setActiveTab("subjects")}
-                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                      activeTab === "subjects"
+                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "subjects"
                         ? "text-blue-600 border-blue-600 bg-transparent"
                         : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                    } cursor-pointer`}
+                      } cursor-pointer`}
                   >
                     <span className="hidden sm:inline">Subjects Overview</span>
                     <span className="sm:hidden">Subjects</span>
                   </button>
                   <button
                     onClick={() => setActiveTab("documents")}
-                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                      activeTab === "documents"
+                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "documents"
                         ? "text-blue-600 border-blue-600 bg-transparent"
                         : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                    } cursor-pointer`}
+                      } cursor-pointer`}
                   >
                     Documents
                   </button>

@@ -1,0 +1,1 @@
+ALTER TABLE "fee_groups" DROP COLUMN "is_carry_forwarded";

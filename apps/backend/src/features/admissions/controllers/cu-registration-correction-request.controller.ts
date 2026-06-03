@@ -3,11 +3,11 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { db } from "@/db/index.js";
-import { studentModel } from "@repo/db/schemas/models/user";
-import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
+import { studentModel } from "@academic/db/schemas/models/user";
+import { cuRegistrationCorrectionRequestModel } from "@academic/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { ilike, eq } from "drizzle-orm";
 import { parseReportExportFilters } from "@/utils/report-export-filters.js";
-import { cuRegistrationCorrectionRequestInsertSchema } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
+import { cuRegistrationCorrectionRequestInsertSchema } from "@academic/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import {
   createCuRegistrationCorrectionRequest,
   findCuRegistrationCorrectionRequestById,
@@ -38,7 +38,7 @@ import {
 } from "@/services/filesystem-storage.service.js";
 import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
 import multer from "multer";
-import { UserDto } from "@repo/db/index.js";
+import { UserDto } from "@academic/db/index.js";
 
 // Create a new CU registration correction request
 export const createNewCuRegistrationCorrectionRequest = async (

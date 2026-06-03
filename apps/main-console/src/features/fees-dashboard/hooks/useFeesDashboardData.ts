@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
-import type { FeeStructureDto } from "@repo/db/dtos/fees";
-import type { AcademicActivityDto } from "@repo/db/dtos/academics";
+import type { FeeStructureDto } from "@academic/db/dtos/fees";
+import type { AcademicActivityDto } from "@academic/db/dtos/academics";
 import type { FeesSlab } from "@/types/fees";
-import type { FeeCategoryDto, FeeGroupDto } from "@repo/db/dtos/fees";
+import type { FeeCategoryDto, FeeGroupDto } from "@academic/db/dtos/fees";
 import {
   getAllFeeCategories,
   getAllFeeGroups,
@@ -12,16 +12,22 @@ import {
   getAllFeesStructures,
 } from "@/services/fees-api";
 import { SEMESTER_FEE_PAYMENT_MASTER_NAME } from "../data/fees-domain";
-import { MOCK_METRIC_VALUES, type MetricValues } from "../data/dashboard-metrics";
+import {
+  MOCK_METRIC_VALUES,
+  type MetricValues,
+} from "../data/dashboard-metrics";
 
 function isSemesterFeePaymentActivity(activity: AcademicActivityDto): boolean {
   return (
     Boolean(activity.master?.isActive) &&
-    (activity.master?.name || "").trim().toLowerCase() === SEMESTER_FEE_PAYMENT_MASTER_NAME
+    (activity.master?.name || "").trim().toLowerCase() ===
+      SEMESTER_FEE_PAYMENT_MASTER_NAME
   );
 }
 
-export function countOpenSemesterFeeScopes(activities: AcademicActivityDto[]): number {
+export function countOpenSemesterFeeScopes(
+  activities: AcademicActivityDto[],
+): number {
   const now = Date.now();
   return activities
     .filter(isSemesterFeePaymentActivity)
@@ -34,7 +40,11 @@ export function countOpenSemesterFeeScopes(activities: AcademicActivityDto[]): n
     }).length;
 }
 
-export type StructurePaymentWindowStatus = "open" | "scheduled" | "closed" | "no_rule";
+export type StructurePaymentWindowStatus =
+  | "open"
+  | "scheduled"
+  | "closed"
+  | "no_rule";
 
 export function getStructurePaymentWindowStatus(
   structure: FeeStructureDto,
@@ -50,7 +60,11 @@ export function getStructurePaymentWindowStatus(
   const matchingActivities = activities.filter((a) => {
     if (!isSemesterFeePaymentActivity(a)) return false;
     if (a.academicYear?.id !== ayId) return false;
-    if (a.courseLevelId != null && courseLevelId != null && a.courseLevelId !== courseLevelId) {
+    if (
+      a.courseLevelId != null &&
+      courseLevelId != null &&
+      a.courseLevelId !== courseLevelId
+    ) {
       return false;
     }
     return true;
@@ -66,7 +80,12 @@ export function getStructurePaymentWindowStatus(
     for (const scope of activity.scopes || []) {
       if (!scope.isEnabled) continue;
       if (scope.class?.id !== classId) continue;
-      if (streamId != null && scope.stream?.id != null && scope.stream.id !== streamId) continue;
+      if (
+        streamId != null &&
+        scope.stream?.id != null &&
+        scope.stream.id !== streamId
+      )
+        continue;
 
       const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
       const end = scope.endDate ? new Date(scope.endDate).getTime() : Infinity;
@@ -80,7 +99,9 @@ export function getStructurePaymentWindowStatus(
   return "closed";
 }
 
-export function isStructureOnlineWindowOpen(structure: FeeStructureDto): boolean {
+export function isStructureOnlineWindowOpen(
+  structure: FeeStructureDto,
+): boolean {
   const now = Date.now();
   const start = structure.onlineStartDate
     ? new Date(structure.onlineStartDate).getTime()
@@ -102,7 +123,9 @@ export function useFeesDashboardData() {
   const [categories, setCategories] = useState<FeeCategoryDto[]>([]);
   const [groups, setGroups] = useState<FeeGroupDto[]>([]);
   const [structures, setStructures] = useState<FeeStructureDto[]>([]);
-  const [semesterFeeActivities, setSemesterFeeActivities] = useState<AcademicActivityDto[]>([]);
+  const [semesterFeeActivities, setSemesterFeeActivities] = useState<
+    AcademicActivityDto[]
+  >([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,21 +134,28 @@ export function useFeesDashboardData() {
       setLoading(true);
       setError(null);
       try {
-        const [slabsRes, categoriesRes, groupsRes, structuresRes, activitiesRes] =
-          await Promise.all([
-            getAllFeesSlabs(),
-            getAllFeeCategories(),
-            getAllFeeGroups(),
-            getAllFeesStructures(1, 200),
-            axiosInstance.get<ApiResponse<AcademicActivityDto[]>>(
-              "/api/academics/academic-activities",
-            ),
-          ]);
+        const [
+          slabsRes,
+          categoriesRes,
+          groupsRes,
+          structuresRes,
+          activitiesRes,
+        ] = await Promise.all([
+          getAllFeesSlabs(),
+          getAllFeeCategories(),
+          getAllFeeGroups(),
+          getAllFeesStructures(1, 200),
+          axiosInstance.get<ApiResponse<AcademicActivityDto[]>>(
+            "/api/academics/academic-activities",
+          ),
+        ]);
 
         if (cancelled) return;
 
         setSlabs(Array.isArray(slabsRes.payload) ? slabsRes.payload : []);
-        setCategories(Array.isArray(categoriesRes.payload) ? categoriesRes.payload : []);
+        setCategories(
+          Array.isArray(categoriesRes.payload) ? categoriesRes.payload : [],
+        );
         setGroups(Array.isArray(groupsRes.payload) ? groupsRes.payload : []);
 
         const structureRows =
@@ -135,7 +165,9 @@ export function useFeesDashboardData() {
 
         const activities = activitiesRes.data?.payload;
         const allActivities = Array.isArray(activities) ? activities : [];
-        setSemesterFeeActivities(allActivities.filter(isSemesterFeePaymentActivity));
+        setSemesterFeeActivities(
+          allActivities.filter(isSemesterFeePaymentActivity),
+        );
       } catch (e) {
         if (!cancelled) {
           console.error(e);
@@ -167,7 +199,15 @@ export function useFeesDashboardData() {
       fee_categories_count: categories.length,
       fee_groups_count: groups.length,
     };
-  }, [loading, error, structures, slabs, categories, groups, semesterFeeActivities]);
+  }, [
+    loading,
+    error,
+    structures,
+    slabs,
+    categories,
+    groups,
+    semesterFeeActivities,
+  ]);
 
   return {
     loading,

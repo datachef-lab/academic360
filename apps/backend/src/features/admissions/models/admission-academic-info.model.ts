@@ -1,9 +1,9 @@
-import { courseModel } from "@repo/db/schemas/models/course-design";
+import { courseModel } from "@academic/db/schemas/models/course-design";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
 import { institutionModel } from "@/features/resources/models/institution.model.js";
 import { languageMediumModel } from "@/features/resources/models/languageMedium.model.js";
-import { boardResultStatusType, streamType } from "@repo/db/schemas/enums";
+import { boardResultStatusType, streamType } from "@academic/db/schemas/enums";
 import {
   boolean,
   integer,

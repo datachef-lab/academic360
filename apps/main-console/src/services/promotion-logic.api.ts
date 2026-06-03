@@ -1,12 +1,14 @@
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
-import type { PromotionBuilderDto, PromotionClauseDto } from "@repo/db";
+import type { PromotionBuilderDto, PromotionClauseDto } from "@academic/db";
 
 const BASE = "/api/v1/batches";
 
 // ── Promotion Builders ──
 
-export async function getPromotionBuilders(affiliationId?: number): Promise<PromotionBuilderDto[]> {
+export async function getPromotionBuilders(
+  affiliationId?: number,
+): Promise<PromotionBuilderDto[]> {
   const res = await axiosInstance.get<ApiResponse<PromotionBuilderDto[]>>(
     `${BASE}/promotion-builders`,
     {
@@ -88,7 +90,8 @@ export async function getPromotionClauses(opts?: {
   const res = await axiosInstance.get<ApiResponse<PromotionClauseDto[]>>(
     `${BASE}/promotion-clauses`,
     {
-      params: opts?.isActive === undefined ? undefined : { isActive: opts.isActive },
+      params:
+        opts?.isActive === undefined ? undefined : { isActive: opts.isActive },
     },
   );
   return res.data.payload ?? [];

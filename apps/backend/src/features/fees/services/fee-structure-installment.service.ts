@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import {
   feeStructureInstallmentModel,
   FeeStructureInstallment,
-} from "@repo/db/schemas/models/fees";
+} from "@academic/db/schemas/models/fees";
 import { eq } from "drizzle-orm";
 
 export const createFeeStructureInstallment = async (

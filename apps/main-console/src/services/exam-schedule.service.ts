@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
-import type { ExamDto } from "@repo/db/index";
+import type { ExamDto } from "@academic/db/index";
 
 export interface CountStudentsParams {
   classId: number;
@@ -62,18 +62,26 @@ export async function countStudentsForExam(
     formData.append("examCommencementDate", params.examCommencementDate);
   }
 
-  params.programCourseIds.forEach((id) => formData.append("programCourseIds[]", String(id)));
+  params.programCourseIds.forEach((id) =>
+    formData.append("programCourseIds[]", String(id)),
+  );
   params.paperIds.forEach((id) => formData.append("paperIds[]", String(id)));
-  params.academicYearIds.forEach((id) => formData.append("academicYearIds[]", String(id)));
+  params.academicYearIds.forEach((id) =>
+    formData.append("academicYearIds[]", String(id)),
+  );
   params.shiftIds?.forEach((id) => formData.append("shiftIds[]", String(id)));
 
   if (file) {
     formData.append("file", file); // 🔑 MUST be "file"
   }
 
-  const response = await axiosInstance.post("/api/exams/schedule/count-students", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await axiosInstance.post(
+    "/api/exams/schedule/count-students",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
 
   return response.data;
 }
@@ -82,7 +90,10 @@ export async function countStudentsBreakdownForExam(
   params: CountStudentsBreakdownParams,
   file: File | null,
 ): Promise<ApiResponse<CountStudentsBreakdownResponse>> {
-  console.log("in ui, countStudentsBreakdownForExam(), service api call:", params);
+  console.log(
+    "in ui, countStudentsBreakdownForExam(), service api call:",
+    params,
+  );
 
   // If no file, send as JSON for better parsing
   if (!file) {
@@ -105,7 +116,9 @@ export async function countStudentsBreakdownForExam(
   }
 
   params.paperIds.forEach((id) => formData.append("paperIds[]", String(id)));
-  params.academicYearIds.forEach((id) => formData.append("academicYearIds[]", String(id)));
+  params.academicYearIds.forEach((id) =>
+    formData.append("academicYearIds[]", String(id)),
+  );
 
   // Send combinations as JSON array string (FormData doesn't handle nested objects well)
   formData.append("combinations", JSON.stringify(params.combinations));
@@ -181,9 +194,13 @@ export async function getStudentsForExam(
     formData.append("examCommencementDate", params.examCommencementDate);
   }
 
-  params.programCourseIds.forEach((id) => formData.append("programCourseIds[]", String(id)));
+  params.programCourseIds.forEach((id) =>
+    formData.append("programCourseIds[]", String(id)),
+  );
   params.paperIds.forEach((id) => formData.append("paperIds[]", String(id)));
-  params.academicYearIds.forEach((id) => formData.append("academicYearIds[]", String(id)));
+  params.academicYearIds.forEach((id) =>
+    formData.append("academicYearIds[]", String(id)),
+  );
 
   params.shiftIds?.forEach((id) => formData.append("shiftIds[]", String(id)));
 
@@ -197,9 +214,13 @@ export async function getStudentsForExam(
     formData.append("file", file);
   }
 
-  const response = await axiosInstance.post("/api/exams/schedule/get-students", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await axiosInstance.post(
+    "/api/exams/schedule/get-students",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
 
   return response.data;
 }
@@ -214,10 +235,9 @@ export async function checkDuplicateExam(
   dto: ExamDto,
 ): Promise<ApiResponse<CheckDuplicateExamResponse>> {
   try {
-    const response = await axiosInstance.post<ApiResponse<CheckDuplicateExamResponse>>(
-      "/api/exams/schedule/check-duplicate",
-      dto,
-    );
+    const response = await axiosInstance.post<
+      ApiResponse<CheckDuplicateExamResponse>
+    >("/api/exams/schedule/check-duplicate", dto);
     return response.data;
   } catch (error) {
     console.error("Error checking duplicate exam:", error);
@@ -253,10 +273,9 @@ export async function getEligibleRooms(
   params: GetEligibleRoomsParams,
 ): Promise<ApiResponse<GetEligibleRoomsResponse>> {
   try {
-    const response = await axiosInstance.post<ApiResponse<GetEligibleRoomsResponse>>(
-      "/api/exams/schedule/eligible-rooms",
-      params,
-    );
+    const response = await axiosInstance.post<
+      ApiResponse<GetEligibleRoomsResponse>
+    >("/api/exams/schedule/eligible-rooms", params);
     return response.data;
   } catch (error) {
     console.error("Error fetching eligible rooms:", error);

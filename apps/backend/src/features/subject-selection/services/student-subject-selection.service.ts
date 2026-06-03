@@ -1,33 +1,33 @@
 import { db, pool } from "@/db/index.js";
 import { and, countDistinct, desc, eq, inArray, max, sql } from "drizzle-orm";
-import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
-import { sessionModel } from "@repo/db/schemas/models/academics";
+import { studentSubjectSelectionModel } from "@academic/db/schemas/models/subject-selection/student-subject-selection.model";
+import { sessionModel } from "@academic/db/schemas/models/academics";
 import {
   subjectSelectionMetaModel,
   subjectSelectionMetaStreamModel,
   subjectSelectionMetaClassModel,
-} from "@repo/db/schemas/models/subject-selection";
+} from "@academic/db/schemas/models/subject-selection";
 import {
   subjectModel,
   streamModel,
   subjectTypeModel,
   programCourseModel,
-} from "@repo/db/schemas/models/course-design";
-import { academicYearModel } from "@repo/db/schemas/models/academics";
-import { classModel } from "@repo/db/schemas/models/academics/class.model";
-import { userModel } from "@repo/db/schemas/models/user";
-import { studentModel } from "@repo/db/schemas/models/user/student.model";
-import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
-import { sectionModel } from "@repo/db/schemas/models/academics/section.model";
-import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
+} from "@academic/db/schemas/models/course-design";
+import { academicYearModel } from "@academic/db/schemas/models/academics";
+import { classModel } from "@academic/db/schemas/models/academics/class.model";
+import { userModel } from "@academic/db/schemas/models/user";
+import { studentModel } from "@academic/db/schemas/models/user/student.model";
+import { promotionModel } from "@academic/db/schemas/models/batches/promotions.model";
+import { sectionModel } from "@academic/db/schemas/models/academics/section.model";
+import { cuRegistrationCorrectionRequestModel } from "@academic/db/schemas/models/admissions/cu-registration-correction-request.model";
 import {
   StudentSubjectSelection,
   StudentSubjectSelectionT,
-} from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
+} from "@academic/db/schemas/models/subject-selection/student-subject-selection.model";
 import {
   SubjectSelectionMetaDto,
   StudentSubjectSelectionDto,
-} from "@repo/db/dtos/subject-selection/index";
+} from "@academic/db/dtos/subject-selection/index";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as studentSubjectsService from "./student-subjects.service";
 import * as XLSX from "xlsx";
@@ -477,11 +477,11 @@ function buildSubjectsByCategoryForEmail(
 //     academicYearName: string,
 //     subjectsByCategory: Record<string, Record<string, string>>,
 // ) {
-//     const { notificationModel } = await import("@repo/db/schemas/models/notifications/notification.model");
-//     const { notificationContentModel } = await import("@repo/db/schemas/models/notifications/notification-content.model");
-//     const { notificationQueueModel } = await import("@repo/db/schemas/models/notifications/notification-queue.model");
-//     const { notificationMasterModel } = await import("@repo/db/schemas/models/notifications/notification-master.model");
-//     const { notificationTypeEnum, notificationVariantEnum, notificationStatusEnum } = await import("@repo/db/schemas/enums");
+//     const { notificationModel } = await import("@academic/db/schemas/models/notifications/notification.model");
+//     const { notificationContentModel } = await import("@academic/db/schemas/models/notifications/notification-content.model");
+//     const { notificationQueueModel } = await import("@academic/db/schemas/models/notifications/notification-queue.model");
+//     const { notificationMasterModel } = await import("@academic/db/schemas/models/notifications/notification-master.model");
+//     const { notificationTypeEnum, notificationVariantEnum, notificationStatusEnum } = await import("@academic/db/schemas/enums");
 
 //     // Global toggle via env
 //     const enabled = String(process.env.NOTIFICATIONS_ENABLED || "true").toLowerCase() === "true";
@@ -1590,9 +1590,9 @@ export async function createStudentSubjectSelectionsWithValidation(
       let contentRows: Array<{ whatsappFieldId: number; content: string }> = [];
       if (emailMasterId) {
         const { notificationMasterMetaModel } =
-          await import("@repo/db/schemas/models/notifications/notification-master-meta.model");
+          await import("@academic/db/schemas/models/notifications/notification-master-meta.model");
         const { notificationMasterFieldModel } =
-          await import("@repo/db/schemas/models/notifications/notification-master-field.model");
+          await import("@academic/db/schemas/models/notifications/notification-master-field.model");
 
         console.log("[backend] notification master ID:", emailMasterId);
         console.log(
@@ -3000,9 +3000,9 @@ export async function updateStudentSubjectSelectionsEfficiently(
           [];
         if (masterId) {
           const { notificationMasterMetaModel } =
-            await import("@repo/db/schemas/models/notifications/notification-master-meta.model");
+            await import("@academic/db/schemas/models/notifications/notification-master-meta.model");
           const { notificationMasterFieldModel } =
-            await import("@repo/db/schemas/models/notifications/notification-master-field.model");
+            await import("@academic/db/schemas/models/notifications/notification-master-field.model");
 
           console.log(
             "[backend] notification master ID (no-change):",
@@ -3536,9 +3536,9 @@ export async function updateStudentSubjectSelectionsEfficiently(
       let contentRows: Array<{ whatsappFieldId: number; content: string }> = [];
       if (emailMasterId) {
         const { notificationMasterMetaModel } =
-          await import("@repo/db/schemas/models/notifications/notification-master-meta.model");
+          await import("@academic/db/schemas/models/notifications/notification-master-meta.model");
         const { notificationMasterFieldModel } =
-          await import("@repo/db/schemas/models/notifications/notification-master-field.model");
+          await import("@academic/db/schemas/models/notifications/notification-master-field.model");
 
         const metas = await db
           .select({

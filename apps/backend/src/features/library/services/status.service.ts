@@ -1,8 +1,8 @@
 import { db } from "@/db/index.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, SQL } from "drizzle-orm";
-import { statusModel } from "@repo/db/schemas/models/library/status.model.js";
-import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
+import { statusModel } from "@academic/db/schemas/models/library/status.model.js";
+import { copyDetailsModel } from "@academic/db/schemas/models/library/copy-details.model.js";
 
 export type StatusListFilters = {
   page: number;

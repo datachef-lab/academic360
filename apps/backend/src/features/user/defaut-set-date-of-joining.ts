@@ -4,7 +4,7 @@ import {
   promotionModel,
   sessionModel,
   studentModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 
 export async function defaultSetDateOfJoining() {

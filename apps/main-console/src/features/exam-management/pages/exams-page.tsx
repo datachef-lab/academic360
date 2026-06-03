@@ -57,7 +57,7 @@ import type {
   //   Course,
   //   CourseType,
   ExamGroupDto,
-} from "@repo/db/index";
+} from "@academic/db/index";
 // import { Class } from "@/types/academics/class";
 // import { AxiosError } from "axios";
 // import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
@@ -69,7 +69,7 @@ import { getAllClasses } from "@/services/classes.service";
 import { getAffiliations, getRegulationTypes } from "@/services/course-design.api";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { Class } from "@/types/academics/class";
-import { Affiliation, RegulationType } from "@repo/db/index";
+import { Affiliation, RegulationType } from "@academic/db/index";
 import { Link } from "react-router-dom";
 
 const ExamsPage = () => {
@@ -1746,13 +1746,13 @@ const ExamsPage = () => {
                     Filters
                     {Object.values(filters).filter((v) => v !== null && v !== undefined).length >
                       0 && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                      >
-                        {Object.values(filters).filter((v) => v !== null && v !== undefined).length}
-                      </Badge>
-                    )}
+                        <Badge
+                          variant="secondary"
+                          className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                        >
+                          {Object.values(filters).filter((v) => v !== null && v !== undefined).length}
+                        </Badge>
+                      )}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto">

@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
-import type { AdmissionAcademicInfoDto } from "@repo/db/dtos/admissions";
+import type { AdmissionAcademicInfoDto } from "@academic/db/dtos/admissions";
 
 const BASE_URL = "/api/admissions/academic-info";
 
@@ -14,7 +14,9 @@ export async function getAcademicInfoById(
 export async function getAcademicInfoByApplicationFormId(
   applicationFormId: number,
 ): Promise<ApiResponse<AdmissionAcademicInfoDto | null>> {
-  const res = await axiosInstance.get(`${BASE_URL}/application-form/${applicationFormId}`);
+  const res = await axiosInstance.get(
+    `${BASE_URL}/application-form/${applicationFormId}`,
+  );
   return res.data;
 }
 
@@ -33,7 +35,9 @@ export async function updateAcademicInfo(
   return res.data;
 }
 
-export async function deleteAcademicInfo(id: number): Promise<ApiResponse<{ success: boolean }>> {
+export async function deleteAcademicInfo(
+  id: number,
+): Promise<ApiResponse<{ success: boolean }>> {
   const res = await axiosInstance.delete(`${BASE_URL}/${id}`);
   return res.data;
 }

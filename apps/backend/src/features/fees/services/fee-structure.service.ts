@@ -79,7 +79,7 @@ import {
   CreateFeeStructureDto,
   FeeStructureDto,
   FeeStructureComponentDto,
-} from "@repo/db/dtos/fees";
+} from "@academic/db/dtos/fees";
 import {
   feeStructureModel,
   FeeStructure,
@@ -92,22 +92,22 @@ import {
   feeGroupPromotionMappingModel,
   feeCategoryModel,
   feeGroupModel,
-} from "@repo/db/schemas/models/fees";
+} from "@academic/db/schemas/models/fees";
 import {
   academicYearModel,
   classModel,
   shiftModel,
   sessionModel,
   sectionModel,
-} from "@repo/db/schemas/models/academics";
-import { careerProgressionFormModel } from "@repo/db/schemas";
+} from "@academic/db/schemas/models/academics";
+import { careerProgressionFormModel } from "@academic/db/schemas";
 import {
   affiliationModel,
   programCourseModel,
   regulationTypeModel,
-} from "@repo/db/schemas/models/course-design";
-import { promotionModel } from "@repo/db/schemas/models/batches";
-import { paymentModel } from "@repo/db/schemas/models/payments";
+} from "@academic/db/schemas/models/course-design";
+import { promotionModel } from "@academic/db/schemas/models/batches";
+import { paymentModel } from "@academic/db/schemas/models/payments";
 import {
   and,
   eq,
@@ -131,7 +131,7 @@ import * as programCourseService from "@/features/course-design/services/program
 import * as receiptTypeService from "./receipt-type.service.js";
 import * as feeHeadService from "./fee-head.service.js";
 import * as feeSlabService from "./fee-slab.service.js";
-import { studentModel, userModel } from "@repo/db/index.js";
+import { studentModel, userModel } from "@academic/db/index.js";
 import { socketService } from "@/services/socketService.js";
 import * as userService from "@/features/user/services/user.service.js";
 import { copyCareerProgressionFormsForAcademicYearMigration } from "@/features/academics/services/career-progression-form.service.js";

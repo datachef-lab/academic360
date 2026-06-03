@@ -50,7 +50,7 @@ import type {
   ExamSubjectT,
   ExamRoomDto,
   ExamProgramCourseDto,
-} from "@repo/db/index";
+} from "@academic/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
@@ -217,17 +217,17 @@ export default function ScheduleExamPage() {
       // Filter to only include active components
       const mappedComponents: ExamComponent[] = Array.isArray(data)
         ? data
-            .filter((comp) => (comp as { isActive?: boolean | null }).isActive !== false)
-            .map((comp) => ({
-              id: comp.id,
-              name: comp.name,
-              shortName: comp.shortName ?? null,
-              code: comp.code ?? null,
-              sequence: comp.sequence ?? null,
-              disabled: false, // All filtered items are active, so disabled is false
-              createdAt: comp.createdAt,
-              updatedAt: comp.updatedAt,
-            }))
+          .filter((comp) => (comp as { isActive?: boolean | null }).isActive !== false)
+          .map((comp) => ({
+            id: comp.id,
+            name: comp.name,
+            shortName: comp.shortName ?? null,
+            code: comp.code ?? null,
+            sequence: comp.sequence ?? null,
+            disabled: false, // All filtered items are active, so disabled is false
+            createdAt: comp.createdAt,
+            updatedAt: comp.updatedAt,
+          }))
         : [];
       return mappedComponents;
     },
@@ -1492,7 +1492,7 @@ export default function ScheduleExamPage() {
       if (duplicateCheck.payload?.isDuplicate) {
         throw new Error(
           duplicateCheck.payload.message ||
-            `An exam with the same configuration already exists (Exam ID: ${duplicateCheck.payload.duplicateExamId}).`,
+          `An exam with the same configuration already exists (Exam ID: ${duplicateCheck.payload.duplicateExamId}).`,
         );
       }
 
@@ -2152,11 +2152,10 @@ export default function ScheduleExamPage() {
                                   key={group.id}
                                   type="button"
                                   onClick={() => setSelectedExistingGroupId(group.id ?? null)}
-                                  className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
-                                    selectedExistingGroupId === group.id
+                                  className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${selectedExistingGroupId === group.id
                                       ? "border-purple-500 bg-purple-50"
                                       : "border-gray-300 bg-gray-50 hover:border-purple-300"
-                                  }`}
+                                    }`}
                                 >
                                   <div className="flex items-center gap-2">
                                     <Checkbox
@@ -2209,10 +2208,10 @@ export default function ScheduleExamPage() {
 
             {/* Check if all required fields from first section are selected */}
             {examType &&
-            semester &&
-            selectedProgramCourses.length > 0 &&
-            selectedShifts.length > 0 &&
-            selectedSubjectCategories.length > 0 ? (
+              semester &&
+              selectedProgramCourses.length > 0 &&
+              selectedShifts.length > 0 &&
+              selectedSubjectCategories.length > 0 ? (
               <>
                 {/* Dotted Separator between sections */}
                 <div className="border-t border-dashed border-gray-400 my-4"></div>
@@ -2246,7 +2245,7 @@ export default function ScheduleExamPage() {
                                 >
                                   <span className="text-gray-600 truncate">
                                     {getAvailableSubjects().length === 0 &&
-                                    getDistinctSubjects().length > 0
+                                      getDistinctSubjects().length > 0
                                       ? "All papers added"
                                       : currentSubjectIds.length > 0
                                         ? `${currentSubjectIds.length} subject(s)`
@@ -2365,7 +2364,7 @@ export default function ScheduleExamPage() {
                                   {currentSubjectIds.length === 0
                                     ? "Select subjects first"
                                     : getAvailableProgramCoursesForSubjects(currentSubjectIds)
-                                          .length === 0
+                                      .length === 0
                                       ? "All papers added"
                                       : currentProgramCourseIds.length > 0
                                         ? `${currentProgramCourseIds.length} selected`
@@ -2377,7 +2376,7 @@ export default function ScheduleExamPage() {
                             <PopoverContent className="w-80 p-2" align="start">
                               <div className="max-h-60 overflow-y-auto space-y-1">
                                 {getAvailableProgramCoursesForSubjects(currentSubjectIds).length ===
-                                0 ? (
+                                  0 ? (
                                   <div className="px-2 py-4 text-center text-sm text-gray-500">
                                     All papers have been added
                                   </div>

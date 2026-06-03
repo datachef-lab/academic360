@@ -1,4 +1,4 @@
-import type { AcademicYear } from "@repo/db/schemas";
+import type { AcademicYear } from "@academic/db/schemas";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 // Define the initial state interface
@@ -29,7 +29,10 @@ const academicYearSlice = createSlice({
     },
 
     // Set available academic years
-    setAvailableAcademicYears: (state, action: PayloadAction<AcademicYear[]>) => {
+    setAvailableAcademicYears: (
+      state,
+      action: PayloadAction<AcademicYear[]>,
+    ) => {
       state.availableAcademicYears = action.payload;
       state.error = null;
     },
@@ -74,14 +77,18 @@ export const {
 export default academicYearSlice.reducer;
 
 // Selectors
-export const selectCurrentAcademicYear = (state: { academicYear: AcademicYearState }) =>
-  state.academicYear.currentAcademicYear;
+export const selectCurrentAcademicYear = (state: {
+  academicYear: AcademicYearState;
+}) => state.academicYear.currentAcademicYear;
 
-export const selectAvailableAcademicYears = (state: { academicYear: AcademicYearState }) =>
-  state.academicYear.availableAcademicYears;
+export const selectAvailableAcademicYears = (state: {
+  academicYear: AcademicYearState;
+}) => state.academicYear.availableAcademicYears;
 
-export const selectAcademicYearLoading = (state: { academicYear: AcademicYearState }) =>
-  state.academicYear.loading;
+export const selectAcademicYearLoading = (state: {
+  academicYear: AcademicYearState;
+}) => state.academicYear.loading;
 
-export const selectAcademicYearError = (state: { academicYear: AcademicYearState }) =>
-  state.academicYear.error;
+export const selectAcademicYearError = (state: {
+  academicYear: AcademicYearState;
+}) => state.academicYear.error;

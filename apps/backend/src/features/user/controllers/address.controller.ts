@@ -1,7 +1,7 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { createAddressSchema } from "@repo/db/schemas/models/user";
+import { createAddressSchema } from "@academic/db/schemas/models/user";
 import {
   addAddress,
   findAddressById,
@@ -9,7 +9,7 @@ import {
   removeAddress,
   getAllAddresses,
 } from "@/features/user/services/address.service.js";
-import { Address } from "@repo/db/schemas/models/user";
+import { Address } from "@academic/db/schemas/models/user";
 
 export const createAddress = async (
   req: Request,

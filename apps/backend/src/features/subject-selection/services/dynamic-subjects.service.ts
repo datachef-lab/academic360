@@ -2,13 +2,13 @@ import { eq, and } from "drizzle-orm";
 import {
   studentSubjectSelectionModel,
   subjectSelectionMetaModel,
-} from "@repo/db/schemas/models/subject-selection";
+} from "@academic/db/schemas/models/subject-selection";
 import {
   paperModel,
   subjectModel,
   subjectTypeModel,
-} from "@repo/db/schemas/models/course-design";
-import { studentModel } from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/course-design";
+import { studentModel } from "@academic/db/schemas/models/user";
 import { db } from "@/db";
 import { findSubjectsSelections } from "./student-subjects.service";
 

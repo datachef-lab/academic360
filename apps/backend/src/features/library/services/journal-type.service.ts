@@ -1,8 +1,8 @@
 import { db } from "@/db/index.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, SQL } from "drizzle-orm";
-import { journalTypeModel } from "@repo/db/schemas/models/library/journal-type.model.js";
-import { journalModel } from "@repo/db/schemas/models/library/journal.model.js";
+import { journalTypeModel } from "@academic/db/schemas/models/library/journal-type.model.js";
+import { journalModel } from "@academic/db/schemas/models/library/journal.model.js";
 
 export type JournalTypeListFilters = {
   page: number;

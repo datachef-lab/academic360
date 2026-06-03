@@ -1,11 +1,11 @@
 import { db } from "@/db/index.js";
-import { RoomDto } from "@repo/db/dtos";
+import { RoomDto } from "@academic/db/dtos";
 import {
   Room,
   RoomT,
   roomModel,
   floorModel,
-} from "@repo/db/schemas/models/exams";
+} from "@academic/db/schemas/models/exams";
 import { and, eq, ilike, ne } from "drizzle-orm";
 
 function normaliseRoomPayload<T extends Partial<Room | RoomT>>(data: T) {

@@ -1,6 +1,6 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError, ApiResponse, ApiError } from "@/utils/index.js";
-import { createPersonSchema } from "@repo/db/schemas/models/user";
+import { createPersonSchema } from "@academic/db/schemas/models/user";
 import {
   addPerson,
   findPersonById,
@@ -8,7 +8,7 @@ import {
   removePerson,
   getAllPersons,
 } from "../services/person.service.js";
-import { Person } from "@repo/db/schemas/models/user";
+import { Person } from "@academic/db/schemas/models/user";
 import { updateFamilyMemberTitles } from "../services/student.service.js";
 
 export const createPerson = async (

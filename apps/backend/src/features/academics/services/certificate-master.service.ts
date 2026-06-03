@@ -4,7 +4,7 @@ import {
   certificateFieldOptionMasterModel,
   certificateMasterModel,
   createCertificateMasterSchema,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { asc, eq } from "drizzle-orm";
 
 export type CertificateMasterRow = typeof certificateMasterModel.$inferSelect;

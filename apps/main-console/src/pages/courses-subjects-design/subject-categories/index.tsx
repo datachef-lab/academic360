@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { SubjectCategoryForm } from "./subject-category-form";
-import type { SubjectType } from "@repo/db/index";
+import type { SubjectType } from "@academic/db/index";
 import {
   getSubjectTypes,
   createSubjectType,
@@ -356,7 +356,7 @@ const SubjectCategoriesPage = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" onClick={() => {}} className="flex-shrink-0">
+            <Button variant="outline" onClick={() => { }} className="flex-shrink-0">
               <Download className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Download</span>
             </Button>

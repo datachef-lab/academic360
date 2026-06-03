@@ -80,8 +80,8 @@ import {
   BoardSubject,
   BoardSubjectName,
   cuRegistrationCorrectionRequestModel,
-} from "@repo/db/schemas/models";
-import { personTitleType } from "@repo/db/schemas/enums";
+} from "@academic/db/schemas/models";
+import { personTitleType } from "@academic/db/schemas/enums";
 import {
   OldAdmStudentPersonalDetail,
   OldBoardResultStatus,
@@ -90,9 +90,9 @@ import {
   OldStudentSubjectDetails,
   OldBoardSubjectName,
   OldStudentAcademicDetails,
-} from "@repo/db/legacy-system-types/admissions";
+} from "@academic/db/legacy-system-types/admissions";
 
-import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
+import { classModel } from "@academic/db/schemas/models/academics/class.model.js";
 import { and, eq, ilike, or } from "drizzle-orm";
 
 import { OldBoard } from "@/types/old-board";
@@ -100,22 +100,25 @@ import { OldBoardStatus } from "@/types/old-board-status";
 import {
   OldCvSubjectSelection,
   OldMeritList,
-} from "@repo/db/legacy-system-types/admissions";
+} from "@academic/db/legacy-system-types/admissions";
 import { OldCourse } from "@/types/old-data/old-course";
 import { OldDegree } from "@/types/old-degree";
 import { OldSubject } from "@/types/old-data/old-subject";
 import { OldSubjectType } from "@/types/old-data/old-subject-type";
-import { bankBranchModel } from "@repo/db/schemas/models/payments/bank-branch.model";
-import { bankModel } from "@repo/db/schemas/models/payments/bank.model";
-import { meritListModel } from "@repo/db/schemas/models/admissions/merit-list.model";
-import { OldBank, OldBankBranch } from "@repo/db/legacy-system-types/payment";
+import { bankBranchModel } from "@academic/db/schemas/models/payments/bank-branch.model";
+import { bankModel } from "@academic/db/schemas/models/payments/bank.model";
+import { meritListModel } from "@academic/db/schemas/models/admissions/merit-list.model";
+import {
+  OldBank,
+  OldBankBranch,
+} from "@academic/db/legacy-system-types/payment";
 import { OldShift } from "@/types/old-data/old-shift";
-import { eligibilityCriteriaModel } from "@repo/db/schemas/models/admissions/eligibility-criteria.model";
-import { studentCategoryModel } from "@repo/db/schemas/models/admissions/adm-student-category.model";
+import { eligibilityCriteriaModel } from "@academic/db/schemas/models/admissions/eligibility-criteria.model";
+import { studentCategoryModel } from "@academic/db/schemas/models/admissions/adm-student-category.model";
 import { OldClass } from "@/types/old-data/old-class";
-import { OldEligibilityCriteria } from "@repo/db/legacy-system-types/course-design";
-import { userTypeEnum } from "@repo/db/schemas";
-import { staffModel } from "@repo/db/schemas/models/user/staff.model";
+import { OldEligibilityCriteria } from "@academic/db/legacy-system-types/course-design";
+import { userTypeEnum } from "@academic/db/schemas";
+import { staffModel } from "@academic/db/schemas/models/user/staff.model";
 import * as oldAdmPersonalDetailsHelper from "./old-student.service";
 
 export function formatAadhaarCardNumber(
@@ -162,9 +165,9 @@ import {
   OldHistoricalRecord,
   OldStaff,
   OldStudent,
-} from "@repo/db/legacy-system-types/users";
-import { OldCountry } from "@repo/db/legacy-system-types/resources";
-import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
+} from "@academic/db/legacy-system-types/users";
+import { OldCountry } from "@academic/db/legacy-system-types/resources";
+import { OldPromotionStatus } from "@academic/db/legacy-system-types/batches";
 import { bitToBool } from "./refactor-old-migration.service";
 import { CuRegistrationNumberService } from "@/services/cu-registration-number.service";
 import { CLIENT_RENEG_LIMIT } from "tls";

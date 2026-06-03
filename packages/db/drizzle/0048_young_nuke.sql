@@ -1,0 +1,1 @@
+ALTER TYPE "public"."person_title_type" ADD VALUE 'LATE';

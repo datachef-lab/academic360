@@ -1,6 +1,6 @@
 /**
- * Local Drizzle model for `user_status_mapping` (not in @repo/db).
- * `user_statuses_master` reads use {@link userStatusMasterModel} from @repo/db.
+ * Local Drizzle model for `user_status_mapping` (not in @academic/db).
+ * `user_statuses_master` reads use {@link userStatusMasterModel} from @academic/db.
  */
 import {
   boolean,

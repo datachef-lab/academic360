@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
   createEmergencyContactSchema,
   EmergencyContact,
-} from "@repo/db/schemas/models/user";
+} from "@academic/db/schemas/models/user";
 import {
   addEmergencyContact,
   findEmergencyContactById,

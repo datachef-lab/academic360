@@ -38,7 +38,7 @@ import {
   Settings2,
   Trash2,
 } from "lucide-react";
-import { userTypeEnum } from "@repo/db/schemas/enums";
+import { userTypeEnum } from "@academic/db/schemas/enums";
 import { toast } from "sonner";
 import { getColorFromName } from "@/utils/avatar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -712,10 +712,9 @@ export default function BookCirculationPage() {
               {previewUser && (
                 <div className="flex items-center gap-2">
                   <Badge
-                    className={`${
-                      (previewUser.userType && userTypeClassMap[previewUser.userType]) ||
+                    className={`${(previewUser.userType && userTypeClassMap[previewUser.userType]) ||
                       "bg-slate-100 text-slate-700"
-                    } border border-slate-300`}
+                      } border border-slate-300`}
                   >
                     {toSentenceCase(previewUser.userType || "USER")}
                   </Badge>
@@ -745,11 +744,10 @@ export default function BookCirculationPage() {
                     <div
                       className="h-full w-full rounded-sm bg-cover bg-center"
                       style={{
-                        backgroundImage: `url("${
-                          previewUser.userType === "STUDENT" && previewUser.uid
+                        backgroundImage: `url("${previewUser.userType === "STUDENT" && previewUser.uid
                             ? getStudentAvatarUrl(previewUser.uid)
                             : previewUser.image || ""
-                        }")`,
+                          }")`,
                         backgroundSize: "cover",
                         objectFit: "contain",
                         backgroundRepeat: "no-repeat",
@@ -760,12 +758,12 @@ export default function BookCirculationPage() {
                         (previewUser.userType === "STUDENT" && previewUser.uid) ||
                         previewUser.image
                       ) && (
-                        <div
-                          className={`flex h-full w-full items-center justify-center text-4xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
-                        >
-                          {getInitials(previewUser.name)}
-                        </div>
-                      )}
+                          <div
+                            className={`flex h-full w-full items-center justify-center text-4xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
+                          >
+                            {getInitials(previewUser.name)}
+                          </div>
+                        )}
                     </div>
                   </div>
                   <div className="border border-slate-200 bg-emerald-50">
@@ -963,15 +961,15 @@ export default function BookCirculationPage() {
                                   prev.map((row) =>
                                     row.id === item.id
                                       ? {
-                                          ...row,
-                                          bookOptionKey: value,
-                                          copyDetailsId: picked.copyDetailsId,
-                                          title: picked.title,
-                                          accessNumber: picked.accessNumber,
-                                          author: picked.author,
-                                          publication: picked.publication,
-                                          frontCover: picked.frontCover,
-                                        }
+                                        ...row,
+                                        bookOptionKey: value,
+                                        copyDetailsId: picked.copyDetailsId,
+                                        title: picked.title,
+                                        accessNumber: picked.accessNumber,
+                                        author: picked.author,
+                                        publication: picked.publication,
+                                        frontCover: picked.frontCover,
+                                      }
                                       : row,
                                   ),
                                 );
@@ -1005,12 +1003,12 @@ export default function BookCirculationPage() {
                                   prev.map((row) =>
                                     row.id === item.id
                                       ? {
-                                          ...row,
-                                          borrowingType: value,
-                                          borrowingTypeId:
-                                            borrowingTypeOptions.find((opt) => opt.name === value)
-                                              ?.id ?? null,
-                                        }
+                                        ...row,
+                                        borrowingType: value,
+                                        borrowingTypeId:
+                                          borrowingTypeOptions.find((opt) => opt.name === value)
+                                            ?.id ?? null,
+                                      }
                                       : row,
                                   ),
                                 )
@@ -1031,11 +1029,11 @@ export default function BookCirculationPage() {
                                   prev.map((row) =>
                                     row.id === item.id
                                       ? {
-                                          ...row,
-                                          returnTimestamp: date
-                                            ? date.toISOString()
-                                            : row.returnTimestamp,
-                                        }
+                                        ...row,
+                                        returnTimestamp: date
+                                          ? date.toISOString()
+                                          : row.returnTimestamp,
+                                      }
                                       : row,
                                   ),
                                 )
@@ -1064,11 +1062,11 @@ export default function BookCirculationPage() {
                                     prev.map((row) =>
                                       row.id === item.id
                                         ? {
-                                            ...row,
-                                            actualReturnTimestamp: row.actualReturnTimestamp
-                                              ? null
-                                              : new Date().toISOString(),
-                                          }
+                                          ...row,
+                                          actualReturnTimestamp: row.actualReturnTimestamp
+                                            ? null
+                                            : new Date().toISOString(),
+                                        }
                                         : row,
                                     ),
                                   );

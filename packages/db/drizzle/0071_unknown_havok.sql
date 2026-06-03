@@ -1,0 +1,1 @@
+ALTER TABLE "exam_types" ADD COLUMN "foil_number_required" boolean DEFAULT false;

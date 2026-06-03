@@ -4,8 +4,8 @@ import {
   AppModule,
   AppModuleT,
   appModuleModel,
-} from "@repo/db/schemas/models/administration";
-import { AppModuleDto } from "@repo/db/dtos/administration";
+} from "@academic/db/schemas/models/administration";
+import { AppModuleDto } from "@academic/db/dtos/administration";
 import { appModuleData } from "@/features/default-administration-data";
 import fs from "fs";
 import path from "path";

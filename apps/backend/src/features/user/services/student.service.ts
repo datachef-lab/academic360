@@ -24,8 +24,8 @@ import {
   healthModel,
   emergencyContactModel,
   transportDetailsModel,
-} from "@repo/db/schemas/models/user";
-import { userModel } from "@repo/db/schemas/models/user/user.model";
+} from "@academic/db/schemas/models/user";
+import { userModel } from "@academic/db/schemas/models/user/user.model";
 import {
   categoryModel,
   nationalityModel,
@@ -34,21 +34,21 @@ import {
   occupationModel,
   qualificationModel,
   annualIncomeModel,
-} from "@repo/db/schemas/models/resources";
-import { countryModel } from "@repo/db/schemas/models/resources/country.model";
-import { stateModel } from "@repo/db/schemas/models/resources/state.model";
-import { cityModel } from "@repo/db/schemas/models/resources/city.model";
-import { districtModel } from "@repo/db/schemas/models/resources/district.model";
-import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model";
-import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model";
+} from "@academic/db/schemas/models/resources";
+import { countryModel } from "@academic/db/schemas/models/resources/country.model";
+import { stateModel } from "@academic/db/schemas/models/resources/state.model";
+import { cityModel } from "@academic/db/schemas/models/resources/city.model";
+import { districtModel } from "@academic/db/schemas/models/resources/district.model";
+import { postOfficeModel } from "@academic/db/schemas/models/user/post-office.model";
+import { policeStationModel } from "@academic/db/schemas/models/user/police-station.model";
 import { StudentType } from "@/types/user/student.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
-import { degreeModel } from "@repo/db/schemas/models/resources";
-import { marksheetModel } from "@repo/db/schemas/models/academics";
+import { degreeModel } from "@academic/db/schemas/models/resources";
+import { marksheetModel } from "@academic/db/schemas/models/academics";
 
 import { processClassBySemesterNumber } from "@/features/academics/services/class.service.js";
-import { StudentDto } from "@repo/db/dtos/user/index.js";
+import { StudentDto } from "@academic/db/dtos/user/index.js";
 import XLSX from "xlsx";
 import ExcelJS from "exceljs";
 
@@ -158,10 +158,10 @@ function generateAddressColumns(addressDetails: any) {
 import {
   admissionGeneralInfoModel,
   applicationFormModel,
-} from "@repo/db/schemas";
-import { promotionModel } from "@repo/db/schemas/models/batches";
-import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
-import { boardResultStatusModel } from "@repo/db/schemas/models/resources";
+} from "@academic/db/schemas";
+import { promotionModel } from "@academic/db/schemas/models/batches";
+import { promotionStatusModel } from "@academic/db/schemas/models/batches/promotion-status.model";
+import { boardResultStatusModel } from "@academic/db/schemas/models/resources";
 import {
   studentAcademicSubjectModel,
   admSubjectPaperSelectionModel,
@@ -171,24 +171,24 @@ import {
   admissionAcademicInfoModel,
   admissionCourseDetailsModel,
   cuRegistrationCorrectionRequestModel,
-} from "@repo/db/schemas/models/admissions";
+} from "@academic/db/schemas/models/admissions";
 import {
   paperModel,
   subjectModel,
   subjectTypeModel,
-} from "@repo/db/schemas/models/course-design";
-import { boardModel } from "@repo/db/schemas/models/resources";
+} from "@academic/db/schemas/models/course-design";
+import { boardModel } from "@academic/db/schemas/models/resources";
 import {
   sessionModel,
   classModel,
   sectionModel,
   shiftModel,
   academicYearModel,
-} from "@repo/db/schemas/models/academics";
+} from "@academic/db/schemas/models/academics";
 import {
   programCourseModel,
   streamModel,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as specializationService from "@/features/resources/services/specialization.service";

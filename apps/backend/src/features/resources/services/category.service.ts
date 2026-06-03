@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import {
   categoryModel,
   type Category,
-} from "@repo/db/schemas/models/resources/category.model";
+} from "@academic/db/schemas/models/resources/category.model";
 import { eq } from "drizzle-orm";
 
 const categories: Omit<Category, "id" | "createdAt" | "updatedAt">[] = [

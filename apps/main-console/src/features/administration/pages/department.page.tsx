@@ -24,7 +24,7 @@
 //   SelectValue,
 // } from "@/components/ui/select";
 // import { Building2, Edit, GitBranch, PlusCircle } from "lucide-react";
-// import type { Department,  } from "@repo/db/index";
+// import type { Department,  } from "@academic/db/index";
 
 // import {
 //   createDepartment,

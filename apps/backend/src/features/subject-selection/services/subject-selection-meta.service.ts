@@ -5,20 +5,20 @@ import {
   subjectSelectionMetaClassModel,
   subjectSelectionMetaStreamModel,
   studentSubjectSelectionModel,
-} from "@repo/db/schemas/models/subject-selection";
+} from "@academic/db/schemas/models/subject-selection";
 import {
   streamModel,
   subjectTypeModel,
-} from "@repo/db/schemas/models/course-design";
+} from "@academic/db/schemas/models/course-design";
 import {
   academicYearModel,
   classModel,
-} from "@repo/db/schemas/models/academics";
+} from "@academic/db/schemas/models/academics";
 import {
   SubjectSelectionMetaDto,
   SubjectSelectionMetaClassDto,
   SubjectSelectionMetaStreamDto,
-} from "@repo/db/dtos/subject-selection";
+} from "@academic/db/dtos/subject-selection";
 
 // Use DTOs only for service I/O types per requirement
 

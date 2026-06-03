@@ -3,9 +3,9 @@ import {
   feeStructureComponentModel,
   createFeeStructureComponentSchema,
   feeHeadModel,
-} from "@repo/db/schemas";
+} from "@academic/db/schemas";
 import { eq, inArray } from "drizzle-orm";
-import type { FeeStructureComponentDto } from "@repo/db/dtos/fees";
+import type { FeeStructureComponentDto } from "@academic/db/dtos/fees";
 
 /**
  * Services return raw DTOs/arrays/null and do not catch errors.

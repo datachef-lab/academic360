@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
 import { validateData } from "@/middlewares/index.js";
-import { createUserStatusMasterSchema } from "@repo/db/schemas/models/administration";
+import { createUserStatusMasterSchema } from "@academic/db/schemas/models/administration";
 import {
   createUserStatusMaster,
   deleteUserStatusMaster,

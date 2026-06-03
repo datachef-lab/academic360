@@ -11,7 +11,7 @@ import {
   FeeCategoryPromotionFilter,
   bulkUploadFeeCategoryPromotionMappings,
 } from "../services/fee-category-promotion-mapping.service";
-import { createFeeGroupPromotionMappingSchema } from "@repo/db/schemas";
+import { createFeeGroupPromotionMappingSchema } from "@academic/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 

@@ -7,7 +7,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { specializationModel } from "@repo/db/schemas/models/course-design";
+import { specializationModel } from "@academic/db/schemas/models/course-design";
 import { z } from "zod";
 
 export const annualIncomeModel = pgTable("annual_incomes", {

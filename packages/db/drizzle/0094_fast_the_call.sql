@@ -1,0 +1,3 @@
+ALTER TABLE "payments" ADD COLUMN "fee_student_mapping_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "payment_status" "payment_status" DEFAULT 'PENDING' NOT NULL;--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_fee_student_mapping_id_fk_fee_student_mappings_id_fk" FOREIGN KEY ("fee_student_mapping_id_fk") REFERENCES "public"."fee_student_mappings"("id") ON DELETE no action ON UPDATE no action;

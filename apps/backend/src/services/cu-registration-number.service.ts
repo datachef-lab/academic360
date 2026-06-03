@@ -6,7 +6,7 @@
  */
 
 import { db } from "@/db/index.js";
-import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
+import { cuRegistrationCorrectionRequestModel } from "@academic/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { max, sql } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
 

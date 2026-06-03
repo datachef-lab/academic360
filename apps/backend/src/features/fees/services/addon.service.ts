@@ -59,7 +59,7 @@
 // };
 
 import { db } from "@/db";
-import { AddOn, addonModel } from "@repo/db/schemas";
+import { AddOn, addonModel } from "@academic/db/schemas";
 import { eq } from "drizzle-orm";
 
 /**

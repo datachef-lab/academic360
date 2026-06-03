@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { ApiError } from "@/utils/ApiError.js";
-import { cuRegistrationDocumentUploadInsertSchema } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
+import { cuRegistrationDocumentUploadInsertSchema } from "@academic/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import {
   createCuRegistrationDocumentUpload,
   findCuRegistrationDocumentUploadById,
@@ -45,7 +45,7 @@ import {
 import multer from "multer";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { documentModel } from "@repo/db/index.js";
+import { documentModel } from "@academic/db/index.js";
 
 // Helper function to get document name by ID from database
 async function getDocumentNameById(documentId: string): Promise<string> {
