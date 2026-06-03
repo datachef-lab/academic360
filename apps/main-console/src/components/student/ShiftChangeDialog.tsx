@@ -335,12 +335,7 @@ function PreviewPanel({
     getGeneratedDocumentInvalidationMessage(generatedFeeDocuments);
 
   const notes: string[] = [];
-  if (preview.feesPaid) {
-    notes.push("This session's payment is kept — nothing is removed.");
-    notes.push("New fee amounts apply from the next session only.");
-  } else {
-    notes.push("Unpaid fees update immediately for this session.");
-  }
+  notes.push("Unpaid fees update immediately for this session.");
   notes.push("Shift, UID, and login email change as soon as you save.");
   notes.push("Allowed only once per student.");
   if (preview.hasExamHistoryOnActivePromotions) {

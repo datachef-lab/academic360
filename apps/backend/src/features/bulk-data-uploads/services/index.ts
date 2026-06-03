@@ -14,7 +14,7 @@ import { sessionModel } from "@repo/db/schemas/models/academics/session.model.js
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { admissionCourseDetailsModel } from "@repo/db/schemas/models/admissions/adm-course-details.model.js";
 import { admissionProgramCourseModel } from "@repo/db/schemas/models/admissions/admission-program-course.model.js";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   precomputeBuilderPolicy,
   validateExamFormFillupBulkAgainstBuilder,
@@ -430,18 +430,21 @@ export async function bulkUploadExamFormFillup(
             eq(promotionModel.sessionId, sessionId),
             eq(promotionModel.classId, classId),
             eq(promotionModel.programCourseId, programCourseId),
+            isNull(promotionModel.endDate),
+            sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
           ),
         )
+        .orderBy(desc(promotionModel.id))
         .limit(2);
 
       if (promotions.length === 0) {
         throw new Error(
-          `No promotion found for this student (CU Reg/Roll), selected class, session, and resolved program course from admission.`,
+          `No active promotion found for this student (CU Reg/Roll), selected class, session, and program course (deprecated or closed promotions are excluded).`,
         );
       }
       if (promotions.length > 1) {
         throw new Error(
-          "Multiple promotion rows match the same student, session, class, and program course; check for duplicate promotions.",
+          "Multiple active promotion rows match the same student, session, class, and program course; resolve duplicate active promotions first.",
         );
       }
 

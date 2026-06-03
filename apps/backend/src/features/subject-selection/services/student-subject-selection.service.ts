@@ -2172,6 +2172,8 @@ WITH students_in_report_year AS (
   FROM promotions pr
   JOIN sessions sess_lp ON sess_lp.id = pr.session_id_fk
   WHERE pr.is_alumni IS NOT TRUE
+    AND pr.end_date IS NULL
+    AND COALESCE(pr.is_deprecated, false) = false
     AND sess_lp.academic_id_fk = $1
 ),
 student_paper_years AS (
@@ -2203,7 +2205,7 @@ student_registration_year AS (
 ),
 
 student_promotions_by_class AS (
-  SELECT
+  SELECT DISTINCT ON (pr.student_id_fk, pr.class_id_fk)
          pr.id AS promotion_id,
          pr.student_id_fk AS student_id,
          pr.class_id_fk,
@@ -2213,10 +2215,14 @@ student_promotions_by_class AS (
   JOIN sessions sess ON sess.id = pr.session_id_fk
   JOIN academic_years ay ON ay.id = sess.academic_id_fk
   WHERE pr.is_alumni IS NOT TRUE
+    AND pr.end_date IS NULL
+    AND COALESCE(pr.is_deprecated, false) = false
     AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
     AND sess.academic_id_fk = $1
+  ORDER BY pr.student_id_fk, pr.class_id_fk, pr.id DESC
 ),
 
+/** One row per student + selection slot (meta), matching CU Registration admin form. */
 latest_student_selections AS (
   SELECT id,
          student_id_fk,
@@ -2228,9 +2234,7 @@ latest_student_selections AS (
     SELECT sss.*,
            ROW_NUMBER() OVER (
              PARTITION BY sss.student_id_fk,
-                          sss.session_id_fk,
-                          sss.subject_selection_meta_id_fk,
-                          sss.subject_id_fk
+                          sss.subject_selection_meta_id_fk
              ORDER BY sss.version DESC,
                       sss.updated_at DESC NULLS LAST,
                       sss.created_at DESC,
@@ -2238,6 +2242,7 @@ latest_student_selections AS (
            ) AS rn
     FROM student_subject_selections sss
     WHERE sss.is_active = TRUE
+      AND sss.student_id_fk IN (SELECT student_id FROM students_in_report_year)
   ) ranked
   WHERE rn = 1
 ),
@@ -2297,6 +2302,7 @@ mandatory AS (
   JOIN subjects sbj ON sbj.id = p.subject_id_fk
   JOIN subject_types sbt ON sbt.id = p.subject_type_id_fk
   WHERE p.is_optional = FALSE
+    AND p.is_active = TRUE
     __EXTRA_FILTER_MAND__
 ),
 
@@ -2359,10 +2365,10 @@ optional_direct AS (
        ON ssmc.subject_selection_meta_id_fk = ssm.id AND ssmc.class_id_fk = cl.id
   JOIN latest_student_selections lss
        ON lss.student_id_fk = std.id
-      AND lss.session_id_fk = spbc.session_id_fk
       AND lss.subject_selection_meta_id_fk = ssm.id
       AND lss.subject_id_fk = p.subject_id_fk
   WHERE p.is_optional = TRUE
+    AND p.is_active = TRUE
     __EXTRA_FILTER_OPTD__
 ),
 
@@ -2416,9 +2422,6 @@ optional_grouped AS (
                    )
   JOIN academic_years ay ON ay.id = p_sel.academic_year_id_fk
   JOIN classes cl_sel ON cl_sel.id = p_sel.class_id_fk
-  LEFT JOIN student_promotions_by_class spbc_sel
-       ON spbc_sel.student_id = std.id
-      AND spbc_sel.class_id_fk = cl_sel.id
   JOIN subjects sbj_sel ON sbj_sel.id = p_sel.subject_id_fk
   JOIN subject_types sbt ON sbt.id = p_sel.subject_type_id_fk
   JOIN subject_selection_meta ssm ON ssm.subject_type_id_fk = sbt.id
@@ -2426,7 +2429,6 @@ optional_grouped AS (
        ON ssmc.subject_selection_meta_id_fk = ssm.id AND ssmc.class_id_fk = cl_sel.id
   JOIN latest_student_selections lss
        ON lss.student_id_fk = std.id
-      AND lss.session_id_fk = spbc_sel.session_id_fk
       AND lss.subject_selection_meta_id_fk = ssm.id
       AND lss.subject_id_fk = p_sel.subject_id_fk
   JOIN subject_grouping_main sgm
@@ -2441,15 +2443,20 @@ optional_grouped AS (
       AND sgs_selected.subject_id_fk = p_sel.subject_id_fk
   JOIN subject_grouping_subjects sgs_all
        ON sgs_all.subject_grouping_main_id_fk = sgm.id
+      AND sgs_all.subject_id_fk = p_sel.subject_id_fk
   JOIN subjects sbj_all ON sbj_all.id = sgs_all.subject_id_fk
   JOIN papers p_all ON p_all.academic_year_id_fk = ay.id
                    AND p_all.programe_course_id_fk = pc.id
                    AND p_all.subject_id_fk = sbj_all.id
   JOIN classes cl_all ON cl_all.id = p_all.class_id_fk
+  JOIN subject_selection_meta_classes ssmc_all
+       ON ssmc_all.subject_selection_meta_id_fk = ssm.id
+      AND ssmc_all.class_id_fk = cl_all.id
   LEFT JOIN student_promotions_by_class spbc
        ON spbc.student_id = std.id
       AND spbc.class_id_fk = cl_all.id
   WHERE p_all.is_optional = TRUE
+    AND p_all.is_active = TRUE
     __EXTRA_FILTER_OPTG__
 ),
 
@@ -2461,9 +2468,9 @@ optional AS (
          paper_id, paper_type, paper, paper_code, is_optional, auto_assign, is_active,
          subject_grouping_main_id, subject_grouping_name, subject_grouping_code, promotion_id
   FROM (
-    SELECT *, 1 AS priority FROM optional_grouped
+    SELECT *, 1 AS priority FROM optional_direct
     UNION ALL
-    SELECT *, 2 AS priority FROM optional_direct
+    SELECT *, 2 AS priority FROM optional_grouped
   ) combined
   ORDER BY student_id, paper_id, promotion_id NULLS LAST, priority
 )
@@ -2645,20 +2652,6 @@ export async function exportStudentSubjectsReport(
       // Add transformed rows
       transformedRows.forEach((row) => {
         sheet.addRow(row);
-      });
-
-      // Recalculate column widths after adding all rows to ensure accuracy
-      headers.forEach((header, colIndex) => {
-        const sentenceCaseHeader = toSentenceCase(header);
-        const allColumnData = transformedRows.map((row) => row[header]);
-        const calculatedWidth = calculateColumnWidth(
-          sentenceCaseHeader,
-          allColumnData,
-        );
-        const column = sheet.getColumn(colIndex + 1);
-        if (column) {
-          column.width = calculatedWidth;
-        }
       });
 
       applyStandardExcelReportTableStyling(sheet);

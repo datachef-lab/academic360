@@ -3,6 +3,7 @@ import {
   academicYearModel,
   classModel,
   examCandidateModel,
+  examFormFillupModel,
   feeCategoryModel,
   feeGroupModel,
   feeGroupPromotionMappingModel,
@@ -21,6 +22,7 @@ import {
 import {
   and,
   asc,
+  desc,
   eq,
   inArray,
   isNotNull,
@@ -31,6 +33,7 @@ import {
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { ensureDefaultFeeStudentMappingsForFeeStructure } from "@/features/fees/services/fee-structure.service.js";
+import { userStatusMappingOverview } from "../models/user-status-overview.models.js";
 import * as userService from "./user.service.js";
 
 const STUDENT_EMAIL_DOMAIN = "thebges.edu.in";
@@ -232,6 +235,74 @@ async function getPromotionIdsWithExamCandidates(
     .filter((id): id is number => id != null);
 }
 
+type ClonedPromotionExamFormFields = {
+  examFormFillupId: number | null;
+  isExamFormSubmitted: boolean;
+  examFormSubmissionTimeStamp: Date | null;
+};
+
+/** Carry appear type (exam_form_fillup) and submission flags onto the new promotion row. */
+async function resolveExamFormFieldsForClonedPromotion(
+  source: typeof promotionModel.$inferSelect,
+): Promise<ClonedPromotionExamFormFields> {
+  const empty: ClonedPromotionExamFormFields = {
+    examFormFillupId: null,
+    isExamFormSubmitted: false,
+    examFormSubmissionTimeStamp: null,
+  };
+
+  if (source.examFormFillupId != null) {
+    const [fillup] = await db
+      .select({
+        id: examFormFillupModel.id,
+        status: examFormFillupModel.status,
+        appearTypeId: examFormFillupModel.appearTypeId,
+      })
+      .from(examFormFillupModel)
+      .where(eq(examFormFillupModel.id, source.examFormFillupId))
+      .limit(1);
+
+    if (fillup?.id != null && fillup.appearTypeId != null) {
+      const completed = fillup.status === "COMPLETED";
+      return {
+        examFormFillupId: fillup.id,
+        isExamFormSubmitted: source.isExamFormSubmitted ?? completed,
+        examFormSubmissionTimeStamp: source.examFormSubmissionTimeStamp ?? null,
+      };
+    }
+  }
+
+  const [fillupByKeys] = await db
+    .select({
+      id: examFormFillupModel.id,
+      status: examFormFillupModel.status,
+      appearTypeId: examFormFillupModel.appearTypeId,
+    })
+    .from(examFormFillupModel)
+    .where(
+      and(
+        eq(examFormFillupModel.studentId, source.studentId),
+        eq(examFormFillupModel.sessionId, source.sessionId),
+        eq(examFormFillupModel.programCourseId, source.programCourseId),
+        eq(examFormFillupModel.classId, source.classId),
+        isNotNull(examFormFillupModel.appearTypeId),
+      ),
+    )
+    .orderBy(desc(examFormFillupModel.id))
+    .limit(1);
+
+  if (fillupByKeys?.id != null) {
+    const completed = fillupByKeys.status === "COMPLETED";
+    return {
+      examFormFillupId: fillupByKeys.id,
+      isExamFormSubmitted: completed,
+      examFormSubmissionTimeStamp: null,
+    };
+  }
+
+  return empty;
+}
+
 /**
  * Promotions linked to exam scheduling must keep their original shiftId because
  * exam_candidates.promotion_id_fk → promotions.id and admit cards join shift via promotion.
@@ -240,6 +311,7 @@ function buildClonedPromotionInsert(
   source: typeof promotionModel.$inferSelect,
   newShiftId: number,
   closedAt: Date,
+  examForm: ClonedPromotionExamFormFields,
 ): typeof promotionModel.$inferInsert {
   return {
     legacyHistoricalRecordId: source.legacyHistoricalRecordId,
@@ -256,14 +328,14 @@ function buildClonedPromotionInsert(
     rollNumberSI: source.rollNumberSI,
     examNumber: source.examNumber,
     examSerialNumber: source.examSerialNumber,
-    isExamFormSubmitted: false,
-    examFormFillupId: null,
+    isExamFormSubmitted: examForm.isExamFormSubmitted,
+    examFormFillupId: examForm.examFormFillupId,
     boardResultStatusId: source.boardResultStatusId,
     startDate: closedAt,
     endDate: null,
     remarks: source.remarks,
     isDeprecated: false,
-    examFormSubmissionTimeStamp: null,
+    examFormSubmissionTimeStamp: examForm.examFormSubmissionTimeStamp,
   };
 }
 
@@ -961,6 +1033,9 @@ export async function getStudentShiftChangePreview(
     blockReason = `Shift "${newShift.name}" is disabled.`;
   } else if (currentShiftId === newShiftId) {
     blockReason = "Student is already on the selected shift.";
+  } else if (feesPaid) {
+    blockReason =
+      "Shift change is not allowed: fees for the current promotion are already paid.";
   }
 
   const generatedFeeDocuments =
@@ -1099,6 +1174,12 @@ export async function changeStudentShift(
     activePromotionIds,
   );
 
+  if (feesPaid) {
+    throw new Error(
+      "Shift change is not allowed: fees for the current promotion are already paid.",
+    );
+  }
+
   const regYearSuffix = await getRegistrationYearSuffixForStudent(studentId);
   const newUid = buildShiftChangeUid(
     student.uid,
@@ -1165,6 +1246,9 @@ export async function changeStudentShift(
     for (const promo of activePromotions) {
       if (promo.id == null) continue;
 
+      const examFormFields =
+        await resolveExamFormFieldsForClonedPromotion(promo);
+
       await tx
         .update(promotionModel)
         .set({ endDate: closedAt, isDeprecated: true, updatedAt: closedAt })
@@ -1175,9 +1259,33 @@ export async function changeStudentShift(
           ),
         );
 
-      await tx
+      const [inserted] = await tx
         .insert(promotionModel)
-        .values(buildClonedPromotionInsert(promo, newShiftId, closedAt));
+        .values(
+          buildClonedPromotionInsert(
+            promo,
+            newShiftId,
+            closedAt,
+            examFormFields,
+          ),
+        )
+        .returning({ id: promotionModel.id });
+
+      if (inserted?.id != null) {
+        await tx
+          .update(userStatusMappingOverview)
+          .set({
+            promotionId: inserted.id,
+            updatedAt: closedAt,
+          })
+          .where(
+            and(
+              eq(userStatusMappingOverview.promotionId, promo.id),
+              eq(userStatusMappingOverview.studentId, studentId),
+              eq(userStatusMappingOverview.isActive, true),
+            ),
+          );
+      }
 
       promotionsClosed++;
       promotionsCloned++;
