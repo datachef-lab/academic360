@@ -101,6 +101,10 @@ export type SemesterBreakdownRow = {
   collected: number;
   pending: number;
   eligibleStudents: number;
+  /** Distinct students with mapping fully paid (Fee MIS NOS — collected). */
+  fullyPaidStudents: number;
+  /** Distinct students with mapping unpaid / partial (Fee MIS NOS — pending). */
+  unpaidStudents: number;
   challansGenerated: number;
   challanPending: number;
   challanOnly: number;
@@ -213,7 +217,7 @@ function resolveDashboardFilters(
   return filters ?? {};
 }
 
-function hasDashboardScope(filters: FeesDashboardFilters): boolean {
+export function hasDashboardScope(filters: FeesDashboardFilters): boolean {
   return Boolean(
     filters.academicYearIds?.length ||
     filters.programCourseIds?.length ||
@@ -422,6 +426,9 @@ function activePromotionJoinCondition(
   const shiftIds = filters.shiftIds;
   if (shiftIds?.length) {
     parts.push(inArray(promotionModel.shiftId, shiftIds));
+  }
+  if (filters.classIds?.length) {
+    parts.push(inArray(promotionModel.classId, filters.classIds));
   }
   return and(...parts)!;
 }
@@ -706,7 +713,7 @@ type DashboardScope = {
 const NO_MAPPING_SCOPE = sql`false`;
 
 /** Scoped mapping rows by pre-resolved canonical ids (avoids re-running expensive subqueries). */
-function mappingIdsWhere(canonicalMappingIds: number[]): SQL {
+export function mappingIdsWhere(canonicalMappingIds: number[]): SQL {
   if (!canonicalMappingIds.length) return NO_MAPPING_SCOPE;
   return inArray(feeStudentMappingModel.id, canonicalMappingIds);
 }
@@ -740,7 +747,7 @@ export function clearFeesDashboardScopeCache(): void {
   canonicalScopeCache.clear();
 }
 
-async function resolveDashboardScope(
+export async function resolveDashboardScope(
   filtersInput?: FeesDashboardFilters | null,
   options?: MappingWhereOptions,
 ): Promise<DashboardScope> {
@@ -1090,8 +1097,10 @@ async function loadSemesterBreakdown(
         receivable: sql<number>`COALESCE(SUM(${feeStudentMappingModel.totalPayable}), 0)::float`,
         collected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
         eligibleStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
+        fullyPaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
+        unpaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
         challansGenerated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
-        receiptsIssued: sql<number>`COUNT(*) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
+        receiptsIssued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
         challanOnly: sql<number>`COUNT(*) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
         paidEntries: sql<number>`COUNT(*) FILTER (WHERE COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0)::int`,
         structuresCount: sql<number>`COUNT(DISTINCT ${feeStructureModel.id})::int`,
@@ -1151,6 +1160,8 @@ async function loadSemesterBreakdown(
       collected,
       pending: Math.max(0, receivable - collected),
       eligibleStudents: eligible,
+      fullyPaidStudents: Number(r.fullyPaidStudents ?? 0),
+      unpaidStudents: Number(r.unpaidStudents ?? 0),
       challansGenerated: challansGen,
       challanPending: Math.max(0, eligible - challansGen),
       challanOnly: Number(r.challanOnly ?? 0),

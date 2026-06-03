@@ -4379,7 +4379,12 @@ export async function getLiveSelectionCountsByProgramCourse(
 // Helper function to emit MIS table updates via socket
 async function emitMisTableUpdates(studentIds: number[]) {
   try {
-    // Get unique session and class combinations for the affected students
+    const { scheduleRealtimeTrackerBroadcast } =
+      await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+    const { sessionModel } = await import("@repo/db/schemas");
+    type RealtimeTrackerFilters =
+      import("@/utils/realtime-tracker-filters.js").RealtimeTrackerFilters;
+
     const studentPromotions = await db
       .select({
         sessionId: promotionModel.sessionId,
@@ -4388,7 +4393,6 @@ async function emitMisTableUpdates(studentIds: number[]) {
       .from(promotionModel)
       .where(inArray(promotionModel.studentId, studentIds));
 
-    // Get unique combinations
     const uniqueCombinations = Array.from(
       new Set(
         studentPromotions.map(
@@ -4397,7 +4401,8 @@ async function emitMisTableUpdates(studentIds: number[]) {
       ),
     );
 
-    // Emit updates for each unique combination
+    const broadcasted = new Set<string>();
+
     for (const combination of uniqueCombinations) {
       const [sessionIdStr, classIdStr] = combination.split("-");
       const sessionId =
@@ -4409,14 +4414,31 @@ async function emitMisTableUpdates(studentIds: number[]) {
         trigger: "subject_selection_change",
         affectedStudents: studentIds.length,
       });
+
+      const rtFilters: RealtimeTrackerFilters = {};
+      if (classId) rtFilters.classIds = [classId];
+      if (sessionId) {
+        const [sessionRow] = await db
+          .select({ academicYearId: sessionModel.academicYearId })
+          .from(sessionModel)
+          .where(eq(sessionModel.id, sessionId))
+          .limit(1);
+        if (sessionRow?.academicYearId) {
+          rtFilters.academicYearIds = [sessionRow.academicYearId];
+        }
+      }
+      const key = JSON.stringify(rtFilters);
+      if (!broadcasted.has(key)) {
+        broadcasted.add(key);
+        scheduleRealtimeTrackerBroadcast(
+          "affiliation",
+          "subject_selection_change",
+          rtFilters,
+        );
+      }
     }
 
-    // Also emit a general update to all MIS dashboard clients
-    const generalMisData = await getMisTableData();
-    socketService.sendMisTableUpdateToAll(generalMisData.data, {
-      trigger: "subject_selection_change",
-      affectedStudents: studentIds.length,
-    });
+    socketService.emitFeeMisRefresh("subject_selection_change");
 
     console.log(
       `[SocketService] Emitted MIS table updates for ${studentIds.length} affected students`,
@@ -4426,107 +4448,9 @@ async function emitMisTableUpdates(studentIds: number[]) {
   }
 }
 
-// MIS Table data with sessionId and classId filters
+// MIS Table data with sessionId and classId filters (legacy); full filters via realtime-tracker API.
 export async function getMisTableData(sessionId?: number, classId?: number) {
-  // Build WHERE conditions for session and class filters
-  const whereConditions = [
-    eq(userModel.isActive, true),
-    eq(userModel.type, "STUDENT"),
-  ];
-
-  if (sessionId) {
-    whereConditions.push(eq(promotionModel.sessionId, sessionId));
-  }
-
-  if (classId) {
-    whereConditions.push(eq(promotionModel.classId, classId));
-  }
-
-  // Get program course data with counts
-  const programCourseData = await db
-    .select({
-      programCourseId: programCourseModel.id,
-      programCourseName: programCourseModel.name,
-      admitted: countDistinct(userModel.id),
-      subjectSelectionDone: sql<number>`COUNT(DISTINCT CASE WHEN ${studentSubjectSelectionModel.studentId} IS NOT NULL THEN ${studentModel.id} END)`,
-      onlineRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.onlineRegistrationDone} = true THEN ${studentModel.id} END)`,
-      physicalRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.physicalRegistrationDone} = true THEN ${studentModel.id} END)`,
-    })
-    .from(programCourseModel)
-    .innerJoin(
-      promotionModel,
-      eq(promotionModel.programCourseId, programCourseModel.id),
-    )
-    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      studentSubjectSelectionModel,
-      eq(studentSubjectSelectionModel.studentId, studentModel.id),
-    )
-    .leftJoin(
-      cuRegistrationCorrectionRequestModel,
-      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
-    )
-    .where(and(...whereConditions))
-    .groupBy(programCourseModel.id, programCourseModel.name);
-
-  // Get total counts
-  const totalData = await db
-    .select({
-      admitted: countDistinct(userModel.id),
-      subjectSelectionDone: sql<number>`COUNT(DISTINCT CASE WHEN ${studentSubjectSelectionModel.studentId} IS NOT NULL THEN ${studentModel.id} END)`,
-      onlineRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.onlineRegistrationDone} = true THEN ${studentModel.id} END)`,
-      physicalRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.physicalRegistrationDone} = true THEN ${studentModel.id} END)`,
-    })
-    .from(programCourseModel)
-    .innerJoin(
-      promotionModel,
-      eq(promotionModel.programCourseId, programCourseModel.id),
-    )
-    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      studentSubjectSelectionModel,
-      eq(studentSubjectSelectionModel.studentId, studentModel.id),
-    )
-    .leftJoin(
-      cuRegistrationCorrectionRequestModel,
-      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
-    )
-    .where(and(...whereConditions));
-
-  const total = totalData[0] || {
-    admitted: 0,
-    subjectSelectionDone: 0,
-    onlineRegDone: 0,
-    physicalRegDone: 0,
-  };
-
-  // Combine data with totals
-  const data = [
-    ...programCourseData.map((row, index) => ({
-      programCourseName:
-        row.programCourseName || `Program Course ${row.programCourseId}`,
-      admitted: row.admitted,
-      subjectSelectionDone: row.subjectSelectionDone,
-      onlineRegDone: row.onlineRegDone,
-      physicalRegDone: row.physicalRegDone,
-      sortOrder: 0,
-    })),
-    {
-      programCourseName: "Total",
-      admitted: total.admitted,
-      subjectSelectionDone: total.subjectSelectionDone,
-      onlineRegDone: total.onlineRegDone,
-      physicalRegDone: total.physicalRegDone,
-      sortOrder: 1,
-    },
-  ];
-
-  return {
-    updatedAt: new Date().toISOString(),
-    sessionId,
-    classId,
-    data,
-  };
+  const { getMisTableDataLegacy } =
+    await import("@/features/realtime-tracker/services/realtime-tracker.service.js");
+  return getMisTableDataLegacy(sessionId, classId);
 }

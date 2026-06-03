@@ -1,3 +1,4 @@
+import type { ProgramCourseDto } from "@repo/db/dtos/course-design";
 import type { FeesDashboardFilters } from "../types/dashboard-api";
 
 export function hasDashboardScope(filters?: FeesDashboardFilters | null): boolean {
@@ -196,3 +197,71 @@ export function formatDateRangeLabel(from: string, to: string): string {
   if (to) return `Until ${to}`;
   return DEFAULT_FILTER_LABELS.dateRange;
 }
+
+/** Parent filters that narrow the program-course dropdown (AND logic). */
+export type ProgramCourseCascadeForm = Pick<
+  FeesDashboardFilterForm,
+  "affiliationIds" | "regulationTypeIds" | "courseLevelIds" | "streamIds"
+>;
+
+export function filterProgramCoursesForForm(
+  programCourses: ProgramCourseDto[],
+  form: ProgramCourseCascadeForm,
+): ProgramCourseDto[] {
+  let list = programCourses.filter((pc) => pc.id != null && pc.isActive !== false);
+
+  if (form.affiliationIds.length) {
+    const allowed = new Set(form.affiliationIds.map(Number));
+    list = list.filter((pc) => {
+      const id = pc.affiliation?.id;
+      return id != null && allowed.has(id);
+    });
+  }
+  if (form.regulationTypeIds.length) {
+    const allowed = new Set(form.regulationTypeIds.map(Number));
+    list = list.filter((pc) => {
+      const id = pc.regulationType?.id;
+      return id != null && allowed.has(id);
+    });
+  }
+  if (form.courseLevelIds.length) {
+    const allowed = new Set(form.courseLevelIds.map(Number));
+    list = list.filter((pc) => {
+      const id = pc.courseLevel?.id;
+      return id != null && allowed.has(id);
+    });
+  }
+  if (form.streamIds.length) {
+    const allowed = new Set(form.streamIds.map(Number));
+    list = list.filter((pc) => {
+      const id = pc.stream?.id;
+      return id != null && allowed.has(id);
+    });
+  }
+
+  return list;
+}
+
+export function programCourseOptionsFromList(
+  programCourses: ProgramCourseDto[],
+): { value: string; label: string }[] {
+  return programCourses.map((pc) => ({
+    value: String(pc.id),
+    label: pc.shortName?.trim() ? `${pc.shortName} · ${pc.name}` : (pc.name ?? "Program course"),
+  }));
+}
+
+export function pruneProgramCourseIds(
+  selectedIds: string[],
+  options: { value: string }[],
+): string[] {
+  const allowed = new Set(options.map((o) => o.value));
+  return selectedIds.filter((id) => allowed.has(id));
+}
+
+export const PROGRAM_COURSE_CASCADE_KEYS = [
+  "affiliationIds",
+  "regulationTypeIds",
+  "courseLevelIds",
+  "streamIds",
+] as const satisfies readonly (keyof FeesDashboardFilterForm)[];

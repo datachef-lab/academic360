@@ -104,7 +104,7 @@ export const connectToDatabase = async () => {
     loadDefaultPromotionData().catch((e) => {
       log.warn("Default promotion data load failed", { error: e });
     });
-    loadStudentFees();
+    // loadStudentFees();
     loadLibrary();
     initializeAcademicActivities();
     defaultSetDateOfJoining();

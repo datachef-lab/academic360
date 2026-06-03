@@ -35,6 +35,8 @@ export type SemesterBreakdownRow = {
   collected: number;
   pending: number;
   eligibleStudents: number;
+  fullyPaidStudents?: number;
+  unpaidStudents?: number;
   challansGenerated: number;
   challanPending: number;
   challanOnly: number;

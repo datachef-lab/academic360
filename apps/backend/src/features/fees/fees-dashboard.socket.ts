@@ -20,5 +20,6 @@ export function scheduleFeesDashboardBroadcast(reason: string): void {
       updatedAt: new Date().toISOString(),
       reason,
     });
+    socketService.emitFeeMisRefresh(reason);
   }, 400);
 }

@@ -30,9 +30,13 @@ import type { FeesDashboardFilters } from "../types/dashboard-api";
 import { formatSemesterClassOptionLabel } from "../utils/semester-display";
 import {
   DEFAULT_FILTER_LABELS,
+  filterProgramCoursesForForm,
   formFromApiFilters,
   formatDateRangeLabel,
   formatMultiSelectLabel,
+  PROGRAM_COURSE_CASCADE_KEYS,
+  programCourseOptionsFromList,
+  pruneProgramCourseIds,
   toApiFilters,
   type FeesDashboardFilterForm,
   type FeesDashboardFilterLabels,
@@ -156,39 +160,7 @@ export function FeesFiltersDialog({
     label: level.name,
   }));
   const programCourseOptions = useMemo(() => {
-    let list = programCourses.filter((pc) => pc.id != null);
-    if (form.affiliationIds.length) {
-      const allowed = new Set(form.affiliationIds.map(Number));
-      list = list.filter((pc) => {
-        const id = pc.affiliation?.id;
-        return id != null && allowed.has(id);
-      });
-    }
-    if (form.regulationTypeIds.length) {
-      const allowed = new Set(form.regulationTypeIds.map(Number));
-      list = list.filter((pc) => {
-        const id = pc.regulationType?.id;
-        return id != null && allowed.has(id);
-      });
-    }
-    if (form.courseLevelIds.length) {
-      const allowed = new Set(form.courseLevelIds.map(Number));
-      list = list.filter((pc) => {
-        const id = pc.courseLevel?.id;
-        return id != null && allowed.has(id);
-      });
-    }
-    if (form.streamIds.length) {
-      const allowed = new Set(form.streamIds.map(Number));
-      list = list.filter((pc) => {
-        const id = pc.stream?.id;
-        return id != null && allowed.has(id);
-      });
-    }
-    return list.map((pc) => ({
-      value: String(pc.id),
-      label: pc.shortName?.trim() ? `${pc.shortName} · ${pc.name}` : (pc.name ?? "Program course"),
-    }));
+    return programCourseOptionsFromList(filterProgramCoursesForForm(programCourses, form));
   }, [
     programCourses,
     form.affiliationIds,
@@ -199,8 +171,7 @@ export function FeesFiltersDialog({
 
   useEffect(() => {
     if (!open) return;
-    const allowed = new Set(programCourseOptions.map((o) => o.value));
-    const pruned = form.programCourseIds.filter((id) => allowed.has(id));
+    const pruned = pruneProgramCourseIds(form.programCourseIds, programCourseOptions);
     if (pruned.length !== form.programCourseIds.length) {
       setForm((prev) => ({ ...prev, programCourseIds: pruned }));
     }
@@ -238,7 +209,19 @@ export function FeesFiltersDialog({
     key: K,
     next: FeesDashboardFilterForm[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: next }));
+    setForm((prev) => {
+      let merged: FeesDashboardFilterForm = { ...prev, [key]: next };
+      if ((PROGRAM_COURSE_CASCADE_KEYS as readonly string[]).includes(key as string)) {
+        const options = programCourseOptionsFromList(
+          filterProgramCoursesForForm(programCourses, merged),
+        );
+        merged = {
+          ...merged,
+          programCourseIds: pruneProgramCourseIds(merged.programCourseIds, options),
+        };
+      }
+      return merged;
+    });
   };
 
   const handleApply = () => {
