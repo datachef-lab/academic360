@@ -38,6 +38,9 @@ import { useIsMobile } from "@/hooks/useMobile";
 import useDebounce from "@/components/Hooks/useDebounce";
 import ShiftChangeDialog from "@/components/student/ShiftChangeDialog";
 
+/** Temporarily hide shift-change UI from the student profile panel. */
+const STUDENT_SHIFT_CHANGE_UI_ENABLED = false;
+
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
   { label: "Personal", icon: <IdCard size={16} />, endpoint: "/personal-details" },
@@ -328,15 +331,19 @@ export default function StudentPage() {
             <div className="font-semibold text-gray-500">Shift:</div>
             <div>
               {data?.currentPromotion?.shift?.name ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 px-2 text-xs font-normal"
-                  onClick={() => setShiftChangeOpen(true)}
-                >
-                  {data.currentPromotion.shift.name}
-                </Button>
+                STUDENT_SHIFT_CHANGE_UI_ENABLED ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs font-normal"
+                    onClick={() => setShiftChangeOpen(true)}
+                  >
+                    {data.currentPromotion.shift.name}
+                  </Button>
+                ) : (
+                  <span>{data.currentPromotion.shift.name}</span>
+                )
               ) : (
                 "-"
               )}
@@ -832,30 +839,32 @@ export default function StudentPage() {
         </div>
       </div>
 
-      <ShiftChangeDialog
-        student={data}
-        open={shiftChangeOpen}
-        onOpenChange={setShiftChangeOpen}
-        onSuccess={async (newUid) => {
-          if (!newUid) return;
+      {STUDENT_SHIFT_CHANGE_UI_ENABLED ? (
+        <ShiftChangeDialog
+          student={data}
+          open={shiftChangeOpen}
+          onOpenChange={setShiftChangeOpen}
+          onSuccess={async (newUid) => {
+            if (!newUid) return;
 
-          const previousRouteKey = studentIdOrUid;
-          const previousUid = data?.uid;
+            const previousRouteKey = studentIdOrUid;
+            const previousUid = data?.uid;
 
-          await queryClient.cancelQueries({ queryKey: ["student", previousRouteKey] });
-          queryClient.removeQueries({ queryKey: ["student", previousRouteKey] });
-          if (previousUid && previousUid !== previousRouteKey) {
-            queryClient.removeQueries({ queryKey: ["student", previousUid] });
-          }
+            await queryClient.cancelQueries({ queryKey: ["student", previousRouteKey] });
+            queryClient.removeQueries({ queryKey: ["student", previousRouteKey] });
+            if (previousUid && previousUid !== previousRouteKey) {
+              queryClient.removeQueries({ queryKey: ["student", previousUid] });
+            }
 
-          navigate(`/dashboard/students/${newUid}`, { replace: true });
+            navigate(`/dashboard/students/${newUid}`, { replace: true });
 
-          await queryClient.prefetchQuery({
-            queryKey: ["student", newUid],
-            queryFn: () => fetchStudentByUid(newUid),
-          });
-        }}
-      />
+            await queryClient.prefetchQuery({
+              queryKey: ["student", newUid],
+              queryFn: () => fetchStudentByUid(newUid),
+            });
+          }}
+        />
+      ) : null}
     </>
   );
 }

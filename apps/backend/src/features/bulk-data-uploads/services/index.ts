@@ -14,7 +14,8 @@ import { sessionModel } from "@repo/db/schemas/models/academics/session.model.js
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { admissionCourseDetailsModel } from "@repo/db/schemas/models/admissions/adm-course-details.model.js";
 import { admissionProgramCourseModel } from "@repo/db/schemas/models/admissions/admission-program-course.model.js";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { activePromotionRowConditions } from "../utils/active-promotion-filters.js";
 import {
   precomputeBuilderPolicy,
   validateExamFormFillupBulkAgainstBuilder,
@@ -430,8 +431,7 @@ export async function bulkUploadExamFormFillup(
             eq(promotionModel.sessionId, sessionId),
             eq(promotionModel.classId, classId),
             eq(promotionModel.programCourseId, programCourseId),
-            isNull(promotionModel.endDate),
-            sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+            ...activePromotionRowConditions,
           ),
         )
         .orderBy(desc(promotionModel.id))

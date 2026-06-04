@@ -2171,16 +2171,14 @@ WITH students_in_report_year AS (
   SELECT DISTINCT pr.student_id_fk AS student_id
   FROM promotions pr
   JOIN sessions sess_lp ON sess_lp.id = pr.session_id_fk
-  WHERE pr.is_alumni IS NOT TRUE
-    AND pr.end_date IS NULL
-    AND COALESCE(pr.is_deprecated, false) = false
+  WHERE COALESCE(pr.is_deprecated, false) = false
     AND sess_lp.academic_id_fk = $1
 ),
 student_paper_years AS (
   SELECT DISTINCT pr.student_id_fk AS student_id, sess.academic_id_fk AS academic_year_id
   FROM promotions pr
   JOIN sessions sess ON sess.id = pr.session_id_fk
-  WHERE pr.is_alumni IS NOT TRUE
+  WHERE COALESCE(pr.is_deprecated, false) = false
     AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
     AND sess.academic_id_fk = $1
 ),
@@ -2188,7 +2186,7 @@ student_program_in_year AS (
   SELECT DISTINCT pr.student_id_fk AS student_id, pr.program_course_id_fk
   FROM promotions pr
   JOIN sessions sess ON sess.id = pr.session_id_fk
-  WHERE pr.is_alumni IS NOT TRUE
+  WHERE COALESCE(pr.is_deprecated, false) = false
     AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
     AND sess.academic_id_fk = $1
 ),
@@ -2214,9 +2212,7 @@ student_promotions_by_class AS (
   FROM promotions pr
   JOIN sessions sess ON sess.id = pr.session_id_fk
   JOIN academic_years ay ON ay.id = sess.academic_id_fk
-  WHERE pr.is_alumni IS NOT TRUE
-    AND pr.end_date IS NULL
-    AND COALESCE(pr.is_deprecated, false) = false
+  WHERE COALESCE(pr.is_deprecated, false) = false
     AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
     AND sess.academic_id_fk = $1
   ORDER BY pr.student_id_fk, pr.class_id_fk, pr.id DESC
@@ -2242,6 +2238,7 @@ latest_student_selections AS (
            ) AS rn
     FROM student_subject_selections sss
     WHERE sss.is_active = TRUE
+      AND COALESCE(sss.is_deprecated, false) = false
       AND sss.student_id_fk IN (SELECT student_id FROM students_in_report_year)
   ) ranked
   WHERE rn = 1
@@ -3888,6 +3885,7 @@ export async function exportStudentSubjectSelections(
           allMetasForYear.map((m) => m.id),
         ),
         eq(studentSubjectSelectionModel.isActive, true),
+        eq(studentSubjectSelectionModel.isDeprecated, false),
       ),
     )
     .groupBy(
@@ -3925,7 +3923,39 @@ export async function exportStudentSubjectSelections(
     studentIds,
   );
 
-  // Get student details with user info and promotions
+  // Only students with a non-deprecated promotion in this academic year
+  const activePromotionStudentRows = await db
+    .selectDistinct({ studentId: promotionModel.studentId })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .where(
+      and(
+        inArray(promotionModel.studentId, studentIds),
+        eq(sessionModel.academicYearId, academicYearId),
+        sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+      ),
+    );
+
+  const activeStudentIdSet = new Set(
+    activePromotionStudentRows.map((r) => r.studentId),
+  );
+  const filteredStudentIds = studentIds.filter((id) =>
+    activeStudentIdSet.has(id),
+  );
+
+  if (filteredStudentIds.length === 0) {
+    console.log(
+      "No students with active promotions in the academic year for export",
+    );
+    return {
+      buffer: null,
+      fileName: `student_subject_selections_academic_year_${academicYearId}_empty.xlsx`,
+      totalRecords: 0,
+      allMetasForYear: allMetasForYear,
+    };
+  }
+
+  // Get student details with user info and active promotion for the report year
   let studentsWithDetails = await db
     .select({
       studentId: studentModel.id,
@@ -3949,15 +3979,33 @@ export async function exportStudentSubjectSelections(
     })
     .from(studentModel)
     .innerJoin(userModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(promotionModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(promotionModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
     .leftJoin(sectionModel, eq(promotionModel.sectionId, sectionModel.id))
-    .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
     .leftJoin(
       programCourseModel,
       eq(promotionModel.programCourseId, programCourseModel.id),
     )
     .leftJoin(classModel, eq(promotionModel.classId, classModel.id))
-    .where(inArray(studentModel.id, studentIds));
+    .where(
+      and(
+        inArray(studentModel.id, filteredStudentIds),
+        eq(sessionModel.academicYearId, academicYearId),
+        sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+      ),
+    );
+
+  const promotionRowByStudent = new Map<
+    number,
+    (typeof studentsWithDetails)[number]
+  >();
+  for (const row of studentsWithDetails) {
+    const prev = promotionRowByStudent.get(row.studentId);
+    if (!prev || (row.promotionId ?? 0) > (prev.promotionId ?? 0)) {
+      promotionRowByStudent.set(row.studentId, row);
+    }
+  }
+  studentsWithDetails = [...promotionRowByStudent.values()];
 
   if (filters.programCourseIds?.length) {
     const allow = new Set(filters.programCourseIds);
@@ -4031,6 +4079,7 @@ export async function exportStudentSubjectSelections(
           allMetasForYear.map((m) => m.id),
         ),
         eq(studentSubjectSelectionModel.isActive, true),
+        eq(studentSubjectSelectionModel.isDeprecated, false),
       ),
     )
     .groupBy(
