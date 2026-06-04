@@ -21,7 +21,8 @@ export function resolveAffiliationTabLabel(
     if (aff) return `${affiliationDisplayCode(aff)} Registration`;
   }
   if (ids.length === 0 && affiliations.length === 1) {
-    return `${affiliationDisplayCode(affiliations[0])} Registration`;
+    const sole = affiliations[0];
+    if (sole) return `${affiliationDisplayCode(sole)} Registration`;
   }
   return "Affiliation Registration";
 }

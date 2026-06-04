@@ -279,13 +279,14 @@ export default function RealTimeTrackerPage() {
   useEffect(() => {
     if (filtersReady) return;
     const defaultYear = currentAcademicYear ?? availableAcademicYears.find((y) => y.isCurrentYear);
-    if (!defaultYear?.id) return;
+    const yearId = defaultYear?.id;
+    if (yearId == null) return;
 
     let cancelled = false;
     void (async () => {
       const resolved = await resolveSmartDefaults(
-        defaultYear.id,
-        defaultYear.year ?? "Current academic year",
+        yearId,
+        defaultYear?.year ?? "Current academic year",
       );
       if (cancelled) return;
       setFilters(resolved);
@@ -312,7 +313,7 @@ export default function RealTimeTrackerPage() {
       setFilters({});
       return;
     }
-    void resolveSmartDefaults(defaultYear.id, defaultYear.year ?? "Current academic year").then(
+    void resolveSmartDefaults(defaultYear.id, defaultYear?.year ?? "Current academic year").then(
       setFilters,
     );
   }, [currentAcademicYear, availableAcademicYears, resolveSmartDefaults]);
