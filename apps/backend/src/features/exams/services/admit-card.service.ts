@@ -83,6 +83,7 @@ export async function searchCandidate(
           ilike(studentModel.registrationNumber, term),
           ilike(studentModel.rfidNumber, term),
           ilike(studentModel.uid, term),
+          ilike(studentModel.previousUid, term),
           ilike(promotionModel.rollNumber, term),
           ilike(promotionModel.classRollNumber, term),
           ilike(admissionAcademicInfoModel.registrationNumber, term),
