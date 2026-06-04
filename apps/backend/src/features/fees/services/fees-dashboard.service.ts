@@ -705,10 +705,12 @@ function buildMappingWhere(
   )!;
 }
 
-type DashboardScope = {
+export type FeesDashboardScope = {
   canonicalMappingIds: number[];
   filters: FeesDashboardFilters;
 };
+
+type DashboardScope = FeesDashboardScope;
 
 const NO_MAPPING_SCOPE = sql`false`;
 
@@ -774,6 +776,51 @@ export async function resolveDashboardScope(
     cachedAt: Date.now(),
   });
   return { canonicalMappingIds, filters };
+}
+
+export type FeesDashboardFeeMisSlice = {
+  updatedAt: string;
+  semesterBreakdown: SemesterBreakdownRow[];
+  fullyPaid: number;
+  partialOrUnpaid: number;
+};
+
+const EMPTY_FEE_MIS_SLICE: FeesDashboardFeeMisSlice = {
+  updatedAt: new Date().toISOString(),
+  semesterBreakdown: [],
+  fullyPaid: 0,
+  partialOrUnpaid: 0,
+};
+
+/** Lightweight dashboard data for realtime Fee MIS (avoids full "all" dashboard queries). */
+export async function getFeesDashboardFeeMisSlice(
+  rawFilters: FeesDashboardFilters = {},
+  preResolvedScope?: FeesDashboardScope,
+): Promise<FeesDashboardFeeMisSlice> {
+  const filters = resolveDashboardFilters(rawFilters);
+  if (!hasDashboardScope(filters)) {
+    return { ...EMPTY_FEE_MIS_SLICE, updatedAt: new Date().toISOString() };
+  }
+
+  const scope = preResolvedScope ?? (await resolveDashboardScope(filters));
+  if (!scope.canonicalMappingIds.length) {
+    return { ...EMPTY_FEE_MIS_SLICE, updatedAt: new Date().toISOString() };
+  }
+
+  const mappingWhere = mappingIdsWhere(scope.canonicalMappingIds);
+  const { canonicalMappingIds } = scope;
+
+  const [coreStats, semesterBreakdown] = await Promise.all([
+    loadCoreMappingStats(mappingWhere, canonicalMappingIds),
+    loadSemesterBreakdown(mappingWhere, canonicalMappingIds),
+  ]);
+
+  return {
+    updatedAt: new Date().toISOString(),
+    semesterBreakdown,
+    fullyPaid: coreStats.mappingAgg.fully_paid,
+    partialOrUnpaid: coreStats.mappingAgg.partial_or_unpaid,
+  };
 }
 
 async function loadMasterCounts(

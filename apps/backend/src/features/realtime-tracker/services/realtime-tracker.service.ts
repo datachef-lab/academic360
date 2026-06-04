@@ -19,11 +19,12 @@ import {
   type RealtimeTrackerFilters,
 } from "@/utils/realtime-tracker-filters.js";
 import {
-  getFeesDashboardData,
+  getFeesDashboardFeeMisSlice,
   hasDashboardScope,
   mappingIdsWhere,
   resolveDashboardScope,
   type FeesDashboardFilters,
+  type FeesDashboardScope,
 } from "@/features/fees/services/fees-dashboard.service.js";
 
 const ACTIVE_STUDENT_SQL = and(
@@ -400,6 +401,7 @@ function buildFeeMisMappingWhere(
 
 async function loadFeeMisCourseRows(
   filters: RealtimeTrackerFilters,
+  preResolvedScope?: FeesDashboardScope,
 ): Promise<FeeMisCourseRow[]> {
   const feesFilters = toFeesDashboardFilters(filters);
   if (!hasDashboardScope(feesFilters)) {
@@ -421,7 +423,7 @@ async function loadFeeMisCourseRows(
     ];
   }
 
-  const scope = await resolveDashboardScope(feesFilters);
+  const scope = preResolvedScope ?? (await resolveDashboardScope(feesFilters));
   if (!scope.canonicalMappingIds.length) {
     return [
       {
@@ -619,10 +621,30 @@ export async function getFeeMisData(
 ): Promise<FeeMisPayload> {
   const filters = canonicalRealtimeTrackerFilters(filtersInput);
   const feesFilters = toFeesDashboardFilters(filters);
-  const [{ labels: semesterDisplayLabels }, dashboard] = await Promise.all([
-    resolveClassDisplayLabels(filters.classIds),
-    getFeesDashboardData(feesFilters, "all"),
-  ]);
+
+  if (!hasDashboardScope(feesFilters)) {
+    const [{ labels: semesterDisplayLabels }, courseRows] = await Promise.all([
+      resolveClassDisplayLabels(filters.classIds),
+      loadFeeMisCourseRows(filters),
+    ]);
+    return {
+      updatedAt: new Date().toISOString(),
+      filters,
+      semesterDisplayLabels,
+      courseRows,
+      semesterRows: [],
+      paidStatus: { paid: 0, unpaid: 0, paidPct: 0 },
+    };
+  }
+
+  const scope = await resolveDashboardScope(feesFilters);
+
+  const [{ labels: semesterDisplayLabels }, dashboard, courseRows] =
+    await Promise.all([
+      resolveClassDisplayLabels(filters.classIds),
+      getFeesDashboardFeeMisSlice(feesFilters, scope),
+      loadFeeMisCourseRows(filters, scope),
+    ]);
 
   const semesterRows: FeeMisSemesterRow[] = dashboard.semesterBreakdown.map(
     (s) => ({
@@ -636,12 +658,10 @@ export async function getFeeMisData(
     }),
   );
 
-  const paid = dashboard.metrics.fully_paid;
-  const unpaid = dashboard.metrics.partial_or_unpaid;
+  const paid = dashboard.fullyPaid;
+  const unpaid = dashboard.partialOrUnpaid;
   const total = paid + unpaid;
   const paidPct = total > 0 ? Math.round((paid / total) * 10000) / 100 : 0;
-
-  const courseRows = await loadFeeMisCourseRows(filters);
 
   return {
     updatedAt: dashboard.updatedAt,
