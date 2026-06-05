@@ -24,60 +24,54 @@ export function resolveDescriptionFontSize(value?: number | null): number {
   return clampFontSize(value, DEFAULT_DESCRIPTION_FONT_SIZE);
 }
 
-function isCpMasterRowActive(row: {
+type CpActiveFlagRow = {
   isActive?: boolean | null;
   is_active?: boolean | null;
-}): boolean {
+};
+
+type CpTemplateFieldRow = CpActiveFlagRow & {
+  name: string;
+  options?: CpActiveFlagRow[];
+};
+
+type CpTemplateMasterRow = CpActiveFlagRow & {
+  fields: CpTemplateFieldRow[];
+};
+
+function isCpMasterRowActive(row: CpActiveFlagRow): boolean {
   const flag = row.isActive ?? row.is_active;
   return flag !== false;
 }
 
 /** Keep only active certificate masters, fields, and select options. */
-export function filterActiveCpTemplateMasters<
-  T extends {
-    isActive?: boolean | null;
-    is_active?: boolean | null;
-    fields: Array<{
-      isActive?: boolean | null;
-      is_active?: boolean | null;
-      options?: Array<{ isActive?: boolean | null; is_active?: boolean | null }>;
-      name: string;
-    }>;
-  },
->(masters: T[]): T[] {
+export function filterActiveCpTemplateMasters<T>(masters: T[]): T[] {
   return masters
-    .filter((cm) => isCpMasterRowActive(cm))
-    .map((cm) => ({
-      ...cm,
-      fields: cm.fields
-        .filter((f) => isCpMasterRowActive(f))
-        .map((f) => ({
-          ...f,
-          options: (f.options ?? []).filter((o) => isCpMasterRowActive(o)),
-        })),
-    }))
-    .filter((cm) => cm.fields.length > 0);
+    .filter((cm) => isCpMasterRowActive(cm as CpActiveFlagRow))
+    .map((cm) => {
+      const row = cm as T & CpTemplateMasterRow;
+      return {
+        ...row,
+        fields: row.fields
+          .filter((f) => isCpMasterRowActive(f))
+          .map((f) => ({
+            ...f,
+            options: (f.options ?? []).filter((o) => isCpMasterRowActive(o)),
+          })),
+      } as T;
+    })
+    .filter((cm) => (cm as CpTemplateMasterRow).fields.length > 0);
 }
 
 /** Normalize API field rows (camelCase or snake_case) for display. */
-export function normalizeCpTemplateMasters<
-  T extends {
-    isActive?: boolean | null;
-    is_active?: boolean | null;
-    fields: Array<{
-      isActive?: boolean | null;
-      is_active?: boolean | null;
-      options?: Array<{ isActive?: boolean | null; is_active?: boolean | null }>;
-      name: string;
-    }>;
-  },
->(masters: T[]): T[] {
-  return filterActiveCpTemplateMasters(
-    masters.map((cm) => ({
-      ...cm,
-      fields: cm.fields.map((f) => normalizeCpFieldForDisplay(f)),
-    })),
-  );
+export function normalizeCpTemplateMasters<T>(masters: T[]): T[] {
+  const normalized = masters.map((cm) => {
+    const row = cm as T & CpTemplateMasterRow;
+    return {
+      ...row,
+      fields: row.fields.map((f) => normalizeCpFieldForDisplay(f)),
+    } as T;
+  });
+  return filterActiveCpTemplateMasters(normalized);
 }
 
 export function normalizeCpFieldForDisplay<T extends { name: string }>(
