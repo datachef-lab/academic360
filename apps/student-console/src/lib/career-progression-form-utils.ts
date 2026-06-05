@@ -24,14 +24,60 @@ export function resolveDescriptionFontSize(value?: number | null): number {
   return clampFontSize(value, DEFAULT_DESCRIPTION_FONT_SIZE);
 }
 
+function isCpMasterRowActive(row: {
+  isActive?: boolean | null;
+  is_active?: boolean | null;
+}): boolean {
+  const flag = row.isActive ?? row.is_active;
+  return flag !== false;
+}
+
+/** Keep only active certificate masters, fields, and select options. */
+export function filterActiveCpTemplateMasters<
+  T extends {
+    isActive?: boolean | null;
+    is_active?: boolean | null;
+    fields: Array<{
+      isActive?: boolean | null;
+      is_active?: boolean | null;
+      options?: Array<{ isActive?: boolean | null; is_active?: boolean | null }>;
+      name: string;
+    }>;
+  },
+>(masters: T[]): T[] {
+  return masters
+    .filter((cm) => isCpMasterRowActive(cm))
+    .map((cm) => ({
+      ...cm,
+      fields: cm.fields
+        .filter((f) => isCpMasterRowActive(f))
+        .map((f) => ({
+          ...f,
+          options: (f.options ?? []).filter((o) => isCpMasterRowActive(o)),
+        })),
+    }))
+    .filter((cm) => cm.fields.length > 0);
+}
+
 /** Normalize API field rows (camelCase or snake_case) for display. */
-export function normalizeCpTemplateMasters<T extends { fields: Array<{ name: string }> }>(
-  masters: T[],
-): T[] {
-  return masters.map((cm) => ({
-    ...cm,
-    fields: cm.fields.map((f) => normalizeCpFieldForDisplay(f)),
-  }));
+export function normalizeCpTemplateMasters<
+  T extends {
+    isActive?: boolean | null;
+    is_active?: boolean | null;
+    fields: Array<{
+      isActive?: boolean | null;
+      is_active?: boolean | null;
+      options?: Array<{ isActive?: boolean | null; is_active?: boolean | null }>;
+      name: string;
+    }>;
+  },
+>(masters: T[]): T[] {
+  return filterActiveCpTemplateMasters(
+    masters.map((cm) => ({
+      ...cm,
+      fields: cm.fields.map((f) => normalizeCpFieldForDisplay(f)),
+    })),
+  );
 }
 
 export function normalizeCpFieldForDisplay<T extends { name: string }>(
