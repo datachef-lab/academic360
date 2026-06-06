@@ -142,7 +142,7 @@ function TrackerMain({
         onValueChange={(v) => onTabChange(v as RealtimeTrackerTab)}
         className="flex min-h-0 flex-1 flex-col"
       >
-        <div className="shrink-0 border-b bg-white px-2">
+        <div className="shrink-0 border-b bg-white px-2 pb-[8px]">
           <TabsList className="h-10 bg-transparent">
             <TabsTrigger value="affiliation" className="text-sm">
               {affiliationTabLabel}

@@ -209,6 +209,24 @@ const ACTIVE_PROMOTION_ROW_SQL = sql`${promotionModel.endDate} IS NULL AND COALE
 type MappingWhereOptions = {
   /** Live "today" widgets ignore dateFrom/dateTo on mapping.updatedAt. */
   forTodayLive?: boolean;
+  /**
+   * Fee MIS needs previous-semester stats even when promotions are closed.
+   * When enabled, exclude only deprecated promotions, not `endDate != NULL`.
+   */
+  includeClosedPromotions?: boolean;
+};
+
+const NON_DEPRECATED_PROMOTION_ROW_SQL = sql`COALESCE(${promotionModel.isDeprecated}, false) = false`;
+
+function promotionRowSql(options?: MappingWhereOptions): SQL {
+  return options?.includeClosedPromotions
+    ? NON_DEPRECATED_PROMOTION_ROW_SQL
+    : ACTIVE_PROMOTION_ROW_SQL;
+}
+
+/** Prior-semester MIS stats need closed promotions; today widgets stay on active-only scope. */
+const FEES_HISTORICAL_SCOPE_OPTIONS: MappingWhereOptions = {
+  includeClosedPromotions: true,
 };
 
 function resolveDashboardFilters(
@@ -414,11 +432,12 @@ function buildStructureScope(
  */
 function activePromotionJoinCondition(
   filtersInput?: FeesDashboardFilters | null,
+  options?: MappingWhereOptions,
 ): SQL {
   const filters = resolveDashboardFilters(filtersInput);
   const parts: SQL[] = [
     eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
-    ACTIVE_PROMOTION_ROW_SQL,
+    promotionRowSql(options),
     eq(promotionModel.studentId, feeStudentMappingModel.studentId),
     eq(promotionModel.classId, feeStructureModel.classId),
     eq(promotionModel.programCourseId, feeStructureModel.programCourseId),
@@ -436,11 +455,12 @@ function activePromotionJoinCondition(
 /** FGPM rows linked to an open, non-deprecated promotion (shift filter when set). */
 function activePromotionFgpmSubquery(
   filtersInput?: FeesDashboardFilters | null,
+  options?: MappingWhereOptions,
 ) {
   const filters = resolveDashboardFilters(filtersInput);
   const promoParts: SQL[] = [
     eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
-    ACTIVE_PROMOTION_ROW_SQL,
+    promotionRowSql(options),
   ];
   const shiftIds = filters.shiftIds;
   if (shiftIds?.length) {
@@ -527,7 +547,7 @@ function canonicalActiveMappingIdsSubquery(
         feeStudentMappingModel.feeGroupPromotionMappingId,
       ),
     )
-    .innerJoin(promotionModel, activePromotionJoinCondition(filters))
+    .innerJoin(promotionModel, activePromotionJoinCondition(filters, options))
     .innerJoin(
       studentModel,
       eq(studentModel.id, feeStudentMappingModel.studentId),
@@ -700,7 +720,7 @@ function buildMappingWhere(
     ),
     inArray(
       feeStudentMappingModel.feeGroupPromotionMappingId,
-      activePromotionFgpmSubquery(filters),
+      activePromotionFgpmSubquery(filters, options),
     ),
   )!;
 }
@@ -742,6 +762,7 @@ function canonicalScopeCacheKey(
   return JSON.stringify({
     filters,
     forTodayLive: options?.forTodayLive ?? false,
+    includeClosedPromotions: options?.includeClosedPromotions ?? false,
   });
 }
 
@@ -802,7 +823,9 @@ export async function getFeesDashboardFeeMisSlice(
     return { ...EMPTY_FEE_MIS_SLICE, updatedAt: new Date().toISOString() };
   }
 
-  const scope = preResolvedScope ?? (await resolveDashboardScope(filters));
+  const scope =
+    preResolvedScope ??
+    (await resolveDashboardScope(filters, FEES_HISTORICAL_SCOPE_OPTIONS));
   if (!scope.canonicalMappingIds.length) {
     return { ...EMPTY_FEE_MIS_SLICE, updatedAt: new Date().toISOString() };
   }
@@ -1787,7 +1810,10 @@ export async function getFeesDashboardData(
   }
 
   if (section === "reports") {
-    const scope = await resolveDashboardScope(filters);
+    const scope = await resolveDashboardScope(
+      filters,
+      FEES_HISTORICAL_SCOPE_OPTIONS,
+    );
     if (!scope.canonicalMappingIds.length) {
       return buildEmptyDashboardPayload();
     }
@@ -1801,7 +1827,10 @@ export async function getFeesDashboardData(
     };
   }
 
-  const scope = await resolveDashboardScope(filters);
+  const scope = await resolveDashboardScope(
+    filters,
+    FEES_HISTORICAL_SCOPE_OPTIONS,
+  );
   const hasDateWindow = Boolean(filters.dateFrom || filters.dateTo);
   const todayScope = hasDateWindow
     ? await resolveDashboardScope(filters, { forTodayLive: true })
