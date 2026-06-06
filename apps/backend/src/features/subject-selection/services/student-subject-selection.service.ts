@@ -2122,6 +2122,9 @@ export async function getSubjectSelectionMetaForStudent(
   };
 }
 
+const STUDENT_SUBJECTS_FINAL_WHERE_PROMOTED = `WHERE promotion_id IS NOT NULL
+  AND NULLIF(TRIM(COALESCE(promotion_academic_year, '')), '') IS NOT NULL`;
+
 const STUDENT_SUBJECTS_FINAL_SELECT_FULL = `SELECT
     student_id,
     uid,
@@ -2151,7 +2154,8 @@ FROM (
   SELECT * FROM mandatory
   UNION ALL
   SELECT * FROM optional
-) final`;
+) final
+${STUDENT_SUBJECTS_FINAL_WHERE_PROMOTED}`;
 
 /** Enrolment master: papers scoped to a promotion in the report year (promotion_id + class match). */
 const STUDENT_SUBJECTS_FINAL_SELECT_PAPER = `SELECT promotion_id, student_id, paper, paper_code
@@ -2160,22 +2164,21 @@ FROM (
   UNION ALL
   SELECT * FROM optional
 ) final
-WHERE promotion_id IS NOT NULL
-  AND NULLIF(TRIM(COALESCE(promotion_academic_year, '')), '') IS NOT NULL`;
+${STUDENT_SUBJECTS_FINAL_WHERE_PROMOTED}`;
 
 const STUDENT_SUBJECTS_EXPORT_SQL = `
 WITH students_in_report_year AS (
   SELECT DISTINCT pr.student_id_fk AS student_id
   FROM promotions pr
   JOIN sessions sess_lp ON sess_lp.id = pr.session_id_fk
-  WHERE pr.is_alumni IS NOT TRUE
+  WHERE COALESCE(pr.is_deprecated, false) = false
     AND sess_lp.academic_id_fk = $1
 ),
 student_paper_years AS (
   SELECT DISTINCT pr.student_id_fk AS student_id, sess.academic_id_fk AS academic_year_id
   FROM promotions pr
   JOIN sessions sess ON sess.id = pr.session_id_fk
-  WHERE pr.is_alumni IS NOT TRUE
+  WHERE COALESCE(pr.is_deprecated, false) = false
     AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
     AND sess.academic_id_fk = $1
 ),
@@ -2183,7 +2186,7 @@ student_program_in_year AS (
   SELECT DISTINCT pr.student_id_fk AS student_id, pr.program_course_id_fk
   FROM promotions pr
   JOIN sessions sess ON sess.id = pr.session_id_fk
-  WHERE pr.is_alumni IS NOT TRUE
+  WHERE COALESCE(pr.is_deprecated, false) = false
     AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
     AND sess.academic_id_fk = $1
 ),
@@ -2200,7 +2203,7 @@ student_registration_year AS (
 ),
 
 student_promotions_by_class AS (
-  SELECT
+  SELECT DISTINCT ON (pr.student_id_fk, pr.class_id_fk)
          pr.id AS promotion_id,
          pr.student_id_fk AS student_id,
          pr.class_id_fk,
@@ -2209,11 +2212,13 @@ student_promotions_by_class AS (
   FROM promotions pr
   JOIN sessions sess ON sess.id = pr.session_id_fk
   JOIN academic_years ay ON ay.id = sess.academic_id_fk
-  WHERE pr.is_alumni IS NOT TRUE
+  WHERE COALESCE(pr.is_deprecated, false) = false
     AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
     AND sess.academic_id_fk = $1
+  ORDER BY pr.student_id_fk, pr.class_id_fk, pr.id DESC
 ),
 
+/** One row per student + selection slot (meta), matching CU Registration admin form. */
 latest_student_selections AS (
   SELECT id,
          student_id_fk,
@@ -2225,9 +2230,7 @@ latest_student_selections AS (
     SELECT sss.*,
            ROW_NUMBER() OVER (
              PARTITION BY sss.student_id_fk,
-                          sss.session_id_fk,
-                          sss.subject_selection_meta_id_fk,
-                          sss.subject_id_fk
+                          sss.subject_selection_meta_id_fk
              ORDER BY sss.version DESC,
                       sss.updated_at DESC NULLS LAST,
                       sss.created_at DESC,
@@ -2235,6 +2238,8 @@ latest_student_selections AS (
            ) AS rn
     FROM student_subject_selections sss
     WHERE sss.is_active = TRUE
+      AND COALESCE(sss.is_deprecated, false) = false
+      AND sss.student_id_fk IN (SELECT student_id FROM students_in_report_year)
   ) ranked
   WHERE rn = 1
 ),
@@ -2294,6 +2299,7 @@ mandatory AS (
   JOIN subjects sbj ON sbj.id = p.subject_id_fk
   JOIN subject_types sbt ON sbt.id = p.subject_type_id_fk
   WHERE p.is_optional = FALSE
+    AND p.is_active = TRUE
     __EXTRA_FILTER_MAND__
 ),
 
@@ -2356,10 +2362,10 @@ optional_direct AS (
        ON ssmc.subject_selection_meta_id_fk = ssm.id AND ssmc.class_id_fk = cl.id
   JOIN latest_student_selections lss
        ON lss.student_id_fk = std.id
-      AND lss.session_id_fk = spbc.session_id_fk
       AND lss.subject_selection_meta_id_fk = ssm.id
       AND lss.subject_id_fk = p.subject_id_fk
   WHERE p.is_optional = TRUE
+    AND p.is_active = TRUE
     __EXTRA_FILTER_OPTD__
 ),
 
@@ -2413,9 +2419,6 @@ optional_grouped AS (
                    )
   JOIN academic_years ay ON ay.id = p_sel.academic_year_id_fk
   JOIN classes cl_sel ON cl_sel.id = p_sel.class_id_fk
-  LEFT JOIN student_promotions_by_class spbc_sel
-       ON spbc_sel.student_id = std.id
-      AND spbc_sel.class_id_fk = cl_sel.id
   JOIN subjects sbj_sel ON sbj_sel.id = p_sel.subject_id_fk
   JOIN subject_types sbt ON sbt.id = p_sel.subject_type_id_fk
   JOIN subject_selection_meta ssm ON ssm.subject_type_id_fk = sbt.id
@@ -2423,7 +2426,6 @@ optional_grouped AS (
        ON ssmc.subject_selection_meta_id_fk = ssm.id AND ssmc.class_id_fk = cl_sel.id
   JOIN latest_student_selections lss
        ON lss.student_id_fk = std.id
-      AND lss.session_id_fk = spbc_sel.session_id_fk
       AND lss.subject_selection_meta_id_fk = ssm.id
       AND lss.subject_id_fk = p_sel.subject_id_fk
   JOIN subject_grouping_main sgm
@@ -2438,15 +2440,20 @@ optional_grouped AS (
       AND sgs_selected.subject_id_fk = p_sel.subject_id_fk
   JOIN subject_grouping_subjects sgs_all
        ON sgs_all.subject_grouping_main_id_fk = sgm.id
+      AND sgs_all.subject_id_fk = p_sel.subject_id_fk
   JOIN subjects sbj_all ON sbj_all.id = sgs_all.subject_id_fk
   JOIN papers p_all ON p_all.academic_year_id_fk = ay.id
                    AND p_all.programe_course_id_fk = pc.id
                    AND p_all.subject_id_fk = sbj_all.id
   JOIN classes cl_all ON cl_all.id = p_all.class_id_fk
+  JOIN subject_selection_meta_classes ssmc_all
+       ON ssmc_all.subject_selection_meta_id_fk = ssm.id
+      AND ssmc_all.class_id_fk = cl_all.id
   LEFT JOIN student_promotions_by_class spbc
        ON spbc.student_id = std.id
       AND spbc.class_id_fk = cl_all.id
   WHERE p_all.is_optional = TRUE
+    AND p_all.is_active = TRUE
     __EXTRA_FILTER_OPTG__
 ),
 
@@ -2458,9 +2465,9 @@ optional AS (
          paper_id, paper_type, paper, paper_code, is_optional, auto_assign, is_active,
          subject_grouping_main_id, subject_grouping_name, subject_grouping_code, promotion_id
   FROM (
-    SELECT *, 1 AS priority FROM optional_grouped
+    SELECT *, 1 AS priority FROM optional_direct
     UNION ALL
-    SELECT *, 2 AS priority FROM optional_direct
+    SELECT *, 2 AS priority FROM optional_grouped
   ) combined
   ORDER BY student_id, paper_id, promotion_id NULLS LAST, priority
 )
@@ -2642,20 +2649,6 @@ export async function exportStudentSubjectsReport(
       // Add transformed rows
       transformedRows.forEach((row) => {
         sheet.addRow(row);
-      });
-
-      // Recalculate column widths after adding all rows to ensure accuracy
-      headers.forEach((header, colIndex) => {
-        const sentenceCaseHeader = toSentenceCase(header);
-        const allColumnData = transformedRows.map((row) => row[header]);
-        const calculatedWidth = calculateColumnWidth(
-          sentenceCaseHeader,
-          allColumnData,
-        );
-        const column = sheet.getColumn(colIndex + 1);
-        if (column) {
-          column.width = calculatedWidth;
-        }
       });
 
       applyStandardExcelReportTableStyling(sheet);
@@ -3892,6 +3885,7 @@ export async function exportStudentSubjectSelections(
           allMetasForYear.map((m) => m.id),
         ),
         eq(studentSubjectSelectionModel.isActive, true),
+        eq(studentSubjectSelectionModel.isDeprecated, false),
       ),
     )
     .groupBy(
@@ -3929,7 +3923,39 @@ export async function exportStudentSubjectSelections(
     studentIds,
   );
 
-  // Get student details with user info and promotions
+  // Only students with a non-deprecated promotion in this academic year
+  const activePromotionStudentRows = await db
+    .selectDistinct({ studentId: promotionModel.studentId })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .where(
+      and(
+        inArray(promotionModel.studentId, studentIds),
+        eq(sessionModel.academicYearId, academicYearId),
+        sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+      ),
+    );
+
+  const activeStudentIdSet = new Set(
+    activePromotionStudentRows.map((r) => r.studentId),
+  );
+  const filteredStudentIds = studentIds.filter((id) =>
+    activeStudentIdSet.has(id),
+  );
+
+  if (filteredStudentIds.length === 0) {
+    console.log(
+      "No students with active promotions in the academic year for export",
+    );
+    return {
+      buffer: null,
+      fileName: `student_subject_selections_academic_year_${academicYearId}_empty.xlsx`,
+      totalRecords: 0,
+      allMetasForYear: allMetasForYear,
+    };
+  }
+
+  // Get student details with user info and active promotion for the report year
   let studentsWithDetails = await db
     .select({
       studentId: studentModel.id,
@@ -3953,15 +3979,33 @@ export async function exportStudentSubjectSelections(
     })
     .from(studentModel)
     .innerJoin(userModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(promotionModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(promotionModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
     .leftJoin(sectionModel, eq(promotionModel.sectionId, sectionModel.id))
-    .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
     .leftJoin(
       programCourseModel,
       eq(promotionModel.programCourseId, programCourseModel.id),
     )
     .leftJoin(classModel, eq(promotionModel.classId, classModel.id))
-    .where(inArray(studentModel.id, studentIds));
+    .where(
+      and(
+        inArray(studentModel.id, filteredStudentIds),
+        eq(sessionModel.academicYearId, academicYearId),
+        sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+      ),
+    );
+
+  const promotionRowByStudent = new Map<
+    number,
+    (typeof studentsWithDetails)[number]
+  >();
+  for (const row of studentsWithDetails) {
+    const prev = promotionRowByStudent.get(row.studentId);
+    if (!prev || (row.promotionId ?? 0) > (prev.promotionId ?? 0)) {
+      promotionRowByStudent.set(row.studentId, row);
+    }
+  }
+  studentsWithDetails = [...promotionRowByStudent.values()];
 
   if (filters.programCourseIds?.length) {
     const allow = new Set(filters.programCourseIds);
@@ -4035,6 +4079,7 @@ export async function exportStudentSubjectSelections(
           allMetasForYear.map((m) => m.id),
         ),
         eq(studentSubjectSelectionModel.isActive, true),
+        eq(studentSubjectSelectionModel.isDeprecated, false),
       ),
     )
     .groupBy(
@@ -4383,7 +4428,12 @@ export async function getLiveSelectionCountsByProgramCourse(
 // Helper function to emit MIS table updates via socket
 async function emitMisTableUpdates(studentIds: number[]) {
   try {
-    // Get unique session and class combinations for the affected students
+    const { scheduleRealtimeTrackerBroadcast } =
+      await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+    const { sessionModel } = await import("@repo/db/schemas");
+    type RealtimeTrackerFilters =
+      import("@/utils/realtime-tracker-filters.js").RealtimeTrackerFilters;
+
     const studentPromotions = await db
       .select({
         sessionId: promotionModel.sessionId,
@@ -4392,7 +4442,6 @@ async function emitMisTableUpdates(studentIds: number[]) {
       .from(promotionModel)
       .where(inArray(promotionModel.studentId, studentIds));
 
-    // Get unique combinations
     const uniqueCombinations = Array.from(
       new Set(
         studentPromotions.map(
@@ -4401,7 +4450,8 @@ async function emitMisTableUpdates(studentIds: number[]) {
       ),
     );
 
-    // Emit updates for each unique combination
+    const broadcasted = new Set<string>();
+
     for (const combination of uniqueCombinations) {
       const [sessionIdStr, classIdStr] = combination.split("-");
       const sessionId =
@@ -4413,14 +4463,31 @@ async function emitMisTableUpdates(studentIds: number[]) {
         trigger: "subject_selection_change",
         affectedStudents: studentIds.length,
       });
+
+      const rtFilters: RealtimeTrackerFilters = {};
+      if (classId) rtFilters.classIds = [classId];
+      if (sessionId) {
+        const [sessionRow] = await db
+          .select({ academicYearId: sessionModel.academicYearId })
+          .from(sessionModel)
+          .where(eq(sessionModel.id, sessionId))
+          .limit(1);
+        if (sessionRow?.academicYearId) {
+          rtFilters.academicYearIds = [sessionRow.academicYearId];
+        }
+      }
+      const key = JSON.stringify(rtFilters);
+      if (!broadcasted.has(key)) {
+        broadcasted.add(key);
+        scheduleRealtimeTrackerBroadcast(
+          "affiliation",
+          "subject_selection_change",
+          rtFilters,
+        );
+      }
     }
 
-    // Also emit a general update to all MIS dashboard clients
-    const generalMisData = await getMisTableData();
-    socketService.sendMisTableUpdateToAll(generalMisData.data, {
-      trigger: "subject_selection_change",
-      affectedStudents: studentIds.length,
-    });
+    socketService.emitFeeMisRefresh("subject_selection_change");
 
     console.log(
       `[SocketService] Emitted MIS table updates for ${studentIds.length} affected students`,
@@ -4430,107 +4497,9 @@ async function emitMisTableUpdates(studentIds: number[]) {
   }
 }
 
-// MIS Table data with sessionId and classId filters
+// MIS Table data with sessionId and classId filters (legacy); full filters via realtime-tracker API.
 export async function getMisTableData(sessionId?: number, classId?: number) {
-  // Build WHERE conditions for session and class filters
-  const whereConditions = [
-    eq(userModel.isActive, true),
-    eq(userModel.type, "STUDENT"),
-  ];
-
-  if (sessionId) {
-    whereConditions.push(eq(promotionModel.sessionId, sessionId));
-  }
-
-  if (classId) {
-    whereConditions.push(eq(promotionModel.classId, classId));
-  }
-
-  // Get program course data with counts
-  const programCourseData = await db
-    .select({
-      programCourseId: programCourseModel.id,
-      programCourseName: programCourseModel.name,
-      admitted: countDistinct(userModel.id),
-      subjectSelectionDone: sql<number>`COUNT(DISTINCT CASE WHEN ${studentSubjectSelectionModel.studentId} IS NOT NULL THEN ${studentModel.id} END)`,
-      onlineRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.onlineRegistrationDone} = true THEN ${studentModel.id} END)`,
-      physicalRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.physicalRegistrationDone} = true THEN ${studentModel.id} END)`,
-    })
-    .from(programCourseModel)
-    .innerJoin(
-      promotionModel,
-      eq(promotionModel.programCourseId, programCourseModel.id),
-    )
-    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      studentSubjectSelectionModel,
-      eq(studentSubjectSelectionModel.studentId, studentModel.id),
-    )
-    .leftJoin(
-      cuRegistrationCorrectionRequestModel,
-      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
-    )
-    .where(and(...whereConditions))
-    .groupBy(programCourseModel.id, programCourseModel.name);
-
-  // Get total counts
-  const totalData = await db
-    .select({
-      admitted: countDistinct(userModel.id),
-      subjectSelectionDone: sql<number>`COUNT(DISTINCT CASE WHEN ${studentSubjectSelectionModel.studentId} IS NOT NULL THEN ${studentModel.id} END)`,
-      onlineRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.onlineRegistrationDone} = true THEN ${studentModel.id} END)`,
-      physicalRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.physicalRegistrationDone} = true THEN ${studentModel.id} END)`,
-    })
-    .from(programCourseModel)
-    .innerJoin(
-      promotionModel,
-      eq(promotionModel.programCourseId, programCourseModel.id),
-    )
-    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      studentSubjectSelectionModel,
-      eq(studentSubjectSelectionModel.studentId, studentModel.id),
-    )
-    .leftJoin(
-      cuRegistrationCorrectionRequestModel,
-      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
-    )
-    .where(and(...whereConditions));
-
-  const total = totalData[0] || {
-    admitted: 0,
-    subjectSelectionDone: 0,
-    onlineRegDone: 0,
-    physicalRegDone: 0,
-  };
-
-  // Combine data with totals
-  const data = [
-    ...programCourseData.map((row, index) => ({
-      programCourseName:
-        row.programCourseName || `Program Course ${row.programCourseId}`,
-      admitted: row.admitted,
-      subjectSelectionDone: row.subjectSelectionDone,
-      onlineRegDone: row.onlineRegDone,
-      physicalRegDone: row.physicalRegDone,
-      sortOrder: 0,
-    })),
-    {
-      programCourseName: "Total",
-      admitted: total.admitted,
-      subjectSelectionDone: total.subjectSelectionDone,
-      onlineRegDone: total.onlineRegDone,
-      physicalRegDone: total.physicalRegDone,
-      sortOrder: 1,
-    },
-  ];
-
-  return {
-    updatedAt: new Date().toISOString(),
-    sessionId,
-    classId,
-    data,
-  };
+  const { getMisTableDataLegacy } =
+    await import("@/features/realtime-tracker/services/realtime-tracker.service.js");
+  return getMisTableDataLegacy(sessionId, classId);
 }

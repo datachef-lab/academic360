@@ -48,6 +48,7 @@ export const promotionModel = pgTable("promotions", {
     startDate: timestamp("start_date", {withTimezone: true}),
     endDate: timestamp("end_date", {withTimezone: true}),
     remarks: text("remarks"),
+    isDeprecated: boolean("is_deprecated").default(false),
     examFormSubmissionTimeStamp: timestamp({withTimezone: true}),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),

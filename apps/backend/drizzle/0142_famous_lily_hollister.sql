@@ -1,0 +1,1 @@
+ALTER TABLE "students" ADD COLUMN "previous_uid" varchar(255);
