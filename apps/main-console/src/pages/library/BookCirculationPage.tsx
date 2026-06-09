@@ -186,32 +186,38 @@ export default function BookCirculationPage() {
   const previewBatchProgram =
     previewUser?.programCourseShortName?.trim() || previewUser?.programCourse || "-";
 
-  const loadUserByUserId = useCallback(async (targetUserId: number) => {
-    try {
-      setPreviewLoading(true);
-      setNoCandidateFound(false);
-      const response = await getBookCirculationPreview(targetUserId);
-      setPreviewData(response.payload);
-      loadedUserIdRef.current = targetUserId;
-      setEditableRows(
-        response.payload.rows.map((item) => ({
-          ...item,
-          bookOptionKey: String(item.copyDetailsId),
-          isNew: false,
-        })),
-      );
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      toast.error("Failed to load user details");
-      console.error(error);
-      setPreviewData(null);
-      setEditableRows([]);
-      setHasUnsavedChanges(false);
-      loadedUserIdRef.current = null;
-    } finally {
-      setPreviewLoading(false);
-    }
-  }, []);
+  const loadUserByUserId = useCallback(
+    async (targetUserId: number, options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+      try {
+        if (!silent) setPreviewLoading(true);
+        setNoCandidateFound(false);
+        const response = await getBookCirculationPreview(targetUserId);
+        setPreviewData(response.payload);
+        loadedUserIdRef.current = targetUserId;
+        setEditableRows(
+          response.payload.rows.map((item) => ({
+            ...item,
+            bookOptionKey: String(item.copyDetailsId),
+            isNew: false,
+          })),
+        );
+        setHasUnsavedChanges(false);
+      } catch (error) {
+        toast.error("Failed to load user details");
+        console.error(error);
+        if (!silent) {
+          setPreviewData(null);
+          setEditableRows([]);
+          setHasUnsavedChanges(false);
+          loadedUserIdRef.current = null;
+        }
+      } finally {
+        if (!silent) setPreviewLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const run = async () => {
@@ -243,7 +249,7 @@ export default function BookCirculationPage() {
       if (Date.now() - lastLocalSaveAtRef.current < LOCAL_SAVE_SOCKET_SUPPRESS_MS) return;
       toast.info(data.message);
       if (loadedUserIdRef.current != null) {
-        void loadUserByUserId(loadedUserIdRef.current);
+        void loadUserByUserId(loadedUserIdRef.current, { silent: true });
       }
     };
     socket.on("library_book_circulation_update", handleUpdate);
@@ -345,7 +351,7 @@ export default function BookCirculationPage() {
       lastLocalSaveAtRef.current = Date.now();
       await upsertBookCirculationRows(previewData.user.userId, payloadRows);
       toast.success("Book circulation saved successfully.");
-      await loadUserByUserId(previewData.user.userId);
+      await loadUserByUserId(previewData.user.userId, { silent: true });
     } catch (error) {
       console.error(error);
       toast.error("Failed to save circulation rows.");
