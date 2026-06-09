@@ -30,9 +30,13 @@ import type { FeesDashboardFilters } from "../types/dashboard-api";
 import { formatSemesterClassOptionLabel } from "../utils/semester-display";
 import {
   DEFAULT_FILTER_LABELS,
+  filterProgramCoursesForForm,
   formFromApiFilters,
   formatDateRangeLabel,
   formatMultiSelectLabel,
+  PROGRAM_COURSE_CASCADE_KEYS,
+  programCourseOptionsFromList,
+  pruneProgramCourseIds,
   toApiFilters,
   type FeesDashboardFilterForm,
   type FeesDashboardFilterLabels,
@@ -52,22 +56,17 @@ const GENDER_OPTIONS = [
   { value: "OTHER", label: "Other" },
 ];
 
+/** Fee mapping collection state (paid vs not fully paid) and failed online/cash attempts. */
 const PAYMENT_STATUS_OPTIONS = [
-  { value: "PAID", label: "Paid" },
-  { value: "PARTIAL", label: "Partial" },
-  { value: "UNPAID", label: "Unpaid" },
+  { value: "PAID", label: "Paid (fully collected)" },
+  { value: "UNPAID", label: "Unpaid / due" },
+  { value: "FAILED", label: "Failed (payment attempt)" },
 ];
 
 const PAYMENT_MODE_OPTIONS = [
   { value: "ONLINE", label: "Online" },
   { value: "CASH", label: "Cash" },
   { value: "CHEQUE", label: "Cheque" },
-];
-
-const TRANSACTION_STATUS_OPTIONS = [
-  { value: "SUCCESS", label: "Success" },
-  { value: "FAILED", label: "Failed" },
-  { value: "PENDING", label: "Pending" },
 ];
 
 function rowsWithId<T extends { id?: number | null }>(rows: T[]): Array<T & { id: number }> {
@@ -161,26 +160,22 @@ export function FeesFiltersDialog({
     label: level.name,
   }));
   const programCourseOptions = useMemo(() => {
-    let list = programCourses.filter((pc) => pc.id != null);
-    if (form.affiliationIds.length) {
-      const allowed = new Set(form.affiliationIds.map(Number));
-      list = list.filter((pc) => {
-        const id = pc.affiliation?.id;
-        return id != null && allowed.has(id);
-      });
+    return programCourseOptionsFromList(filterProgramCoursesForForm(programCourses, form));
+  }, [
+    programCourses,
+    form.affiliationIds,
+    form.regulationTypeIds,
+    form.courseLevelIds,
+    form.streamIds,
+  ]);
+
+  useEffect(() => {
+    if (!open) return;
+    const pruned = pruneProgramCourseIds(form.programCourseIds, programCourseOptions);
+    if (pruned.length !== form.programCourseIds.length) {
+      setForm((prev) => ({ ...prev, programCourseIds: pruned }));
     }
-    if (form.regulationTypeIds.length) {
-      const allowed = new Set(form.regulationTypeIds.map(Number));
-      list = list.filter((pc) => {
-        const id = pc.regulationType?.id;
-        return id != null && allowed.has(id);
-      });
-    }
-    return list.map((pc) => ({
-      value: String(pc.id),
-      label: pc.shortName?.trim() ? `${pc.shortName} · ${pc.name}` : (pc.name ?? "Course"),
-    }));
-  }, [programCourses, form.affiliationIds, form.regulationTypeIds]);
+  }, [open, programCourseOptions, form.programCourseIds]);
   const classOptions = classes.map((cls) => ({
     value: String(cls.id),
     label: formatSemesterClassOptionLabel(cls.name),
@@ -214,7 +209,19 @@ export function FeesFiltersDialog({
     key: K,
     next: FeesDashboardFilterForm[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: next }));
+    setForm((prev) => {
+      let merged: FeesDashboardFilterForm = { ...prev, [key]: next };
+      if ((PROGRAM_COURSE_CASCADE_KEYS as readonly string[]).includes(key as string)) {
+        const options = programCourseOptionsFromList(
+          filterProgramCoursesForForm(programCourses, merged),
+        );
+        merged = {
+          ...merged,
+          programCourseIds: pruneProgramCourseIds(merged.programCourseIds, options),
+        };
+      }
+      return merged;
+    });
   };
 
   const handleApply = () => {
@@ -269,11 +276,6 @@ export function FeesFiltersDialog({
         PAYMENT_MODE_OPTIONS,
         DEFAULT_FILTER_LABELS.paymentMode,
       ),
-      transactionStatus: formatMultiSelectLabel(
-        form.transactionStatuses,
-        TRANSACTION_STATUS_OPTIONS,
-        DEFAULT_FILTER_LABELS.transactionStatus,
-      ),
       dateRange: formatDateRangeLabel(form.dateFrom, form.dateTo),
       studentSearch: form.studentSearch.trim(),
     };
@@ -309,9 +311,9 @@ export function FeesFiltersDialog({
             />
           </FilterField>
 
-          <FilterField label="Program (level)">
+          <FilterField label="Course level">
             <MultiSelectDropdown
-              placeholder="All programs"
+              placeholder="All course levels"
               options={courseLevelOptions}
               selectedOptions={form.courseLevelIds}
               onChange={(selected) => updateForm("courseLevelIds", selected)}
@@ -349,9 +351,9 @@ export function FeesFiltersDialog({
             />
           </FilterField>
 
-          <FilterField label="Course">
+          <FilterField label="Program course">
             <MultiSelectDropdown
-              placeholder="All courses"
+              placeholder="All program courses"
               options={programCourseOptions}
               selectedOptions={form.programCourseIds}
               onChange={(selected) => updateForm("programCourseIds", selected)}
@@ -425,16 +427,6 @@ export function FeesFiltersDialog({
               options={PAYMENT_MODE_OPTIONS}
               selectedOptions={form.paymentModes}
               onChange={(selected) => updateForm("paymentModes", selected)}
-              contentClassName="min-w-[280px]"
-            />
-          </FilterField>
-
-          <FilterField label="Transaction status">
-            <MultiSelectDropdown
-              placeholder="All transaction statuses"
-              options={TRANSACTION_STATUS_OPTIONS}
-              selectedOptions={form.transactionStatuses}
-              onChange={(selected) => updateForm("transactionStatuses", selected)}
               contentClassName="min-w-[280px]"
             />
           </FilterField>

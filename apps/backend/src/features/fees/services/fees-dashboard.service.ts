@@ -101,6 +101,10 @@ export type SemesterBreakdownRow = {
   collected: number;
   pending: number;
   eligibleStudents: number;
+  /** Distinct students with mapping fully paid (Fee MIS NOS — collected). */
+  fullyPaidStudents: number;
+  /** Distinct students with mapping unpaid / partial (Fee MIS NOS — pending). */
+  unpaidStudents: number;
   challansGenerated: number;
   challanPending: number;
   challanOnly: number;
@@ -142,7 +146,8 @@ export type ChallansByProgramRow = {
 export type EnrollmentMatrixCell = {
   paid: number;
   notPaid: number;
-  challanGenerated: number;
+  /** Distinct students with a fee mapping in scope for this program × semester. */
+  eligible: number;
 };
 
 export type EnrollmentMatrixRow = {
@@ -204,6 +209,24 @@ const ACTIVE_PROMOTION_ROW_SQL = sql`${promotionModel.endDate} IS NULL AND COALE
 type MappingWhereOptions = {
   /** Live "today" widgets ignore dateFrom/dateTo on mapping.updatedAt. */
   forTodayLive?: boolean;
+  /**
+   * Fee MIS needs previous-semester stats even when promotions are closed.
+   * When enabled, exclude only deprecated promotions, not `endDate != NULL`.
+   */
+  includeClosedPromotions?: boolean;
+};
+
+const NON_DEPRECATED_PROMOTION_ROW_SQL = sql`COALESCE(${promotionModel.isDeprecated}, false) = false`;
+
+function promotionRowSql(options?: MappingWhereOptions): SQL {
+  return options?.includeClosedPromotions
+    ? NON_DEPRECATED_PROMOTION_ROW_SQL
+    : ACTIVE_PROMOTION_ROW_SQL;
+}
+
+/** Prior-semester MIS stats need closed promotions; today widgets stay on active-only scope. */
+const FEES_HISTORICAL_SCOPE_OPTIONS: MappingWhereOptions = {
+  includeClosedPromotions: true,
 };
 
 function resolveDashboardFilters(
@@ -212,7 +235,7 @@ function resolveDashboardFilters(
   return filters ?? {};
 }
 
-function hasDashboardScope(filters: FeesDashboardFilters): boolean {
+export function hasDashboardScope(filters: FeesDashboardFilters): boolean {
   return Boolean(
     filters.academicYearIds?.length ||
     filters.programCourseIds?.length ||
@@ -299,6 +322,42 @@ function isTimestampToday(
  * When the payment actually occurred (gateway / cash desk txnDate), not when the
  * row was inserted (legacy imports set createdAt to import time).
  */
+/** Group gateways case-insensitively (Paytm vs PAYTM). */
+const GATEWAY_VENDOR_KEY_SQL = sql`UPPER(COALESCE(NULLIF(TRIM(${paymentModel.paymentGatewayVendor}), ''), 'UNKNOWN'))`;
+
+const GATEWAY_DISPLAY_LABELS: Record<string, string> = {
+  PAYTM: "Paytm",
+  RAZORPAY: "Razorpay",
+  PHONEPE: "PhonePe",
+  UNKNOWN: "Unknown",
+};
+
+function formatGatewayLabel(vendorKey: string): string {
+  const key = vendorKey.trim().toUpperCase() || "UNKNOWN";
+  return (
+    GATEWAY_DISPLAY_LABELS[key] ?? key.charAt(0) + key.slice(1).toLowerCase()
+  );
+}
+
+function mergeGatewayMixRows(rows: MixRow[]): MixRow[] {
+  const byKey = new Map<string, MixRow>();
+  for (const row of rows) {
+    const key = row.name.trim().toUpperCase() || "UNKNOWN";
+    const label = formatGatewayLabel(key);
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, { name: label, count: row.count, amount: row.amount });
+      continue;
+    }
+    existing.count += row.count;
+    existing.amount += row.amount;
+  }
+  return [...byKey.values()].map((r) => ({
+    ...r,
+    amount: Math.round(r.amount),
+  }));
+}
+
 const PAYMENT_EVENT_TIME_SQL = sql`COALESCE(
   CASE
     WHEN NULLIF(TRIM(${paymentModel.txnDate}), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
@@ -373,11 +432,12 @@ function buildStructureScope(
  */
 function activePromotionJoinCondition(
   filtersInput?: FeesDashboardFilters | null,
+  options?: MappingWhereOptions,
 ): SQL {
   const filters = resolveDashboardFilters(filtersInput);
   const parts: SQL[] = [
     eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
-    ACTIVE_PROMOTION_ROW_SQL,
+    promotionRowSql(options),
     eq(promotionModel.studentId, feeStudentMappingModel.studentId),
     eq(promotionModel.classId, feeStructureModel.classId),
     eq(promotionModel.programCourseId, feeStructureModel.programCourseId),
@@ -386,17 +446,21 @@ function activePromotionJoinCondition(
   if (shiftIds?.length) {
     parts.push(inArray(promotionModel.shiftId, shiftIds));
   }
+  if (filters.classIds?.length) {
+    parts.push(inArray(promotionModel.classId, filters.classIds));
+  }
   return and(...parts)!;
 }
 
 /** FGPM rows linked to an open, non-deprecated promotion (shift filter when set). */
 function activePromotionFgpmSubquery(
   filtersInput?: FeesDashboardFilters | null,
+  options?: MappingWhereOptions,
 ) {
   const filters = resolveDashboardFilters(filtersInput);
   const promoParts: SQL[] = [
     eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
-    ACTIVE_PROMOTION_ROW_SQL,
+    promotionRowSql(options),
   ];
   const shiftIds = filters.shiftIds;
   if (shiftIds?.length) {
@@ -483,7 +547,7 @@ function canonicalActiveMappingIdsSubquery(
         feeStudentMappingModel.feeGroupPromotionMappingId,
       ),
     )
-    .innerJoin(promotionModel, activePromotionJoinCondition(filters))
+    .innerJoin(promotionModel, activePromotionJoinCondition(filters, options))
     .innerJoin(
       studentModel,
       eq(studentModel.id, feeStudentMappingModel.studentId),
@@ -578,15 +642,17 @@ function buildPaymentStatusScope(
   for (const status of filters.paymentStatuses) {
     const normalized = status.trim().toUpperCase();
     if (normalized === "PAID") parts.push(PAID_MAPPING_SQL);
-    if (normalized === "PARTIAL") {
-      parts.push(
-        sql`COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) < COALESCE(${feeStudentMappingModel.totalPayable}, 0)`,
-      );
+    if (normalized === "UNPAID" || normalized === "PARTIAL") {
+      parts.push(UNPAID_MAPPING_SQL);
     }
-    if (normalized === "UNPAID") {
-      parts.push(
-        sql`COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) = 0`,
-      );
+    if (normalized === "FAILED") {
+      const failedMappings = db
+        .select({ id: paymentModel.feeStudentMappingId })
+        .from(paymentModel)
+        .where(
+          and(feePaymentContextWhere(), eq(paymentModel.status, "FAILED")),
+        );
+      parts.push(inArray(feeStudentMappingModel.id, failedMappings));
     }
   }
   return parts.length ? or(...parts) : undefined;
@@ -654,20 +720,22 @@ function buildMappingWhere(
     ),
     inArray(
       feeStudentMappingModel.feeGroupPromotionMappingId,
-      activePromotionFgpmSubquery(filters),
+      activePromotionFgpmSubquery(filters, options),
     ),
   )!;
 }
 
-type DashboardScope = {
+export type FeesDashboardScope = {
   canonicalMappingIds: number[];
   filters: FeesDashboardFilters;
 };
 
+type DashboardScope = FeesDashboardScope;
+
 const NO_MAPPING_SCOPE = sql`false`;
 
 /** Scoped mapping rows by pre-resolved canonical ids (avoids re-running expensive subqueries). */
-function mappingIdsWhere(canonicalMappingIds: number[]): SQL {
+export function mappingIdsWhere(canonicalMappingIds: number[]): SQL {
   if (!canonicalMappingIds.length) return NO_MAPPING_SCOPE;
   return inArray(feeStudentMappingModel.id, canonicalMappingIds);
 }
@@ -681,11 +749,38 @@ function paymentScopeWhere(canonicalMappingIds: number[]): SQL {
   )!;
 }
 
-async function resolveDashboardScope(
+const CANONICAL_SCOPE_CACHE_TTL_MS = 90_000;
+const canonicalScopeCache = new Map<
+  string,
+  { canonicalMappingIds: number[]; cachedAt: number }
+>();
+
+function canonicalScopeCacheKey(
+  filters: FeesDashboardFilters,
+  options?: MappingWhereOptions,
+): string {
+  return JSON.stringify({
+    filters,
+    forTodayLive: options?.forTodayLive ?? false,
+    includeClosedPromotions: options?.includeClosedPromotions ?? false,
+  });
+}
+
+export function clearFeesDashboardScopeCache(): void {
+  canonicalScopeCache.clear();
+}
+
+export async function resolveDashboardScope(
   filtersInput?: FeesDashboardFilters | null,
   options?: MappingWhereOptions,
 ): Promise<DashboardScope> {
   const filters = resolveDashboardFilters(filtersInput);
+  const cacheKey = canonicalScopeCacheKey(filters, options);
+  const cached = canonicalScopeCache.get(cacheKey);
+  if (cached && Date.now() - cached.cachedAt < CANONICAL_SCOPE_CACHE_TTL_MS) {
+    return { canonicalMappingIds: cached.canonicalMappingIds, filters };
+  }
+
   const canonicalRows = await canonicalActiveMappingIdsSubquery(
     filters,
     options,
@@ -697,7 +792,58 @@ async function resolveDashboardScope(
         .filter((id): id is number => id != null),
     ),
   ];
+  canonicalScopeCache.set(cacheKey, {
+    canonicalMappingIds,
+    cachedAt: Date.now(),
+  });
   return { canonicalMappingIds, filters };
+}
+
+export type FeesDashboardFeeMisSlice = {
+  updatedAt: string;
+  semesterBreakdown: SemesterBreakdownRow[];
+  fullyPaid: number;
+  partialOrUnpaid: number;
+};
+
+const EMPTY_FEE_MIS_SLICE: FeesDashboardFeeMisSlice = {
+  updatedAt: new Date().toISOString(),
+  semesterBreakdown: [],
+  fullyPaid: 0,
+  partialOrUnpaid: 0,
+};
+
+/** Lightweight dashboard data for realtime Fee MIS (avoids full "all" dashboard queries). */
+export async function getFeesDashboardFeeMisSlice(
+  rawFilters: FeesDashboardFilters = {},
+  preResolvedScope?: FeesDashboardScope,
+): Promise<FeesDashboardFeeMisSlice> {
+  const filters = resolveDashboardFilters(rawFilters);
+  if (!hasDashboardScope(filters)) {
+    return { ...EMPTY_FEE_MIS_SLICE, updatedAt: new Date().toISOString() };
+  }
+
+  const scope =
+    preResolvedScope ??
+    (await resolveDashboardScope(filters, FEES_HISTORICAL_SCOPE_OPTIONS));
+  if (!scope.canonicalMappingIds.length) {
+    return { ...EMPTY_FEE_MIS_SLICE, updatedAt: new Date().toISOString() };
+  }
+
+  const mappingWhere = mappingIdsWhere(scope.canonicalMappingIds);
+  const { canonicalMappingIds } = scope;
+
+  const [coreStats, semesterBreakdown] = await Promise.all([
+    loadCoreMappingStats(mappingWhere, canonicalMappingIds),
+    loadSemesterBreakdown(mappingWhere, canonicalMappingIds),
+  ]);
+
+  return {
+    updatedAt: new Date().toISOString(),
+    semesterBreakdown,
+    fullyPaid: coreStats.mappingAgg.fully_paid,
+    partialOrUnpaid: coreStats.mappingAgg.partial_or_unpaid,
+  };
 }
 
 async function loadMasterCounts(
@@ -783,14 +929,15 @@ function buildMappingAggregateMetrics(
   };
 }
 
-function buildPaymentStatusRows(row: {
-  paidCount?: number | null;
-  paidAmount?: number | null;
-  partialCount?: number | null;
-  partialAmount?: number | null;
-  unpaidCount?: number | null;
-  unpaidAmount?: number | null;
-}): PaymentStatusRow[] {
+function buildPaymentStatusRows(
+  row: {
+    paidCount?: number | null;
+    paidAmount?: number | null;
+    unpaidCount?: number | null;
+    unpaidAmount?: number | null;
+  },
+  failed?: { count: number; amount: number },
+): PaymentStatusRow[] {
   const rows: PaymentStatusRow[] = [
     {
       status: "PAID",
@@ -799,21 +946,24 @@ function buildPaymentStatusRows(row: {
       sharePct: 0,
     },
     {
-      status: "PARTIAL",
-      count: Number(row.partialCount ?? 0),
-      amount: Math.round(Number(row.partialAmount ?? 0)),
-      sharePct: 0,
-    },
-    {
       status: "UNPAID",
       count: Number(row.unpaidCount ?? 0),
       amount: Math.round(Number(row.unpaidAmount ?? 0)),
       sharePct: 0,
     },
-  ].filter((r) => r.count > 0 || r.amount > 0);
+  ];
+  if (failed && (failed.count > 0 || failed.amount > 0)) {
+    rows.push({
+      status: "FAILED",
+      count: failed.count,
+      amount: Math.round(failed.amount),
+      sharePct: 0,
+    });
+  }
 
-  const totalAmount = rows.reduce((s, r) => s + r.amount, 0);
-  return rows.map((r) => ({
+  const visible = rows.filter((r) => r.count > 0 || r.amount > 0);
+  const totalAmount = visible.reduce((s, r) => s + r.amount, 0);
+  return visible.map((r) => ({
     ...r,
     sharePct:
       totalAmount > 0 ? Math.round((r.amount / totalAmount) * 1000) / 10 : 0,
@@ -821,39 +971,65 @@ function buildPaymentStatusRows(row: {
 }
 
 /** Single scan for headline mapping metrics, student count, and payment-status breakdown. */
-async function loadCoreMappingStats(mappingWhere: SQL): Promise<{
+async function loadCoreMappingStats(
+  mappingWhere: SQL,
+  canonicalMappingIds: number[],
+): Promise<{
   mappingAgg: MappingAggregateMetrics;
   totalStudents: number;
   paymentStatus: PaymentStatusRow[];
 }> {
-  const [row] = await db
-    .select({
-      fee_receivable: sql<number>`COALESCE(SUM(${feeStudentMappingModel.totalPayable}), 0)::float`,
-      fee_collected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
-      eligible_students: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
-      total_students: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
-      fully_paid: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
-      partial_or_unpaid: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
-      challans_generated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
-      receipts_issued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
-      challan_only: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
-      waived_amount: sql<number>`COALESCE(SUM(CASE WHEN ${feeStudentMappingModel.isWaivedOff} THEN COALESCE(${feeStudentMappingModel.waivedOffAmount}, 0) ELSE 0 END), 0)::float`,
-      today_challans: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${MAPPING_CHALLAN_TODAY_SQL})::int`,
-      today_receipts: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${MAPPING_RECEIPT_TODAY_SQL})::int`,
-      paidCount: sql<number>`COUNT(*) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
-      paidAmount: sql<number>`COALESCE(SUM(CASE WHEN ${PAID_MAPPING_SQL} THEN COALESCE(${feeStudentMappingModel.amountPaid}, 0) ELSE 0 END), 0)::float`,
-      partialCount: sql<number>`COUNT(*) FILTER (WHERE COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) < COALESCE(${feeStudentMappingModel.totalPayable}, 0))::int`,
-      partialAmount: sql<number>`COALESCE(SUM(CASE WHEN COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) < COALESCE(${feeStudentMappingModel.totalPayable}, 0) THEN COALESCE(${feeStudentMappingModel.amountPaid}, 0) ELSE 0 END), 0)::float`,
-      unpaidCount: sql<number>`COUNT(*) FILTER (WHERE COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) = 0)::int`,
-      unpaidAmount: sql<number>`COALESCE(SUM(CASE WHEN COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) = 0 THEN COALESCE(${feeStudentMappingModel.totalPayable}, 0) ELSE 0 END), 0)::float`,
-    })
-    .from(feeStudentMappingModel)
-    .where(mappingWhere);
+  const failedPaymentQuery =
+    canonicalMappingIds.length > 0
+      ? db
+          .select({
+            count: sql<number>`COUNT(*)::int`,
+            amount: sql<number>`COALESCE(SUM(${paymentModel.amount}), 0)::float`,
+          })
+          .from(paymentModel)
+          .where(
+            and(
+              paymentScopeWhere(canonicalMappingIds),
+              eq(paymentModel.status, "FAILED"),
+            ),
+          )
+      : Promise.resolve([{ count: 0, amount: 0 }]);
+
+  const [[row], [failedPayment]] = await Promise.all([
+    db
+      .select({
+        fee_receivable: sql<number>`COALESCE(SUM(${feeStudentMappingModel.totalPayable}), 0)::float`,
+        fee_collected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
+        eligible_students: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
+        total_students: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
+        fully_paid: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
+        partial_or_unpaid: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
+        challans_generated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
+        receipts_issued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
+        challan_only: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
+        waived_amount: sql<number>`COALESCE(SUM(CASE WHEN ${feeStudentMappingModel.isWaivedOff} THEN COALESCE(${feeStudentMappingModel.waivedOffAmount}, 0) ELSE 0 END), 0)::float`,
+        today_challans: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${MAPPING_CHALLAN_TODAY_SQL})::int`,
+        today_receipts: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${MAPPING_RECEIPT_TODAY_SQL})::int`,
+        paidCount: sql<number>`COUNT(*) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
+        paidAmount: sql<number>`COALESCE(SUM(CASE WHEN ${PAID_MAPPING_SQL} THEN COALESCE(${feeStudentMappingModel.amountPaid}, 0) ELSE 0 END), 0)::float`,
+        unpaidCount: sql<number>`COUNT(*) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
+        unpaidAmount: sql<number>`COALESCE(SUM(CASE WHEN ${UNPAID_MAPPING_SQL} THEN GREATEST(COALESCE(${feeStudentMappingModel.totalPayable}, 0) - COALESCE(${feeStudentMappingModel.amountPaid}, 0), 0) ELSE 0 END), 0)::float`,
+      })
+      .from(feeStudentMappingModel)
+      .where(mappingWhere),
+    failedPaymentQuery,
+  ]);
+
+  const failedCount = Number(failedPayment?.count ?? 0);
+  const failedAmount = Number(failedPayment?.amount ?? 0);
 
   return {
     mappingAgg: buildMappingAggregateMetrics(row),
     totalStudents: Number(row?.total_students ?? 0),
-    paymentStatus: buildPaymentStatusRows(row ?? {}),
+    paymentStatus: buildPaymentStatusRows(row ?? {}, {
+      count: failedCount,
+      amount: failedAmount,
+    }),
   };
 }
 
@@ -927,15 +1103,13 @@ async function loadPaymentAggregates(canonicalMappingIds: number[]) {
         .groupBy(paymentModel.paymentMode),
       db
         .select({
-          gateway: sql<string>`COALESCE(NULLIF(TRIM(${paymentModel.paymentGatewayVendor}), ''), 'Unknown')`,
+          gateway: GATEWAY_VENDOR_KEY_SQL,
           count: sql<number>`COUNT(*)::int`,
           amount: sql<number>`COALESCE(SUM(${paymentModel.amount}), 0)::float`,
         })
         .from(paymentModel)
         .where(and(linkedSuccess, eq(paymentModel.paymentMode, "ONLINE")))
-        .groupBy(
-          sql`COALESCE(NULLIF(TRIM(${paymentModel.paymentGatewayVendor}), ''), 'Unknown')`,
-        ),
+        .groupBy(GATEWAY_VENDOR_KEY_SQL),
     ]);
 
   const todayRow = todayRows[0];
@@ -953,11 +1127,13 @@ async function loadPaymentAggregates(canonicalMappingIds: number[]) {
 
   return {
     transactionMix,
-    gatewayMix: gatewayRows.map((r) => ({
-      name: String(r.gateway),
-      count: Number(r.count ?? 0),
-      amount: Math.round(Number(r.amount ?? 0)),
-    })),
+    gatewayMix: mergeGatewayMixRows(
+      gatewayRows.map((r) => ({
+        name: formatGatewayLabel(String(r.gateway ?? "UNKNOWN")),
+        count: Number(r.count ?? 0),
+        amount: Math.round(Number(r.amount ?? 0)),
+      })),
+    ),
     paymentChannels: modeRows.map((r) => ({
       channel: String(r.mode),
       studentCount: Number(r.count ?? 0),
@@ -991,8 +1167,10 @@ async function loadSemesterBreakdown(
         receivable: sql<number>`COALESCE(SUM(${feeStudentMappingModel.totalPayable}), 0)::float`,
         collected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
         eligibleStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
+        fullyPaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
+        unpaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
         challansGenerated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
-        receiptsIssued: sql<number>`COUNT(*) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
+        receiptsIssued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
         challanOnly: sql<number>`COUNT(*) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
         paidEntries: sql<number>`COUNT(*) FILTER (WHERE COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0)::int`,
         structuresCount: sql<number>`COUNT(DISTINCT ${feeStructureModel.id})::int`,
@@ -1052,6 +1230,8 @@ async function loadSemesterBreakdown(
       collected,
       pending: Math.max(0, receivable - collected),
       eligibleStudents: eligible,
+      fullyPaidStudents: Number(r.fullyPaidStudents ?? 0),
+      unpaidStudents: Number(r.unpaidStudents ?? 0),
       challansGenerated: challansGen,
       challanPending: Math.max(0, eligible - challansGen),
       challanOnly: Number(r.challanOnly ?? 0),
@@ -1075,13 +1255,12 @@ function normalizeHourKey(hour: string): string {
   return `${match[1]!.padStart(2, "0")}:00`;
 }
 
-/** Fee payment attempts today by hour — success (linked) + failed. */
-async function loadHourlyActivityToday(
-  canonicalMappingIds: number[],
-): Promise<HourlyActivityRow[]> {
-  if (!canonicalMappingIds.length) return [];
-
-  const scoped = paymentScopeWhere(canonicalMappingIds);
+/**
+ * Fee payment attempts today by hour — institution-wide (not scoped to dashboard filters).
+ * Shows all FEE/ADMISSION payments for the current calendar day.
+ */
+async function loadHourlyActivityToday(): Promise<HourlyActivityRow[]> {
+  const scoped = feePaymentContextWhere();
 
   const [successRows, failedRows] = await Promise.all([
     db
@@ -1405,7 +1584,7 @@ async function loadEnrollmentMatrix(
       semester: classModel.name,
       paid: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
       notPaid: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
-      challanGenerated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
+      eligible: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
     })
     .from(feeStudentMappingModel)
     .innerJoin(
@@ -1430,7 +1609,7 @@ async function loadEnrollmentMatrix(
   const byProgram = new Map<string, EnrollmentMatrixRow>();
   for (const row of rows) {
     const program =
-      row.programShort?.trim() || row.programName?.trim() || "Program";
+      row.programShort?.trim() || row.programName?.trim() || "Program course";
     const semester = String(row.semester ?? "Semester");
     if (!byProgram.has(program)) {
       byProgram.set(program, { program, bySemester: {} });
@@ -1438,7 +1617,7 @@ async function loadEnrollmentMatrix(
     byProgram.get(program)!.bySemester[semester] = {
       paid: Number(row.paid ?? 0),
       notPaid: Number(row.notPaid ?? 0),
-      challanGenerated: Number(row.challanGenerated ?? 0),
+      eligible: Number(row.eligible ?? 0),
     };
   }
 
@@ -1631,7 +1810,10 @@ export async function getFeesDashboardData(
   }
 
   if (section === "reports") {
-    const scope = await resolveDashboardScope(filters);
+    const scope = await resolveDashboardScope(
+      filters,
+      FEES_HISTORICAL_SCOPE_OPTIONS,
+    );
     if (!scope.canonicalMappingIds.length) {
       return buildEmptyDashboardPayload();
     }
@@ -1645,10 +1827,14 @@ export async function getFeesDashboardData(
     };
   }
 
-  const [scope, todayScope] = await Promise.all([
-    resolveDashboardScope(filters),
-    resolveDashboardScope(filters, { forTodayLive: true }),
-  ]);
+  const scope = await resolveDashboardScope(
+    filters,
+    FEES_HISTORICAL_SCOPE_OPTIONS,
+  );
+  const hasDateWindow = Boolean(filters.dateFrom || filters.dateTo);
+  const todayScope = hasDateWindow
+    ? await resolveDashboardScope(filters, { forTodayLive: true })
+    : scope;
 
   if (!scope.canonicalMappingIds.length) {
     return buildEmptyDashboardPayload();
@@ -1672,11 +1858,11 @@ export async function getFeesDashboardData(
     slabBreakdown,
     promotionBreakdown,
   ] = await Promise.all([
-    loadCoreMappingStats(mappingWhere),
+    loadCoreMappingStats(mappingWhere, canonicalMappingIds),
     loadMasterCounts(filters),
     loadPaymentAggregates(canonicalMappingIds),
     loadSemesterBreakdown(mappingWhere, canonicalMappingIds),
-    loadHourlyActivityToday(todayMappingIds),
+    loadHourlyActivityToday(),
     loadTodayLiveMetrics(todayMappingIds),
     includeReports
       ? loadChallansByProgram(mappingWhere)

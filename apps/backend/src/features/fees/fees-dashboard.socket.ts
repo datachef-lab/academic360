@@ -1,4 +1,5 @@
 import { socketService } from "@/services/socketService.js";
+import { clearFeesDashboardScopeCache } from "./services/fees-dashboard.service.js";
 
 export type FeesDashboardSocketPayload = {
   updatedAt: string;
@@ -14,9 +15,11 @@ export function scheduleFeesDashboardBroadcast(reason: string): void {
 
   debounceTimer = setTimeout(() => {
     debounceTimer = null;
+    clearFeesDashboardScopeCache();
     socketService.sendFeesDashboardUpdate({
       updatedAt: new Date().toISOString(),
       reason,
     });
-  }, 1200);
+    socketService.emitFeeMisRefresh(reason);
+  }, 400);
 }

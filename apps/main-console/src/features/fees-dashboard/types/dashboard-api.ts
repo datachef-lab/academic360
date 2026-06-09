@@ -35,6 +35,8 @@ export type SemesterBreakdownRow = {
   collected: number;
   pending: number;
   eligibleStudents: number;
+  fullyPaidStudents?: number;
+  unpaidStudents?: number;
   challansGenerated: number;
   challanPending: number;
   challanOnly: number;
@@ -76,7 +78,8 @@ export type ChallansByProgramRow = {
 export type EnrollmentMatrixCell = {
   paid: number;
   notPaid: number;
-  challanGenerated: number;
+  /** Students with a fee mapping in scope for this program course × semester. */
+  eligible: number;
 };
 
 export type EnrollmentMatrixRow = {

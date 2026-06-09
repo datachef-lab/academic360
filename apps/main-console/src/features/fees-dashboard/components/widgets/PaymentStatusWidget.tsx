@@ -44,7 +44,8 @@ export function PaymentStatusWidget() {
         </FeesTable>
       )}
       <p className="border-t border-[#b8b8b8] px-3 py-2 text-sm text-[#1a1a1a]">
-        Source: fee_student_mappings · active users · paid / partial / unpaid
+        Paid = fully collected on mapping · Unpaid = balance due · Failed = payment rows with FAILED
+        status
       </p>
     </CompactPanel>
   );

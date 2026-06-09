@@ -64,6 +64,34 @@ export function listInProcessSemesterFeeScopes(
     );
 }
 
+/** Enabled scopes on semester fee payment activities (used when none are in the live date window). */
+export function listEnabledSemesterFeeScopes(
+  activities: AcademicActivityDto[],
+  academicYearId?: number,
+): InProcessScopeEntry[] {
+  return activities
+    .filter(isSemesterFeePaymentActivity)
+    .filter((activity) =>
+      academicYearId != null ? activity.academicYear?.id === academicYearId : true,
+    )
+    .flatMap((activity) =>
+      (activity.scopes ?? [])
+        .filter((scope) => scope.isEnabled)
+        .map((scope) => ({ activity, scope })),
+    );
+}
+
+/** Prefer scopes in the live payment window; otherwise all enabled scopes for the year. */
+export function listDefaultSemesterFeeScopeEntries(
+  activities: AcademicActivityDto[],
+  academicYearId: number,
+  at: Date = new Date(),
+): InProcessScopeEntry[] {
+  const inProcess = listInProcessSemesterFeeScopes(activities, academicYearId, at);
+  if (inProcess.length) return inProcess;
+  return listEnabledSemesterFeeScopes(activities, academicYearId);
+}
+
 /** Program courses that match each in-process scope row (stream + activity dimensions). */
 export function programCourseIdsForInProcessScopes(
   entries: InProcessScopeEntry[],

@@ -9,6 +9,12 @@ import {
 } from "@repo/db/schemas";
 import { and, asc, eq } from "drizzle-orm";
 import type { CareerProgressionFormFieldDto } from "@repo/db/dtos/academics";
+import {
+  activeCertificateFieldMasterIdWhere,
+  activeCertificateOptionForFieldWhere,
+  isCertificateFieldMasterActive,
+  isCertificateFieldOptionActive,
+} from "@/features/academics/utils/certificate-master-active.js";
 
 async function rowToDto(
   row: typeof careerProgressionFormFieldModel.$inferSelect,
@@ -18,7 +24,7 @@ async function rowToDto(
     .from(certificateFieldMasterModel)
     .where(eq(certificateFieldMasterModel.id, row.certificateFieldMasterId));
 
-  if (!master) return null;
+  if (!master || !isCertificateFieldMasterActive(master)) return null;
 
   let option: typeof certificateFieldOptionMasterModel.$inferSelect | null =
     null;
@@ -36,7 +42,9 @@ async function rowToDto(
       if (opt.certificateFieldMasterId !== row.certificateFieldMasterId) {
         return null;
       }
-      option = opt;
+      if (isCertificateFieldOptionActive(opt)) {
+        option = opt;
+      }
     }
   }
 
@@ -159,7 +167,7 @@ async function assertFieldMasterExists(
   const [m] = await db
     .select({ id: certificateFieldMasterModel.id })
     .from(certificateFieldMasterModel)
-    .where(eq(certificateFieldMasterModel.id, certificateFieldMasterId));
+    .where(activeCertificateFieldMasterIdWhere(certificateFieldMasterId));
   return !!m;
 }
 
@@ -168,16 +176,10 @@ async function assertOptionValidForMaster(
   optionId: number,
 ): Promise<boolean> {
   const [opt] = await db
-    .select()
+    .select({ id: certificateFieldOptionMasterModel.id })
     .from(certificateFieldOptionMasterModel)
     .where(
-      and(
-        eq(certificateFieldOptionMasterModel.id, optionId),
-        eq(
-          certificateFieldOptionMasterModel.certificateFieldMasterId,
-          certificateFieldMasterId,
-        ),
-      ),
+      activeCertificateOptionForFieldWhere(certificateFieldMasterId, optionId),
     );
   return !!opt;
 }

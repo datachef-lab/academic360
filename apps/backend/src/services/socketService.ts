@@ -1,4 +1,9 @@
 import { Server, Socket } from "socket.io";
+import { getRealtimeTrackerRoomName } from "@/features/realtime-tracker/realtime-tracker.socket.js";
+import {
+  canonicalRealtimeTrackerFilters,
+  parseRealtimeTrackerFilters,
+} from "@/utils/realtime-tracker-filters.js";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
 import * as userService from "@/features/user/services/user.service";
 
@@ -323,6 +328,55 @@ class SocketService {
           log.error("Error unsubscribing from fees dashboard room", { error });
         }
       });
+
+      socket.on(
+        "subscribe_realtime_tracker",
+        async (payload: {
+          tab?: "affiliation" | "fee_mis";
+          filters?: Record<string, unknown>;
+        }) => {
+          try {
+            const tab = payload?.tab === "fee_mis" ? "fee_mis" : "affiliation";
+            const { parseRealtimeTrackerFilters } =
+              await import("@/utils/realtime-tracker-filters.js");
+            const { getRealtimeTrackerRoomName, pushRealtimeTrackerSnapshot } =
+              await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+            const filters = canonicalRealtimeTrackerFilters(
+              parseRealtimeTrackerFilters(payload?.filters ?? {}),
+            );
+            const roomName = getRealtimeTrackerRoomName(tab, filters);
+            socket.join(roomName);
+            log.debug(`Socket ${socket.id} joined ${roomName}`);
+            await pushRealtimeTrackerSnapshot(tab, filters, "subscribe");
+          } catch (error) {
+            log.error("Error subscribing to realtime tracker", { error });
+          }
+        },
+      );
+
+      socket.on(
+        "unsubscribe_realtime_tracker",
+        async (payload: {
+          tab?: "affiliation" | "fee_mis";
+          filters?: Record<string, unknown>;
+        }) => {
+          try {
+            const tab = payload?.tab === "fee_mis" ? "fee_mis" : "affiliation";
+            const { parseRealtimeTrackerFilters } =
+              await import("@/utils/realtime-tracker-filters.js");
+            const { getRealtimeTrackerRoomName } =
+              await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+            const filters = canonicalRealtimeTrackerFilters(
+              parseRealtimeTrackerFilters(payload?.filters ?? {}),
+            );
+            const roomName = getRealtimeTrackerRoomName(tab, filters);
+            socket.leave(roomName);
+            log.debug(`Socket ${socket.id} left ${roomName}`);
+          } catch (error) {
+            log.error("Error unsubscribing from realtime tracker", { error });
+          }
+        },
+      );
 
       socket.on("subscribe_library_entry_exit", () => {
         try {
@@ -896,6 +950,55 @@ class SocketService {
     } catch (error) {
       log.error("Error sending MIS table update", { error });
     }
+  }
+
+  private realtimeTrackerRoom(
+    tab: "affiliation" | "fee_mis",
+    filters: Record<string, unknown>,
+  ): string {
+    const parsed = canonicalRealtimeTrackerFilters(
+      parseRealtimeTrackerFilters(filters),
+    );
+    return getRealtimeTrackerRoomName(tab, parsed);
+  }
+
+  sendAffiliationRegistrationUpdate(
+    filters: Record<string, unknown>,
+    payload: Record<string, unknown>,
+    reason?: string,
+  ) {
+    if (!this.io) return;
+    try {
+      const roomName = this.realtimeTrackerRoom("affiliation", filters);
+      const message = { ...payload, reason, filters };
+      this.io.to(roomName).emit("affiliation_registration_update", message);
+    } catch (error) {
+      log.error("Error sending affiliation registration update", { error });
+    }
+  }
+
+  sendFeeMisUpdate(
+    filters: Record<string, unknown>,
+    payload: Record<string, unknown>,
+    reason?: string,
+  ) {
+    if (!this.io) return;
+    try {
+      const roomName = this.realtimeTrackerRoom("fee_mis", filters);
+      const message = { ...payload, reason, filters };
+      this.io.to(roomName).emit("fee_mis_update", message);
+    } catch (error) {
+      log.error("Error sending fee MIS update", { error });
+    }
+  }
+
+  /** Tell all clients to refetch Fee MIS (fee activity uses many filter rooms). */
+  emitFeeMisRefresh(reason: string) {
+    if (!this.io) return;
+    this.io.emit("fee_mis_refresh", {
+      reason,
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   // Send MIS table update to all MIS dashboard rooms

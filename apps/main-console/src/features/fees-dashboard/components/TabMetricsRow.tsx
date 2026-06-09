@@ -1,4 +1,5 @@
 import { MetricCard } from "./MetricCard";
+import type { TabMetricTheme } from "./TabPanel";
 import { useFeesDashboard } from "../context/FeesDashboardContext";
 import {
   ALL_METRICS,
@@ -12,9 +13,10 @@ type TabMetricsRowProps = {
   tab?: FeesDashboardTab;
   metricIds?: MetricId[];
   compact?: boolean;
+  metricTheme?: TabMetricTheme;
 };
 
-export function TabMetricsRow({ tab, metricIds, compact }: TabMetricsRowProps) {
+export function TabMetricsRow({ tab, metricIds, compact, metricTheme }: TabMetricsRowProps) {
   const { metrics, dashboardLoading } = useFeesDashboard();
   const ids = metricIds ?? (tab ? TAB_METRICS[tab] : []);
 
@@ -43,6 +45,7 @@ export function TabMetricsRow({ tab, metricIds, compact }: TabMetricsRowProps) {
                   : undefined
             }
             compact={compact}
+            theme={metricTheme}
           />
         );
       })}

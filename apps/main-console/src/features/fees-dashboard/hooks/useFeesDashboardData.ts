@@ -12,8 +12,13 @@ import {
   getAllFeesStructures,
 } from "@/services/fees-api";
 import { getFeesDashboard } from "@/services/fees-dashboard-api";
+import { getProgramCourseDtos } from "@/services/course-design.api";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useSocket } from "@/hooks/useSocket";
+import {
+  deriveDefaultFiltersFromInProcessScopes,
+  type DefaultDashboardFiltersResult,
+} from "../utils/scope-filter-defaults";
 import {
   countInProcessSemesterFeeScopes,
   isScopeInProcess,
@@ -99,6 +104,8 @@ export function isStructureOnlineWindowOpen(structure: FeeStructureDto): boolean
 type UseFeesDashboardDataOptions = {
   /** When false, dashboard API is not called (e.g. filters still initializing). */
   enabled?: boolean;
+  academicYearLabel?: string;
+  onScopeFiltersRefresh?: (resolved: DefaultDashboardFiltersResult) => void;
 };
 
 export function useFeesDashboardData(
@@ -107,6 +114,8 @@ export function useFeesDashboardData(
 ) {
   const filters = rawFilters ?? {};
   const enabled = options.enabled ?? true;
+  const onScopeFiltersRefresh = options.onScopeFiltersRefresh;
+  const academicYearLabel = options.academicYearLabel ?? "Current academic year";
   const canFetchDashboard = enabled && hasDashboardScope(filters);
   const { user } = useAuth();
   const userId = user?.id?.toString();
@@ -125,6 +134,53 @@ export function useFeesDashboardData(
 
   const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
   const fetchSeq = useRef(0);
+  const masterSeq = useRef(0);
+
+  const fetchMasterData = useCallback(async (opts?: { silent?: boolean }) => {
+    const seq = ++masterSeq.current;
+    if (!opts?.silent) {
+      setLoading(true);
+      setError(null);
+    }
+
+    try {
+      const [slabsRes, categoriesRes, groupsRes, structuresRes, activitiesRes] = await Promise.all([
+        getAllFeesSlabs(),
+        getAllFeeCategories(),
+        getAllFeeGroups(),
+        getAllFeesStructures(1, 200),
+        axiosInstance.get<ApiResponse<AcademicActivityDto[]>>("/api/academics/academic-activities"),
+      ]);
+
+      if (seq !== masterSeq.current) return null;
+
+      setSlabs(Array.isArray(slabsRes.payload) ? slabsRes.payload : []);
+      setCategories(Array.isArray(categoriesRes.payload) ? categoriesRes.payload : []);
+      setGroups(Array.isArray(groupsRes.payload) ? groupsRes.payload : []);
+
+      const structureRows =
+        structuresRes.payload?.content ??
+        (structuresRes.payload as { data?: FeeStructureDto[] })?.data;
+      setStructures(Array.isArray(structureRows) ? structureRows : []);
+
+      const activities = activitiesRes.data?.payload;
+      const semesterActivities = Array.isArray(activities)
+        ? activities.filter(isSemesterFeePaymentActivity)
+        : [];
+      setSemesterFeeActivities(semesterActivities);
+      return semesterActivities;
+    } catch (e) {
+      if (seq === masterSeq.current && !opts?.silent) {
+        console.error(e);
+        setError("Could not load fees master data");
+      }
+      return null;
+    } finally {
+      if (seq === masterSeq.current && !opts?.silent) {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   const fetchDashboard = useCallback(async () => {
     if (!canFetchDashboard) {
@@ -173,52 +229,8 @@ export function useFeesDashboardData(
   }, [filtersKey, filters, canFetchDashboard]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadMaster() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [slabsRes, categoriesRes, groupsRes, structuresRes, activitiesRes] =
-          await Promise.all([
-            getAllFeesSlabs(),
-            getAllFeeCategories(),
-            getAllFeeGroups(),
-            getAllFeesStructures(1, 200),
-            axiosInstance.get<ApiResponse<AcademicActivityDto[]>>(
-              "/api/academics/academic-activities",
-            ),
-          ]);
-
-        if (cancelled) return;
-
-        setSlabs(Array.isArray(slabsRes.payload) ? slabsRes.payload : []);
-        setCategories(Array.isArray(categoriesRes.payload) ? categoriesRes.payload : []);
-        setGroups(Array.isArray(groupsRes.payload) ? groupsRes.payload : []);
-
-        const structureRows =
-          structuresRes.payload?.content ??
-          (structuresRes.payload as { data?: FeeStructureDto[] })?.data;
-        setStructures(Array.isArray(structureRows) ? structureRows : []);
-
-        const activities = activitiesRes.data?.payload;
-        const allActivities = Array.isArray(activities) ? activities : [];
-        setSemesterFeeActivities(allActivities.filter(isSemesterFeePaymentActivity));
-      } catch (e) {
-        if (!cancelled) {
-          console.error(e);
-          setError("Could not load fees master data");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    void loadMaster();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void fetchMasterData();
+  }, [fetchMasterData]);
 
   useEffect(() => {
     if (!canFetchDashboard) {
@@ -228,25 +240,67 @@ export function useFeesDashboardData(
     void fetchDashboard();
   }, [fetchDashboard, canFetchDashboard]);
 
-  const { socket, isConnected } = useSocket({ userId });
+  const { socket, isConnected, emit: emitSocket } = useSocket({ userId });
 
   useEffect(() => {
-    if (!socket || !isConnected || !canFetchDashboard) return;
+    if (!socket || !isConnected || !enabled) return;
 
-    socket.emit("subscribe_fees_dashboard");
+    emitSocket("subscribe_fees_dashboard");
 
-    const handleDashboardUpdate = (data: FeesDashboardSocketUpdate) => {
+    const handleDashboardUpdate = async (data: FeesDashboardSocketUpdate) => {
       setLastSocketUpdate(data.updatedAt);
-      void fetchDashboard();
+
+      const refreshTasks: Promise<AcademicActivityDto[] | null | void>[] = [
+        fetchMasterData({ silent: true }),
+      ];
+      if (canFetchDashboard) {
+        refreshTasks.push(fetchDashboard());
+      }
+      const [semesterActivities] = await Promise.all(refreshTasks);
+
+      if (
+        data.reason === "academic_activity_updated" &&
+        onScopeFiltersRefresh &&
+        semesterActivities?.length
+      ) {
+        const academicYearId = filters.academicYearIds?.[0];
+        if (academicYearId != null) {
+          try {
+            const programCourses = await getProgramCourseDtos();
+            const resolved = deriveDefaultFiltersFromInProcessScopes(
+              semesterActivities,
+              academicYearId,
+              academicYearLabel,
+              Array.isArray(programCourses) ? programCourses : [],
+            );
+            if (resolved) {
+              onScopeFiltersRefresh(resolved);
+            }
+          } catch (e) {
+            console.error("Failed to refresh filters from academic scopes:", e);
+          }
+        }
+      }
     };
 
     socket.on("fees_dashboard_updated", handleDashboardUpdate);
 
     return () => {
       socket.off("fees_dashboard_updated", handleDashboardUpdate);
-      socket.emit("unsubscribe_fees_dashboard");
+      emitSocket("unsubscribe_fees_dashboard");
     };
-  }, [socket, isConnected, fetchDashboard, canFetchDashboard]);
+  }, [
+    socket,
+    isConnected,
+    enabled,
+    emitSocket,
+    fetchDashboard,
+    fetchMasterData,
+    canFetchDashboard,
+    onScopeFiltersRefresh,
+    filters.academicYearIds,
+    academicYearLabel,
+  ]);
 
   const openScopes = countOpenSemesterFeeScopes(semesterFeeActivities, filters.academicYearIds);
 
@@ -359,6 +413,7 @@ export function useFeesDashboardData(
     isSocketConnected: isConnected,
     lastSocketUpdate,
     refetchDashboard: fetchDashboard,
+    refetchMasterData: () => fetchMasterData({ silent: true }),
     filters,
   };
 }

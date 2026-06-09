@@ -13,6 +13,7 @@ import {
   findPaymentByOrderId,
 } from "./payment.service.js";
 import { sendFeeReceiptEmailForPaymentId } from "./fee-receipt-notification.service.js";
+import { scheduleFeesDashboardBroadcast } from "@/features/fees/fees-dashboard.socket.js";
 
 function normalizeReceiptNumber(input: string): string {
   return String(input || "")
@@ -338,6 +339,7 @@ export async function receiveCashFeePayment(params: {
     await sendFeeReceiptEmailForPaymentId(paymentId);
   }
 
+  scheduleFeesDashboardBroadcast("fee_payment_marked");
   return { success: true, data: reloaded.data };
 }
 
@@ -572,5 +574,6 @@ export async function markOnlineFeePaymentSuccessManual(params: {
   });
   await sendFeeReceiptEmailForPaymentId(payment.id);
 
+  scheduleFeesDashboardBroadcast("fee_payment_marked");
   return { success: true, data: reloaded.data };
 }

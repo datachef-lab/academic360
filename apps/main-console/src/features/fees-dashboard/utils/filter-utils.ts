@@ -1,3 +1,4 @@
+import type { ProgramCourseDto } from "@repo/db/dtos/course-design";
 import type { FeesDashboardFilters } from "../types/dashboard-api";
 
 export function hasDashboardScope(filters?: FeesDashboardFilters | null): boolean {
@@ -16,7 +17,6 @@ export function hasDashboardScope(filters?: FeesDashboardFilters | null): boolea
     f.genders?.length ||
     f.paymentStatuses?.length ||
     f.paymentModes?.length ||
-    f.transactionStatuses?.length ||
     f.dateFrom ||
     f.dateTo ||
     f.studentSearch?.trim(),
@@ -37,15 +37,14 @@ export type FeesDashboardFilterLabels = {
   gender: string;
   paymentStatus: string;
   paymentMode: string;
-  transactionStatus: string;
   dateRange: string;
   studentSearch: string;
 };
 
 export const DEFAULT_FILTER_LABELS: FeesDashboardFilterLabels = {
   academicYear: "All academic years",
-  program: "All programs",
-  programCourse: "All courses",
+  program: "All course levels",
+  programCourse: "All program courses",
   semester: "All semesters",
   shift: "All shifts",
   regulation: "All regulations",
@@ -56,15 +55,14 @@ export const DEFAULT_FILTER_LABELS: FeesDashboardFilterLabels = {
   gender: "All genders",
   paymentStatus: "All payment statuses",
   paymentMode: "All payment modes",
-  transactionStatus: "All transaction statuses",
   dateRange: "Any date",
   studentSearch: "",
 };
 
 export const FILTER_DIMENSION_LABELS: Record<keyof FeesDashboardFilterLabels, string> = {
   academicYear: "Academic year",
-  program: "Program",
-  programCourse: "Course",
+  program: "Course level",
+  programCourse: "Program course",
   semester: "Semester",
   shift: "Shift",
   regulation: "Regulation",
@@ -75,7 +73,6 @@ export const FILTER_DIMENSION_LABELS: Record<keyof FeesDashboardFilterLabels, st
   gender: "Gender",
   paymentStatus: "Payment status",
   paymentMode: "Payment mode",
-  transactionStatus: "Transaction status",
   dateRange: "Date range",
   studentSearch: "Student search",
 };
@@ -105,6 +102,10 @@ export function buildFilterChips(labels: FeesDashboardFilterLabels): string[] {
   return buildActiveFilterChips(labels).map((chip) => chip.value);
 }
 
+export function countActiveDashboardFilters(labels: FeesDashboardFilterLabels): number {
+  return buildActiveFilterChips(labels).length;
+}
+
 export type FeesDashboardFilterForm = {
   academicYearIds: string[];
   courseLevelIds: string[];
@@ -119,7 +120,6 @@ export type FeesDashboardFilterForm = {
   genders: string[];
   paymentStatuses: string[];
   paymentModes: string[];
-  transactionStatuses: string[];
   dateFrom: string;
   dateTo: string;
   studentSearch: string;
@@ -141,7 +141,6 @@ export function formFromApiFilters(filters?: FeesDashboardFilters | null): FeesD
     genders: f.genders ?? [],
     paymentStatuses: f.paymentStatuses ?? [],
     paymentModes: f.paymentModes ?? [],
-    transactionStatuses: f.transactionStatuses ?? [],
     dateFrom: f.dateFrom ?? "",
     dateTo: f.dateTo ?? "",
     studentSearch: f.studentSearch ?? "",
@@ -173,7 +172,6 @@ export function toApiFilters(form: FeesDashboardFilterForm): FeesDashboardFilter
   if (form.genders.length) filters.genders = form.genders;
   if (form.paymentStatuses.length) filters.paymentStatuses = form.paymentStatuses;
   if (form.paymentModes.length) filters.paymentModes = form.paymentModes;
-  if (form.transactionStatuses.length) filters.transactionStatuses = form.transactionStatuses;
   if (form.dateFrom) filters.dateFrom = form.dateFrom;
   if (form.dateTo) filters.dateTo = form.dateTo;
   if (form.studentSearch.trim()) filters.studentSearch = form.studentSearch.trim();
@@ -199,3 +197,71 @@ export function formatDateRangeLabel(from: string, to: string): string {
   if (to) return `Until ${to}`;
   return DEFAULT_FILTER_LABELS.dateRange;
 }
+
+/** Parent filters that narrow the program-course dropdown (AND logic). */
+export type ProgramCourseCascadeForm = Pick<
+  FeesDashboardFilterForm,
+  "affiliationIds" | "regulationTypeIds" | "courseLevelIds" | "streamIds"
+>;
+
+export function filterProgramCoursesForForm(
+  programCourses: ProgramCourseDto[],
+  form: ProgramCourseCascadeForm,
+): ProgramCourseDto[] {
+  let list = programCourses.filter((pc) => pc.id != null && pc.isActive !== false);
+
+  if (form.affiliationIds.length) {
+    const allowed = new Set(form.affiliationIds.map(Number));
+    list = list.filter((pc) => {
+      const id = pc.affiliation?.id;
+      return id != null && allowed.has(id);
+    });
+  }
+  if (form.regulationTypeIds.length) {
+    const allowed = new Set(form.regulationTypeIds.map(Number));
+    list = list.filter((pc) => {
+      const id = pc.regulationType?.id;
+      return id != null && allowed.has(id);
+    });
+  }
+  if (form.courseLevelIds.length) {
+    const allowed = new Set(form.courseLevelIds.map(Number));
+    list = list.filter((pc) => {
+      const id = pc.courseLevel?.id;
+      return id != null && allowed.has(id);
+    });
+  }
+  if (form.streamIds.length) {
+    const allowed = new Set(form.streamIds.map(Number));
+    list = list.filter((pc) => {
+      const id = pc.stream?.id;
+      return id != null && allowed.has(id);
+    });
+  }
+
+  return list;
+}
+
+export function programCourseOptionsFromList(
+  programCourses: ProgramCourseDto[],
+): { value: string; label: string }[] {
+  return programCourses.map((pc) => ({
+    value: String(pc.id),
+    label: pc.shortName?.trim() ? `${pc.shortName} · ${pc.name}` : (pc.name ?? "Program course"),
+  }));
+}
+
+export function pruneProgramCourseIds(
+  selectedIds: string[],
+  options: { value: string }[],
+): string[] {
+  const allowed = new Set(options.map((o) => o.value));
+  return selectedIds.filter((id) => allowed.has(id));
+}
+
+export const PROGRAM_COURSE_CASCADE_KEYS = [
+  "affiliationIds",
+  "regulationTypeIds",
+  "courseLevelIds",
+  "streamIds",
+] as const satisfies readonly (keyof FeesDashboardFilterForm)[];
