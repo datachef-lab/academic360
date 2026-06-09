@@ -3,7 +3,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -15,6 +14,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -28,6 +37,7 @@ import {
   BookOpen,
   BookOpenCheck,
   CalendarClock,
+  CheckCircle2,
   IndianRupee,
   Loader2,
   Plus,
@@ -166,8 +176,8 @@ export default function BookCirculationPage() {
   >([]);
   const [savingRows, setSavingRows] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [reissueRowId, setReissueRowId] = useState<number | null>(null);
-  const [reissueDate, setReissueDate] = useState<Date | undefined>(undefined);
+  const [reissuingRowIds, setReissuingRowIds] = useState<Set<number>>(new Set());
+  const [confirmReturnRowId, setConfirmReturnRowId] = useState<number | null>(null);
   const lastLocalSaveAtRef = useRef<number>(0);
   const loadedUserIdRef = useRef<number | null>(null);
 
@@ -194,6 +204,7 @@ export default function BookCirculationPage() {
         setNoCandidateFound(false);
         const response = await getBookCirculationPreview(targetUserId);
         setPreviewData(response.payload);
+        setReissuingRowIds(new Set());
         loadedUserIdRef.current = targetUserId;
         setEditableRows(
           response.payload.rows.map((item) => ({
@@ -366,7 +377,7 @@ export default function BookCirculationPage() {
   };
 
   const fineHandler = (id: number) => {
-    // markUnsavedChanges();
+    markUnsavedChanges();
     setEditableRows((prev) =>
       prev.map((row) => {
         if (row.id !== id) return row;
@@ -619,10 +630,7 @@ export default function BookCirculationPage() {
                     const statusLabel = isReturned ? "Returned" : item.isNew ? "New" : "Issued";
 
                     return (
-                      <TableRow
-                        key={item.id}
-                        className={isReturned ? "bg-emerald-50/60 hover:bg-emerald-50/80" : ""}
-                      >
+                      <TableRow key={item.id}>
                         <TableCell className="text-center text-sm font-medium text-slate-600">
                           {index + 1}
                         </TableCell>
@@ -695,7 +703,7 @@ export default function BookCirculationPage() {
                             value={
                               item.returnTimestamp ? new Date(item.returnTimestamp) : undefined
                             }
-                            disabled={!item.isNew}
+                            disabled={!item.isNew && !reissuingRowIds.has(item.id)}
                             onSelect={(date) =>
                               updateRow(item.id, {
                                 returnTimestamp: date ? date.toISOString() : item.returnTimestamp,
@@ -732,15 +740,31 @@ export default function BookCirculationPage() {
                               <TooltipTrigger asChild>
                                 <Button
                                   size="sm"
-                                  className="h-8 bg-violet-600 px-2.5 text-white hover:bg-violet-700"
+                                  className={
+                                    isReturned
+                                      ? "h-8 bg-emerald-600 px-2.5 text-white hover:bg-emerald-700"
+                                      : "h-8 bg-violet-600 px-2.5 text-white hover:bg-violet-700"
+                                  }
                                   disabled={!item.isNew && isReturned}
-                                  onClick={() => toggleReturn(item.id)}
+                                  onClick={() => {
+                                    if (isReturned) {
+                                      toggleReturn(item.id);
+                                    } else {
+                                      setConfirmReturnRowId(item.id);
+                                    }
+                                  }}
                                 >
-                                  <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                                  Return
+                                  {isReturned ? (
+                                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                  ) : (
+                                    <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                                  )}
+                                  {isReturned ? "Returned" : "Return"}
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Mark as returned</TooltipContent>
+                              <TooltipContent>
+                                {isReturned ? "Marked as returned" : "Mark as returned"}
+                              </TooltipContent>
                             </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -748,15 +772,12 @@ export default function BookCirculationPage() {
                                   size="sm"
                                   variant="outline"
                                   className="h-8 border-blue-200 bg-blue-50 px-2.5 text-blue-700 hover:bg-blue-100"
-                                  disabled={item.isNew || isReturned}
-                                  onClick={() => {
-                                    setReissueRowId(item.id);
-                                    setReissueDate(
-                                      item.returnTimestamp
-                                        ? new Date(item.returnTimestamp)
-                                        : undefined,
-                                    );
-                                  }}
+                                  disabled={
+                                    item.isNew || isReturned || reissuingRowIds.has(item.id)
+                                  }
+                                  onClick={() =>
+                                    setReissuingRowIds((prev) => new Set(prev).add(item.id))
+                                  }
                                 >
                                   <CalendarClock className="mr-1 h-3.5 w-3.5" />
                                   Re-issue
@@ -861,7 +882,7 @@ export default function BookCirculationPage() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="min-h-screen py-4 sm:py-8">
+      <div className="min-h-screen py-4 sm:py-8 [&_button:disabled]:pointer-events-auto [&_button:disabled]:cursor-not-allowed [&_input:disabled]:cursor-not-allowed [&_[data-disabled]]:cursor-not-allowed">
         <div className="mx-auto max-w-7xl px-3 sm:px-4">
           <Card className="mb-4 border-none sm:mb-6">
             <CardHeader className="mb-3 rounded-md border bg-background p-3 sm:p-4">
@@ -971,59 +992,39 @@ export default function BookCirculationPage() {
 
           {renderCandidateResult()}
 
-          <Dialog
-            open={reissueRowId !== null}
+          <AlertDialog
+            open={confirmReturnRowId !== null}
             onOpenChange={(open) => {
-              if (!open) {
-                setReissueRowId(null);
-                setReissueDate(undefined);
-              }
+              if (!open) setConfirmReturnRowId(null);
             }}
           >
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>Re-issue Book</DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-col gap-4 py-2">
-                <p className="text-sm text-muted-foreground">
-                  Select a new return date for this book.
-                </p>
-                <DatePicker
-                  value={reissueDate}
-                  onSelect={(date) => setReissueDate(date ?? undefined)}
-                  className="w-full"
-                  displayFormat="dd/MM/yyyy"
-                />
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setReissueRowId(null);
-                      setReissueDate(undefined);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-blue-600 text-white hover:bg-blue-700"
-                    disabled={!reissueDate}
-                    onClick={() => {
-                      if (!reissueDate || reissueRowId === null) return;
-                      updateRow(reissueRowId, {
-                        returnTimestamp: reissueDate.toISOString(),
-                      });
-                      setReissueRowId(null);
-                      setReissueDate(undefined);
-                    }}
-                  >
-                    Confirm
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Mark book as returned?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {(() => {
+                    const row = editableRows.find((r) => r.id === confirmReturnRowId);
+                    const bookLabel = row?.title
+                      ? `"${row.title}"${row.accessNumber ? ` (${row.accessNumber})` : ""}`
+                      : "this book";
+                    return `You are about to mark ${bookLabel} as returned. Remember to click "Save Changes" to persist it.`;
+                  })()}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={() => {
+                    if (confirmReturnRowId !== null) toggleReturn(confirmReturnRowId);
+                    setConfirmReturnRowId(null);
+                  }}
+                >
+                  Confirm Return
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </TooltipProvider>
