@@ -16,10 +16,6 @@ import {
   getCuRegDocumentPathFromName,
   getCuRegDocumentPathFromNameDynamic,
 } from "../services/cu-registration-document-path.service.js";
-import {
-  uploadToFileSystem,
-  uploadToFileSystemAtPath,
-} from "@/services/filesystem-storage.service.js";
 import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
 import { db } from "@/db/index.js";
 import { documentModel } from "@repo/db/schemas";
@@ -305,10 +301,8 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
           originalname: pathConfig.filename,
         };
 
-        // Upload to S3 and mirror to filesystem — both must succeed
         let uploadResult;
         try {
-          // Create upload config using the folder path from path service
           const uploadConfig = createUploadConfig(pathConfig.folder, {
             customFileName: pathConfig.filename,
             maxFileSizeMB: 10,
@@ -332,17 +326,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
             `[CU-REG BATCH SUBMIT] S3 upload successful: ${pathConfig.fullPath}`,
           );
           s3UploadedCount++;
-          // Mirror to filesystem (required)
-          await uploadToFileSystemAtPath(
-            convertedFile,
-            pathConfig.folder,
-            pathConfig.filename,
-          );
-          console.info(
-            `[CU-REG BATCH SUBMIT] Mirrored file to filesystem for application ${cuRegNumber}`,
-          );
-        } catch (s3Error: any) {
-          // No fallback: both S3 and filesystem saves are required for consistency
+        } catch (s3Error: unknown) {
           throw s3Error;
         }
 

@@ -17,7 +17,7 @@ function attachClientErrorHandlers(
   client: RedisClientType,
   label: string,
 ): void {
-  client.on("error", (error) => {
+  client.on("error", (error: Error) => {
     log.error(`Redis ${label} client error`, { error });
   });
 }

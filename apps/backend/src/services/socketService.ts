@@ -4,7 +4,7 @@ import {
   canonicalRealtimeTrackerFilters,
   parseRealtimeTrackerFilters,
 } from "@/utils/realtime-tracker-filters.js";
-import { DefaultEventsMap } from "socket.io/dist/typed-events";
+import type { DefaultEventsMap } from "socket.io";
 import * as userService from "@/features/user/services/user.service";
 
 import { createLogger } from "@/config/logger.js";

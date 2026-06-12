@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -36,35 +37,30 @@ export interface UploadConfig {
 
 // Initialize S3 client with configuration
 function createS3Client(config?: Partial<S3Config>): S3Client | null {
-  const s3Config: S3Config = {
-    region: config?.region || process.env.AWS_REGION || "ap-south-1",
-    bucket: config?.bucket || process.env.AWS_S3_BUCKET || "",
-    accessKeyId: config?.accessKeyId || process.env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey:
-      config?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || "",
-  };
+  const region = config?.region || process.env.AWS_REGION || "ap-south-1";
+  const bucket = config?.bucket || process.env.AWS_S3_BUCKET || "";
+  const accessKeyId =
+    config?.accessKeyId?.trim() || process.env.AWS_ACCESS_KEY_ID?.trim() || "";
+  const secretAccessKey =
+    config?.secretAccessKey?.trim() ||
+    process.env.AWS_SECRET_ACCESS_KEY?.trim() ||
+    "";
 
-  if (!s3Config.bucket) {
+  if (!bucket) {
     console.warn(
       "⚠️  S3 bucket name not configured. Set AWS_S3_BUCKET environment variable or provide bucket in config.",
     );
     return null;
   }
 
-  if (!s3Config.accessKeyId || !s3Config.secretAccessKey) {
-    console.warn(
-      "⚠️  AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables or provide them in config.",
-    );
-    return null;
-  }
+  const clientOptions: ConstructorParameters<typeof S3Client>[0] = { region };
 
-  return new S3Client({
-    region: s3Config.region,
-    credentials: {
-      accessKeyId: s3Config.accessKeyId,
-      secretAccessKey: s3Config.secretAccessKey,
-    },
-  });
+  if (accessKeyId && secretAccessKey) {
+    clientOptions.credentials = { accessKeyId, secretAccessKey };
+  }
+  // Otherwise use the default credential provider chain (IAM role, etc.)
+
+  return new S3Client(clientOptions);
 }
 
 // Default S3 client instance (null if AWS credentials not configured)
@@ -185,6 +181,39 @@ export async function uploadToS3(
   }
 }
 
+function resolveS3Key(key: string): string {
+  const root = (process.env.AWS_ROOT_FOLDER || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "");
+
+  if (root && !key.startsWith(`${root}/`)) {
+    return `${root}/${key}`.replace(/\/{2,}/g, "/");
+  }
+
+  return key;
+}
+
+export async function fileExistsInS3(
+  key: string,
+  s3Config?: Partial<S3Config>,
+): Promise<boolean> {
+  try {
+    const s3Client = s3Config ? createS3Client(s3Config) : defaultS3Client;
+    if (!s3Client) return false;
+
+    const bucket = s3Config?.bucket || defaultBucket;
+    await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: bucket,
+        Key: resolveS3Key(key),
+      }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Delete a file from S3
  */
@@ -289,25 +318,13 @@ export async function getFileFromS3(
 
     const bucket = s3Config?.bucket || defaultBucket;
 
-    // Apply the same root folder logic as upload functions
-    const root = (process.env.AWS_ROOT_FOLDER || "")
-      .trim()
-      .replace(/^\/+|\/+$/g, "");
-
-    // Check if the key already contains the root folder prefix to avoid double prefixing
-    let finalKey = key;
-    if (root && !key.startsWith(`${root}/`)) {
-      finalKey = `${root}/${key}`;
-    }
-
     const command = new GetObjectCommand({
       Bucket: bucket,
-      Key: finalKey,
+      Key: resolveS3Key(key),
     });
 
     const response = await s3Client.send(command);
 
-    // Check if Body exists (it's optional in GetObjectCommandOutput)
     if (!response.Body) {
       return null;
     }
@@ -320,6 +337,16 @@ export async function getFileFromS3(
     console.error("Error getting file from S3:", error);
     throw new ApiError(500, "Failed to get file from S3");
   }
+}
+
+export async function getBufferFromS3(
+  key: string,
+  s3Config?: Partial<S3Config>,
+): Promise<Buffer | null> {
+  const result = await getFileFromS3(key, s3Config);
+  if (!result?.Body) return null;
+  const bytes = await result.Body.transformToByteArray();
+  return Buffer.from(bytes);
 }
 
 /**
@@ -679,6 +706,27 @@ export const UploadConfigs = {
     folder: "public-assets",
     maxFileSizeMB: 20,
     allowedMimeTypes: [...FileTypeConfigs.IMAGES, ...FileTypeConfigs.PDF_ONLY],
+    makePublic: true,
+  },
+
+  SETTINGS_FILES: {
+    folder: "settings",
+    maxFileSizeMB: 10,
+    allowedMimeTypes: FileTypeConfigs.IMAGES,
+    makePublic: false,
+  },
+
+  EXAM_FORMS: {
+    folder: "exam-forms",
+    maxFileSizeMB: 5,
+    allowedMimeTypes: FileTypeConfigs.PDF_ONLY,
+    makePublic: false,
+  },
+
+  APP_MODULE_IMAGES: {
+    folder: "app-module-images",
+    maxFileSizeMB: 5,
+    allowedMimeTypes: FileTypeConfigs.IMAGES,
     makePublic: true,
   },
 };

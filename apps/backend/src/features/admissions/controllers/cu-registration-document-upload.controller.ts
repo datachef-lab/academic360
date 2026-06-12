@@ -33,11 +33,7 @@ import {
   getCuRegDocumentPathDynamic,
   getDocumentCodeFromName,
 } from "../services/cu-registration-document-path.service.js";
-import {
-  uploadToFileSystem,
-  uploadToFileSystemAtPath,
-  deleteFromFileSystem,
-} from "@/services/filesystem-storage.service.js";
+import { deleteFromFileSystem } from "@/services/filesystem-storage.service.js";
 import {
   convertToJpg,
   getDocumentConversionSettings,
@@ -264,29 +260,13 @@ export const createNewCuRegistrationDocumentUpload = async (
       );
     }
 
-    // Upload to S3 and also mirror to filesystem — both must succeed
     console.info("[CU-REG DOC UPLOAD] Attempting S3 upload...");
-    const s3Upload = await uploadToS3(processedFile, uploadConfig);
+    const uploadResult = await uploadToS3(processedFile, uploadConfig);
     console.info("[CU-REG DOC UPLOAD] S3 upload successful:", {
-      key: s3Upload.key,
-      url: s3Upload.url,
-      bucket: s3Upload.bucket,
+      key: uploadResult.key,
+      url: uploadResult.url,
+      bucket: uploadResult.bucket,
     });
-
-    console.info("[CU-REG DOC UPLOAD] Saving copy to filesystem...");
-    const fsUpload = await uploadToFileSystemAtPath(
-      processedFile,
-      pathConfig.folder,
-      pathConfig.filename,
-    );
-    console.info("[CU-REG DOC UPLOAD] Filesystem save successful:", {
-      key: fsUpload.key,
-      url: fsUpload.url,
-      fileName: fsUpload.fileName,
-    });
-
-    // Use S3 upload details for DB persistence
-    const uploadResult = s3Upload;
 
     // Validate upload result
     if (!uploadResult || !uploadResult.key || !uploadResult.url) {

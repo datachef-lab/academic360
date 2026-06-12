@@ -10,10 +10,6 @@ import { settingsVariantEnum } from "@repo/db/schemas/enums";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/index.js";
 import { Settings } from "@repo/db/schemas/models/app";
-import path from "path";
-import fs from "fs";
-
-const SETTINGS_PATH = process.env.SETTINGS_PATH!;
 
 export const getAllSettingsHandler = async (
   req: Request,
@@ -150,15 +146,16 @@ export const downloadSettingFileHandler = async (
         );
     }
 
-    const filePath = path.join(SETTINGS_PATH, setting.value);
-
-    if (!fs.existsSync(filePath)) {
+    const fileStreamData = await getSettingFileService(String(setting.id));
+    if (!fileStreamData) {
       return res
         .status(404)
         .json(new ApiResponse(404, "NOT_FOUND", "File not found on server"));
     }
 
-    return res.sendFile(filePath);
+    const { stream, contentType } = fileStreamData;
+    res.setHeader("Content-Type", contentType);
+    return stream.pipe(res);
   } catch (error) {
     handleError(error, res, next);
   }
