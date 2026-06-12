@@ -1,16 +1,13 @@
 {
-  "extends": "@academic360/typescript-config/base.json",
+  "extends": "@academic360/typescript-config/node-library.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "rootDir": ".",
+    "rootDir": "src",
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    },
-    "composite": true,
-    "incremental": true,
-    "sourceMap": true
-  }
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

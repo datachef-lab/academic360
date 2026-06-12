@@ -9,7 +9,7 @@ import globals from "globals";
  *
  * @type {import("eslint").Linter.Config[]}
  * */
-export const nextJsConfig = [
+const nextJsConfig = [
   ...baseConfig,
 
   // React flat config
@@ -40,3 +40,6 @@ export const nextJsConfig = [
     },
   },
 ];
+
+export default nextJsConfig;
+export { nextJsConfig };

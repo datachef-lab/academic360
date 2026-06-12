@@ -1,9 +1,10 @@
 {
-  "name": "@repo/utils",
+  "name": "@academic360/utils",
   "version": "1.0.0",
   "description": "Shared utilities for Academic360 apps",
   "type": "module",
   "private": true,
+  "prettier": "@academic360/prettier-config",
   "exports": {
     "./*": {
       "types": "./src/*.ts",
@@ -11,15 +12,17 @@
       "default": "./src/*.ts"
     }
   },
-  "keywords": [
-    "utils"
-  ],
-  "license": "ISC",
+  "scripts": {
+    "lint": "eslint ."
+  },
   "dependencies": {
     "@academic360/db": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4.20.4",
-    "typescript": "5.5.4"
+    "@academic360/eslint-config": "workspace:*",
+    "@academic360/prettier-config": "workspace:*",
+    "@academic360/typescript-config": "workspace:*",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   }
 }

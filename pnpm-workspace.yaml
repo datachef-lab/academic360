@@ -8,6 +8,7 @@ allowBuilds:
 catalog:
   # Language
   typescript: 5.5.4
+  eslint: ^9.39.4
 
   # Formatting
   prettier: ^3.6.2

@@ -1,14 +1,14 @@
 {
+  "extends": "@academic360/typescript-config/base.json",
   "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "baseUrl": "src",
     "paths": {
       "@/*": ["*"]
-    },
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "strict": true
+    }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }

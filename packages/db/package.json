@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Database schemas, models, DTOs, and types for Academic360",
   "type": "module",
+  "private": true,
+  "prettier": "@academic360/prettier-config",
   "imports": {
     "#db/*": {
       "types": "./src/*.ts",
@@ -16,15 +18,15 @@
     }
   },
   "scripts": {
-    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "build": "pnpm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "check-types": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist",
     "dev": "tsc --watch --preserveWatchOutput",
-    "lint": "eslint src --ext .ts",
-    "prettier": "@academic360/prettier-config",
-    "db:generate": "pnpm dlx drizzle-kit generate",
-    "db:migrate": "pnpm dlx drizzle-kit migrate",
-    "db:push": "pnpm dlx drizzle-kit push",
-    "db:studio": "pnpm dlx drizzle-kit studio"
+    "lint": "eslint .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
@@ -33,11 +35,14 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@academic360/typescript-config": "workspace:*",
     "@academic360/eslint-config": "workspace:*",
     "@academic360/prettier-config": "workspace:*",
+    "@academic360/typescript-config": "workspace:*",
     "@types/pg": "^8.11.10",
+    "dotenv": "catalog:",
     "drizzle-kit": "catalog:",
+    "eslint": "catalog:",
+    "tsc-alias": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"
   }
