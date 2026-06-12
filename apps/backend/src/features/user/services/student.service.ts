@@ -978,7 +978,12 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
   const [latestPromotion] = await db
     .select()
     .from(promotionModel)
-    .where(eq(promotionModel.studentId, student.id as number))
+    .where(
+      and(
+        eq(promotionModel.studentId, student.id as number),
+        eq(promotionModel.isDeprecated, false),
+      ),
+    )
     .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
     .limit(1);
 

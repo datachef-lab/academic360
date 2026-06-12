@@ -116,11 +116,13 @@ import {
   desc,
   inArray,
   isNotNull,
+  isNull,
   or,
   asc,
   aliasedTable,
   min,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
@@ -131,12 +133,22 @@ import * as programCourseService from "@/features/course-design/services/program
 import * as receiptTypeService from "./receipt-type.service.js";
 import * as feeHeadService from "./fee-head.service.js";
 import * as feeSlabService from "./fee-slab.service.js";
-import { studentModel, userModel } from "@academic/db/index.js";
+import { studentModel, userModel } from "@repo/db/index.js";
+import { scheduleFeesDashboardBroadcast } from "../fees-dashboard.socket.js";
 import { socketService } from "@/services/socketService.js";
 import * as userService from "@/features/user/services/user.service.js";
 import { copyCareerProgressionFormsForAcademicYearMigration } from "@/features/academics/services/career-progression-form.service.js";
 
 type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
+
+/** Open, non-deprecated promotion — aligned with fees dashboard and shift change. */
+function activePromotionCondition(...extra: SQL[]): SQL {
+  const parts: SQL[] = [
+    sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+  ];
+  if (extra.length) parts.push(...extra);
+  return and(...parts)!;
+}
 
 /**
  * Ensures default fee-group-promotion-mapping and fee-student-mapping
@@ -144,7 +156,7 @@ type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
  * (regardless of active/inactive/suspended/cancelled status).
  *
  * Business rules:
- * - Find all promotions for:
+ * - Find active promotions (open, not deprecated) for:
  *   - same academic year (via session -> academicYear)
  *   - same class, program course, shift as the fee structure
  * - For each promotion:
@@ -258,7 +270,7 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
 
   emitProgress("Finding matching students...", 20, "in_progress");
 
-  // Find all promotions matching this fee structure context (all students regardless of status)
+  // Active promotions matching this fee structure context (student account status ignored).
   const promotions = await db
     .select({
       id: promotionModel.id,
@@ -272,6 +284,7 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
         eq(promotionModel.classId, feeStructure.classId),
         eq(promotionModel.programCourseId, feeStructure.programCourseId),
         eq(promotionModel.shiftId, feeStructure.shiftId),
+        activePromotionCondition(),
       ),
     );
 
@@ -631,6 +644,10 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
       total: promotions.length,
     },
   );
+
+  if (processed > 0) {
+    scheduleFeesDashboardBroadcast("fee_structure_provisioned");
+  }
 }
 
 /**
@@ -3269,6 +3286,7 @@ export async function downloadFeeStudentMappings(
       latestOnlinePaymentSq,
       eq(latestOnlinePaymentSq.feeStudentMappingId, feeStudentMappingModel.id),
     )
+    .where(activePromotionCondition())
     .orderBy(asc(feeStudentMappingModel.id));
 
   const [rows, academicYear] = await Promise.all([

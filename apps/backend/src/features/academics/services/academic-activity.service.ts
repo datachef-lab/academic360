@@ -13,9 +13,10 @@ import {
 import {
   academicActivityModel,
   AcademicActivityT,
-} from "@academic/db/schemas/models/academics/academic-activity.model.js";
-import { academicActivityScopeModel } from "@academic/db/schemas/models/academics/academic-activity-scope.model.js";
-import { academicActivityMasterModel } from "@academic/db/schemas/models/academics/academic-activity-master.model.js";
+} from "@repo/db/schemas/models/academics/academic-activity.model.js";
+import { academicActivityScopeModel } from "@repo/db/schemas/models/academics/academic-activity-scope.model.js";
+import { academicActivityMasterModel } from "@repo/db/schemas/models/academics/academic-activity-master.model.js";
+import { scheduleFeesDashboardBroadcast } from "@/features/fees/fees-dashboard.socket.js";
 
 export type CreateAcademicActivityPayload = Omit<
   AcademicActivityT,
@@ -203,6 +204,7 @@ export async function createAcademicActivity(
 
   const enriched = await getAcademicActivityById(created.id);
   if (!enriched) throw new Error("Failed to fetch created academic activity");
+  scheduleFeesDashboardBroadcast("academic_activity_updated");
   return enriched;
 }
 
@@ -244,7 +246,11 @@ export async function updateAcademicActivity(
     await replaceScopes(id, payload.scopes);
   }
 
-  return getAcademicActivityById(id);
+  const updated = await getAcademicActivityById(id);
+  if (updated) {
+    scheduleFeesDashboardBroadcast("academic_activity_updated");
+  }
+  return updated;
 }
 
 export async function deleteAcademicActivity(id: number): Promise<boolean> {

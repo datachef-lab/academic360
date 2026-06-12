@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,111 +10,487 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import MultiSelectDropdown from "@/components/ui/MultiSelect";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+import { getAllClasses } from "@/services/classes.service";
+import { getAllShifts } from "@/services/academic";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  getAffiliations,
+  getCourseLevels,
+  getProgramCourseDtos,
+  getRegulationTypes,
+  getStreams,
+} from "@/services/course-design.api";
+import { getAllCategories } from "@/services/categories.service";
+import { getAllReligions } from "@/services/religion.service";
+import type { Class } from "@/types/academics/class";
+import type { Shift } from "@/types/academics/shift";
+import type { ProgramCourseDto } from "@repo/db/dtos/course-design";
+import type { FeesDashboardFilters } from "../types/dashboard-api";
+import { formatSemesterClassOptionLabel } from "../utils/semester-display";
+import {
+  DEFAULT_FILTER_LABELS,
+  filterProgramCoursesForForm,
+  formFromApiFilters,
+  formatDateRangeLabel,
+  formatMultiSelectLabel,
+  PROGRAM_COURSE_CASCADE_KEYS,
+  programCourseOptionsFromList,
+  pruneProgramCourseIds,
+  toApiFilters,
+  type FeesDashboardFilterForm,
+  type FeesDashboardFilterLabels,
+} from "../utils/filter-utils";
 
 type FeesFiltersDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onApply: () => void;
+  value: FeesDashboardFilters;
+  onApply: (filters: FeesDashboardFilters, labels: FeesDashboardFilterLabels) => void;
   onReset: () => void;
 };
+
+const GENDER_OPTIONS = [
+  { value: "MALE", label: "Male" },
+  { value: "FEMALE", label: "Female" },
+  { value: "OTHER", label: "Other" },
+];
+
+/** Fee mapping collection state (paid vs not fully paid) and failed online/cash attempts. */
+const PAYMENT_STATUS_OPTIONS = [
+  { value: "PAID", label: "Paid (fully collected)" },
+  { value: "UNPAID", label: "Unpaid / due" },
+  { value: "FAILED", label: "Failed (payment attempt)" },
+];
+
+const PAYMENT_MODE_OPTIONS = [
+  { value: "ONLINE", label: "Online" },
+  { value: "CASH", label: "Cash" },
+  { value: "CHEQUE", label: "Cheque" },
+];
+
+function rowsWithId<T extends { id?: number | null }>(rows: T[]): Array<T & { id: number }> {
+  return rows.filter((row): row is T & { id: number } => row.id != null);
+}
 
 export function FeesFiltersDialog({
   open,
   onOpenChange,
+  value,
   onApply,
   onReset,
 }: FeesFiltersDialogProps) {
+  const { availableAcademicYears, loadAcademicYears } = useAcademicYear();
+  const [form, setForm] = useState<FeesDashboardFilterForm>(() => formFromApiFilters(value));
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [programCourses, setProgramCourses] = useState<ProgramCourseDto[]>([]);
+  const [courseLevels, setCourseLevels] = useState<{ id: number; name: string }[]>([]);
+  const [regulations, setRegulations] = useState<
+    { id: number; name: string; shortName?: string | null }[]
+  >([]);
+  const [affiliations, setAffiliations] = useState<{ id: number; name: string }[]>([]);
+  const [streams, setStreams] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [religions, setReligions] = useState<{ id: number; name: string }[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+
+  useEffect(() => {
+    if (open) setForm(formFromApiFilters(value));
+  }, [open, value]);
+
+  useEffect(() => {
+    if (availableAcademicYears.length === 0) void loadAcademicYears();
+  }, [availableAcademicYears.length, loadAcademicYears]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoadingOptions(true);
+    void Promise.all([
+      getAllClasses(),
+      getAllShifts(),
+      getProgramCourseDtos(),
+      getCourseLevels(),
+      getRegulationTypes(),
+      getAffiliations(),
+      getStreams(),
+      getAllCategories(),
+      getAllReligions(),
+    ])
+      .then(
+        ([
+          classRows,
+          shiftRows,
+          courseRows,
+          levelRows,
+          regulationRows,
+          affiliationRows,
+          streamRows,
+          categoryRows,
+          religionRows,
+        ]) => {
+          if (cancelled) return;
+          setClasses(classRows.filter((c) => !c.disabled && c.type === "SEMESTER"));
+          setShifts(shiftRows.filter((s) => !s.disabled));
+          setProgramCourses(Array.isArray(courseRows) ? courseRows : []);
+          setCourseLevels(rowsWithId(Array.isArray(levelRows) ? levelRows : []));
+          setRegulations(rowsWithId(Array.isArray(regulationRows) ? regulationRows : []));
+          setAffiliations(rowsWithId(Array.isArray(affiliationRows) ? affiliationRows : []));
+          setStreams(rowsWithId(Array.isArray(streamRows) ? streamRows : []));
+          setCategories(rowsWithId(Array.isArray(categoryRows) ? categoryRows : []));
+          setReligions(rowsWithId(Array.isArray(religionRows) ? religionRows : []));
+        },
+      )
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setLoadingOptions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const academicYearOptions = availableAcademicYears.map((ay) => ({
+    value: String(ay.id),
+    label: `${ay.year}${ay.isCurrentYear ? " (current)" : ""}`,
+  }));
+  const courseLevelOptions = courseLevels.map((level) => ({
+    value: String(level.id),
+    label: level.name,
+  }));
+  const programCourseOptions = useMemo(() => {
+    return programCourseOptionsFromList(filterProgramCoursesForForm(programCourses, form));
+  }, [
+    programCourses,
+    form.affiliationIds,
+    form.regulationTypeIds,
+    form.courseLevelIds,
+    form.streamIds,
+  ]);
+
+  useEffect(() => {
+    if (!open) return;
+    const pruned = pruneProgramCourseIds(form.programCourseIds, programCourseOptions);
+    if (pruned.length !== form.programCourseIds.length) {
+      setForm((prev) => ({ ...prev, programCourseIds: pruned }));
+    }
+  }, [open, programCourseOptions, form.programCourseIds]);
+  const classOptions = classes.map((cls) => ({
+    value: String(cls.id),
+    label: formatSemesterClassOptionLabel(cls.name),
+  }));
+  const shiftOptions = shifts.map((shift) => ({
+    value: String(shift.id),
+    label: shift.name,
+  }));
+  const regulationOptions = regulations.map((r) => ({
+    value: String(r.id),
+    label: r.shortName?.trim() || r.name,
+  }));
+  const affiliationOptions = affiliations.map((a) => ({
+    value: String(a.id),
+    label: a.name,
+  }));
+  const streamOptions = streams.map((s) => ({
+    value: String(s.id),
+    label: s.name,
+  }));
+  const categoryOptions = categories.map((c) => ({
+    value: String(c.id),
+    label: c.name,
+  }));
+  const religionOptions = religions.map((r) => ({
+    value: String(r.id),
+    label: r.name,
+  }));
+
+  const updateForm = <K extends keyof FeesDashboardFilterForm>(
+    key: K,
+    next: FeesDashboardFilterForm[K],
+  ) => {
+    setForm((prev) => {
+      let merged: FeesDashboardFilterForm = { ...prev, [key]: next };
+      if ((PROGRAM_COURSE_CASCADE_KEYS as readonly string[]).includes(key as string)) {
+        const options = programCourseOptionsFromList(
+          filterProgramCoursesForForm(programCourses, merged),
+        );
+        merged = {
+          ...merged,
+          programCourseIds: pruneProgramCourseIds(merged.programCourseIds, options),
+        };
+      }
+      return merged;
+    });
+  };
+
+  const handleApply = () => {
+    const filters = toApiFilters(form);
+    const labels: FeesDashboardFilterLabels = {
+      academicYear: formatMultiSelectLabel(
+        form.academicYearIds,
+        academicYearOptions,
+        DEFAULT_FILTER_LABELS.academicYear,
+      ),
+      program: formatMultiSelectLabel(
+        form.courseLevelIds,
+        courseLevelOptions,
+        DEFAULT_FILTER_LABELS.program,
+      ),
+      programCourse: formatMultiSelectLabel(
+        form.programCourseIds,
+        programCourseOptions,
+        DEFAULT_FILTER_LABELS.programCourse,
+      ),
+      semester: formatMultiSelectLabel(form.classIds, classOptions, DEFAULT_FILTER_LABELS.semester),
+      shift: formatMultiSelectLabel(form.shiftIds, shiftOptions, DEFAULT_FILTER_LABELS.shift),
+      regulation: formatMultiSelectLabel(
+        form.regulationTypeIds,
+        regulationOptions,
+        DEFAULT_FILTER_LABELS.regulation,
+      ),
+      affiliation: formatMultiSelectLabel(
+        form.affiliationIds,
+        affiliationOptions,
+        DEFAULT_FILTER_LABELS.affiliation,
+      ),
+      stream: formatMultiSelectLabel(form.streamIds, streamOptions, DEFAULT_FILTER_LABELS.stream),
+      category: formatMultiSelectLabel(
+        form.categoryIds,
+        categoryOptions,
+        DEFAULT_FILTER_LABELS.category,
+      ),
+      religion: formatMultiSelectLabel(
+        form.religionIds,
+        religionOptions,
+        DEFAULT_FILTER_LABELS.religion,
+      ),
+      gender: formatMultiSelectLabel(form.genders, GENDER_OPTIONS, DEFAULT_FILTER_LABELS.gender),
+      paymentStatus: formatMultiSelectLabel(
+        form.paymentStatuses,
+        PAYMENT_STATUS_OPTIONS,
+        DEFAULT_FILTER_LABELS.paymentStatus,
+      ),
+      paymentMode: formatMultiSelectLabel(
+        form.paymentModes,
+        PAYMENT_MODE_OPTIONS,
+        DEFAULT_FILTER_LABELS.paymentMode,
+      ),
+      dateRange: formatDateRangeLabel(form.dateFrom, form.dateTo),
+      studentSearch: form.studentSearch.trim(),
+    };
+
+    onApply(filters, labels);
+    onOpenChange(false);
+  };
+
+  const handleReset = () => {
+    setForm(formFromApiFilters({}));
+    onReset();
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">Dashboard filters</DialogTitle>
           <DialogDescription className="text-base">
-            Segment analytics by academic year, program, semester, and student attributes.
+            Segment analytics by academic scope, student attributes, and payment activity.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            { id: "ay", label: "Academic Year", options: ["2025-26", "2024-25", "2023-24"] },
-            { id: "program", label: "Program", options: ["All Programs", "UG", "PG"] },
-            {
-              id: "course",
-              label: "Course",
-              options: ["All Courses", "B.Com (H)", "BBA (H)", "BCA"],
-            },
-            { id: "semester", label: "Semester", options: ["All", "Sem I", "Sem IV", "Sem VI"] },
-            { id: "shift", label: "Shift", options: ["All", "Morning", "Day", "Evening"] },
-            {
-              id: "category",
-              label: "Category",
-              options: ["All", "General", "SC", "ST", "OBC", "EWS"],
-            },
-            { id: "religion", label: "Religion", options: ["All"] },
-            { id: "gender", label: "Gender", options: ["All", "Male", "Female", "Other"] },
-            {
-              id: "payStatus",
-              label: "Payment Status",
-              options: ["All", "Paid", "Partial", "Unpaid"],
-            },
-            { id: "payMode", label: "Payment Mode", options: ["All", "Online", "Cash", "Cheque"] },
-            {
-              id: "txnStatus",
-              label: "Transaction Status",
-              options: ["All", "Success", "Failed", "Pending"],
-            },
-          ].map((field) => (
-            <div key={field.id} className="space-y-2">
-              <Label className="text-sm font-medium">{field.label}</Label>
-              <Select defaultValue={field.options[0]}>
-                <SelectTrigger className="h-10 text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {field.options.map((opt) => (
-                    <SelectItem key={opt} value={opt} className="text-base">
-                      {opt}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
-          <div className="space-y-2 sm:col-span-2">
-            <Label className="text-sm font-medium">Date range</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="date" className="h-10 text-base" />
-              <Input type="date" className="h-10 text-base" />
-            </div>
-          </div>
-          <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-            <Label className="text-sm font-medium">Search student (PRN / name)</Label>
-            <Input placeholder="PRN, UID, or student name…" className="h-10 text-base" />
-          </div>
+          <FilterField label="Academic year">
+            <MultiSelectDropdown
+              placeholder="All academic years"
+              options={academicYearOptions}
+              selectedOptions={form.academicYearIds}
+              onChange={(selected) => updateForm("academicYearIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Course level">
+            <MultiSelectDropdown
+              placeholder="All course levels"
+              options={courseLevelOptions}
+              selectedOptions={form.courseLevelIds}
+              onChange={(selected) => updateForm("courseLevelIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Regulation">
+            <MultiSelectDropdown
+              placeholder="All regulations"
+              options={regulationOptions}
+              selectedOptions={form.regulationTypeIds}
+              onChange={(selected) => updateForm("regulationTypeIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Affiliation">
+            <MultiSelectDropdown
+              placeholder="All affiliations"
+              options={affiliationOptions}
+              selectedOptions={form.affiliationIds}
+              onChange={(selected) => updateForm("affiliationIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Stream">
+            <MultiSelectDropdown
+              placeholder="All streams"
+              options={streamOptions}
+              selectedOptions={form.streamIds}
+              onChange={(selected) => updateForm("streamIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Program course">
+            <MultiSelectDropdown
+              placeholder="All program courses"
+              options={programCourseOptions}
+              selectedOptions={form.programCourseIds}
+              onChange={(selected) => updateForm("programCourseIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Semester / class">
+            <MultiSelectDropdown
+              placeholder="All semesters"
+              options={classOptions}
+              selectedOptions={form.classIds}
+              onChange={(selected) => updateForm("classIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Shift">
+            <MultiSelectDropdown
+              placeholder="All shifts"
+              options={shiftOptions}
+              selectedOptions={form.shiftIds}
+              onChange={(selected) => updateForm("shiftIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Category">
+            <MultiSelectDropdown
+              placeholder="All categories"
+              options={categoryOptions}
+              selectedOptions={form.categoryIds}
+              onChange={(selected) => updateForm("categoryIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Religion">
+            <MultiSelectDropdown
+              placeholder="All religions"
+              options={religionOptions}
+              selectedOptions={form.religionIds}
+              onChange={(selected) => updateForm("religionIds", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Gender">
+            <MultiSelectDropdown
+              placeholder="All genders"
+              options={GENDER_OPTIONS}
+              selectedOptions={form.genders}
+              onChange={(selected) => updateForm("genders", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Payment status">
+            <MultiSelectDropdown
+              placeholder="All payment statuses"
+              options={PAYMENT_STATUS_OPTIONS}
+              selectedOptions={form.paymentStatuses}
+              onChange={(selected) => updateForm("paymentStatuses", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Payment mode">
+            <MultiSelectDropdown
+              placeholder="All payment modes"
+              options={PAYMENT_MODE_OPTIONS}
+              selectedOptions={form.paymentModes}
+              onChange={(selected) => updateForm("paymentModes", selected)}
+              contentClassName="min-w-[280px]"
+            />
+          </FilterField>
+
+          <FilterField label="Date from" className="sm:col-span-1">
+            <Input
+              type="date"
+              className="h-10 text-base"
+              value={form.dateFrom}
+              onChange={(e) => updateForm("dateFrom", e.target.value)}
+              disabled={loadingOptions}
+            />
+          </FilterField>
+
+          <FilterField label="Date to" className="sm:col-span-1">
+            <Input
+              type="date"
+              className="h-10 text-base"
+              value={form.dateTo}
+              onChange={(e) => updateForm("dateTo", e.target.value)}
+              disabled={loadingOptions}
+            />
+          </FilterField>
+
+          <FilterField
+            label="Search student (UID / roll / name)"
+            className="sm:col-span-2 lg:col-span-3"
+          >
+            <Input
+              placeholder="UID, roll number, or student name…"
+              className="h-10 text-base"
+              value={form.studentSearch}
+              onChange={(e) => updateForm("studentSearch", e.target.value)}
+              disabled={loadingOptions}
+            />
+          </FilterField>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" className="text-base" onClick={onReset}>
+          <Button variant="outline" className="text-base" onClick={handleReset}>
             Reset
           </Button>
-          <Button
-            className="text-base"
-            onClick={() => {
-              onApply();
-              onOpenChange(false);
-            }}
-          >
+          <Button className="text-base" onClick={handleApply} disabled={loadingOptions}>
             Apply filters
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function FilterField({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`space-y-2 ${className ?? ""}`}>
+      <Label className="text-sm font-medium">{label}</Label>
+      {children}
+    </div>
   );
 }

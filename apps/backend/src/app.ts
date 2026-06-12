@@ -113,6 +113,8 @@ import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
 import feeStudentMappingRouter from "@/features/fees/routes/fee-student-mapping.route.js";
 import feeReceiptRouter from "@/features/fees/routes/fee-receipt.route.js";
+import feesDashboardRouter from "@/features/fees/routes/fees-dashboard.route.js";
+import realtimeTrackerRouter from "@/features/realtime-tracker/routes/realtime-tracker.routes.js";
 import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
 import {
   promotionBuilderRouter,
@@ -571,6 +573,8 @@ app.use("/api/classes", classRouter);
 app.use("/api/v1/shifts", shiftRouter);
 app.use("/api/v1/academics", academicYearRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
+app.use("/api/v1/fees/dashboard", feesDashboardRouter);
+app.use("/api/v1/realtime-tracker", realtimeTrackerRouter);
 app.use("/api/v1/fees/structure", feesStructureRouter);
 
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);

@@ -139,6 +139,7 @@ async function persistReceiptIssuanceIfNeeded(params: {
         .set({ challanGeneratedAt: now })
         .where(eq(feeStudentMappingModel.id, mappingId));
       cg = now;
+      scheduleFeesDashboardBroadcast("fee_receipt_issued");
     }
     return { challanNumber: existingRn, challanGeneratedAt: cg };
   }
@@ -159,6 +160,7 @@ async function persistReceiptIssuanceIfNeeded(params: {
     })
     .where(eq(feeStudentMappingModel.id, mappingId));
 
+  scheduleFeesDashboardBroadcast("fee_receipt_issued");
   return { challanNumber, challanGeneratedAt: now };
 }
 
@@ -365,6 +367,8 @@ async function modelToDto(
   };
 }
 
+import { scheduleFeesDashboardBroadcast } from "../fees-dashboard.socket.js";
+
 const emitFeeStudentMappingUpdate = async (studentId: number) => {
   try {
     const io = socketService.getIO();
@@ -379,6 +383,7 @@ const emitFeeStudentMappingUpdate = async (studentId: number) => {
         timestamp: new Date().toISOString(),
       });
     }
+    scheduleFeesDashboardBroadcast("fee_student_mapping_updated");
   } catch {
     // non-critical
   }

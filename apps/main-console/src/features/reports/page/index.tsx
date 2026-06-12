@@ -60,7 +60,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import MultiSelectDropdown from "@/components/ui/MultiSelect";
+import DialogMultiSelect from "@/components/ui/DialogMultiSelect";
 import { ExportService, type ReportExportQueryFilters } from "@/services/exportService";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import * as XLSX from "xlsx";
@@ -1335,8 +1335,8 @@ export default function ReportsPage() {
                 ) : null}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-lg">
-              <DialogHeader>
+            <DialogContent className="flex max-h-[min(90vh,720px)] max-w-md flex-col overflow-hidden sm:max-w-lg">
+              <DialogHeader className="shrink-0">
                 <DialogTitle>Export filters</DialogTitle>
                 <DialogDescription className="text-left text-slate-600">
                   Optional narrowers for supported downloads (Enrolment exports, CU corrections,
@@ -1345,7 +1345,7 @@ export default function ReportsPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4 py-2">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Academic year</Label>
                   <Select value={exportAcademicYearId} onValueChange={setExportAcademicYearId}>
@@ -1365,7 +1365,7 @@ export default function ReportsPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Regulation</Label>
-                  <MultiSelectDropdown
+                  <DialogMultiSelect
                     placeholder="All regulations"
                     options={regulationFilterOptions}
                     selectedOptions={filterRegulationIds.map(String)}
@@ -1376,7 +1376,7 @@ export default function ReportsPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Affiliation</Label>
-                  <MultiSelectDropdown
+                  <DialogMultiSelect
                     placeholder="All affiliations"
                     options={affiliationFilterOptions}
                     selectedOptions={filterAffiliationIds.map(String)}
@@ -1391,7 +1391,7 @@ export default function ReportsPage() {
                     List follows affiliation and regulation above (leave those empty for all
                     courses).
                   </p>
-                  <MultiSelectDropdown
+                  <DialogMultiSelect
                     placeholder="All program courses"
                     options={programCourseFilterOptions}
                     selectedOptions={filterProgramCourseIds.map(String)}
@@ -1402,7 +1402,7 @@ export default function ReportsPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Semester (class)</Label>
-                  <MultiSelectDropdown
+                  <DialogMultiSelect
                     placeholder="All semesters"
                     options={semesterClassFilterOptions}
                     selectedOptions={filterClassIds.map(String)}
@@ -1412,7 +1412,7 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              <DialogFooter className="gap-2 sm:gap-0 flex-col sm:flex-row">
+              <DialogFooter className="shrink-0 gap-2 sm:gap-0 flex-col sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"

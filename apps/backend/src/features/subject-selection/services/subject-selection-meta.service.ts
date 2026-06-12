@@ -464,10 +464,10 @@ export async function toDto(
     createdAt: meta.createdAt,
     updatedAt: meta.updatedAt,
     streams,
-    subjectType:
-      subjectType as unknown as SubjectSelectionMetaDto["subjectType"],
-    academicYear:
-      academicYear as unknown as SubjectSelectionMetaDto["academicYear"],
+    subjectType: (subjectType[0] ??
+      null) as unknown as SubjectSelectionMetaDto["subjectType"],
+    academicYear: (academicYear[0] ??
+      null) as unknown as SubjectSelectionMetaDto["academicYear"],
     forClasses,
   };
   return dto;

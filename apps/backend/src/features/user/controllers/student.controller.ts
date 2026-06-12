@@ -18,6 +18,10 @@ import { eq } from "drizzle-orm";
 import { socketService } from "@/services/socketService.js";
 import { parseReportExportFilters } from "@/utils/report-export-filters.js";
 import { exportEnrolmentMasterReportBuffer } from "../services/enrolment-master-export.service.js";
+import {
+  changeStudentShift,
+  getStudentShiftChangePreview,
+} from "../services/student-shift-change.service.js";
 
 export const createStudent = async (
   req: Request,
@@ -842,6 +846,94 @@ export const checkExistingStudentUidsController = async (
           "UID existence check completed",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const changeStudentShiftController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = Number(req.params.id);
+    const { newShiftId } = req.body as { newShiftId?: number };
+
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Valid student id is required"),
+        );
+      return;
+    }
+
+    if (!Number.isInteger(newShiftId) || (newShiftId ?? 0) <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Valid newShiftId is required"),
+        );
+      return;
+    }
+
+    const result = await changeStudentShift(studentId, newShiftId!);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          result.feesPaid
+            ? "Shift changed; existing fee mappings and payments retained"
+            : "Shift changed; fee mappings recreated for the new shift",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const changeStudentShiftPreviewController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = Number(req.params.id);
+    const newShiftId = Number(req.query.newShiftId);
+
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Valid student id is required"),
+        );
+      return;
+    }
+
+    if (!Number.isInteger(newShiftId) || newShiftId <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "ERROR",
+            null,
+            "Valid newShiftId query param is required",
+          ),
+        );
+      return;
+    }
+
+    const preview = await getStudentShiftChangePreview(studentId, newShiftId);
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", preview, "Shift change preview"));
   } catch (error) {
     handleError(error, res, next);
   }

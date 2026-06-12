@@ -36,7 +36,7 @@ function scopeStatus(
 }
 
 export function SemesterFeePaymentPanel() {
-  const { semesterFeeActivities, loading } = useFeesDashboard();
+  const { semesterFeeActivities, masterLoading } = useFeesDashboard();
 
   const rows = semesterFeeActivities.flatMap((activity) =>
     (activity.scopes || []).map((scope) => ({
@@ -65,7 +65,7 @@ export function SemesterFeePaymentPanel() {
         stream, and dates. This is separate from{" "}
         <code className="rounded bg-white px-1">fee_structures.onlineStartDate</code>.
       </p>
-      {loading ? (
+      {masterLoading ? (
         <p className="p-4 text-sm text-[#888]">Loading academic activities…</p>
       ) : rows.length === 0 ? (
         <p className="p-4 text-sm text-[#888]">

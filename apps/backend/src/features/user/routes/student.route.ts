@@ -20,6 +20,8 @@ import {
   exportStudentAcademicSubjectsReportController,
   downloadStudentImagesController,
   exportEnrolmentMasterReportController,
+  changeStudentShiftController,
+  changeStudentShiftPreviewController,
 } from "../controllers/student.controller.js";
 
 import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
@@ -52,6 +54,8 @@ router.get("/query", (req: Request, res: Response, next: NextFunction) => {
 
 router.put("/", updateStudent);
 router.put("/:id/status", updateStudentStatus);
+router.get("/:id/shift-change/preview", changeStudentShiftPreviewController);
+router.post("/:id/shift-change", changeStudentShiftController);
 
 // POST /api/students/uids/check-existing
 // Check if any of the given UIDs already exist (prevents importing/updating existing students)

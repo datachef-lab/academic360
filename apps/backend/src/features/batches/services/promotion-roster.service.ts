@@ -22,6 +22,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNull,
   or,
   sql,
   type SQL,
@@ -90,6 +91,8 @@ function baseFilters(params: PromotionRosterParams): SQL | undefined {
     eq(pFrom.sessionId, params.fromSessionId),
     eq(pFrom.classId, params.fromClassId),
     eq(sessionModel.academicYearId, params.academicYearId),
+    isNull(pFrom.endDate),
+    sql`COALESCE(${pFrom.isDeprecated}, false) = false`,
     sql`NOT (${sqlTrulyInactive})`,
   ];
   if (params.affiliationIds?.length) {

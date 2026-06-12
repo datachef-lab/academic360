@@ -607,6 +607,7 @@ export default function AllotExamPage() {
     queryKey: [
       "studentsWithSeats",
       selectedExam?.id,
+      selectedExamCommencementDate,
       selectedRooms,
       assignBy,
       gender,
