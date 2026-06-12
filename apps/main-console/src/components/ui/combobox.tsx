@@ -15,7 +15,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ComboboxProps = {
-  dataArr: { value: string; label: string; imageUrl?: string }[];
+  dataArr: { value: string; label: string; triggerLabel?: string; imageUrl?: string }[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -23,6 +23,8 @@ type ComboboxProps = {
   disabled?: boolean;
   showOptionsHint?: boolean;
   contentClassName?: string;
+  /** Shown after the label in the trigger (not truncated), e.g. access number. */
+  selectedSuffix?: string;
 };
 
 export function Combobox({
@@ -34,6 +36,7 @@ export function Combobox({
   disabled = false,
   showOptionsHint = true,
   contentClassName = "",
+  selectedSuffix,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -45,7 +48,8 @@ export function Combobox({
       )
     : dataArr;
 
-  const selectedLabel = value ? dataArr.find((item) => item.value === value)?.label : "";
+  const selectedItem = value ? dataArr.find((item) => item.value === value) : undefined;
+  const selectedLabel = selectedItem ? (selectedItem.triggerLabel ?? selectedItem.label) : "";
 
   return (
     <Popover open={open && !disabled} onOpenChange={setOpen}>
@@ -58,7 +62,12 @@ export function Combobox({
           disabled={disabled}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-            <span className="truncate text-left">{selectedLabel || placeholder}</span>
+            <span className="min-w-0 truncate text-left">{selectedLabel || placeholder}</span>
+            {selectedSuffix ? (
+              <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                {selectedSuffix}
+              </span>
+            ) : null}
             {showOptionsHint && !selectedLabel && dataArr.length > 0 && (
               <span className="hidden shrink-0 text-xs text-muted-foreground xl:inline">
                 ({dataArr.filter((item) => item.value !== "").length} option

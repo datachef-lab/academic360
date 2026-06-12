@@ -48,6 +48,8 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
+import { formatSemesterClassOptionLabel } from "@/features/fees-dashboard/utils/semester-display";
+import { cn } from "@/lib/utils";
 import { getColorFromName } from "@/utils/avatar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
@@ -433,7 +435,12 @@ export default function BookCirculationPage() {
           { label: "UID", value: previewUser.uid ?? "—", mono: true },
           { label: "Program Course", value: previewBatchProgram },
           { label: "Shift", value: previewUser.shift ?? "—" },
-          { label: "Semester", value: toSentenceCase(previewUser.classOrSemester) },
+          {
+            label: "Semester",
+            value: previewUser.classOrSemester
+              ? formatSemesterClassOptionLabel(previewUser.classOrSemester)
+              : "—",
+          },
           { label: "RFID No.", value: previewUser.rfid ?? "N/A", mono: true },
           { label: "Section", value: previewUser.section ?? "—" },
           { label: "Class Roll No.", value: previewUser.classRollNumber ?? "—" },
@@ -583,7 +590,6 @@ export default function BookCirculationPage() {
                 {editableRows.length}
               </Badge>
             </div>
-            <span className="text-xs text-slate-500">Scroll horizontally on smaller screens</span>
           </div>
 
           {editableRows.length === 0 ? (
@@ -595,33 +601,30 @@ export default function BookCirculationPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table className="min-w-[1280px]">
+            <div className="overflow-hidden">
+              <Table className="w-full table-fixed">
+                <colgroup>
+                  <col className="w-[3%]" />
+                  <col className="w-[26%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[14%]" />
+                </colgroup>
                 <TableHeader>
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="w-10 text-center text-xs font-semibold">#</TableHead>
-                    <TableHead className="min-w-[220px] text-xs font-semibold">Book</TableHead>
-                    <TableHead className="min-w-[90px] text-xs font-semibold">Access No.</TableHead>
-                    <TableHead className="min-w-[120px] text-xs font-semibold">Author</TableHead>
-                    <TableHead className="min-w-[150px] text-xs font-semibold">
-                      Borrowing Type
-                    </TableHead>
-                    <TableHead className="min-w-[100px] text-xs font-semibold">Issued On</TableHead>
-                    <TableHead className="min-w-[168px] text-xs font-semibold">
-                      Return Due
-                    </TableHead>
-                    <TableHead className="min-w-[100px] text-xs font-semibold">
-                      Returned On
-                    </TableHead>
-                    <TableHead className="min-w-[70px] text-center text-xs font-semibold">
-                      Fine
-                    </TableHead>
-                    <TableHead className="min-w-[80px] text-center text-xs font-semibold">
-                      Status
-                    </TableHead>
-                    <TableHead className="min-w-[240px] text-center text-xs font-semibold">
-                      Actions
-                    </TableHead>
+                    <TableHead className="text-center text-xs font-semibold">#</TableHead>
+                    <TableHead className="text-xs font-semibold">Book / Access No.</TableHead>
+                    <TableHead className="text-xs font-semibold">Author</TableHead>
+                    <TableHead className="text-xs font-semibold">Borrowing Type</TableHead>
+                    <TableHead className="text-xs font-semibold">Issued On</TableHead>
+                    <TableHead className="text-xs font-semibold">Return Due</TableHead>
+                    <TableHead className="text-xs font-semibold">Returned On</TableHead>
+                    <TableHead className="text-center text-xs font-semibold">Fine</TableHead>
+                    <TableHead className="text-center text-xs font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -634,44 +637,62 @@ export default function BookCirculationPage() {
                         <TableCell className="text-center text-sm font-medium text-slate-600">
                           {index + 1}
                         </TableCell>
-                        <TableCell className="px-3 py-2.5">
-                          <Combobox
-                            className="h-9 min-w-[200px] px-3 text-sm"
-                            placeholder="Select book..."
-                            value={item.bookOptionKey}
-                            showOptionsHint={false}
-                            dataArr={bookOptions.map((option) => ({
-                              value: String(option.copyDetailsId),
-                              label: `${option.title || "-"} (${option.accessNumber || "-"})`,
-                              imageUrl: option.frontCover ?? undefined,
-                            }))}
-                            contentClassName="w-[min(480px,calc(100vw-2rem))]"
-                            onChange={(value) => {
-                              const picked = bookOptions.find(
-                                (opt) => String(opt.copyDetailsId) === value,
-                              );
-                              if (!picked) return;
-                              updateRow(item.id, {
-                                bookOptionKey: value,
-                                copyDetailsId: picked.copyDetailsId,
-                                title: picked.title,
-                                accessNumber: picked.accessNumber,
-                                author: picked.author,
-                                publication: picked.publication,
-                                frontCover: picked.frontCover,
-                              });
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="font-mono text-sm text-slate-700">
-                          {item.accessNumber || "—"}
+                        <TableCell className="px-2 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="min-w-0 flex-1">
+                              <Combobox
+                                className="h-9 w-full min-w-0 px-2 text-sm"
+                                placeholder="Select book..."
+                                value={item.bookOptionKey}
+                                showOptionsHint={false}
+                                selectedSuffix={item.accessNumber?.trim() || undefined}
+                                dataArr={bookOptions.map((option) => ({
+                                  value: String(option.copyDetailsId),
+                                  label: `${option.title || "-"} · ${option.accessNumber || "-"}`,
+                                  triggerLabel: option.title || "-",
+                                  imageUrl: option.frontCover ?? undefined,
+                                }))}
+                                contentClassName="w-[min(480px,calc(100vw-2rem))]"
+                                onChange={(value) => {
+                                  const picked = bookOptions.find(
+                                    (opt) => String(opt.copyDetailsId) === value,
+                                  );
+                                  if (!picked) return;
+                                  updateRow(item.id, {
+                                    bookOptionKey: value,
+                                    copyDetailsId: picked.copyDetailsId,
+                                    title: picked.title,
+                                    accessNumber: picked.accessNumber,
+                                    author: picked.author,
+                                    publication: picked.publication,
+                                    frontCover: picked.frontCover,
+                                  });
+                                }}
+                              />
+                            </div>
+                            <Badge
+                              className={cn(
+                                "shrink-0 text-[10px]",
+                                isReturned
+                                  ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                                  : item.isNew
+                                    ? "border-blue-200 bg-blue-100 text-blue-800"
+                                    : "border-amber-200 bg-amber-100 text-amber-800",
+                              )}
+                            >
+                              {statusLabel}
+                            </Badge>
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm text-slate-700">
-                          <span className="line-clamp-2" title={item.author ?? undefined}>
+                          <span
+                            className="line-clamp-2 break-words"
+                            title={item.author ?? undefined}
+                          >
                             {item.author || "—"}
                           </span>
                         </TableCell>
-                        <TableCell className="px-3 py-2.5">
+                        <TableCell className="px-2 py-2">
                           <Select
                             value={item.borrowingType ?? ""}
                             onValueChange={(value) =>
@@ -683,7 +704,7 @@ export default function BookCirculationPage() {
                               })
                             }
                           >
-                            <SelectTrigger className="h-9 w-full min-w-[150px] bg-white px-3">
+                            <SelectTrigger className="h-9 w-full min-w-0 bg-white px-2 text-xs">
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -695,10 +716,10 @@ export default function BookCirculationPage() {
                             </SelectContent>
                           </Select>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm text-slate-700">
+                        <TableCell className="truncate text-sm text-slate-700">
                           {formatDate(item.issuedTimestamp)}
                         </TableCell>
-                        <TableCell className="px-3 py-2.5">
+                        <TableCell className="px-2 py-2">
                           <DatePicker
                             value={
                               item.returnTimestamp ? new Date(item.returnTimestamp) : undefined
@@ -709,11 +730,11 @@ export default function BookCirculationPage() {
                                 returnTimestamp: date ? date.toISOString() : item.returnTimestamp,
                               })
                             }
-                            className="w-full min-w-[10.5rem]"
+                            className="w-full min-w-0"
                             displayFormat="dd/MM/yyyy"
                           />
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm text-slate-700">
+                        <TableCell className="truncate text-sm text-slate-700">
                           {item.actualReturnTimestamp
                             ? formatDate(item.actualReturnTimestamp)
                             : "—"}
@@ -721,84 +742,8 @@ export default function BookCirculationPage() {
                         <TableCell className="text-center text-sm font-medium text-slate-800">
                           {formatInr(item.netFine)}
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            className={
-                              isReturned
-                                ? "border-emerald-200 bg-emerald-100 text-emerald-800"
-                                : item.isNew
-                                  ? "border-blue-200 bg-blue-100 text-blue-800"
-                                  : "border-amber-200 bg-amber-100 text-amber-800"
-                            }
-                          >
-                            {statusLabel}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-2">
-                          <div className="flex items-center justify-center gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  className={
-                                    isReturned
-                                      ? "h-8 bg-emerald-600 px-2.5 text-white hover:bg-emerald-700"
-                                      : "h-8 bg-violet-600 px-2.5 text-white hover:bg-violet-700"
-                                  }
-                                  disabled={!item.isNew && isReturned}
-                                  onClick={() => {
-                                    if (isReturned) {
-                                      toggleReturn(item.id);
-                                    } else {
-                                      setConfirmReturnRowId(item.id);
-                                    }
-                                  }}
-                                >
-                                  {isReturned ? (
-                                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                                  ) : (
-                                    <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                                  )}
-                                  {isReturned ? "Returned" : "Return"}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {isReturned ? "Marked as returned" : "Mark as returned"}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 border-blue-200 bg-blue-50 px-2.5 text-blue-700 hover:bg-blue-100"
-                                  disabled={
-                                    item.isNew || isReturned || reissuingRowIds.has(item.id)
-                                  }
-                                  onClick={() =>
-                                    setReissuingRowIds((prev) => new Set(prev).add(item.id))
-                                  }
-                                >
-                                  <CalendarClock className="mr-1 h-3.5 w-3.5" />
-                                  Re-issue
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Extend due date</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => fineHandler(item.id)}
-                                  className="h-8 border-amber-200 bg-amber-50 px-2.5 text-amber-700 hover:bg-amber-100"
-                                  disabled={!item.isNew && isReturned}
-                                >
-                                  <IndianRupee className="h-3.5 w-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Fine / waiver</TooltipContent>
-                            </Tooltip>
+                        <TableCell className="px-1 py-2">
+                          <div className="flex flex-wrap items-center justify-center gap-0.5">
                             {item.isNew ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -818,7 +763,63 @@ export default function BookCirculationPage() {
                                 </TooltipTrigger>
                                 <TooltipContent>Remove row</TooltipContent>
                               </Tooltip>
-                            ) : null}
+                            ) : (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      className={
+                                        isReturned
+                                          ? "h-8 w-8 bg-emerald-600 text-white hover:bg-emerald-700"
+                                          : "h-8 w-8 bg-violet-600 text-white hover:bg-violet-700"
+                                      }
+                                      disabled={isReturned}
+                                      onClick={() => setConfirmReturnRowId(item.id)}
+                                    >
+                                      {isReturned ? (
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <RotateCcw className="h-3.5 w-3.5" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {isReturned ? "Already returned" : "Mark as returned"}
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      className="h-8 w-8 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                      disabled={isReturned || reissuingRowIds.has(item.id)}
+                                      onClick={() =>
+                                        setReissuingRowIds((prev) => new Set(prev).add(item.id))
+                                      }
+                                    >
+                                      <CalendarClock className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Extend due date</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      onClick={() => fineHandler(item.id)}
+                                      className="h-8 w-8 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                      disabled={isReturned}
+                                    >
+                                      <IndianRupee className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Fine / waiver</TooltipContent>
+                                </Tooltip>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
