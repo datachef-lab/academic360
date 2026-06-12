@@ -78,7 +78,7 @@
 // })();
 
 import "dotenv/config";
-import { httpServer } from "@/app.js";
+import { connectRedis, disconnectRedis } from "@/config/redis.js";
 import { connectToDatabase, connectToMySQL } from "@/db/index.js";
 import { createLogger } from "@/config/logger.js"; // not createLogger
 import { startPaytmDowntimeScheduler } from "@/features/payments/schedulers/paytm-downtime.scheduler.js";
@@ -127,6 +127,9 @@ function checkRequiredEnvs() {
   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
 
   try {
+    await connectRedis();
+    const { httpServer } = await import("@/app.js");
+
     await connectToDatabase();
 
     const shouldConnectMySQL = [
@@ -138,6 +141,14 @@ function checkRequiredEnvs() {
     if (shouldConnectMySQL) {
       await connectToMySQL();
     }
+
+    const shutdown = async (signal: string) => {
+      log.info(`Received ${signal}, shutting down...`);
+      await disconnectRedis();
+      process.exit(0);
+    };
+    process.once("SIGINT", () => void shutdown("SIGINT"));
+    process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
     httpServer.listen(PORT, async () => {
       log.info(`academic360 running on http://localhost:${PORT} 🚀`);

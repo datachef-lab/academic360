@@ -12,7 +12,13 @@ import { db } from "./db/index.js";
 import { eq, ilike } from "drizzle-orm";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
 import { corsOptions } from "@/config/corsOptions.js";
+import {
+  getRedisPubSubClients,
+  getSessionStore,
+  isRedisEnabled,
+} from "@/config/redis.js";
 import { socketService } from "./services/socketService.js";
 import settingsRouter from "@/features/apps/routes/settings.route.js";
 import { errorHandler, logger } from "@/middlewares/index.js";
@@ -273,15 +279,36 @@ export const io = new Server(httpServer, {
   },
 });
 
+const redisPubSub = getRedisPubSubClients();
+if (redisPubSub) {
+  io.adapter(createAdapter(redisPubSub.pubClient, redisPubSub.subClient));
+  console.info("[backend] Socket.IO Redis adapter enabled");
+} else if (isRedisEnabled()) {
+  console.warn(
+    "[backend] REDIS_URL is set but Redis clients are unavailable — Socket.IO running single-node",
+  );
+}
+
 // Initialize the socket service with our io instance
 socketService.initialize(io);
 
+const isProductionLike =
+  process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
+
 app.use(
   expressSession({
-    secret: process.env.ACCESS_TOKEN_SECRET || "secret", // Add a secret key here
+    secret:
+      process.env.SESSION_SECRET?.trim() ||
+      process.env.ACCESS_TOKEN_SECRET ||
+      "secret",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }, // set to true if using HTTPS
+    store: getSessionStore() ?? undefined,
+    cookie: {
+      secure: isProductionLike,
+      sameSite: isProductionLike ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24,
+    },
   }),
 );
 
