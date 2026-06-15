@@ -75,6 +75,7 @@ export async function getFeeReceiptPdfByChallanHandler(
     }
 
     res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Cache-Control", "no-store");
     res.setHeader(
       "Content-Disposition",
       buildFeeReceiptPdfContentDisposition({
