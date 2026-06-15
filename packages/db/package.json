@@ -20,13 +20,13 @@
   "scripts": {
     "build": "pnpm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "check-types": "tsc -p tsconfig.json --noEmit",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "dev": "tsc --watch --preserveWatchOutput",
     "lint": "eslint .",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:generate": "tsx --tsconfig tsconfig.json ./node_modules/drizzle-kit/bin.cjs generate",
+    "db:migrate": "tsx --tsconfig tsconfig.json ./node_modules/drizzle-kit/bin.cjs migrate",
+    "db:push": "tsx --tsconfig tsconfig.json ./node_modules/drizzle-kit/bin.cjs push",
+    "db:studio": "tsx --tsconfig tsconfig.json ./node_modules/drizzle-kit/bin.cjs studio"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
@@ -38,6 +38,7 @@
     "@academic360/eslint-config": "workspace:*",
     "@academic360/prettier-config": "workspace:*",
     "@academic360/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
     "@types/pg": "^8.11.10",
     "dotenv": "catalog:",
     "drizzle-kit": "catalog:",
