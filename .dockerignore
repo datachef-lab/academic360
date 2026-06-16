@@ -37,3 +37,8 @@ dist
 logs
 .turbo
 !packages/db/dist
+
+# Build-time env files the frontends bake in (no secrets beyond what ships
+# to browsers anyway); everything else in .env* stays excluded.
+!apps/student-console/.env.production
+!apps/main-console/.env.local
