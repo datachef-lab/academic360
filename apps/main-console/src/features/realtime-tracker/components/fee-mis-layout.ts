@@ -44,32 +44,3 @@ export function buildFeeMisTableBlocks(rows: FeeMisCourseRow[]): FeeMisTableBloc
 
   return blocks;
 }
-
-export function streamSemesterLabels(
-  segment: FeeMisStreamSegment,
-  filterLabels?: string[],
-): string[] {
-  if (filterLabels?.length) {
-    return [...filterLabels];
-  }
-  const labels = new Set<string>();
-  for (const row of segment.detailRows) {
-    const label = row.semesterLabel?.trim();
-    if (label) labels.add(label);
-  }
-  const totalLabel = segment.totalRow.semesterLabel?.trim();
-  if (totalLabel) labels.add(totalLabel);
-  return [...labels].sort((a, b) => a.localeCompare(b));
-}
-
-/** Split block height evenly between AMT and NOS (differs by at most one row). */
-export function streamFeeRowSpans(programCount: number): {
-  blockRows: number;
-  amtRowSpan: number;
-  nosRowSpan: number;
-} {
-  const blockRows = programCount > 0 ? programCount + 1 : 2;
-  const amtRowSpan = Math.floor(blockRows / 2);
-  const nosRowSpan = blockRows - amtRowSpan;
-  return { blockRows, amtRowSpan, nosRowSpan };
-}

@@ -24,14 +24,54 @@ export function resolveDescriptionFontSize(value?: number | null): number {
   return clampFontSize(value, DEFAULT_DESCRIPTION_FONT_SIZE);
 }
 
+type CpActiveFlagRow = {
+  isActive?: boolean | null;
+  is_active?: boolean | null;
+};
+
+type CpTemplateFieldRow = CpActiveFlagRow & {
+  name: string;
+  options?: CpActiveFlagRow[];
+};
+
+type CpTemplateMasterRow = CpActiveFlagRow & {
+  fields: CpTemplateFieldRow[];
+};
+
+function isCpMasterRowActive(row: CpActiveFlagRow): boolean {
+  const flag = row.isActive ?? row.is_active;
+  return flag !== false;
+}
+
+/** Keep only active certificate masters, fields, and select options. */
+export function filterActiveCpTemplateMasters<T>(masters: T[]): T[] {
+  return masters
+    .filter((cm) => isCpMasterRowActive(cm as CpActiveFlagRow))
+    .map((cm) => {
+      const row = cm as T & CpTemplateMasterRow;
+      return {
+        ...row,
+        fields: row.fields
+          .filter((f) => isCpMasterRowActive(f))
+          .map((f) => ({
+            ...f,
+            options: (f.options ?? []).filter((o) => isCpMasterRowActive(o)),
+          })),
+      } as T;
+    })
+    .filter((cm) => (cm as CpTemplateMasterRow).fields.length > 0);
+}
+
 /** Normalize API field rows (camelCase or snake_case) for display. */
-export function normalizeCpTemplateMasters<T extends { fields: Array<{ name: string }> }>(
-  masters: T[],
-): T[] {
-  return masters.map((cm) => ({
-    ...cm,
-    fields: cm.fields.map((f) => normalizeCpFieldForDisplay(f)),
-  }));
+export function normalizeCpTemplateMasters<T>(masters: T[]): T[] {
+  const normalized = masters.map((cm) => {
+    const row = cm as T & CpTemplateMasterRow;
+    return {
+      ...row,
+      fields: row.fields.map((f) => normalizeCpFieldForDisplay(f)),
+    } as T;
+  });
+  return filterActiveCpTemplateMasters(normalized);
 }
 
 export function normalizeCpFieldForDisplay<T extends { name: string }>(

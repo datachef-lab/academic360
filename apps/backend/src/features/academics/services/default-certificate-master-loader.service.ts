@@ -7,6 +7,11 @@ import {
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { CertificateMasterDto } from "@repo/db/dtos";
 import { defaultCertificateMasterData } from "@/features/academics/default-certificate-master-data.js";
+import {
+  ACTIVE_CERTIFICATE_FIELD_SQL,
+  ACTIVE_CERTIFICATE_MASTER_SQL,
+  ACTIVE_CERTIFICATE_OPTION_SQL,
+} from "@/features/academics/utils/certificate-master-active.js";
 
 /** Rename legacy combined master and align field sequences with the Internship template. */
 async function migrateLegacyWorkExperienceInternshipSplit(): Promise<void> {
@@ -198,7 +203,7 @@ export async function listCertificateMastersWithFields(): Promise<
   const masters = await db
     .select()
     .from(certificateMasterModel)
-    .where(eq(certificateMasterModel.isActive, true))
+    .where(ACTIVE_CERTIFICATE_MASTER_SQL)
     .orderBy(asc(certificateMasterModel.sequence));
 
   const dtos: CertificateMasterDto[] = [];
@@ -210,7 +215,7 @@ export async function listCertificateMastersWithFields(): Promise<
       .where(
         and(
           eq(certificateFieldMasterModel.certificateMasterId, m.id),
-          eq(certificateFieldMasterModel.isActive, true),
+          ACTIVE_CERTIFICATE_FIELD_SQL,
         ),
       )
       .orderBy(asc(certificateFieldMasterModel.sequence));
@@ -226,7 +231,7 @@ export async function listCertificateMastersWithFields(): Promise<
                 certificateFieldOptionMasterModel.certificateFieldMasterId,
                 fm.id,
               ),
-              eq(certificateFieldOptionMasterModel.isActive, true),
+              ACTIVE_CERTIFICATE_OPTION_SQL,
             ),
           )
           .orderBy(asc(certificateFieldOptionMasterModel.sequence));
@@ -234,6 +239,8 @@ export async function listCertificateMastersWithFields(): Promise<
         return { ...fm, options };
       }),
     );
+
+    if (fields.length === 0) continue;
 
     dtos.push({
       ...m,
