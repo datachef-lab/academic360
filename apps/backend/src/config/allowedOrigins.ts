@@ -24,7 +24,11 @@ async function getOrigins() {
 
     "http://localhost:8081",
     "http://192.168.31.146:8081",
-    process.env.CORS_ORIGIN!,
+    // CORS_ORIGIN supports a comma-separated list of origins
+    ...(process.env.CORS_ORIGIN ?? "")
+      .split(",")
+      .map((o) => o.trim().replace(/\/$/, ""))
+      .filter(Boolean),
     "*",
     ...availableApps.map((app) => app.url),
   ];

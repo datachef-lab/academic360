@@ -2,8 +2,19 @@ import { db } from "@/db/index.js";
 import { Settings, settingsModel } from "../models/settings.model.js";
 import { and, asc, eq, ilike } from "drizzle-orm";
 import { settingsVariantEnum } from "@repo/db/schemas/enums";
+import fs from "fs";
+import path from "path";
+import mime from "mime-types";
+import type { Readable } from "stream";
+import {
+  createUploadConfig,
+  deleteFromS3,
+  getFileFromS3,
+  uploadToS3,
+  UploadConfigs,
+} from "@/services/s3.service.js";
 
-const SETTINGS_PATH = process.env.SETTINGS_PATH!;
+const SETTINGS_PATH = process.env.SETTINGS_PATH;
 
 const defaultSettings: Settings[] = [
   {
@@ -53,6 +64,45 @@ const defaultSettings: Settings[] = [
   { name: "ZEPTO_TOKEN", value: null, type: "TEXT", variant: "API_CONFIG" },
 ];
 
+function settingsS3Key(fileName: string): string {
+  return `settings/${fileName}`.replace(/\/{2,}/g, "/");
+}
+
+async function deleteSettingFileFromS3(fileName: string): Promise<void> {
+  try {
+    await deleteFromS3(settingsS3Key(fileName));
+  } catch {
+    // Ignore missing objects during replacement.
+  }
+}
+
+async function streamSettingFromS3(
+  fileName: string,
+): Promise<{ stream: Readable; contentType: string } | null> {
+  const s3File = await getFileFromS3(settingsS3Key(fileName)).catch(() => null);
+  if (!s3File?.Body) return null;
+
+  return {
+    stream: s3File.Body as Readable,
+    contentType:
+      s3File.ContentType || mime.lookup(fileName) || "application/octet-stream",
+  };
+}
+
+function streamSettingFromDisk(
+  fileName: string,
+): { stream: Readable; contentType: string } | null {
+  if (!SETTINGS_PATH) return null;
+
+  const filePath = path.join(SETTINGS_PATH, fileName);
+  if (!fs.existsSync(filePath)) return null;
+
+  return {
+    stream: fs.createReadStream(filePath),
+    contentType: mime.lookup(filePath) || "application/octet-stream",
+  };
+}
+
 export async function loadDefaultSettings() {
   for (let i = 0; i < defaultSettings.length; i++) {
     const [existingSetting] = await db
@@ -84,13 +134,6 @@ export async function findAll(
 export async function findById(id: number) {
   return await db.select().from(settingsModel).where(eq(settingsModel.id, id));
 }
-import fs from "fs";
-import path from "path";
-import { promisify } from "util";
-import mime from "mime-types";
-
-const writeFile = promisify(fs.writeFile);
-const unlinkFile = promisify(fs.unlink);
 
 export async function save(
   id: number,
@@ -105,39 +148,45 @@ export async function save(
     throw new Error("Setting not found");
   }
 
-  // Handle FILE type
   if (existingSetting.type === "FILE" && givenData.file) {
     const file = givenData.file;
 
-    // Get file extension from mimetype or original name
     const ext =
       mime.extension(file.mimetype) ||
       path.extname(file.originalname).replace(".", "");
 
-    // Sanitize the name for filename use
-    const safeName = existingSetting.name
-      .replace(/[^a-z0-9]/gi, "_")
-      .toLowerCase();
     const fileName = `${id}.${ext}`;
-    const filePath = path.join(SETTINGS_PATH, fileName);
 
-    // Delete existing file if exists
     if (existingSetting.value) {
-      const existingFilePath = path.join(SETTINGS_PATH, existingSetting.value);
-      if (fs.existsSync(existingFilePath)) {
-        await unlinkFile(existingFilePath);
+      await deleteSettingFileFromS3(existingSetting.value);
+      if (SETTINGS_PATH) {
+        const existingFilePath = path.join(
+          SETTINGS_PATH,
+          existingSetting.value,
+        );
+        if (fs.existsSync(existingFilePath)) {
+          fs.unlinkSync(existingFilePath);
+        }
       }
     }
 
-    // Save new file
-    await writeFile(filePath, file.buffer);
+    await uploadToS3(
+      file,
+      createUploadConfig(UploadConfigs.SETTINGS_FILES.folder, {
+        customFileName: fileName,
+        maxFileSizeMB: UploadConfigs.SETTINGS_FILES.maxFileSizeMB,
+        allowedMimeTypes: UploadConfigs.SETTINGS_FILES.allowedMimeTypes,
+        metadata: {
+          settingId: String(id),
+          settingName: existingSetting.name,
+        },
+      }),
+    );
 
-    // Update setting value with the new filename
     givenData.value = fileName;
   }
 
-  // Remove file object before DB insert
-  delete (givenData as any).file;
+  delete (givenData as { file?: Express.Multer.File }).file;
 
   return await db
     .update(settingsModel)
@@ -157,8 +206,6 @@ export async function findByIdOrName(idOrName: string | number) {
 }
 
 export async function getSettingFileService(idOrName: string) {
-  console.log("idOrName", idOrName);
-
   const setting = await db
     .select()
     .from(settingsModel)
@@ -169,35 +216,28 @@ export async function getSettingFileService(idOrName: string) {
     )
     .then((res) => res[0]);
 
-  console.log("setting", setting);
-
   if (!setting || setting.type !== "FILE") {
-    console.log("setting not found");
     return null;
   }
 
-  // ✅ Try all possible extensions
   const extensions = ["jpg", "jpeg", "png", "webp"];
 
-  let filePath: string | null = null;
+  if (setting.value) {
+    const fromS3 = await streamSettingFromS3(setting.value);
+    if (fromS3) return fromS3;
+
+    const fromDisk = streamSettingFromDisk(setting.value);
+    if (fromDisk) return fromDisk;
+  }
 
   for (const ext of extensions) {
-    const fullPath = path.join(SETTINGS_PATH, `${setting.id}.${ext}`);
-    if (fs.existsSync(fullPath)) {
-      filePath = fullPath;
-      break;
-    }
+    const fileName = `${setting.id}.${ext}`;
+    const fromS3 = await streamSettingFromS3(fileName);
+    if (fromS3) return fromS3;
+
+    const fromDisk = streamSettingFromDisk(fileName);
+    if (fromDisk) return fromDisk;
   }
 
-  console.log("resolved filePath:", filePath);
-
-  if (!filePath) {
-    console.log("file not found on disk");
-    return null;
-  }
-
-  const contentType = mime.lookup(filePath) || "application/octet-stream";
-  const stream = fs.createReadStream(filePath);
-
-  return { stream, contentType };
+  return null;
 }

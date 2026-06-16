@@ -16,7 +16,9 @@ import {
 import { db } from "@/db";
 import { readFileSync, existsSync } from "fs";
 import { join, resolve } from "path";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { createS3Client } from "@/utils/s3-client.js";
+import { claimNotificationQueueRows } from "@/utils/queue-claim.js";
 
 const POLL_MS = Number(process.env.EMAIL_POLL_MS ?? 3000);
 const BATCH_SIZE = Number(process.env.EMAIL_BATCH_SIZE ?? 50);
@@ -68,14 +70,7 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
 
         console.log("📎 [email.worker] Extracted S3 key:", key);
 
-        // Initialize S3 client
-        const s3Client = new S3Client({
-          region: process.env.AWS_REGION || "ap-south-1",
-          credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-          },
-        });
+        const s3Client = createS3Client();
 
         // Download PDF from S3 using S3 client
         const command = new GetObjectCommand({
@@ -123,37 +118,7 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
 }
 
 async function processBatch() {
-  const rows = await db.transaction(async (tx) => {
-    // 1️⃣ Select IDs to claim
-    const ids = await tx
-      .select({ id: notificationQueueModel.id })
-      .from(notificationQueueModel)
-      .where(
-        and(
-          eq(notificationQueueModel.type, "EMAIL_QUEUE" as never),
-          eq(notificationQueueModel.isDeadLetter, false),
-          eq(notificationQueueModel.isProcessing, false),
-        ),
-      )
-      .orderBy(notificationQueueModel.createdAt)
-      .limit(BATCH_SIZE);
-
-    if (ids.length === 0) return [];
-
-    // 2️⃣ Mark them as processing
-    const claimed = await tx
-      .update(notificationQueueModel)
-      .set({ isProcessing: true })
-      .where(
-        inArray(
-          notificationQueueModel.id,
-          ids.map((r) => r.id),
-        ),
-      )
-      .returning();
-
-    return claimed;
-  });
+  const rows = await claimNotificationQueueRows("EMAIL_QUEUE", BATCH_SIZE);
 
   for (const row of rows) {
     try {

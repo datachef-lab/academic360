@@ -12,7 +12,13 @@ import { db } from "./db/index.js";
 import { eq, ilike } from "drizzle-orm";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
 import { corsOptions } from "@/config/corsOptions.js";
+import {
+  getRedisPubSubClients,
+  getSessionStore,
+  isRedisEnabled,
+} from "@/config/redis.js";
 import { socketService } from "./services/socketService.js";
 import settingsRouter from "@/features/apps/routes/settings.route.js";
 import { errorHandler, logger } from "@/middlewares/index.js";
@@ -240,24 +246,33 @@ app.use(express.urlencoded({ extended: true, limit: "1gb" }));
 
 app.use(cookieParser());
 
+// Liveness probe for the ALB target group (no auth; /api/health is the
+// student health-records feature, not a status endpoint).
+app.get("/healthz", (_req, res) => {
+  res.status(200).send("ok");
+});
+
 // Setup Socket.IO with CORS - allow both main console and student console
 const allowedSocketOrigins = [
-  process.env.CORS_ORIGIN || "http://localhost:5173", // Main console
-  "http://localhost:5173",
+  "http://localhost:5173", // Main console
   "http://localhost:3000", // Student console
   "http://localhost:3008", // Student console (production port)
   "https://stage.academic360.app", // Staging main console
   "https://academic360.app", // Production main console
   "https://besc.academic360.app", // Production main console (alternative)
-  // Also allow any origin that starts with the CORS_ORIGIN (for subdomains)
-  ...(process.env.CORS_ORIGIN
-    ? [process.env.CORS_ORIGIN.replace(/\/$/, "")]
-    : []),
+  // CORS_ORIGIN supports a comma-separated list of origins
+  ...(process.env.CORS_ORIGIN ?? "")
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))
+    .filter(Boolean),
 ];
 
 export const io = new Server(httpServer, {
   cors: {
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
 
@@ -273,15 +288,36 @@ export const io = new Server(httpServer, {
   },
 });
 
+const redisPubSub = getRedisPubSubClients();
+if (redisPubSub) {
+  io.adapter(createAdapter(redisPubSub.pubClient, redisPubSub.subClient));
+  console.info("[backend] Socket.IO Redis adapter enabled");
+} else if (isRedisEnabled()) {
+  console.warn(
+    "[backend] REDIS_URL is set but Redis clients are unavailable — Socket.IO running single-node",
+  );
+}
+
 // Initialize the socket service with our io instance
 socketService.initialize(io);
 
+const isProductionLike =
+  process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
+
 app.use(
   expressSession({
-    secret: process.env.ACCESS_TOKEN_SECRET || "secret", // Add a secret key here
+    secret:
+      process.env.SESSION_SECRET?.trim() ||
+      process.env.ACCESS_TOKEN_SECRET ||
+      "secret",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }, // set to true if using HTTPS
+    store: getSessionStore() ?? undefined,
+    cookie: {
+      secure: isProductionLike,
+      sameSite: isProductionLike ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24,
+    },
   }),
 );
 
