@@ -70,9 +70,9 @@ export const connectToDatabase = async () => {
     log.info("Connected to the database successfully 🎉");
     client.release(); // Release the connection back to the pool
 
-    createDefaultExamComponents();
-    initializeClasses();
-    loadDefaultSettings();
+    // createDefaultExamComponents();
+    // initializeClasses();
+    // loadDefaultSettings();
     // loadDegree();
     // loadShifts()
     // loadCategory();
@@ -82,33 +82,33 @@ export const connectToDatabase = async () => {
     // loadOccupations();
     // loadQualifications();
     // loadNationalities();
-    await loadAffiliation();
-    loadCourseLevel();
+    // await loadAffiliation();
+    // loadCourseLevel();
     // loadAllAddress();
     // loadAllPostOffice();
     // loadAllPoliceStation();
-    loadCourseType();
-    loadRegulationType();
-    loadDefaultOtpNotificationMasters();
-    loadDefaultDocuments();
+    // loadCourseType();
+    // loadRegulationType();
+    // loadDefaultOtpNotificationMasters();
+    // loadDefaultDocuments();
     // Clear existing duplicates and load fresh metas (only in development)
 
-    loadDefaultSubjectSelectionMetas();
+    // loadDefaultSubjectSelectionMetas();
 
     // loadDefaultUserTypes();
     // loadDefaultUserStatusMasters();
-    loadDefaultAppModules();
-    loadDefaultCertificateMasters().catch((e) => {
-      log.warn("Default certificate master load failed", { error: e });
-    });
-    loadDefaultPromotionData().catch((e) => {
-      log.warn("Default promotion data load failed", { error: e });
-    });
+    // loadDefaultAppModules();
+    // loadDefaultCertificateMasters().catch((e) => {
+    //   log.warn("Default certificate master load failed", { error: e });
+    // });
+    // loadDefaultPromotionData().catch((e) => {
+    //   log.warn("Default promotion data load failed", { error: e });
+    // });
     // loadStudentFees();
-    loadLibrary();
-    initializeAcademicActivities();
-    defaultSetDateOfJoining();
-    loadLibraryUsers();
+    // loadLibrary();
+    // initializeAcademicActivities();
+    // defaultSetDateOfJoining();
+    // loadLibraryUsers();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
