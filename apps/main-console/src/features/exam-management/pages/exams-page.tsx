@@ -2173,6 +2173,9 @@ const ExamsPage = () => {
                     <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
                       Subject Category
                     </th>
+                    <th className="w-[12%] px-3 py-3 border-r border-slate-300 text-center">
+                      Allotment
+                    </th>
                     <th className="w-[8%] px-3 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
@@ -2180,7 +2183,7 @@ const ExamsPage = () => {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200"
                       >
                         <div className="flex items-center justify-center gap-2">
@@ -2192,7 +2195,7 @@ const ExamsPage = () => {
                   ) : examGroups.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200"
                       >
                         No exams found.
@@ -2255,6 +2258,9 @@ const ExamsPage = () => {
                         });
                       });
                       const distinctSubjectTypes = Array.from(distinctSTMap.values());
+                      const hasNotAllottedExam = examGroup.exams.some(
+                        (exam) => exam.isAllotted === false,
+                      );
 
                       return (
                         <tr
@@ -2330,6 +2336,23 @@ const ExamsPage = () => {
                                 </Badge>
                               ))}
                             </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top text-center">
+                            {hasNotAllottedExam ? (
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-amber-300 text-amber-700 bg-amber-50"
+                              >
+                                Not Allotted
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
+                              >
+                                Allotted
+                              </Badge>
+                            )}
                           </td>
                           <td className="px-3 py-3 text-center align-top">
                             <Button
