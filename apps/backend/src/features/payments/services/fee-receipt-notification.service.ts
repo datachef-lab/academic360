@@ -14,7 +14,7 @@ import {
 import { enqueueNotification } from "@/services/notificationClient.js";
 
 const DEFAULT_COLLEGE_LOGO_URL =
-  "https://besc.academic360.app/api/api/v1/settings/file/4";
+  "https://api.academic360.app/api/v1/settings/file/4";
 
 /**
  * Base URL for links inside emails (must reach the Express app that serves

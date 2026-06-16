@@ -421,7 +421,7 @@ export class CuRegistrationDataService {
         // College Information
         collegeLogoUrl:
           options.collegeLogoUrl ||
-          "https://besc.academic360.app/api/api/v1/settings/file/4",
+          "https://api.academic360.app/api/v1/settings/file/4",
         collegeName:
           options.collegeName || "The Bhawanipur Education Society College",
         collegeAddress:

@@ -200,7 +200,7 @@ export class CuRegistrationPdfIntegrationService {
       outputDirectory: "./uploads/cu-registration-pdfs",
       uploadToS3: true, // Enable S3 upload for final submissions
       collegeInfo: {
-        logoUrl: "https://besc.academic360.app/api/api/v1/settings/file/4",
+        logoUrl: "https://api.academic360.app/api/v1/settings/file/4",
         name: "The Bhawanipur Education Society College",
         address: "5, Lala Lajpat Rai Sarani, Kolkata - 700020",
         details1:

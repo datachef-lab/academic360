@@ -85,7 +85,7 @@ export function Header() {
       <View className="flex-row items-center gap-2">
         <Image
           source={{
-            uri: "https://besc.academic360.app/api/api/v1/settings/file/4",
+            uri: "https://api.academic360.app/api/v1/settings/file/4",
           }}
           className="h-9 w-9 rounded-full"
         />

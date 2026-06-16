@@ -14,7 +14,7 @@ Venue: 4 A Hall
 Please report at the specified time and venue for physical submission of your CU Registration form.`;
 
     // College logo URL
-    const logoUrl = "https://besc.academic360.app/api/api/v1/settings/file/4";
+    const logoUrl = "https://api.academic360.app/api/v1/settings/file/4";
 
     console.log("📝 QR Content:");
     console.log(qrContent);
