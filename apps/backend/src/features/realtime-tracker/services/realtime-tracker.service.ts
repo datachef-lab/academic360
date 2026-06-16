@@ -423,7 +423,11 @@ async function loadFeeMisCourseRows(
     ];
   }
 
-  const scope = preResolvedScope ?? (await resolveDashboardScope(feesFilters));
+  const scope =
+    preResolvedScope ??
+    (await resolveDashboardScope(feesFilters, {
+      includeClosedPromotions: true,
+    }));
   if (!scope.canonicalMappingIds.length) {
     return [
       {
@@ -637,7 +641,9 @@ export async function getFeeMisData(
     };
   }
 
-  const scope = await resolveDashboardScope(feesFilters);
+  const scope = await resolveDashboardScope(feesFilters, {
+    includeClosedPromotions: true,
+  });
 
   const [{ labels: semesterDisplayLabels }, dashboard, courseRows] =
     await Promise.all([

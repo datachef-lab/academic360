@@ -94,19 +94,15 @@ function RealtimeTrackerFiltersSidebarInner({
   );
 
   useEffect(() => {
-    setForm((current) => {
-      const pruned = pruneProgramCourseIds(current.programCourseIds, programCourseOptions);
-      if (pruned.length === current.programCourseIds.length) return current;
-      const merged = { ...current, programCourseIds: pruned };
-      const nextApi = toApiFilters(merged);
-      if (realtimeTrackerFiltersKey(nextApi) !== valueKey) {
-        onChange(nextApi);
-      }
-      return merged;
-    });
-  }, [programCourseOptions, valueKey, onChange]);
+    const pruned = pruneProgramCourseIds(form.programCourseIds, programCourseOptions);
+    if (pruned.length === form.programCourseIds.length) return;
+    setForm((prev) => ({ ...prev, programCourseIds: pruned }));
+  }, [programCourseOptions, form.programCourseIds]);
 
-  const update = <K extends keyof FeesDashboardFilterForm>(
+  const formKey = useMemo(() => realtimeTrackerFiltersKey(toApiFilters(form)), [form]);
+  const isDirty = formKey !== valueKey;
+
+  const updateForm = <K extends keyof FeesDashboardFilterForm>(
     key: K,
     next: FeesDashboardFilterForm[K],
   ) => {
@@ -121,9 +117,12 @@ function RealtimeTrackerFiltersSidebarInner({
           programCourseIds: pruneProgramCourseIds(merged.programCourseIds, options),
         };
       }
-      onChange(toApiFilters(merged));
       return merged;
     });
+  };
+
+  const handleApply = () => {
+    onChange(toApiFilters(form));
   };
 
   const academicYearOptions = academicYears.map((ay) => ({
@@ -143,7 +142,7 @@ function RealtimeTrackerFiltersSidebarInner({
             placeholder="All academic years"
             options={academicYearOptions}
             selectedOptions={form.academicYearIds}
-            onChange={(s) => update("academicYearIds", s)}
+            onChange={(s) => updateForm("academicYearIds", s)}
             contentClassName="min-w-[240px]"
           />
         </FilterField>
@@ -152,7 +151,7 @@ function RealtimeTrackerFiltersSidebarInner({
             placeholder="All course levels"
             options={courseLevels.map((l) => ({ value: String(l.id), label: l.name }))}
             selectedOptions={form.courseLevelIds}
-            onChange={(s) => update("courseLevelIds", s)}
+            onChange={(s) => updateForm("courseLevelIds", s)}
           />
         </FilterField>
         <FilterField label="Regulation">
@@ -163,7 +162,7 @@ function RealtimeTrackerFiltersSidebarInner({
               label: r.shortName?.trim() || r.name,
             }))}
             selectedOptions={form.regulationTypeIds}
-            onChange={(s) => update("regulationTypeIds", s)}
+            onChange={(s) => updateForm("regulationTypeIds", s)}
           />
         </FilterField>
         <FilterField label="Affiliation">
@@ -174,7 +173,7 @@ function RealtimeTrackerFiltersSidebarInner({
               label: a.shortName?.trim() || a.name,
             }))}
             selectedOptions={form.affiliationIds}
-            onChange={(s) => update("affiliationIds", s)}
+            onChange={(s) => updateForm("affiliationIds", s)}
           />
         </FilterField>
         <FilterField label="Stream">
@@ -182,7 +181,7 @@ function RealtimeTrackerFiltersSidebarInner({
             placeholder="All streams"
             options={streams.map((s) => ({ value: String(s.id), label: s.name }))}
             selectedOptions={form.streamIds}
-            onChange={(s) => update("streamIds", s)}
+            onChange={(s) => updateForm("streamIds", s)}
           />
         </FilterField>
         <FilterField label="Program course">
@@ -190,7 +189,7 @@ function RealtimeTrackerFiltersSidebarInner({
             placeholder="All program courses"
             options={programCourseOptions}
             selectedOptions={form.programCourseIds}
-            onChange={(s) => update("programCourseIds", s)}
+            onChange={(s) => updateForm("programCourseIds", s)}
           />
         </FilterField>
         <FilterField label="Semester / class">
@@ -201,7 +200,7 @@ function RealtimeTrackerFiltersSidebarInner({
               label: formatSemesterClassOptionLabel(c.name),
             }))}
             selectedOptions={form.classIds}
-            onChange={(s) => update("classIds", s)}
+            onChange={(s) => updateForm("classIds", s)}
           />
         </FilterField>
         <FilterField label="Shift">
@@ -209,7 +208,7 @@ function RealtimeTrackerFiltersSidebarInner({
             placeholder="All shifts"
             options={shifts.map((s) => ({ value: String(s.id), label: s.name }))}
             selectedOptions={form.shiftIds}
-            onChange={(s) => update("shiftIds", s)}
+            onChange={(s) => updateForm("shiftIds", s)}
           />
         </FilterField>
         <FilterField label="Category">
@@ -217,7 +216,7 @@ function RealtimeTrackerFiltersSidebarInner({
             placeholder="All categories"
             options={categories.map((c) => ({ value: String(c.id), label: c.name }))}
             selectedOptions={form.categoryIds}
-            onChange={(s) => update("categoryIds", s)}
+            onChange={(s) => updateForm("categoryIds", s)}
           />
         </FilterField>
         <FilterField label="Religion">
@@ -225,7 +224,7 @@ function RealtimeTrackerFiltersSidebarInner({
             placeholder="All religions"
             options={religions.map((r) => ({ value: String(r.id), label: r.name }))}
             selectedOptions={form.religionIds}
-            onChange={(s) => update("religionIds", s)}
+            onChange={(s) => updateForm("religionIds", s)}
           />
         </FilterField>
         <FilterField label="Gender">
@@ -233,7 +232,7 @@ function RealtimeTrackerFiltersSidebarInner({
             placeholder="All genders"
             options={GENDER_OPTIONS}
             selectedOptions={form.genders}
-            onChange={(s) => update("genders", s)}
+            onChange={(s) => updateForm("genders", s)}
           />
         </FilterField>
         {showPaymentFilters ? (
@@ -243,7 +242,7 @@ function RealtimeTrackerFiltersSidebarInner({
                 placeholder="All payment statuses"
                 options={PAYMENT_STATUS_OPTIONS}
                 selectedOptions={form.paymentStatuses}
-                onChange={(s) => update("paymentStatuses", s)}
+                onChange={(s) => updateForm("paymentStatuses", s)}
               />
             </FilterField>
             <FilterField label="Payment mode">
@@ -251,7 +250,7 @@ function RealtimeTrackerFiltersSidebarInner({
                 placeholder="All payment modes"
                 options={PAYMENT_MODE_OPTIONS}
                 selectedOptions={form.paymentModes}
-                onChange={(s) => update("paymentModes", s)}
+                onChange={(s) => updateForm("paymentModes", s)}
               />
             </FilterField>
           </>
@@ -260,20 +259,25 @@ function RealtimeTrackerFiltersSidebarInner({
           <Input
             type="date"
             value={form.dateFrom}
-            onChange={(e) => update("dateFrom", e.target.value)}
+            onChange={(e) => updateForm("dateFrom", e.target.value)}
           />
         </FilterField>
         <FilterField label="Date to">
           <Input
             type="date"
             value={form.dateTo}
-            onChange={(e) => update("dateTo", e.target.value)}
+            onChange={(e) => updateForm("dateTo", e.target.value)}
           />
         </FilterField>
       </div>
-      <Button variant="outline" size="sm" className="w-full" onClick={onReset}>
-        Reset filters
-      </Button>
+      <div className="flex flex-col gap-2 border-t pt-3">
+        <Button size="sm" className="w-full" onClick={handleApply} disabled={!isDirty}>
+          Apply filters
+        </Button>
+        <Button variant="outline" size="sm" className="w-full" onClick={onReset}>
+          Reset filters
+        </Button>
+      </div>
     </div>
   );
 }
