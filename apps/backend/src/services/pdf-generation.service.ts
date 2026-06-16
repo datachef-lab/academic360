@@ -659,7 +659,7 @@ export class PdfGenerationService {
 
       // Pre-fetch external images as base64 data URLs to avoid network requests during rendering
       const studentImageUrl = `https://besc.academic360.app/id-card-generate/api/images?uid=${formData.uid}&crop=true`;
-      const collegeLogoUrl = `https://besc.academic360.app/api/api/v1/settings/file/4`;
+      const collegeLogoUrl = `https://api.academic360.app/api/v1/settings/file/4`;
 
       const [studentImageDataUrl, collegeLogoDataUrl, qrCodeDataUrl] =
         await Promise.all([
@@ -764,7 +764,7 @@ export class PdfGenerationService {
       );
 
       // Embed logo as data URL to avoid missing image during puppeteer rendering
-      const collegeLogoUrl = `https://besc.academic360.app/api/api/v1/settings/file/4`;
+      const collegeLogoUrl = `https://api.academic360.app/api/v1/settings/file/4`;
       const collegeLogoDataUrl = await this.fetchImageAsDataUrl(collegeLogoUrl);
       (formData as any).collegeLogo = collegeLogoDataUrl || collegeLogoUrl;
 
@@ -863,7 +863,7 @@ export class PdfGenerationService {
       // Pre-load college logo as base64 to avoid network delays during PDF generation
       // This MUST be done before EJS rendering
       const collegeLogoUrl =
-        "https://besc.academic360.app/api/api/v1/settings/file/4";
+        "https://api.academic360.app/api/v1/settings/file/4";
       const collegeLogoBase64 = await this.loadImageAsBase64(collegeLogoUrl);
 
       // Create a modified template that uses the injected base64 image
