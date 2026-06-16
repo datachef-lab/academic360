@@ -672,7 +672,7 @@ export async function findProfileInfo(
     academicInfo: studentAcademicInfo
       ? await mapAcademicInfoToDto(studentAcademicInfo)
       : null,
-    familyDetails: family ? await mapFamilyToDto(family) : null,
+    familyDetails: studentFamily ? await mapFamilyToDto(studentFamily) : null,
     studentFamily: studentFamily ? await mapFamilyToDto(studentFamily) : null,
     personalDetails: personalDetailsDto,
     healthDetails: healthDto,
