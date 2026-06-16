@@ -5,6 +5,12 @@ import {
   BookCopy,
   BookOpenCheck,
   BookText,
+  BookMarked,
+  Building,
+  Building2,
+  CalendarDays,
+  CalendarRange,
+  IdCard,
   FolderArchive,
   LayoutDashboard,
   LibraryBig,
@@ -12,9 +18,12 @@ import {
   Package2,
   Rows3,
   ScanBarcode,
+  Scale,
   ScrollText,
   Tags,
+  UserCog,
   UserRoundCheck,
+  Users,
   Workflow,
 } from "lucide-react";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
@@ -117,6 +126,51 @@ const masterLinks = [
     title: "Borrowing Type",
     url: "/dashboard/library/borrowing-types",
     icon: BookOpenCheck,
+  },
+  {
+    title: "Author Type",
+    url: "/dashboard/library/author-types",
+    icon: UserCog,
+  },
+  {
+    title: "Author",
+    url: "/dashboard/library/authors",
+    icon: Users,
+  },
+  {
+    title: "Vendor",
+    url: "/dashboard/library/vendors",
+    icon: Building2,
+  },
+  {
+    title: "Holiday",
+    url: "/dashboard/library/holidays",
+    icon: CalendarDays,
+  },
+  {
+    title: "Class Holiday",
+    url: "/dashboard/library/class-holidays",
+    icon: CalendarRange,
+  },
+  {
+    title: "Branch",
+    url: "/dashboard/library/branches",
+    icon: Building,
+  },
+  {
+    title: "Patron Category",
+    url: "/dashboard/library/patron-categories",
+    icon: IdCard,
+  },
+  {
+    title: "Item Category",
+    url: "/dashboard/library/item-categories",
+    icon: BookMarked,
+  },
+  {
+    title: "Circulation Policy",
+    url: "/dashboard/library/circulation-policies",
+    icon: Scale,
   },
 ];
 

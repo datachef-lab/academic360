@@ -30,7 +30,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Book, Download, Filter, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  Book,
+  Download,
+  Filter,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
@@ -38,9 +49,11 @@ import {
   createBook,
   deleteBook,
   downloadBooksExcel,
+  getBookAuthors,
   getBookById,
   getBookList,
   getBooksMeta,
+  saveBookAuthors,
   updateBook,
   type BookDetail,
   type BookListRow,
@@ -48,6 +61,8 @@ import {
   type BookListQueryParams,
   type BookUpsertBody,
 } from "@/services/books.service";
+import { getLibraryAuthorTypes } from "@/services/library-author-types.service";
+import { getLibraryAuthors } from "@/services/library-authors.service";
 
 type LibraryBookSocketUpdate = {
   id: string;
@@ -348,6 +363,13 @@ export default function BooksPage() {
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const frontCoverInputRef = useRef<HTMLInputElement | null>(null);
   const backCoverInputRef = useRef<HTMLInputElement | null>(null);
+  const [authorTypeOptions, setAuthorTypeOptions] = useState<{ value: string; label: string }[]>(
+    [],
+  );
+  const [authorOptions, setAuthorOptions] = useState<{ value: string; label: string }[]>([]);
+  const [formAuthors, setFormAuthors] = useState<
+    Array<{ authorId: string; authorTypeId: string; remarks: string }>
+  >([]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const activeFilterCount = countActiveFilters(appliedFilters);
@@ -362,6 +384,31 @@ export default function BooksPage() {
       try {
         const res = await getBooksMeta();
         setMeta(res.payload);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [typesRes, authorsRes] = await Promise.all([
+          getLibraryAuthorTypes({ page: 1, limit: 200 }),
+          getLibraryAuthors({ page: 1, limit: 1000 }),
+        ]);
+        setAuthorTypeOptions(
+          typesRes.payload.rows.map((r) => ({
+            value: String(r.id),
+            label: r.name,
+          })),
+        );
+        setAuthorOptions(
+          authorsRes.payload.rows.map((r) => ({
+            value: String(r.id),
+            label: r.shortName ? `${r.name} (${r.shortName})` : r.name,
+          })),
+        );
       } catch (e) {
         console.error(e);
       }
@@ -631,14 +678,25 @@ export default function BooksPage() {
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setFormAuthors([]);
     setDialogOpen(true);
   };
 
   const openEdit = async (id: number) => {
     try {
-      const res = await getBookById(id);
+      const [bookRes, authorsRes] = await Promise.all([
+        getBookById(id),
+        getBookAuthors(id).catch(() => null),
+      ]);
       setEditingId(id);
-      setForm(detailToForm(res.payload));
+      setForm(detailToForm(bookRes.payload));
+      setFormAuthors(
+        (authorsRes?.payload ?? []).map((a) => ({
+          authorId: String(a.authorId),
+          authorTypeId: String(a.authorTypeId),
+          remarks: a.remarks ?? "",
+        })),
+      );
       setDialogOpen(true);
     } catch (e) {
       console.error(e);
@@ -646,20 +704,48 @@ export default function BooksPage() {
     }
   };
 
+  const addAuthorRow = () =>
+    setFormAuthors((rows) => [...rows, { authorId: "", authorTypeId: "", remarks: "" }]);
+
+  const removeAuthorRow = (index: number) =>
+    setFormAuthors((rows) => rows.filter((_, i) => i !== index));
+
+  const updateAuthorRow = (
+    index: number,
+    patch: Partial<{ authorId: string; authorTypeId: string; remarks: string }>,
+  ) => setFormAuthors((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+
   const handleSave = async () => {
     if (!form.title.trim()) {
       toast.error("Title is required");
       return;
     }
+    const validAuthors = formAuthors.filter((a) => a.authorId && a.authorTypeId);
+    if (formAuthors.length > validAuthors.length) {
+      toast.error("Every author row needs an author and a type, or remove it");
+      return;
+    }
     try {
       setSaving(true);
       const body = formToBody(form);
+      let bookId = editingId;
       if (editingId == null) {
-        await createBook(body);
+        const res = await createBook(body);
+        bookId = res.payload.id;
         toast.success("Book created");
       } else {
         await updateBook(editingId, body);
         toast.success("Book updated");
+      }
+      if (bookId != null) {
+        await saveBookAuthors(
+          bookId,
+          validAuthors.map((a) => ({
+            authorId: Number(a.authorId),
+            authorTypeId: Number(a.authorTypeId),
+            remarks: a.remarks.trim() || null,
+          })),
+        );
       }
       setDialogOpen(false);
       void fetchRows();
@@ -1330,6 +1416,80 @@ export default function BooksPage() {
                   }}
                 />
               </div>
+            </div>
+
+            <div className="mt-6 rounded-lg border bg-muted/10 p-3 sm:p-4">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-800">Authors</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Add authors, editors, translators, and other contributors for this book.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addAuthorRow}
+                  disabled={authorOptions.length === 0}
+                >
+                  <UserPlus className="mr-1 h-4 w-4" />
+                  Add author
+                </Button>
+              </div>
+
+              {formAuthors.length === 0 ? (
+                <p className="rounded-md border border-dashed bg-background p-4 text-center text-xs text-muted-foreground">
+                  No authors added yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {formAuthors.map((row, i) => (
+                    <div
+                      key={i}
+                      className="grid grid-cols-1 gap-2 rounded-md border bg-background p-2 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end"
+                    >
+                      <div className="space-y-1">
+                        <Label className="text-xs">Author *</Label>
+                        <Combobox
+                          dataArr={authorOptions}
+                          value={row.authorId}
+                          onChange={(v) => updateAuthorRow(i, { authorId: v })}
+                          placeholder="Select author"
+                          showOptionsHint={false}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Role *</Label>
+                        <Combobox
+                          dataArr={authorTypeOptions}
+                          value={row.authorTypeId}
+                          onChange={(v) => updateAuthorRow(i, { authorTypeId: v })}
+                          placeholder="Select role"
+                          showOptionsHint={false}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Remarks</Label>
+                        <Input
+                          value={row.remarks}
+                          onChange={(e) => updateAuthorRow(i, { remarks: e.target.value })}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-red-600 hover:text-red-700 sm:self-end"
+                        onClick={() => removeAuthorRow(i)}
+                        aria-label="Remove author row"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter className="shrink-0 border-t bg-muted/30 px-6 py-4">

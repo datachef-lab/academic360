@@ -14,6 +14,7 @@ import { policeStationModel } from "./police-station.model";
 import { personModel } from "./person.model";
 import { publisherModel } from "../library/publisher.model";
 import { vendorModel } from "../library/vendor.model";
+import { branchModel } from "../library/branch.model";
 
 export const addressModel = pgTable("address", {
     id: serial().primaryKey(),
@@ -25,6 +26,7 @@ export const addressModel = pgTable("address", {
     personId: integer("person_id_fk").references(() => personModel.id),
     publisherId: integer("publisher_id_fk").references(() => publisherModel.id),
     vendorId: integer("vendor_id_fk").references(() => vendorModel.id),
+    libraryBranchId: integer("library_branch_id_fk").references(() => branchModel.id),
 
     type: addressTypeEnum(),
     countryId: integer("country_id_fk").references(() => countryModel.id),

@@ -10,10 +10,13 @@ import { enclosureModel } from "./enclosure.model";
 import { userModel } from "../user";
 import { libraryPeriodModel } from "./library-period.model";
 import { subjectGroupingMainModel } from "../course-design";
+import { branchModel } from "./branch.model";
 
 export const bookModel = pgTable("books", {
     id: serial().primaryKey(),
     legacyBooksId: integer(),
+    branchId: integer("branch_id_fk")
+        .references(() => branchModel.id),
     libraryDocumentTypeId: integer("library_document_type_id_fk")
         .references(() => libraryDocumentTypeModel.id),
     title: varchar({ length: 1000 }).notNull(),
@@ -54,6 +57,9 @@ export const bookModel = pgTable("books", {
     frequency: integer("library_period_id_fk")
         .references(() => libraryPeriodModel.id),
     referenceNumber: varchar({ length: 255 }),
+    cdlEnabled: boolean().notNull().default(false),
+    cdlConcurrentLimit: integer().notNull().default(1),
+    cdlLoanHours: integer().notNull().default(24),
     createdById: integer("created_by_user_id_fk")
         .references(() => userModel.id),
     createdAt: timestamp().notNull().defaultNow(),

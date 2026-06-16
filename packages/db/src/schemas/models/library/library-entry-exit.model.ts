@@ -3,10 +3,13 @@ import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { userModel } from "../user";
 import { libraryEntryExitStatusEnum } from "@/schemas/enums";
+import { branchModel } from "./branch.model";
 
 export const libraryEntryExitModel = pgTable("library_entry_exit", {
     id: serial().primaryKey(),
     legacyLibraryEntryExitId: integer(),
+    branchId: integer("branch_id_fk")
+        .references(() => branchModel.id),
     userId: integer("user_id_fk")
         .references(() => userModel.id)
         .notNull(),

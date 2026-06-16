@@ -14,11 +14,20 @@ import BindingTypesPage from "./BindingTypesPage";
 import BorrowingTypesPage from "./BorrowingTypesPage";
 import {
   ArticlesPage,
+  AuthorTypesPage,
+  AuthorsPage,
+  BranchesPage,
+  CirculationPoliciesPage,
+  ClassHolidaysPage,
+  HolidaysPage,
+  ItemCategoriesPage,
   JournalTypesPage,
   LibraryDocumentsPage,
+  PatronCategoriesPage,
   RacksPage,
   ShelvesPage,
   StatusesPage,
+  VendorsPage,
 } from "./MasterPages";
 
 export {
@@ -42,4 +51,13 @@ export {
   ArticlesPage,
   LibraryDocumentsPage,
   BorrowingTypesPage,
+  AuthorTypesPage,
+  AuthorsPage,
+  VendorsPage,
+  HolidaysPage,
+  ClassHolidaysPage,
+  BranchesPage,
+  PatronCategoriesPage,
+  ItemCategoriesPage,
+  CirculationPoliciesPage,
 };

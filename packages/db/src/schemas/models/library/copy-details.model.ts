@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { bookModel } from "./book.model";
@@ -10,10 +10,18 @@ import { enclosureModel } from "./enclosure.model";
 import { bindingModel } from "./binding.model";
 import { personModel, userModel } from "../user";
 import { vendorModel } from "./vendor.model";
+import { branchModel } from "./branch.model";
+import { itemCategoryModel } from "./item-category.model";
 
 export const copyDetailsModel = pgTable("copy_details", {
     id: serial().primaryKey(),
     legacyCopyDetailsId: integer(),
+    branchId: integer("branch_id_fk")
+        .references(() => branchModel.id),
+    itemCategoryId: integer("item_category_id_fk")
+        .references(() => itemCategoryModel.id),
+    rfidNumber: varchar({ length: 255 }),
+    theftBitArmed: boolean().notNull().default(false),
     bookId: integer("book_id_fk")
         .references(() => bookModel.id)
         .notNull(),

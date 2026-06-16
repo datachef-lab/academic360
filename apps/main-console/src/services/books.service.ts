@@ -175,3 +175,37 @@ export async function deleteBook(id: number): Promise<ApiResponse<null>> {
   const res = await axiosInstance.delete<ApiResponse<null>>(`${BASE}/${id}`);
   return res.data;
 }
+
+export type BookAuthorRow = {
+  id: number;
+  bookId: number;
+  authorId: number;
+  authorName: string;
+  authorShortName: string | null;
+  authorTypeId: number;
+  authorTypeName: string;
+  remarks: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BookAuthorUpsertRow = {
+  authorId: number;
+  authorTypeId: number;
+  remarks?: string | null;
+};
+
+export async function getBookAuthors(bookId: number): Promise<ApiResponse<BookAuthorRow[]>> {
+  const res = await axiosInstance.get<ApiResponse<BookAuthorRow[]>>(`${BASE}/${bookId}/authors`);
+  return res.data;
+}
+
+export async function saveBookAuthors(
+  bookId: number,
+  authors: BookAuthorUpsertRow[],
+): Promise<ApiResponse<null>> {
+  const res = await axiosInstance.put<ApiResponse<null>>(`${BASE}/${bookId}/authors/bulk`, {
+    authors,
+  });
+  return res.data;
+}
