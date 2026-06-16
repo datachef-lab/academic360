@@ -1,0 +1,1 @@
+ALTER TABLE "promotions" ADD COLUMN "is_deprecated" boolean DEFAULT false;

@@ -1,4 +1,4 @@
-import { NextFunction, Response, Router } from "express";
+import { Router } from "express";
 import {
   allotExamRoomsAndStudentsController,
   checkDuplicateExamController,
@@ -23,7 +23,6 @@ import {
   updateExamSubjectHandler,
 } from "../controllers/exam-schedule.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
-import { createExamAssignment } from "../services/exam-schedule.service.js";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();

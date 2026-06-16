@@ -25,6 +25,7 @@ import {
 import { AlertTriangle, CheckCircle2, CreditCard, Info, Search, Wallet, X } from "lucide-react";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { useAuth } from "@/features/auth/providers/auth-provider";
+import { isFeeMarkingOnlyUser } from "@/hooks/use-restrict-temp-users";
 import { cn } from "@/lib/utils";
 
 type Mode = "CASH" | "ONLINE";
@@ -82,6 +83,7 @@ function extractErrorMessage(error: unknown): string {
 
 export default function FeePaymentMarkingPage() {
   const { user: loggedInUser } = useAuth();
+  const cashOnlyMarking = isFeeMarkingOnlyUser(loggedInUser?.email);
   const [mode, setMode] = useState<Mode>("CASH");
   const [loading, setLoading] = useState(false);
   const [record, setRecord] = useState<FeePaymentMarkingLoadedRecord | null>(null);
@@ -304,52 +306,66 @@ export default function FeePaymentMarkingPage() {
         </p>
       </div>
 
-      <Card className="rounded-xl shadow-sm border-slate-200">
-        <CardHeader className="pb-2 flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
-          <CardTitle className="text-sm font-semibold tracking-wide uppercase text-slate-600">
-            Payment mode
-          </CardTitle>
-          <p className="text-xs text-slate-500">Select a mode, then load student record</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setMode("CASH");
-                clearLoadedRecord();
-              }}
-              className={cn(
-                "rounded-lg h-12 gap-2 justify-center",
-                mode === "CASH"
-                  ? "bg-sky-50 text-sky-800 border-2 border-sky-500 hover:bg-sky-100"
-                  : "text-slate-600 border-slate-200",
-              )}
-            >
-              <Wallet className="h-5 w-5 shrink-0" />
-              Cash Payment
-            </Button>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setMode("ONLINE");
-                clearLoadedRecord();
-              }}
-              className={cn(
-                "rounded-lg h-12 gap-2 justify-center",
-                mode === "ONLINE"
-                  ? "bg-sky-50 text-sky-800 border-2 border-sky-500 hover:bg-sky-100"
-                  : "text-slate-600 border-slate-200",
-              )}
-            >
-              <CreditCard className="h-5 w-5 shrink-0" />
-              Online Payment
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {!cashOnlyMarking ? (
+        <Card className="rounded-xl shadow-sm border-slate-200">
+          <CardHeader className="pb-2 flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
+            <CardTitle className="text-sm font-semibold tracking-wide uppercase text-slate-600">
+              Payment mode
+            </CardTitle>
+            <p className="text-xs text-slate-500">Select a mode, then load student record</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setMode("CASH");
+                  clearLoadedRecord();
+                }}
+                className={cn(
+                  "rounded-lg h-12 gap-2 justify-center",
+                  mode === "CASH"
+                    ? "bg-sky-50 text-sky-800 border-2 border-sky-500 hover:bg-sky-100"
+                    : "text-slate-600 border-slate-200",
+                )}
+              >
+                <Wallet className="h-5 w-5 shrink-0" />
+                Cash Payment
+              </Button>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setMode("ONLINE");
+                  clearLoadedRecord();
+                }}
+                className={cn(
+                  "rounded-lg h-12 gap-2 justify-center",
+                  mode === "ONLINE"
+                    ? "bg-sky-50 text-sky-800 border-2 border-sky-500 hover:bg-sky-100"
+                    : "text-slate-600 border-slate-200",
+                )}
+              >
+                <CreditCard className="h-5 w-5 shrink-0" />
+                Online Payment
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="rounded-xl shadow-sm border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold tracking-wide uppercase text-slate-600 flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-sky-600 shrink-0" />
+              Cash payment marking
+            </CardTitle>
+            <p className="text-xs text-slate-500">
+              Online marking is not available for your account
+            </p>
+          </CardHeader>
+        </Card>
+      )}
 
       <Card className="rounded-xl shadow-sm border-slate-200 overflow-hidden">
         <CardHeader className="pb-3 border-b bg-slate-50/80">

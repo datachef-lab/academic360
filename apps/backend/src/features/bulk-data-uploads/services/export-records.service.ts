@@ -6,6 +6,7 @@ import { programCourseModel } from "@repo/db/schemas/models/course-design/progra
 import { sessionModel } from "@repo/db/schemas/models/academics/session.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { activePromotionRowConditions } from "../utils/active-promotion-filters.js";
 
 export type BulkExportMode = "cu-reg-roll" | "exam-form-fillup";
 
@@ -77,6 +78,7 @@ export async function fetchBulkExportRows(params: {
   const promoFilters = [
     eq(promotionModel.sessionId, sessionId),
     inArray(promotionModel.programCourseId, eligibleProgramCourseIds),
+    ...activePromotionRowConditions,
   ];
   if (classId != null) {
     promoFilters.push(eq(promotionModel.classId, classId));
@@ -128,6 +130,16 @@ export async function fetchBulkExportRows(params: {
     .innerJoin(
       promotionStatusModel,
       eq(promotionStatusModel.id, examFormFillupModel.appearTypeId),
+    )
+    .innerJoin(
+      promotionModel,
+      and(
+        eq(promotionModel.studentId, examFormFillupModel.studentId),
+        eq(promotionModel.sessionId, examFormFillupModel.sessionId),
+        eq(promotionModel.programCourseId, examFormFillupModel.programCourseId),
+        eq(promotionModel.classId, examFormFillupModel.classId),
+        ...activePromotionRowConditions,
+      ),
     )
     .where(and(...fillupFilters))
     .orderBy(asc(studentModel.uid));

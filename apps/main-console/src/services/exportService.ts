@@ -44,6 +44,31 @@ export interface ExcelUploadResponse<T = unknown> {
   data?: T;
 }
 
+function academicYearIdFromSubjectSelectionMeta(row: unknown): number | null {
+  if (!row || typeof row !== "object") return null;
+  const r = row as Record<string, unknown>;
+
+  if (r.academicYearId != null && r.academicYearId !== "") {
+    const n = Number(r.academicYearId);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  const ay = r.academicYear;
+  if (Array.isArray(ay)) {
+    const first = ay[0];
+    if (first && typeof first === "object" && "id" in first) {
+      const n = Number((first as { id: unknown }).id);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  }
+  if (ay && typeof ay === "object" && "id" in ay) {
+    const n = Number((ay as { id: unknown }).id);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 export class ExportService {
   /**
    * Any subject-selection meta row for the academic year works as the export route param;
@@ -53,25 +78,20 @@ export class ExportService {
     academicYearId: number,
   ): Promise<number | null> {
     try {
-      const response = await axiosInstance.get<unknown>("/api/subject-selection/metas");
-      const raw = response.data as Record<string, unknown> | unknown[];
-      const rows = Array.isArray(raw)
-        ? raw
-        : Array.isArray((raw as { payload?: unknown }).payload)
-          ? ((raw as { payload: unknown[] }).payload as unknown[])
-          : Array.isArray((raw as { data?: unknown }).data)
-            ? ((raw as { data: unknown[] }).data as unknown[])
-            : null;
+      const response = await axiosInstance.get<{ payload?: unknown }>(
+        "/api/subject-selection/metas",
+      );
+      const payload = response.data?.payload;
+      const rows = Array.isArray(payload) ? payload : null;
       if (!rows?.length) return null;
+
       const match = rows.find(
-        (r) =>
-          r &&
-          typeof r === "object" &&
-          "academicYearId" in r &&
-          Number((r as { academicYearId: number }).academicYearId) === academicYearId,
+        (r) => academicYearIdFromSubjectSelectionMeta(r) === academicYearId,
       ) as { id?: number } | undefined;
-      return match?.id != null ? Number(match.id) : null;
-    } catch {
+
+      return match?.id != null && Number.isFinite(Number(match.id)) ? Number(match.id) : null;
+    } catch (error) {
+      console.error("Failed to resolve subject selection meta for academic year:", error);
       return null;
     }
   }
