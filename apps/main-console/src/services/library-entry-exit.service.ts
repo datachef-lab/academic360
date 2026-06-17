@@ -35,6 +35,7 @@ export type LibraryEntryExitFilters = {
   userType?: LibraryUserType;
   currentStatus?: LibraryCurrentStatus;
   date?: string;
+  branchId?: number | null;
 };
 
 export type LibrarySearchUser = {

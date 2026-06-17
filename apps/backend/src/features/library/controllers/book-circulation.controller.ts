@@ -52,6 +52,11 @@ export const getBookCirculationListController = async (
       typeof req.query.status === "string" ? req.query.status : undefined;
     const issueDate =
       typeof req.query.issueDate === "string" ? req.query.issueDate : undefined;
+    const branchIdRaw = req.query.branchId;
+    const branchId =
+      typeof branchIdRaw === "string" && branchIdRaw !== ""
+        ? Number(branchIdRaw)
+        : undefined;
 
     const records = await findBookCirculationPaginated({
       page: safePage,
@@ -71,6 +76,10 @@ export const getBookCirculationListController = async (
         | "RETURNED"
         | undefined,
       issueDate,
+      branchId:
+        branchId !== undefined && !Number.isNaN(branchId)
+          ? branchId
+          : undefined,
     });
 
     res

@@ -7,12 +7,14 @@ import {
   createIssue,
   deleteIssue,
   deleteSubscription,
+  findMissingIssues,
   findSubscriptionsPaginated,
   getSubscriptionById,
   listIssuesBySubscription,
   updateIssue,
   updateSubscription,
 } from "@/features/library/services/journal-subscription.service.js";
+import { runJournalIssuePredictorSweep } from "@/features/library/schedulers/journal-issue-predictor.scheduler.js";
 
 const parseId = (v?: string | string[]): number | null => {
   const input = Array.isArray(v) ? v[0] : v;
@@ -207,6 +209,50 @@ export const deleteIssueController = async (
     res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", null, "Issue deleted."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+};
+
+export const listMissingIssuesController = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const rows = await findMissingIssues();
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          rows,
+          "Missing journal issues fetched.",
+        ),
+      );
+  } catch (e) {
+    handleError(e, res, next);
+  }
+};
+
+export const runIssuePredictorController = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    await runJournalIssuePredictorSweep();
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          null,
+          "Journal issue predictor sweep complete.",
+        ),
+      );
   } catch (e) {
     handleError(e, res, next);
   }

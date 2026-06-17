@@ -1,9 +1,11 @@
 import { db } from "@/db/index.js";
 import { ApiError } from "@/utils/ApiError.js";
-import { and, count, desc, eq, gte, lte, SQL, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, SQL, sql, sum } from "drizzle-orm";
 import { studentLibraryAnalyticsModel } from "@repo/db/schemas/models/library/student-library-analytics.model.js";
 import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
 import { libraryEntryExitModel } from "@repo/db/schemas/models/library/library-entry-exit.model.js";
+import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
+import { marksheetModel } from "@repo/db/schemas/models/academics/marksheet.model.js";
 
 export type StudentAnalyticsRow =
   typeof studentLibraryAnalyticsModel.$inferSelect;
@@ -114,6 +116,30 @@ export async function recomputeForUser(userId: number, academicYear: string) {
       ),
     );
 
+  // Average grade — pull sgpa rows from marksheets via studentId, filtered to
+  // the academic-year start year. SGPA is a per-semester score; we average
+  // every row in the window. Returns null if the student has no marksheets,
+  // which is harmless and matches the prior behaviour.
+  const academicYearStartYear = Number(academicYear.trim().split(/[-/]/)[0]);
+  const [avgGradeRow] = academicYearStartYear
+    ? await db
+        .select({
+          avg: sql<string | null>`AVG(${marksheetModel.sgpa})`,
+        })
+        .from(marksheetModel)
+        .innerJoin(studentModel, eq(studentModel.id, marksheetModel.studentId))
+        .where(
+          and(
+            eq(studentModel.userId, userId),
+            eq(marksheetModel.year, academicYearStartYear),
+          ),
+        )
+    : [{ avg: null }];
+  const averageGrade =
+    avgGradeRow?.avg != null && !Number.isNaN(Number(avgGradeRow.avg))
+      ? Number(avgGradeRow.avg)
+      : null;
+
   const payload = {
     userId,
     academicYear: academicYear.trim(),
@@ -122,6 +148,7 @@ export async function recomputeForUser(userId: number, academicYear: string) {
     totalOverdue: Number(overdueAgg?.totalOverdue ?? 0),
     totalFinesPaid: Number(issuesAgg?.totalFinesPaid ?? 0),
     libraryVisits: Number(visitsAgg?.libraryVisits ?? 0),
+    averageGrade,
     computedAt: new Date(),
     updatedAt: new Date(),
   };

@@ -52,6 +52,7 @@ import { getAllClasses } from "@/services/classes.service";
 import { findAdminsAndStaff } from "@/services/user";
 import { getBookList } from "@/services/books.service";
 import { getJournalList } from "@/services/journal.service";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 
 type ListForm = {
   programCourseId: string;
@@ -340,17 +341,21 @@ export default function ReadingListsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="min-w-0 p-2 sm:p-4">
+      <LibraryPageHeader
+        icon={ListChecks}
+        title="Reading Lists"
+        subtitle="Curated lists of books, journals, and external resources per program-course / class."
+        actions={
+          <Button onClick={onCreateList} className="gap-1">
+            <Plus className="h-4 w-4" /> New
+          </Button>
+        }
+      />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.5fr]">
         <Card>
-          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5 text-indigo-600" />
-              <CardTitle>Reading Lists</CardTitle>
-            </div>
-            <Button onClick={onCreateList} size="sm" className="gap-1">
-              <Plus className="h-4 w-4" /> New
-            </Button>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Lists</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="relative">

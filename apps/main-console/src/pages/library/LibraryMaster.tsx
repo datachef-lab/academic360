@@ -85,6 +85,11 @@ const quickLinks = [
     url: "/dashboard/library/reports",
     icon: FileBarChart,
   },
+  {
+    title: "Digital Twin",
+    url: "/dashboard/library/digital-twin",
+    icon: MapPin,
+  },
 ];
 
 const masterLinks = [

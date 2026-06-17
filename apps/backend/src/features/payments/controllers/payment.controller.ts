@@ -34,6 +34,7 @@ import {
 import { findApplicationFormModelById } from "@/features/admissions/services/application-form.service.js";
 import { paytmConfig, isPaytmConfigured } from "../config/paytm.config.js";
 import { sendFeeReceiptEmailForPaymentId } from "../services/fee-receipt-notification.service.js";
+import { settleLibraryFinePayment } from "@/features/library/services/library-fine-payment.service.js";
 
 function normalizePaytmTxnStatus(value: unknown): string {
   return String(value ?? "")
@@ -634,7 +635,25 @@ export const paymentCallbackHandler = async (
       }
 
       if (updatedPaymentOnSuccess?.id) {
-        await sendFeeReceiptEmailForPaymentId(updatedPaymentOnSuccess.id);
+        // Library-fine bridge: when the Paytm callback flips a LIBRARY_FINE
+        // payment to SUCCESS, mark the corresponding book_circulation as paid
+        // and emit LIBRARY_FINE_PAID. (Fee receipts are handled below for the
+        // FEES context — they're independent code paths.)
+        if (updatedPaymentOnSuccess.context === "LIBRARY_FINE") {
+          try {
+            await settleLibraryFinePayment(
+              updatedPaymentOnSuccess.id,
+              "SUCCESS",
+            );
+          } catch (e) {
+            console.error("[Paytm callback] library-fine settle failed", {
+              paymentId: updatedPaymentOnSuccess.id,
+              error: e,
+            });
+          }
+        } else {
+          await sendFeeReceiptEmailForPaymentId(updatedPaymentOnSuccess.id);
+        }
       }
     } catch (updateError) {
       callbackUpdateFailed = true;

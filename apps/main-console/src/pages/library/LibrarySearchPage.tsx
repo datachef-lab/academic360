@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -14,7 +12,16 @@ import {
 } from "@/components/ui/table";
 import { BookText, Loader2, Newspaper, Search, Library } from "lucide-react";
 import { librarySearch } from "@/services/library-search.service";
+import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
 import type { LibrarySearchHit } from "@/services/library-search.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 
 type HitType = "ALL" | "BOOK" | "JOURNAL" | "COPY" | "ARTICLE";
 
@@ -29,6 +36,7 @@ const TYPE_META: Record<
 };
 
 export default function LibrarySearchPage() {
+  const [activeBranchId] = useActiveLibraryBranchId();
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [activeType, setActiveType] = useState<HitType>("ALL");
@@ -53,6 +61,7 @@ export default function LibrarySearchPage() {
         q: debounced.trim(),
         type: activeType === "ALL" ? undefined : activeType,
         limit: 50,
+        ...(activeBranchId != null ? { branchId: activeBranchId } : {}),
       });
       setHits(res.payload?.hits ?? []);
       setTotal(res.payload?.total ?? 0);
@@ -61,22 +70,21 @@ export default function LibrarySearchPage() {
     } finally {
       setLoading(false);
     }
-  }, [debounced, activeType]);
+  }, [debounced, activeType, activeBranchId]);
 
   useEffect(() => {
     void runSearch();
   }, [runSearch]);
 
   return (
-    <div className="p-4 sm:p-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <Search className="h-5 w-5 text-indigo-600" />
-            <CardTitle>Library Discovery</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="min-w-0 p-2 sm:p-4">
+      <LibraryPageHeader
+        icon={Search}
+        title="Library Discovery"
+        subtitle="Search the entire library catalogue across books, journals, copies, and articles."
+      />
+      <div className="rounded-md border bg-background p-3 sm:p-4">
+        <div className="space-y-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
@@ -143,12 +151,12 @@ export default function LibrarySearchPage() {
               {/* Desktop table */}
               <div className="hidden sm:block">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className={STICKY_THEAD_CLASS}>
                     <TableRow>
-                      <TableHead className="w-24">Type</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Subtitle</TableHead>
-                      <TableHead>Meta</TableHead>
+                      <TableHead className={cn(STICKY_TH_LEFT, "w-24")}>Type</TableHead>
+                      <TableHead className={STICKY_TH_BASE}>Title</TableHead>
+                      <TableHead className={STICKY_TH_BASE}>Subtitle</TableHead>
+                      <TableHead className={STICKY_TH_RIGHT}>Meta</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -174,8 +182,8 @@ export default function LibrarySearchPage() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

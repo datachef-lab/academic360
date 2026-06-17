@@ -1,6 +1,18 @@
 import ExcelJS from "exceljs";
 import { db } from "@/db/index.js";
-import { and, desc, eq, gte, ilike, inArray, lt, or, SQL } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  lt,
+  or,
+  SQL,
+} from "drizzle-orm";
+import { ApiError } from "@/utils/ApiError.js";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
@@ -13,7 +25,10 @@ import { userModel } from "@repo/db/schemas/models/user/user.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model.js";
 import { getLibraryEntryExitPreviewByUserId } from "@/features/library/services/library-entry-exit.service.js";
-import { resolvePolicyForCirculation } from "@/features/library/services/circulation-policy-resolver.service.js";
+import {
+  resolveCurrentClassIdForUser,
+  resolvePolicyForCirculation,
+} from "@/features/library/services/circulation-policy-resolver.service.js";
 import { countWorkingDaysBetween } from "@/features/library/services/holiday-calendar.service.js";
 import { emitLibraryNotification } from "@/features/library/services/library-notifications.service.js";
 
@@ -26,6 +41,7 @@ export type BookCirculationFilters = {
   userType?: UserType;
   status?: "ISSUED" | "OVERDUE" | "REISSUED" | "RETURNED";
   issueDate?: string;
+  branchId?: number;
 };
 
 export type BookCirculationListRow = {
@@ -111,10 +127,14 @@ const toDayBounds = (isoDate: string) => {
 };
 
 const buildCirculationFilterConditions = (
-  filters: Pick<BookCirculationFilters, "status" | "issueDate">,
+  filters: Pick<BookCirculationFilters, "status" | "issueDate" | "branchId">,
 ): SQL[] => {
   const conditions: SQL[] = [];
   const now = new Date();
+
+  if (filters.branchId != null) {
+    conditions.push(eq(bookCirculationModel.branchId, filters.branchId));
+  }
 
   if (filters.issueDate?.trim()) {
     const bounds = toDayBounds(filters.issueDate.trim());
@@ -487,11 +507,22 @@ export async function returnBookCirculationById(id: number): Promise<void> {
 
   let fineAmount = 0;
   if (actualReturn > base.returnTimestamp) {
-    const lateWorkingDays = await countWorkingDaysBetween(
-      base.returnTimestamp,
-      actualReturn,
-    );
-    const billableDays = Math.max(0, lateWorkingDays - policy.graceDays);
+    let lateDays: number;
+    if (policy.skipHolidaysInFine) {
+      // Class-specific holidays only apply to students; for staff/faculty this
+      // resolves to null and only org-wide holidays are subtracted.
+      const classId = await resolveCurrentClassIdForUser(base.userId);
+      lateDays = await countWorkingDaysBetween(
+        base.returnTimestamp,
+        actualReturn,
+        classId,
+      );
+    } else {
+      // Raw calendar-day fine — policy opted out of holiday exclusion.
+      const ms = actualReturn.getTime() - base.returnTimestamp.getTime();
+      lateDays = Math.max(0, Math.floor(ms / 86400000));
+    }
+    const billableDays = Math.max(0, lateDays - policy.graceDays);
     fineAmount = billableDays * policy.finePerDay;
   }
 
@@ -539,6 +570,20 @@ export async function reissueBookCirculationById(id: number): Promise<void> {
     base.userId,
     base.copyDetailsId,
   );
+
+  // Enforce policy.renewalLimit. One row in book_reissues = one prior renewal,
+  // so reissuing now would push the count to existingReissues + 1 ≤ renewalLimit.
+  const [{ existingReissues }] = await db
+    .select({ existingReissues: count() })
+    .from(bookReissueModel)
+    .where(eq(bookReissueModel.bookCirculationId, id));
+  if (existingReissues >= policy.renewalLimit) {
+    throw new ApiError(
+      400,
+      `Renewal limit reached (${policy.renewalLimit}). This book cannot be reissued again.`,
+    );
+  }
+
   const now = new Date();
   const due = new Date(now);
   due.setDate(due.getDate() + policy.loanDays);

@@ -54,6 +54,15 @@ import {
   upsertBookCirculationRows,
 } from "@/services/book-circulation.service";
 import { initiateLibraryFinePayment } from "@/services/library-fine-payment.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
+import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
 
 type Filters = {
   userType: "all" | (typeof userTypeEnum.enumValues)[number];
@@ -121,6 +130,7 @@ export default function BookCirculationPage() {
   const { user } = useAuth();
   const userId = user?.id?.toString();
   const { socket, isConnected } = useSocket({ userId });
+  const [activeBranchId] = useActiveLibraryBranchId();
 
   const todayIso = new Date().toISOString().slice(0, 10);
   const [rows, setRows] = useState<BookCirculationRow[]>([]);
@@ -205,6 +215,7 @@ export default function BookCirculationPage() {
         ...(filters.userType !== "all" ? { userType: filters.userType } : {}),
         ...(filters.status !== "all" ? { status: filters.status } : {}),
         ...(filters.issueDate ? { issueDate: filters.issueDate } : {}),
+        ...(activeBranchId != null ? { branchId: activeBranchId } : {}),
       });
       setRows(response.payload.rows);
       setTotal(response.payload.total);
@@ -214,7 +225,7 @@ export default function BookCirculationPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, search, filters]);
+  }, [page, limit, search, filters, activeBranchId]);
 
   useEffect(() => {
     void fetchRows();
@@ -417,18 +428,13 @@ export default function BookCirculationPage() {
   };
 
   return (
-    <div className="p-2 sm:p-4">
-      <Card className="border-none">
-        <CardHeader className="mb-3 rounded-md border bg-background p-3 sm:p-4">
-          <CardTitle className="flex items-center text-lg sm:text-xl">
-            <BookOpenCheck className="mr-2 h-6 w-6 border rounded-md p-1 border-slate-400" />
-            Book Circulation
-          </CardTitle>
-          <p className="text-[14px] sm:text-sm text-muted-foreground">
-            Track issued and returned books with due dates and fines.
-          </p>
-        </CardHeader>
-
+    <div className="min-w-0 p-2 sm:p-4">
+      <LibraryPageHeader
+        icon={BookOpenCheck}
+        title="Book Circulation"
+        subtitle="Track issued and returned books with due dates and fines."
+      />
+      <Card className="min-w-0 border-none">
         <CardContent className="px-0">
           <div className="mb-0 border-b bg-background p-2 sm:p-4">
             <div className="flex flex-wrap items-end gap-2">
@@ -492,30 +498,70 @@ export default function BookCirculationPage() {
                 className="border rounded-md w-full text-[14px]"
                 style={{ tableLayout: "fixed" }}
               >
-                <TableHeader>
+                <TableHeader className={STICKY_THEAD_CLASS}>
                   <TableRow>
-                    <TableHead className="bg-slate-100 w-[4%] px-1 sm:px-3 text-[14px] sm:text-xs">
+                    <TableHead
+                      className={cn(
+                        STICKY_TH_LEFT,
+                        "bg-slate-100 w-[4%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                      )}
+                    >
                       #
                     </TableHead>
-                    <TableHead className="bg-slate-100 w-[26%] px-1 sm:px-3 text-[14px] sm:text-xs">
+                    <TableHead
+                      className={cn(
+                        STICKY_TH_BASE,
+                        "bg-slate-100 w-[26%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                      )}
+                    >
                       User
                     </TableHead>
-                    <TableHead className="bg-slate-100 w-[12%] px-1 sm:px-3 text-[14px] sm:text-xs">
+                    <TableHead
+                      className={cn(
+                        STICKY_TH_BASE,
+                        "bg-slate-100 w-[12%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                      )}
+                    >
                       User Type
                     </TableHead>
-                    <TableHead className="bg-slate-100 w-[24%] px-1 sm:px-3 text-[14px] sm:text-xs">
+                    <TableHead
+                      className={cn(
+                        STICKY_TH_BASE,
+                        "bg-slate-100 w-[24%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                      )}
+                    >
                       Recent Books Summary
                     </TableHead>
-                    <TableHead className="bg-slate-100 w-[9%] px-1 sm:px-3 text-[14px] sm:text-xs">
+                    <TableHead
+                      className={cn(
+                        STICKY_TH_BASE,
+                        "bg-slate-100 w-[9%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                      )}
+                    >
                       No. of Days Late
                     </TableHead>
-                    <TableHead className="bg-slate-100 w-[9%] px-1 sm:px-3 text-[14px] sm:text-xs">
+                    <TableHead
+                      className={cn(
+                        STICKY_TH_BASE,
+                        "bg-slate-100 w-[9%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                      )}
+                    >
                       Fine
                     </TableHead>
-                    <TableHead className="bg-slate-100 w-[13%] px-1 sm:px-3 text-[14px] sm:text-xs">
+                    <TableHead
+                      className={cn(
+                        STICKY_TH_BASE,
+                        "bg-slate-100 w-[13%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                      )}
+                    >
                       Last Updated
                     </TableHead>
-                    <TableHead className="bg-slate-100 w-[7%] px-1 sm:px-3 text-[14px] sm:text-xs">
+                    <TableHead
+                      className={cn(
+                        STICKY_TH_RIGHT,
+                        "bg-slate-100 w-[7%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                      )}
+                    >
                       Action
                     </TableHead>
                   </TableRow>
@@ -895,30 +941,56 @@ export default function BookCirculationPage() {
 
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-md border">
                 <Table className="w-full table-fixed">
-                  <TableHeader>
+                  <TableHeader className={STICKY_THEAD_CLASS}>
                     <TableRow className="bg-slate-100">
-                      <TableHead className="sticky top-0 z-30 w-10 bg-slate-100">#</TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[24%] bg-slate-100">Book</TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[9%] bg-slate-100">
+                      <TableHead
+                        className={cn(STICKY_TH_LEFT, "sticky top-0 z-30 w-10 bg-slate-100")}
+                      >
+                        #
+                      </TableHead>
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[24%] bg-slate-100")}
+                      >
+                        Book
+                      </TableHead>
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[9%] bg-slate-100")}
+                      >
                         Access No.
                       </TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[12%] bg-slate-100">
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[12%] bg-slate-100")}
+                      >
                         Author
                       </TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[13%] bg-slate-100">
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[13%] bg-slate-100")}
+                      >
                         Borrowing Type
                       </TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[11%] bg-slate-100">
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[11%] bg-slate-100")}
+                      >
                         Issued At
                       </TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[10%] bg-slate-100">
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[10%] bg-slate-100")}
+                      >
                         Return Date
                       </TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[10%] bg-slate-100">
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[10%] bg-slate-100")}
+                      >
                         Returned On
                       </TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[5%] bg-slate-100">Fine</TableHead>
-                      <TableHead className="sticky top-0 z-30 w-[12%] bg-slate-100">
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[5%] bg-slate-100")}
+                      >
+                        Fine
+                      </TableHead>
+                      <TableHead
+                        className={cn(STICKY_TH_RIGHT, "sticky top-0 z-30 w-[12%] bg-slate-100")}
+                      >
                         <span className="inline-flex items-center gap-1">
                           <Settings2 className="h-3.5 w-3.5" />
                           Actions

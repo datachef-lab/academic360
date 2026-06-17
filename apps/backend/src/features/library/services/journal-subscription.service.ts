@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { ApiError } from "@/utils/ApiError.js";
-import { and, count, desc, eq, gte, lte, SQL } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNull, lte, SQL } from "drizzle-orm";
 import { journalSubscriptionModel } from "@repo/db/schemas/models/library/journal-subscription.model.js";
 import { journalIssueModel } from "@repo/db/schemas/models/library/journal-issue.model.js";
 import { journalModel } from "@repo/db/schemas/models/library/journal.model.js";
@@ -265,22 +265,44 @@ export async function findMissingIssues(asOf: Date = new Date()): Promise<
   Array<{
     id: number;
     subscriptionId: number;
-    issueNumber: string;
+    journalTitle: string | null;
+    issueNumber: string | null;
     expectedDate: string;
+    daysLate: number;
   }>
 > {
-  return db
+  const today = asOf.toISOString().slice(0, 10);
+  const rows = await db
     .select({
       id: journalIssueModel.id,
       subscriptionId: journalIssueModel.subscriptionId,
       issueNumber: journalIssueModel.issueNumber,
       expectedDate: journalIssueModel.expectedDate,
+      journalTitle: journalModel.title,
     })
     .from(journalIssueModel)
+    .leftJoin(
+      journalSubscriptionModel,
+      eq(journalSubscriptionModel.id, journalIssueModel.subscriptionId),
+    )
+    .leftJoin(
+      journalModel,
+      eq(journalModel.id, journalSubscriptionModel.journalId),
+    )
     .where(
       and(
-        lte(journalIssueModel.expectedDate, asOf.toISOString().slice(0, 10)),
-        // receivedDate IS NULL
+        lte(journalIssueModel.expectedDate, today),
+        isNull(journalIssueModel.receivedDate),
       ),
-    );
+    )
+    .orderBy(journalIssueModel.expectedDate);
+  return rows.map((r) => ({
+    ...r,
+    daysLate: Math.max(
+      0,
+      Math.floor(
+        (asOf.getTime() - new Date(r.expectedDate).getTime()) / 86400000,
+      ),
+    ),
+  }));
 }

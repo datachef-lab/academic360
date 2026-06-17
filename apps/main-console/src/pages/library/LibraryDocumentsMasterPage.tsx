@@ -46,6 +46,13 @@ import {
 } from "@/services/library-document-types.service";
 import type { LibraryArticleRow } from "@/services/library-articles.service";
 import { getLibraryArticles } from "@/services/library-articles.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 const NONE = "__none__";
 
@@ -366,13 +373,21 @@ export default function LibraryDocumentsMasterPage() {
                 <div className="hidden min-w-0 pb-2 lg:block">
                   <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
                     <Table containerClassName="min-w-[880px]">
-                      <TableHeader>
+                      <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[280px]">Document Type</TableHead>
-                          <TableHead className="min-w-[240px]">Article</TableHead>
-                          <TableHead className="min-w-[120px]">Updated</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                          <TableHead className={cn(STICKY_TH_LEFT, "w-10")}>#</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[280px]")}>
+                            Document Type
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[240px]")}>
+                            Article
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Updated
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "w-[90px] text-right")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

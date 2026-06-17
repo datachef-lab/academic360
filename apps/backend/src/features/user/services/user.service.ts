@@ -4,6 +4,7 @@ import { db } from "@/db/index.js";
 import crypto from "crypto";
 
 import { User, userModel } from "@repo/db/schemas/models/user";
+import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 // import { findStudentByUserId } from "./student.service.js";
 import { findAll } from "@/utils/helper.js";
@@ -176,6 +177,59 @@ export async function findAllUsers(
     totalElements: 0,
     totalPages: Math.ceil(Number(0) / pageSize),
   };
+}
+
+export type StudentPickerOption = {
+  userId: number;
+  studentId: number;
+  name: string;
+  uid: string;
+  rollNumber: string | null;
+  registrationNumber: string | null;
+};
+
+/**
+ * Lightweight picker source for any "select a student" UI. Joins `users` →
+ * `students` so the response carries the human-facing UID (e.g. BESC/2025/123)
+ * which is what library staff use to identify a student — not the internal
+ * `userId`. Supports an optional `search` prefix matched against UID + name +
+ * roll number + registration number.
+ */
+export async function findStudentPickerOptions(
+  search?: string,
+  limit: number = 500,
+): Promise<StudentPickerOption[]> {
+  const trimmed = search?.trim();
+  const conditions = [
+    eq(userModel.type, "STUDENT"),
+    eq(userModel.isActive, true),
+  ];
+  if (trimmed) {
+    const term = `%${trimmed}%`;
+    conditions.push(
+      or(
+        ilike(userModel.name, term),
+        ilike(studentModel.uid, term),
+        ilike(studentModel.rollNumber, term),
+        ilike(studentModel.registrationNumber, term),
+      )!,
+    );
+  }
+  const rows = await db
+    .select({
+      userId: userModel.id,
+      studentId: studentModel.id,
+      name: userModel.name,
+      uid: studentModel.uid,
+      rollNumber: studentModel.rollNumber,
+      registrationNumber: studentModel.registrationNumber,
+    })
+    .from(studentModel)
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .where(and(...conditions))
+    .orderBy(userModel.name)
+    .limit(Math.min(limit, 1000));
+  return rows;
 }
 
 export async function findById(id: number) {

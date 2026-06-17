@@ -49,6 +49,15 @@ import {
   markLibraryEntryExitAsCheckedOut,
   searchLibraryUsers,
 } from "@/services/library-entry-exit.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
+import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
 
 type Filters = {
   userType: "all" | LibraryUserType;
@@ -246,12 +255,12 @@ function EntryExitUserCard({
         {userDetailColumns.length > 0 && (
           <div className="mb-6 rounded-lg border border-slate-200 overflow-hidden overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className={STICKY_THEAD_CLASS}>
                 <TableRow className="bg-slate-100">
                   {userDetailColumns.map((col) => (
                     <TableHead
+                      className={cn(STICKY_TH_LEFT, "whitespace-nowrap font-semibold text-center")}
                       key={col.label}
-                      className="whitespace-nowrap font-semibold text-center"
                     >
                       {col.label}
                     </TableHead>
@@ -371,6 +380,7 @@ export default function EntryExitPage() {
   const { user } = useAuth();
   const userId = user?.id?.toString();
   const { socket, isConnected } = useSocket({ userId });
+  const [activeBranchId] = useActiveLibraryBranchId();
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [searchText, setSearchText] = useState("");
   const [filters, setFilters] = useState<Filters>({
@@ -404,6 +414,7 @@ export default function EntryExitPage() {
         ...(filters.userType !== "all" ? { userType: filters.userType } : {}),
         ...(filters.currentStatus !== "all" ? { currentStatus: filters.currentStatus } : {}),
         ...(filters.date ? { date: filters.date } : {}),
+        ...(activeBranchId != null ? { branchId: activeBranchId } : {}),
       });
 
       setRows(response.payload.rows);
@@ -418,7 +429,15 @@ export default function EntryExitPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, searchText, filters.userType, filters.currentStatus, filters.date]);
+  }, [
+    page,
+    limit,
+    searchText,
+    filters.userType,
+    filters.currentStatus,
+    filters.date,
+    activeBranchId,
+  ]);
 
   useEffect(() => {
     void fetchRows();
@@ -645,32 +664,24 @@ export default function EntryExitPage() {
   };
 
   return (
-    <div className="min-h-screen py-4 sm:py-8">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4">
-        <Card className="mb-4 sm:mb-6 border-none">
-          <CardHeader className="mb-3 rounded-md border bg-background p-3 sm:p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <CardTitle className="flex items-center text-lg sm:text-xl">
-                  <DoorOpen className="mr-2 h-6 w-6 border rounded-md p-1 border-slate-400" />
-                  Entry / Exit
-                </CardTitle>
-                <p className="text-[14px] sm:text-sm text-muted-foreground">
-                  Search users and record library check-in or check-out
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDownload}
-                className="w-full sm:w-auto shrink-0"
-              >
-                <List className="w-4 h-4 mr-2" />
-                Download Report
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
+    <div className="min-h-screen py-2 sm:py-4">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4">
+        <LibraryPageHeader
+          icon={DoorOpen}
+          title="Library Entry / Exit"
+          subtitle="Search users and record library check-in or check-out."
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownload}
+              className="w-full sm:w-auto shrink-0"
+            >
+              <List className="w-4 h-4 mr-2" />
+              Download Report
+            </Button>
+          }
+        />
 
         <Card className="mb-4 sm:mb-6">
           <CardHeader className="p-4 sm:p-6">
@@ -846,24 +857,42 @@ export default function EntryExitPage() {
             <div className="relative" style={{ height: "600px" }}>
               <div className="h-full overflow-y-auto overflow-x-auto">
                 <Table className="border rounded-md min-w-[850px]" style={{ tableLayout: "fixed" }}>
-                  <TableHeader>
+                  <TableHeader className={STICKY_THEAD_CLASS}>
                     <TableRow>
-                      <TableHead className="bg-slate-100" style={{ width: 40 }}>
+                      <TableHead
+                        className={cn(STICKY_TH_LEFT, "bg-slate-100")}
+                        style={{ width: 40 }}
+                      >
                         #
                       </TableHead>
-                      <TableHead className="bg-slate-100" style={{ width: 240 }}>
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "bg-slate-100")}
+                        style={{ width: 240 }}
+                      >
                         User
                       </TableHead>
-                      <TableHead className="bg-slate-100" style={{ width: 120 }}>
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "bg-slate-100")}
+                        style={{ width: 120 }}
+                      >
                         User Type
                       </TableHead>
-                      <TableHead className="bg-slate-100" style={{ width: 130 }}>
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "bg-slate-100")}
+                        style={{ width: 130 }}
+                      >
                         Current Status
                       </TableHead>
-                      <TableHead className="bg-slate-100" style={{ width: 190 }}>
+                      <TableHead
+                        className={cn(STICKY_TH_BASE, "bg-slate-100")}
+                        style={{ width: 190 }}
+                      >
                         Entry Time
                       </TableHead>
-                      <TableHead className="bg-slate-100" style={{ width: 190 }}>
+                      <TableHead
+                        className={cn(STICKY_TH_RIGHT, "bg-slate-100")}
+                        style={{ width: 190 }}
+                      >
                         Exit Time
                       </TableHead>
                     </TableRow>

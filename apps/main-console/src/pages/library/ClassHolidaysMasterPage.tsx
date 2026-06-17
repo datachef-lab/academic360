@@ -44,6 +44,13 @@ import {
 import { getLibraryHolidays } from "@/services/library-holidays.service";
 import { getProgramCourses } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 type FormState = {
   holidayId: string;
@@ -379,15 +386,27 @@ export default function ClassHolidaysMasterPage() {
                 <div className="hidden min-w-0 pb-2 lg:block">
                   <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
                     <Table containerClassName="min-w-[1000px]">
-                      <TableHeader>
+                      <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[220px]">Holiday</TableHead>
-                          <TableHead className="min-w-[200px]">Range</TableHead>
-                          <TableHead className="min-w-[220px]">Program course</TableHead>
-                          <TableHead className="min-w-[140px]">Class</TableHead>
-                          <TableHead className="min-w-[120px]">Status</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                          <TableHead className={cn(STICKY_TH_LEFT, "w-10")}>#</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[220px]")}>
+                            Holiday
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[200px]")}>
+                            Range
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[220px]")}>
+                            Program course
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[140px]")}>
+                            Class
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Status
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "w-[90px] text-right")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

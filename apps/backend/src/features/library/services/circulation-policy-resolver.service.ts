@@ -1,15 +1,18 @@
 import { db } from "@/db/index.js";
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { circulationPolicyModel } from "@repo/db/schemas/models/library/circulation-policy.model.js";
 import { patronCategoryModel } from "@repo/db/schemas/models/library/patron-category.model.js";
 import { userModel } from "@repo/db/schemas/models/user/user.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
+import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
+import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model.js";
 
 export type EffectivePolicy = {
   loanDays: number;
   finePerDay: number;
   renewalLimit: number;
   graceDays: number;
+  skipHolidaysInFine: boolean;
   policyId: number | null;
 };
 
@@ -18,6 +21,7 @@ const DEFAULTS: EffectivePolicy = {
   finePerDay: 1,
   renewalLimit: 1,
   graceDays: 0,
+  skipHolidaysInFine: true,
   policyId: null,
 };
 
@@ -105,6 +109,7 @@ export async function resolveEffectivePolicy(args: {
     finePerDay: Number(best.finePerDay ?? DEFAULTS.finePerDay),
     renewalLimit: best.renewalLimit ?? DEFAULTS.renewalLimit,
     graceDays: best.graceDays ?? DEFAULTS.graceDays,
+    skipHolidaysInFine: best.skipHolidaysInFine ?? DEFAULTS.skipHolidaysInFine,
     policyId: best.id,
   };
 }
@@ -118,4 +123,27 @@ export async function resolvePolicyForCirculation(
     resolveItemCategoryIdForCopy(copyDetailsId),
   ]);
   return resolveEffectivePolicy({ patronCategoryId, itemCategoryId });
+}
+
+/**
+ * Resolves the current class of a user (when the user is a student). Used by the
+ * fine calculator so class-specific holidays (class_holiday rows) are excluded
+ * from billable days. Returns null for non-students or when no promotion exists.
+ */
+export async function resolveCurrentClassIdForUser(
+  userId: number,
+): Promise<number | null> {
+  const [student] = await db
+    .select({ id: studentModel.id })
+    .from(studentModel)
+    .where(eq(studentModel.userId, userId))
+    .limit(1);
+  if (!student) return null;
+  const [promo] = await db
+    .select({ classId: promotionModel.classId })
+    .from(promotionModel)
+    .where(eq(promotionModel.studentId, student.id))
+    .orderBy(desc(promotionModel.id))
+    .limit(1);
+  return promo?.classId ?? null;
 }

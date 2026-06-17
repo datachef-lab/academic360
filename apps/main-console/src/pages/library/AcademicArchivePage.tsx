@@ -32,6 +32,7 @@ import { Archive, Download, Loader2, Pencil, Plus, Search, Trash2 } from "lucide
 import {
   createAcademicArchive,
   deleteAcademicArchive,
+  getAcademicArchiveUrl,
   getAcademicArchives,
   updateAcademicArchive,
 } from "@/services/library-academic-archives.service";
@@ -42,6 +43,14 @@ import type {
 import { Combobox } from "@/components/ui/combobox";
 import { getProgramCourses } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 type FormState = {
   archiveType: string;
@@ -86,10 +95,18 @@ const formToBody = (f: FormState): AcademicArchiveUpsertBody => ({
   programCourseId: f.programCourseId ? Number(f.programCourseId) : null,
   classId: f.classId ? Number(f.classId) : null,
   year: f.year ? Number(f.year) : null,
-  fileKey: f.fileKey.trim(),
+  // Backend derives fileKey/mimeType/fileSizeBytes from the uploaded file when one is sent.
+  // For metadata-only edits, controller preserves the existing fileKey.
+  fileKey: f.fileKey.trim() || undefined,
   mimeType: f.mimeType.trim() || null,
   tags: f.tags.trim() || null,
 });
+
+const formatBytes = (n: number): string => {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+};
 
 export default function AcademicArchivePage() {
   const [rows, setRows] = useState<AcademicArchiveRow[]>([]);
@@ -108,6 +125,7 @@ export default function AcademicArchivePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [formFile, setFormFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<AcademicArchiveRow | null>(null);
 
@@ -161,27 +179,50 @@ export default function AcademicArchivePage() {
   const onCreate = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setFormFile(null);
     setDialogOpen(true);
   };
 
   const onEdit = (r: AcademicArchiveRow) => {
     setEditingId(r.id);
     setForm(rowToForm(r));
+    setFormFile(null);
     setDialogOpen(true);
   };
 
+  const onView = async (row: AcademicArchiveRow) => {
+    try {
+      const res = await getAcademicArchiveUrl(row.id);
+      const url = res.payload?.url;
+      if (!url) {
+        toast.error("No file attached.");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Could not open file.";
+      toast.error(msg);
+    }
+  };
+
   const onSubmit = async () => {
-    if (!form.archiveType.trim() || !form.title.trim() || !form.fileKey.trim()) {
-      toast.error("Type, title, and file key are required.");
+    if (!form.archiveType.trim() || !form.title.trim()) {
+      toast.error("Type and title are required.");
+      return;
+    }
+    if (!editingId && !formFile) {
+      toast.error("Please choose a file to upload.");
       return;
     }
     setSaving(true);
     try {
       if (editingId) {
-        await updateAcademicArchive(editingId, formToBody(form));
+        await updateAcademicArchive(editingId, formToBody(form), formFile);
         toast.success("Archive updated.");
       } else {
-        await createAcademicArchive(formToBody(form));
+        await createAcademicArchive(formToBody(form), formFile);
         toast.success("Archive created.");
       }
       setDialogOpen(false);
@@ -212,18 +253,19 @@ export default function AcademicArchivePage() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <Archive className="h-5 w-5 text-indigo-600" />
-            <CardTitle>Academic Archive</CardTitle>
-          </div>
+    <div className="min-w-0 p-2 sm:p-4">
+      <LibraryPageHeader
+        icon={Archive}
+        title="Academic Archive"
+        subtitle="Syllabi, question papers, lecture notes scoped by program-course / class / year."
+        actions={
           <Button onClick={onCreate} className="gap-1">
             <Plus className="h-4 w-4" /> Add entry
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
+        }
+      />
+      <Card className="min-w-0 border-none">
+        <CardContent className="space-y-3 px-0">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
             <div className="relative sm:col-span-2">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -279,14 +321,13 @@ export default function AcademicArchivePage() {
                       ) : null}
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <a
-                        href={r.fileKey}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => void onView(r)}
                         className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline"
                       >
                         <Download className="h-3.5 w-3.5" /> View
-                      </a>
+                      </button>
                       <div className="flex gap-1">
                         <Button
                           size="icon"
@@ -315,14 +356,14 @@ export default function AcademicArchivePage() {
           {/* Desktop */}
           <div className="hidden sm:block">
             <Table>
-              <TableHeader>
+              <TableHeader className={STICKY_THEAD_CLASS}>
                 <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Program / Class</TableHead>
-                  <TableHead>Year</TableHead>
-                  <TableHead>File</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className={STICKY_TH_LEFT}>Title</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Type</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Program / Class</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Year</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>File</TableHead>
+                  <TableHead className={cn(STICKY_TH_RIGHT, "text-right")}>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -349,14 +390,13 @@ export default function AcademicArchivePage() {
                       </TableCell>
                       <TableCell>{r.year ?? "—"}</TableCell>
                       <TableCell>
-                        <a
-                          href={r.fileKey}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => void onView(r)}
                           className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
                         >
                           <Download className="h-4 w-4" /> View
-                        </a>
+                        </button>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -462,27 +502,28 @@ export default function AcademicArchivePage() {
               </div>
             </div>
             <div>
-              <Label>File key (S3 path) *</Label>
+              <Label>File {editingId ? "(leave empty to keep current)" : "*"}</Label>
               <Input
-                value={form.fileKey}
-                onChange={(e) => setForm({ ...form, fileKey: e.target.value })}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
+                onChange={(e) => setFormFile(e.target.files?.[0] ?? null)}
               />
+              {formFile ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formFile.name} · {formatBytes(formFile.size)}
+                </p>
+              ) : editingId && form.fileKey ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Current file: {form.fileKey.split("/").pop()}
+                </p>
+              ) : null}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label>MIME type</Label>
-                <Input
-                  value={form.mimeType}
-                  onChange={(e) => setForm({ ...form, mimeType: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Tags (comma separated)</Label>
-                <Input
-                  value={form.tags}
-                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                />
-              </div>
+            <div>
+              <Label>Tags (comma separated)</Label>
+              <Input
+                value={form.tags}
+                onChange={(e) => setForm({ ...form, tags: e.target.value })}
+              />
             </div>
             <div>
               <Label>Description</Label>

@@ -3,12 +3,15 @@ import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { branchModel } from "./branch.model";
 import { copyDetailsModel } from "./copy-details.model";
+import { libraryZoneModel } from "./library-zone.model";
 import { userModel } from "../user";
 
 export const libraryGateEventModel = pgTable("library_gate_events", {
     id: serial().primaryKey(),
     branchId: integer("branch_id_fk")
         .references(() => branchModel.id),
+    zoneId: integer("zone_id_fk")
+        .references(() => libraryZoneModel.id),
     gateIdentifier: varchar({ length: 255 }),
     eventType: varchar({ length: 100 }).notNull(),
     rfidNumber: varchar({ length: 255 }),

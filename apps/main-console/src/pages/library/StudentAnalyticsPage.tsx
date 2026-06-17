@@ -19,7 +19,15 @@ import {
 } from "@/services/library-student-analytics.service";
 import type { StudentLibraryAnalyticsRow } from "@/services/library-student-analytics.service";
 import { Combobox } from "@/components/ui/combobox";
-import { findAllUsers } from "@/services/user";
+import { getStudentPickerOptions } from "@/services/user";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 export default function StudentAnalyticsPage() {
   const [rows, setRows] = useState<StudentLibraryAnalyticsRow[]>([]);
@@ -38,12 +46,12 @@ export default function StudentAnalyticsPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const res = await findAllUsers(1, 1000, "STUDENT");
-        const list = res.payload?.content ?? [];
+        const res = await getStudentPickerOptions({ limit: 1000 });
+        const list = res.payload ?? [];
         setStudentOptions(
-          list.map((u) => ({
-            value: String(u.id),
-            label: u.name ? `${u.name} (#${u.id})` : `User #${u.id}`,
+          list.map((s) => ({
+            value: String(s.userId),
+            label: `${s.name} (UID: ${s.uid})`,
           })),
         );
       } catch (e) {
@@ -95,15 +103,14 @@ export default function StudentAnalyticsPage() {
   };
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="min-w-0 space-y-4 p-2 sm:p-4">
+      <LibraryPageHeader
+        icon={BarChart3}
+        title="Student Library Analytics"
+        subtitle="Per-student usage summary: issues, returns, overdue, fines paid, visits, average grade."
+      />
       <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-indigo-600" />
-            <CardTitle>Student Library Analytics</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="rounded-lg border bg-indigo-50/40 p-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-indigo-700">
               Recompute for user
@@ -186,17 +193,17 @@ export default function StudentAnalyticsPage() {
           {/* Desktop table */}
           <div className="hidden sm:block">
             <Table>
-              <TableHeader>
+              <TableHeader className={STICKY_THEAD_CLASS}>
                 <TableRow>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Academic year</TableHead>
-                  <TableHead>Issues</TableHead>
-                  <TableHead>Returns</TableHead>
-                  <TableHead>Overdue</TableHead>
-                  <TableHead>Fines paid</TableHead>
-                  <TableHead>Visits</TableHead>
-                  <TableHead>Avg grade</TableHead>
-                  <TableHead>Computed</TableHead>
+                  <TableHead className={STICKY_TH_LEFT}>User ID</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Academic year</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Issues</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Returns</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Overdue</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Fines paid</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Visits</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Avg grade</TableHead>
+                  <TableHead className={STICKY_TH_RIGHT}>Computed</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

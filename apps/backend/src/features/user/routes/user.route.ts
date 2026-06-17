@@ -2,6 +2,7 @@ import express, { NextFunction, Request, Response } from "express";
 import {
   getAllUsers,
   getSearchedUsers,
+  getStudentPickerOptionsController,
   getUserByEmail,
   getUserById,
   toggleDisableUser,
@@ -36,6 +37,8 @@ router.use(verifyJWT);
 
 // Users
 router.get("/", getAllUsers);
+
+router.get("/student-picker", getStudentPickerOptionsController);
 
 router.get("/search", getSearchedUsers);
 

@@ -30,6 +30,7 @@ type LibraryEntryExitFilters = {
   userType?: UserType;
   currentStatus?: CurrentStatus;
   date?: string;
+  branchId?: number;
 };
 
 export type LibraryEntryExitListRow = LibraryEntryExit & {
@@ -147,6 +148,10 @@ const buildFilterConditions = (
 
   if (filters.userType) {
     conditions.push(eq(userModel.type, filters.userType));
+  }
+
+  if (filters.branchId != null) {
+    conditions.push(eq(libraryEntryExitModel.branchId, filters.branchId));
   }
 
   if (filters.currentStatus) {

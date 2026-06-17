@@ -164,6 +164,7 @@ export async function listGateEvents(filters: {
 
 export async function recordGateEvent(input: {
   branchId?: number | null;
+  zoneId?: number | null;
   gateIdentifier?: string | null;
   eventType: string;
   rfidNumber?: string | null;
@@ -179,6 +180,7 @@ export async function recordGateEvent(input: {
     .insert(libraryGateEventModel)
     .values({
       branchId: input.branchId ?? null,
+      zoneId: input.zoneId ?? null,
       gateIdentifier: input.gateIdentifier?.trim() || null,
       eventType: input.eventType.trim(),
       rfidNumber: input.rfidNumber?.trim() || null,

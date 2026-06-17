@@ -365,3 +365,115 @@ export const deleteBookController = async (
     handleError(error, res, next);
   }
 };
+
+import {
+  bookToDublinCoreXml,
+  parseMarc21Stream,
+} from "@/features/library/services/library-catalog-interop.service.js";
+
+// MARC files are usually small (<5MB), single-file upload.
+const marcUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
+export const importMarcMiddleware = marcUpload.single("file");
+
+/**
+ * Import MARC21 records — parses every record in the uploaded .mrc file and
+ * returns a preview list. The librarian decides which ones to commit via a
+ * subsequent POST (out of scope for v1: ingest is preview-only).
+ */
+export const importMarcController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!req.file?.buffer) {
+      throw new ApiError(
+        400,
+        "MARC file is required (multipart field 'file').",
+      );
+    }
+    const records = parseMarc21Stream(req.file.buffer);
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "SUCCESS",
+        {
+          count: records.length,
+          previews: records.map((r) => ({
+            isbn: r.isbn,
+            title: r.title,
+            subTitle: r.subTitle,
+            author: r.author,
+            publisher: r.publisher,
+            publishedYear: r.publishedYear,
+            edition: r.edition,
+            keywords: r.keywords,
+          })),
+        },
+        "MARC records parsed.",
+      ),
+    );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+/**
+ * Dublin Core XML for one book — useful for OAI-PMH / metadata harvesting.
+ * Returns text/xml so a browser or curl can save the .xml directly.
+ */
+export const getBookDublinCoreController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (!id || Number.isNaN(id)) throw new ApiError(400, "Invalid book id.");
+    const xml = await bookToDublinCoreXml(id);
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.status(200).send(xml);
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+import { federatedSearch } from "@/features/library/services/library-federated-search.service.js";
+
+/**
+ * Z39.50 / SRU federated search proxy.
+ * Query: ?q=physics&max=10
+ */
+export const federatedCatalogSearchController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const q = typeof req.query.q === "string" ? req.query.q : "";
+    if (!q.trim()) {
+      res
+        .status(200)
+        .json(
+          new ApiResponse(200, "SUCCESS", [], "Empty query — no upstream hit."),
+        );
+      return;
+    }
+    const max = Number(req.query.max ?? 10);
+    const hits = await federatedSearch(
+      q,
+      Number.isNaN(max) ? 10 : Math.min(Math.max(max, 1), 25),
+    );
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", hits, "Federated search complete."),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};

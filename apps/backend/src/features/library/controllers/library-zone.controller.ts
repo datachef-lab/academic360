@@ -160,6 +160,7 @@ export const recordGateEventController = async (
     const b = req.body as Record<string, unknown>;
     const id = await recordGateEvent({
       branchId: optId(b.branchId),
+      zoneId: optId(b.zoneId),
       gateIdentifier:
         typeof b.gateIdentifier === "string" ? b.gateIdentifier : null,
       eventType: typeof b.eventType === "string" ? b.eventType : "",
@@ -173,6 +174,49 @@ export const recordGateEventController = async (
     res
       .status(201)
       .json(new ApiResponse(201, "SUCCESS", { id }, "Gate event recorded."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+};
+
+import {
+  getZoneOccupancy,
+  listZonesOccupancyForBranch,
+} from "@/features/library/services/library-zone-occupancy.service.js";
+
+export const getZoneOccupancyController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const zoneId = parseId(req.params.id);
+    const branchId = optId(req.query.branchId) ?? undefined;
+    if (!zoneId) throw new ApiError(400, "Invalid zone id.");
+    const payload = await getZoneOccupancy(zoneId, branchId);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", payload, "Zone occupancy fetched."),
+      );
+  } catch (e) {
+    handleError(e, res, next);
+  }
+};
+
+export const listZonesOccupancyController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const branchId = optId(req.query.branchId) ?? undefined;
+    const rows = await listZonesOccupancyForBranch(branchId);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", rows, "All zone occupancies fetched."),
+      );
   } catch (e) {
     handleError(e, res, next);
   }

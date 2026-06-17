@@ -47,6 +47,7 @@ import type {
 import { getJournalList } from "@/services/journal.service";
 import { getLibraryVendors } from "@/services/library-vendors.service";
 import { Combobox } from "@/components/ui/combobox";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 
 type SubForm = {
   journalId: string;
@@ -325,7 +326,17 @@ export default function JournalSubscriptionsPage() {
   };
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="min-w-0 space-y-4 p-2 sm:p-4">
+      <LibraryPageHeader
+        icon={Newspaper}
+        title="Journal Subscriptions"
+        subtitle="Subscriptions and per-issue receipt tracking for periodicals."
+        actions={
+          <Button onClick={onCreateSub} className="gap-1">
+            <Plus className="h-4 w-4" /> New
+          </Button>
+        }
+      />
       <Card className="bg-gradient-to-r from-indigo-50 to-purple-50">
         <CardContent className="flex flex-col items-start justify-between gap-2 p-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
@@ -347,14 +358,8 @@ export default function JournalSubscriptionsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.4fr]">
         <Card>
-          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <Newspaper className="h-5 w-5 text-indigo-600" />
-              <CardTitle>Subscriptions</CardTitle>
-            </div>
-            <Button onClick={onCreateSub} size="sm" className="gap-1">
-              <Plus className="h-4 w-4" /> New
-            </Button>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Subscriptions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="relative">

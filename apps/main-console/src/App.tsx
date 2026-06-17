@@ -513,6 +513,8 @@ const router = createBrowserRouter(
             { path: "journal-subscriptions", element: <libraryModule.JournalSubscriptionsPage /> },
             { path: "reports", element: <libraryModule.LibraryReportsPage /> },
             { path: "student-analytics", element: <libraryModule.StudentAnalyticsPage /> },
+            { path: "cdl/:bookId", element: <libraryModule.CdlReaderPage /> },
+            { path: "digital-twin", element: <libraryModule.DigitalTwinPage /> },
           ],
         },
 

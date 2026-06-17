@@ -23,7 +23,9 @@
     "db:generate": "pnpm run build && drizzle-kit generate",
     "db:migrate": "pnpm run build && drizzle-kit migrate",
     "db:studio": "pnpm run build && drizzle-kit studio",
-    "lint": "eslint . --ext .ts,.js"
+    "lint": "eslint . --ext .ts,.js",
+    "seed:library": "tsx scripts/seed-library.ts",
+    "smoke:library": "tsx scripts/smoke-library.ts"
   },
   "author": "Harsh Nilesh Desai",
   "license": "ISC",

@@ -20,6 +20,8 @@ import EvidenceLockerPage from "./EvidenceLockerPage";
 import JournalSubscriptionsPage from "./JournalSubscriptionsPage";
 import LibraryReportsPage from "./LibraryReportsPage";
 import StudentAnalyticsPage from "./StudentAnalyticsPage";
+import CdlReaderPage from "./CdlReaderPage";
+import DigitalTwinPage from "./DigitalTwinPage";
 import {
   ArticlesPage,
   AuthorTypesPage,
@@ -76,4 +78,6 @@ export {
   JournalSubscriptionsPage,
   LibraryReportsPage,
   StudentAnalyticsPage,
+  CdlReaderPage,
+  DigitalTwinPage,
 };

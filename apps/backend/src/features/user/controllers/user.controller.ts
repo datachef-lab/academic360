@@ -42,6 +42,33 @@ export const getProfileInfo = asyncHandler(
   },
 );
 
+export const getStudentPickerOptionsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const search =
+      typeof req.query.search === "string" ? req.query.search : undefined;
+    const limit = Number(req.query.limit ?? 500);
+    const safeLimit =
+      Number.isNaN(limit) || limit < 1 ? 500 : Math.min(limit, 1000);
+    const rows = await userService.findStudentPickerOptions(search, safeLimit);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          rows,
+          "Student picker options fetched.",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
 export const getAllUsers = async (
   req: Request,
   res: Response,

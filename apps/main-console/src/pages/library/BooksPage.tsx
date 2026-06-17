@@ -64,6 +64,14 @@ import {
 import { getLibraryAuthorTypes } from "@/services/library-author-types.service";
 import { getLibraryAuthors } from "@/services/library-authors.service";
 import { getLibraryBranches } from "@/services/library-branches.service";
+import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 type LibraryBookSocketUpdate = {
   id: string;
@@ -358,6 +366,7 @@ function BookRowActions({
 
 export default function BooksPage() {
   const { user } = useAuth();
+  const [activeBranchId] = useActiveLibraryBranchId();
   const userId = user?.id?.toString();
   const { socket, isConnected } = useSocket({ userId });
 
@@ -594,6 +603,7 @@ export default function BooksPage() {
           : {}),
         ...(appliedFilters.journalId != null ? { journalId: appliedFilters.journalId } : {}),
         ...(appliedFilters.enclosureId != null ? { enclosureId: appliedFilters.enclosureId } : {}),
+        ...(activeBranchId != null ? { branchId: activeBranchId } : {}),
       });
       setRows(res.payload.rows);
       setTotal(res.payload.total);
@@ -603,7 +613,7 @@ export default function BooksPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, debouncedSearch, appliedFilters]);
+  }, [page, limit, debouncedSearch, appliedFilters, activeBranchId]);
 
   useEffect(() => {
     void fetchRows();
@@ -937,16 +947,30 @@ export default function BooksPage() {
                 <div className="hidden min-w-0 pb-2 xl:block">
                   <div className="max-h-[min(70vh,640px)] overflow-y-auto overflow-x-auto rounded-md border bg-background">
                     <Table containerClassName="min-w-[880px]">
-                      <TableHeader>
+                      <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className="w-10 px-2">#</TableHead>
-                          <TableHead className="min-w-[210px]">Title</TableHead>
-                          <TableHead className="min-w-[100px]">ISBN</TableHead>
-                          <TableHead className="min-w-[120px]">Subject group</TableHead>
-                          <TableHead className="min-w-[120px]">Period / frequency</TableHead>
-                          <TableHead className="min-w-[130px]">Doc type</TableHead>
-                          <TableHead className="min-w-[130px]">Journal</TableHead>
-                          <TableHead className="min-w-[72px] text-right">Actions</TableHead>
+                          <TableHead className={cn(STICKY_TH_LEFT, "w-10 px-2")}>#</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[210px]")}>
+                            Title
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[100px]")}>
+                            ISBN
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Subject group
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Period / frequency
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[130px]")}>
+                            Doc type
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[130px]")}>
+                            Journal
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "min-w-[72px] text-right")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

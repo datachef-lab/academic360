@@ -49,6 +49,13 @@ import {
   type JournalListQueryParams,
   type JournalUpsertBody,
 } from "@/services/journal.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 const NONE = "__none__";
 
@@ -741,25 +748,49 @@ export default function JournalPage() {
                 {/* Large viewports: full table with horizontal scroll + sticky actions */}
                 <div className="hidden max-h-[560px] min-w-0 overflow-x-auto overflow-y-auto rounded-md border lg:block">
                   <Table className="min-w-[960px] w-full text-[13px]">
-                    <TableHeader>
+                    <TableHeader className={STICKY_THEAD_CLASS}>
                       <TableRow>
-                        <TableHead className="w-10 whitespace-nowrap bg-slate-100 px-2">
+                        <TableHead
+                          className={cn(STICKY_TH_LEFT, "w-10 whitespace-nowrap bg-slate-100 px-2")}
+                        >
                           #
                         </TableHead>
-                        <TableHead className="min-w-[200px] max-w-[320px] bg-slate-100 px-2">
+                        <TableHead
+                          className={cn(
+                            STICKY_TH_BASE,
+                            "min-w-[200px] max-w-[320px] bg-slate-100 px-2",
+                          )}
+                        >
                           {"Title, publisher & language"}
                         </TableHead>
-                        <TableHead className="min-w-[96px] bg-slate-100 px-2">Type</TableHead>
-                        <TableHead className="min-w-[112px] bg-slate-100 px-2">
+                        <TableHead className={cn(STICKY_TH_BASE, "min-w-[96px] bg-slate-100 px-2")}>
+                          Type
+                        </TableHead>
+                        <TableHead
+                          className={cn(STICKY_TH_BASE, "min-w-[112px] bg-slate-100 px-2")}
+                        >
                           Subject group
                         </TableHead>
-                        <TableHead className="min-w-[104px] bg-slate-100 px-2">
+                        <TableHead
+                          className={cn(STICKY_TH_BASE, "min-w-[104px] bg-slate-100 px-2")}
+                        >
                           Entry mode
                         </TableHead>
-                        <TableHead className="min-w-[96px] bg-slate-100 px-2">Binding</TableHead>
-                        <TableHead className="min-w-[96px] bg-slate-100 px-2">Period</TableHead>
-                        <TableHead className="min-w-[88px] bg-slate-100 px-2">ISSN</TableHead>
-                        <TableHead className="sticky right-0 z-20 min-w-[100px] whitespace-nowrap bg-slate-100 px-3 text-right shadow-[-6px_0_10px_-4px_rgba(15,23,42,0.12)]">
+                        <TableHead className={cn(STICKY_TH_BASE, "min-w-[96px] bg-slate-100 px-2")}>
+                          Binding
+                        </TableHead>
+                        <TableHead className={cn(STICKY_TH_BASE, "min-w-[96px] bg-slate-100 px-2")}>
+                          Period
+                        </TableHead>
+                        <TableHead className={cn(STICKY_TH_BASE, "min-w-[88px] bg-slate-100 px-2")}>
+                          ISSN
+                        </TableHead>
+                        <TableHead
+                          className={cn(
+                            STICKY_TH_RIGHT,
+                            "sticky right-0 z-20 min-w-[100px] whitespace-nowrap bg-slate-100 px-3 text-right shadow-[-6px_0_10px_-4px_rgba(15,23,42,0.12)]",
+                          )}
+                        >
                           Actions
                         </TableHead>
                       </TableRow>

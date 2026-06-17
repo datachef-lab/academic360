@@ -101,6 +101,7 @@ export type BookCirculationFilters = {
   userType?: BookCirculationUserType;
   status?: BookCirculationStatus;
   issueDate?: string;
+  branchId?: number | null;
 };
 
 const BASE_URL = "/api/library/book-circulation";

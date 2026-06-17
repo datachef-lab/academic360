@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, MapPin, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
 import type { LibraryZoneRow, LibraryZoneUpsertBody } from "@/services/library-zones.service";
 import {
   createLibraryZone,
@@ -38,6 +39,14 @@ import {
 } from "@/services/library-zones.service";
 import { getLibraryBranches } from "@/services/library-branches.service";
 import { Combobox } from "@/components/ui/combobox";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 
 type FormState = {
   name: string;
@@ -76,6 +85,7 @@ const formToBody = (f: FormState): LibraryZoneUpsertBody => ({
 });
 
 export default function LibraryZonesMasterPage() {
+  const [activeBranchId] = useActiveLibraryBranchId();
   const [rows, setRows] = useState<LibraryZoneRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -118,6 +128,7 @@ export default function LibraryZonesMasterPage() {
         page,
         limit,
         search: debounced.trim() || undefined,
+        ...(activeBranchId != null ? { branchId: activeBranchId } : {}),
       });
       setRows(res.payload?.rows ?? []);
       setTotal(res.payload?.total ?? 0);
@@ -126,7 +137,7 @@ export default function LibraryZonesMasterPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, debounced]);
+  }, [page, limit, debounced, activeBranchId]);
 
   useEffect(() => {
     void fetchRows();
@@ -134,7 +145,12 @@ export default function LibraryZonesMasterPage() {
 
   const onCreate = () => {
     setEditingId(null);
-    setForm(emptyForm());
+    // Pre-fill the Branch combobox with the active right-sidebar branch so the
+    // librarian doesn't have to pick it again — it's almost always the same.
+    setForm({
+      ...emptyForm(),
+      branchId: activeBranchId != null ? String(activeBranchId) : "",
+    });
     setDialogOpen(true);
   };
 
@@ -186,32 +202,33 @@ export default function LibraryZonesMasterPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-indigo-600" />
-            <CardTitle>Library Zones</CardTitle>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <div className="relative flex-1 sm:w-72">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+    <div className="min-w-0 p-2 sm:p-4">
+      <LibraryPageHeader
+        icon={MapPin}
+        title="Library Zones"
+        subtitle="Physical zones inside a branch (reading rooms, reference, e-resources)."
+        actions={
+          <Button onClick={onCreate} className="gap-1">
+            <Plus className="h-4 w-4" /> Add zone
+          </Button>
+        }
+      />
+      <Card className="min-w-0 border-none">
+        <CardContent className="px-0">
+          <div className="mb-3 border-b bg-background px-2 py-3 sm:px-4">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
-                placeholder="Search zones..."
+                className="pl-9"
+                placeholder="Search zones…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="pl-9"
               />
             </div>
-            <Button onClick={onCreate} className="gap-1">
-              <Plus className="h-4 w-4" /> Add zone
-            </Button>
           </div>
-        </CardHeader>
-        <CardContent>
           {/* Mobile list */}
           <div className="space-y-2 sm:hidden">
             {loading ? (
@@ -258,14 +275,14 @@ export default function LibraryZonesMasterPage() {
           {/* Desktop table */}
           <div className="hidden sm:block">
             <Table>
-              <TableHeader>
+              <TableHeader className={STICKY_THEAD_CLASS}>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Capacity</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className={STICKY_TH_LEFT}>Name</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Code</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Branch</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Capacity</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Active</TableHead>
+                  <TableHead className={cn(STICKY_TH_RIGHT, "text-right")}>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

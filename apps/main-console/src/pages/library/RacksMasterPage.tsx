@@ -31,6 +31,13 @@ import {
 import { Loader2, Package2, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 import type { LibraryRackRow, LibraryRackUpsertBody } from "@/services/library-racks.service";
 import {
   createLibraryRack,
@@ -312,13 +319,16 @@ export default function RacksMasterPage() {
 
                 <div className="hidden min-w-0 pb-2 lg:block">
                   <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
-                    <Table containerClassName="min-w-[720px]">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[360px]">Name</TableHead>
-                          <TableHead className="min-w-[140px]">Updated</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                    <Table
+                      className="border-separate border-spacing-0"
+                      containerClassName="overflow-visible min-w-[720px]"
+                    >
+                      <TableHeader className={STICKY_THEAD_CLASS}>
+                        <TableRow className="border-b-0 hover:bg-transparent">
+                          <TableHead className={STICKY_TH_LEFT}>#</TableHead>
+                          <TableHead className={STICKY_TH_BASE}>Name</TableHead>
+                          <TableHead className={STICKY_TH_BASE}>Updated</TableHead>
+                          <TableHead className={STICKY_TH_RIGHT}>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

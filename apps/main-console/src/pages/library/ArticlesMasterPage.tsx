@@ -44,6 +44,13 @@ import {
   getLibraryArticles,
   updateLibraryArticle,
 } from "@/services/library-articles.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 type LibraryArticleSocketUpdate = {
   id: string;
@@ -446,16 +453,30 @@ export default function ArticlesMasterPage() {
                 <div className="hidden min-w-0 pb-2 lg:block">
                   <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
                     <Table containerClassName="min-w-[980px]">
-                      <TableHeader>
+                      <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[240px]">Name</TableHead>
-                          <TableHead className="min-w-[140px]">Code</TableHead>
-                          <TableHead className="min-w-[110px]">Doc type</TableHead>
-                          <TableHead className="min-w-[130px]">Unique #</TableHead>
-                          <TableHead className="min-w-[120px]">Journal</TableHead>
-                          <TableHead className="min-w-[120px]">Updated</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                          <TableHead className={cn(STICKY_TH_LEFT, "w-10")}>#</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[240px]")}>
+                            Name
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[140px]")}>
+                            Code
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[110px]")}>
+                            Doc type
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[130px]")}>
+                            Unique #
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Journal
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Updated
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "w-[90px] text-right")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

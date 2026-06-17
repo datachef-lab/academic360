@@ -44,6 +44,13 @@ import {
 } from "@/services/library-circulation-policies.service";
 import { getLibraryPatronCategories } from "@/services/library-patron-categories.service";
 import { getLibraryItemCategories } from "@/services/library-item-categories.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 type FormState = {
   patronCategoryId: string;
@@ -338,19 +345,37 @@ export default function CirculationPoliciesMasterPage() {
                 <div className="hidden min-w-0 pb-2 lg:block">
                   <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
                     <Table containerClassName="min-w-[1100px]">
-                      <TableHeader>
+                      <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[180px]">Patron</TableHead>
-                          <TableHead className="min-w-[180px]">Item</TableHead>
-                          <TableHead className="w-[90px] text-right">Loan days</TableHead>
-                          <TableHead className="w-[110px] text-right">Fine / day</TableHead>
-                          <TableHead className="w-[100px] text-right">Renewals</TableHead>
-                          <TableHead className="w-[90px] text-right">Grace</TableHead>
-                          <TableHead className="w-[110px] text-right">Max copies</TableHead>
-                          <TableHead className="w-[120px]">Skip holidays</TableHead>
-                          <TableHead className="w-[110px]">Status</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                          <TableHead className={cn(STICKY_TH_LEFT, "w-10")}>#</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[180px]")}>
+                            Patron
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[180px]")}>
+                            Item
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[90px] text-right")}>
+                            Loan days
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[110px] text-right")}>
+                            Fine / day
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[100px] text-right")}>
+                            Renewals
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[90px] text-right")}>
+                            Grace
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[110px] text-right")}>
+                            Max copies
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[120px]")}>
+                            Skip holidays
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[110px]")}>Status</TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "w-[90px] text-right")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

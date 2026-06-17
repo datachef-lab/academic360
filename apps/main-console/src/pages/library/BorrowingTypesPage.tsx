@@ -33,6 +33,14 @@ import {
   LibraryBorrowingType,
   updateLibraryBorrowingType,
 } from "@/services/library-borrowing-type.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 
 const DEFAULT_LIMIT = 10;
 
@@ -180,18 +188,12 @@ export default function BorrowingTypesPage() {
 
   return (
     <div className="p-2 sm:p-4">
-      <Card className="border-none">
-        <CardHeader className="sticky top-0 z-30 mb-3 flex flex-col items-start justify-between gap-4 rounded-md border bg-background p-4 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
-            <CardTitle className="flex items-center text-lg sm:text-xl">
-              <BookOpenCheck className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
-              <span className="truncate">Borrowing Types</span>
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Manage library borrowing types and search guideline settings.
-            </p>
-          </div>
-          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
+      <LibraryPageHeader
+        icon={BookOpenCheck}
+        title="Borrowing Types"
+        subtitle="Manage library borrowing types and search guideline settings."
+        actions={
+          <>
             <Button variant="outline" onClick={handleDownload} className="flex-shrink-0">
               <Download className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Download</span>
@@ -203,8 +205,10 @@ export default function BorrowingTypesPage() {
               <PlusCircle className="mr-2 h-4 w-4" />
               Add
             </Button>
-          </div>
-        </CardHeader>
+          </>
+        }
+      />
+      <Card className="min-w-0 border-none">
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 mb-0 border-b bg-background p-2 sm:p-4">
             <div className="relative w-full md:w-80">
@@ -220,21 +224,36 @@ export default function BorrowingTypesPage() {
           <div className="relative" style={{ height: "600px" }}>
             <div className="h-full overflow-y-auto overflow-x-auto">
               <Table className="min-w-[900px] rounded-md border" style={{ tableLayout: "fixed" }}>
-                <TableHeader>
+                <TableHeader className={STICKY_THEAD_CLASS}>
                   <TableRow>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 70 }}>
+                    <TableHead
+                      className={cn(STICKY_TH_LEFT, "sticky top-0 z-20 bg-slate-100")}
+                      style={{ width: 70 }}
+                    >
                       #
                     </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 320 }}>
+                    <TableHead
+                      className={cn(STICKY_TH_BASE, "sticky top-0 z-20 bg-slate-100")}
+                      style={{ width: 320 }}
+                    >
                       Name
                     </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 220 }}>
+                    <TableHead
+                      className={cn(STICKY_TH_BASE, "sticky top-0 z-20 bg-slate-100")}
+                      style={{ width: 220 }}
+                    >
                       Search Guideline
                     </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 220 }}>
+                    <TableHead
+                      className={cn(STICKY_TH_BASE, "sticky top-0 z-20 bg-slate-100")}
+                      style={{ width: 220 }}
+                    >
                       Updated At
                     </TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-slate-100" style={{ width: 130 }}>
+                    <TableHead
+                      className={cn(STICKY_TH_RIGHT, "sticky top-0 z-20 bg-slate-100")}
+                      style={{ width: 130 }}
+                    >
                       Actions
                     </TableHead>
                   </TableRow>

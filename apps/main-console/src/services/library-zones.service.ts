@@ -1,6 +1,33 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
 
+export type ZoneOccupancyRow = {
+  zoneId: number | null;
+  zoneName: string | null;
+  branchId: number | null;
+  currentInside: number;
+  peakToday: number;
+  byHour: Array<{ hour: number; count: number }>;
+  byDepartment: Array<{ departmentName: string; count: number }>;
+  recentGateEvents: number;
+};
+
+export async function getZoneOccupancyList(branchId?: number | null) {
+  const res = await axiosInstance.get<ApiResponse<ZoneOccupancyRow[]>>(
+    "/api/library/zones/occupancy",
+    { params: branchId != null ? { branchId } : {} },
+  );
+  return res.data;
+}
+
+export async function getZoneOccupancy(zoneId: number, branchId?: number | null) {
+  const res = await axiosInstance.get<ApiResponse<ZoneOccupancyRow>>(
+    `/api/library/zones/${zoneId}/occupancy`,
+    { params: branchId != null ? { branchId } : {} },
+  );
+  return res.data;
+}
+
 export type LibraryZoneRow = {
   id: number;
   branchId: number | null;

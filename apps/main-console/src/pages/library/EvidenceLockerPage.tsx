@@ -33,12 +33,21 @@ import {
   createEvidenceDoc,
   deleteEvidenceDoc,
   getEvidenceDocs,
+  getEvidenceDocUrl,
   updateEvidenceDoc,
 } from "@/services/library-evidence-docs.service";
 import type {
   EvidenceDocRow,
   EvidenceDocUpsertBody,
 } from "@/services/library-evidence-docs.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
+import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 
 type FormState = {
   criterionCode: string;
@@ -74,11 +83,18 @@ const formToBody = (f: FormState): EvidenceDocUpsertBody => ({
   criterionCode: f.criterionCode.trim(),
   title: f.title.trim(),
   description: f.description.trim() || null,
-  fileKey: f.fileKey.trim(),
+  // Backend derives fileKey/mimeType/fileSizeBytes from the uploaded file when one is sent.
+  fileKey: f.fileKey.trim() || undefined,
   mimeType: f.mimeType.trim() || null,
   tags: f.tags.trim() || null,
   academicYear: f.academicYear.trim() || null,
 });
+
+const formatBytes = (n: number): string => {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+};
 
 export default function EvidenceLockerPage() {
   const [rows, setRows] = useState<EvidenceDocRow[]>([]);
@@ -92,6 +108,7 @@ export default function EvidenceLockerPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [formFile, setFormFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<EvidenceDocRow | null>(null);
 
@@ -126,27 +143,50 @@ export default function EvidenceLockerPage() {
   const onCreate = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setFormFile(null);
     setDialogOpen(true);
   };
 
   const onEdit = (r: EvidenceDocRow) => {
     setEditingId(r.id);
     setForm(rowToForm(r));
+    setFormFile(null);
     setDialogOpen(true);
   };
 
+  const onView = async (row: EvidenceDocRow) => {
+    try {
+      const res = await getEvidenceDocUrl(row.id);
+      const url = res.payload?.url;
+      if (!url) {
+        toast.error("No file attached.");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Could not open file.";
+      toast.error(msg);
+    }
+  };
+
   const onSubmit = async () => {
-    if (!form.criterionCode.trim() || !form.title.trim() || !form.fileKey.trim()) {
-      toast.error("Criterion, title, and file key are required.");
+    if (!form.criterionCode.trim() || !form.title.trim()) {
+      toast.error("Criterion and title are required.");
+      return;
+    }
+    if (!editingId && !formFile) {
+      toast.error("Please choose a file to upload.");
       return;
     }
     setSaving(true);
     try {
       if (editingId) {
-        await updateEvidenceDoc(editingId, formToBody(form));
+        await updateEvidenceDoc(editingId, formToBody(form), formFile);
         toast.success("Evidence doc updated.");
       } else {
-        await createEvidenceDoc(formToBody(form));
+        await createEvidenceDoc(formToBody(form), formFile);
         toast.success("Evidence doc created.");
       }
       setDialogOpen(false);
@@ -177,18 +217,19 @@ export default function EvidenceLockerPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-indigo-600" />
-            <CardTitle>Accreditation Evidence Locker</CardTitle>
-          </div>
+    <div className="min-w-0 p-2 sm:p-4">
+      <LibraryPageHeader
+        icon={ShieldCheck}
+        title="Accreditation Evidence Locker"
+        subtitle="Evidence documents tagged by NAAC / NIRF / AISHE criterion code."
+        actions={
           <Button onClick={onCreate} className="gap-1">
             <Plus className="h-4 w-4" /> Upload entry
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
+        }
+      />
+      <Card className="min-w-0 border-none">
+        <CardContent className="space-y-3 px-0">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
             <div className="relative sm:col-span-2">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -234,14 +275,13 @@ export default function EvidenceLockerPage() {
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <a
-                        href={r.fileKey}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => void onView(r)}
                         className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline"
                       >
                         <Download className="h-3.5 w-3.5" /> View
-                      </a>
+                      </button>
                       <div className="flex gap-1">
                         <Button
                           size="icon"
@@ -270,14 +310,14 @@ export default function EvidenceLockerPage() {
           {/* Desktop */}
           <div className="hidden sm:block">
             <Table>
-              <TableHeader>
+              <TableHeader className={STICKY_THEAD_CLASS}>
                 <TableRow>
-                  <TableHead>Criterion</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Academic year</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>File</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className={STICKY_TH_LEFT}>Criterion</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Title</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Academic year</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>Tags</TableHead>
+                  <TableHead className={STICKY_TH_BASE}>File</TableHead>
+                  <TableHead className={cn(STICKY_TH_RIGHT, "text-right")}>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -301,14 +341,13 @@ export default function EvidenceLockerPage() {
                       <TableCell>{r.academicYear ?? "—"}</TableCell>
                       <TableCell className="text-xs text-gray-500">{r.tags ?? "—"}</TableCell>
                       <TableCell>
-                        <a
-                          href={r.fileKey}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => void onView(r)}
                           className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
                         >
                           <Download className="h-4 w-4" /> View
-                        </a>
+                        </button>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -393,27 +432,28 @@ export default function EvidenceLockerPage() {
               />
             </div>
             <div>
-              <Label>File key (S3 path) *</Label>
+              <Label>File {editingId ? "(leave empty to keep current)" : "*"}</Label>
               <Input
-                value={form.fileKey}
-                onChange={(e) => setForm({ ...form, fileKey: e.target.value })}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
+                onChange={(e) => setFormFile(e.target.files?.[0] ?? null)}
               />
+              {formFile ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formFile.name} · {formatBytes(formFile.size)}
+                </p>
+              ) : editingId && form.fileKey ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Current file: {form.fileKey.split("/").pop()}
+                </p>
+              ) : null}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label>MIME type</Label>
-                <Input
-                  value={form.mimeType}
-                  onChange={(e) => setForm({ ...form, mimeType: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Tags</Label>
-                <Input
-                  value={form.tags}
-                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                />
-              </div>
+            <div>
+              <Label>Tags</Label>
+              <Input
+                value={form.tags}
+                onChange={(e) => setForm({ ...form, tags: e.target.value })}
+              />
             </div>
             <div>
               <Label>Description</Label>

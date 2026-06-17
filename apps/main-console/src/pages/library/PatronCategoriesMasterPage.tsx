@@ -41,6 +41,13 @@ import {
   getLibraryPatronCategories,
   updateLibraryPatronCategory,
 } from "@/services/library-patron-categories.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 type FormState = {
   name: string;
@@ -287,15 +294,23 @@ export default function PatronCategoriesMasterPage() {
                 <div className="hidden min-w-0 pb-2 lg:block">
                   <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
                     <Table containerClassName="min-w-[820px]">
-                      <TableHeader>
+                      <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[220px]">Name</TableHead>
-                          <TableHead className="min-w-[120px]">Code</TableHead>
-                          <TableHead className="min-w-[300px]">Description</TableHead>
-                          <TableHead className="w-[110px]">Status</TableHead>
-                          <TableHead className="w-[110px]">Updated</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                          <TableHead className={cn(STICKY_TH_LEFT, "w-10")}>#</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[220px]")}>
+                            Name
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Code
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[300px]")}>
+                            Description
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[110px]")}>Status</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "w-[110px]")}>Updated</TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "w-[90px] text-right")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

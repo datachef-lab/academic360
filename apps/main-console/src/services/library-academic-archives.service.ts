@@ -34,12 +34,22 @@ export type AcademicArchiveUpsertBody = {
   programCourseId?: number | null;
   classId?: number | null;
   year?: number | null;
-  fileKey: string;
+  fileKey?: string;
   mimeType?: string | null;
   fileSizeBytes?: number | null;
   tags?: string | null;
   uploadedByUserId?: number | null;
 };
+
+function bodyToFormData(body: AcademicArchiveUpsertBody, file?: File | null): FormData {
+  const fd = new FormData();
+  if (file) fd.append("file", file);
+  for (const [k, v] of Object.entries(body)) {
+    if (v == null) continue;
+    fd.append(k, String(v));
+  }
+  return fd;
+}
 
 const BASE = "/api/library/academic-archives";
 
@@ -61,17 +71,32 @@ export async function getAcademicArchiveById(id: number) {
   return res.data;
 }
 
-export async function createAcademicArchive(body: AcademicArchiveUpsertBody) {
-  const res = await axiosInstance.post<ApiResponse<{ id: number }>>(BASE, body);
+export async function createAcademicArchive(body: AcademicArchiveUpsertBody, file?: File | null) {
+  const res = await axiosInstance.post<ApiResponse<{ id: number }>>(
+    BASE,
+    bodyToFormData(body, file),
+  );
   return res.data;
 }
 
-export async function updateAcademicArchive(id: number, body: AcademicArchiveUpsertBody) {
-  const res = await axiosInstance.put<ApiResponse<null>>(`${BASE}/${id}`, body);
+export async function updateAcademicArchive(
+  id: number,
+  body: AcademicArchiveUpsertBody,
+  file?: File | null,
+) {
+  const res = await axiosInstance.put<ApiResponse<null>>(
+    `${BASE}/${id}`,
+    bodyToFormData(body, file),
+  );
   return res.data;
 }
 
 export async function deleteAcademicArchive(id: number) {
   const res = await axiosInstance.delete<ApiResponse<null>>(`${BASE}/${id}`);
+  return res.data;
+}
+
+export async function getAcademicArchiveUrl(id: number) {
+  const res = await axiosInstance.get<ApiResponse<{ url: string }>>(`${BASE}/${id}/url`);
   return res.data;
 }

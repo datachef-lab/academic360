@@ -24,6 +24,7 @@ import { BookCopy, Download, Filter, Loader2, Pencil, Plus, Search } from "lucid
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
+import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
 import {
   createCopyDetails,
   downloadCopyDetailsExcel,
@@ -290,6 +291,7 @@ export default function CopyDetailsPage() {
   const { user } = useAuth();
   const userId = user?.id?.toString();
   const { socket, isConnected } = useSocket({ userId });
+  const [activeBranchId] = useActiveLibraryBranchId();
 
   const [rows, setRows] = useState<CopyDetailsListRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -467,6 +469,7 @@ export default function CopyDetailsPage() {
           : {}),
         ...(appliedFilters.enclosureId != null ? { enclosureId: appliedFilters.enclosureId } : {}),
         ...(appliedFilters.bookId != null ? { bookId: appliedFilters.bookId } : {}),
+        ...(activeBranchId != null ? { branchId: activeBranchId } : {}),
       });
       setRows(res.payload.rows);
       setTotal(res.payload.total);
@@ -476,7 +479,7 @@ export default function CopyDetailsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, debouncedSearch, appliedFilters]);
+  }, [page, limit, debouncedSearch, appliedFilters, activeBranchId]);
 
   useEffect(() => {
     void fetchRows();
