@@ -44,6 +44,9 @@ import type {
   LibraryJournalSubscriptionRow,
   LibraryJournalSubscriptionUpsertBody,
 } from "@/services/library-journal-subscriptions.service";
+import { getJournalList } from "@/services/journal.service";
+import { getLibraryVendors } from "@/services/library-vendors.service";
+import { Combobox } from "@/components/ui/combobox";
 
 type SubForm = {
   journalId: string;
@@ -144,10 +147,38 @@ export default function JournalSubscriptionsPage() {
   const [issueForm, setIssueForm] = useState<IssueForm>(emptyIssueForm());
   const [savingIssue, setSavingIssue] = useState(false);
 
+  const [journalOptions, setJournalOptions] = useState<{ value: string; label: string }[]>([]);
+  const [vendorOptions, setVendorOptions] = useState<{ value: string; label: string }[]>([]);
+
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [journalsRes, vendorsRes] = await Promise.all([
+          getJournalList({ page: 1, limit: 500 }),
+          getLibraryVendors({ page: 1, limit: 500 }),
+        ]);
+        setJournalOptions(
+          (journalsRes.payload?.rows ?? []).map((j) => ({
+            value: String(j.id),
+            label: j.title,
+          })),
+        );
+        setVendorOptions(
+          (vendorsRes.payload?.rows ?? []).map((v) => ({
+            value: String(v.id),
+            label: v.name,
+          })),
+        );
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -510,19 +541,21 @@ export default function JournalSubscriptionsPage() {
           <div className="grid gap-3 py-2">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>Journal ID *</Label>
-                <Input
+                <Label>Journal *</Label>
+                <Combobox
+                  placeholder="Select journal"
                   value={subForm.journalId}
-                  onChange={(e) => setSubForm({ ...subForm, journalId: e.target.value })}
-                  inputMode="numeric"
+                  dataArr={journalOptions}
+                  onChange={(v) => setSubForm({ ...subForm, journalId: v })}
                 />
               </div>
               <div>
-                <Label>Vendor ID</Label>
-                <Input
+                <Label>Vendor</Label>
+                <Combobox
+                  placeholder="Select vendor"
                   value={subForm.vendorId}
-                  onChange={(e) => setSubForm({ ...subForm, vendorId: e.target.value })}
-                  inputMode="numeric"
+                  dataArr={vendorOptions}
+                  onChange={(v) => setSubForm({ ...subForm, vendorId: v })}
                 />
               </div>
             </div>

@@ -36,6 +36,8 @@ import {
   getLibraryZones,
   updateLibraryZone,
 } from "@/services/library-zones.service";
+import { getLibraryBranches } from "@/services/library-branches.service";
+import { Combobox } from "@/components/ui/combobox";
 
 type FormState = {
   name: string;
@@ -86,11 +88,28 @@ export default function LibraryZonesMasterPage() {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<LibraryZoneRow | null>(null);
+  const [branchOptions, setBranchOptions] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await getLibraryBranches({ page: 1, limit: 200 });
+        setBranchOptions(
+          (res.payload?.rows ?? []).map((r) => ({
+            value: String(r.id),
+            label: r.code ? `${r.name} (${r.code})` : r.name,
+          })),
+        );
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -345,10 +364,12 @@ export default function LibraryZonesMasterPage() {
                 />
               </div>
               <div>
-                <Label>Branch ID</Label>
-                <Input
+                <Label>Branch</Label>
+                <Combobox
+                  placeholder="Select branch"
                   value={form.branchId}
-                  onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                  dataArr={branchOptions}
+                  onChange={(v) => setForm({ ...form, branchId: v })}
                 />
               </div>
             </div>

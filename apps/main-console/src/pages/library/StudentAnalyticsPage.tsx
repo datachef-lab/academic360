@@ -18,6 +18,8 @@ import {
   recomputeStudentLibraryAnalytics,
 } from "@/services/library-student-analytics.service";
 import type { StudentLibraryAnalyticsRow } from "@/services/library-student-analytics.service";
+import { Combobox } from "@/components/ui/combobox";
+import { findAllUsers } from "@/services/user";
 
 export default function StudentAnalyticsPage() {
   const [rows, setRows] = useState<StudentLibraryAnalyticsRow[]>([]);
@@ -30,6 +32,25 @@ export default function StudentAnalyticsPage() {
   const [recompUserId, setRecompUserId] = useState("");
   const [recompYear, setRecompYear] = useState("2025-26");
   const [recomputing, setRecomputing] = useState(false);
+
+  const [studentOptions, setStudentOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await findAllUsers(1, 1000, "STUDENT");
+        const list = res.payload?.content ?? [];
+        setStudentOptions(
+          list.map((u) => ({
+            value: String(u.id),
+            label: u.name ? `${u.name} (#${u.id})` : `User #${u.id}`,
+          })),
+        );
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -89,12 +110,12 @@ export default function StudentAnalyticsPage() {
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="flex-1">
-                <Label>User ID</Label>
-                <Input
+                <Label>Student</Label>
+                <Combobox
+                  placeholder="Select student"
                   value={recompUserId}
-                  onChange={(e) => setRecompUserId(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="123"
+                  dataArr={studentOptions}
+                  onChange={(v) => setRecompUserId(v)}
                 />
               </div>
               <div className="flex-1">
@@ -118,11 +139,12 @@ export default function StudentAnalyticsPage() {
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div>
-              <Label>Filter user ID</Label>
-              <Input
+              <Label>Filter by student</Label>
+              <Combobox
+                placeholder="Any student"
                 value={filters.userId}
-                onChange={(e) => setFilters({ ...filters, userId: e.target.value })}
-                inputMode="numeric"
+                dataArr={[{ value: "", label: "Any student" }, ...studentOptions]}
+                onChange={(v) => setFilters({ ...filters, userId: v })}
               />
             </div>
             <div>

@@ -46,6 +46,12 @@ import type {
   ReadingListRow,
   ReadingListUpsertBody,
 } from "@/services/library-reading-lists.service";
+import { Combobox } from "@/components/ui/combobox";
+import { getProgramCourses } from "@/services/course-design.api";
+import { getAllClasses } from "@/services/classes.service";
+import { findAdminsAndStaff } from "@/services/user";
+import { getBookList } from "@/services/books.service";
+import { getJournalList } from "@/services/journal.service";
 
 type ListForm = {
   programCourseId: string;
@@ -138,10 +144,64 @@ export default function ReadingListsPage() {
   const [itemForm, setItemForm] = useState<ItemForm>(emptyItemForm());
   const [savingItem, setSavingItem] = useState(false);
 
+  const [programCourseOptions, setProgramCourseOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [classOptions, setClassOptions] = useState<{ value: string; label: string }[]>([]);
+  const [facultyOptions, setFacultyOptions] = useState<{ value: string; label: string }[]>([]);
+  const [bookOptions, setBookOptions] = useState<{ value: string; label: string }[]>([]);
+  const [journalOptions, setJournalOptions] = useState<{ value: string; label: string }[]>([]);
+
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [pcs, classes, faculty, books, journals] = await Promise.all([
+          getProgramCourses(),
+          getAllClasses(),
+          findAdminsAndStaff(1, 500),
+          getBookList({ page: 1, limit: 500 }),
+          getJournalList({ page: 1, limit: 500 }),
+        ]);
+        setProgramCourseOptions(
+          (pcs ?? []).map((p) => ({
+            value: String(p.id),
+            label: p.name,
+          })),
+        );
+        setClassOptions(
+          (classes ?? []).map((c) => ({
+            value: String(c.id),
+            label: c.name,
+          })),
+        );
+        setFacultyOptions(
+          (faculty ?? []).map((u) => ({
+            value: String(u.id),
+            label: u.name ?? `User #${u.id}`,
+          })),
+        );
+        setBookOptions(
+          (books.payload?.rows ?? []).map((b) => ({
+            value: String(b.id),
+            label: b.title,
+          })),
+        );
+        setJournalOptions(
+          (journals.payload?.rows ?? []).map((j) => ({
+            value: String(j.id),
+            label: j.title,
+          })),
+        );
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -489,35 +549,31 @@ export default function ReadingListsPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>
-                  Program Course ID * <span title="Paste the integer ID">?</span>
-                </Label>
-                <Input
+                <Label>Program Course *</Label>
+                <Combobox
+                  placeholder="Select program course"
                   value={listForm.programCourseId}
-                  onChange={(e) =>
-                    setListForm({
-                      ...listForm,
-                      programCourseId: e.target.value,
-                    })
-                  }
-                  inputMode="numeric"
+                  dataArr={programCourseOptions}
+                  onChange={(v) => setListForm({ ...listForm, programCourseId: v })}
                 />
               </div>
               <div>
-                <Label>Class ID</Label>
-                <Input
+                <Label>Class</Label>
+                <Combobox
+                  placeholder="Select class"
                   value={listForm.classId}
-                  onChange={(e) => setListForm({ ...listForm, classId: e.target.value })}
-                  inputMode="numeric"
+                  dataArr={classOptions}
+                  onChange={(v) => setListForm({ ...listForm, classId: v })}
                 />
               </div>
             </div>
             <div>
-              <Label>Faculty User ID</Label>
-              <Input
+              <Label>Faculty</Label>
+              <Combobox
+                placeholder="Select faculty"
                 value={listForm.facultyUserId}
-                onChange={(e) => setListForm({ ...listForm, facultyUserId: e.target.value })}
-                inputMode="numeric"
+                dataArr={facultyOptions}
+                onChange={(v) => setListForm({ ...listForm, facultyUserId: v })}
               />
             </div>
             <div>
@@ -578,22 +634,24 @@ export default function ReadingListsPage() {
 
             {itemForm.itemType === "BOOK" ? (
               <div>
-                <Label>Book ID *</Label>
-                <Input
+                <Label>Book *</Label>
+                <Combobox
+                  placeholder="Select book"
                   value={itemForm.bookId}
-                  onChange={(e) => setItemForm({ ...itemForm, bookId: e.target.value })}
-                  inputMode="numeric"
+                  dataArr={bookOptions}
+                  onChange={(v) => setItemForm({ ...itemForm, bookId: v })}
                 />
               </div>
             ) : null}
 
             {itemForm.itemType === "JOURNAL" ? (
               <div>
-                <Label>Journal ID *</Label>
-                <Input
+                <Label>Journal *</Label>
+                <Combobox
+                  placeholder="Select journal"
                   value={itemForm.journalId}
-                  onChange={(e) => setItemForm({ ...itemForm, journalId: e.target.value })}
-                  inputMode="numeric"
+                  dataArr={journalOptions}
+                  onChange={(v) => setItemForm({ ...itemForm, journalId: v })}
                 />
               </div>
             ) : null}

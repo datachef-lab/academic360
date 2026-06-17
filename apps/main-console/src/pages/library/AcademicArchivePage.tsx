@@ -39,6 +39,9 @@ import type {
   AcademicArchiveRow,
   AcademicArchiveUpsertBody,
 } from "@/services/library-academic-archives.service";
+import { Combobox } from "@/components/ui/combobox";
+import { getProgramCourses } from "@/services/course-design.api";
+import { getAllClasses } from "@/services/classes.service";
 
 type FormState = {
   archiveType: string;
@@ -108,10 +111,27 @@ export default function AcademicArchivePage() {
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<AcademicArchiveRow | null>(null);
 
+  const [programCourseOptions, setProgramCourseOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [classOptions, setClassOptions] = useState<{ value: string; label: string }[]>([]);
+
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [pcs, classes] = await Promise.all([getProgramCourses(), getAllClasses()]);
+        setProgramCourseOptions((pcs ?? []).map((p) => ({ value: String(p.id), label: p.name })));
+        setClassOptions((classes ?? []).map((c) => ({ value: String(c.id), label: c.name })));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -222,11 +242,11 @@ export default function AcademicArchivePage() {
               value={filters.archiveType}
               onChange={(e) => setFilters({ ...filters, archiveType: e.target.value })}
             />
-            <Input
-              placeholder="Program course ID"
+            <Combobox
+              placeholder="Program course"
               value={filters.programCourseId}
-              onChange={(e) => setFilters({ ...filters, programCourseId: e.target.value })}
-              inputMode="numeric"
+              dataArr={[{ value: "", label: "Any program course" }, ...programCourseOptions]}
+              onChange={(v) => setFilters({ ...filters, programCourseId: v })}
             />
             <Input
               placeholder="Year"
@@ -423,21 +443,21 @@ export default function AcademicArchivePage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>
-                  Program Course ID <span title="Paste integer ID">?</span>
-                </Label>
-                <Input
+                <Label>Program Course</Label>
+                <Combobox
+                  placeholder="Select program course"
                   value={form.programCourseId}
-                  onChange={(e) => setForm({ ...form, programCourseId: e.target.value })}
-                  inputMode="numeric"
+                  dataArr={programCourseOptions}
+                  onChange={(v) => setForm({ ...form, programCourseId: v })}
                 />
               </div>
               <div>
-                <Label>Class ID</Label>
-                <Input
+                <Label>Class</Label>
+                <Combobox
+                  placeholder="Select class"
                   value={form.classId}
-                  onChange={(e) => setForm({ ...form, classId: e.target.value })}
-                  inputMode="numeric"
+                  dataArr={classOptions}
+                  onChange={(v) => setForm({ ...form, classId: v })}
                 />
               </div>
             </div>

@@ -63,6 +63,7 @@ import {
 } from "@/services/books.service";
 import { getLibraryAuthorTypes } from "@/services/library-author-types.service";
 import { getLibraryAuthors } from "@/services/library-authors.service";
+import { getLibraryBranches } from "@/services/library-branches.service";
 
 type LibraryBookSocketUpdate = {
   id: string;
@@ -383,6 +384,7 @@ export default function BooksPage() {
     [],
   );
   const [authorOptions, setAuthorOptions] = useState<{ value: string; label: string }[]>([]);
+  const [branchOptions, setBranchOptions] = useState<{ value: string; label: string }[]>([]);
   const [formAuthors, setFormAuthors] = useState<
     Array<{ authorId: string; authorTypeId: string; remarks: string }>
   >([]);
@@ -409,9 +411,10 @@ export default function BooksPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const [typesRes, authorsRes] = await Promise.all([
+        const [typesRes, authorsRes, branchesRes] = await Promise.all([
           getLibraryAuthorTypes({ page: 1, limit: 200 }),
           getLibraryAuthors({ page: 1, limit: 1000 }),
+          getLibraryBranches({ page: 1, limit: 200 }),
         ]);
         setAuthorTypeOptions(
           typesRes.payload.rows.map((r) => ({
@@ -423,6 +426,12 @@ export default function BooksPage() {
           authorsRes.payload.rows.map((r) => ({
             value: String(r.id),
             label: r.shortName ? `${r.name} (${r.shortName})` : r.name,
+          })),
+        );
+        setBranchOptions(
+          (branchesRes.payload?.rows ?? []).map((r) => ({
+            value: String(r.id),
+            label: r.code ? `${r.name} (${r.code})` : r.name,
           })),
         );
       } catch (e) {
@@ -1521,13 +1530,14 @@ export default function BooksPage() {
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <Label>Branch ID</Label>
-                  <Input
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Branch</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Select branch"
                     value={form.branchId}
-                    inputMode="numeric"
-                    placeholder="e.g. 1"
-                    onChange={(e) => setForm((f) => ({ ...f, branchId: e.target.value }))}
+                    dataArr={branchOptions}
+                    onChange={(v) => setForm((f) => ({ ...f, branchId: v }))}
                   />
                 </div>
                 <div className="flex items-center gap-2 pt-6">

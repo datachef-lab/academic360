@@ -10,16 +10,21 @@ import {
   Building2,
   CalendarDays,
   CalendarRange,
+  ClipboardList,
+  FileBarChart,
+  FileSearch,
   IdCard,
   FolderArchive,
   LayoutDashboard,
   LibraryBig,
+  MapPin,
   Newspaper,
   Package2,
   Rows3,
   ScanBarcode,
   Scale,
   ScrollText,
+  ShieldCheck,
   Tags,
   UserCog,
   UserRoundCheck,
@@ -59,6 +64,26 @@ const quickLinks = [
     title: "Journal",
     url: "/dashboard/library/journal",
     icon: Newspaper,
+  },
+  {
+    title: "Search",
+    url: "/dashboard/library/search",
+    icon: FileSearch,
+  },
+  {
+    title: "Reading Lists",
+    url: "/dashboard/library/reading-lists",
+    icon: ClipboardList,
+  },
+  {
+    title: "Journal Subscriptions",
+    url: "/dashboard/library/journal-subscriptions",
+    icon: Newspaper,
+  },
+  {
+    title: "Reports",
+    url: "/dashboard/library/reports",
+    icon: FileBarChart,
   },
 ];
 
@@ -172,6 +197,26 @@ const masterLinks = [
     title: "Circulation Policy",
     url: "/dashboard/library/circulation-policies",
     icon: Scale,
+  },
+  {
+    title: "Zones",
+    url: "/dashboard/library/zones",
+    icon: MapPin,
+  },
+  {
+    title: "Academic Archive",
+    url: "/dashboard/library/academic-archives",
+    icon: FolderArchive,
+  },
+  {
+    title: "Evidence Locker",
+    url: "/dashboard/library/evidence-locker",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Student Analytics",
+    url: "/dashboard/library/student-analytics",
+    icon: FileBarChart,
   },
 ];
 

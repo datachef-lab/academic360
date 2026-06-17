@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -22,6 +22,8 @@ import {
   YAxis,
 } from "recharts";
 import { getLibraryDashboardStats } from "@/services/library-dashboard.service";
+import { useSocket } from "@/hooks/useSocket";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 type StatCardProps = {
   label: string;
@@ -57,12 +59,67 @@ const formatINR = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
+const LIBRARY_DASHBOARD_ROOMS = [
+  {
+    subscribe: "subscribe_library_books",
+    unsubscribe: "unsubscribe_library_books",
+    event: "library_book_update",
+  },
+  {
+    subscribe: "subscribe_library_copy_details",
+    unsubscribe: "unsubscribe_library_copy_details",
+    event: "library_copy_details_update",
+  },
+  {
+    subscribe: "subscribe_library_book_circulation",
+    unsubscribe: "unsubscribe_library_book_circulation",
+    event: "library_book_circulation_update",
+  },
+  {
+    subscribe: "subscribe_library_entry_exit",
+    unsubscribe: "unsubscribe_library_entry_exit",
+    event: "library_entry_exit_update",
+  },
+] as const;
+
 const LibraryDashboard: React.FC = () => {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["library-dashboard-stats"],
     queryFn: async () => (await getLibraryDashboardStats()).payload!,
     staleTime: 60_000,
   });
+
+  const { user } = useAuth();
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({ userId });
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    const scheduleRefetch = () => {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current);
+      refetchTimer.current = setTimeout(() => {
+        void refetch();
+      }, 500);
+    };
+
+    LIBRARY_DASHBOARD_ROOMS.forEach(({ subscribe, event }) => {
+      socket.emit(subscribe);
+      socket.on(event, scheduleRefetch);
+    });
+
+    return () => {
+      if (refetchTimer.current) {
+        clearTimeout(refetchTimer.current);
+        refetchTimer.current = null;
+      }
+      LIBRARY_DASHBOARD_ROOMS.forEach(({ unsubscribe, event }) => {
+        socket.off(event, scheduleRefetch);
+        socket.emit(unsubscribe);
+      });
+    };
+  }, [socket, isConnected, refetch]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
@@ -83,12 +140,6 @@ const LibraryDashboard: React.FC = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => refetch()}
-            className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700"
-          >
-            Refresh
-          </button>
         </motion.div>
 
         {isError ? (
