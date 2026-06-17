@@ -552,15 +552,40 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
       ),
     );
 
-  const [[oldCourse]] = (await mysqlConnection.query(`
+  let oldCourse: OldCourse | undefined;
+
+  if (oldStudent.admissionid) {
+    const [[courseFromAdmission]] = (await mysqlConnection.query(`
         SELECT crs.*
         FROM course crs
         JOIN coursedetails cd ON cd.courseid = crs.id
         WHERE cd.id = ${oldStudent.admissionid} AND cd.transferred = true
     `)) as [OldCourse[], any];
+    oldCourse = courseFromAdmission;
+  }
 
   if (!oldCourse) {
-    throw new Error(`Course not found for student ${oldStudent.codeNumber}`);
+    const [[courseFromHistoricalRecord]] = (await mysqlConnection.query(`
+        SELECT c.*
+        FROM historicalrecord hr
+        JOIN course c ON c.id = hr.courseId
+        WHERE hr.parent_id = ${oldStudent.id}
+        ORDER BY hr.present DESC, hr.index_col DESC
+        LIMIT 1
+    `)) as [OldCourse[], any];
+    oldCourse = courseFromHistoricalRecord;
+
+    if (oldCourse) {
+      console.log(
+        `Resolved program course for ${oldStudent.codeNumber} via historicalrecord (admissionid is null)`,
+      );
+    }
+  }
+
+  if (!oldCourse) {
+    throw new Error(
+      `Course not found for student ${oldStudent.codeNumber} (no coursedetails or historicalrecord)`,
+    );
   }
 
   let [foundProgramCourse] = await db
@@ -2087,12 +2112,20 @@ export async function processStudent(
                 WHERE spd.id = ${oldStudent.id};
             `)) as [OldAdmStudentPersonalDetail[], any];
 
-      transferredAdmCourseDetails =
-        await oldAdmPersonalDetailsHelper.addAdmCourseApps(
-          oldAdmStudentPersonalDetails,
-          applicationForm,
-          oldStudent,
-        );
+      if (oldAdmStudentPersonalDetails) {
+        transferredAdmCourseDetails =
+          await oldAdmPersonalDetailsHelper.addAdmCourseApps(
+            oldAdmStudentPersonalDetails,
+            applicationForm,
+            oldStudent,
+          );
+      } else {
+        transferredAdmCourseDetails =
+          await oldAdmPersonalDetailsHelper.findTransferredAdmissionCourseDetailsForStudent(
+            student.applicationId as number,
+            student.programCourseId ?? undefined,
+          );
+      }
     } else {
       transferredAdmCourseDetails = acd[0].admission_course_details;
     }
@@ -2584,45 +2617,64 @@ export async function addPromotion(
   student: Student,
   applicationForm: ApplicationForm,
   oldStudentId: number,
-  admissionCourseDetails: AdmissionCourseDetails,
+  _admissionCourseDetails: AdmissionCourseDetails,
 ) {
-  const [foundAdmission] = await db
-    .select()
-    .from(admissionModel)
-    .where(eq(admissionModel.id, applicationForm.admissionId!));
-
-  const [[oldHistoricalRecord]] = (await mysqlConnection.query(`
-        SELECT * FROM historicalrecord WHERE parent_id = ${oldStudentId}
+  const [oldHistoricalRecords] = (await mysqlConnection.query(`
+        SELECT * FROM historicalrecord
+        WHERE parent_id = ${oldStudentId}
+        ORDER BY index_col ASC
     `)) as [OldHistoricalRecord[], any];
 
-  const [foundSession] = await db
-    .select()
-    .from(sessionModel)
-    .where(eq(sessionModel.id, foundAdmission?.sessionId!));
+  if (!oldHistoricalRecords?.length) {
+    console.warn(
+      `No historicalrecord rows found for student legacy id ${oldStudentId}`,
+    );
+    return;
+  }
+
+  for (const oldHistoricalRecord of oldHistoricalRecords) {
+    await upsertPromotionFromHistoricalRecord(student, oldHistoricalRecord);
+  }
+}
+
+async function upsertPromotionFromHistoricalRecord(
+  student: Student,
+  oldHistoricalRecord: OldHistoricalRecord,
+) {
+  const foundSession =
+    await oldAdmPersonalDetailsHelper.getOrCreateSessionForLegacySessionId(
+      oldHistoricalRecord.sessionid,
+    );
 
   const foundClass = await oldAdmPersonalDetailsHelper.addClass(
-    oldHistoricalRecord?.classId!,
+    oldHistoricalRecord.classId,
   );
 
-  const [foundAdmissionProgramCourse] = await db
-    .select()
-    .from(admissionProgramCourseModel)
-    .where(
-      eq(
-        admissionProgramCourseModel.id,
-        admissionCourseDetails.admissionProgramCourseId,
-      ),
+  const [[oldCourse]] = (await mysqlConnection.query(`
+        SELECT * FROM course WHERE id = ${oldHistoricalRecord.courseId}
+    `)) as [OldCourse[], any];
+
+  if (!oldCourse?.courseName) {
+    console.warn(
+      `Skipping promotion ${oldHistoricalRecord.id}: course ${oldHistoricalRecord.courseId} not found`,
     );
+    return;
+  }
 
   const [foundProgramCourse] = await db
     .select()
     .from(programCourseModel)
-    .where(
-      eq(programCourseModel.id, foundAdmissionProgramCourse?.programCourseId!),
+    .where(ilike(programCourseModel.name, oldCourse.courseName.trim()));
+
+  if (!foundProgramCourse) {
+    console.warn(
+      `Skipping promotion ${oldHistoricalRecord.id}: program course not found for ${oldCourse.courseName}`,
     );
+    return;
+  }
 
   const [[oldPromotionStatus]] = (await mysqlConnection.query(`
-        SELECT * FROM promotionstatus WHERE id = ${oldHistoricalRecord?.promotionstatus}
+        SELECT * FROM promotionstatus WHERE id = ${oldHistoricalRecord.promotionstatus}
     `)) as [OldPromotionStatus[], any];
 
   let [foundPromotionStatus] = await db
@@ -2632,14 +2684,14 @@ export async function addPromotion(
       eq(promotionStatusModel.legacyPromotionStatusId, oldPromotionStatus?.id!),
     );
 
-  if (!foundPromotionStatus) {
+  if (!foundPromotionStatus && oldPromotionStatus) {
     foundPromotionStatus = (
       await db
         .insert(promotionStatusModel)
         .values({
-          legacyPromotionStatusId: oldPromotionStatus?.id!,
-          name: oldPromotionStatus?.name!,
-          type: oldPromotionStatus?.spltype.toUpperCase().trim() as
+          legacyPromotionStatusId: oldPromotionStatus.id!,
+          name: oldPromotionStatus.name!,
+          type: oldPromotionStatus.spltype.toUpperCase().trim() as
             | "REGULAR"
             | "READMISSION"
             | "CASUAL",
@@ -2649,7 +2701,7 @@ export async function addPromotion(
   }
 
   let foundBoardResultStatus: BoardResultStatus | undefined;
-  if (oldHistoricalRecord?.boardresultid) {
+  if (oldHistoricalRecord.boardresultid) {
     foundBoardResultStatus = (
       await db
         .select()
@@ -2657,95 +2709,92 @@ export async function addPromotion(
         .where(
           eq(
             boardResultStatusModel.legacyBoardResultStatusId,
-            oldHistoricalRecord?.boardresultid!,
+            oldHistoricalRecord.boardresultid,
           ),
         )
     )[0];
 
     if (!foundBoardResultStatus) {
       const [[oldBoardResultStatus]] = (await mysqlConnection.query(`
-                SELECT * FROM boardresultstatus WHERE id = ${oldHistoricalRecord?.boardresultid}
+                SELECT * FROM boardresultstatus WHERE id = ${oldHistoricalRecord.boardresultid}
             `)) as [OldBoardResultStatus[], any];
-      foundBoardResultStatus = (
-        await db
-          .insert(boardResultStatusModel)
-          .values({
-            legacyBoardResultStatusId: oldBoardResultStatus?.id!,
-            name: oldBoardResultStatus?.name!,
-            spclType: oldBoardResultStatus?.spcltype,
-          })
-          .returning()
-      )[0];
+      if (oldBoardResultStatus) {
+        foundBoardResultStatus = (
+          await db
+            .insert(boardResultStatusModel)
+            .values({
+              legacyBoardResultStatusId: oldBoardResultStatus.id!,
+              name: oldBoardResultStatus.name!,
+              spclType: oldBoardResultStatus.spcltype,
+            })
+            .returning()
+        )[0];
+      }
     }
   }
 
   const foundSection = await oldAdmPersonalDetailsHelper.addSection(
-    oldHistoricalRecord?.sectionId!,
+    oldHistoricalRecord.sectionId,
   );
 
   const shift = await oldAdmPersonalDetailsHelper.upsertShift(
-    oldHistoricalRecord?.shiftId!,
+    oldHistoricalRecord.shiftId,
   );
 
-  // First try to find existing promotion by studentId and legacyHistoricalRecordId
-  let [existingPromotion] = await db
+  const [existingPromotion] = await db
     .select()
     .from(promotionModel)
     .where(
       and(
         eq(promotionModel.studentId, student.id!),
-        eq(promotionModel.legacyHistoricalRecordId, oldHistoricalRecord?.id!),
+        eq(promotionModel.legacyHistoricalRecordId, oldHistoricalRecord.id),
       ),
     );
 
+  const promotionValues = {
+    studentId: student.id!,
+    sectionId: foundSection?.id,
+    legacyHistoricalRecordId: oldHistoricalRecord.id,
+    programCourseId: foundProgramCourse.id!,
+    sessionId: foundSession.id!,
+    shiftId: shift?.id!,
+    classId: foundClass?.id!,
+    classRollNumber: oldHistoricalRecord.rollNo
+      ? String(oldHistoricalRecord.rollNo)
+      : student.classRollNumber || "",
+    dateOfJoining: toDate(oldHistoricalRecord.dateofJoining),
+    promotionStatusId: foundPromotionStatus?.id,
+    boardResultStatusId: foundBoardResultStatus?.id,
+    startDate: toDate(oldHistoricalRecord.startDate) ?? null,
+    endDate: toDate(oldHistoricalRecord.endDate) ?? null,
+    remarks: oldHistoricalRecord.specialisation,
+    rollNumber: oldHistoricalRecord.univrollno,
+    rollNumberSI: oldHistoricalRecord.univrollnosi,
+    examNumber: oldHistoricalRecord.exmno,
+    examSerialNumber: oldHistoricalRecord.exmsrl,
+  };
+
   if (existingPromotion) {
-    console.log("Updating promotion data for student:", student.id);
+    console.log(
+      "Updating promotion data for student:",
+      student.id,
+      "historicalRecordId:",
+      oldHistoricalRecord.id,
+    );
     await db
       .update(promotionModel)
-      .set({
-        studentId: student.id!,
-        sectionId: foundSection?.id,
-        legacyHistoricalRecordId: oldHistoricalRecord?.id!,
-        programCourseId: foundProgramCourse?.id!,
-        sessionId: foundSession?.id!,
-        shiftId: shift?.id!,
-        classId: foundClass?.id!,
-        classRollNumber:
-          String(oldHistoricalRecord?.rollNo!) || student.classRollNumber!,
-        dateOfJoining: toDate(oldHistoricalRecord?.dateofJoining),
-        // promotionStatusId: foundPromotionStatus?.id!,
-        boardResultStatusId: foundBoardResultStatus?.id!,
-        startDate: toDate(oldHistoricalRecord?.startDate) ?? null,
-        endDate: toDate(oldHistoricalRecord?.endDate) ?? null,
-        remarks: oldHistoricalRecord?.specialisation,
-        rollNumber: oldHistoricalRecord?.univrollno,
-        rollNumberSI: oldHistoricalRecord?.univrollnosi,
-        examNumber: oldHistoricalRecord?.exmno,
-        examSerialNumber: oldHistoricalRecord?.exmsrl,
-      })
+      .set(promotionValues)
       .where(eq(promotionModel.id, existingPromotion.id));
   } else {
-    console.log("Creating promotion data for student:", student.id);
-    await db.insert(promotionModel).values({
-      studentId: student.id!,
-      sectionId: foundSection?.id,
-      legacyHistoricalRecordId: oldHistoricalRecord?.id!,
-      programCourseId: foundProgramCourse?.id!,
-      sessionId: foundSession?.id!,
-      shiftId: shift?.id!,
-      classId: foundClass?.id!,
-      classRollNumber: String(oldHistoricalRecord?.rollNo!),
-      dateOfJoining: toDate(oldHistoricalRecord?.dateofJoining),
-      promotionStatusId: foundPromotionStatus?.id!,
-      boardResultStatusId: foundBoardResultStatus?.id!,
-      startDate: toDate(oldHistoricalRecord?.startDate) ?? null,
-      endDate: toDate(oldHistoricalRecord?.endDate) ?? null,
-      remarks: oldHistoricalRecord?.specialisation,
-      rollNumber: oldHistoricalRecord?.univrollno,
-      rollNumberSI: oldHistoricalRecord?.univrollnosi,
-      examNumber: oldHistoricalRecord?.exmno,
-      examSerialNumber: oldHistoricalRecord?.exmsrl,
-    } as PromotionInsertSchema);
+    console.log(
+      "Creating promotion data for student:",
+      student.id,
+      "historicalRecordId:",
+      oldHistoricalRecord.id,
+    );
+    await db
+      .insert(promotionModel)
+      .values(promotionValues as PromotionInsertSchema);
   }
 }
 
