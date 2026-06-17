@@ -204,6 +204,10 @@ type FormState = {
   backCoverPreview: string;
   frontCoverFile: File | null;
   backCoverFile: File | null;
+  branchId: string;
+  cdlEnabled: boolean;
+  cdlConcurrentLimit: string;
+  cdlLoanHours: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -238,6 +242,10 @@ const emptyForm = (): FormState => ({
   backCoverPreview: "",
   frontCoverFile: null,
   backCoverFile: null,
+  branchId: "",
+  cdlEnabled: false,
+  cdlConcurrentLimit: "1",
+  cdlLoanHours: "24",
 });
 
 const detailToForm = (d: BookDetail): FormState => ({
@@ -272,6 +280,10 @@ const detailToForm = (d: BookDetail): FormState => ({
   backCoverPreview: d.backCover ?? "",
   frontCoverFile: null,
   backCoverFile: null,
+  branchId: d.branchId != null ? String(d.branchId) : "",
+  cdlEnabled: d.cdlEnabled ?? false,
+  cdlConcurrentLimit: d.cdlConcurrentLimit != null ? String(d.cdlConcurrentLimit) : "1",
+  cdlLoanHours: d.cdlLoanHours != null ? String(d.cdlLoanHours) : "24",
 });
 
 const formToBody = (f: FormState): BookUpsertBody => ({
@@ -304,6 +316,10 @@ const formToBody = (f: FormState): BookUpsertBody => ({
   backCover: f.backCover.trim() || null,
   frontCoverFile: f.frontCoverFile,
   backCoverFile: f.backCoverFile,
+  branchId: f.branchId.trim() ? Number(f.branchId) : null,
+  cdlEnabled: f.cdlEnabled,
+  cdlConcurrentLimit: f.cdlConcurrentLimit ? Number(f.cdlConcurrentLimit) : 1,
+  cdlLoanHours: f.cdlLoanHours ? Number(f.cdlLoanHours) : 24,
 });
 
 function BookRowActions({
@@ -1490,6 +1506,68 @@ export default function BooksPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="rounded-lg border border-indigo-100 bg-indigo-50/30 p-3 sm:p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    Branch & Controlled Digital Lending (CDL)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Scope the title to a library branch and configure CDL access if a soft-copy is
+                    uploaded.
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Branch ID</Label>
+                  <Input
+                    value={form.branchId}
+                    inputMode="numeric"
+                    placeholder="e.g. 1"
+                    onChange={(e) => setForm((f) => ({ ...f, branchId: e.target.value }))}
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <input
+                    id="cdl-enabled"
+                    type="checkbox"
+                    checked={form.cdlEnabled}
+                    onChange={(e) => setForm((f) => ({ ...f, cdlEnabled: e.target.checked }))}
+                  />
+                  <Label htmlFor="cdl-enabled">Enable CDL</Label>
+                </div>
+                <div>
+                  <Label>Concurrent limit</Label>
+                  <Input
+                    value={form.cdlConcurrentLimit}
+                    inputMode="numeric"
+                    disabled={!form.cdlEnabled}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        cdlConcurrentLimit: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Loan hours</Label>
+                  <Input
+                    value={form.cdlLoanHours}
+                    inputMode="numeric"
+                    disabled={!form.cdlEnabled}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        cdlLoanHours: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter className="shrink-0 border-t bg-muted/30 px-6 py-4">

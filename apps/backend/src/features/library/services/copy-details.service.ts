@@ -23,6 +23,8 @@ export type CopyDetailsListFilters = {
   bindingTypeId?: number;
   enclosureId?: number;
   bookId?: number;
+  branchId?: number;
+  itemCategoryId?: number;
 };
 
 export type CopyDetailsExportFilters = Omit<
@@ -147,6 +149,12 @@ const buildListWhere = (
   }
   if (filters.enclosureId != null && !Number.isNaN(filters.enclosureId)) {
     parts.push(eq(copyDetailsModel.enclosureId, filters.enclosureId));
+  }
+  if (filters.branchId != null && !Number.isNaN(filters.branchId)) {
+    parts.push(eq(copyDetailsModel.branchId, filters.branchId));
+  }
+  if (filters.itemCategoryId != null && !Number.isNaN(filters.itemCategoryId)) {
+    parts.push(eq(copyDetailsModel.itemCategoryId, filters.itemCategoryId));
   }
   if (filters.bookId != null && !Number.isNaN(filters.bookId)) {
     parts.push(eq(copyDetailsModel.bookId, filters.bookId));

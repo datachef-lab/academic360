@@ -196,6 +196,7 @@ export const downloadBookExcelController = async (
       libraryDocumentTypeId: parseQueryInt(req.query, "libraryDocumentTypeId"),
       journalId: parseQueryInt(req.query, "journalId"),
       enclosureId: parseQueryInt(req.query, "enclosureId"),
+      branchId: parseQueryInt(req.query, "branchId"),
     });
 
     const filename = `library-books-${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -236,6 +237,7 @@ export const getBookListController = async (
       libraryDocumentTypeId: parseQueryInt(req.query, "libraryDocumentTypeId"),
       journalId: parseQueryInt(req.query, "journalId"),
       enclosureId: parseQueryInt(req.query, "enclosureId"),
+      branchId: parseQueryInt(req.query, "branchId"),
     });
 
     res

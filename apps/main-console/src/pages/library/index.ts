@@ -12,6 +12,14 @@ import EntryModesPage from "./EntryModesPage";
 import PeriodsPage from "./PeriodsPage";
 import BindingTypesPage from "./BindingTypesPage";
 import BorrowingTypesPage from "./BorrowingTypesPage";
+import LibraryZonesMasterPage from "./LibraryZonesMasterPage";
+import LibrarySearchPage from "./LibrarySearchPage";
+import ReadingListsPage from "./ReadingListsPage";
+import AcademicArchivePage from "./AcademicArchivePage";
+import EvidenceLockerPage from "./EvidenceLockerPage";
+import JournalSubscriptionsPage from "./JournalSubscriptionsPage";
+import LibraryReportsPage from "./LibraryReportsPage";
+import StudentAnalyticsPage from "./StudentAnalyticsPage";
 import {
   ArticlesPage,
   AuthorTypesPage,
@@ -60,4 +68,12 @@ export {
   PatronCategoriesPage,
   ItemCategoriesPage,
   CirculationPoliciesPage,
+  LibraryZonesMasterPage,
+  LibrarySearchPage,
+  ReadingListsPage,
+  AcademicArchivePage,
+  EvidenceLockerPage,
+  JournalSubscriptionsPage,
+  LibraryReportsPage,
+  StudentAnalyticsPage,
 };

@@ -27,6 +27,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { LibraryBranchSelector } from "@/features/library/LibraryBranchSelector";
 
 const quickLinks = [
   {
@@ -181,6 +182,9 @@ export default function LibraryMaster() {
 
   const rightBarContent = (
     <div className="flex h-full flex-col justify-between gap-4 py-3">
+      <div>
+        <LibraryBranchSelector />
+      </div>
       <ul>
         {quickLinks.map((link) => (
           <NavItem

@@ -17,8 +17,9 @@ export const initiateLibraryFinePaymentController = async (
     if (Number.isNaN(circulationId) || circulationId <= 0) {
       throw new ApiError(400, "Invalid circulation id.");
     }
+    const sessionUser = req.user as { id?: number } | undefined;
     const userId = Number(
-      (req.body as { userId?: number | string }).userId ?? req.user?.id,
+      (req.body as { userId?: number | string }).userId ?? sessionUser?.id,
     );
     if (Number.isNaN(userId) || userId <= 0) {
       throw new ApiError(400, "userId is required.");

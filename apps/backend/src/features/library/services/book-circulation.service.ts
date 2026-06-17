@@ -13,6 +13,9 @@ import { userModel } from "@repo/db/schemas/models/user/user.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model.js";
 import { getLibraryEntryExitPreviewByUserId } from "@/features/library/services/library-entry-exit.service.js";
+import { resolvePolicyForCirculation } from "@/features/library/services/circulation-policy-resolver.service.js";
+import { countWorkingDaysBetween } from "@/features/library/services/holiday-calendar.service.js";
+import { emitLibraryNotification } from "@/features/library/services/library-notifications.service.js";
 
 type UserType = "ADMIN" | "STUDENT" | "FACULTY" | "STAFF" | "PARENTS";
 
@@ -467,6 +470,7 @@ export async function returnBookCirculationById(id: number): Promise<void> {
   const [base] = await db
     .select({
       userId: bookCirculationModel.userId,
+      copyDetailsId: bookCirculationModel.copyDetailsId,
       issueTimestamp: bookCirculationModel.issueTimestamp,
       returnTimestamp: bookCirculationModel.returnTimestamp,
     })
@@ -475,27 +479,54 @@ export async function returnBookCirculationById(id: number): Promise<void> {
     .limit(1);
   if (!base) return;
 
+  const actualReturn = new Date();
+  const policy = await resolvePolicyForCirculation(
+    base.userId,
+    base.copyDetailsId,
+  );
+
+  let fineAmount = 0;
+  if (actualReturn > base.returnTimestamp) {
+    const lateWorkingDays = await countWorkingDaysBetween(
+      base.returnTimestamp,
+      actualReturn,
+    );
+    const billableDays = Math.max(0, lateWorkingDays - policy.graceDays);
+    fineAmount = billableDays * policy.finePerDay;
+  }
+
   await db
     .update(bookCirculationModel)
     .set({
       isReturned: true,
-      actualReturnTimestamp: new Date(),
+      actualReturnTimestamp: actualReturn,
       returnedToId: null,
+      fineAmount,
+      fineDate: fineAmount > 0 ? actualReturn : null,
       updatedAt: new Date(),
     })
-    .where(
-      and(
-        eq(bookCirculationModel.userId, base.userId),
-        eq(bookCirculationModel.issueTimestamp, base.issueTimestamp),
-        eq(bookCirculationModel.returnTimestamp, base.returnTimestamp),
-      ),
-    );
+    .where(eq(bookCirculationModel.id, id));
+
+  await emitLibraryNotification({
+    event: "LIBRARY_RETURN_CONFIRMED",
+    userId: base.userId,
+    variables: { circulationId: id, returnedAt: actualReturn.toISOString() },
+  });
+  if (fineAmount > 0) {
+    await emitLibraryNotification({
+      event: "LIBRARY_FINE_CHARGED",
+      userId: base.userId,
+      variables: { circulationId: id, fineAmount },
+    });
+  }
 }
 
 export async function reissueBookCirculationById(id: number): Promise<void> {
   const [base] = await db
     .select({
       userId: bookCirculationModel.userId,
+      copyDetailsId: bookCirculationModel.copyDetailsId,
+      issuedFromId: bookCirculationModel.issuedFromId,
       issueTimestamp: bookCirculationModel.issueTimestamp,
       returnTimestamp: bookCirculationModel.returnTimestamp,
     })
@@ -504,27 +535,41 @@ export async function reissueBookCirculationById(id: number): Promise<void> {
     .limit(1);
   if (!base) return;
 
+  const policy = await resolvePolicyForCirculation(
+    base.userId,
+    base.copyDetailsId,
+  );
   const now = new Date();
   const due = new Date(now);
-  due.setDate(due.getDate() + 7);
+  due.setDate(due.getDate() + policy.loanDays);
 
-  await db
-    .update(bookCirculationModel)
-    .set({
-      isReIssued: true,
-      isReturned: false,
-      issueTimestamp: now,
+  await db.transaction(async (tx) => {
+    await tx
+      .update(bookCirculationModel)
+      .set({
+        isReIssued: true,
+        isReturned: false,
+        issueTimestamp: now,
+        returnTimestamp: due,
+        actualReturnTimestamp: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(bookCirculationModel.id, id));
+    await tx.insert(bookReissueModel).values({
+      bookCirculationId: id,
+      reissuedBy: base.issuedFromId,
       returnTimestamp: due,
-      actualReturnTimestamp: null,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(bookCirculationModel.userId, base.userId),
-        eq(bookCirculationModel.issueTimestamp, base.issueTimestamp),
-        eq(bookCirculationModel.returnTimestamp, base.returnTimestamp),
-      ),
-    );
+    });
+  });
+
+  await emitLibraryNotification({
+    event: "LIBRARY_REISSUE_CONFIRMED",
+    userId: base.userId,
+    variables: {
+      circulationId: id,
+      newReturnTimestamp: due.toISOString(),
+    },
+  });
 }
 
 export async function issueBookCirculationFromExistingById(
@@ -542,24 +587,41 @@ export async function issueBookCirculationFromExistingById(
     .limit(1);
   if (!base) return;
 
+  const policy = await resolvePolicyForCirculation(
+    base.userId,
+    base.copyDetailsId,
+  );
   const now = new Date();
   const due = new Date(now);
-  due.setDate(due.getDate() + 7);
+  due.setDate(due.getDate() + policy.loanDays);
 
-  await db.insert(bookCirculationModel).values({
-    copyDetailsId: base.copyDetailsId,
+  const [inserted] = await db
+    .insert(bookCirculationModel)
+    .values({
+      copyDetailsId: base.copyDetailsId,
+      userId: base.userId,
+      borrowingTypeId: base.borrowingTypeId,
+      issueTimestamp: now,
+      returnTimestamp: due,
+      actualReturnTimestamp: null,
+      isReturned: false,
+      isReIssued: false,
+      isForcedIssue: false,
+      fineAmount: 0,
+      fineWaiver: 0,
+      issuedFromId: base.issuedFromId,
+      returnedToId: null,
+    })
+    .returning({ id: bookCirculationModel.id });
+
+  await emitLibraryNotification({
+    event: "LIBRARY_ISSUE_CONFIRMED",
     userId: base.userId,
-    borrowingTypeId: base.borrowingTypeId,
-    issueTimestamp: now,
-    returnTimestamp: due,
-    actualReturnTimestamp: null,
-    isReturned: false,
-    isReIssued: false,
-    isForcedIssue: false,
-    fineAmount: 0,
-    fineWaiver: 0,
-    issuedFromId: base.issuedFromId,
-    returnedToId: null,
+    variables: {
+      circulationId: inserted?.id ?? null,
+      copyDetailsId: base.copyDetailsId,
+      returnTimestamp: due.toISOString(),
+    },
   });
 }
 
@@ -594,6 +656,12 @@ export async function upsertBookCirculationRowsForUser(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
+  const events: Array<
+    | { kind: "ISSUE"; circulationId: number; returnTimestamp: Date }
+    | { kind: "RETURN"; circulationId: number; returnedAt: Date }
+    | { kind: "REISSUE"; circulationId: number; newReturnTimestamp: Date }
+  > = [];
+
   await db.transaction(async (tx) => {
     const existingIds = prepared
       .map((row) => row.id)
@@ -605,6 +673,7 @@ export async function upsertBookCirculationRowsForUser(
             id: bookCirculationModel.id,
             userId: bookCirculationModel.userId,
             returnTimestamp: bookCirculationModel.returnTimestamp,
+            actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
             issuedFromId: bookCirculationModel.issuedFromId,
           })
           .from(bookCirculationModel)
@@ -622,6 +691,8 @@ export async function upsertBookCirculationRowsForUser(
           row.returnTimestamp.getTime();
         const reissuedById = actorUserId ?? existing.issuedFromId ?? userId;
         const shouldInsertReissue = returnTimestampChanged;
+        const becameReturned =
+          !existing.actualReturnTimestamp && !!row.actualReturnTimestamp;
 
         await tx
           .update(bookCirculationModel)
@@ -646,27 +717,82 @@ export async function upsertBookCirculationRowsForUser(
             reissuedBy: reissuedById,
             returnTimestamp: row.returnTimestamp,
           });
+          events.push({
+            kind: "REISSUE",
+            circulationId: row.id,
+            newReturnTimestamp: row.returnTimestamp,
+          });
+        }
+        if (becameReturned && row.actualReturnTimestamp) {
+          events.push({
+            kind: "RETURN",
+            circulationId: row.id,
+            returnedAt: row.actualReturnTimestamp,
+          });
         }
         continue;
       }
 
-      await tx.insert(bookCirculationModel).values({
-        copyDetailsId: row.copyDetailsId,
-        userId,
-        borrowingTypeId: row.borrowingTypeId,
-        issueTimestamp: row.issueTimestamp,
-        returnTimestamp: row.returnTimestamp,
-        actualReturnTimestamp: row.actualReturnTimestamp,
-        isReturned: !!row.actualReturnTimestamp,
-        isReIssued: false,
-        isForcedIssue: false,
-        fineAmount: 0,
-        fineWaiver: 0,
-        issuedFromId: actorUserId ?? userId,
-        returnedToId: row.actualReturnTimestamp ? (actorUserId ?? null) : null,
-      });
+      const [inserted] = await tx
+        .insert(bookCirculationModel)
+        .values({
+          copyDetailsId: row.copyDetailsId,
+          userId,
+          borrowingTypeId: row.borrowingTypeId,
+          issueTimestamp: row.issueTimestamp,
+          returnTimestamp: row.returnTimestamp,
+          actualReturnTimestamp: row.actualReturnTimestamp,
+          isReturned: !!row.actualReturnTimestamp,
+          isReIssued: false,
+          isForcedIssue: false,
+          fineAmount: 0,
+          fineWaiver: 0,
+          issuedFromId: actorUserId ?? userId,
+          returnedToId: row.actualReturnTimestamp
+            ? (actorUserId ?? null)
+            : null,
+        })
+        .returning({ id: bookCirculationModel.id });
+      if (inserted?.id && !row.actualReturnTimestamp) {
+        events.push({
+          kind: "ISSUE",
+          circulationId: inserted.id,
+          returnTimestamp: row.returnTimestamp,
+        });
+      }
     }
   });
+
+  for (const ev of events) {
+    if (ev.kind === "ISSUE") {
+      await emitLibraryNotification({
+        event: "LIBRARY_ISSUE_CONFIRMED",
+        userId,
+        variables: {
+          circulationId: ev.circulationId,
+          returnTimestamp: ev.returnTimestamp.toISOString(),
+        },
+      });
+    } else if (ev.kind === "RETURN") {
+      await emitLibraryNotification({
+        event: "LIBRARY_RETURN_CONFIRMED",
+        userId,
+        variables: {
+          circulationId: ev.circulationId,
+          returnedAt: ev.returnedAt.toISOString(),
+        },
+      });
+    } else if (ev.kind === "REISSUE") {
+      await emitLibraryNotification({
+        event: "LIBRARY_REISSUE_CONFIRMED",
+        userId,
+        variables: {
+          circulationId: ev.circulationId,
+          newReturnTimestamp: ev.newReturnTimestamp.toISOString(),
+        },
+      });
+    }
+  }
 }
 
 const formatExcelDateTime = (value: Date | string | null) => {

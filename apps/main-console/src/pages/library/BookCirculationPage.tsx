@@ -53,6 +53,7 @@ import {
   getBookCirculationPreview,
   upsertBookCirculationRows,
 } from "@/services/book-circulation.service";
+import { initiateLibraryFinePayment } from "@/services/library-fine-payment.service";
 
 type Filters = {
   userType: "all" | (typeof userTypeEnum.enumValues)[number];
@@ -1100,10 +1101,39 @@ export default function BookCirculationPage() {
                                 variant="outline"
                                 className="h-8 border-amber-300 bg-amber-50 px-2 text-xs text-amber-700 hover:bg-amber-100"
                                 type="button"
-                                disabled={!item.isNew && !!item.actualReturnTimestamp}
+                                disabled={
+                                  item.isNew || item.netFine <= 0 || !previewData?.user?.userId
+                                }
+                                onClick={async () => {
+                                  if (!previewData?.user?.userId) return;
+                                  try {
+                                    const res = await initiateLibraryFinePayment(
+                                      item.id,
+                                      previewData.user.userId,
+                                    );
+                                    if (res.payload) {
+                                      const link = `Order ${res.payload.orderId} · ${formatInr(res.payload.amount)}`;
+                                      await navigator.clipboard
+                                        ?.writeText(res.payload.orderId)
+                                        .catch(() => undefined);
+                                      toast.success(
+                                        `Payment link generated. ${link} (order id copied).`,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    const msg =
+                                      (
+                                        e as {
+                                          response?: { data?: { message?: string } };
+                                        }
+                                      )?.response?.data?.message ??
+                                      "Failed to initiate fine payment.";
+                                    toast.error(msg);
+                                  }
+                                }}
                               >
                                 <IndianRupee className="mr-1 h-3.5 w-3.5" />
-                                Fine
+                                Pay Fine
                               </Button>
                               {item.isNew ? (
                                 <Button

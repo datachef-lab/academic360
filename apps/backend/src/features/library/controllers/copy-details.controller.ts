@@ -123,6 +123,8 @@ export const downloadCopyDetailsExcelController = async (
       bindingTypeId: parseQueryInt(req.query, "bindingTypeId"),
       enclosureId: parseQueryInt(req.query, "enclosureId"),
       bookId: parseQueryInt(req.query, "bookId"),
+      branchId: parseQueryInt(req.query, "branchId"),
+      itemCategoryId: parseQueryInt(req.query, "itemCategoryId"),
     });
 
     const filename = `library-copy-details-${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -163,6 +165,8 @@ export const getCopyDetailsListController = async (
       bindingTypeId: parseQueryInt(req.query, "bindingTypeId"),
       enclosureId: parseQueryInt(req.query, "enclosureId"),
       bookId: parseQueryInt(req.query, "bookId"),
+      branchId: parseQueryInt(req.query, "branchId"),
+      itemCategoryId: parseQueryInt(req.query, "itemCategoryId"),
     });
 
     res

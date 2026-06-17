@@ -58,6 +58,10 @@ export type BookDetail = {
   referenceNumber: string | null;
   frontCover: string | null;
   backCover: string | null;
+  branchId: number | null;
+  cdlEnabled: boolean;
+  cdlConcurrentLimit: number;
+  cdlLoanHours: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -103,6 +107,10 @@ export type BookUpsertBody = {
   backCover?: string | null;
   frontCoverFile?: File | null;
   backCoverFile?: File | null;
+  branchId?: number | null;
+  cdlEnabled?: boolean;
+  cdlConcurrentLimit?: number;
+  cdlLoanHours?: number;
 };
 
 const BASE = "/api/library/books";
