@@ -261,9 +261,7 @@ export async function deleteIssue(id: number) {
   await db.delete(journalIssueModel).where(eq(journalIssueModel.id, id));
 }
 
-export async function findMissingIssues(
-  asOf: Date = new Date(),
-): Promise<
+export async function findMissingIssues(asOf: Date = new Date()): Promise<
   Array<{
     id: number;
     subscriptionId: number;
