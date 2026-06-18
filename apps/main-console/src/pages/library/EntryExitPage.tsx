@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -591,8 +592,7 @@ export default function EntryExitPage() {
     }
   };
 
-  const getStudentAvatarUrl = (uid: string) =>
-    `${import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ?? "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid="}${uid}`;
+  const getStudentAvatarUrl = (uid: string) => studentAvatarUrl(uid) ?? "";
 
   const getPreviewAvatarUrl = () => {
     const user = previewData?.user;

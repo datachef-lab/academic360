@@ -91,6 +91,7 @@ import PromoteStudentsPage from "./pages/PromoteStudentsPage";
 import AcademicActivityPage from "./features/administration/pages/academic-activity.page";
 import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalCURegMarkingPage";
 import * as administrationModule from "./features/administration";
+import * as idCardModule from "@/features/idcard";
 // import * as resourceModule from "@/pages/resources";
 
 const router = createBrowserRouter(
@@ -194,6 +195,21 @@ const router = createBrowserRouter(
                 { path: "classes", element: <courseSubjectModule.ClassesPage /> },
                 { path: "promotion-clauses", element: <PromotionClausesPage /> },
                 { path: "appear-types", element: <AppearTypePage /> },
+              ],
+            },
+            {
+              path: "classes",
+              element: <idCardModule.ClassesMaster />,
+              children: [
+                { path: "", element: <idCardModule.IdCardIssuePage /> },
+                { path: "reports", element: <idCardModule.IdCardReportsPage /> },
+                { path: "templates", element: <idCardModule.IdCardTemplatesPage /> },
+                {
+                  path: "templates/:templateId/editor",
+                  element: <idCardModule.IdCardTemplateEditorPage />,
+                },
+                { path: "shifts", element: <idCardModule.ShiftsMasterPage /> },
+                { path: "sections", element: <idCardModule.SectionsMasterPage /> },
               ],
             },
           ],

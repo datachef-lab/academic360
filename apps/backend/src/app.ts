@@ -121,6 +121,7 @@ import feeStudentMappingRouter from "@/features/fees/routes/fee-student-mapping.
 import feeReceiptRouter from "@/features/fees/routes/fee-receipt.route.js";
 import feesDashboardRouter from "@/features/fees/routes/fees-dashboard.route.js";
 import realtimeTrackerRouter from "@/features/realtime-tracker/routes/realtime-tracker.routes.js";
+import idCardRouter from "@/features/idcard/routes/id-card.routes.js";
 import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
 import {
   promotionBuilderRouter,
@@ -827,6 +828,8 @@ app.use(
 app.use("/api/subject-selection/dynamic-subjects", dynamicSubjectsRoutes);
 
 app.use("/api/bulk-upload", bulkUploadRouter);
+
+app.use("/api/idcard", idCardRouter);
 
 // Lightweight districts endpoint to support frontend dropdowns
 app.get("/api/districts", async (req: Request, res: Response) => {

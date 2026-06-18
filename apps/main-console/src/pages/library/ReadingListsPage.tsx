@@ -171,7 +171,7 @@ export default function ReadingListsPage() {
         setProgramCourseOptions(
           (pcs ?? []).map((p) => ({
             value: String(p.id),
-            label: p.name,
+            label: p.name ?? "",
           })),
         );
         setClassOptions(

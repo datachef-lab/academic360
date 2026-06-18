@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Combobox } from "@/components/ui/combobox";
@@ -63,6 +63,7 @@ import {
 import { cn } from "@/lib/utils";
 import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
 type Filters = {
   userType: "all" | (typeof userTypeEnum.enumValues)[number];
@@ -170,8 +171,7 @@ export default function BookCirculationPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const userTypeOptions = useMemo(() => userTypeEnum.enumValues, []);
-  const getStudentAvatarUrl = (uid: string) =>
-    `${import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ?? "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid="}${uid}`;
+  const getStudentAvatarUrl = (uid: string) => studentAvatarUrl(uid) ?? "";
   const getEntryRowAvatarUrl = (row: BookCirculationRow) => {
     if (row.userType === "STUDENT" && row.studentUid) {
       return getStudentAvatarUrl(row.studentUid);

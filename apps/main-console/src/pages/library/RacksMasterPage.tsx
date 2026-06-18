@@ -37,7 +37,6 @@ import {
   STICKY_TH_LEFT,
   STICKY_TH_RIGHT,
 } from "@/components/library/LibraryTablePage";
-import { cn } from "@/lib/utils";
 import type { LibraryRackRow, LibraryRackUpsertBody } from "@/services/library-racks.service";
 import {
   createLibraryRack,

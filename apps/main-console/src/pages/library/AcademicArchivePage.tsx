@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -143,7 +143,9 @@ export default function AcademicArchivePage() {
     void (async () => {
       try {
         const [pcs, classes] = await Promise.all([getProgramCourses(), getAllClasses()]);
-        setProgramCourseOptions((pcs ?? []).map((p) => ({ value: String(p.id), label: p.name })));
+        setProgramCourseOptions(
+          (pcs ?? []).map((p) => ({ value: String(p.id), label: p.name ?? "" })),
+        );
         setClassOptions((classes ?? []).map((c) => ({ value: String(c.id), label: c.name })));
       } catch (e) {
         console.error(e);

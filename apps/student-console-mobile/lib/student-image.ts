@@ -1,15 +1,12 @@
 /**
- * Base URL for student profile images.
- * Configure via EXPO_PUBLIC_STUDENT_IMAGE_URL in .env
+ * Builds the URL to the unified backend avatar resolver. The backend runs
+ * the S3 → besc → hrclIRP → previous-uid chain server-side; on 404 the
+ * caller should render initials locally.
  */
-export const STUDENT_IMAGE_BASE =
-  process.env.EXPO_PUBLIC_STUDENT_IMAGE_URL ?? "https://74.207.233.48:8443/hrclIRP/studentimages";
+export const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "";
 
-/**
- * Returns the student image URL for the given UID.
- * Use this for all student avatars - fallback to initials when image fails to load.
- */
 export function getStudentImageUrl(uid?: string | null): string | null {
   if (!uid) return null;
-  return `${STUDENT_IMAGE_BASE}/Student_Image_${uid}.jpg`;
+  if (!API_BASE) return null;
+  return `${API_BASE}/api/students/uid/${encodeURIComponent(uid)}/avatar`;
 }

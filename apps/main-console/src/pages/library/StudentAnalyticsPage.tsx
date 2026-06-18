@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,8 +27,6 @@ import {
   STICKY_TH_LEFT,
   STICKY_TH_RIGHT,
 } from "@/components/library/LibraryTablePage";
-import { cn } from "@/lib/utils";
-
 export default function StudentAnalyticsPage() {
   const [rows, setRows] = useState<StudentLibraryAnalyticsRow[]>([]);
   const [loading, setLoading] = useState(false);

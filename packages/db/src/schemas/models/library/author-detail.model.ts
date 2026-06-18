@@ -1,7 +1,6 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
-import { nationalityModel } from "../resources";
 import { authorTypeModel } from "./author-type.model";
 import { authorModel } from "./author.model";
 import { bookModel } from "./book.model";
