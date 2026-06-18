@@ -24,16 +24,18 @@ export function DatePicker({
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant={"outline"}
+          variant="outline"
           disabled={disabled}
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "h-9 w-full min-w-[10.5rem] justify-start gap-2 px-3 py-2 text-left text-sm font-normal",
             !value && "text-muted-foreground",
             className,
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, displayFormat) : <span>Pick a date</span>}
+          <CalendarIcon className="h-4 w-4 shrink-0 opacity-70" />
+          <span className="whitespace-nowrap">
+            {value ? format(value, displayFormat) : "Pick a date"}
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
