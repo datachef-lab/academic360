@@ -1421,6 +1421,27 @@ async function createBootstrapAdmissionCourseDetails(
 }
 
 /**
+ * For bootstrap students, oldStudent carries the only signals admission_additional_info
+ * can mirror (handicapped flag). Create the row if missing so the FK chain is whole.
+ */
+export async function upsertBootstrapAdditionalInfo(
+  applicationFormId: number,
+  oldStudent: OldStudent,
+): Promise<void> {
+  const [existing] = await db
+    .select()
+    .from(admissionAdditionalInfoModel)
+    .where(
+      eq(admissionAdditionalInfoModel.applicationFormId, applicationFormId),
+    );
+  if (existing) return;
+  await db.insert(admissionAdditionalInfoModel).values({
+    applicationFormId,
+    isPhysicallyChallenged: oldStudent.handicapped === "YES",
+  });
+}
+
+/**
  * Build a minimal application form from post-admission legacy data when the
  * pre-admission personaldetails/coursedetails chain is unavailable.
  */
@@ -1468,6 +1489,35 @@ export async function createLegacyBootstrapApplicationForm(
       );
     }
 
+    // Refuse to adopt an applicationForm that wasn't bootstrap-built. The bootstrap path
+    // is only legitimate when (a) the linked course_details was created with
+    // legacyCourseDetailsId IS NULL AND isTransferred = true, OR (b) the linked
+    // general_info has legacyPersonalDetailsId IS NULL. Otherwise this would silently
+    // glue post-admission data onto a happy-path applicationForm.
+    const isBootstrapTombstone =
+      transferredAdmCourseDetails.legacyCourseDetailsId == null &&
+      transferredAdmCourseDetails.isTransferred === true;
+    if (!isBootstrapTombstone) {
+      const [gi] = await db
+        .select({
+          legacyPersonalDetailsId:
+            admissionGeneralInfoModel.legacyPersonalDetailsId,
+        })
+        .from(admissionGeneralInfoModel)
+        .where(
+          eq(admissionGeneralInfoModel.applicationFormId, applicationForm.id!),
+        );
+      if (gi && gi.legacyPersonalDetailsId != null) {
+        throw new Error(
+          `Refusing bootstrap on student ${student.uid}: applicationForm ${applicationForm.id} ` +
+            `was created via the happy path (legacyCourseDetailsId=${transferredAdmCourseDetails.legacyCourseDetailsId}, ` +
+            `legacyPersonalDetailsId=${gi.legacyPersonalDetailsId}). ` +
+            `Bootstrap may not adopt a non-bootstrap form.`,
+        );
+      }
+    }
+
+    await upsertBootstrapAdditionalInfo(applicationForm.id!, oldStudent);
     return { applicationForm, transferredAdmCourseDetails };
   }
 
@@ -1499,10 +1549,34 @@ export async function createLegacyBootstrapApplicationForm(
   );
   const foundAdmission = await getOrCreateAdmissionForSession(foundSession);
 
-  const level =
-    oldStudent.coursetype?.trim().toUpperCase() === "PG"
-      ? "POST_GRADUATE"
-      : "UNDER_GRADUATE";
+  // Resolve UG/PG from the new-DB programCourse already linked to the student
+  // (upsertStudent ran first in processStudent). studentpersonaldetails.coursetype
+  // holds curriculum framework values like "CBCS" — NOT a UG/PG signal.
+  let level: "UNDER_GRADUATE" | "POST_GRADUATE" | null = null;
+  if (student.programCourseId) {
+    const [row] = await db
+      .select({ shortName: courseLevelModel.shortName })
+      .from(programCourseModel)
+      .leftJoin(
+        courseLevelModel,
+        eq(programCourseModel.courseLevelId, courseLevelModel.id),
+      )
+      .where(eq(programCourseModel.id, student.programCourseId));
+    const short = row?.shortName?.trim().toUpperCase();
+    if (short === "PG") level = "POST_GRADUATE";
+    else if (short === "UG") level = "UNDER_GRADUATE";
+  }
+  if (!level) {
+    const ct = oldStudent.coursetype?.trim().toUpperCase();
+    if (ct === "PG") level = "POST_GRADUATE";
+    else if (ct === "UG") level = "UNDER_GRADUATE";
+  }
+  if (!level) {
+    throw new Error(
+      `Cannot determine UG/PG level for student ${oldStudent.codeNumber}: ` +
+        `course_levels.short_name unknown and oldStudent.coursetype='${oldStudent.coursetype ?? ""}' is not UG/PG`,
+    );
+  }
 
   const [applicationForm] = await db
     .insert(applicationFormModel)
@@ -1546,6 +1620,8 @@ export async function createLegacyBootstrapApplicationForm(
     });
   }
 
+  await upsertBootstrapAdditionalInfo(applicationForm.id!, oldStudent);
+
   const transferredAdmCourseDetails =
     await createBootstrapAdmissionCourseDetails(
       applicationForm,
@@ -1553,12 +1629,13 @@ export async function createLegacyBootstrapApplicationForm(
       oldStudent,
     );
 
-  console.log(
-    "Legacy bootstrap application form created for student:",
-    oldStudent.codeNumber,
-    "applicationFormId:",
-    applicationForm.id,
-  );
+  console.log("[legacy-bootstrap]", {
+    uid: student.uid,
+    codeNumber: oldStudent.codeNumber,
+    applicationFormId: applicationForm.id,
+    level,
+    source: "historicalrecord",
+  });
 
   return { applicationForm, transferredAdmCourseDetails };
 }
