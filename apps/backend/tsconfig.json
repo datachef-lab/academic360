@@ -22,10 +22,7 @@
     "paths": {
       "@repo/db/*": ["../../packages/db/src/*"],
       "@repo/utils/*": ["../../packages/utils/src/*"],
-      "@/*": ["./src/*", "../../packages/db/src/*"],
-      "socket.io": ["./node_modules/socket.io"],
-      "redis": ["./node_modules/redis"],
-      "@socket.io/redis-adapter": ["./node_modules/@socket.io/redis-adapter"]
+      "@/*": ["./src/*", "../../packages/db/src/*"]
     }
   },
   "include": [
