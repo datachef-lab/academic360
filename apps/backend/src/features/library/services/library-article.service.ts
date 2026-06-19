@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { libraryArticleModel } from "@repo/db/schemas/models/library/library-article.model.js";
 import { libraryDocumentTypeModel } from "@repo/db/schemas/models/library/library-document-type.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type LibraryArticleListFilters = {
   page: number;
@@ -147,6 +148,13 @@ export async function getLibraryArticleById(
 export async function createLibraryArticle(
   input: LibraryArticleUpsertInput,
 ): Promise<number> {
+  await assertUniqueLibraryName({
+    table: libraryArticleModel,
+    nameColumn: libraryArticleModel.name,
+    idColumn: libraryArticleModel.id,
+    value: input.name,
+    label: "Article",
+  });
   const [inserted] = await db
     .insert(libraryArticleModel)
     .values({
@@ -177,6 +185,14 @@ export async function updateLibraryArticle(
   id: number,
   input: LibraryArticleUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: libraryArticleModel,
+    nameColumn: libraryArticleModel.name,
+    idColumn: libraryArticleModel.id,
+    value: input.name,
+    label: "Article",
+    excludeId: id,
+  });
   await db
     .update(libraryArticleModel)
     .set({

@@ -44,6 +44,11 @@ export const getAllLibraryEntryExitController = async (
         : undefined;
     const date =
       typeof req.query.date === "string" ? req.query.date : undefined;
+    const branchIdRaw = req.query.branchId;
+    const branchId =
+      typeof branchIdRaw === "string" && branchIdRaw !== ""
+        ? Number(branchIdRaw)
+        : undefined;
 
     const records = await findLibraryEntryExitPaginated({
       page: safePage,
@@ -58,6 +63,10 @@ export const getAllLibraryEntryExitController = async (
         | undefined,
       currentStatus: currentStatus as "CHECKED_IN" | "CHECKED_OUT" | undefined,
       date,
+      branchId:
+        branchId !== undefined && !Number.isNaN(branchId)
+          ? branchId
+          : undefined,
     });
 
     res

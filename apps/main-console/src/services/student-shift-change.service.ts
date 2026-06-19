@@ -85,3 +85,25 @@ export async function submitStudentShiftChange(
   });
   return res.data.payload as StudentShiftChangeResult;
 }
+
+export type ActivePromotionFieldsResult = {
+  promotionIdsUpdated: number[];
+  sectionId: number | null;
+  classRollNumber: string | null;
+};
+
+/**
+ * PATCH the section / class roll number on every active promotion of a
+ * student (endDate IS NULL and not deprecated). Either field is optional —
+ * send whichever the operator changed.
+ */
+export async function updateActivePromotionFields(
+  studentId: number,
+  input: { sectionId?: number | null; classRollNumber?: string | null },
+): Promise<ActivePromotionFieldsResult> {
+  const res = await axiosInstance.patch(
+    `/api/students/${studentId}/active-promotion-fields`,
+    input,
+  );
+  return res.data.payload as ActivePromotionFieldsResult;
+}

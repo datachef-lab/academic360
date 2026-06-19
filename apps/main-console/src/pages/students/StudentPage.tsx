@@ -12,7 +12,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { getStudentById, fetchStudentByUid } from "@/services/student";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StudentAvatar } from "@/components/student/StudentAvatar";
 import StudentContent from "@/components/student/StudentContent";
 import StudentPanel from "@/components/student/StudentPanel";
 import { Badge } from "@/components/ui/badge";
@@ -38,8 +38,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import useDebounce from "@/components/Hooks/useDebounce";
 import ShiftChangeDialog from "@/components/student/ShiftChangeDialog";
 
-/** Temporarily hide shift-change UI from the student profile panel. */
-const STUDENT_SHIFT_CHANGE_UI_ENABLED = false;
+const STUDENT_SHIFT_CHANGE_UI_ENABLED = true;
 
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
@@ -269,26 +268,18 @@ export default function StudentPage() {
     return (
       <>
         <div className="w-full bg-gradient-to-br from-purple-600 to-violet-500 rounded-t-2xl lg:rounded-t-2xl lg:rounded-tr-none p-3 sm:p-4 flex flex-col items-center">
-          <Avatar className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-white shadow mb-2">
-            <AvatarImage
-              className="object-cover"
-              src={`https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${data?.uid}.jpg`}
-              alt={(() => {
-                const parts = [
-                  data?.personalDetails?.firstName,
-                  data?.personalDetails?.middleName,
-                  data?.personalDetails?.lastName,
-                ].filter(Boolean);
-                return parts.length ? parts.join(" ") : "Student";
-              })()}
-            />
-            <AvatarFallback className="text-lg sm:text-2xl font-bold bg-purple-100 text-purple-600">
-              {(() => {
-                const first = data?.personalDetails?.firstName || "?";
-                return first.charAt(0);
-              })()}
-            </AvatarFallback>
-          </Avatar>
+          <StudentAvatar
+            uid={data?.uid}
+            name={[
+              data?.personalDetails?.firstName,
+              data?.personalDetails?.middleName,
+              data?.personalDetails?.lastName,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            size="xl"
+            className="border-4 border-white shadow mb-2"
+          />
           <div className="text-base sm:text-lg font-bold text-white mb-1 text-center w-full truncate">
             {(() => {
               const parts = [data?.name].filter(Boolean);

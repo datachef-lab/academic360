@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, SQL } from "drizzle-orm";
 import { journalTypeModel } from "@repo/db/schemas/models/library/journal-type.model.js";
 import { journalModel } from "@repo/db/schemas/models/library/journal.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type JournalTypeListFilters = {
   page: number;
@@ -89,6 +90,13 @@ export async function getJournalTypeById(
 export async function createJournalType(
   input: JournalTypeUpsertInput,
 ): Promise<number> {
+  await assertUniqueLibraryName({
+    table: journalTypeModel,
+    nameColumn: journalTypeModel.name,
+    idColumn: journalTypeModel.id,
+    value: input.name,
+    label: "Journal type",
+  });
   const [inserted] = await db
     .insert(journalTypeModel)
     .values({
@@ -102,6 +110,14 @@ export async function updateJournalType(
   id: number,
   input: JournalTypeUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: journalTypeModel,
+    nameColumn: journalTypeModel.name,
+    idColumn: journalTypeModel.id,
+    value: input.name,
+    label: "Journal type",
+    excludeId: id,
+  });
   await db
     .update(journalTypeModel)
     .set({

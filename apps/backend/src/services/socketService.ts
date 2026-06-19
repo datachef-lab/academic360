@@ -78,7 +78,7 @@ export interface LibraryJournalUpdate {
 export interface LibraryCopyDetailsUpdate {
   id: string;
   type: "library_copy_details_update";
-  action: "CREATED" | "UPDATED";
+  action: "CREATED" | "UPDATED" | "DELETED";
   actorName: string;
   copyDetailsId: number;
   bookTitle: string;
@@ -435,6 +435,26 @@ class SocketService {
           log.debug(`Socket ${socket.id} left room: library_copy_details_page`);
         } catch (error) {
           log.error("Error unsubscribing from library copy details room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_copy_bulk_upload", (jobId: string) => {
+        if (!jobId || typeof jobId !== "string") return;
+        try {
+          socket.join(`library_copy_bulk_upload_${jobId}`);
+        } catch (error) {
+          log.error("Error subscribing to copy bulk upload room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_copy_bulk_upload", (jobId: string) => {
+        if (!jobId || typeof jobId !== "string") return;
+        try {
+          socket.leave(`library_copy_bulk_upload_${jobId}`);
+        } catch (error) {
+          log.error("Error unsubscribing from copy bulk upload room", {
             error,
           });
         }
@@ -1113,7 +1133,7 @@ class SocketService {
   }
 
   sendLibraryCopyDetailsUpdate(payload: {
-    action: "CREATED" | "UPDATED";
+    action: "CREATED" | "UPDATED" | "DELETED";
     actorName: string;
     copyDetailsId: number;
     bookTitle: string;
@@ -1125,7 +1145,12 @@ class SocketService {
     }
 
     try {
-      const verb = payload.action === "CREATED" ? "added" : "updated";
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "DELETED"
+            ? "deleted"
+            : "updated";
       const title = payload.bookTitle.trim() || "Untitled book";
       const actor = payload.actorName.trim() || "Someone";
       const message = `${actor} ${verb} a copy for "${title}"`;
@@ -1150,6 +1175,32 @@ class SocketService {
       );
     } catch (error) {
       log.error("Error sending library copy details update", { error });
+    }
+  }
+
+  sendLibraryCopyBulkUploadProgress(payload: {
+    jobId: string;
+    bookId: number;
+    status: "STARTED" | "ROW" | "COMPLETED";
+    processed: number;
+    succeeded: number;
+    failed: number;
+    total: number;
+    lastError?: { row: number; message: string } | null;
+    errors?: Array<{ row: number; message: string }>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send copy bulk upload progress: io is null");
+      return;
+    }
+    try {
+      const room = `library_copy_bulk_upload_${payload.jobId}`;
+      this.io.to(room).emit("library_copy_bulk_upload_progress", {
+        ...payload,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      log.error("Error sending copy bulk upload progress", { error });
     }
   }
 

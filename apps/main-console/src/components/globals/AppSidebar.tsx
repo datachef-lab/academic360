@@ -13,7 +13,6 @@ import {
   Settings,
   Home,
   LayoutList,
-  LayoutDashboard,
   Megaphone,
   UserCog,
   ChevronDown,
@@ -29,6 +28,7 @@ import {
   Layers,
   TrendingUp,
   SlidersHorizontal,
+  Wrench,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -86,7 +86,7 @@ const data = {
   ],
   navMain: [
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
-    { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
+    { title: "Academic Setup*", url: "/dashboard/academic-year-setup", icon: LayoutList },
     { title: "Promote Students", url: "/dashboard/promote-students", icon: GraduationCap },
     { title: "Academic Activity", url: "/dashboard/academic-activity", icon: SlidersHorizontal },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
@@ -100,19 +100,14 @@ const data = {
       url: "/dashboard/cu-reg/physical-marking",
       icon: CheckSquare,
     },
-    { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
-    { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
-    { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
-    { title: "Library", url: "/dashboard/library", icon: BookOpen },
-    { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
+    { title: "Exam Management*", url: "/dashboard/exam-management", icon: GraduationCap },
+    { title: "Real Time Tracker*", url: "/dashboard/realtime-tracker", icon: Activity },
+    { title: "Reports*", url: "/dashboard/reports", icon: ClipboardList },
+    { title: "Library*", url: "/dashboard/library", icon: BookOpen },
+    { title: "Fees Module*", url: "/dashboard/fees", icon: IndianRupee },
     { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
     { title: "Career Progression", url: "/dashboard/career-progression", icon: TrendingUp },
-    { title: "Bulk Data Upload", url: "/dashboard/bulk-upload", icon: Layers },
-    {
-      title: "Student Console Simulation",
-      url: "/dashboard/apps/student-console/simulation",
-      icon: BookOpen,
-    },
+    { title: "Bulk Data Upload*", url: "/dashboard/bulk-upload", icon: Layers },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
@@ -125,22 +120,22 @@ const data = {
 
   navAdministration: [
     {
-      title: "Apps",
-      url: "/dashboard/apps",
-      icon: LayoutDashboard, // new icon
+      title: "Tools*",
+      url: "/dashboard/tools",
+      icon: Wrench,
     },
     {
-      title: "Notice Management",
+      title: "Notice Management*",
       url: "/dashboard/notices",
       icon: Megaphone, // already imported
     },
     {
-      title: "User Groups & Accesses",
+      title: "User Groups & Accesses*",
       url: "/dashboard/user-groups-accesses",
       icon: UserCog, // new icon
     },
     {
-      title: "Settings",
+      title: "Settings*",
       url: "/dashboard/settings",
       icon: Settings,
     },
@@ -186,6 +181,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Helper to check if sidebar item is active
   function isSidebarActive(currentPath: string, itemUrl: string) {
     return currentPath === itemUrl || currentPath.startsWith(itemUrl + "/");
+  }
+
+  // Renders a sidebar item title, highlighting a trailing "*" in red.
+  function renderSidebarTitle(title: string): React.ReactNode {
+    if (title.endsWith("*")) {
+      return (
+        <>
+          {title.slice(0, -1)}
+          <span className="text-red-400">*</span>
+        </>
+      );
+    }
+    return title;
   }
 
   //   const handleLogout = async () => {
@@ -336,7 +344,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               : isSidebarActive(currentPath, item.url))
                           }
                         >
-                          <span className="text-lg">{item.title}</span>
+                          <span className="text-lg">{renderSidebarTitle(item.title)}</span>
                         </NavItem>
                       ))}
                     </div>
@@ -383,7 +391,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               <span className="text-[14px]">
                                 {feeMarkingRestricted && item.title === "Fees Module"
                                   ? "Fee Payment Marking"
-                                  : item.title}
+                                  : renderSidebarTitle(item.title)}
                               </span>
                             </NavItem>
                           );
@@ -439,7 +447,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             href={url}
                             isActive={isActive}
                           >
-                            <span className="text-base">{item.title}</span>
+                            <span className="text-base">{renderSidebarTitle(item.title)}</span>
                           </NavItem>
                         );
                       })}

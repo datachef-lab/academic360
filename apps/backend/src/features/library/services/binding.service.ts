@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { Binding, bindingModel } from "@repo/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 type BindingListFilters = {
   page: number;
@@ -74,6 +75,13 @@ export async function findBindingsPaginated(
 export async function createBinding(
   data: Omit<Binding, "id">,
 ): Promise<Binding> {
+  await assertUniqueLibraryName({
+    table: bindingModel,
+    nameColumn: bindingModel.name,
+    idColumn: bindingModel.id,
+    value: data.name,
+    label: "Binding type",
+  });
   const [created] = await db.insert(bindingModel).values(data).returning();
   return created;
 }
@@ -82,6 +90,16 @@ export async function updateBinding(
   id: number,
   data: Partial<Omit<Binding, "id">>,
 ): Promise<Binding | null> {
+  if (data.name != null) {
+    await assertUniqueLibraryName({
+      table: bindingModel,
+      nameColumn: bindingModel.name,
+      idColumn: bindingModel.id,
+      value: data.name,
+      label: "Binding type",
+      excludeId: id,
+    });
+  }
   const [updated] = await db
     .update(bindingModel)
     .set(data)

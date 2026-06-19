@@ -93,10 +93,11 @@ export default function ProfileContent() {
     });
   };
 
-  // Helper function to get student image URL
+  // Routes to the unified backend resolver (S3 → besc → hrclIRP → previous uid).
   const getStudentImageUrl = (uid?: string) => {
     if (!uid) return null;
-    return `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${uid}.jpg`;
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "";
+    return `${base}/api/students/uid/${encodeURIComponent(uid)}/avatar`;
   };
 
   // Helper function to format address

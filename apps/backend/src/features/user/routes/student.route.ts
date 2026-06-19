@@ -22,13 +22,21 @@ import {
   exportEnrolmentMasterReportController,
   changeStudentShiftController,
   changeStudentShiftPreviewController,
+  updateActivePromotionFieldsController,
 } from "../controllers/student.controller.js";
 
 import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
 import { updateApaarIdsFromExcel } from "../controllers/student-apaar-update.controller.js";
 import { updateCuRollAndRegistrationFromExcel } from "../controllers/student-cu-roll-reg-update.controller.js";
+import { getStudentAvatarController } from "../controllers/student-avatar.controller.js";
 
 const router = express.Router();
+
+// Publicly resolvable: the avatar resolver itself only ever returns the same
+// bytes you'd get from the existing public besc.academic360.app image URL.
+// Browsers cannot attach a JWT to <img> tags, so this must sit before the
+// verifyJWT guard.
+router.get("/uid/:uid/avatar", getStudentAvatarController);
 
 router.use(verifyJWT);
 
@@ -56,6 +64,10 @@ router.put("/", updateStudent);
 router.put("/:id/status", updateStudentStatus);
 router.get("/:id/shift-change/preview", changeStudentShiftPreviewController);
 router.post("/:id/shift-change", changeStudentShiftController);
+router.patch(
+  "/:id/active-promotion-fields",
+  updateActivePromotionFieldsController,
+);
 
 // POST /api/students/uids/check-existing
 // Check if any of the given UIDs already exist (prevents importing/updating existing students)

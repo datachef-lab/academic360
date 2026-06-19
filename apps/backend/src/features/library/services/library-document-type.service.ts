@@ -4,6 +4,7 @@ import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { libraryDocumentTypeModel } from "@repo/db/schemas/models/library/library-document-type.model.js";
 import { libraryArticleModel } from "@repo/db/schemas/models/library/library-article.model.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type LibraryDocumentTypeListFilters = {
   page: number;
@@ -126,6 +127,13 @@ export async function getLibraryDocumentTypeById(
 export async function createLibraryDocumentType(
   input: LibraryDocumentTypeUpsertInput,
 ): Promise<number> {
+  await assertUniqueLibraryName({
+    table: libraryDocumentTypeModel,
+    nameColumn: libraryDocumentTypeModel.name,
+    idColumn: libraryDocumentTypeModel.id,
+    value: input.name,
+    label: "Library document type",
+  });
   const [inserted] = await db
     .insert(libraryDocumentTypeModel)
     .values({
@@ -140,6 +148,14 @@ export async function updateLibraryDocumentType(
   id: number,
   input: LibraryDocumentTypeUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: libraryDocumentTypeModel,
+    nameColumn: libraryDocumentTypeModel.name,
+    idColumn: libraryDocumentTypeModel.id,
+    value: input.name,
+    label: "Library document type",
+    excludeId: id,
+  });
   await db
     .update(libraryDocumentTypeModel)
     .set({

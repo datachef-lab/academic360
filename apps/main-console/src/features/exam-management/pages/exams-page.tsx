@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { uppercaseRomanNumerals } from "@/utils/uppercaseRomanNumerals";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Edit, Filter, X, Loader2 } from "lucide-react";
 import { useSocket } from "@/hooks/useSocket";
@@ -2270,7 +2271,7 @@ const ExamsPage = () => {
                                 variant="outline"
                                 className="text-xs border-purple-300 text-purple-700 bg-purple-50 w-fit"
                               >
-                                {examGroup.name}
+                                {uppercaseRomanNumerals(examGroup.name)}
                               </Badge>
                               <span className="text-xs text-muted-foreground text-center">
                                 {examGroup.examCommencementDate

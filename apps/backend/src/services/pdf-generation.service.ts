@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import { QRCodeService } from "./qr-code.service.js";
+import { resolveStudentAvatarDataUrl } from "@/features/user/services/student-avatar.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -657,13 +658,14 @@ export class PdfGenerationService {
         },
       );
 
-      // Pre-fetch external images as base64 data URLs to avoid network requests during rendering
-      const studentImageUrl = `https://besc.academic360.app/id-card-generate/api/images?uid=${formData.uid}&crop=true`;
+      // Resolve the student photo through the unified backend chain (S3 →
+      // besc → hrclIRP → previous-uid) and inline as a base64 data URL so the
+      // PDF renderer never needs network access.
       const collegeLogoUrl = `https://api.academic360.app/api/v1/settings/file/4`;
 
       const [studentImageDataUrl, collegeLogoDataUrl, qrCodeDataUrl] =
         await Promise.all([
-          this.fetchImageAsDataUrl(studentImageUrl),
+          resolveStudentAvatarDataUrl(formData.uid).catch(() => null),
           this.fetchImageAsDataUrl(collegeLogoUrl),
           QRCodeService.generateApplicationQRCode(formData.uid).catch(
             (error) => {
@@ -676,7 +678,7 @@ export class PdfGenerationService {
           ),
         ]);
 
-      formData.studentImage = studentImageDataUrl || studentImageUrl;
+      formData.studentImage = studentImageDataUrl ?? "";
       (formData as any).collegeLogo = collegeLogoDataUrl || collegeLogoUrl;
       formData.qrCodeDataUrl = qrCodeDataUrl;
 

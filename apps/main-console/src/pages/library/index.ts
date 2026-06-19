@@ -3,7 +3,6 @@ import LibraryHomePage from "./LibraryHomePage";
 import EntryExitPage from "./EntryExitPage";
 import BookCirculationPage from "./BookCirculationPage";
 import BooksPage from "./BooksPage";
-import CopyDetailsPage from "./CopyDetailsPage";
 import SeriesPage from "./SeriesPage";
 import JournalPage from "./JournalPage";
 import PublicationsPage from "./PublicationsPage";
@@ -12,13 +11,32 @@ import EntryModesPage from "./EntryModesPage";
 import PeriodsPage from "./PeriodsPage";
 import BindingTypesPage from "./BindingTypesPage";
 import BorrowingTypesPage from "./BorrowingTypesPage";
+import LibraryZonesMasterPage from "./LibraryZonesMasterPage";
+import LibrarySearchPage from "./LibrarySearchPage";
+import ReadingListsPage from "./ReadingListsPage";
+import AcademicArchivePage from "./AcademicArchivePage";
+import EvidenceLockerPage from "./EvidenceLockerPage";
+import JournalSubscriptionsPage from "./JournalSubscriptionsPage";
+import LibraryReportsPage from "./LibraryReportsPage";
+import StudentAnalyticsPage from "./StudentAnalyticsPage";
+import CdlReaderPage from "./CdlReaderPage";
+import DigitalTwinPage from "./DigitalTwinPage";
 import {
   ArticlesPage,
+  AuthorTypesPage,
+  AuthorsPage,
+  BranchesPage,
+  CirculationPoliciesPage,
+  ClassHolidaysPage,
+  HolidaysPage,
+  ItemCategoriesPage,
   JournalTypesPage,
   LibraryDocumentsPage,
+  PatronCategoriesPage,
   RacksPage,
   ShelvesPage,
   StatusesPage,
+  VendorsPage,
 } from "./MasterPages";
 
 export {
@@ -27,7 +45,6 @@ export {
   EntryExitPage,
   BookCirculationPage,
   BooksPage,
-  CopyDetailsPage,
   SeriesPage,
   JournalPage,
   PublicationsPage,
@@ -42,4 +59,23 @@ export {
   ArticlesPage,
   LibraryDocumentsPage,
   BorrowingTypesPage,
+  AuthorTypesPage,
+  AuthorsPage,
+  VendorsPage,
+  HolidaysPage,
+  ClassHolidaysPage,
+  BranchesPage,
+  PatronCategoriesPage,
+  ItemCategoriesPage,
+  CirculationPoliciesPage,
+  LibraryZonesMasterPage,
+  LibrarySearchPage,
+  ReadingListsPage,
+  AcademicArchivePage,
+  EvidenceLockerPage,
+  JournalSubscriptionsPage,
+  LibraryReportsPage,
+  StudentAnalyticsPage,
+  CdlReaderPage,
+  DigitalTwinPage,
 };

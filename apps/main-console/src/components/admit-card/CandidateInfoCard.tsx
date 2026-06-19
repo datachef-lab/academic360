@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
 interface Props {
   candidate: AdmitCardCandidate;
@@ -54,10 +55,7 @@ export const CandidateInfoCard: React.FC<Props> = ({
           <div className="flex items-center gap-4 flex-1">
             {/* Student Avatar */}
             <Avatar className="w-16 h-16 border-2 border-purple-300 shadow-md">
-              <AvatarImage
-                src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${candidate.uid}.jpg`}
-                alt={candidate.name}
-              />
+              <AvatarImage src={studentAvatarUrl(candidate.uid)} alt={candidate.name} />
               <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-400 text-white font-bold text-lg">
                 {candidate.name
                   .split(" ")

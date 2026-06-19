@@ -4,6 +4,7 @@ import { createPool, type Pool as MySqlPool } from "mysql2/promise"; // For MySQ
 import { drizzle } from "drizzle-orm/node-postgres";
 
 import { createLogger } from "@/config/logger.js";
+import { loadLibrary } from "@/features/library/old-irp-data";
 
 const log = createLogger("db");
 // Create a connection pool
@@ -63,7 +64,7 @@ export const connectToDatabase = async () => {
     //   log.warn("Default promotion data load failed", { error: e });
     // });
     // loadStudentFees();
-    // loadLibrary();
+    loadLibrary();
     // initializeAcademicActivities();
     // defaultSetDateOfJoining();
     // loadLibraryUsers();
