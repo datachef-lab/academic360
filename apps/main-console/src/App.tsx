@@ -64,6 +64,7 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
+import ToolsPage from "./features/tools/pages/tools-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
 // import MandatorySubjectsPage from "./features/academic-year-setup/pages/mandatory-subjects-page";
 
@@ -197,8 +198,15 @@ const router = createBrowserRouter(
                 { path: "appear-types", element: <AppearTypePage /> },
               ],
             },
+          ],
+        },
+        {
+          path: "tools",
+          element: <Outlet />,
+          children: [
+            { path: "", element: <ToolsPage /> },
             {
-              path: "classes",
+              path: "id-cards",
               element: <idCardModule.ClassesMaster />,
               children: [
                 { path: "", element: <idCardModule.IdCardIssuePage /> },
@@ -211,6 +219,10 @@ const router = createBrowserRouter(
                 { path: "shifts", element: <idCardModule.ShiftsMasterPage /> },
                 { path: "sections", element: <idCardModule.SectionsMasterPage /> },
               ],
+            },
+            {
+              path: "simulation",
+              element: <appModule.StudentConsoleSimulation />,
             },
           ],
         },
@@ -587,6 +599,7 @@ const router = createBrowserRouter(
             { path: "admission-comm-module", element: <appModule.AdmissionCommModulePage /> },
           ],
         },
+        // Legacy alias for the old direct route — kept so deep links keep working.
         {
           path: "apps/student-console/simulation",
           element: <appModule.StudentConsoleSimulation />,

@@ -178,9 +178,7 @@ export default function IdCardTemplatesPage() {
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          navigate(
-                            `/dashboard/academic-year-setup/classes/templates/${row.id}/editor`,
-                          )
+                          navigate(`/dashboard/tools/id-cards/templates/${row.id}/editor`)
                         }
                       >
                         Editor

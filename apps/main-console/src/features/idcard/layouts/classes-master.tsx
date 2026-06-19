@@ -6,12 +6,12 @@ import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 const pageLinks = [
   {
     title: "Issue / Reissue ID Card",
-    url: "/dashboard/academic-year-setup/classes",
+    url: "/dashboard/tools/id-cards",
     icon: ScanLine,
   },
   {
     title: "Reports",
-    url: "/dashboard/academic-year-setup/classes/reports",
+    url: "/dashboard/tools/id-cards/reports",
     icon: BarChart3,
   },
 ];
@@ -19,49 +19,49 @@ const pageLinks = [
 const masterLinks = [
   {
     title: "ID Card Templates",
-    url: "/dashboard/academic-year-setup/classes/templates",
+    url: "/dashboard/tools/id-cards/templates",
     icon: IdCard,
   },
   {
     title: "Shifts",
-    url: "/dashboard/academic-year-setup/classes/shifts",
+    url: "/dashboard/tools/id-cards/shifts",
     icon: Sun,
   },
   {
     title: "Sections",
-    url: "/dashboard/academic-year-setup/classes/sections",
+    url: "/dashboard/tools/id-cards/sections",
     icon: Layers,
   },
 ];
 
 const pageNotes: Record<string, { title: string; description: string }> = {
-  "/dashboard/academic-year-setup/classes": {
+  "/dashboard/tools/id-cards": {
     title: "Issue / Reissue ID Card",
     description:
       "Search a student by UID or RFID, capture their photo, compose the card from the active template, write/update RFID, and save the issued card to AWS S3 with a permanent audit record.",
   },
-  "/dashboard/academic-year-setup/classes/reports": {
+  "/dashboard/tools/id-cards/reports": {
     title: "Reports",
     description:
       "Pick an issuance date and download the daily Excel sheet of issued cards or a ZIP of the captured card images.",
   },
-  "/dashboard/academic-year-setup/classes/templates": {
+  "/dashboard/tools/id-cards/templates": {
     title: "ID Card Templates",
     description:
       "Front-side template master per academic year — upload background, set per-field coordinates, validity dates, and pick the default.",
   },
-  "/dashboard/academic-year-setup/classes/shifts": {
+  "/dashboard/tools/id-cards/shifts": {
     title: "Shifts",
     description: "Shift master used across academic and idcard modules.",
   },
-  "/dashboard/academic-year-setup/classes/sections": {
+  "/dashboard/tools/id-cards/sections": {
     title: "Sections",
     description: "Section master used across academic and idcard modules.",
   },
 };
 
 const isActive = (linkUrl: string, currentPath: string) => {
-  if (linkUrl === "/dashboard/academic-year-setup/classes") {
+  if (linkUrl === "/dashboard/tools/id-cards") {
     return currentPath === linkUrl;
   }
   return currentPath.startsWith(linkUrl);

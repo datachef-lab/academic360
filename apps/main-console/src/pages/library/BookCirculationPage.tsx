@@ -66,7 +66,6 @@ import {
 import { cn } from "@/lib/utils";
 import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
-import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
 type Filters = {
   userType: "all" | (typeof userTypeEnum.enumValues)[number];
@@ -150,10 +149,6 @@ export default function BookCirculationPage() {
   const { socket, isConnected } = useSocket({ userId });
   const [activeBranchId] = useActiveLibraryBranchId();
 
-  const todayIso = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  })();
   const [rows, setRows] = useState<BookCirculationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");

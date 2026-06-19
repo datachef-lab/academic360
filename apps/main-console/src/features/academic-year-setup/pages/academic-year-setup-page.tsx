@@ -10,7 +10,6 @@ import {
   Database,
   Star,
   Workflow,
-  CreditCard,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
@@ -102,17 +101,6 @@ const featureCards = [
     iconColor: "text-violet-600",
     status: "Ready",
     items: "Promotion rules",
-    illustration: null,
-  },
-  {
-    title: "Classes",
-    description: "Manage ID card templates and issue / reissue student ID cards",
-    icon: CreditCard,
-    href: "/dashboard/academic-year-setup/classes",
-    color: "bg-rose-50 border-rose-200 hover:bg-rose-100",
-    iconColor: "text-rose-600",
-    status: "Ready",
-    items: "ID card module",
     illustration: null,
   },
 ];
