@@ -153,7 +153,7 @@ function checkRequiredEnvs() {
     process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
     httpServer.listen(PORT, async () => {
-      log.info(`academic360 running on http://localhost:${PORT} 🚀`);
+      log.info(`academic360  running on http://localhost:${PORT} 🚀`);
       log.info(`Profile: ${process.env.NODE_ENV}`);
       log.debug("Press Ctrl+C to stop the application.");
       startPaytmDowntimeScheduler();
