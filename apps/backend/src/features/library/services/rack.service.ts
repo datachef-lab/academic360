@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, SQL } from "drizzle-orm";
 import { rackModel } from "@repo/db/schemas/models/library/rack.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type RackListFilters = {
   page: number;
@@ -85,6 +86,13 @@ export async function getRackById(id: number): Promise<RackListRow | null> {
 }
 
 export async function createRack(input: RackUpsertInput): Promise<number> {
+  await assertUniqueLibraryName({
+    table: rackModel,
+    nameColumn: rackModel.name,
+    idColumn: rackModel.id,
+    value: input.name,
+    label: "Rack",
+  });
   const [inserted] = await db
     .insert(rackModel)
     .values({
@@ -98,6 +106,14 @@ export async function updateRack(
   id: number,
   input: RackUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: rackModel,
+    nameColumn: rackModel.name,
+    idColumn: rackModel.id,
+    value: input.name,
+    label: "Rack",
+    excludeId: id,
+  });
   await db
     .update(rackModel)
     .set({

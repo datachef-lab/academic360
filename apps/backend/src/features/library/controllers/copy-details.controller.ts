@@ -11,13 +11,17 @@ import {
   deleteCopyDetails,
   exportCopyDetailsExcel,
   findCopyDetailsPaginated,
+  generateCopyDetailsBulkTemplate,
   getBookTitleById,
   getCopyDetailsById,
   getCopyDetailsMeta,
+  importCopyDetailsForBookExcel,
   updateCopyDetails,
   type CopyDetailsUpsertInput,
 } from "@/features/library/services/copy-details.service.js";
 import { socketService } from "@/services/socketService.js";
+import multer from "multer";
+import crypto from "node:crypto";
 
 const copyDetailsActorName = (req: Request): string => {
   const u = req.user as { name?: string | null } | undefined;
@@ -332,6 +336,86 @@ export const deleteCopyDetailsController = async (
           "Copy details deleted successfully.",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+const copyBulkUploadMulter = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
+
+export const copyBulkUploadFileMiddleware = copyBulkUploadMulter.single("file");
+
+export const downloadCopyBulkUploadTemplateController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const bookId = parseId(req.query.bookId as string | string[] | undefined);
+    let bookTitle: string | null = null;
+    if (bookId) {
+      bookTitle = await getBookTitleById(bookId);
+    }
+    const buffer = await generateCopyDetailsBulkTemplate(bookTitle);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="copy-details-template${bookId ? `-book-${bookId}` : ""}.xlsx"`,
+    );
+    res.send(buffer);
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const bulkUploadCopyDetailsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const bookId = parseId(req.query.bookId as string | string[] | undefined);
+    if (!bookId) {
+      res.status(400).json(new ApiError(400, "bookId is required"));
+      return;
+    }
+    const file = (req as Request & { file?: Express.Multer.File }).file;
+    if (!file || !file.buffer) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Excel file is required (field: file)"));
+      return;
+    }
+    const actor = req.user as { id?: number } | undefined;
+    const actorUserId = typeof actor?.id === "number" ? actor.id : null;
+    const jobId = crypto.randomUUID();
+
+    res
+      .status(202)
+      .json(
+        new ApiResponse(
+          202,
+          "ACCEPTED",
+          { jobId, bookId },
+          "Bulk upload started. Progress will stream over socket.",
+        ),
+      );
+
+    void importCopyDetailsForBookExcel({
+      bookId,
+      buffer: file.buffer,
+      actorUserId,
+      jobId,
+      onProgress: (update) => {
+        socketService.sendLibraryCopyBulkUploadProgress(update);
+      },
+    });
   } catch (error) {
     handleError(error, res, next);
   }

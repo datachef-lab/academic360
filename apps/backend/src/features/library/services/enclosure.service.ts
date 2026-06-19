@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { Enclosure, enclosureModel } from "@repo/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 type EnclosureListFilters = {
   page: number;
@@ -74,6 +75,13 @@ export async function findEnclosuresPaginated(
 export async function createEnclosure(
   data: Omit<Enclosure, "id">,
 ): Promise<Enclosure> {
+  await assertUniqueLibraryName({
+    table: enclosureModel,
+    nameColumn: enclosureModel.name,
+    idColumn: enclosureModel.id,
+    value: data.name,
+    label: "Enclosure",
+  });
   const [created] = await db.insert(enclosureModel).values(data).returning();
   return created;
 }
@@ -82,6 +90,16 @@ export async function updateEnclosure(
   id: number,
   data: Partial<Omit<Enclosure, "id">>,
 ): Promise<Enclosure | null> {
+  if (data.name != null) {
+    await assertUniqueLibraryName({
+      table: enclosureModel,
+      nameColumn: enclosureModel.name,
+      idColumn: enclosureModel.id,
+      value: data.name,
+      label: "Enclosure",
+      excludeId: id,
+    });
+  }
   const [updated] = await db
     .update(enclosureModel)
     .set(data)

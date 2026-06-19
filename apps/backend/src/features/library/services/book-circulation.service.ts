@@ -5,6 +5,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   gte,
   ilike,
   inArray,
@@ -133,18 +134,38 @@ const buildCirculationFilterConditions = (
   const now = new Date();
 
   if (filters.branchId != null) {
-    conditions.push(eq(bookCirculationModel.branchId, filters.branchId));
+    conditions.push(
+      or(
+        eq(bookCirculationModel.branchId, filters.branchId),
+        eq(copyDetailsModel.branchId, filters.branchId),
+      )!,
+    );
   }
 
   if (filters.issueDate?.trim()) {
     const bounds = toDayBounds(filters.issueDate.trim());
     if (bounds) {
-      conditions.push(
-        and(
-          gte(bookCirculationModel.issueTimestamp, bounds.start),
-          lt(bookCirculationModel.issueTimestamp, bounds.end),
-        )!,
+      const issuedOnDate = and(
+        gte(bookCirculationModel.issueTimestamp, bounds.start),
+        lt(bookCirculationModel.issueTimestamp, bounds.end),
+      )!;
+      const returnedOnDate = and(
+        gte(bookCirculationModel.actualReturnTimestamp, bounds.start),
+        lt(bookCirculationModel.actualReturnTimestamp, bounds.end),
+      )!;
+      const reissuedOnDate = exists(
+        db
+          .select({ one: bookReissueModel.id })
+          .from(bookReissueModel)
+          .where(
+            and(
+              eq(bookReissueModel.bookCirculationId, bookCirculationModel.id),
+              gte(bookReissueModel.createdAt, bounds.start),
+              lt(bookReissueModel.createdAt, bounds.end),
+            ),
+          ),
       );
+      conditions.push(or(issuedOnDate, returnedOnDate, reissuedOnDate)!);
     }
   }
 
@@ -213,6 +234,10 @@ export async function findBookCirculationPaginated(
     .leftJoin(userModel, eq(bookCirculationModel.userId, userModel.id))
     .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
     .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
+    .leftJoin(
+      copyDetailsModel,
+      eq(bookCirculationModel.copyDetailsId, copyDetailsModel.id),
+    )
     .where(whereCirculations)
     .orderBy(desc(bookCirculationModel.id));
 
@@ -265,14 +290,16 @@ export async function findBookCirculationPaginated(
     }
 
     // "Recent Books" summary:
-    // - returned: all completed circulations
-    // - overdue/issued: only pending circulations
+    // - returned: completed circulations
+    // - issued: currently with the user (includes overdue)
+    // - overdue: subset of issued whose due date has passed
     if (row.isReturned) {
       bucket.returned += 1;
-    } else if (!Number.isNaN(dueMs) && dueMs < now) {
-      bucket.overdue += 1;
     } else {
       bucket.issued += 1;
+      if (!Number.isNaN(dueMs) && dueMs < now) {
+        bucket.overdue += 1;
+      }
     }
 
     if (!row.isReturned) {
@@ -451,6 +478,43 @@ export async function getBookCirculationPreviewByUserId(
     user: entryExitPreview.user,
     rows,
   };
+}
+
+export type BookOptionResult = BookCirculationMetaResult["bookOptions"][number];
+
+export async function searchBookOptions(
+  search: string,
+  limit: number,
+): Promise<BookOptionResult[]> {
+  const safeLimit = Math.min(Math.max(limit || 50, 1), 100);
+  const trimmed = search.trim();
+  const baseQuery = db
+    .select({
+      copyDetailsId: copyDetailsModel.id,
+      accessNumber: copyDetailsModel.accessNumber,
+      title: bookModel.title,
+      author: bookModel.alternateTitle,
+      publication: publisherModel.name,
+      frontCover: bookModel.frontCover,
+    })
+    .from(copyDetailsModel)
+    .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
+    .leftJoin(publisherModel, eq(bookModel.publisherId, publisherModel.id));
+
+  if (trimmed) {
+    const term = `%${trimmed}%`;
+    return baseQuery
+      .where(
+        or(
+          ilike(copyDetailsModel.accessNumber, term),
+          ilike(bookModel.title, term),
+        )!,
+      )
+      .orderBy(desc(copyDetailsModel.id))
+      .limit(safeLimit);
+  }
+
+  return baseQuery.orderBy(desc(copyDetailsModel.id)).limit(safeLimit);
 }
 
 export async function getBookCirculationMeta(): Promise<BookCirculationMetaResult> {
@@ -726,6 +790,23 @@ export async function upsertBookCirculationRowsForUser(
       : [];
     const existingMap = new Map(existingRows.map((row) => [row.id, row]));
 
+    const newCopyIds = Array.from(
+      new Set(
+        prepared.filter((row) => !row.id).map((row) => row.copyDetailsId),
+      ),
+    );
+    const copyBranchMap = new Map<number, number | null>();
+    if (newCopyIds.length > 0) {
+      const copies = await tx
+        .select({
+          id: copyDetailsModel.id,
+          branchId: copyDetailsModel.branchId,
+        })
+        .from(copyDetailsModel)
+        .where(inArray(copyDetailsModel.id, newCopyIds));
+      for (const c of copies) copyBranchMap.set(c.id, c.branchId ?? null);
+    }
+
     for (const row of prepared) {
       if (row.id) {
         const existing = existingMap.get(row.id);
@@ -783,6 +864,7 @@ export async function upsertBookCirculationRowsForUser(
         .values({
           copyDetailsId: row.copyDetailsId,
           userId,
+          branchId: copyBranchMap.get(row.copyDetailsId) ?? null,
           borrowingTypeId: row.borrowingTypeId,
           issueTimestamp: row.issueTimestamp,
           returnTimestamp: row.returnTimestamp,

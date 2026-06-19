@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { LibraryPeriod, libraryPeriodModel } from "@repo/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 type LibraryPeriodListFilters = {
   page: number;
@@ -79,6 +80,13 @@ export async function findLibraryPeriodsPaginated(
 export async function createLibraryPeriod(
   data: Omit<LibraryPeriod, "id">,
 ): Promise<LibraryPeriod> {
+  await assertUniqueLibraryName({
+    table: libraryPeriodModel,
+    nameColumn: libraryPeriodModel.name,
+    idColumn: libraryPeriodModel.id,
+    value: data.name,
+    label: "Period / frequency",
+  });
   const [created] = await db
     .insert(libraryPeriodModel)
     .values(data)
@@ -90,6 +98,16 @@ export async function updateLibraryPeriod(
   id: number,
   data: Partial<Omit<LibraryPeriod, "id">>,
 ): Promise<LibraryPeriod | null> {
+  if (data.name != null) {
+    await assertUniqueLibraryName({
+      table: libraryPeriodModel,
+      nameColumn: libraryPeriodModel.name,
+      idColumn: libraryPeriodModel.id,
+      value: data.name,
+      label: "Period / frequency",
+      excludeId: id,
+    });
+  }
   const [updated] = await db
     .update(libraryPeriodModel)
     .set(data)

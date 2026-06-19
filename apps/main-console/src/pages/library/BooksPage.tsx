@@ -31,7 +31,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Book, Download, Filter, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  Book,
+  Download,
+  Filter,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
@@ -39,11 +49,9 @@ import {
   createBook,
   deleteBook,
   downloadBooksExcel,
-  getBookAuthors,
   getBookById,
   getBookList,
   getBooksMeta,
-  saveBookAuthors,
   updateBook,
   type BookDetail,
   type BookListRow,
@@ -52,13 +60,30 @@ import {
   type BookUpsertBody,
 } from "@/services/books.service";
 import {
+  bulkUploadCopyDetails,
   deleteCopyDetails,
+  downloadCopyBulkUploadTemplate,
   getCopyDetailsList,
   getCopyDetailsMeta,
+  type CopyBulkUploadProgress,
   type CopyDetailsListRow,
   type CopyDetailsMetaPayload,
 } from "@/services/copy-details.service";
+import { cn } from "@/lib/utils";
 import CopyDialog, { formatPriceInrDisplay } from "./components/CopyDialog";
+
+const STICKY_THEAD_CLASS =
+  "sticky top-0 z-20 border-b-2 border-slate-500 bg-muted/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-muted/80 dark:border-slate-400";
+const STICKY_TH_BASE =
+  "h-auto whitespace-nowrap border-r border-solid border-slate-300 bg-muted/95 px-3 py-2.5 text-xs font-semibold text-slate-800 backdrop-blur dark:border-slate-400";
+const STICKY_TH_LEFT = cn(
+  STICKY_TH_BASE,
+  "sticky left-0 z-30 shadow-[6px_0_10px_-4px_rgba(15,23,42,0.06)]",
+);
+const STICKY_TH_RIGHT = cn(
+  STICKY_TH_BASE,
+  "sticky right-0 z-30 shadow-[-8px_0_12px_-6px_rgba(15,23,42,0.12)]",
+);
 
 type LibraryBookSocketUpdate = {
   id: string;
@@ -324,8 +349,8 @@ function BookRowActions({
   onDelete,
 }: {
   row: BookListRow;
-  onEdit: (id: number) => void;
-  onDelete: (row: BookListRow) => void;
+  onEdit: (_id: number) => void;
+  onDelete: (_row: BookListRow) => void;
 }) {
   return (
     <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
@@ -353,7 +378,6 @@ function BookRowActions({
 
 export default function BooksPage() {
   const { user } = useAuth();
-  const [activeBranchId] = useActiveLibraryBranchId();
   const userId = user?.id?.toString();
   const { socket, isConnected } = useSocket({ userId });
 
@@ -384,6 +408,12 @@ export default function BooksPage() {
   const [editingCopyId, setEditingCopyId] = useState<number | null>(null);
   const [deleteCopyTarget, setDeleteCopyTarget] = useState<CopyDetailsListRow | null>(null);
   const [copyDeleteInProgress, setCopyDeleteInProgress] = useState(false);
+  const copyBulkUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [bulkUploadJobId, setBulkUploadJobId] = useState<string | null>(null);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState<CopyBulkUploadProgress | null>(null);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const activeFilterCount = countActiveFilters(appliedFilters);
@@ -434,6 +464,63 @@ export default function BooksPage() {
     if (editingId == null) return;
     void fetchCopiesForBook(editingId);
   }, [dialogOpen, dialogTab, editingId, fetchCopiesForBook]);
+
+  useEffect(() => {
+    if (!socket || !isConnected || !bulkUploadJobId) return;
+    socket.emit("subscribe_library_copy_bulk_upload", bulkUploadJobId);
+    const handler = (data: CopyBulkUploadProgress) => {
+      if (data.jobId !== bulkUploadJobId) return;
+      setBulkUploadProgress(data);
+      if (data.status === "COMPLETED") {
+        setBulkUploading(false);
+        const ok = data.succeeded;
+        const ko = data.failed;
+        if (ko === 0) toast.success(`Uploaded ${ok} copies.`);
+        else toast.warning(`Uploaded ${ok} copies, ${ko} failed.`);
+        if (editingId != null) void fetchCopiesForBook(editingId);
+      }
+    };
+    socket.on("library_copy_bulk_upload_progress", handler);
+    return () => {
+      socket.off("library_copy_bulk_upload_progress", handler);
+      socket.emit("unsubscribe_library_copy_bulk_upload", bulkUploadJobId);
+    };
+  }, [socket, isConnected, bulkUploadJobId, editingId, fetchCopiesForBook]);
+
+  const handleDownloadCopyTemplate = async () => {
+    if (editingId == null) return;
+    try {
+      setDownloadingTemplate(true);
+      const blob = await downloadCopyBulkUploadTemplate(editingId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `copy-details-template-book-${editingId}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to download template");
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
+  const handleSelectCopyBulkFile = async (file: File) => {
+    if (editingId == null) return;
+    try {
+      setBulkUploading(true);
+      setBulkUploadProgress(null);
+      setBulkUploadOpen(true);
+      const res = await bulkUploadCopyDetails(editingId, file);
+      setBulkUploadJobId(res.payload.jobId);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to start bulk upload");
+      setBulkUploading(false);
+      setBulkUploadOpen(false);
+    }
+  };
 
   const filterComboDocTypes = useMemo(
     () => [
@@ -589,7 +676,6 @@ export default function BooksPage() {
           : {}),
         ...(appliedFilters.journalId != null ? { journalId: appliedFilters.journalId } : {}),
         ...(appliedFilters.enclosureId != null ? { enclosureId: appliedFilters.enclosureId } : {}),
-        ...(activeBranchId != null ? { branchId: activeBranchId } : {}),
       });
       setRows(res.payload.rows);
       setTotal(res.payload.total);
@@ -599,7 +685,7 @@ export default function BooksPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, debouncedSearch, appliedFilters, activeBranchId]);
+  }, [page, limit, debouncedSearch, appliedFilters]);
 
   useEffect(() => {
     void fetchRows();
@@ -706,10 +792,7 @@ export default function BooksPage() {
 
   const openEdit = async (id: number) => {
     try {
-      const [bookRes, authorsRes] = await Promise.all([
-        getBookById(id),
-        getBookAuthors(id).catch(() => null),
-      ]);
+      const res = await getBookById(id);
       setEditingId(id);
       setForm(detailToForm(res.payload));
       setDialogTab("details");
@@ -721,31 +804,14 @@ export default function BooksPage() {
     }
   };
 
-  const addAuthorRow = () =>
-    setFormAuthors((rows) => [...rows, { authorId: "", authorTypeId: "", remarks: "" }]);
-
-  const removeAuthorRow = (index: number) =>
-    setFormAuthors((rows) => rows.filter((_, i) => i !== index));
-
-  const updateAuthorRow = (
-    index: number,
-    patch: Partial<{ authorId: string; authorTypeId: string; remarks: string }>,
-  ) => setFormAuthors((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
-
   const handleSave = async () => {
     if (!form.title.trim()) {
       toast.error("Title is required");
       return;
     }
-    const validAuthors = formAuthors.filter((a) => a.authorId && a.authorTypeId);
-    if (formAuthors.length > validAuthors.length) {
-      toast.error("Every author row needs an author and a type, or remove it");
-      return;
-    }
     try {
       setSaving(true);
       const body = formToBody(form);
-      let bookId = editingId;
       if (editingId == null) {
         const res = await createBook(body);
         setEditingId(res.payload.id);
@@ -1250,6 +1316,11 @@ export default function BooksPage() {
                 </div>
 
                 <div className="order-3 grid min-h-0 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:order-none">
+                  <div className="sm:col-span-2 -mb-1 mt-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Title
+                    </p>
+                  </div>
                   <div className="space-y-1 sm:col-span-2">
                     <Label>Title *</Label>
                     <Input
@@ -1271,6 +1342,39 @@ export default function BooksPage() {
                       value={form.alternateTitle}
                       onChange={(e) => setForm((f) => ({ ...f, alternateTitle: e.target.value }))}
                     />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Identifiers
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>ISBN</Label>
+                    <Input
+                      value={form.isbn}
+                      onChange={(e) => setForm((f) => ({ ...f, isbn: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Call number</Label>
+                    <Input
+                      value={form.callNumber}
+                      onChange={(e) => setForm((f) => ({ ...f, callNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Reference number</Label>
+                    <Input
+                      value={form.referenceNumber}
+                      onChange={(e) => setForm((f) => ({ ...f, referenceNumber: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Publication
+                    </p>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Document type</Label>
@@ -1302,6 +1406,88 @@ export default function BooksPage() {
                       onChange={(v) => setForm((f) => ({ ...f, languageId: v }))}
                     />
                   </div>
+                  <div className="space-y-1">
+                    <Label>Edition</Label>
+                    <Input
+                      value={form.edition}
+                      onChange={(e) => setForm((f) => ({ ...f, edition: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Edition year</Label>
+                    <Input
+                      value={form.editionYear}
+                      onChange={(e) => setForm((f) => ({ ...f, editionYear: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Published year</Label>
+                    <Input
+                      value={form.publishedYear}
+                      onChange={(e) => setForm((f) => ({ ...f, publishedYear: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Issue date</Label>
+                    <Input
+                      type="date"
+                      value={form.issueDate}
+                      onChange={(e) => setForm((f) => ({ ...f, issueDate: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Periodical / Issue
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Journal (periodical link)</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Journal"
+                      value={form.journalId}
+                      dataArr={formComboJournals}
+                      onChange={(v) => setForm((f) => ({ ...f, journalId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Frequency / period</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Period"
+                      value={form.frequency}
+                      dataArr={formComboPeriods}
+                      onChange={(v) => setForm((f) => ({ ...f, frequency: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Issue number</Label>
+                    <Input
+                      value={form.issueNumber}
+                      onChange={(e) => setForm((f) => ({ ...f, issueNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Volume</Label>
+                    <Input
+                      value={form.bookVolume}
+                      onChange={(e) => setForm((f) => ({ ...f, bookVolume: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Part</Label>
+                    <Input
+                      value={form.bookPart}
+                      onChange={(e) => setForm((f) => ({ ...f, bookPart: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Classification
+                    </p>
+                  </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Subject group</Label>
                     <Combobox
@@ -1322,17 +1508,7 @@ export default function BooksPage() {
                       onChange={(v) => setForm((f) => ({ ...f, seriesId: v }))}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Journal (periodical link)</Label>
-                    <Combobox
-                      className="h-10"
-                      placeholder="Journal"
-                      value={form.journalId}
-                      dataArr={formComboJournals}
-                      onChange={(v) => setForm((f) => ({ ...f, journalId: v }))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 sm:col-span-2">
                     <Label className="text-xs font-medium">Enclosure</Label>
                     <Combobox
                       className="h-10"
@@ -1342,93 +1518,18 @@ export default function BooksPage() {
                       onChange={(v) => setForm((f) => ({ ...f, enclosureId: v }))}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Frequency / period</Label>
-                    <Combobox
-                      className="h-10"
-                      placeholder="Period"
-                      value={form.frequency}
-                      dataArr={formComboPeriods}
-                      onChange={(v) => setForm((f) => ({ ...f, frequency: v }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>ISBN</Label>
-                    <Input
-                      value={form.isbn}
-                      onChange={(e) => setForm((f) => ({ ...f, isbn: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Issue date</Label>
-                    <Input
-                      type="date"
-                      value={form.issueDate}
-                      onChange={(e) => setForm((f) => ({ ...f, issueDate: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Edition</Label>
-                    <Input
-                      value={form.edition}
-                      onChange={(e) => setForm((f) => ({ ...f, edition: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Edition year</Label>
-                    <Input
-                      value={form.editionYear}
-                      onChange={(e) => setForm((f) => ({ ...f, editionYear: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Volume</Label>
-                    <Input
-                      value={form.bookVolume}
-                      onChange={(e) => setForm((f) => ({ ...f, bookVolume: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Part</Label>
-                    <Input
-                      value={form.bookPart}
-                      onChange={(e) => setForm((f) => ({ ...f, bookPart: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Published year</Label>
-                    <Input
-                      value={form.publishedYear}
-                      onChange={(e) => setForm((f) => ({ ...f, publishedYear: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Issue number</Label>
-                    <Input
-                      value={form.issueNumber}
-                      onChange={(e) => setForm((f) => ({ ...f, issueNumber: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Call number</Label>
-                    <Input
-                      value={form.callNumber}
-                      onChange={(e) => setForm((f) => ({ ...f, callNumber: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Reference number</Label>
-                    <Input
-                      value={form.referenceNumber}
-                      onChange={(e) => setForm((f) => ({ ...f, referenceNumber: e.target.value }))}
-                    />
-                  </div>
                   <div className="space-y-1 sm:col-span-2">
                     <Label>Keywords</Label>
                     <Input
                       value={form.keywords}
                       onChange={(e) => setForm((f) => ({ ...f, keywords: e.target.value }))}
                     />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Notes &amp; Access
+                    </p>
                   </div>
                   <div className="space-y-1 sm:col-span-2">
                     <Label>Remarks</Label>
@@ -1502,15 +1603,52 @@ export default function BooksPage() {
                       Each copy has its own accession, location, and status.
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={editingId == null}
-                    onClick={openAddCopy}
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add copy
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={copyBulkUploadInputRef}
+                      type="file"
+                      accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) void handleSelectCopyBulkFile(file);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={editingId == null || downloadingTemplate}
+                      onClick={() => void handleDownloadCopyTemplate()}
+                    >
+                      {downloadingTemplate ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-1 h-4 w-4" />
+                      )}
+                      Download template
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={editingId == null || bulkUploading}
+                      onClick={() => copyBulkUploadInputRef.current?.click()}
+                    >
+                      <Upload className="mr-1 h-4 w-4" />
+                      Bulk upload
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={editingId == null}
+                      onClick={openAddCopy}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add copy
+                    </Button>
+                  </div>
                 </div>
                 <div className="min-h-0 flex-1 overflow-auto">
                   <div className="rounded-md border bg-background">
@@ -1621,6 +1759,104 @@ export default function BooksPage() {
           onSaved={handleCopySaved}
         />
       ) : null}
+
+      <Dialog
+        open={bulkUploadOpen}
+        onOpenChange={(open) => {
+          if (!open && bulkUploading) return;
+          setBulkUploadOpen(open);
+          if (!open) {
+            setBulkUploadJobId(null);
+            setBulkUploadProgress(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Bulk upload copies</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const p = bulkUploadProgress;
+            const total = p?.total ?? 0;
+            const processed = p?.processed ?? 0;
+            const succeeded = p?.succeeded ?? 0;
+            const failed = p?.failed ?? 0;
+            const pct = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : 0;
+            const done = p?.status === "COMPLETED";
+            return (
+              <div className="space-y-3 py-2 text-sm">
+                <div className="text-xs text-muted-foreground">
+                  {p == null
+                    ? "Starting…"
+                    : p.status === "STARTED"
+                      ? `Parsed ${total} row${total === 1 ? "" : "s"}. Inserting…`
+                      : done
+                        ? `Completed in ${processed} row${processed === 1 ? "" : "s"}.`
+                        : `Processing row ${processed} of ${total}…`}
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={cn(
+                      "h-2 transition-all",
+                      done && failed === 0
+                        ? "bg-emerald-500"
+                        : done
+                          ? "bg-amber-500"
+                          : "bg-blue-500",
+                    )}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="rounded-md border bg-slate-50 p-2">
+                    <div className="text-slate-500">Total</div>
+                    <div className="text-base font-semibold">{total}</div>
+                  </div>
+                  <div className="rounded-md border bg-emerald-50 p-2">
+                    <div className="text-emerald-700">Succeeded</div>
+                    <div className="text-base font-semibold text-emerald-700">{succeeded}</div>
+                  </div>
+                  <div className="rounded-md border bg-red-50 p-2">
+                    <div className="text-red-700">Failed</div>
+                    <div className="text-base font-semibold text-red-700">{failed}</div>
+                  </div>
+                </div>
+                {p?.errors && p.errors.length > 0 ? (
+                  <div className="max-h-48 overflow-y-auto rounded-md border bg-red-50/40 p-2 text-xs">
+                    <p className="mb-1 font-semibold text-red-700">Errors ({p.errors.length})</p>
+                    <ul className="space-y-1">
+                      {p.errors.map((err, idx) => (
+                        <li key={`${err.row}-${idx}`} className="text-red-700">
+                          Row {err.row}: {err.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : p?.lastError && !done ? (
+                  <div className="rounded-md border bg-amber-50 p-2 text-xs text-amber-800">
+                    Row {p.lastError.row}: {p.lastError.message}
+                  </div>
+                ) : null}
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={done ? "default" : "outline"}
+                    disabled={!done && bulkUploading}
+                    onClick={() => {
+                      setBulkUploadOpen(false);
+                      setBulkUploadJobId(null);
+                      setBulkUploadProgress(null);
+                    }}
+                  >
+                    {done ? "Close" : "Hide"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={deleteCopyTarget != null}

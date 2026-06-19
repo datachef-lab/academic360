@@ -144,3 +144,46 @@ export async function deleteCopyDetails(id: number): Promise<ApiResponse<null>> 
   const res = await axiosInstance.delete<ApiResponse<null>>(`${BASE}/${id}`);
   return res.data;
 }
+
+export async function downloadCopyBulkUploadTemplate(bookId?: number): Promise<Blob> {
+  const res = await axiosInstance.get(`${BASE}/template`, {
+    params: bookId ? { bookId } : undefined,
+    responseType: "blob",
+  });
+  return res.data as Blob;
+}
+
+export type CopyBulkUploadJob = {
+  jobId: string;
+  bookId: number;
+};
+
+export async function bulkUploadCopyDetails(
+  bookId: number,
+  file: File,
+): Promise<ApiResponse<CopyBulkUploadJob>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await axiosInstance.post<ApiResponse<CopyBulkUploadJob>>(
+    `${BASE}/bulk-upload`,
+    formData,
+    {
+      params: { bookId },
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
+  return res.data;
+}
+
+export type CopyBulkUploadProgress = {
+  jobId: string;
+  bookId: number;
+  status: "STARTED" | "ROW" | "COMPLETED";
+  processed: number;
+  succeeded: number;
+  failed: number;
+  total: number;
+  lastError?: { row: number; message: string } | null;
+  errors?: Array<{ row: number; message: string }>;
+  updatedAt: string;
+};

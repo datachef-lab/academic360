@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { vendorModel } from "@repo/db/schemas/models/library/vendor.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type VendorListFilters = {
   page: number;
@@ -131,6 +132,13 @@ const normalizeUpsert = (input: VendorUpsertInput) => ({
 });
 
 export async function createVendor(input: VendorUpsertInput): Promise<number> {
+  await assertUniqueLibraryName({
+    table: vendorModel,
+    nameColumn: vendorModel.name,
+    idColumn: vendorModel.id,
+    value: input.name,
+    label: "Vendor",
+  });
   const [inserted] = await db
     .insert(vendorModel)
     .values(normalizeUpsert(input))
@@ -142,6 +150,14 @@ export async function updateVendor(
   id: number,
   input: VendorUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: vendorModel,
+    nameColumn: vendorModel.name,
+    idColumn: vendorModel.id,
+    value: input.name,
+    label: "Vendor",
+    excludeId: id,
+  });
   await db
     .update(vendorModel)
     .set({ ...normalizeUpsert(input), updatedAt: new Date() })

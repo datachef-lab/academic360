@@ -6,6 +6,7 @@ import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
 import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
 import { libraryEntryExitModel } from "@repo/db/schemas/models/library/library-entry-exit.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type BranchListFilters = {
   page: number;
@@ -113,6 +114,13 @@ const normalizeUpsert = (input: BranchUpsertInput) => ({
 });
 
 export async function createBranch(input: BranchUpsertInput): Promise<number> {
+  await assertUniqueLibraryName({
+    table: branchModel,
+    nameColumn: branchModel.name,
+    idColumn: branchModel.id,
+    value: input.name,
+    label: "Branch",
+  });
   const [inserted] = await db
     .insert(branchModel)
     .values(normalizeUpsert(input))
@@ -124,6 +132,14 @@ export async function updateBranch(
   id: number,
   input: BranchUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: branchModel,
+    nameColumn: branchModel.name,
+    idColumn: branchModel.id,
+    value: input.name,
+    label: "Branch",
+    excludeId: id,
+  });
   await db
     .update(branchModel)
     .set({ ...normalizeUpsert(input), updatedAt: new Date() })

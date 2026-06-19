@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { libraryZoneModel } from "@repo/db/schemas/models/library/library-zone.model.js";
 import { libraryGateEventModel } from "@repo/db/schemas/models/library/library-gate-event.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type ZoneListFilters = {
   page: number;
@@ -100,6 +101,13 @@ const normalize = (input: ZoneUpsertInput) => ({
 });
 
 export async function createZone(input: ZoneUpsertInput) {
+  await assertUniqueLibraryName({
+    table: libraryZoneModel,
+    nameColumn: libraryZoneModel.name,
+    idColumn: libraryZoneModel.id,
+    value: input.name,
+    label: "Zone",
+  });
   const [r] = await db
     .insert(libraryZoneModel)
     .values(normalize(input))
@@ -108,6 +116,14 @@ export async function createZone(input: ZoneUpsertInput) {
 }
 
 export async function updateZone(id: number, input: ZoneUpsertInput) {
+  await assertUniqueLibraryName({
+    table: libraryZoneModel,
+    nameColumn: libraryZoneModel.name,
+    idColumn: libraryZoneModel.id,
+    value: input.name,
+    label: "Zone",
+    excludeId: id,
+  });
   await db
     .update(libraryZoneModel)
     .set({ ...normalize(input), updatedAt: new Date() })

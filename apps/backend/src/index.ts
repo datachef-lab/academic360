@@ -161,7 +161,11 @@ function checkRequiredEnvs() {
       startJournalIssuePredictorScheduler();
     });
   } catch (error) {
-    log.error("Failed to start the application ⚠️", { error });
+    log.error("Failed to start the application ⚠️", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    console.error(error);
     process.exit(1);
   }
 })();

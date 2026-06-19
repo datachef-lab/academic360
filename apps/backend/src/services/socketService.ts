@@ -440,6 +440,26 @@ class SocketService {
         }
       });
 
+      socket.on("subscribe_library_copy_bulk_upload", (jobId: string) => {
+        if (!jobId || typeof jobId !== "string") return;
+        try {
+          socket.join(`library_copy_bulk_upload_${jobId}`);
+        } catch (error) {
+          log.error("Error subscribing to copy bulk upload room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_copy_bulk_upload", (jobId: string) => {
+        if (!jobId || typeof jobId !== "string") return;
+        try {
+          socket.leave(`library_copy_bulk_upload_${jobId}`);
+        } catch (error) {
+          log.error("Error unsubscribing from copy bulk upload room", {
+            error,
+          });
+        }
+      });
+
       socket.on("subscribe_library_books", () => {
         try {
           socket.join("library_books_page");
@@ -1155,6 +1175,32 @@ class SocketService {
       );
     } catch (error) {
       log.error("Error sending library copy details update", { error });
+    }
+  }
+
+  sendLibraryCopyBulkUploadProgress(payload: {
+    jobId: string;
+    bookId: number;
+    status: "STARTED" | "ROW" | "COMPLETED";
+    processed: number;
+    succeeded: number;
+    failed: number;
+    total: number;
+    lastError?: { row: number; message: string } | null;
+    errors?: Array<{ row: number; message: string }>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send copy bulk upload progress: io is null");
+      return;
+    }
+    try {
+      const room = `library_copy_bulk_upload_${payload.jobId}`;
+      this.io.to(room).emit("library_copy_bulk_upload_progress", {
+        ...payload,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      log.error("Error sending copy bulk upload progress", { error });
     }
   }
 

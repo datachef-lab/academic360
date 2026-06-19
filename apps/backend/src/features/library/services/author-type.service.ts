@@ -4,6 +4,7 @@ import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { authorTypeModel } from "@repo/db/schemas/models/library/author-type.model.js";
 import { authorModel } from "@repo/db/schemas/models/library/author.model.js";
 import { authorDetailsModel } from "@repo/db/schemas/models/library/author-detail.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type AuthorTypeListFilters = {
   page: number;
@@ -90,6 +91,13 @@ export async function getAuthorTypeById(
 export async function createAuthorType(
   input: AuthorTypeUpsertInput,
 ): Promise<number> {
+  await assertUniqueLibraryName({
+    table: authorTypeModel,
+    nameColumn: authorTypeModel.name,
+    idColumn: authorTypeModel.id,
+    value: input.name,
+    label: "Author type",
+  });
   const [inserted] = await db
     .insert(authorTypeModel)
     .values({
@@ -103,6 +111,14 @@ export async function updateAuthorType(
   id: number,
   input: AuthorTypeUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: authorTypeModel,
+    nameColumn: authorTypeModel.name,
+    idColumn: authorTypeModel.id,
+    value: input.name,
+    label: "Author type",
+    excludeId: id,
+  });
   await db
     .update(authorTypeModel)
     .set({

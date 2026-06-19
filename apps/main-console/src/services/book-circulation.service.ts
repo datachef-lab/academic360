@@ -141,6 +141,38 @@ export async function getBookCirculationMeta(): Promise<ApiResponse<BookCirculat
   return response.data;
 }
 
+export type BookOption = BookCirculationMetaPayload["bookOptions"][number];
+
+export async function searchBookCirculationBookOptions(
+  search: string,
+  limit = 50,
+): Promise<ApiResponse<BookOption[]>> {
+  const response = await axiosInstance.get<ApiResponse<BookOption[]>>(`${BASE_URL}/book-options`, {
+    params: { search, limit },
+  });
+  return response.data;
+}
+
+export type BookCirculationPolicyPayload = {
+  loanDays: number;
+  finePerDay: number;
+  graceDays: number;
+  renewalLimit: number;
+  policyId: number | null;
+  dueDate: string;
+};
+
+export async function getBookCirculationPolicy(
+  userId: number,
+  copyDetailsId: number,
+): Promise<ApiResponse<BookCirculationPolicyPayload>> {
+  const response = await axiosInstance.get<ApiResponse<BookCirculationPolicyPayload>>(
+    `${BASE_URL}/policy`,
+    { params: { userId, copyDetailsId } },
+  );
+  return response.data;
+}
+
 export async function downloadBookCirculationExcel(
   filters: Omit<BookCirculationFilters, "page" | "limit">,
 ): Promise<Blob> {
