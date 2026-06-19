@@ -3,6 +3,7 @@ import { verifyJWT } from "@/middlewares/index.js";
 import {
   bulkTagRfidController,
   createCopyDetailsController,
+  deleteCopyDetailsController,
   downloadCopyDetailsExcelController,
   getCopyDetailsByIdController,
   getCopyDetailsListController,
@@ -23,5 +24,6 @@ router.get("/", getCopyDetailsListController);
 router.get("/:id", getCopyDetailsByIdController);
 router.post("/", createCopyDetailsController);
 router.put("/:id", updateCopyDetailsController);
+router.delete("/:id", deleteCopyDetailsController);
 
 export default router;
