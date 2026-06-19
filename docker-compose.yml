@@ -17,7 +17,7 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
-    image: a360-backend
+    image: ${ECR_REGISTRY:-049252392122.dkr.ecr.ap-south-1.amazonaws.com}/a360-backend:${IMAGE_TAG:-prod}
     env_file: /opt/academic360/env/backend.env
     ports:
       - "8080:8080"
@@ -35,7 +35,7 @@ services:
     build:
       context: .
       dockerfile: apps/student-console/Dockerfile
-    image: a360-student-console
+    image: ${ECR_REGISTRY:-049252392122.dkr.ecr.ap-south-1.amazonaws.com}/a360-student-console:${IMAGE_TAG:-prod}
     env_file: /opt/academic360/env/student-console.env
     environment:
       HOSTNAME: 0.0.0.0
@@ -56,7 +56,7 @@ services:
     build:
       context: .
       dockerfile: apps/main-console/Dockerfile
-    image: a360-main-console
+    image: ${ECR_REGISTRY:-049252392122.dkr.ecr.ap-south-1.amazonaws.com}/a360-main-console:${IMAGE_TAG:-prod}
     ports:
       - "80:5173"
     restart: unless-stopped
@@ -71,7 +71,7 @@ services:
     build:
       context: .
       dockerfile: apps/notification-system/Dockerfile
-    image: a360-notification-worker
+    image: ${ECR_REGISTRY:-049252392122.dkr.ecr.ap-south-1.amazonaws.com}/a360-notification-worker:${IMAGE_TAG:-prod}
     env_file: /opt/academic360/env/notification.env
     restart: unless-stopped
     logging:
