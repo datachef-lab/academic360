@@ -2,7 +2,6 @@ import { Outlet, useLocation } from "react-router-dom";
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import {
   Book,
-  BookCopy,
   BookOpenCheck,
   BookText,
   FolderArchive,
@@ -39,11 +38,6 @@ const quickLinks = [
     title: "Books",
     url: "/dashboard/library/books",
     icon: Book,
-  },
-  {
-    title: "Copy Details",
-    url: "/dashboard/library/copy-details",
-    icon: BookCopy,
   },
   {
     title: "Journal",

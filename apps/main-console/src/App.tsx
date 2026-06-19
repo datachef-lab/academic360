@@ -481,7 +481,6 @@ const router = createBrowserRouter(
             { path: "entry-exit", element: <libraryModule.EntryExitPage /> },
             { path: "book-circulation", element: <libraryModule.BookCirculationPage /> },
             { path: "books", element: <libraryModule.BooksPage /> },
-            { path: "copy-details", element: <libraryModule.CopyDetailsPage /> },
             { path: "journal", element: <libraryModule.JournalPage /> },
             { path: "series", element: <libraryModule.SeriesPage /> },
             { path: "publications", element: <libraryModule.PublicationsPage /> },

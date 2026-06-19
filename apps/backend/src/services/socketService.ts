@@ -78,7 +78,7 @@ export interface LibraryJournalUpdate {
 export interface LibraryCopyDetailsUpdate {
   id: string;
   type: "library_copy_details_update";
-  action: "CREATED" | "UPDATED";
+  action: "CREATED" | "UPDATED" | "DELETED";
   actorName: string;
   copyDetailsId: number;
   bookTitle: string;
@@ -1113,7 +1113,7 @@ class SocketService {
   }
 
   sendLibraryCopyDetailsUpdate(payload: {
-    action: "CREATED" | "UPDATED";
+    action: "CREATED" | "UPDATED" | "DELETED";
     actorName: string;
     copyDetailsId: number;
     bookTitle: string;
@@ -1125,7 +1125,12 @@ class SocketService {
     }
 
     try {
-      const verb = payload.action === "CREATED" ? "added" : "updated";
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "DELETED"
+            ? "deleted"
+            : "updated";
       const title = payload.bookTitle.trim() || "Untitled book";
       const actor = payload.actorName.trim() || "Someone";
       const message = `${actor} ${verb} a copy for "${title}"`;

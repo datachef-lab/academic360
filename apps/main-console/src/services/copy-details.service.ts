@@ -139,3 +139,8 @@ export async function updateCopyDetails(
   const res = await axiosInstance.put<ApiResponse<null>>(`${BASE}/${id}`, body);
   return res.data;
 }
+
+export async function deleteCopyDetails(id: number): Promise<ApiResponse<null>> {
+  const res = await axiosInstance.delete<ApiResponse<null>>(`${BASE}/${id}`);
+  return res.data;
+}

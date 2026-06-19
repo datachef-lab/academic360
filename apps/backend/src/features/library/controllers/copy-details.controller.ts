@@ -3,7 +3,9 @@ import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
+  countCopyCirculations,
   createCopyDetails,
+  deleteCopyDetails,
   exportCopyDetailsExcel,
   findCopyDetailsPaginated,
   getBookTitleById,
@@ -274,6 +276,53 @@ export const updateCopyDetailsController = async (
           "SUCCESS",
           null,
           "Copy details updated successfully.",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const deleteCopyDetailsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) {
+      throw new ApiError(400, "Invalid copy details id.");
+    }
+    const existing = await getCopyDetailsById(id);
+    if (!existing) {
+      throw new ApiError(404, "Copy details not found.");
+    }
+    const circulationCount = await countCopyCirculations(id);
+    if (circulationCount > 0) {
+      throw new ApiError(
+        409,
+        "This copy has circulation history and cannot be deleted.",
+      );
+    }
+    await deleteCopyDetails(id);
+    const bookTitle =
+      (await getBookTitleById(existing.bookId))?.trim() ||
+      `Book #${existing.bookId}`;
+    socketService.sendLibraryCopyDetailsUpdate({
+      action: "DELETED",
+      actorName: copyDetailsActorName(req),
+      copyDetailsId: id,
+      bookTitle,
+      meta: { copyDetailsId: id, bookId: existing.bookId },
+    });
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          null,
+          "Copy details deleted successfully.",
         ),
       );
   } catch (error) {

@@ -3,6 +3,7 @@ import { db } from "@/db/index.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 import { bindingModel } from "@repo/db/schemas/models/library/binding.model.js";
+import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
 import { enclosureModel } from "@repo/db/schemas/models/library/enclosure.model.js";
@@ -481,4 +482,18 @@ export async function updateCopyDetails(
       updatedAt: new Date(),
     })
     .where(eq(copyDetailsModel.id, id));
+}
+
+export async function countCopyCirculations(
+  copyDetailsId: number,
+): Promise<number> {
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(bookCirculationModel)
+    .where(eq(bookCirculationModel.copyDetailsId, copyDetailsId));
+  return total;
+}
+
+export async function deleteCopyDetails(id: number): Promise<void> {
+  await db.delete(copyDetailsModel).where(eq(copyDetailsModel.id, id));
 }
