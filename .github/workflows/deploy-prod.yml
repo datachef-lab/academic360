@@ -8,8 +8,9 @@ name: Deploy (prod)
 #
 # Required repo config:
 #   secrets.AWS_DEPLOY_ROLE_ARN  — IAM role 'a360-github-deploy' (OIDC trust)
-#   vars.ASG_NAME                — Auto Scaling Group holding the app instances
-#   vars.DEPLOY_BUCKET           — S3 bucket for compose+scripts (deploy/ prefix)
+#   vars.ASG_NAME                — Auto Scaling Group (optional; default a360-asg)
+#   vars.DEPLOY_BUCKET           — S3 bucket for compose+scripts, deploy/ prefix
+#                                  (optional; default a360-deploy-artifacts)
 
 on:
   push:
@@ -44,6 +45,10 @@ permissions:
 env:
   AWS_REGION: ap-south-1
   ECR_REGISTRY: 049252392122.dkr.ecr.ap-south-1.amazonaws.com
+  # Fixed prod infra names. Overridable via repo vars; fall back to the known
+  # defaults so an unset/empty var can't silently produce an invalid "s3:///".
+  DEPLOY_BUCKET: ${{ vars.DEPLOY_BUCKET || 'a360-deploy-artifacts' }}
+  ASG_NAME: ${{ vars.ASG_NAME || 'a360-asg' }}
 
 jobs:
   build-and-deploy:
@@ -114,14 +119,12 @@ jobs:
       - name: Sync compose + scripts to deploy bucket
         run: |
           set -euo pipefail
-          aws s3 cp docker-compose.yml "s3://${{ vars.DEPLOY_BUCKET }}/deploy/docker-compose.yml"
-          aws s3 sync --delete scripts/ "s3://${{ vars.DEPLOY_BUCKET }}/deploy/scripts/"
+          aws s3 cp docker-compose.yml "s3://$DEPLOY_BUCKET/deploy/docker-compose.yml"
+          aws s3 sync --delete scripts/ "s3://$DEPLOY_BUCKET/deploy/scripts/"
 
       - name: Roll out to instances via SSM (sequential, health-gated)
         env:
           TAG: ${{ steps.tag.outputs.tag }}
-          ASG_NAME: ${{ vars.ASG_NAME }}
-          DEPLOY_BUCKET: ${{ vars.DEPLOY_BUCKET }}
           RUN_MIGRATE_INPUT: ${{ github.event.inputs.run_migrate }}
         run: |
           set -euo pipefail
