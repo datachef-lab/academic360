@@ -1,4 +1,4 @@
-# academic360
+# Academic360
 
 Welcome to **academic360** – a Student Management App built as a **monorepo** using **Turborepo**. This project includes both the **backend** and **frontend** apps for managing student data, academic records, attendance, and more.
 
