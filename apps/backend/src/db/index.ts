@@ -105,6 +105,8 @@ export const mysqlConnection: MySqlPool = createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  // Remote legacy host can take 8s+ to handshake; default of 10s is too tight.
+  connectTimeout: 60_000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
 });

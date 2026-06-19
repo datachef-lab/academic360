@@ -1,0 +1,15 @@
+{
+  "elapsed": "362.2s",
+  "summary": {
+    "totalRows": 11,
+    "totalUids": 10,
+    "processed": 9,
+    "notFound": 0,
+    "errors": [
+      {
+        "uid": "0604230008",
+        "error": "connect ETIMEDOUT"
+      }
+    ]
+  }
+}

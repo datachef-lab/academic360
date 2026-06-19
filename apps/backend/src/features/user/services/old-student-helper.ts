@@ -93,6 +93,7 @@ import {
 } from "@repo/db/legacy-system-types/admissions";
 
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
+import { migrateSubjectSelectionForStudent } from "./subject-selection-migration.service.js";
 import { and, eq, ilike, or } from "drizzle-orm";
 
 import { OldBoard } from "@/types/old-board";
@@ -650,6 +651,9 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         notes: oldStudent.notes ?? undefined,
         active: bitToBool(oldStudent.active),
         alumni: bitToBool(oldStudent.alumni),
+        dateOfJoining: oldStudent.admissiondate
+          ? new Date(oldStudent.admissiondate)
+          : undefined,
         leavingDate: oldStudent.leavingdate
           ? new Date(oldStudent.leavingdate)
           : undefined,
@@ -694,6 +698,9 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         notes: oldStudent.notes ?? undefined,
         active: bitToBool(oldStudent.active),
         alumni: bitToBool(oldStudent.alumni),
+        dateOfJoining: oldStudent.admissiondate
+          ? new Date(oldStudent.admissiondate)
+          : undefined,
         leavingDate: oldStudent.leavingdate
           ? new Date(oldStudent.leavingdate)
           : undefined,
@@ -1898,12 +1905,14 @@ export async function processStudent(
   studentId: number | undefined,
   lastSyncTime?: Date,
 ) {
-  await db
-    .update(userModel)
-    .set({
-      whatsappNumber: oldStudent.whatsappno || undefined,
-    })
-    .where(eq(userModel.id, user.id!));
+  if (oldStudent.whatsappno) {
+    await db
+      .update(userModel)
+      .set({
+        whatsappNumber: oldStudent.whatsappno,
+      })
+      .where(eq(userModel.id, user.id!));
+  }
   let student: Student | undefined;
 
   // Check if we need to update student data (Steps 1-8)
@@ -1992,6 +2001,14 @@ export async function processStudent(
           .returning();
 
         student = updatedStudent;
+      }
+
+      // Backfill bootstrap additional_info even for already-imported students.
+      if (student.applicationId) {
+        await oldAdmPersonalDetailsHelper.upsertBootstrapAdditionalInfo(
+          student.applicationId,
+          oldStudent,
+        );
       }
     }
   } else {
@@ -2144,6 +2161,22 @@ export async function processStudent(
 
   // Step 10: Load the student academic info and subjects
   await loadStudentAcademicInfoAndSubjects(oldStudent, student);
+
+  // Step 11: Migrate legacy subject-selection (per-semester elective choices) into
+  // student_subject_selections. Idempotent + safe to re-run.
+  if (student) {
+    try {
+      const r = await migrateSubjectSelectionForStudent(student);
+      if (r.legacyRows > 0) {
+        console.log("[subject-selection-migration]", {
+          uid: student.uid,
+          ...r,
+        });
+      }
+    } catch (e) {
+      console.warn("[subject-selection-migration] failed for", student.uid, e);
+    }
+  }
 
   return student;
 }
@@ -2391,8 +2424,8 @@ async function loadStudentAcademicInfoAndSubjects(
           ? parseInt(oldStudentAcademicDetails.rank)
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
-        registrationNumber: null,
-        rollNumber: oldStudentAcademicDetails.regno,
+        registrationNumber: oldStudentAcademicDetails.regno,
+        rollNumber: oldStudentAcademicDetails.rollno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
         otherBoard: oldStudentAcademicDetails.otherbrd,
@@ -2464,8 +2497,8 @@ async function loadStudentAcademicInfoAndSubjects(
           ? parseInt(oldStudentAcademicDetails.rank)
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
-        registrationNumber: null,
-        rollNumber: oldStudentAcademicDetails.regno,
+        registrationNumber: oldStudentAcademicDetails.regno,
+        rollNumber: oldStudentAcademicDetails.rollno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
         otherBoard: oldStudentAcademicDetails.otherbrd,
@@ -2765,7 +2798,13 @@ async function upsertPromotionFromHistoricalRecord(
     dateOfJoining: toDate(oldHistoricalRecord.dateofJoining),
     promotionStatusId: foundPromotionStatus?.id,
     boardResultStatusId: foundBoardResultStatus?.id,
-    startDate: toDate(oldHistoricalRecord.startDate) ?? null,
+    // Legacy historicalrecord.startDate is consistently NULL; the actual semester
+    // start lives on dateofJoining for that row. Mirror it into start_date so the UI
+    // shows the semester window.
+    startDate:
+      toDate(oldHistoricalRecord.startDate) ??
+      toDate(oldHistoricalRecord.dateofJoining) ??
+      null,
     endDate: toDate(oldHistoricalRecord.endDate) ?? null,
     remarks: oldHistoricalRecord.specialisation,
     rollNumber: oldHistoricalRecord.univrollno,

@@ -1,0 +1,122 @@
+{
+  "1004210020": {
+    "legacyStudentId": 39794,
+    "legacyAdmissionId": null,
+    "courseName": "BBA (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "1104230060": {
+    "legacyStudentId": 52359,
+    "legacyAdmissionId": null,
+    "courseName": "M.Com",
+    "className": "Semester III",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "1304220003": {
+    "legacyStudentId": 43565,
+    "legacyAdmissionId": null,
+    "courseName": "B.Sc. Computer Science (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "1404230016": {
+    "legacyStudentId": 52308,
+    "legacyAdmissionId": null,
+    "courseName": "M.A. English",
+    "className": "Semester III",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "1504220029": {
+    "legacyStudentId": 43953,
+    "legacyAdmissionId": null,
+    "courseName": "B.A. Journalism and Mass Comm (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "1604220025": {
+    "legacyStudentId": 43718,
+    "legacyAdmissionId": null,
+    "courseName": "B.A. SOCIOLOGY (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "1802220003": {
+    "legacyStudentId": 47503,
+    "legacyAdmissionId": null,
+    "courseName": "B.COM (G)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "0101212154": {
+    "legacyStudentId": 40718,
+    "legacyAdmissionId": null,
+    "courseName": "B.COM (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "0804220028": {
+    "legacyStudentId": 43534,
+    "legacyAdmissionId": null,
+    "courseName": "B.Sc. Mathematics (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "0604220005": {
+    "legacyStudentId": 43495,
+    "legacyAdmissionId": null,
+    "courseName": "B.Sc. Chemistry (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "0904220033": {
+    "legacyStudentId": 47509,
+    "legacyAdmissionId": null,
+    "courseName": "B.Sc. Physics (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "0204220034": {
+    "legacyStudentId": 43903,
+    "legacyAdmissionId": null,
+    "courseName": "B.A. History (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "0704220001": {
+    "legacyStudentId": 43606,
+    "legacyAdmissionId": null,
+    "courseName": "B.Sc. Economics (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "0504220002": {
+    "legacyStudentId": 43758,
+    "legacyAdmissionId": null,
+    "courseName": "B.A. Political Science (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  },
+  "0304220349": {
+    "legacyStudentId": 43987,
+    "legacyAdmissionId": null,
+    "courseName": "B.A. English (H)",
+    "className": "Semester V",
+    "sessionId": 17,
+    "expectedPath": "bootstrap"
+  }
+}
