@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
 import { NextFunction, Request, Response } from "express";
 import { processStudentsFromExcelBuffer } from "../services/refactor-old-migration.service.js";
 // import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
@@ -185,14 +189,19 @@ export const getOnlineStudents = async (
     // Filter out any nulls just in case
     const filtered = students.filter((s) => s !== null);
 
+    const enriched = filtered.map((student) => ({
+      ...student,
+      loginTime: socketService.getOnlineStudentLoginTime(student.userId),
+    }));
+
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          filtered,
-          `Fetched ${filtered.length} online students`,
+          enriched,
+          `Fetched ${enriched.length} online students`,
         ),
       );
   } catch (error) {
