@@ -4,6 +4,7 @@ import { and, count, desc, eq, SQL } from "drizzle-orm";
 import { circulationPolicyModel } from "@repo/db/schemas/models/library/circulation-policy.model.js";
 import { patronCategoryModel } from "@repo/db/schemas/models/library/patron-category.model.js";
 import { itemCategoryModel } from "@repo/db/schemas/models/library/item-category.model.js";
+import { assertUniqueCompound } from "@/features/library/services/_assert-unique.js";
 
 export type CirculationPolicyListFilters = {
   page: number;
@@ -177,36 +178,42 @@ const validate = (input: CirculationPolicyUpsertInput) => {
     throw new ApiError(400, "maxCopiesAtOnce must be at least 1.");
 };
 
+async function assertUniquePatronItem(
+  input: CirculationPolicyUpsertInput,
+  excludeId?: number,
+): Promise<void> {
+  await assertUniqueCompound({
+    table: circulationPolicyModel,
+    idColumn: circulationPolicyModel.id,
+    key: [
+      eq(circulationPolicyModel.patronCategoryId, input.patronCategoryId),
+      eq(circulationPolicyModel.itemCategoryId, input.itemCategoryId),
+    ],
+    label: "A policy for this patron × item category combination",
+    excludeId,
+  });
+}
+
 export async function createCirculationPolicy(
   input: CirculationPolicyUpsertInput,
 ): Promise<number> {
   validate(input);
-  try {
-    const [inserted] = await db
-      .insert(circulationPolicyModel)
-      .values({
-        patronCategoryId: input.patronCategoryId,
-        itemCategoryId: input.itemCategoryId,
-        loanDays: input.loanDays,
-        finePerDay: input.finePerDay,
-        renewalLimit: input.renewalLimit,
-        graceDays: input.graceDays,
-        maxCopiesAtOnce: input.maxCopiesAtOnce,
-        skipHolidaysInFine: input.skipHolidaysInFine,
-        isActive: input.isActive ?? true,
-      })
-      .returning({ id: circulationPolicyModel.id });
-    return inserted.id;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("unique") || msg.toLowerCase().includes("duplicate")) {
-      throw new ApiError(
-        409,
-        "A policy already exists for this patron × item category combination.",
-      );
-    }
-    throw err;
-  }
+  await assertUniquePatronItem(input);
+  const [inserted] = await db
+    .insert(circulationPolicyModel)
+    .values({
+      patronCategoryId: input.patronCategoryId,
+      itemCategoryId: input.itemCategoryId,
+      loanDays: input.loanDays,
+      finePerDay: input.finePerDay,
+      renewalLimit: input.renewalLimit,
+      graceDays: input.graceDays,
+      maxCopiesAtOnce: input.maxCopiesAtOnce,
+      skipHolidaysInFine: input.skipHolidaysInFine,
+      isActive: input.isActive ?? true,
+    })
+    .returning({ id: circulationPolicyModel.id });
+  return inserted.id;
 }
 
 export async function updateCirculationPolicy(
@@ -214,6 +221,7 @@ export async function updateCirculationPolicy(
   input: CirculationPolicyUpsertInput,
 ): Promise<void> {
   validate(input);
+  await assertUniquePatronItem(input, id);
   await db
     .update(circulationPolicyModel)
     .set({

@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { BorrowingType, borrowingTypeModel } from "@repo/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 type BorrowingTypeListFilters = {
   page: number;
@@ -79,6 +80,13 @@ export async function findBorrowingTypesPaginated(
 export async function createBorrowingType(
   data: Omit<BorrowingType, "id">,
 ): Promise<BorrowingType> {
+  await assertUniqueLibraryName({
+    table: borrowingTypeModel,
+    nameColumn: borrowingTypeModel.name,
+    idColumn: borrowingTypeModel.id,
+    value: data.name,
+    label: "Borrowing type",
+  });
   const [created] = await db
     .insert(borrowingTypeModel)
     .values(data)
@@ -90,6 +98,16 @@ export async function updateBorrowingType(
   id: number,
   data: Partial<Omit<BorrowingType, "id">>,
 ): Promise<BorrowingType | null> {
+  if (data.name != null) {
+    await assertUniqueLibraryName({
+      table: borrowingTypeModel,
+      nameColumn: borrowingTypeModel.name,
+      idColumn: borrowingTypeModel.id,
+      value: data.name,
+      label: "Borrowing type",
+      excludeId: id,
+    });
+  }
   const [updated] = await db
     .update(borrowingTypeModel)
     .set(data)

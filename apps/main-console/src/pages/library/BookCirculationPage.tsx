@@ -23,11 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BookOpenCheck,
   CalendarClock,
   Download,
-  Eye,
   Filter,
   IndianRupee,
   Loader2,
@@ -47,10 +47,13 @@ import {
   BookCirculationPreviewPayload,
   BookCirculationRow,
   BookCirculationStatus,
+  BookOption,
   downloadBookCirculationExcel,
   getBookCirculationMeta,
   getBookCirculationList,
+  getBookCirculationPolicy,
   getBookCirculationPreview,
+  searchBookCirculationBookOptions,
   upsertBookCirculationRows,
 } from "@/services/book-circulation.service";
 import { initiateLibraryFinePayment } from "@/services/library-fine-payment.service";
@@ -118,12 +121,26 @@ const formatInr = (value: number | null | undefined) => {
   return `₹${safe.toLocaleString("en-IN")}`;
 };
 
+const formatDateOnly = (value: string | null) => {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+};
+
+const ROMAN_NUMERAL_RE = /^(?=[MDCLXVI])M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+
 const toSentenceCase = (value: string | null) => {
   if (!value) return "-";
   return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => {
+      const upper = part.toUpperCase();
+      if (ROMAN_NUMERAL_RE.test(upper)) return upper;
+      const lower = part.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
     .join(" ");
 };
 
@@ -133,7 +150,10 @@ export default function BookCirculationPage() {
   const { socket, isConnected } = useSocket({ userId });
   const [activeBranchId] = useActiveLibraryBranchId();
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
   const [rows, setRows] = useState<BookCirculationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -142,7 +162,7 @@ export default function BookCirculationPage() {
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState<Filters>({
     userType: "all",
-    issueDate: todayIso,
+    issueDate: "",
     status: "all",
   });
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -167,11 +187,50 @@ export default function BookCirculationPage() {
   const [savingRows, setSavingRows] = useState(false);
   const [reissueRowId, setReissueRowId] = useState<number | null>(null);
   const [reissueDate, setReissueDate] = useState<Date | undefined>(undefined);
+  const [stagedBookKey, setStagedBookKey] = useState<string>("");
+  const [stagedBookLabel, setStagedBookLabel] = useState<string>("");
+  const [pickerOptions, setPickerOptions] = useState<BookOption[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [addingStagedBook, setAddingStagedBook] = useState(false);
+  const [activeDialogTab, setActiveDialogTab] = useState<"issue" | "history">("issue");
   const lastLocalSaveAtRef = useRef<number>(0);
+  const pickerRequestIdRef = useRef(0);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const userTypeOptions = useMemo(() => userTypeEnum.enumValues, []);
-  const getStudentAvatarUrl = (uid: string) => studentAvatarUrl(uid) ?? "";
+  const pickerBookItems = useMemo(
+    () =>
+      pickerOptions.map((option) => ({
+        value: String(option.copyDetailsId),
+        label: `${option.accessNumber || "-"} — ${option.title || "-"}`,
+      })),
+    [pickerOptions],
+  );
+
+  const handlePickerSearch = useCallback(async (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed) {
+      pickerRequestIdRef.current++;
+      setPickerOptions([]);
+      setPickerLoading(false);
+      return;
+    }
+    const requestId = ++pickerRequestIdRef.current;
+    setPickerLoading(true);
+    try {
+      const response = await searchBookCirculationBookOptions(trimmed, 50);
+      if (requestId !== pickerRequestIdRef.current) return;
+      setPickerOptions(response.payload ?? []);
+    } catch (error) {
+      if (requestId !== pickerRequestIdRef.current) return;
+      console.error("Book options search failed", error);
+      setPickerOptions([]);
+    } finally {
+      if (requestId === pickerRequestIdRef.current) setPickerLoading(false);
+    }
+  }, []);
+  const getStudentAvatarUrl = (uid: string) =>
+    `${import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ?? "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid="}${uid}`;
   const getEntryRowAvatarUrl = (row: BookCirculationRow) => {
     if (row.userType === "STUDENT" && row.studentUid) {
       return getStudentAvatarUrl(row.studentUid);
@@ -200,10 +259,6 @@ export default function BookCirculationPage() {
   const previewUser = previewData?.user;
   const previewBatchProgram =
     previewUser?.programCourseShortName?.trim() || previewUser?.programCourse || "-";
-  const previewAffiliation =
-    previewUser?.affiliationShortName?.trim() || previewUser?.affiliation || "-";
-  const previewRegulation =
-    previewUser?.regulationTypeShortName?.trim() || previewUser?.regulationType || "-";
 
   const fetchRows = useCallback(async () => {
     try {
@@ -282,6 +337,11 @@ export default function BookCirculationPage() {
           isNew: false,
         })),
       );
+      setActiveDialogTab("issue");
+      setStagedBookKey("");
+      setStagedBookLabel("");
+      setPickerOptions([]);
+      setPickerLoading(false);
       setDetailsOpen(true);
     } catch (error) {
       toast.error("Failed to load preview");
@@ -297,23 +357,40 @@ export default function BookCirculationPage() {
     return due;
   };
 
-  const addDraftRow = () => {
+  const addStagedBook = async () => {
+    if (!stagedBookKey || !previewData?.user?.userId) return;
+    const picked =
+      pickerOptions.find((o) => String(o.copyDetailsId) === stagedBookKey) ??
+      bookOptions.find((o) => String(o.copyDetailsId) === stagedBookKey);
+    if (!picked) return;
+    let returnDate = getDefaultReturnDate().toISOString();
+    try {
+      setAddingStagedBook(true);
+      const policy = await getBookCirculationPolicy(previewData.user.userId, picked.copyDetailsId);
+      if (policy.payload?.dueDate) {
+        returnDate = policy.payload.dueDate;
+      }
+    } catch (error) {
+      console.error("policy lookup failed; falling back to default return date", error);
+    } finally {
+      setAddingStagedBook(false);
+    }
     setEditableRows((prev) => [
       ...prev,
       {
         id: Date.now() * -1,
-        copyDetailsId: 0,
+        copyDetailsId: picked.copyDetailsId,
         borrowingTypeId: null,
-        accessNumber: null,
-        title: null,
-        author: null,
-        publication: null,
-        frontCover: null,
+        accessNumber: picked.accessNumber,
+        title: picked.title,
+        author: picked.author,
+        publication: picked.publication,
+        frontCover: picked.frontCover,
         borrowingType: null,
         status: "ISSUED",
-        bookOptionKey: "",
+        bookOptionKey: stagedBookKey,
         issuedTimestamp: new Date().toISOString(),
-        returnTimestamp: getDefaultReturnDate().toISOString(),
+        returnTimestamp: returnDate,
         actualReturnTimestamp: null,
         fine: 0,
         fineWaiver: 0,
@@ -322,11 +399,14 @@ export default function BookCirculationPage() {
         isNew: true,
       },
     ]);
+    setStagedBookKey("");
+    setStagedBookLabel("");
   };
 
-  const hasInvalidRows = editableRows.some(
-    (row) => !row.copyDetailsId || !row.borrowingTypeId || !row.returnTimestamp,
+  const hasInvalidStagedRows = editableRows.some(
+    (row) => row.isNew && (!row.copyDetailsId || !row.returnTimestamp),
   );
+  const hasSavable = editableRows.length > 0;
 
   const formatDateChip = (isoDate: string) => {
     const parsed = new Date(`${isoDate}T00:00:00`);
@@ -368,7 +448,7 @@ export default function BookCirculationPage() {
   };
 
   const resetFilters = () => {
-    const defaults: Filters = { userType: "all", issueDate: todayIso, status: "all" };
+    const defaults: Filters = { userType: "all", issueDate: "", status: "all" };
     setFilterDraft(defaults);
     setFilters(defaults);
     setPage(1);
@@ -425,6 +505,250 @@ export default function BookCirculationPage() {
     } finally {
       setSavingRows(false);
     }
+  };
+
+  const renderRowsTable = (
+    rowsToShow: EditablePreviewRow[],
+    emptyLabel: string,
+    variant: "issue" | "history",
+  ) => {
+    const showReturnedOn = variant === "history";
+    const showFine = variant === "history";
+    const colCount = 7 + (showReturnedOn ? 1 : 0) + (showFine ? 1 : 0);
+    const headBase = cn(
+      STICKY_TH_BASE,
+      "sticky top-0 z-30 bg-slate-100 text-center border-r border-slate-400",
+    );
+    const headLeft = cn(
+      STICKY_TH_LEFT,
+      "sticky top-0 z-30 w-10 bg-slate-100 text-center border-r border-slate-400",
+    );
+    const headRight = cn(
+      STICKY_TH_RIGHT,
+      "sticky top-0 z-30 bg-slate-100 text-center border-l border-slate-400",
+    );
+    const cellBase = "border-r border-slate-300 text-center";
+    return (
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-md border">
+        <Table className="w-full table-fixed">
+          <TableHeader className={STICKY_THEAD_CLASS}>
+            <TableRow className="bg-slate-100">
+              <TableHead className={headLeft}>#</TableHead>
+              <TableHead className={cn(headBase, "w-[28%]")}>Book</TableHead>
+              <TableHead className={cn(headBase, "w-[10%]")}>Access No.</TableHead>
+              <TableHead className={cn(headBase, "w-[15%]")}>Borrowing Type</TableHead>
+              <TableHead className={cn(headBase, "w-[12%]")}>Issued At</TableHead>
+              <TableHead className={cn(headBase, "w-[12%]")}>Return Date</TableHead>
+              {showReturnedOn ? (
+                <TableHead className={cn(headBase, "w-[10%]")}>Returned On</TableHead>
+              ) : null}
+              {showFine ? <TableHead className={cn(headBase, "w-[6%]")}>Fine</TableHead> : null}
+              <TableHead className={cn(headRight, "w-[14%]")}>
+                <span className="inline-flex items-center justify-center gap-1">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Actions
+                </span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rowsToShow.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={colCount}
+                  className="text-center text-xs text-slate-500 border-b border-slate-200"
+                >
+                  {emptyLabel}
+                </TableCell>
+              </TableRow>
+            ) : (
+              rowsToShow.map((item, index) => (
+                <TableRow
+                  key={item.id}
+                  className={`[&>td]:border-b [&>td]:border-slate-200 last:[&>td]:border-b last:[&>td]:border-slate-300 ${item.actualReturnTimestamp ? "bg-green-100" : ""}`}
+                >
+                  <TableCell className={cellBase}>{index + 1}</TableCell>
+                  <TableCell className={cn(cellBase, "text-left")}>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-slate-800">
+                        {item.title || "—"}
+                      </p>
+                      {item.author ? (
+                        <p className="truncate text-[11px] text-slate-500">{item.author}</p>
+                      ) : null}
+                    </div>
+                  </TableCell>
+                  <TableCell className={cellBase}>
+                    <span className="text-xs font-medium text-slate-700">
+                      {item.accessNumber || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell className={cellBase}>
+                    <Combobox
+                      className="h-9 w-full bg-white text-sm font-medium text-slate-800"
+                      placeholder="Borrowing Type"
+                      value={item.borrowingType || ""}
+                      showOptionsHint={false}
+                      contentClassName="w-[280px] max-w-[calc(100vw-2rem)]"
+                      dataArr={borrowingTypeOptions.map((option) => ({
+                        value: option.name,
+                        label: prettyLabel(option.name),
+                      }))}
+                      onChange={(value) =>
+                        setEditableRows((prev) =>
+                          prev.map((row) =>
+                            row.id === item.id
+                              ? {
+                                  ...row,
+                                  borrowingType: value,
+                                  borrowingTypeId:
+                                    borrowingTypeOptions.find((opt) => opt.name === value)?.id ??
+                                    null,
+                                }
+                              : row,
+                          ),
+                        )
+                      }
+                    />
+                  </TableCell>
+                  <TableCell className={cellBase}>
+                    <span className="text-xs">{formatDateTime(item.issuedTimestamp)}</span>
+                  </TableCell>
+                  <TableCell className={cellBase}>
+                    {item.isNew ? (
+                      <DatePicker
+                        value={item.returnTimestamp ? new Date(item.returnTimestamp) : undefined}
+                        onSelect={(date) =>
+                          setEditableRows((prev) =>
+                            prev.map((row) =>
+                              row.id === item.id
+                                ? {
+                                    ...row,
+                                    returnTimestamp: date
+                                      ? date.toISOString()
+                                      : row.returnTimestamp,
+                                  }
+                                : row,
+                            ),
+                          )
+                        }
+                        className="h-8 text-xs"
+                        displayFormat="dd/MM/yyyy"
+                      />
+                    ) : (
+                      <span className="text-xs">{formatDateOnly(item.returnTimestamp)}</span>
+                    )}
+                  </TableCell>
+                  {showReturnedOn ? (
+                    <TableCell className={cellBase}>
+                      <span className="text-xs">
+                        {item.actualReturnTimestamp
+                          ? formatDateTime(item.actualReturnTimestamp)
+                          : "—"}
+                      </span>
+                    </TableCell>
+                  ) : null}
+                  {showFine ? (
+                    <TableCell className={cellBase}>{formatInr(item.netFine)}</TableCell>
+                  ) : null}
+                  <TableCell className={cellBase}>
+                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                      {variant === "history" ? (
+                        <>
+                          {!item.actualReturnTimestamp ? (
+                            <Button
+                              size="sm"
+                              className="h-8 bg-violet-600 px-2 text-xs text-white hover:bg-violet-700"
+                              variant="default"
+                              type="button"
+                              onClick={() => {
+                                setEditableRows((prev) =>
+                                  prev.map((row) =>
+                                    row.id === item.id
+                                      ? {
+                                          ...row,
+                                          actualReturnTimestamp: new Date().toISOString(),
+                                        }
+                                      : row,
+                                  ),
+                                );
+                              }}
+                            >
+                              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                              Return
+                            </Button>
+                          ) : null}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-blue-300 bg-blue-50 px-2 text-xs text-blue-700 hover:bg-blue-100"
+                            type="button"
+                            disabled={!!item.actualReturnTimestamp}
+                            onClick={() => {
+                              setReissueRowId(item.id);
+                              setReissueDate(
+                                item.returnTimestamp ? new Date(item.returnTimestamp) : undefined,
+                              );
+                            }}
+                          >
+                            <CalendarClock className="mr-1 h-3.5 w-3.5" />
+                            Re-issue
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-amber-300 bg-amber-50 px-2 text-xs text-amber-700 hover:bg-amber-100"
+                            type="button"
+                            disabled={item.netFine <= 0 || !previewData?.user?.userId}
+                            onClick={async () => {
+                              if (!previewData?.user?.userId) return;
+                              try {
+                                const res = await initiateLibraryFinePayment(
+                                  item.id,
+                                  previewData.user.userId,
+                                );
+                                if (res.payload) {
+                                  const link = `Order ${res.payload.orderId} · ${formatInr(res.payload.amount)}`;
+                                  await navigator.clipboard
+                                    ?.writeText(res.payload.orderId)
+                                    .catch(() => undefined);
+                                  toast.success(
+                                    `Payment link generated. ${link} (order id copied).`,
+                                  );
+                                }
+                              } catch (e) {
+                                const msg =
+                                  (e as { response?: { data?: { message?: string } } })?.response
+                                    ?.data?.message ?? "Failed to initiate fine payment.";
+                                toast.error(msg);
+                              }
+                            }}
+                          >
+                            <IndianRupee className="mr-1 h-3.5 w-3.5" />
+                            Pay Fine
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-red-600 hover:text-red-700"
+                          onClick={() =>
+                            setEditableRows((prev) => prev.filter((row) => row.id !== item.id))
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    );
   };
 
   return (
@@ -550,26 +874,18 @@ export default function BookCirculationPage() {
                     </TableHead>
                     <TableHead
                       className={cn(
-                        STICKY_TH_BASE,
+                        STICKY_TH_RIGHT,
                         "bg-slate-100 w-[13%] px-1 sm:px-3 text-[14px] sm:text-xs",
                       )}
                     >
                       Last Updated
-                    </TableHead>
-                    <TableHead
-                      className={cn(
-                        STICKY_TH_RIGHT,
-                        "bg-slate-100 w-[7%] px-1 sm:px-3 text-[14px] sm:text-xs",
-                      )}
-                    >
-                      Action
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="text-[14px]">
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-6">
+                      <TableCell colSpan={7} className="text-center py-6">
                         <div className="inline-flex items-center gap-2 text-slate-500">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Loading circulation data...
@@ -578,13 +894,20 @@ export default function BookCirculationPage() {
                     </TableRow>
                   ) : rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-6 text-slate-500">
+                      <TableCell colSpan={7} className="text-center py-6 text-slate-500">
                         No circulation records found.
                       </TableCell>
                     </TableRow>
                   ) : (
                     rows.map((row, index) => (
-                      <TableRow key={row.userId} className={getRowHighlightClass(row)}>
+                      <TableRow
+                        key={row.userId}
+                        className={cn(
+                          getRowHighlightClass(row),
+                          "cursor-pointer hover:bg-slate-50",
+                        )}
+                        onClick={() => void openDetails(row.userId)}
+                      >
                         <TableCell>{(page - 1) * limit + index + 1}</TableCell>
                         <TableCell className="align-top px-1 sm:px-3 py-2">
                           <div className="flex items-center gap-2 min-w-0 max-w-full">
@@ -635,16 +958,6 @@ export default function BookCirculationPage() {
                         <TableCell className="px-1 sm:px-3 py-2">{row.fine.toFixed(2)}</TableCell>
                         <TableCell className="px-1 sm:px-3 py-2 text-[13px]">
                           {formatDateTime(row.lastUpdatedAt)}
-                        </TableCell>
-                        <TableCell className="px-1 sm:px-3 py-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => void openDetails(row.userId)}
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -785,450 +1098,128 @@ export default function BookCirculationPage() {
               Loading details...
             </div>
           ) : (
-            <div className="space-y-4 flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="rounded-md bg-slate-100">
-                <div className="grid grid-cols-1 md:grid-cols-[12%_29%_33%_26%]">
-                  <div className="border border-slate-200 bg-blue-50">
-                    <div
-                      className="h-full w-full rounded-sm bg-cover bg-center"
-                      style={{
-                        backgroundImage: `url("${
-                          previewUser.userType === "STUDENT" && previewUser.uid
-                            ? getStudentAvatarUrl(previewUser.uid)
-                            : previewUser.image || ""
-                        }")`,
-                        backgroundSize: "cover",
-                        objectFit: "contain",
-                        backgroundRepeat: "no-repeat",
-                        backgroundPosition: "center",
-                      }}
+            <div className="space-y-3 flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="rounded-md border bg-slate-50 p-3">
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border">
+                    <AvatarImage
+                      src={
+                        previewUser.userType === "STUDENT" && previewUser.uid
+                          ? getStudentAvatarUrl(previewUser.uid)
+                          : previewUser.image || undefined
+                      }
+                      alt={previewUser.name}
+                      className="rounded-md object-cover"
+                    />
+                    <AvatarFallback
+                      className={`rounded-md text-2xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
                     >
-                      {!(
-                        (previewUser.userType === "STUDENT" && previewUser.uid) ||
-                        previewUser.image
-                      ) && (
-                        <div
-                          className={`flex h-full w-full items-center justify-center text-4xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
-                        >
-                          {getInitials(previewUser.name)}
-                        </div>
-                      )}
+                      {getInitials(previewUser.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[14px] md:grid-cols-2 lg:grid-cols-3">
+                    <div className="flex gap-2">
+                      <span className="min-w-[120px] text-slate-500">Name:</span>
+                      <span className="font-medium">{previewUser.name || "-"}</span>
                     </div>
-                  </div>
-                  <div className="border border-slate-200 bg-emerald-50">
-                    <p className="mb-2 border-b border-slate-200 p-2 pb-1 text-[14px] font-semibold uppercase tracking-wide text-slate-500">
-                      User Info
-                    </p>
-                    <div className="space-y-1 p-2 text-[14px]">
-                      <div className="flex items-start gap-2">
-                        <span className="inline-block min-w-[120px] text-slate-500">Name:</span>
-                        {previewUser.name || "-"}
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="inline-block min-w-[120px] text-slate-500">UID:</span>
-                        {previewUser.uid || "-"}
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="inline-block min-w-[120px] text-slate-500">RFID:</span>
-                        {previewUser.rfid || "-"}
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="inline-block min-w-[120px] text-slate-500">
-                          Roll Number:
-                        </span>
-                        {previewUser.rollNumber || "-"}
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="inline-block min-w-[120px] text-slate-500">
-                          Registration:
-                        </span>
-                        {previewUser.registrationNumber || "-"}
-                      </div>
+                    <div className="flex gap-2">
+                      <span className="min-w-[120px] text-slate-500">UID:</span>
+                      <span className="font-medium">{previewUser.uid || "-"}</span>
                     </div>
-                  </div>
-                  <div className="border border-slate-200 bg-amber-50 p-2">
-                    <p className="mb-2 border-b border-slate-200 pb-1 text-[14px] font-semibold uppercase tracking-wide text-slate-500">
-                      {previewUser.userType === "STAFF" ? "Staff Details" : "Batch Details"}
-                    </p>
-                    <div className="space-y-1 text-[14px]">
-                      {previewUser.userType === "STAFF" ? (
-                        <>
-                          <div className="flex items-start gap-2">
-                            <span className="inline-block min-w-[120px] text-slate-500">
-                              Shift:
-                            </span>
-                            {previewUser.shift || "-"}
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="inline-block min-w-[120px] text-slate-500">
-                              Attendance Code:
-                            </span>
-                            {previewUser.attendanceCode || "-"}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex items-start gap-2">
-                            <span className="inline-block min-w-[120px] text-slate-500">
-                              Program Course:
-                            </span>
-                            {previewBatchProgram}{" "}
-                            <span className="text-slate-500">
-                              ({previewAffiliation}, {previewRegulation})
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="inline-block min-w-[120px] text-slate-500">
-                              Class/Semester:
-                            </span>
-                            {toSentenceCase(previewUser.classOrSemester)}
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="inline-block min-w-[120px] text-slate-500">
-                              Shift:
-                            </span>
-                            {previewUser.shift || "-"}
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="inline-block min-w-[120px] text-slate-500">
-                              Section:
-                            </span>
-                            {previewUser.section || "-"}
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="inline-block min-w-[120px] text-slate-500">
-                              Class Roll No.:
-                            </span>
-                            {previewUser.classRollNumber || "-"}
-                          </div>
-                        </>
-                      )}
+                    <div className="flex gap-2">
+                      <span className="min-w-[120px] text-slate-500">Program Course:</span>
+                      <span className="font-medium">{previewBatchProgram}</span>
                     </div>
-                  </div>
-                  <div className="border border-slate-200 bg-violet-50 p-2">
-                    <p className="mb-2 border-b border-slate-200 pb-1 text-[14px] font-semibold uppercase tracking-wide text-slate-500">
-                      Contact Details
-                    </p>
-                    <div className="space-y-1 text-[14px]">
-                      <div className="flex items-start gap-2">
-                        <span className="inline-block min-w-[120px] text-slate-500">Email:</span>
-                        {previewUser.email || "-"}
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="inline-block min-w-[120px] text-slate-500">Phone:</span>
-                        {previewUser.phone || "-"}
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="inline-block min-w-[120px] text-slate-500">WhatsApp:</span>
-                        {previewUser.whatsapp || "-"}
-                      </div>
+                    <div className="flex gap-2">
+                      <span className="min-w-[120px] text-slate-500">Semester:</span>
+                      <span className="font-medium">
+                        {toSentenceCase(previewUser.classOrSemester)}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="min-w-[120px] text-slate-500">Section:</span>
+                      <span className="font-medium">{previewUser.section || "-"}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end">
-                <Button
-                  variant="default"
-                  className="bg-emerald-600 text-white hover:bg-emerald-700"
-                  size="sm"
-                  onClick={addDraftRow}
+              <Tabs
+                value={activeDialogTab}
+                onValueChange={(value) => setActiveDialogTab(value as "issue" | "history")}
+                className="flex flex-1 min-h-0 flex-col"
+              >
+                <div className="flex items-end justify-between gap-3">
+                  <TabsList>
+                    <TabsTrigger value="issue">Issue</TabsTrigger>
+                    <TabsTrigger value="history">Reissue / Return</TabsTrigger>
+                  </TabsList>
+                  {activeDialogTab === "issue" ? (
+                    <div className="flex flex-1 items-center justify-end gap-2">
+                      <div className="flex-1 min-w-0 max-w-2xl">
+                        <Combobox
+                          className="h-9 w-full text-sm"
+                          placeholder="Search book by access no..."
+                          value={stagedBookKey}
+                          showOptionsHint={false}
+                          dataArr={pickerBookItems}
+                          contentClassName="w-[640px] max-w-[calc(100vw-2rem)]"
+                          onSearch={(term) => void handlePickerSearch(term)}
+                          isSearching={pickerLoading}
+                          selectedLabel={stagedBookLabel}
+                          onChange={(value) => {
+                            setStagedBookKey(value);
+                            const picked = pickerOptions.find(
+                              (o) => String(o.copyDetailsId) === value,
+                            );
+                            setStagedBookLabel(
+                              picked
+                                ? `${picked.accessNumber || "-"} — ${picked.title || "-"}`
+                                : "",
+                            );
+                          }}
+                        />
+                      </div>
+                      <Button
+                        variant="default"
+                        className="bg-emerald-600 text-white hover:bg-emerald-700"
+                        size="sm"
+                        disabled={!stagedBookKey || addingStagedBook}
+                        onClick={() => void addStagedBook()}
+                      >
+                        {addingStagedBook ? (
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="mr-1 h-4 w-4" />
+                        )}
+                        Add
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+                <TabsContent
+                  value="issue"
+                  className="mt-2 flex flex-1 min-h-0 flex-col gap-2 data-[state=inactive]:hidden"
+                  forceMount
                 >
-                  <Plus className="mr-1 h-4 w-4" />
-                  Add
-                </Button>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-md border">
-                <Table className="w-full table-fixed">
-                  <TableHeader className={STICKY_THEAD_CLASS}>
-                    <TableRow className="bg-slate-100">
-                      <TableHead
-                        className={cn(STICKY_TH_LEFT, "sticky top-0 z-30 w-10 bg-slate-100")}
-                      >
-                        #
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[24%] bg-slate-100")}
-                      >
-                        Book
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[9%] bg-slate-100")}
-                      >
-                        Access No.
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[12%] bg-slate-100")}
-                      >
-                        Author
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[13%] bg-slate-100")}
-                      >
-                        Borrowing Type
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[11%] bg-slate-100")}
-                      >
-                        Issued At
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[10%] bg-slate-100")}
-                      >
-                        Return Date
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[10%] bg-slate-100")}
-                      >
-                        Returned On
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_BASE, "sticky top-0 z-30 w-[5%] bg-slate-100")}
-                      >
-                        Fine
-                      </TableHead>
-                      <TableHead
-                        className={cn(STICKY_TH_RIGHT, "sticky top-0 z-30 w-[12%] bg-slate-100")}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          <Settings2 className="h-3.5 w-3.5" />
-                          Actions
-                        </span>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {editableRows.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={10}
-                          className="text-center text-xs text-slate-500 border-b border-slate-200"
-                        >
-                          No circulation records found.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      editableRows.map((item, index) => (
-                        <TableRow
-                          key={item.id}
-                          className={`[&>td]:border-b [&>td]:border-slate-200 last:[&>td]:border-b last:[&>td]:border-slate-300 ${item.actualReturnTimestamp ? "bg-green-100" : ""}`}
-                        >
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>
-                            <Combobox
-                              className="h-8 w-full text-xs"
-                              placeholder={item.title || "Select book"}
-                              value={item.bookOptionKey}
-                              showOptionsHint={false}
-                              dataArr={bookOptions.map((option) => ({
-                                value: String(option.copyDetailsId),
-                                label: `${option.title || "-"} (${option.accessNumber || "-"})`,
-                                imageUrl: option.frontCover ?? undefined,
-                              }))}
-                              contentClassName="w-[460px] max-w-[calc(100vw-2rem)]"
-                              onChange={(value) => {
-                                const picked = bookOptions.find(
-                                  (option) => String(option.copyDetailsId) === value,
-                                );
-                                if (!picked) return;
-                                setEditableRows((prev) =>
-                                  prev.map((row) =>
-                                    row.id === item.id
-                                      ? {
-                                          ...row,
-                                          bookOptionKey: value,
-                                          copyDetailsId: picked.copyDetailsId,
-                                          title: picked.title,
-                                          accessNumber: picked.accessNumber,
-                                          author: picked.author,
-                                          publication: picked.publication,
-                                          frontCover: picked.frontCover,
-                                        }
-                                      : row,
-                                  ),
-                                );
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs font-medium text-slate-700">
-                              {item.accessNumber || "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-medium text-slate-700">
-                                {item.author || "—"}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Combobox
-                              className="h-9 w-full bg-white text-sm font-medium text-slate-800"
-                              placeholder="Borrowing Type"
-                              value={item.borrowingType || ""}
-                              showOptionsHint={false}
-                              dataArr={borrowingTypeOptions.map((option) => ({
-                                value: option.name,
-                                label: prettyLabel(option.name),
-                              }))}
-                              onChange={(value) =>
-                                setEditableRows((prev) =>
-                                  prev.map((row) =>
-                                    row.id === item.id
-                                      ? {
-                                          ...row,
-                                          borrowingType: value,
-                                          borrowingTypeId:
-                                            borrowingTypeOptions.find((opt) => opt.name === value)
-                                              ?.id ?? null,
-                                        }
-                                      : row,
-                                  ),
-                                )
-                              }
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs">{formatDateTime(item.issuedTimestamp)}</span>
-                          </TableCell>
-                          <TableCell>
-                            <DatePicker
-                              value={
-                                item.returnTimestamp ? new Date(item.returnTimestamp) : undefined
-                              }
-                              disabled={!item.isNew}
-                              onSelect={(date) =>
-                                setEditableRows((prev) =>
-                                  prev.map((row) =>
-                                    row.id === item.id
-                                      ? {
-                                          ...row,
-                                          returnTimestamp: date
-                                            ? date.toISOString()
-                                            : row.returnTimestamp,
-                                        }
-                                      : row,
-                                  ),
-                                )
-                              }
-                              className="h-8 text-xs"
-                              displayFormat="dd/MM/yyyy"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs">
-                              {item.actualReturnTimestamp
-                                ? formatDateTime(item.actualReturnTimestamp)
-                                : "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell>{formatInr(item.netFine)}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <Button
-                                size="sm"
-                                className="h-8 bg-violet-600 px-2 text-xs text-white hover:bg-violet-700"
-                                variant="default"
-                                disabled={!item.isNew && !!item.actualReturnTimestamp}
-                                onClick={() => {
-                                  setEditableRows((prev) =>
-                                    prev.map((row) =>
-                                      row.id === item.id
-                                        ? {
-                                            ...row,
-                                            actualReturnTimestamp: row.actualReturnTimestamp
-                                              ? null
-                                              : new Date().toISOString(),
-                                          }
-                                        : row,
-                                    ),
-                                  );
-                                }}
-                              >
-                                <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                                Return
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 border-blue-300 bg-blue-50 px-2 text-xs text-blue-700 hover:bg-blue-100"
-                                type="button"
-                                disabled={item.isNew || !!item.actualReturnTimestamp}
-                                onClick={() => {
-                                  setReissueRowId(item.id);
-                                  setReissueDate(
-                                    item.returnTimestamp
-                                      ? new Date(item.returnTimestamp)
-                                      : undefined,
-                                  );
-                                }}
-                              >
-                                <CalendarClock className="mr-1 h-3.5 w-3.5" />
-                                Re-issue
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 border-amber-300 bg-amber-50 px-2 text-xs text-amber-700 hover:bg-amber-100"
-                                type="button"
-                                disabled={
-                                  item.isNew || item.netFine <= 0 || !previewData?.user?.userId
-                                }
-                                onClick={async () => {
-                                  if (!previewData?.user?.userId) return;
-                                  try {
-                                    const res = await initiateLibraryFinePayment(
-                                      item.id,
-                                      previewData.user.userId,
-                                    );
-                                    if (res.payload) {
-                                      const link = `Order ${res.payload.orderId} · ${formatInr(res.payload.amount)}`;
-                                      await navigator.clipboard
-                                        ?.writeText(res.payload.orderId)
-                                        .catch(() => undefined);
-                                      toast.success(
-                                        `Payment link generated. ${link} (order id copied).`,
-                                      );
-                                    }
-                                  } catch (e) {
-                                    const msg =
-                                      (
-                                        e as {
-                                          response?: { data?: { message?: string } };
-                                        }
-                                      )?.response?.data?.message ??
-                                      "Failed to initiate fine payment.";
-                                    toast.error(msg);
-                                  }
-                                }}
-                              >
-                                <IndianRupee className="mr-1 h-3.5 w-3.5" />
-                                Pay Fine
-                              </Button>
-                              {item.isNew ? (
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 text-red-600 hover:text-red-700"
-                                  onClick={() =>
-                                    setEditableRows((prev) =>
-                                      prev.filter((row) => row.id !== item.id),
-                                    )
-                                  }
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                  {renderRowsTable(
+                    editableRows.filter((row) => row.isNew),
+                    "No books staged. Pick a book above and click Add.",
+                    "issue",
+                  )}
+                </TabsContent>
+                <TabsContent
+                  value="history"
+                  className="mt-2 flex flex-1 min-h-0 flex-col data-[state=inactive]:hidden"
+                  forceMount
+                >
+                  {renderRowsTable(
+                    editableRows.filter((row) => !row.isNew),
+                    "No issued or returned books.",
+                    "history",
+                  )}
+                </TabsContent>
+              </Tabs>
 
               <div className="sticky bottom-0 z-20 mt-auto flex items-center justify-end gap-2 border-t bg-white pt-2">
                 <Button
@@ -1242,7 +1233,7 @@ export default function BookCirculationPage() {
                 </Button>
                 <Button
                   className="bg-blue-600 text-white hover:bg-blue-700"
-                  disabled={savingRows || hasInvalidRows || editableRows.length === 0}
+                  disabled={savingRows || hasInvalidStagedRows || !hasSavable}
                   onClick={() => void saveRows()}
                 >
                   {savingRows ? (

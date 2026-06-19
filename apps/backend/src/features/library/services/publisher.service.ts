@@ -2,6 +2,7 @@ import { db } from "@/db/index.js";
 import { PublisherDto } from "@repo/db/dtos/library";
 import { Publisher, publisherModel } from "@repo/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 type PublisherListFilters = {
   page: number;
@@ -82,6 +83,13 @@ export async function findPublishersPaginated(
 export async function createPublisher(
   data: Omit<Publisher, "id">,
 ): Promise<PublisherDto> {
+  await assertUniqueLibraryName({
+    table: publisherModel,
+    nameColumn: publisherModel.name,
+    idColumn: publisherModel.id,
+    value: data.name,
+    label: "Publisher",
+  });
   const [created] = await db.insert(publisherModel).values(data).returning();
   return modelToDto(created);
 }
@@ -90,6 +98,16 @@ export async function updatePublisher(
   id: number,
   data: Partial<Omit<Publisher, "id">>,
 ): Promise<PublisherDto | null> {
+  if (data.name != null) {
+    await assertUniqueLibraryName({
+      table: publisherModel,
+      nameColumn: publisherModel.name,
+      idColumn: publisherModel.id,
+      value: data.name,
+      label: "Publisher",
+      excludeId: id,
+    });
+  }
   const [updated] = await db
     .update(publisherModel)
     .set(data)

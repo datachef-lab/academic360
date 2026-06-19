@@ -27,6 +27,7 @@ import {
   type FloorPlanSummary,
   type FloorPlanWithInventory,
 } from "@/services/library-floor-plan.service";
+import { getLibraryRacks, type LibraryRackRow } from "@/services/library-racks.service";
 
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 500;
@@ -34,6 +35,13 @@ const SNAP = 20;
 
 function snap(n: number): number {
   return Math.round(n / SNAP) * SNAP;
+}
+
+/** Approximate character budget for a rect of given width at text-xs (12px). */
+function fitLabel(label: string, rectWidth: number): string {
+  const max = Math.max(4, Math.floor((rectWidth - 12) / 7));
+  if (label.length <= max) return label;
+  return label.slice(0, max - 1).trimEnd() + "…";
 }
 
 function heatColour(copyCount: number): string {
@@ -53,6 +61,7 @@ export default function DigitalTwinPage() {
   const [name, setName] = useState("");
   const [racks, setRacks] = useState<FloorPlanLayoutRack[]>([]);
   const [dragging, setDragging] = useState<{ x: number; y: number } | null>(null);
+  const [allRacks, setAllRacks] = useState<LibraryRackRow[]>([]);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -66,6 +75,20 @@ export default function DigitalTwinPage() {
   useEffect(() => {
     void fetchPlans();
   }, [fetchPlans]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await getLibraryRacks({ page: 1, limit: 500 });
+        setAllRacks(res.payload.rows);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  const placedRackIds = new Set(racks.map((r) => r.rackId).filter((v): v is number => v != null));
+  const availableRacks = allRacks.filter((r) => !placedRackIds.has(r.id));
 
   const loadPlan = async (id: number) => {
     try {
@@ -125,11 +148,21 @@ export default function DigitalTwinPage() {
     void fetchPlans();
   };
 
-  const addRack = () => {
-    const id = `rack-${Date.now()}`;
+  const addRackFromMaster = (rack: LibraryRackRow) => {
+    const id = `rack-${rack.id}-${Date.now()}`;
+    // Stagger new rectangles so they don't all stack at the same coords.
+    const offset = racks.length * SNAP;
     setRacks([
       ...racks,
-      { id, rackId: null, x: 40, y: 40, w: 120, h: 60, label: `Rack ${racks.length + 1}` },
+      {
+        id,
+        rackId: rack.id,
+        x: snap(40 + offset),
+        y: snap(40 + offset),
+        w: 120,
+        h: 60,
+        label: rack.name,
+      },
     ]);
   };
 
@@ -237,9 +270,31 @@ export default function DigitalTwinPage() {
                   <Label className="text-xs">Plan name</Label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
-                <Button variant="secondary" onClick={addRack} className="w-full">
-                  <Plus className="mr-1 h-4 w-4" /> Add rack
-                </Button>
+                <div className="pt-2">
+                  <Label className="text-xs">Add rack from master</Label>
+                  {allRacks.length === 0 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">Loading racks…</p>
+                  ) : availableRacks.length === 0 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      All racks are placed on this plan.
+                    </p>
+                  ) : (
+                    <ul className="mt-1 max-h-[220px] space-y-1 overflow-auto text-sm">
+                      {availableRacks.map((r) => (
+                        <li key={r.id}>
+                          <button
+                            type="button"
+                            onClick={() => addRackFromMaster(r)}
+                            className="flex w-full items-center justify-between rounded-md border px-2 py-1 text-left hover:bg-slate-50"
+                          >
+                            <span className="truncate">{r.name}</span>
+                            <Plus className="h-3.5 w-3.5 text-slate-500" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </>
             ) : null}
           </CardContent>
@@ -269,6 +324,8 @@ export default function DigitalTwinPage() {
 
                 {viewRacks.map((r) => {
                   const fill = "copyCount" in r ? heatColour(r.copyCount as number) : "#c7d2fe";
+                  const fullLabel = r.label ?? "Rack";
+                  const shownLabel = fitLabel(fullLabel, r.w);
                   return (
                     <g key={r.id}>
                       <rect
@@ -281,21 +338,24 @@ export default function DigitalTwinPage() {
                         strokeWidth="1"
                         rx={4}
                         onMouseDown={(e) => onRackMouseDown(e, r.id)}
-                      />
+                      >
+                        <title>{fullLabel}</title>
+                      </rect>
                       <text
                         x={r.x + r.w / 2}
                         y={r.y + r.h / 2 - 4}
                         textAnchor="middle"
-                        className="select-none text-xs font-semibold fill-slate-800"
+                        className="pointer-events-none select-none text-xs font-semibold fill-slate-800"
                       >
-                        {r.label ?? "Rack"}
+                        {shownLabel}
+                        <title>{fullLabel}</title>
                       </text>
                       {"copyCount" in r ? (
                         <text
                           x={r.x + r.w / 2}
                           y={r.y + r.h / 2 + 10}
                           textAnchor="middle"
-                          className="select-none text-[10px] fill-slate-700"
+                          className="pointer-events-none select-none text-[10px] fill-slate-700"
                         >
                           {(r as { copyCount: number }).copyCount} copies
                         </text>

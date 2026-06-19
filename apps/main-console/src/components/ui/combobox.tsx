@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import { BookOpen, CheckIcon, ChevronsUpDownIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,14 @@ type ComboboxProps = {
   disabled?: boolean;
   showOptionsHint?: boolean;
   contentClassName?: string;
+  /** When provided, dataArr is treated as already filtered and onSearch is called
+   *  with the debounced search term — use this for server-side typeahead. */
+  onSearch?: (term: string) => void;
+  isSearching?: boolean;
+  searchDebounceMs?: number;
+  /** Optional label shown when the selected value isn't present in dataArr
+   *  (common with async search where the catalogue is paged). */
+  selectedLabel?: string;
 };
 
 export function Combobox({
@@ -34,18 +42,49 @@ export function Combobox({
   disabled = false,
   showOptionsHint = true,
   contentClassName = "",
+  onSearch,
+  isSearching = false,
+  searchDebounceMs = 250,
+  selectedLabel: selectedLabelProp,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
+  const isAsync = typeof onSearch === "function";
 
-  // Filter options by label (case-insensitive, robust)
-  const filtered = search
-    ? dataArr.filter((item) =>
-        (item.label || "").toLowerCase().trim().includes(search.toLowerCase().trim()),
-      )
-    : dataArr;
+  const onSearchRef = React.useRef(onSearch);
+  React.useEffect(() => {
+    onSearchRef.current = onSearch;
+  }, [onSearch]);
 
-  const selectedLabel = value ? dataArr.find((item) => item.value === value)?.label : "";
+  React.useEffect(() => {
+    if (!isAsync) return;
+    const trimmed = search.trim();
+    if (!trimmed) {
+      onSearchRef.current?.("");
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      onSearchRef.current?.(trimmed);
+    }, searchDebounceMs);
+    return () => window.clearTimeout(handle);
+  }, [isAsync, search, searchDebounceMs]);
+
+  React.useEffect(() => {
+    if (!open && search) setSearch("");
+  }, [open, search]);
+
+  const filtered = isAsync
+    ? search.trim()
+      ? dataArr
+      : []
+    : search
+      ? dataArr.filter((item) =>
+          (item.label || "").toLowerCase().trim().includes(search.toLowerCase().trim()),
+        )
+      : dataArr;
+
+  const selectedLabel =
+    selectedLabelProp ?? (value ? dataArr.find((item) => item.value === value)?.label : "");
 
   return (
     <Popover open={open && !disabled} onOpenChange={setOpen}>
@@ -87,8 +126,17 @@ export function Combobox({
             placeholder={placeholder ? `Search ${placeholder.toLowerCase()}` : "Search..."}
           />
           <CommandList className="min-h-0 max-h-[min(55vh,400px)] flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
-            <CommandEmpty>No options found.</CommandEmpty>
-            {filtered.length > 0 && (
+            {isSearching ? (
+              <div className="flex items-center justify-center gap-2 px-2 py-4 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Searching...
+              </div>
+            ) : (
+              <CommandEmpty>
+                {isAsync && !search ? "Start typing to search." : "No options found."}
+              </CommandEmpty>
+            )}
+            {filtered.length > 0 && !isSearching && (
               <div className="border-b px-2 py-1.5 text-xs text-muted-foreground">
                 {filtered.filter((item) => item.value !== "").length} option
                 {filtered.filter((item) => item.value !== "").length !== 1 ? "s" : ""} available
@@ -116,6 +164,8 @@ export function Combobox({
                     <img
                       src={item.imageUrl}
                       alt={item.label}
+                      loading="lazy"
+                      decoding="async"
                       className="mr-2 h-7 w-6 shrink-0 rounded border object-cover"
                     />
                   ) : (

@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { itemCategoryModel } from "@repo/db/schemas/models/library/item-category.model.js";
 import { circulationPolicyModel } from "@repo/db/schemas/models/library/circulation-policy.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type ItemCategoryListFilters = {
   page: number;
@@ -107,6 +108,13 @@ const normalize = (input: ItemCategoryUpsertInput) => ({
 export async function createItemCategory(
   input: ItemCategoryUpsertInput,
 ): Promise<number> {
+  await assertUniqueLibraryName({
+    table: itemCategoryModel,
+    nameColumn: itemCategoryModel.name,
+    idColumn: itemCategoryModel.id,
+    value: input.name,
+    label: "Item category",
+  });
   const [inserted] = await db
     .insert(itemCategoryModel)
     .values(normalize(input))
@@ -118,6 +126,14 @@ export async function updateItemCategory(
   id: number,
   input: ItemCategoryUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: itemCategoryModel,
+    nameColumn: itemCategoryModel.name,
+    idColumn: itemCategoryModel.id,
+    value: input.name,
+    label: "Item category",
+    excludeId: id,
+  });
   await db
     .update(itemCategoryModel)
     .set({ ...normalize(input), updatedAt: new Date() })

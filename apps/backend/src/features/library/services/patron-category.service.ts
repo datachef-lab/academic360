@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { patronCategoryModel } from "@repo/db/schemas/models/library/patron-category.model.js";
 import { circulationPolicyModel } from "@repo/db/schemas/models/library/circulation-policy.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type PatronCategoryListFilters = {
   page: number;
@@ -107,6 +108,13 @@ const normalize = (input: PatronCategoryUpsertInput) => ({
 export async function createPatronCategory(
   input: PatronCategoryUpsertInput,
 ): Promise<number> {
+  await assertUniqueLibraryName({
+    table: patronCategoryModel,
+    nameColumn: patronCategoryModel.name,
+    idColumn: patronCategoryModel.id,
+    value: input.name,
+    label: "Patron category",
+  });
   const [inserted] = await db
     .insert(patronCategoryModel)
     .values(normalize(input))
@@ -118,6 +126,14 @@ export async function updatePatronCategory(
   id: number,
   input: PatronCategoryUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: patronCategoryModel,
+    nameColumn: patronCategoryModel.name,
+    idColumn: patronCategoryModel.id,
+    value: input.name,
+    label: "Patron category",
+    excludeId: id,
+  });
   await db
     .update(patronCategoryModel)
     .set({ ...normalize(input), updatedAt: new Date() })
