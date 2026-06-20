@@ -1453,6 +1453,24 @@ export async function exportStudentDetailedReport(academicYearId: number) {
           MAX(CASE WHEN rn = 3 THEN other_police_station END) AS address_3_other_police_station
         FROM addr
         GROUP BY personal_details_id_fk
+      ),
+      student_promotion AS (
+        -- One promotion per student for the academic year (latest semester),
+        -- to avoid fanning out the per-student report by each semester's promotion.
+        SELECT DISTINCT ON (pr.student_id_fk)
+          pr.student_id_fk,
+          pr.program_course_id_fk,
+          pr.section_id_fk,
+          pr.shift_id_fk,
+          pr.class_id_fk
+        FROM promotions pr
+        JOIN sessions sess ON sess.id = pr.session_id_fk
+        WHERE sess.academic_id_fk = ${academicYearId}
+        ORDER BY pr.student_id_fk,
+          CASE WHEN COALESCE(pr.is_deprecated, false) THEN 1 ELSE 0 END,
+          pr.class_id_fk DESC,
+          pr.start_date DESC NULLS LAST,
+          pr.created_at DESC
       )
       SELECT
         u.email AS user_institutional_email,
@@ -1537,22 +1555,20 @@ export async function exportStudentDetailedReport(academicYearId: number) {
         ap.address_3_other_police_station
       FROM users u
       JOIN students std ON u.id = std.user_id_fk
-      JOIN promotions pr ON pr.student_id_fk = std.id
+      JOIN student_promotion pr ON pr.student_id_fk = std.id
       JOIN program_courses pc ON pr.program_course_id_fk = pc.id
-      JOIN sessions sess ON pr.session_id_fk = sess.id
       JOIN personal_details pd ON pd.user_id_fk = u.id
       LEFT JOIN nationality nat ON nat.id = pd.nationality_id_fk
       LEFT JOIN religion rel ON rel.id = pd.religion_id_fk
       LEFT JOIN categories cat ON cat.id = pd.category_id_fk
       JOIN application_forms af ON af.id = std.application_form_id_fk
-      JOIN family_details fd ON fd.user_id_fk = u.id
+      LEFT JOIN family_details fd ON fd.user_id_fk = u.id
       LEFT JOIN sections sec ON sec.id = pr.section_id_fk
       LEFT JOIN shifts sh ON sh.id = pr.shift_id_fk
       LEFT JOIN person father ON father.family_id_fk = fd.id AND father.type = 'FATHER'
       LEFT JOIN person mother ON mother.family_id_fk = fd.id AND mother.type = 'MOTHER'
       LEFT JOIN addr_pivot ap ON ap.personal_details_id_fk = pd.id
-      WHERE u.type = 'STUDENT'
-        AND sess.academic_id_fk = ${academicYearId};
+      WHERE u.type = 'STUDENT';
     `,
   );
 

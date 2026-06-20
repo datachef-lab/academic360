@@ -25,6 +25,18 @@ const UID_FILTER = process.argv
   .slice(2)
   .find((a) => a.startsWith("--uid="))
   ?.slice("--uid=".length);
+const UIDS_FILE = process.argv
+  .slice(2)
+  .find((a) => a.startsWith("--uids="))
+  ?.slice("--uids=".length);
+const UIDS_SET: Set<string> | null = UIDS_FILE
+  ? new Set(
+      readFileSync(UIDS_FILE, "utf8")
+        .split(/\s+/)
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean),
+    )
+  : null;
 
 const legacyPool = createPool({
   host: process.env.OLD_DB_HOST!,
@@ -84,6 +96,10 @@ async function main() {
     );
   if (UID_FILTER)
     students = students.filter((s: any) => s.uid === UID_FILTER.toUpperCase());
+  if (UIDS_SET)
+    students = students.filter((s: any) =>
+      UIDS_SET.has(String(s.uid).toUpperCase()),
+    );
   console.log(`Verifying ${students.length} students...`);
 
   const mismatches: MismatchRow[] = [];
