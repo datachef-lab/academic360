@@ -405,36 +405,38 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
           <p className="text-sm text-muted-foreground py-4">No promotion records found.</p>
         ) : (
           <div className="rounded-md border border-gray-200 overflow-hidden shadow-none">
-            <div className="overflow-x-auto">
-              <Table className="min-w-full [&_tbody_tr]:bg-white [&_tbody_tr:hover]:bg-white">
+            <div className="w-full">
+              <Table className="w-full table-fixed [&_tbody_tr]:bg-white [&_tbody_tr:hover]:bg-white [&_th]:px-2 [&_th]:py-2 [&_td]:px-2 [&_td]:py-2.5 [&_th]:align-middle [&_td]:align-middle">
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
-                    <TableHead className="text-xs font-semibold text-gray-600 w-12">Sr.</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[4%]">
+                      Sr.
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[10%]">
                       Academic year
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[140px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[14%]">
                       Semester and UID
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[10%]">
                       Appear type
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[100px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[8%]">
                       Shift
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[100px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[8%]">
                       Section
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[110px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[10%]">
                       Class roll no.
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[130px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[11%]">
                       Start date
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[130px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[11%]">
                       End date
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[160px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[14%]">
                       Remarks
                     </TableHead>
                   </TableRow>
@@ -476,7 +478,7 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
                       </TableCell>
                       <TableCell className="text-sm">{formatDateDdMmYyyy(p.startDate)}</TableCell>
                       <TableCell className="text-sm">{formatDateDdMmYyyy(p.endDate)}</TableCell>
-                      <TableCell className="text-sm text-gray-600 max-w-[240px] truncate">
+                      <TableCell className="text-sm text-gray-600 truncate">
                         {p.remarks?.trim() || "—"}
                       </TableCell>
                     </TableRow>

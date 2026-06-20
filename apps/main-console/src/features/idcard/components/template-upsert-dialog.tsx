@@ -93,12 +93,12 @@ export default function TemplateUpsertDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
+      <DialogContent className="max-w-xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
           <DialogTitle>{isEdit ? "Edit Template" : "New ID Card Template"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 flex-1 overflow-y-auto px-6 py-4">
           <div>
             <Label>Template Name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -190,7 +190,7 @@ export default function TemplateUpsertDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 px-6 py-4 border-t">
           <Button variant="ghost" onClick={onClose} disabled={saveMutation.isLoading}>
             Cancel
           </Button>

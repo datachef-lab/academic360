@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { Wrench, CreditCard, MonitorPlay } from "lucide-react";
+import { Wrench, CreditCard, MonitorPlay, ArrowLeftRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 
 type ToolCard = {
@@ -35,6 +35,17 @@ const toolCards: ToolCard[] = [
     iconColor: "text-indigo-600",
     status: "Ready",
     items: "Console preview",
+  },
+  {
+    title: "Shift Change",
+    description:
+      "Search a student by UID and change their shift, section, or class roll number (updates UID, login email, and fees).",
+    icon: ArrowLeftRight,
+    href: "/dashboard/tools/shift-change",
+    color: "bg-violet-50 border-violet-200 hover:bg-violet-100",
+    iconColor: "text-violet-600",
+    status: "Ready",
+    items: "Student shift / section / roll",
   },
 ];
 

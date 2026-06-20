@@ -10,7 +10,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { getStudentById, fetchStudentByUid } from "@/services/student";
 import { StudentAvatar } from "@/components/student/StudentAvatar";
 import StudentContent from "@/components/student/StudentContent";
@@ -36,9 +36,6 @@ import { Tabs } from "@/components/ui/tabs";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { useIsMobile } from "@/hooks/useMobile";
 import useDebounce from "@/components/Hooks/useDebounce";
-import ShiftChangeDialog from "@/components/student/ShiftChangeDialog";
-
-const STUDENT_SHIFT_CHANGE_UI_ENABLED = true;
 
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
@@ -58,10 +55,8 @@ export default function StudentPage() {
   const queryClient = useQueryClient();
   const { studentId: studentIdOrUid } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
-  const [shiftChangeOpen, setShiftChangeOpen] = useState(false);
 
   type StudentTab = (typeof studentTabs)[number];
   const [activeTab, setActiveTab] = useState<StudentTab>(() => {
@@ -322,19 +317,7 @@ export default function StudentPage() {
             <div className="font-semibold text-gray-500">Shift:</div>
             <div>
               {data?.currentPromotion?.shift?.name ? (
-                STUDENT_SHIFT_CHANGE_UI_ENABLED ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 text-xs font-normal"
-                    onClick={() => setShiftChangeOpen(true)}
-                  >
-                    {data.currentPromotion.shift.name}
-                  </Button>
-                ) : (
-                  <span>{data.currentPromotion.shift.name}</span>
-                )
+                <span>{data.currentPromotion.shift.name}</span>
               ) : (
                 "-"
               )}
@@ -573,9 +556,7 @@ export default function StudentPage() {
           </div>
         </div>
         {/* Fixed Save Button at Bottom of Screen */}
-        <div
-          className={`${isMobile ? "sticky" : "sticky lg:fixed"} bottom-0 right-0 w-full lg:w-[20%] bg-white border-t border-gray-200 shadow-lg z-10`}
-        >
+        <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 shadow-lg z-10">
           <div className="p-3 sm:p-4">
             <Button
               className="w-full bg-violet-600 hover:bg-violet-700 text-white"
@@ -829,33 +810,6 @@ export default function StudentPage() {
           {renderStudentInfoPanel(false)}
         </div>
       </div>
-
-      {STUDENT_SHIFT_CHANGE_UI_ENABLED ? (
-        <ShiftChangeDialog
-          student={data}
-          open={shiftChangeOpen}
-          onOpenChange={setShiftChangeOpen}
-          onSuccess={async (newUid) => {
-            if (!newUid) return;
-
-            const previousRouteKey = studentIdOrUid;
-            const previousUid = data?.uid;
-
-            await queryClient.cancelQueries({ queryKey: ["student", previousRouteKey] });
-            queryClient.removeQueries({ queryKey: ["student", previousRouteKey] });
-            if (previousUid && previousUid !== previousRouteKey) {
-              queryClient.removeQueries({ queryKey: ["student", previousUid] });
-            }
-
-            navigate(`/dashboard/students/${newUid}`, { replace: true });
-
-            await queryClient.prefetchQuery({
-              queryKey: ["student", newUid],
-              queryFn: () => fetchStudentByUid(newUid),
-            });
-          }}
-        />
-      ) : null}
     </>
   );
 }

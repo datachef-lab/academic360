@@ -1,24 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  Info,
-  Loader2,
-  Moon,
-  PencilLine,
-  Sun,
-  SunMedium,
-  Sunrise,
-  Sunset,
-} from "lucide-react";
+import { AlertTriangle, Info, Loader2, Moon, Sun, SunMedium, Sunrise, Sunset } from "lucide-react";
 import type { StudentDto } from "@repo/db/dtos/user";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,18 +34,17 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Shift } from "@/types/academics/shift";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
-type ShiftChangeDialogProps = {
+type ShiftChangePanelProps = {
   student: StudentDto | undefined;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   onSuccess?: (newUid: string) => void | Promise<void>;
+  onCancel?: () => void;
+  /** Show a Cancel button (used inside the dialog). */
+  showCancel?: boolean;
 };
 
 const STUDENT_LOGIN_EMAIL_DOMAIN = "thebges.edu.in";
-
-import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
-
 const getStudentAvatarUrl = studentAvatarUrl;
 
 function ShiftIcon({ name, className }: { name: string; className?: string }) {
@@ -102,10 +84,7 @@ function formatFeeSlabLabel(
 
 function buildFeeRow(preview: StudentShiftChangePreview): { oldValue: string; newValue: string } {
   if (preview.feesPaid) {
-    return {
-      oldValue: "Paid this session",
-      newValue: "New rates from next session",
-    };
+    return { oldValue: "Paid this session", newValue: "New rates from next session" };
   }
   if (preview.feeComparison?.old.length) {
     const oldRow = preview.feeComparison.old[0];
@@ -115,11 +94,15 @@ function buildFeeRow(preview: StudentShiftChangePreview): { oldValue: string; ne
       newValue: formatFeeSlabLabel(newRow, "Updated for new shift"),
     };
   }
-  return {
-    oldValue: "Not set up",
-    newValue: "Set up for new shift",
-  };
+  return { oldValue: "Not set up", newValue: "Set up for new shift" };
 }
+
+type ChangeRow = {
+  label: string;
+  current: string;
+  next: string;
+  mono?: boolean;
+};
 
 function buildChangeRows(
   preview: StudentShiftChangePreview,
@@ -167,10 +150,7 @@ type GeneratedFeeDocument = {
 };
 
 function getGeneratedFeeDocuments(preview: StudentShiftChangePreview): GeneratedFeeDocument[] {
-  if (preview.feesPaid) {
-    return [];
-  }
-
+  if (preview.feesPaid) return [];
   if (preview.generatedFeeDocuments?.length) {
     return preview.generatedFeeDocuments.map((doc) => ({
       id: String(doc.feeStudentMappingId),
@@ -179,11 +159,7 @@ function getGeneratedFeeDocuments(preview: StudentShiftChangePreview): Generated
       documentLabel: doc.generatedDocumentType === "receipt" ? "fee receipt" : "challan",
     }));
   }
-
-  if (!preview.feeComparison?.old.length) {
-    return [];
-  }
-
+  if (!preview.feeComparison?.old.length) return [];
   return preview.feeComparison.old
     .filter((row) => row.generatedDocumentType)
     .map((row) => ({
@@ -197,25 +173,20 @@ function getGeneratedFeeDocuments(preview: StudentShiftChangePreview): Generated
 function getGeneratedDocumentDetectionMessage(documents: GeneratedFeeDocument[]): string {
   const types = new Set(documents.map((doc) => doc.documentLabel));
   const plural = documents.length > 1;
-
   if (types.has("fee receipt") && types.has("challan")) {
     return "We have detected that fee receipts and challans have already been generated for this student:";
   }
-
   if (types.has("fee receipt")) {
     return plural
       ? "We have detected that fee receipts have already been generated for this student:"
       : "We have detected that a fee receipt has already been generated for this student:";
   }
-
   return plural
     ? "We have detected that challans have already been generated for this student:"
     : "We have detected that a challan has already been generated for this student:";
 }
 
 function getGeneratedDocumentInvalidationMessage(_documents: GeneratedFeeDocument[]): string {
-  // Hard block: once a fee receipt/challan has been generated (or the term
-  // is fully paid), shift change is not permitted from this dialog.
   return "Fees paid is detected — shift change is not allowed.";
 }
 
@@ -248,14 +219,12 @@ function PreviewSkeleton() {
 function UidBreakdownPanel({ breakdown }: { breakdown: UidBreakdownPreview }) {
   const courseLabel =
     breakdown.programCourseShortName?.trim() || breakdown.programCourseName?.trim() || null;
-
   const parts = [
     { label: "Course", value: breakdown.programCoursePrefix, hint: courseLabel },
     { label: "Shift", value: breakdown.shiftPrefix, hint: breakdown.shiftName, changed: true },
     { label: "Year", value: breakdown.registrationYear, hint: "Admission year" },
     { label: "Serial", value: breakdown.sequence, hint: "Unchanged" },
   ];
-
   return (
     <div className="grid grid-cols-4 gap-3">
       {parts.map((part) => (
@@ -291,13 +260,6 @@ function UidBreakdownPanel({ breakdown }: { breakdown: UidBreakdownPreview }) {
   );
 }
 
-type ChangeRow = {
-  label: string;
-  current: string;
-  next: string;
-  mono?: boolean;
-};
-
 function PreviewPanel({
   preview,
   currentUid,
@@ -324,7 +286,7 @@ function PreviewPanel({
   }
 
   return (
-    <div className="relative flex h-full min-h-[62vh] flex-col rounded-lg border border-slate-200 overflow-hidden bg-white">
+    <div className="relative flex h-full min-h-[420px] flex-col rounded-lg border border-slate-200 overflow-hidden bg-white">
       {isRefreshing ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
           <Loader2 className="h-6 w-6 animate-spin text-violet-600" />
@@ -433,14 +395,15 @@ function PreviewPanel({
   );
 }
 
-export default function ShiftChangeDialog({
+export default function ShiftChangePanel({
   student,
-  open,
-  onOpenChange,
   onSuccess,
-}: ShiftChangeDialogProps) {
+  onCancel,
+  showCancel = false,
+}: ShiftChangePanelProps) {
   const queryClient = useQueryClient();
   const { shifts, loading: shiftsLoading } = useShifts();
+  const open = Boolean(student?.id);
   const currentShiftId = student?.currentPromotion?.shift?.id;
 
   const [selectedShiftId, setSelectedShiftId] = useState<string>("");
@@ -448,10 +411,8 @@ export default function ShiftChangeDialog({
   const [classRollNumber, setClassRollNumber] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Sections list for the dropdown — uses the same endpoint the idcard
-  // Sections master pulls from.
   const sectionsQuery = useQuery({
-    queryKey: ["sections", "for-shift-change-dialog"],
+    queryKey: ["sections", "for-shift-change-panel"],
     enabled: open,
     queryFn: async () => {
       const res = await axiosInstance.get<{
@@ -483,14 +444,10 @@ export default function ShiftChangeDialog({
     }
     if (otherShifts.length > 0 && otherShifts[0]?.id != null) {
       setSelectedShiftId((prev) => {
-        if (prev && otherShifts.some((s) => String(s.id) === prev)) {
-          return prev;
-        }
+        if (prev && otherShifts.some((s) => String(s.id) === prev)) return prev;
         return String(otherShifts[0]!.id);
       });
     }
-    // Seed the section + roll inputs from the student's current active
-    // promotion so the operator sees today's values.
     setSelectedSectionId(currentSectionId ? String(currentSectionId) : "");
     setClassRollNumber(currentClassRollNumber ?? "");
   }, [open, otherShifts, currentSectionId, currentClassRollNumber]);
@@ -499,7 +456,6 @@ export default function ShiftChangeDialog({
     if (!open || !student?.id || hasPreviousUid) return;
     const defaultShiftId = otherShifts[0]?.id;
     if (!defaultShiftId) return;
-
     void queryClient.prefetchQuery({
       queryKey: ["shift-change-preview", student.id, String(defaultShiftId)],
       queryFn: () => fetchStudentShiftChangePreview(student.id!, defaultShiftId),
@@ -530,8 +486,6 @@ export default function ShiftChangeDialog({
     return response?.data?.message ?? null;
   };
 
-  // Block shift change whenever fees are fully paid OR any fee
-  // receipt/challan has been generated for the current term.
   const shiftBlockedByFees =
     preview?.feesPaid === true ||
     (preview?.feeComparison?.old?.some((row) => !!row.generatedDocumentType) ?? false) ||
@@ -550,20 +504,12 @@ export default function ShiftChangeDialog({
     setSubmitting(true);
     try {
       let newUid: string | null = null;
-
-      // 1) Persist section / class roll number changes to every active
-      //    promotion. Run this BEFORE the shift change because the shift
-      //    change rotates the student row's UID and creates new rows we
-      //    don't want to overwrite.
       if (sectionChanged || rollChanged) {
         await updateActivePromotionFields(student.id, {
           sectionId: sectionChanged ? Number(selectedSectionId) : undefined,
           classRollNumber: rollChanged ? trimmedRoll : undefined,
         });
       }
-
-      // 2) Apply the heavier shift-change flow only if the operator picked a
-      //    different shift.
       if (shiftPicked) {
         const result = await submitStudentShiftChange(student.id, Number(selectedShiftId));
         newUid = result.newUid;
@@ -571,14 +517,11 @@ export default function ShiftChangeDialog({
       } else {
         toast.success("Student details updated.");
       }
-
       if (newUid && onSuccess) {
         await onSuccess(newUid);
       } else if (onSuccess) {
-        // Same UID; let the caller refresh in place.
         await onSuccess(student.uid ?? "");
       }
-      onOpenChange(false);
     } catch (err: unknown) {
       toast.error(errorMessage(err) || "Could not save changes. Please try again.");
     } finally {
@@ -591,8 +534,6 @@ export default function ShiftChangeDialog({
     !submitting &&
     !isInitialPreviewLoad &&
     !shiftBlockedByFees &&
-    // Either a non-blocking field changed, or a real shift change with an
-    // allowed preview that hasn't been blocked by paid fees.
     (sectionChanged || rollChanged || (shiftPicked && preview?.allowed === true));
 
   const selectedShift = otherShifts.find((s) => String(s.id) === selectedShiftId);
@@ -603,182 +544,174 @@ export default function ShiftChangeDialog({
     "?";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-[98vw] min-h-[90vh] max-h-[96vh] p-0 gap-0 overflow-hidden flex flex-col sm:max-w-7xl">
-        <DialogHeader className="px-6 pt-5 pb-0 border-b-0 bg-slate-50/50 shrink-0">
-          <DialogTitle className="flex items-center gap-2.5 text-xl text-left">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-violet-100 text-violet-700">
-              <PencilLine className="h-4 w-4" />
+    <div className="flex flex-col rounded-lg border border-slate-200 bg-white overflow-hidden">
+      {/* Header: student + shift/section/roll inputs */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/50 px-4 sm:px-6 py-3.5">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <Avatar className="h-11 w-11 shrink-0 border-2 border-white shadow-sm ring-1 ring-slate-200">
+            <AvatarImage
+              src={avatarUrl}
+              alt={student?.name ?? "Student"}
+              className="object-cover"
+            />
+            <AvatarFallback className="bg-violet-100 text-violet-700 text-sm font-semibold">
+              {studentInitial}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-base whitespace-nowrap">
+            <span className="truncate font-semibold text-foreground">
+              {student?.name ?? "Student"}
             </span>
-            Edit student — shift, section, class roll
-          </DialogTitle>
-        </DialogHeader>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground">{currentShiftName}</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="font-mono text-foreground">{currentUid}</span>
+          </div>
+        </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/50 px-6 pb-3.5 pt-2.5">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <Avatar className="h-11 w-11 shrink-0 border-2 border-white shadow-sm ring-1 ring-slate-200">
-              <AvatarImage
-                src={avatarUrl}
-                alt={student?.name ?? "Student"}
-                className="object-cover"
+        {!hasPreviousUid ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <Label className="text-[11px] font-medium text-muted-foreground">New shift</Label>
+              <Select
+                value={selectedShiftId}
+                onValueChange={setSelectedShiftId}
+                disabled={shiftsLoading || otherShifts.length === 0 || shiftBlockedByFees}
+              >
+                <SelectTrigger
+                  id="newShift"
+                  className="h-10 min-w-[220px] w-[220px] shrink-0 text-sm [&>span]:line-clamp-none"
+                >
+                  <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-hidden">
+                    {selectedShift ? (
+                      <ShiftSelectLabel name={selectedShift.name} />
+                    ) : (
+                      <SelectValue placeholder="Keep current" />
+                    )}
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="min-w-[220px]">
+                  {otherShifts.map((shift: Shift) => (
+                    <SelectItem key={shift.id} value={String(shift.id)} className="py-2.5">
+                      <ShiftSelectLabel name={shift.name} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label className="text-[11px] font-medium text-muted-foreground">Section</Label>
+              <Select
+                value={selectedSectionId}
+                onValueChange={setSelectedSectionId}
+                disabled={sectionsQuery.isLoading || sections.length === 0}
+              >
+                <SelectTrigger className="h-10 min-w-[180px] w-[180px] text-sm">
+                  <SelectValue placeholder="Select section" />
+                </SelectTrigger>
+                <SelectContent className="min-w-[180px]">
+                  {sections.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label className="text-[11px] font-medium text-muted-foreground">
+                Class Roll No.
+              </Label>
+              <Input
+                value={classRollNumber}
+                onChange={(e) => setClassRollNumber(e.target.value)}
+                placeholder="e.g. 23"
+                className="h-10 min-w-[140px] w-[140px] text-sm"
               />
-              <AvatarFallback className="bg-violet-100 text-violet-700 text-sm font-semibold">
-                {studentInitial}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex min-w-0 flex-1 items-center gap-2 text-base whitespace-nowrap">
-              <span className="truncate font-semibold text-foreground">
-                {student?.name ?? "Student"}
-              </span>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">{currentShiftName}</span>
-              <span className="text-muted-foreground">·</span>
-              <span className="font-mono text-foreground">{currentUid}</span>
             </div>
           </div>
+        ) : null}
+      </div>
 
-          {!hasPreviousUid ? (
-            <div className="flex shrink-0 items-end gap-3">
-              <div className="flex flex-col gap-1">
-                <Label className="text-[11px] font-medium text-muted-foreground">New shift</Label>
-                <Select
-                  value={selectedShiftId}
-                  onValueChange={setSelectedShiftId}
-                  disabled={shiftsLoading || otherShifts.length === 0 || shiftBlockedByFees}
-                >
-                  <SelectTrigger
-                    id="newShift"
-                    className="h-10 min-w-[220px] w-[220px] shrink-0 text-sm [&>span]:line-clamp-none"
-                  >
-                    <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-hidden">
-                      {selectedShift ? (
-                        <ShiftSelectLabel name={selectedShift.name} />
-                      ) : (
-                        <SelectValue placeholder="Keep current" />
-                      )}
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="min-w-[220px]">
-                    {otherShifts.map((shift: Shift) => (
-                      <SelectItem key={shift.id} value={String(shift.id)} className="py-2.5">
-                        <ShiftSelectLabel name={shift.name} />
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <Label className="text-[11px] font-medium text-muted-foreground">Section</Label>
-                <Select
-                  value={selectedSectionId}
-                  onValueChange={setSelectedSectionId}
-                  disabled={sectionsQuery.isLoading || sections.length === 0}
-                >
-                  <SelectTrigger className="h-10 min-w-[180px] w-[180px] text-sm">
-                    <SelectValue placeholder="Select section" />
-                  </SelectTrigger>
-                  <SelectContent className="min-w-[180px]">
-                    {sections.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <Label className="text-[11px] font-medium text-muted-foreground">
-                  Class Roll No.
-                </Label>
-                <Input
-                  value={classRollNumber}
-                  onChange={(e) => setClassRollNumber(e.target.value)}
-                  placeholder="e.g. 23"
-                  className="h-10 min-w-[140px] w-[140px] text-sm"
-                />
-              </div>
+      {/* Body */}
+      <div className="flex flex-col px-4 sm:px-6 py-4">
+        {hasPreviousUid ? (
+          <div className="flex gap-2.5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div className="space-y-1.5">
+              <p>
+                Shift change has already been used for this student (previous UID:{" "}
+                <span className="font-mono font-medium">{student?.previousUid}</span>).
+              </p>
+              <p className="text-red-800/90">
+                As per policy, only one shift change is allowed per student.
+              </p>
             </div>
-          ) : null}
-        </div>
-
-        <div className="flex min-h-0 flex-1 flex-col px-6 py-4 overflow-hidden">
-          {hasPreviousUid ? (
-            <div className="flex gap-2.5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-              <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-              <div className="space-y-1.5">
-                <p>
-                  Shift change has already been used for this student (previous UID:{" "}
-                  <span className="font-mono font-medium">{student?.previousUid}</span>).
-                </p>
-                <p className="text-red-800/90">
-                  As per policy, only one shift change is allowed per student.
-                </p>
+          </div>
+        ) : (
+          <>
+            {!shiftPicked ? (
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed py-12 text-sm text-muted-foreground">
+                <Info className="h-4 w-4" />
+                {sectionChanged || rollChanged
+                  ? "Section / class roll number will be applied to every active promotion on save."
+                  : "Pick a new shift to preview the UID change, or just update section / class roll number."}
               </div>
-            </div>
-          ) : (
-            <>
-              {!shiftPicked ? (
-                <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed py-12 text-sm text-muted-foreground">
-                  <Info className="h-4 w-4" />
-                  {sectionChanged || rollChanged
-                    ? "Section / class roll number will be applied to every active promotion on save."
-                    : "Pick a new shift to preview the UID change, or just update section / class roll number."}
+            ) : isInitialPreviewLoad ? (
+              <PreviewSkeleton />
+            ) : preview && !preview.allowed ? (
+              <div className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>{preview.blockReason}</p>
+              </div>
+            ) : shiftBlockedByFees ? (
+              <div className="flex gap-2.5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium">
+                    Shift change is not allowed — fees have already been paid for this student.
+                  </p>
+                  <p className="text-red-800/90">
+                    Reverse the existing fee receipt before attempting to change the shift.
+                  </p>
                 </div>
-              ) : isInitialPreviewLoad ? (
-                <PreviewSkeleton />
-              ) : preview && !preview.allowed ? (
-                <div className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <p>{preview.blockReason}</p>
-                </div>
-              ) : shiftBlockedByFees ? (
-                <div className="flex gap-2.5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-                  <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      Shift change is not allowed — fees have already been paid for this student.
-                    </p>
-                    <p className="text-red-800/90">
-                      Reverse the existing fee receipt before attempting to change the shift.
-                    </p>
-                  </div>
-                </div>
-              ) : preview?.allowed ? (
-                <div className="flex min-h-0 flex-1 flex-col">
-                  <PreviewPanel
-                    preview={preview}
-                    currentUid={currentUid}
-                    currentShiftName={currentShiftName}
-                    isRefreshing={isRefreshingPreview}
-                  />
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
+              </div>
+            ) : preview?.allowed ? (
+              <PreviewPanel
+                preview={preview}
+                currentUid={currentUid}
+                currentShiftName={currentShiftName}
+                isRefreshing={isRefreshingPreview}
+              />
+            ) : null}
+          </>
+        )}
+      </div>
 
-        <DialogFooter className="px-6 py-3.5 border-t bg-slate-50/50 shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+      {/* Footer actions */}
+      <div className="flex items-center justify-end gap-2 border-t bg-slate-50/50 px-4 sm:px-6 py-3.5">
+        {showCancel ? (
+          <Button variant="outline" onClick={onCancel} disabled={submitting}>
             Cancel
           </Button>
-          {!hasPreviousUid ? (
-            <Button onClick={handleConfirm} disabled={!canConfirm}>
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : shiftPicked ? (
-                "Confirm shift change"
-              ) : (
-                "Save section & roll"
-              )}
-            </Button>
-          ) : null}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        ) : null}
+        {!hasPreviousUid ? (
+          <Button onClick={handleConfirm} disabled={!canConfirm}>
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : shiftPicked ? (
+              "Confirm shift change"
+            ) : (
+              "Save section & roll"
+            )}
+          </Button>
+        ) : null}
+      </div>
+    </div>
   );
 }

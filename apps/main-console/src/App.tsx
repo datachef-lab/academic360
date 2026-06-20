@@ -65,6 +65,7 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
 import ToolsPage from "./features/tools/pages/tools-page";
+import ShiftChangePage from "./features/tools/pages/shift-change-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
 // import MandatorySubjectsPage from "./features/academic-year-setup/pages/mandatory-subjects-page";
 
@@ -223,6 +224,10 @@ const router = createBrowserRouter(
             {
               path: "simulation",
               element: <appModule.StudentConsoleSimulation />,
+            },
+            {
+              path: "shift-change",
+              element: <ShiftChangePage />,
             },
           ],
         },
