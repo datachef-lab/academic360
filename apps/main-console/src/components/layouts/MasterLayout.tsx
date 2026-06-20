@@ -31,27 +31,33 @@ type MasterLayoutProps = {
   hideRightBar?: boolean;
 };
 
-export default function MasterLayout({
-  children,
-  content,
+type SidebarContentProps = {
+  currentPath: string;
+  subLinks?: LinkType[];
+  content?: ReactNode;
+  rightBarHeader?: ReactNode;
+  rightBarFooter?: ReactNode;
+  rightBarContent?: ReactNode;
+  isSearchActive: boolean;
+  onOpenSearchModal: () => void;
+  onNavigate: () => void;
+};
+
+// Stable module-level component — defining this inside MasterLayout would give it
+// a new identity on every render, forcing React to remount the scrollable sidebar
+// and losing its scrollTop on every route change.
+function SidebarContent({
+  currentPath,
   subLinks,
+  content,
   rightBarHeader,
   rightBarFooter,
   rightBarContent,
-  hideRightBar = false,
-}: MasterLayoutProps) {
-  const location = useLocation();
-  const currentPath = location.pathname;
-  const [isSearchActive, setIsSearchActive] = React.useState(false);
-  const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
-  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
-
-  useEffect(() => {
-    setIsMobileSheetOpen(false);
-  }, [currentPath]);
-
-  // Sidebar content component (reusable for both desktop and mobile)
-  const SidebarContent = () => (
+  isSearchActive,
+  onOpenSearchModal,
+  onNavigate,
+}: SidebarContentProps) {
+  return (
     <>
       {/* Sidebar Header */}
       <div className="border-b px-4 py-3 flex items-center justify-between bg-white shadow-sm">
@@ -72,11 +78,7 @@ export default function MasterLayout({
                 return (
                   <div
                     key={link.title}
-                    onClick={() => {
-                      setIsSearchModalOpen(true);
-                      setIsSearchActive(true);
-                      setIsMobileSheetOpen(false);
-                    }}
+                    onClick={onOpenSearchModal}
                     className={cn(
                       "group flex items-center transition-all duration-100 px-4 py-3 text-sm relative cursor-pointer",
                       isSearchActive
@@ -100,9 +102,7 @@ export default function MasterLayout({
                     icon={<link.icon className="h-5 w-5" />}
                     href={link.url}
                     isActive={currentPath.endsWith(link.url)}
-                    onNavigate={() => {
-                      setIsMobileSheetOpen(false);
-                    }}
+                    onNavigate={onNavigate}
                   >
                     {link.title}
                   </NavItem>
@@ -115,9 +115,7 @@ export default function MasterLayout({
                           icon={<nested.icon className="h-4 w-4" />}
                           href={nested.url}
                           isActive={currentPath.endsWith(nested.url)}
-                          onNavigate={() => {
-                            setIsMobileSheetOpen(false);
-                          }}
+                          onNavigate={onNavigate}
                         >
                           <span
                             className={cn(
@@ -152,6 +150,48 @@ export default function MasterLayout({
       </div>
     </>
   );
+}
+
+export default function MasterLayout({
+  children,
+  content,
+  subLinks,
+  rightBarHeader,
+  rightBarFooter,
+  rightBarContent,
+  hideRightBar = false,
+}: MasterLayoutProps) {
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const [isSearchActive, setIsSearchActive] = React.useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobileSheetOpen(false);
+  }, [currentPath]);
+
+  const handleOpenSearchModal = React.useCallback(() => {
+    setIsSearchModalOpen(true);
+    setIsSearchActive(true);
+    setIsMobileSheetOpen(false);
+  }, []);
+
+  const handleNavigate = React.useCallback(() => {
+    setIsMobileSheetOpen(false);
+  }, []);
+
+  const sidebarProps: SidebarContentProps = {
+    currentPath,
+    subLinks,
+    content,
+    rightBarHeader,
+    rightBarFooter,
+    rightBarContent,
+    isSearchActive,
+    onOpenSearchModal: handleOpenSearchModal,
+    onNavigate: handleNavigate,
+  };
 
   return (
     <>
@@ -172,7 +212,7 @@ export default function MasterLayout({
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[min(100vw-2rem,20rem)] sm:max-w-sm p-0">
                   <div className="h-full flex flex-col min-h-0">
-                    <SidebarContent />
+                    <SidebarContent {...sidebarProps} />
                   </div>
                 </SheetContent>
               </Sheet>
@@ -182,7 +222,7 @@ export default function MasterLayout({
         </div>
         {!hideRightBar && (
           <div className="hidden lg:flex w-[min(280px,24vw)] shrink-0 xl:w-72 border-l h-full flex-col bg-white min-w-0">
-            <SidebarContent />
+            <SidebarContent {...sidebarProps} />
           </div>
         )}
       </div>

@@ -76,6 +76,7 @@ export type FeeMapping = {
   paymentStatus: string;
   receiptNumber?: string | null;
   challanGeneratedAt?: string | null;
+  transactionDate?: string | Date | null;
   type: "FULL" | "INSTALLMENT";
   feeStructureInstallment: { name?: string | null; sequence?: number | null } | null;
   feeStructure: {
@@ -272,24 +273,76 @@ export default function EnrollmentFeesPage() {
   const [proceedingToPayment, setProceedingToPayment] = useState(false);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
   const [paymentTimestamp, setPaymentTimestamp] = useState<string>("");
+  const [paymentVerifying, setPaymentVerifying] = useState(false);
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const handledPaymentRedirectRef = useRef(false);
 
-  const fetchMappings = async () => {
-    if (!student?.id) return;
+  const fetchMappings = async (): Promise<FeeMapping[]> => {
+    if (!student?.id) return [];
     try {
       setLoading(true);
       setError(null);
       const { data } = await axiosInstance.get<ApiResponse<FeeMapping[]>>(
         `/api/v1/fees/student-mappings/student/${student.id}`,
       );
-      setMappings(Array.isArray(data?.payload) ? data.payload : []);
+      const next = Array.isArray(data?.payload) ? data.payload : [];
+      setMappings(next);
+      return next;
     } catch (e) {
       console.error(e);
       setError("Failed to load fee details");
       setMappings([]);
+      return [];
     } finally {
       setLoading(false);
     }
+  };
+
+  const isMappingPaid = (mapping: FeeMapping | undefined): boolean => {
+    const dbStatus = String(mapping?.paymentStatus || "").toUpperCase();
+    return dbStatus === "COMPLETED" || dbStatus === "SUCCESS";
+  };
+
+  const applyPaymentVerification = (
+    freshMappings: FeeMapping[],
+    feeCtx: FeeCtx | null,
+    urlResult: "success" | "failed",
+    respMsg: string | null,
+  ) => {
+    if (feeCtx) {
+      const mapping = freshMappings.find((m) => m.id === feeCtx.feeStudentMappingId);
+      const className = mapping?.feeStructure?.class?.name || "";
+      setSelectedClassName(className);
+
+      if (mapping?.feeStructure?.academicYear?.year) {
+        setSelectedAcademicYear(mapping.feeStructure.academicYear.year);
+      }
+
+      if (isMappingPaid(mapping) && urlResult === "success") {
+        setPaymentResult("success");
+        setPaymentMsg(respMsg || "Payment recorded successfully!");
+        setPaymentMode("online");
+        setPaymentTimestamp(
+          new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
+        );
+      } else {
+        setPaymentResult("failed");
+        setPaymentMsg(
+          respMsg || "Payment failed due to a technical error. Please try after some time.",
+        );
+        setPaymentMode(null);
+      }
+      return;
+    }
+
+    setPaymentResult(urlResult);
+    setPaymentMsg(
+      respMsg ||
+        (urlResult === "success"
+          ? "Payment recorded successfully!"
+          : "Payment failed due to a technical error. Please try after some time."),
+    );
+    setPaymentMode(urlResult === "success" ? "online" : null);
   };
 
   const fetchSemesterFeeActivities = async () => {
@@ -353,19 +406,17 @@ export default function EnrollmentFeesPage() {
 
     const respMsg = params.get("respMsg");
     const ctxParam = params.get("ctx");
+    const orderIdParam = params.get("orderId");
 
     const feeCtx = ctxParam ? decodeFeeCtx(ctxParam) : null;
     if (feeCtx) setSelectedFee(feeCtx);
+    if (orderIdParam) setPaymentOrderId(orderIdParam);
 
     const urlResult = payment === "success" ? "success" : "failed";
-    setPaymentResult(urlResult);
-    setPaymentMsg(
-      respMsg ||
-        (urlResult === "success"
-          ? "Payment recorded successfully!"
-          : "Payment failed due to a technical error. Please try after some time."),
-    );
-    setPaymentMode(urlResult === "success" ? "online" : null);
+    setPaymentVerifying(true);
+    setPaymentResult(null);
+    setPaymentMsg(null);
+    setPaymentMode(null);
     setCpOpen(true);
     setStage("payment");
     setOpenedFromQuery(true);
@@ -388,42 +439,7 @@ export default function EnrollmentFeesPage() {
         );
         const freshMappings = Array.isArray(mapData?.payload) ? mapData.payload : [];
         setMappings(freshMappings);
-
-        if (feeCtx) {
-          const mapping = freshMappings.find((m) => m.id === feeCtx.feeStudentMappingId);
-          const className = mapping?.feeStructure?.class?.name || "";
-          setSelectedClassName(className);
-          const dbStatus = String(mapping?.paymentStatus || "").toUpperCase();
-          const isPaidInDb = dbStatus === "COMPLETED" || dbStatus === "SUCCESS";
-
-          if (mapping?.feeStructure?.academicYear?.year) {
-            setSelectedAcademicYear(mapping.feeStructure.academicYear.year);
-          }
-
-          if (isPaidInDb) {
-            setPaymentResult("success");
-            setPaymentMsg(respMsg || "Payment recorded successfully!");
-            setPaymentMode("online");
-            setPaymentTimestamp(
-              new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
-            );
-          } else {
-            setPaymentResult("failed");
-            setPaymentMsg(
-              respMsg || "Payment failed due to a technical error. Please try after some time.",
-            );
-            setPaymentMode(null);
-          }
-        } else {
-          setPaymentResult(urlResult);
-          setPaymentMsg(
-            respMsg ||
-              (urlResult === "success"
-                ? "Payment recorded successfully!"
-                : "Payment failed due to a technical error. Please try after some time."),
-          );
-          setPaymentMode(urlResult === "success" ? "online" : null);
-        }
+        applyPaymentVerification(freshMappings, feeCtx, urlResult, respMsg);
 
         const ayId = feeCtx
           ? freshMappings.find((m) => m.id === feeCtx.feeStudentMappingId)?.feeStructure
@@ -447,15 +463,13 @@ export default function EnrollmentFeesPage() {
           })
           .catch(() => {});
       } catch {
-        setPaymentResult(urlResult);
+        setPaymentResult("failed");
         setPaymentMsg(
-          respMsg ||
-            (urlResult === "success"
-              ? "Payment recorded successfully!"
-              : "Payment failed due to a technical error. Please try after some time."),
+          "Unable to confirm payment status. Please refresh the page or contact support.",
         );
-        setPaymentMode(urlResult === "success" ? "online" : null);
+        setPaymentMode(null);
       } finally {
+        setPaymentVerifying(false);
         setLoading(false);
       }
     };
@@ -469,6 +483,7 @@ export default function EnrollmentFeesPage() {
     const cp = params.get("cp");
     if (cp !== "1") return;
 
+    const stageParam = params.get("stage");
     const ctxParam = params.get("ctx");
     let ctx: FeeCtx | null = ctxParam ? decodeFeeCtx(ctxParam) : null;
 
@@ -488,11 +503,14 @@ export default function EnrollmentFeesPage() {
     const selected = mappings.find((m) => m.id === feeStudentMappingId);
     if (!selected) return;
     setOpenedFromQuery(true);
+    const isPaid = isMappingPaid(selected);
     openCareerProgression({
       id: selected.id,
       feeStructureId: selected.feeStructureId,
       total: Number(selected.totalPayable || 0),
+      academicYear: selected.feeStructure?.academicYear?.year,
       academicYearId: selected.feeStructure?.academicYear?.id,
+      isPaid: stageParam === "payment" && isPaid,
     });
   }, [mappings, openedFromQuery]);
 
@@ -501,12 +519,32 @@ export default function EnrollmentFeesPage() {
       if (e.data?.type !== "PAYTM_PAYMENT_RESULT") return;
       const msg =
         e.data.respMsg || (e.data.payment === "success" ? "Payment successful" : "Payment failed");
-      setPaymentMsg(msg);
-      if (e.data.payment === "success") fetchMappings();
+      const urlResult = e.data.payment === "success" ? "success" : "failed";
+      if (e.data.orderId) setPaymentOrderId(String(e.data.orderId));
+      setCpOpen(true);
+      setStage("payment");
+      setPaymentVerifying(true);
+      setPaymentResult(null);
+      setPaymentMsg(null);
+      void (async () => {
+        try {
+          const freshMappings = await fetchMappings();
+          const feeCtx = selectedFee;
+          applyPaymentVerification(freshMappings, feeCtx, urlResult, msg);
+        } catch {
+          setPaymentResult("failed");
+          setPaymentMsg(
+            "Unable to confirm payment status. Please refresh the page or contact support.",
+          );
+          setPaymentMode(null);
+        } finally {
+          setPaymentVerifying(false);
+        }
+      })();
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [selectedFee]);
 
   const cards = useMemo(
     () =>
@@ -685,6 +723,7 @@ export default function EnrollmentFeesPage() {
       setPaymentResult("success");
       setPaymentMsg("Payment recorded successfully!");
       setPaymentMode("online");
+      setPaymentVerifying(false);
       setPaymentTimestamp(
         new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
       );
@@ -1172,6 +1211,8 @@ export default function EnrollmentFeesPage() {
             setStage("form");
             setPaymentMode(null);
             setPaymentResult(null);
+            setPaymentVerifying(false);
+            setPaymentOrderId(null);
             const next = params.toString();
             window.history.replaceState(
               {},
@@ -1183,7 +1224,7 @@ export default function EnrollmentFeesPage() {
       >
         <DialogContent
           className={`overflow-hidden p-0 ${
-            paymentResult === "success" && stage === "payment"
+            paymentResult === "success" && stage === "payment" && !paymentVerifying
               ? "h-auto max-h-[90vh] w-[95vw] max-w-2xl"
               : "h-[90vh] w-[92vw] max-w-7xl"
           }`}
@@ -1192,21 +1233,25 @@ export default function EnrollmentFeesPage() {
             <div className="flex h-full min-h-0 w-full flex-col">
               <DialogHeader
                 className={`shrink-0 border-b px-6 py-4 text-white ${
-                  paymentResult === "success" && stage === "payment"
+                  paymentResult === "success" && stage === "payment" && !paymentVerifying
                     ? "bg-gradient-to-r from-emerald-600 to-teal-600"
                     : "bg-gradient-to-r from-violet-600 to-indigo-600"
                 }`}
               >
                 <DialogTitle className="flex items-center gap-2 text-white">
-                  {paymentResult === "success" && stage === "payment" ? (
+                  {paymentResult === "success" && stage === "payment" && !paymentVerifying ? (
                     <CheckCircle2 className="h-4 w-4" />
+                  ) : paymentVerifying && stage === "payment" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
                   {stage === "payment"
-                    ? paymentResult === "success"
-                      ? "Payment Successful"
-                      : "Fee Payment Details"
+                    ? paymentVerifying
+                      ? "Confirming Payment"
+                      : paymentResult === "success"
+                        ? "Payment Successful"
+                        : "Fee Payment Details"
                     : "Career Progression Form"}
                 </DialogTitle>
               </DialogHeader>
@@ -1264,7 +1309,19 @@ export default function EnrollmentFeesPage() {
                   </div>
                 ) : stage === "payment" ? (
                   <div className="mx-auto max-w-3xl space-y-5">
-                    {paymentResult === "success" ? (
+                    {paymentVerifying ? (
+                      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+                        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+                        <div>
+                          <h2 className="text-xl font-semibold text-slate-900">
+                            Confirming payment…
+                          </h2>
+                          <p className="mt-1 text-sm text-slate-600">
+                            Please wait while we verify your payment with the server.
+                          </p>
+                        </div>
+                      </div>
+                    ) : paymentResult === "success" ? (
                       <>
                         <h2 className="text-2xl font-bold text-slate-900">Confirmation</h2>
                         <p className="text-slate-600">
@@ -1310,6 +1367,11 @@ export default function EnrollmentFeesPage() {
                           <div>
                             <p className="font-semibold text-green-800">Payment Confirmed</p>
                             <p className="text-xs text-green-700">{paymentMsg}</p>
+                            {paymentOrderId ? (
+                              <p className="mt-1 text-xs text-green-700">
+                                Order ID: {paymentOrderId}
+                              </p>
+                            ) : null}
                           </div>
                         </div>
 

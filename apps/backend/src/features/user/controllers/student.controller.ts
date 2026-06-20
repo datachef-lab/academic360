@@ -22,6 +22,7 @@ import {
   changeStudentShift,
   getStudentShiftChangePreview,
 } from "../services/student-shift-change.service.js";
+import { updateActivePromotionFields } from "../services/student-active-promotion-fields.service.js";
 
 export const createStudent = async (
   req: Request,
@@ -890,6 +891,50 @@ export const changeStudentShiftController = async (
           result.feesPaid
             ? "Shift changed; existing fee mappings and payments retained"
             : "Shift changed; fee mappings recreated for the new shift",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const updateActivePromotionFieldsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = Number(req.params.id);
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Valid student id is required"),
+        );
+      return;
+    }
+    const body = (req.body ?? {}) as {
+      sectionId?: number | null;
+      classRollNumber?: string | null;
+    };
+    const result = await updateActivePromotionFields(studentId, {
+      sectionId:
+        body.sectionId == null || body.sectionId === undefined
+          ? null
+          : Number(body.sectionId),
+      classRollNumber:
+        body.classRollNumber == null || body.classRollNumber === undefined
+          ? null
+          : String(body.classRollNumber),
+    });
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          `Updated ${result.promotionIdsUpdated.length} active promotion(s).`,
         ),
       );
   } catch (error) {

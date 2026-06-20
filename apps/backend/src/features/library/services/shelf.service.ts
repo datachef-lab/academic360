@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, SQL } from "drizzle-orm";
 import { shelfModel } from "@repo/db/schemas/models/library/shelf.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type ShelfListFilters = {
   page: number;
@@ -85,6 +86,13 @@ export async function getShelfById(id: number): Promise<ShelfListRow | null> {
 }
 
 export async function createShelf(input: ShelfUpsertInput): Promise<number> {
+  await assertUniqueLibraryName({
+    table: shelfModel,
+    nameColumn: shelfModel.name,
+    idColumn: shelfModel.id,
+    value: input.name,
+    label: "Shelf",
+  });
   const [inserted] = await db
     .insert(shelfModel)
     .values({
@@ -98,6 +106,14 @@ export async function updateShelf(
   id: number,
   input: ShelfUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: shelfModel,
+    nameColumn: shelfModel.name,
+    idColumn: shelfModel.id,
+    value: input.name,
+    label: "Shelf",
+    excludeId: id,
+  });
   await db
     .update(shelfModel)
     .set({

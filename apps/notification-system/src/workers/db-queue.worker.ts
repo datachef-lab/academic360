@@ -2,42 +2,15 @@ import {
   notificationQueueModel,
   notificationModel,
 } from "@repo/db/schemas/models/notifications";
-import { and, eq, inArray } from "drizzle-orm";
-import { sendWhatsAppMessage } from "@/providers/interakt.js";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
+import { claimNotificationQueueRows } from "@/utils/queue-claim.js";
 
 const BATCH_SIZE = Number(process.env.NOTIF_BATCH_SIZE ?? 100);
 const MAX_RETRIES = 7;
 
 export async function processDbQueueOnce() {
-  // Fetch oldest pending
-  const rows = await db.transaction(async (tx) => {
-    const ids = await tx
-      .select({ id: notificationQueueModel.id })
-      .from(notificationQueueModel)
-      .where(
-        and(
-          eq(notificationQueueModel.isDeadLetter, false),
-          eq(notificationQueueModel.isProcessing, false),
-          inArray(notificationQueueModel.type, ["WHATSAPP_QUEUE"]),
-        ),
-      )
-      .orderBy(notificationQueueModel.createdAt)
-      .limit(BATCH_SIZE);
-
-    if (ids.length === 0) return [];
-
-    return tx
-      .update(notificationQueueModel)
-      .set({ isProcessing: true })
-      .where(
-        inArray(
-          notificationQueueModel.id,
-          ids.map((i) => i.id),
-        ),
-      )
-      .returning();
-  });
+  const rows = await claimNotificationQueueRows("WHATSAPP_QUEUE", BATCH_SIZE);
 
   for (const row of rows) {
     try {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { uppercaseRomanNumerals } from "@/utils/uppercaseRomanNumerals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -2168,7 +2169,7 @@ export default function ScheduleExamPage() {
                                     />
                                     <div className="flex-1 min-w-0">
                                       <p className="font-medium text-sm text-gray-800">
-                                        {group.name}
+                                        {uppercaseRomanNumerals(group.name)}
                                       </p>
                                       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                                         <p className="text-xs text-gray-600">

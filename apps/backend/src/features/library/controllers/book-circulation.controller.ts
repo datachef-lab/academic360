@@ -10,8 +10,10 @@ import {
   issueBookCirculationFromExistingById,
   reissueBookCirculationById,
   returnBookCirculationById,
+  searchBookOptions,
   upsertBookCirculationRowsForUser,
 } from "@/features/library/services/book-circulation.service.js";
+import { resolvePolicyForCirculation } from "@/features/library/services/circulation-policy-resolver.service.js";
 import { socketService } from "@/services/socketService.js";
 
 const parseId = (value?: string | string[]): number | null => {
@@ -52,6 +54,11 @@ export const getBookCirculationListController = async (
       typeof req.query.status === "string" ? req.query.status : undefined;
     const issueDate =
       typeof req.query.issueDate === "string" ? req.query.issueDate : undefined;
+    const branchIdRaw = req.query.branchId;
+    const branchId =
+      typeof branchIdRaw === "string" && branchIdRaw !== ""
+        ? Number(branchIdRaw)
+        : undefined;
 
     const records = await findBookCirculationPaginated({
       page: safePage,
@@ -71,6 +78,10 @@ export const getBookCirculationListController = async (
         | "RETURNED"
         | undefined,
       issueDate,
+      branchId:
+        branchId !== undefined && !Number.isNaN(branchId)
+          ? branchId
+          : undefined,
     });
 
     res
@@ -154,6 +165,74 @@ export const performBookCirculationActionController = async (
           "Book circulation action completed.",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const searchBookCirculationBookOptionsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const raw = req.query.search;
+    const search =
+      typeof raw === "string"
+        ? raw
+        : Array.isArray(raw)
+          ? String(raw[0] ?? "")
+          : "";
+    const limitRaw = req.query.limit;
+    const limit =
+      Number(Array.isArray(limitRaw) ? limitRaw[0] : limitRaw) || 50;
+    const options = await searchBookOptions(search, limit);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          options,
+          "Book options fetched successfully.",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const getBookCirculationPolicyController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userId = parseId(req.query.userId as string | string[] | undefined);
+    const copyDetailsId = parseId(
+      req.query.copyDetailsId as string | string[] | undefined,
+    );
+    if (!userId || !copyDetailsId) {
+      throw new ApiError(400, "userId and copyDetailsId are required");
+    }
+    const policy = await resolvePolicyForCirculation(userId, copyDetailsId);
+    const due = new Date();
+    due.setDate(due.getDate() + policy.loanDays);
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "SUCCESS",
+        {
+          loanDays: policy.loanDays,
+          finePerDay: policy.finePerDay,
+          graceDays: policy.graceDays,
+          renewalLimit: policy.renewalLimit,
+          policyId: policy.policyId ?? null,
+          dueDate: due.toISOString(),
+        },
+        "Circulation policy resolved.",
+      ),
+    );
   } catch (error) {
     handleError(error, res, next);
   }

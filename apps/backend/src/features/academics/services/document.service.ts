@@ -4,6 +4,11 @@ import "dotenv/config";
 import { ilike } from "drizzle-orm";
 import { promises as fs } from "fs";
 import path from "path";
+import {
+  extractS3KeyFromUrl,
+  fileExistsInS3,
+  getBufferFromS3,
+} from "@/services/s3.service.js";
 
 interface ScanExistingMarksheetFilesByRollNumbrProps {
   framework: "CCF" | "CBSE";
@@ -20,6 +25,37 @@ const defaultDocuments: DocumentT[] = [
   { name: "Mother Photo ID", description: "Mother Photo ID" },
   { name: "EWS Certificate", description: "EWS Certificate" },
 ];
+
+function marksheetS3Key(
+  framework: string,
+  year: number,
+  stream: string,
+  semester: number,
+  rollNumber: string,
+): string {
+  return `marksheets/${framework}/${year}/${stream}/${semester}/${rollNumber}.pdf`;
+}
+
+function marksheetLocalPath(
+  framework: string,
+  year: number,
+  stream: string,
+  semester: number,
+  rollNumber: string,
+): string | null {
+  const documentsPath = process.env.DOCUMENTS_PATH;
+  if (!documentsPath) return null;
+  return path.join(
+    documentsPath,
+    "marksheets",
+    framework,
+    String(year),
+    stream,
+    String(semester),
+    `${rollNumber}.pdf`,
+  );
+}
+
 export async function loadDefaultDocuments() {
   for (const document of defaultDocuments) {
     const existingDocument = await db
@@ -40,30 +76,48 @@ export async function scanExistingMarksheetFilesByRollNumber({
 }: ScanExistingMarksheetFilesByRollNumbrProps): Promise<
   { year: number; filePath: string }[]
 > {
-  const basePath = `${process.env.DOCUMENTS_PATH}/marksheets/${framework}`;
   const fileItems: { year: number; filePath: string }[] = [];
 
-  // Scan the directory for files
   for (let year = 2017; year <= new Date().getFullYear(); year++) {
-    let filePath = `${basePath}/${year}/${stream}/${semester}/${rollNumber}.pdf`;
-    console.log(filePath);
+    const s3Key = marksheetS3Key(framework, year, stream, semester, rollNumber);
+    const existsInS3 = await fileExistsInS3(s3Key);
+    if (existsInS3) {
+      fileItems.push({ year, filePath: s3Key });
+      continue;
+    }
+
+    const localPath = marksheetLocalPath(
+      framework,
+      year,
+      stream,
+      semester,
+      rollNumber,
+    );
+    if (!localPath) continue;
 
     try {
-      await fs.access(filePath); // Check if the file exists
-      fileItems.push({ year, filePath }); // Store the valid file path
-    } catch (error) {
-      // File doesn't exist, continue checking
+      await fs.access(localPath);
+      fileItems.push({ year, filePath: localPath });
+    } catch {
+      // File doesn't exist locally either.
     }
   }
 
-  console.log(fileItems);
-
-  return fileItems; // Return all found file paths
+  return fileItems;
 }
 
 export async function getFile(filePath: string): Promise<Buffer | null> {
   try {
-    console.log(`Reading file: ${filePath}`);
+    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+      const key = extractS3KeyFromUrl(filePath);
+      if (!key) return null;
+      return await getBufferFromS3(key);
+    }
+
+    if (filePath.startsWith("marksheets/")) {
+      return await getBufferFromS3(filePath);
+    }
+
     const absolutePath = path.resolve(filePath);
     return await fs.readFile(absolutePath);
   } catch (error) {

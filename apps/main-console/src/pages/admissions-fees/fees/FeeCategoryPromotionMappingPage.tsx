@@ -71,6 +71,7 @@ import { useSocket } from "@/hooks/useSocket";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import type { ProgressUpdate } from "@/types/progress";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
 const DotSpinnerLoader: React.FC = () => (
   <div className="flex items-center justify-center py-8">
@@ -2169,11 +2170,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14">
                 <AvatarImage
-                  src={
-                    (editingItem?.promotion as { uid?: string } | undefined)?.uid
-                      ? `${import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ?? "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid="}${(editingItem.promotion as { uid: string }).uid}`
-                      : undefined
-                  }
+                  src={studentAvatarUrl(
+                    (editingItem?.promotion as { uid?: string } | undefined)?.uid,
+                  )}
                 />
                 <AvatarFallback className="bg-slate-200 text-slate-700 text-lg">
                   {(editingItem?.promotion as { studentName?: string } | undefined)?.studentName

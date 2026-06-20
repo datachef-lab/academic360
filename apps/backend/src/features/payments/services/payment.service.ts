@@ -96,10 +96,25 @@ function omitUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 
+export function parsePaytmTxnDateInput(
+  value: Date | string | undefined | null,
+): Date | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? value : undefined;
+  }
+  const trimmed = String(value).trim();
+  if (!trimmed) return undefined;
+  const parsed = new Date(trimmed);
+  return Number.isFinite(parsed.getTime()) ? parsed : undefined;
+}
+
 function formatTxnDate(value: Date | string | undefined): string | undefined {
   if (value === undefined) return undefined;
-  if (value instanceof Date) return value.toISOString();
-  return String(value);
+  const parsed = parsePaytmTxnDateInput(value);
+  if (parsed) return parsed.toISOString();
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return undefined;
 }
 
 function previewJson(value: unknown, maxLen = 2000): string {

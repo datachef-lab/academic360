@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { uppercaseRomanNumerals } from "@/utils/uppercaseRomanNumerals";
 import { ExamGroupDto, ExamPapersWithStats, ExamSubjectDto } from "@/dtos";
 import {
   downloadAdmitCardTracking,
@@ -317,7 +318,7 @@ export default function ExamPage() {
 
     const preferredFileName = examGroup
       ? (() => {
-          const name = (examGroup.name || "exam")
+          const name = uppercaseRomanNumerals(examGroup.name || "exam")
             .replace(/[/\\:*?"<>|]/g, "-")
             .replace(/\s+/g, " ")
             .trim()
@@ -379,7 +380,7 @@ export default function ExamPage() {
 
     const preferredFileName = examGroup
       ? (() => {
-          const name = (examGroup.name || "exam")
+          const name = uppercaseRomanNumerals(examGroup.name || "exam")
             .replace(/[/\\:*?"<>|]/g, "-")
             .replace(/\s+/g, " ")
             .trim()
@@ -642,7 +643,7 @@ export default function ExamPage() {
 
     const preferredFileName = examGroup
       ? (() => {
-          const name = (examGroup.name || "exam")
+          const name = uppercaseRomanNumerals(examGroup.name || "exam")
             .replace(/[/\\:*?"<>|]/g, "-")
             .replace(/\s+/g, " ")
             .trim()

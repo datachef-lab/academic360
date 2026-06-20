@@ -10,3 +10,4 @@ export * from "./academics/index.js";
 export * from "./batches/index.js";
 export * from "./library/index.js";
 export * from "./fees/index.js";
+export * from "./idcard/index.js";

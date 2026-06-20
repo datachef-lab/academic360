@@ -3,6 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { and, count, desc, eq, ilike, SQL } from "drizzle-orm";
 import { statusModel } from "@repo/db/schemas/models/library/status.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 export type StatusListFilters = {
   page: number;
@@ -94,6 +95,13 @@ export async function getStatusById(id: number): Promise<StatusListRow | null> {
 }
 
 export async function createStatus(input: StatusUpsertInput): Promise<number> {
+  await assertUniqueLibraryName({
+    table: statusModel,
+    nameColumn: statusModel.name,
+    idColumn: statusModel.id,
+    value: input.name,
+    label: "Status",
+  });
   const [inserted] = await db
     .insert(statusModel)
     .values({
@@ -109,6 +117,14 @@ export async function updateStatus(
   id: number,
   input: StatusUpsertInput,
 ): Promise<void> {
+  await assertUniqueLibraryName({
+    table: statusModel,
+    nameColumn: statusModel.name,
+    idColumn: statusModel.id,
+    value: input.name,
+    label: "Status",
+    excludeId: id,
+  });
   await db
     .update(statusModel)
     .set({

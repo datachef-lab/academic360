@@ -366,6 +366,7 @@ export const paymentForTypeEnum = pgEnum("payment_for_type", [
     "ADMISSION_APPLICATION_FEE",
     "FEE",
     "ADMISSION",
+    "LIBRARY_FINE",
     "OTHER",
 ]);
 
@@ -453,4 +454,22 @@ export const academicActivityTypeEnum = pgEnum("academic_activity_type", [
     "EXAMINATION",
     "ADMISSION",
     "ACADEMIC",
+]);
+
+export const idCardFieldKeyEnum = pgEnum("id_card_field_key", [
+    "NAME",
+    "COURSE",
+    "UID",
+    "MOBILE",
+    "BLOOD_GROUP",
+    "SPORTS_QUOTA",
+    "QRCODE",
+    "VALID_TILL_DATE",
+    "PHOTO",
+]);
+
+export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [
+    "ISSUED",
+    "RENEWED",
+    "REISSUED",
 ]);

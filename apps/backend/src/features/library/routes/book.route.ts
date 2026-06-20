@@ -4,9 +4,13 @@ import {
   createBookController,
   deleteBookController,
   downloadBookExcelController,
+  federatedCatalogSearchController,
   getBookByIdController,
   getBookListController,
+  getBookDublinCoreController,
   getBooksMetaController,
+  importMarcController,
+  importMarcMiddleware,
   uploadBookCoverMiddleware,
   updateBookController,
 } from "@/features/library/controllers/book.controller.js";
@@ -17,6 +21,9 @@ router.use(verifyJWT);
 
 router.get("/meta", getBooksMetaController);
 router.get("/download", downloadBookExcelController);
+router.post("/import-marc", importMarcMiddleware, importMarcController);
+router.get("/federated-search", federatedCatalogSearchController);
+router.get("/:id/dublin-core", getBookDublinCoreController);
 router.get("/", getBookListController);
 router.get("/:id", getBookByIdController);
 router.post("/", uploadBookCoverMiddleware, createBookController);

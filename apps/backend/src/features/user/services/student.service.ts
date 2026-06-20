@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm";
 import pLimit from "p-limit";
 import JSZip from "jszip";
+import { resolveStudentAvatarBuffer } from "@/features/user/services/student-avatar.service.js";
 import { db, mysqlConnection } from "@/db/index.js";
 import {
   personalDetailsModel,
@@ -3223,22 +3224,20 @@ export async function downloadStudentImages(
               return;
             }
 
-            const response = await axios.get(
-              `https://besc.academic360.app/id-card-generate/api/images?uid=${student.uid}&crop=true`,
-              { responseType: "arraybuffer", timeout: 0 },
+            // Pull the photo through the unified resolver chain so it
+            // doesn't matter whether the bytes live in S3 or on the legacy
+            // hosts — the helper picks the first source that delivers.
+            const hit = await resolveStudentAvatarBuffer(student.uid).catch(
+              () => null,
             );
-
-            if (response.status !== 200 || !response.data) {
-              console.error(
-                `Bad response for UID ${student.uid}`,
-                response.status,
-              );
+            if (!hit) {
+              console.error(`No avatar resolved for UID ${student.uid}`);
               return;
             }
 
             // use application number as filename (prefix P as before)
             const fileName = `P${student.cuAppNo}.jpg`;
-            zip.file(fileName, response.data);
+            zip.file(fileName, hit.buffer);
 
             processedCount++;
             socketService.sendProgressUpdate(userId.toString(), {

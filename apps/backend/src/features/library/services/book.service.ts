@@ -26,6 +26,7 @@ export type BookListFilters = {
   libraryDocumentTypeId?: number;
   journalId?: number;
   enclosureId?: number;
+  branchId?: number;
 };
 
 export type BookExportFilters = Omit<BookListFilters, "page" | "limit">;
@@ -183,6 +184,9 @@ const buildListWhere = (
   }
   if (filters.enclosureId != null && !Number.isNaN(filters.enclosureId)) {
     parts.push(eq(bookModel.enclosureId, filters.enclosureId));
+  }
+  if (filters.branchId != null && !Number.isNaN(filters.branchId)) {
+    parts.push(eq(bookModel.branchId, filters.branchId));
   }
   if (parts.length === 0) return undefined;
   return parts.length === 1 ? parts[0]! : and(...parts)!;

@@ -101,6 +101,7 @@ export type BookCirculationFilters = {
   userType?: BookCirculationUserType;
   status?: BookCirculationStatus;
   issueDate?: string;
+  branchId?: number | null;
 };
 
 const BASE_URL = "/api/library/book-circulation";
@@ -136,6 +137,38 @@ export async function performBookCirculationAction(
 export async function getBookCirculationMeta(): Promise<ApiResponse<BookCirculationMetaPayload>> {
   const response = await axiosInstance.get<ApiResponse<BookCirculationMetaPayload>>(
     `${BASE_URL}/meta`,
+  );
+  return response.data;
+}
+
+export type BookOption = BookCirculationMetaPayload["bookOptions"][number];
+
+export async function searchBookCirculationBookOptions(
+  search: string,
+  limit = 50,
+): Promise<ApiResponse<BookOption[]>> {
+  const response = await axiosInstance.get<ApiResponse<BookOption[]>>(`${BASE_URL}/book-options`, {
+    params: { search, limit },
+  });
+  return response.data;
+}
+
+export type BookCirculationPolicyPayload = {
+  loanDays: number;
+  finePerDay: number;
+  graceDays: number;
+  renewalLimit: number;
+  policyId: number | null;
+  dueDate: string;
+};
+
+export async function getBookCirculationPolicy(
+  userId: number,
+  copyDetailsId: number,
+): Promise<ApiResponse<BookCirculationPolicyPayload>> {
+  const response = await axiosInstance.get<ApiResponse<BookCirculationPolicyPayload>>(
+    `${BASE_URL}/policy`,
+    { params: { userId, copyDetailsId } },
   );
   return response.data;
 }

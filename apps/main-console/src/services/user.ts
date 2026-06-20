@@ -4,6 +4,27 @@ import { User } from "@/types/user/user";
 import axiosInstance from "@/utils/api";
 import type { AuthUser } from "@/types/Auth/authUser";
 
+export type StudentPickerOption = {
+  userId: number;
+  studentId: number;
+  name: string;
+  uid: string;
+  rollNumber: string | null;
+  registrationNumber: string | null;
+};
+
+export async function getStudentPickerOptions(
+  params: {
+    search?: string;
+    limit?: number;
+  } = {},
+): Promise<ApiResponse<StudentPickerOption[]>> {
+  const response = await axiosInstance.get("/api/users/student-picker", {
+    params,
+  });
+  return response.data;
+}
+
 export async function getSearchedUsers(
   page: number,
   pageSize: number,

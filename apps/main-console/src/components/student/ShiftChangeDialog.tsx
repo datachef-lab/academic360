@@ -40,10 +40,14 @@ import { useShifts } from "@/hooks/useShifts";
 import {
   fetchStudentShiftChangePreview,
   submitStudentShiftChange,
+  updateActivePromotionFields,
   type ShiftChangeFeeGroupPreviewRow,
   type StudentShiftChangePreview,
   type UidBreakdownPreview,
 } from "@/services/student-shift-change.service";
+import axiosInstance from "@/utils/api";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Shift } from "@/types/academics/shift";
@@ -57,13 +61,9 @@ type ShiftChangeDialogProps = {
 
 const STUDENT_LOGIN_EMAIL_DOMAIN = "thebges.edu.in";
 
-function getStudentAvatarUrl(uid: string | undefined): string | undefined {
-  if (!uid) return undefined;
-  const base =
-    import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ??
-    "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid=";
-  return `${base}${uid}`;
-}
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
+
+const getStudentAvatarUrl = studentAvatarUrl;
 
 function ShiftIcon({ name, className }: { name: string; className?: string }) {
   const normalized = name.toLowerCase();
@@ -213,29 +213,10 @@ function getGeneratedDocumentDetectionMessage(documents: GeneratedFeeDocument[])
     : "We have detected that a challan has already been generated for this student:";
 }
 
-function getGeneratedDocumentInvalidationMessage(documents: GeneratedFeeDocument[]): string {
-  if (documents.length === 0) return "";
-
-  const types = new Set(documents.map((doc) => doc.documentLabel));
-  const plural = documents.length > 1;
-
-  if (types.has("fee receipt") && types.has("challan")) {
-    return plural
-      ? "These downloaded fee receipts and challans will no longer be treated as valid after the shift change."
-      : documents[0]!.documentLabel === "fee receipt"
-        ? "The downloaded fee receipt will no longer be treated as valid after the shift change."
-        : "The downloaded challan will no longer be treated as valid after the shift change.";
-  }
-
-  if (types.has("fee receipt")) {
-    return plural
-      ? "These downloaded fee receipts will no longer be treated as valid after the shift change."
-      : "The downloaded fee receipt will no longer be treated as valid after the shift change.";
-  }
-
-  return plural
-    ? "These downloaded challans will no longer be treated as valid after the shift change."
-    : "The downloaded challan will no longer be treated as valid after the shift change.";
+function getGeneratedDocumentInvalidationMessage(_documents: GeneratedFeeDocument[]): string {
+  // Hard block: once a fee receipt/challan has been generated (or the term
+  // is fully paid), shift change is not permitted from this dialog.
+  return "Fees paid is detected — shift change is not allowed.";
 }
 
 function PreviewSkeleton() {
@@ -463,7 +444,26 @@ export default function ShiftChangeDialog({
   const currentShiftId = student?.currentPromotion?.shift?.id;
 
   const [selectedShiftId, setSelectedShiftId] = useState<string>("");
+  const [selectedSectionId, setSelectedSectionId] = useState<string>("");
+  const [classRollNumber, setClassRollNumber] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Sections list for the dropdown — uses the same endpoint the idcard
+  // Sections master pulls from.
+  const sectionsQuery = useQuery({
+    queryKey: ["sections", "for-shift-change-dialog"],
+    enabled: open,
+    queryFn: async () => {
+      const res = await axiosInstance.get<{
+        payload: Array<{ id: number; name: string; isActive: boolean | null }>;
+      }>("/api/v1/sections");
+      return (res.data.payload ?? []).filter((s) => s.isActive !== false);
+    },
+  });
+  const sections = sectionsQuery.data ?? [];
+
+  const currentSectionId = student?.currentPromotion?.section?.id ?? null;
+  const currentClassRollNumber = student?.currentPromotion?.classRollNumber ?? "";
 
   const otherShifts = useMemo(
     () => shifts.filter((s) => s.id != null && s.id !== currentShiftId && !s.disabled),
@@ -477,6 +477,8 @@ export default function ShiftChangeDialog({
   useEffect(() => {
     if (!open) {
       setSelectedShiftId("");
+      setSelectedSectionId("");
+      setClassRollNumber("");
       return;
     }
     if (otherShifts.length > 0 && otherShifts[0]?.id != null) {
@@ -487,7 +489,11 @@ export default function ShiftChangeDialog({
         return String(otherShifts[0]!.id);
       });
     }
-  }, [open, otherShifts]);
+    // Seed the section + roll inputs from the student's current active
+    // promotion so the operator sees today's values.
+    setSelectedSectionId(currentSectionId ? String(currentSectionId) : "");
+    setClassRollNumber(currentClassRollNumber ?? "");
+  }, [open, otherShifts, currentSectionId, currentClassRollNumber]);
 
   useEffect(() => {
     if (!open || !student?.id || hasPreviousUid) return;
@@ -511,22 +517,70 @@ export default function ShiftChangeDialog({
   const isInitialPreviewLoad = previewQuery.isLoading && !preview;
   const isRefreshingPreview = previewQuery.isFetching && Boolean(preview);
 
+  const sectionChanged =
+    selectedSectionId !== "" && Number(selectedSectionId) !== (currentSectionId ?? -1);
+  const trimmedRoll = classRollNumber.trim();
+  const rollChanged = trimmedRoll !== "" && trimmedRoll !== (currentClassRollNumber ?? "");
+  const shiftPicked =
+    Boolean(selectedShiftId) && Number(selectedShiftId) !== (currentShiftId ?? -1);
+
+  const errorMessage = (err: unknown): string | null => {
+    if (!err || typeof err !== "object") return null;
+    const response = (err as { response?: { data?: { message?: string } } }).response;
+    return response?.data?.message ?? null;
+  };
+
+  // Block shift change whenever fees are fully paid OR any fee
+  // receipt/challan has been generated for the current term.
+  const shiftBlockedByFees =
+    preview?.feesPaid === true ||
+    (preview?.feeComparison?.old?.some((row) => !!row.generatedDocumentType) ?? false) ||
+    (preview?.generatedFeeDocuments?.length ?? 0) > 0;
+
   const handleConfirm = async () => {
-    if (!student?.id || !selectedShiftId) return;
+    if (!student?.id) return;
+    if (!shiftPicked && !sectionChanged && !rollChanged) {
+      toast.info("Nothing to update.");
+      return;
+    }
+    if (shiftBlockedByFees) {
+      toast.error("Shift change is blocked because fees have already been paid for this student.");
+      return;
+    }
     setSubmitting(true);
     try {
-      const result = await submitStudentShiftChange(student.id, Number(selectedShiftId));
-      toast.success(`Shift updated. New student ID: ${result.newUid}`);
-      if (onSuccess) {
-        await onSuccess(result.newUid);
+      let newUid: string | null = null;
+
+      // 1) Persist section / class roll number changes to every active
+      //    promotion. Run this BEFORE the shift change because the shift
+      //    change rotates the student row's UID and creates new rows we
+      //    don't want to overwrite.
+      if (sectionChanged || rollChanged) {
+        await updateActivePromotionFields(student.id, {
+          sectionId: sectionChanged ? Number(selectedSectionId) : undefined,
+          classRollNumber: rollChanged ? trimmedRoll : undefined,
+        });
+      }
+
+      // 2) Apply the heavier shift-change flow only if the operator picked a
+      //    different shift.
+      if (shiftPicked) {
+        const result = await submitStudentShiftChange(student.id, Number(selectedShiftId));
+        newUid = result.newUid;
+        toast.success(`Shift updated. New student ID: ${result.newUid}`);
+      } else {
+        toast.success("Student details updated.");
+      }
+
+      if (newUid && onSuccess) {
+        await onSuccess(newUid);
+      } else if (onSuccess) {
+        // Same UID; let the caller refresh in place.
+        await onSuccess(student.uid ?? "");
       }
       onOpenChange(false);
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : null;
-      toast.error(msg || "Could not change shift. Please try again.");
+      toast.error(errorMessage(err) || "Could not save changes. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -534,10 +588,12 @@ export default function ShiftChangeDialog({
 
   const canConfirm =
     !hasPreviousUid &&
-    Boolean(selectedShiftId) &&
-    preview?.allowed === true &&
     !submitting &&
-    !isInitialPreviewLoad;
+    !isInitialPreviewLoad &&
+    !shiftBlockedByFees &&
+    // Either a non-blocking field changed, or a real shift change with an
+    // allowed preview that hasn't been blocked by paid fees.
+    (sectionChanged || rollChanged || (shiftPicked && preview?.allowed === true));
 
   const selectedShift = otherShifts.find((s) => String(s.id) === selectedShiftId);
   const avatarUrl = getStudentAvatarUrl(currentUid);
@@ -554,7 +610,7 @@ export default function ShiftChangeDialog({
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-violet-100 text-violet-700">
               <PencilLine className="h-4 w-4" />
             </span>
-            Change student shift
+            Edit student — shift, section, class roll
           </DialogTitle>
         </DialogHeader>
 
@@ -582,31 +638,68 @@ export default function ShiftChangeDialog({
           </div>
 
           {!hasPreviousUid ? (
-            <Select
-              value={selectedShiftId}
-              onValueChange={setSelectedShiftId}
-              disabled={shiftsLoading || otherShifts.length === 0}
-            >
-              <SelectTrigger
-                id="newShift"
-                className="h-10 min-w-[280px] w-[280px] shrink-0 text-base [&>span]:line-clamp-none"
-              >
-                <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-hidden">
-                  {selectedShift ? (
-                    <ShiftSelectLabel name={selectedShift.name} />
-                  ) : (
-                    <SelectValue placeholder="New shift" />
-                  )}
-                </div>
-              </SelectTrigger>
-              <SelectContent className="min-w-[280px]">
-                {otherShifts.map((shift: Shift) => (
-                  <SelectItem key={shift.id} value={String(shift.id)} className="py-2.5">
-                    <ShiftSelectLabel name={shift.name} />
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex shrink-0 items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <Label className="text-[11px] font-medium text-muted-foreground">New shift</Label>
+                <Select
+                  value={selectedShiftId}
+                  onValueChange={setSelectedShiftId}
+                  disabled={shiftsLoading || otherShifts.length === 0 || shiftBlockedByFees}
+                >
+                  <SelectTrigger
+                    id="newShift"
+                    className="h-10 min-w-[220px] w-[220px] shrink-0 text-sm [&>span]:line-clamp-none"
+                  >
+                    <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-hidden">
+                      {selectedShift ? (
+                        <ShiftSelectLabel name={selectedShift.name} />
+                      ) : (
+                        <SelectValue placeholder="Keep current" />
+                      )}
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="min-w-[220px]">
+                    {otherShifts.map((shift: Shift) => (
+                      <SelectItem key={shift.id} value={String(shift.id)} className="py-2.5">
+                        <ShiftSelectLabel name={shift.name} />
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <Label className="text-[11px] font-medium text-muted-foreground">Section</Label>
+                <Select
+                  value={selectedSectionId}
+                  onValueChange={setSelectedSectionId}
+                  disabled={sectionsQuery.isLoading || sections.length === 0}
+                >
+                  <SelectTrigger className="h-10 min-w-[180px] w-[180px] text-sm">
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                  <SelectContent className="min-w-[180px]">
+                    {sections.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <Label className="text-[11px] font-medium text-muted-foreground">
+                  Class Roll No.
+                </Label>
+                <Input
+                  value={classRollNumber}
+                  onChange={(e) => setClassRollNumber(e.target.value)}
+                  placeholder="e.g. 23"
+                  className="h-10 min-w-[140px] w-[140px] text-sm"
+                />
+              </div>
+            </div>
           ) : null}
         </div>
 
@@ -626,10 +719,12 @@ export default function ShiftChangeDialog({
             </div>
           ) : (
             <>
-              {!selectedShiftId ? (
+              {!shiftPicked ? (
                 <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed py-12 text-sm text-muted-foreground">
                   <Info className="h-4 w-4" />
-                  Choose a shift to preview
+                  {sectionChanged || rollChanged
+                    ? "Section / class roll number will be applied to every active promotion on save."
+                    : "Pick a new shift to preview the UID change, or just update section / class roll number."}
                 </div>
               ) : isInitialPreviewLoad ? (
                 <PreviewSkeleton />
@@ -637,6 +732,18 @@ export default function ShiftChangeDialog({
                 <div className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                   <p>{preview.blockReason}</p>
+                </div>
+              ) : shiftBlockedByFees ? (
+                <div className="flex gap-2.5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                  <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      Shift change is not allowed — fees have already been paid for this student.
+                    </p>
+                    <p className="text-red-800/90">
+                      Reverse the existing fee receipt before attempting to change the shift.
+                    </p>
+                  </div>
                 </div>
               ) : preview?.allowed ? (
                 <div className="flex min-h-0 flex-1 flex-col">
@@ -663,8 +770,10 @@ export default function ShiftChangeDialog({
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving…
                 </>
-              ) : (
+              ) : shiftPicked ? (
                 "Confirm shift change"
+              ) : (
+                "Save section & roll"
               )}
             </Button>
           ) : null}

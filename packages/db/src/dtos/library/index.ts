@@ -1,7 +1,7 @@
-import { BindingT, BookCirculationT, BookT, BorrowingTypeT, CopyDetailsT, EnclosureT, EntryModeT, JournalT, LibraryArticleT, LibraryDocumentTypeT, LibraryEntryExitT, LibraryPeriodT, PublisherT, RackT, SeriesT, ShelfT, StatusT } from "@/schemas/models/library";
+import { AuthorDetailsT, AuthorT, AuthorTypeT, BindingT, BookCirculationT, BookT, BorrowingTypeT, BranchT, CirculationPolicyT, ClassHolidayT, CopyDetailsT, EnclosureT, EntryModeT, HolidayT, ItemCategoryT, JournalT, LibraryArticleT, LibraryDocumentTypeT, LibraryEntryExitT, LibraryPeriodT, PatronCategoryT, PublisherT, RackT, SeriesT, ShelfT, StatusT, VendorT } from "@/schemas/models/library";
 import { SubjectGroupingMainDto } from "../course-design";
 import { AddressDto, PersonDto } from "../user";
-import { LanguageMediumT, PaymentT, UserT } from "@/schemas";
+import { ClassT, LanguageMediumT, NationalityT, PaymentT, ProgramCourseT, UserT } from "@/schemas";
 import { BookReissueT } from "@/schemas/models/library/book-reissue.model";
 
 export interface PublisherDto extends PublisherT {
@@ -46,11 +46,45 @@ export interface BookDto extends Omit<BookT,
     publisher: PublisherDto | null;
     journal: JournalDto | null;
     enclosure: EnclosureT | null;
+    authors: AuthorDetailsDto[];
     createdBy: UserT;
     updatedBy: UserT;
 }
 
-export interface CopyDetailsDto extends Omit<CopyDetailsT, 
+export interface AuthorTypeDto extends AuthorTypeT {}
+
+export interface AuthorDto extends Omit<AuthorT, "authorTypeId" | "nationalityId"> {
+    authorType: AuthorTypeT | null;
+    nationality: NationalityT | null;
+}
+
+export interface AuthorDetailsDto extends Omit<AuthorDetailsT, "bookId" | "authorId" | "authorTypeId"> {
+    author: AuthorDto;
+    authorType: AuthorTypeT;
+}
+
+export interface VendorDto extends VendorT {}
+
+export interface HolidayDto extends HolidayT {}
+
+export interface ClassHolidayDto extends Omit<ClassHolidayT, "holidayId" | "programCourseId" | "classId"> {
+    holiday: HolidayDto;
+    programCourse: ProgramCourseT;
+    class: ClassT;
+}
+
+export interface BranchDto extends BranchT {}
+
+export interface PatronCategoryDto extends PatronCategoryT {}
+
+export interface ItemCategoryDto extends ItemCategoryT {}
+
+export interface CirculationPolicyDto extends Omit<CirculationPolicyT, "patronCategoryId" | "itemCategoryId"> {
+    patronCategory: PatronCategoryT;
+    itemCategory: ItemCategoryT;
+}
+
+export interface CopyDetailsDto extends Omit<CopyDetailsT,
     "bookId"
     | "statusId"
     | "enntryModeId"
@@ -59,6 +93,7 @@ export interface CopyDetailsDto extends Omit<CopyDetailsT,
     | "enclosureId"
     | "bindingTypeId"
     | "donorPersonId"
+    | "vendorId"
     | "createdById"
     | "updatedById"
 > {
@@ -69,6 +104,7 @@ export interface CopyDetailsDto extends Omit<CopyDetailsT,
     shelf: ShelfT | null;
     enclosure: EnclosureT | null;
     bindingType: BindingT | null;
+    vendor: VendorDto | null;
     DonorPerson: PersonDto | null;
     createdBy: UserT;
     updatedBy: UserT;
@@ -344,4 +380,57 @@ export interface OldIssueReturn {
 export interface OldSubjectGroup {
     readonly id: number;
     subjectgroupName: string;
+}
+
+export interface OldAuthor {
+    readonly id: number;
+    authorName: string;
+    authorType: number;
+    shortName: string | null;
+    nationalityid: number | null;
+    notes: string | null;
+}
+
+export interface OldAuthorType {
+    readonly id: number;
+    authortypeName: string;
+}
+
+export interface OldAuthorDetail {
+    readonly id: number;
+    parent_id: number | null; // References to OldBookEntry
+    authorTypeId: number | null; // References to OldAuthorType
+    authorId: number | null; // References to OldAuthor
+}
+
+export interface OldHoliday {
+    readonly id: number;
+    holidayName: string;
+    fromDate: string | Date | null;
+    toDate: string | Date | null;
+    remarks: string | null;
+}
+
+export interface OldClassHoliday {
+    readonly id: number;
+    parent_id: number; // References to OldHoliday
+    courseId: number; // References to OldProgramCourse
+    classId: number; // References to OldClass
+    isHoliday: boolean;
+}
+
+export interface OldVendor {
+    id: number;
+vendorName: string | null;
+vendoreCode: string | null;
+vendorshortName: string | null;
+vendoraddress: string | null;
+vendorphoneNumber: string | null;
+vendorEmail: string | null;
+vendorWebsite: string | null;
+contactpersonName: string | null;
+contactpersonEmail: string | null;
+contactpersonphnoneNumber: string | null;
+panNumber: string | null;
+
 }

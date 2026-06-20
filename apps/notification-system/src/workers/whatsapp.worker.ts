@@ -4,7 +4,8 @@ import {
   notificationModel,
   notificationContentModel,
 } from "@repo/db/schemas/models/notifications";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { claimNotificationQueueRows } from "@/utils/queue-claim.js";
 import { sendWhatsAppMessage } from "@/providers/interakt.js";
 import type {
   NotificationEventDto,
@@ -48,16 +49,7 @@ function readFromTemplateData(
 
 async function processBatch() {
   try {
-    const rows = await db
-      .select()
-      .from(notificationQueueModel)
-      .where(
-        and(
-          eq(notificationQueueModel.type, "WHATSAPP_QUEUE" as any),
-          eq(notificationQueueModel.isDeadLetter, false),
-        ),
-      )
-      .limit(BATCH_SIZE);
+    const rows = await claimNotificationQueueRows("WHATSAPP_QUEUE", BATCH_SIZE);
     if (rows.length === 0) {
       return;
     }
@@ -451,12 +443,17 @@ async function processBatch() {
               isDeadLetter: true,
               deadLetterAt: new Date(),
               failedReason: errorMessage,
+              isProcessing: false,
             })
             .where(eq(notificationQueueModel.id, row.id));
         } else {
           await db
             .update(notificationQueueModel)
-            .set({ retryAttempts: attempts, failedReason: errorMessage })
+            .set({
+              retryAttempts: attempts,
+              failedReason: errorMessage,
+              isProcessing: false,
+            })
             .where(eq(notificationQueueModel.id, row.id));
         }
       }
