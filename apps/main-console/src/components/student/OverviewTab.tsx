@@ -406,7 +406,7 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
         ) : (
           <div className="rounded-md border border-gray-200 overflow-hidden shadow-none">
             <div className="overflow-x-auto">
-              <Table className="min-w-full">
+              <Table className="min-w-full [&_tbody_tr]:bg-white [&_tbody_tr:hover]:bg-white">
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
                     <TableHead className="text-xs font-semibold text-gray-600 w-12">Sr.</TableHead>
@@ -443,7 +443,7 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
                   {promotions.map((p, index) => (
                     <TableRow
                       key={p.id}
-                      className="border-b border-gray-200 bg-white hover:bg-white"
+                      className="border-b border-gray-200 bg-white hover:bg-white data-[state=selected]:bg-white"
                     >
                       <TableCell className="text-sm text-gray-800">{index + 1}</TableCell>
                       <TableCell className="text-sm">
