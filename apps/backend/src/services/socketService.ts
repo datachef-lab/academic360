@@ -209,6 +209,7 @@ class SocketService {
   > | null = null;
   private activeConnections: Map<string, Set<string>> = new Map(); // userId -> set of socket IDs
   private userInfoCache: Map<string, ActiveUserInfo> = new Map(); // userId -> user info
+  private userConnectedAt: Map<string, Date> = new Map(); // userId -> first socket connect time
   private socketToUserId: Map<string, string> = new Map(); // socketId -> userId
   private socketTabActive: Map<string, boolean> = new Map(); // socketId -> isTabActive (page visible)
 
@@ -652,6 +653,11 @@ class SocketService {
   private async registerUser(userId: string, socketId: string) {
     this.socketToUserId.set(socketId, userId);
 
+    const existingSockets = this.activeConnections.get(userId);
+    if (!existingSockets || existingSockets.size === 0) {
+      this.userConnectedAt.set(userId, new Date());
+    }
+
     if (!this.activeConnections.has(userId)) {
       this.activeConnections.set(userId, new Set());
     }
@@ -718,6 +724,7 @@ class SocketService {
         sockets.delete(socketId);
         if (sockets.size === 0) {
           this.activeConnections.delete(userId);
+          this.userConnectedAt.delete(userId);
           // Remove from cache when user has no active connections
           this.userInfoCache.delete(userId);
         } else {
@@ -777,6 +784,11 @@ class SocketService {
       }
     });
     return ids;
+  }
+
+  public getOnlineStudentLoginTime(userId: number): string | null {
+    const connectedAt = this.userConnectedAt.get(String(userId));
+    return connectedAt ? connectedAt.toISOString() : null;
   }
 
   // Broadcast active users list to all connected clients

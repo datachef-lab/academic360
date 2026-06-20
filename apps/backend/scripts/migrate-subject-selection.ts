@@ -63,6 +63,19 @@ const UID_FILTER = process.argv
   .slice(2)
   .find((a) => a.startsWith("--uid="))
   ?.slice("--uid=".length);
+// Optional: restrict to a newline-delimited UID file (case-insensitive)
+const UIDS_FILE = process.argv
+  .slice(2)
+  .find((a) => a.startsWith("--uids="))
+  ?.slice("--uids=".length);
+const UIDS_SET: Set<string> | null = UIDS_FILE
+  ? new Set(
+      readFileSync(UIDS_FILE, "utf8")
+        .split(/\s+/)
+        .map((s: string) => s.trim().toUpperCase())
+        .filter(Boolean),
+    )
+  : null;
 
 // Legacy class -> new class. Resolved at runtime from new-DB papers coverage.
 let CLASS_MAP: Record<number, number> = {};
@@ -173,6 +186,10 @@ async function main() {
     .where(isNotNull(studentModel.legacyStudentId));
   if (UID_FILTER)
     students = students.filter((s: any) => s.uid === UID_FILTER.toUpperCase());
+  if (UIDS_SET)
+    students = students.filter((s: any) =>
+      UIDS_SET.has(String(s.uid).toUpperCase()),
+    );
   console.log(`imported students in scope: ${students.length}`);
 
   const studentsByLegacyId = new Map<number, any>();
