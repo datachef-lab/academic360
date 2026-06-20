@@ -186,15 +186,39 @@ interface PromotionRow {
   studentId: number;
   sessionId: number;
   classId: number;
+  shiftId?: number | null;
+  uid?: string | null;
+  classRollNumber?: string | null;
   dateOfJoining?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   remarks?: string | null;
   academicYear?: { id: number; year?: string; name?: string } | null;
   class?: { id: number; name?: string; type?: string } | null;
+  shift?: { id?: number; name?: string } | null;
+  section?: { id?: number; name?: string } | null;
   appearTypeName?: string | null;
-  /** Board / exam outcome; wired when API exposes it */
-  result?: string | null;
+}
+
+function buildPromotionShiftNameMap(mappings: FeeStudentMappingDto[]): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const mapping of mappings) {
+    for (const fgpm of mapping.feeGroupPromotionMappings ?? []) {
+      const promotionId = fgpm.promotion?.id;
+      const shiftName = fgpm.promotion?.shift?.name?.trim();
+      if (promotionId != null && shiftName) {
+        map.set(promotionId, shiftName);
+      }
+    }
+  }
+  return map;
+}
+
+function getPromotionShiftLabel(
+  promotion: PromotionRow,
+  shiftByPromotionId: Map<number, string>,
+): string {
+  return promotion.shift?.name?.trim() || shiftByPromotionId.get(promotion.id) || "—";
 }
 
 interface OverviewTabProps {
@@ -277,6 +301,7 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
 
   const feeMappings = feeMappingsRes ?? [];
   const feeCardSummary = useMemo(() => computeFeeCardSummary(feeMappings), [feeMappings]);
+  const promotionShiftById = useMemo(() => buildPromotionShiftNameMap(feeMappings), [feeMappings]);
 
   const promotions = promotionsData?.promotions ?? [];
   const isEligibleForAlumni =
@@ -388,14 +413,20 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
                     <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
                       Academic year
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
-                      Semester
-                    </TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 min-w-[140px]">
-                      Appear Type
+                      Semester and UID
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
+                      Appear type
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 min-w-[100px]">
-                      Result
+                      Shift
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[100px]">
+                      Section
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[110px]">
+                      Class roll no.
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 min-w-[130px]">
                       Start date
@@ -410,26 +441,38 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
                 </TableHeader>
                 <TableBody>
                   {promotions.map((p, index) => (
-                    <TableRow key={p.id} className="border-b border-gray-200">
+                    <TableRow
+                      key={p.id}
+                      className="border-b border-gray-200 bg-white hover:bg-white"
+                    >
                       <TableCell className="text-sm text-gray-800">{index + 1}</TableCell>
                       <TableCell className="text-sm">
                         {p.academicYear?.year || p.academicYear?.name || "—"}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {p.class?.name ? (
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-orange-300 text-orange-800 bg-orange-50 font-normal"
-                          >
-                            {formatSemesterBadgeLabel(p.class.name)}
-                          </Badge>
-                        ) : (
-                          "—"
-                        )}
+                        <div className="flex flex-col items-center gap-1 text-center">
+                          {p.class?.name ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-800 bg-orange-50 font-normal w-fit"
+                            >
+                              {formatSemesterBadgeLabel(p.class.name)}
+                            </Badge>
+                          ) : (
+                            <span>—</span>
+                          )}
+                          <span className="text-xs text-muted-foreground font-mono tracking-tight">
+                            {p.uid?.trim() || studentUid?.trim() || "—"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm">{p.appearTypeName?.trim() || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {p.result?.trim() || "Pending"}
+                      <TableCell className="text-sm">
+                        {getPromotionShiftLabel(p, promotionShiftById)}
+                      </TableCell>
+                      <TableCell className="text-sm">{p.section?.name?.trim() || "—"}</TableCell>
+                      <TableCell className="text-sm tabular-nums">
+                        {p.classRollNumber?.trim() || "—"}
                       </TableCell>
                       <TableCell className="text-sm">{formatDateDdMmYyyy(p.startDate)}</TableCell>
                       <TableCell className="text-sm">{formatDateDdMmYyyy(p.endDate)}</TableCell>

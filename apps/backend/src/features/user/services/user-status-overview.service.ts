@@ -2,6 +2,8 @@ import { db } from "@/db/index.js";
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
 import { academicYearModel } from "@repo/db/schemas/models/academics/academic-year.model.js";
 import { sessionModel } from "@repo/db/schemas/models/academics/session.model.js";
+import { shiftModel } from "@repo/db/schemas/models/academics/shift.model.js";
+import { sectionModel } from "@repo/db/schemas/models/academics/section.model.js";
 import { userStatusMasterModel } from "@repo/db/schemas/models/administration/user-status-master.model.js";
 import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model.js";
 import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model.js";
@@ -195,6 +197,18 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
       .from(classModel)
       .where(eq(classModel.id, promotion.classId));
 
+    const [shf] = await db
+      .select()
+      .from(shiftModel)
+      .where(eq(shiftModel.id, promotion.shiftId));
+
+    const [sec] = promotion.sectionId
+      ? await db
+          .select()
+          .from(sectionModel)
+          .where(eq(sectionModel.id, promotion.sectionId))
+      : [undefined];
+
     let appearTypeName: string | null = null;
     let fillupRow: typeof examFormFillupModel.$inferSelect | undefined;
     if (promotion.examFormFillupId) {
@@ -233,6 +247,9 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
       studentId: promotion.studentId,
       sessionId: promotion.sessionId,
       classId: promotion.classId,
+      shiftId: promotion.shiftId,
+      uid: student?.uid ?? null,
+      classRollNumber: promotion.classRollNumber ?? null,
       academicYear: academicYear
         ? {
             id: academicYear.id,
@@ -243,6 +260,8 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
       class: cls
         ? { id: cls.id, name: cls.name, type: cls.type ?? undefined }
         : null,
+      shift: shf ? { id: shf.id, name: shf.name ?? undefined } : null,
+      section: sec ? { id: sec.id, name: sec.name ?? undefined } : null,
       appearTypeName,
       dateOfJoining: promotion.dateOfJoining,
       startDate: promotion.startDate,
