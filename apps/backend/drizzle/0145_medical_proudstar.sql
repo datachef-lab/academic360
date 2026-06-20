@@ -1,0 +1,2 @@
+ALTER TABLE "copy_details" ADD COLUMN "vendor_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "copy_details" ADD CONSTRAINT "copy_details_vendor_id_fk_vendors_id_fk" FOREIGN KEY ("vendor_id_fk") REFERENCES "public"."vendors"("id") ON DELETE no action ON UPDATE no action;

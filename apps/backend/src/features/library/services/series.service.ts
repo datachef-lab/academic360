@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { Series, seriesModel } from "@repo/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 type SeriesListFilters = {
   page: number;
@@ -63,6 +64,13 @@ export async function findSeriesPaginated(
 }
 
 export async function createSeries(data: Omit<Series, "id">): Promise<Series> {
+  await assertUniqueLibraryName({
+    table: seriesModel,
+    nameColumn: seriesModel.name,
+    idColumn: seriesModel.id,
+    value: data.name,
+    label: "Series",
+  });
   const [created] = await db.insert(seriesModel).values(data).returning();
   return created;
 }
@@ -71,6 +79,16 @@ export async function updateSeries(
   id: number,
   data: Partial<Omit<Series, "id">>,
 ): Promise<Series | null> {
+  if (data.name != null) {
+    await assertUniqueLibraryName({
+      table: seriesModel,
+      nameColumn: seriesModel.name,
+      idColumn: seriesModel.id,
+      value: data.name,
+      label: "Series",
+      excludeId: id,
+    });
+  }
   const [updated] = await db
     .update(seriesModel)
     .set(data)

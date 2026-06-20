@@ -13,8 +13,12 @@ WORKDIR /app
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=pruner /app/patches ./patches
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
+
+# ← .env.production must exist before build (NEXT_PUBLIC_* vars bake in)
+COPY apps/student-console/.env.production ./apps/student-console/.env.production
 
 RUN pnpm turbo run build --filter=student-console...
 

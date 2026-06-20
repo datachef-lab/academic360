@@ -5,10 +5,13 @@ import { userModel } from "../user";
 import { borrowingTypeModel } from "./borrowing-type.model";
 import { copyDetailsModel } from "./copy-details.model";
 import { paymentModel } from "../payments";
+import { branchModel } from "./branch.model";
 
 export const bookCirculationModel = pgTable("book_circulation", {
     id: serial().primaryKey(),
     legacyBookCirculationId: integer(),
+    branchId: integer("branch_id_fk")
+        .references(() => branchModel.id),
     copyDetailsId: integer("copy_details_id_fk")
         .references(() => copyDetailsModel.id)
         .notNull(),

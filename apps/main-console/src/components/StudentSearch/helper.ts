@@ -52,12 +52,10 @@ import { StudentSearchItem } from "@/services/student";
 
 type StudentInput = Student | StudentDto | StudentSearchItem;
 
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
+
 export function formattedStudent(content: StudentInput[]) {
   const formattedArr: StudentSearchType[] = [];
-  const profileBaseUrl =
-    import.meta.env.VITE_STUDENT_PROFILE_URL || "https://74.207.233.48:8443/hrclIRP/studentimages";
-
-  //console.log("Profile base URL being used:", profileBaseUrl);
 
   for (let i = 0; i < content.length; i++) {
     const item = content[i];
@@ -138,18 +136,8 @@ export function formattedStudent(content: StudentInput[]) {
     //     obj = { ...obj, specialization: specialization as Specialization };
     // }
 
-    if (obj.uid) {
-      const avatarUrl = `${profileBaseUrl}/Student_Image_${obj.uid}.jpg`;
-      obj.avatar = avatarUrl;
-      //console.log(`Generated avatar URL for student ${props.name} (UID: ${obj.uid}):`, avatarUrl);
-    } else if (props.id) {
-      const avatarUrl = `${profileBaseUrl}/Student_Image_${props.id}.jpg`;
-      obj.avatar = avatarUrl;
-      //console.log(`Generated avatar URL for student ${props.name} (ID: ${props.id}):`, avatarUrl);
-    } else {
-      obj.avatar = `${profileBaseUrl}/default.jpg`;
-      //console.log(`Using default avatar for student ${props.name} (no ID or UID)`);
-    }
+    const resolverUid = obj.uid ?? (props.id ? String(props.id) : undefined);
+    obj.avatar = studentAvatarUrl(resolverUid) ?? "";
 
     formattedArr.push(obj);
   }

@@ -4,6 +4,7 @@ import { db } from "@/db/index.js";
 import crypto from "crypto";
 
 import { User, userModel } from "@repo/db/schemas/models/user";
+import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 // import { findStudentByUserId } from "./student.service.js";
 import { findAll } from "@/utils/helper.js";
@@ -81,16 +82,19 @@ import * as staffService from "./staff.service.js";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model.js";
 import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
 import { verifyOtp } from "@/features/auth/services/otp.service.js";
+import {
+  cleanupExpiredPasswordResetTokens,
+  deletePasswordResetToken,
+  getPasswordResetToken,
+  savePasswordResetToken,
+} from "@/services/password-reset-token.store.js";
 
-// Password reset interfaces and storage
+// Password reset interfaces
 export interface PasswordResetData {
   token: string;
   email: string;
   expiresAt: Date;
 }
-
-// In-memory store for password reset tokens (in production, use Redis or database)
-const passwordResetTokens = new Map<string, PasswordResetData>();
 
 export async function addUser(user: User) {
   const hashedPassword = await bcrypt.hash(user.password, 10);
@@ -173,6 +177,59 @@ export async function findAllUsers(
     totalElements: 0,
     totalPages: Math.ceil(Number(0) / pageSize),
   };
+}
+
+export type StudentPickerOption = {
+  userId: number;
+  studentId: number;
+  name: string;
+  uid: string;
+  rollNumber: string | null;
+  registrationNumber: string | null;
+};
+
+/**
+ * Lightweight picker source for any "select a student" UI. Joins `users` →
+ * `students` so the response carries the human-facing UID (e.g. BESC/2025/123)
+ * which is what library staff use to identify a student — not the internal
+ * `userId`. Supports an optional `search` prefix matched against UID + name +
+ * roll number + registration number.
+ */
+export async function findStudentPickerOptions(
+  search?: string,
+  limit: number = 500,
+): Promise<StudentPickerOption[]> {
+  const trimmed = search?.trim();
+  const conditions = [
+    eq(userModel.type, "STUDENT"),
+    eq(userModel.isActive, true),
+  ];
+  if (trimmed) {
+    const term = `%${trimmed}%`;
+    conditions.push(
+      or(
+        ilike(userModel.name, term),
+        ilike(studentModel.uid, term),
+        ilike(studentModel.rollNumber, term),
+        ilike(studentModel.registrationNumber, term),
+      )!,
+    );
+  }
+  const rows = await db
+    .select({
+      userId: userModel.id,
+      studentId: studentModel.id,
+      name: userModel.name,
+      uid: studentModel.uid,
+      rollNumber: studentModel.rollNumber,
+      registrationNumber: studentModel.registrationNumber,
+    })
+    .from(studentModel)
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .where(and(...conditions))
+    .orderBy(userModel.name)
+    .limit(Math.min(limit, 1000));
+  return rows;
 }
 
 export async function findById(id: number) {
@@ -672,7 +729,7 @@ export async function findProfileInfo(
     academicInfo: studentAcademicInfo
       ? await mapAcademicInfoToDto(studentAcademicInfo)
       : null,
-    familyDetails: family ? await mapFamilyToDto(family) : null,
+    familyDetails: studentFamily ? await mapFamilyToDto(studentFamily) : null,
     studentFamily: studentFamily ? await mapFamilyToDto(studentFamily) : null,
     personalDetails: personalDetailsDto,
     healthDetails: healthDto,
@@ -1210,12 +1267,7 @@ export async function requestPasswordReset(
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-    // Store token in memory
-    passwordResetTokens.set(token, {
-      token,
-      email,
-      expiresAt,
-    });
+    await savePasswordResetToken(token, { email, expiresAt });
 
     console.log("[PASSWORD RESET] Token generated for:", email);
 
@@ -1290,7 +1342,7 @@ export async function resetPassword(
     console.log("[PASSWORD RESET] Attempting to reset password with token");
 
     // Validate token
-    const tokenData = passwordResetTokens.get(token);
+    const tokenData = await getPasswordResetToken(token);
 
     if (!tokenData) {
       console.log("[PASSWORD RESET] Invalid token");
@@ -1303,7 +1355,7 @@ export async function resetPassword(
     // Check if token is expired
     if (new Date() > tokenData.expiresAt) {
       console.log("[PASSWORD RESET] Token expired");
-      passwordResetTokens.delete(token);
+      await deletePasswordResetToken(token);
       return {
         success: false,
         message: "Reset token has expired. Please request a new one",
@@ -1342,8 +1394,7 @@ export async function resetPassword(
       };
     }
 
-    // Remove used token
-    passwordResetTokens.delete(token);
+    await deletePasswordResetToken(token);
 
     console.log(
       "[PASSWORD RESET] Password updated successfully for:",
@@ -1410,7 +1461,7 @@ export async function validateResetToken(
   token: string,
 ): Promise<{ success: boolean; message: string; email?: string }> {
   try {
-    const tokenData = passwordResetTokens.get(token);
+    const tokenData = await getPasswordResetToken(token);
 
     if (!tokenData) {
       return {
@@ -1420,7 +1471,7 @@ export async function validateResetToken(
     }
 
     if (new Date() > tokenData.expiresAt) {
-      passwordResetTokens.delete(token);
+      await deletePasswordResetToken(token);
       return {
         success: false,
         message: "Reset token has expired",
@@ -1444,13 +1495,8 @@ export async function validateResetToken(
 /**
  * Clean up expired tokens (call this periodically)
  */
-export function cleanupExpiredTokens(): void {
-  const now = new Date();
-  for (const [token, data] of passwordResetTokens.entries()) {
-    if (now > data.expiresAt) {
-      passwordResetTokens.delete(token);
-    }
-  }
+export async function cleanupExpiredTokens(): Promise<void> {
+  await cleanupExpiredPasswordResetTokens();
 }
 
 /**

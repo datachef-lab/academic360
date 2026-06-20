@@ -1,5 +1,5 @@
 {
-  "id": "5c12c5e9-5610-40ab-ac98-3097a6caaeae",
+  "id": "f3d912cd-dc13-44e9-8642-5e7f74e7344e",
   "prevId": "333faaf9-981d-41c6-95ed-464af3b3b5aa",
   "version": "7",
   "dialect": "postgresql",
@@ -10140,6 +10140,250 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.author_details": {
+      "name": "author_details",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_author_details_id": {
+          "name": "legacy_author_details_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "book_id_fk": {
+          "name": "book_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_type_id_fk": {
+          "name": "author_type_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_id_fk": {
+          "name": "author_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "author_details_book_id_fk_books_id_fk": {
+          "name": "author_details_book_id_fk_books_id_fk",
+          "tableFrom": "author_details",
+          "tableTo": "books",
+          "columnsFrom": [
+            "book_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "author_details_author_type_id_fk_author_types_id_fk": {
+          "name": "author_details_author_type_id_fk_author_types_id_fk",
+          "tableFrom": "author_details",
+          "tableTo": "author_types",
+          "columnsFrom": [
+            "author_type_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "author_details_author_id_fk_authors_id_fk": {
+          "name": "author_details_author_id_fk_authors_id_fk",
+          "tableFrom": "author_details",
+          "tableTo": "authors",
+          "columnsFrom": [
+            "author_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.author_types": {
+      "name": "author_types",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_author_type_id": {
+          "name": "legacy_author_type_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.authors": {
+      "name": "authors",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_author_id": {
+          "name": "legacy_author_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_type_id_fk": {
+          "name": "author_type_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "short_name": {
+          "name": "short_name",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nationality_id_fk": {
+          "name": "nationality_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "authors_author_type_id_fk_author_types_id_fk": {
+          "name": "authors_author_type_id_fk_author_types_id_fk",
+          "tableFrom": "authors",
+          "tableTo": "author_types",
+          "columnsFrom": [
+            "author_type_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "authors_nationality_id_fk_nationality_id_fk": {
+          "name": "authors_nationality_id_fk_nationality_id_fk",
+          "tableFrom": "authors",
+          "tableTo": "nationality",
+          "columnsFrom": [
+            "nationality_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.binding_types": {
       "name": "binding_types",
       "schema": "",
@@ -10940,6 +11184,110 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.class_holidays": {
+      "name": "class_holidays",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_holiday_student_mapping_id": {
+          "name": "legacy_holiday_student_mapping_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "holiday_id_fk": {
+          "name": "holiday_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "program_course_id_fk": {
+          "name": "program_course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "class_id_fk": {
+          "name": "class_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_holiday": {
+          "name": "is_holiday",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "class_holidays_holiday_id_fk_holidays_id_fk": {
+          "name": "class_holidays_holiday_id_fk_holidays_id_fk",
+          "tableFrom": "class_holidays",
+          "tableTo": "holidays",
+          "columnsFrom": [
+            "holiday_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "class_holidays_program_course_id_fk_program_courses_id_fk": {
+          "name": "class_holidays_program_course_id_fk_program_courses_id_fk",
+          "tableFrom": "class_holidays",
+          "tableTo": "program_courses",
+          "columnsFrom": [
+            "program_course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "class_holidays_class_id_fk_classes_id_fk": {
+          "name": "class_holidays_class_id_fk_classes_id_fk",
+          "tableFrom": "class_holidays",
+          "tableTo": "classes",
+          "columnsFrom": [
+            "class_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.copy_details": {
       "name": "copy_details",
       "schema": "",
@@ -11394,6 +11742,75 @@
           "type": "varchar(1000)",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.holidays": {
+      "name": "holidays",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_holidays_id": {
+          "name": "legacy_holidays_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "short_name": {
+          "name": "short_name",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "from": {
+          "name": "from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to": {
+          "name": "to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -17077,12 +17494,6 @@
         },
         "old_uid": {
           "name": "old_uid",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "previous_uid": {
-          "name": "previous_uid",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false

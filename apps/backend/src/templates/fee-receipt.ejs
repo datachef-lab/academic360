@@ -367,11 +367,11 @@
       position: relative;
     }
 
-    .challan-copy--specimen > .specimen-watermark {
+    .challan-copy--specimen>.specimen-watermark {
       z-index: 1;
     }
 
-    .challan-copy--specimen > *:not(.specimen-watermark) {
+    .challan-copy--specimen>*:not(.specimen-watermark) {
       position: relative;
       z-index: 2;
     }
@@ -428,171 +428,174 @@
     <% const SECTIONS=["STUDENT COPY", "COLLEGE COPY" , "BANK COPY" ]; %>
 
       <% SECTIONS.forEach((section, sectionIndex)=> { %>
-        <div class="challan-copy<%= typeof showSpecimenWatermark !== 'undefined' && showSpecimenWatermark ? ' challan-copy--specimen' : '' %>">
-          <% if (typeof showSpecimenWatermark !== 'undefined' && showSpecimenWatermark) { %>
-          <div class="specimen-watermark" aria-hidden="true">
-            <div class="specimen-watermark-inner">SPECIMEN ONLY</div>
-          </div>
-          <% } %>
-          <div class="challan-header">
-            <img class="college-logo"
-              src="<%= collegeLogoDataUrl || 'https://besc.academic360.app/api/api/v1/settings/file/4' %>"
-              alt="College Logo" />
-            <div class="header-text">
-              <div class="college-name">The Bhawanipur Education Society College</div>
-              <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
-              <div class="session">Session : <%= session %>
-              </div>
+        <div
+          class="challan-copy<%= typeof showSpecimenWatermark !== 'undefined' && showSpecimenWatermark ? ' challan-copy--specimen' : '' %>">
+          <% if (typeof showSpecimenWatermark !=='undefined' && showSpecimenWatermark) { %>
+            <div class="specimen-watermark" aria-hidden="true">
+              <div class="specimen-watermark-inner">SPECIMEN ONLY</div>
             </div>
-          </div>
-          <div class="bank-details">
-            <p style="margin-bottom: 1px;">Federal Bank A/c 13040200023571</p>
-            <div style="display: flex; justify-content: space-between; width: 100%;">
-              <p style="width: 50%; font-size: 9px;">Payment can be made in any branch.</p>
-              <p style="font-weight: bold; width: 50%; text-align: right; font-size: 9px;">Preferred branch -
-                Bhowanipore
-              </p>
-            </div>
-          </div>
-          <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
-          <div class="student-info-wrapper">
-            <div class="student-info" style="width: 45%; ">
-              <div class="student-info-row">
-                <div class="student-info-label">Name</div>
-                <span>:</span>
-                <span class="student-info-value">
-                  <%= name %>
-                </span>
-              </div>
-              <div class="student-info-row">
-                <div class="student-info-label">UID</div>
-                <span>:</span>
-                <span class="student-info-value">
-                  <%= uid %>
-                </span>
-              </div>
-              <div class="student-info-row">
-                <div class="student-info-label">DOB</div>
-                <span>:</span>
-                <span class="student-info-value">
-                  <%= dob %>
-                </span>
-              </div>
-              <div class="student-info-row">
-                <div class="student-info-label">Mob No.</div>
-                <span>:</span>
-                <span class="student-info-value">
-                  <%= phone %>
-                </span>
-              </div>
-              <div class="student-info-row">
-                <div class="student-info-label">Year</div>
-                <span>:</span>
-                <span class="student-info-value">
-                  <%= semester %>
-                </span>
-              </div>
-              <div class="student-info-row">
-                <div class="student-info-label">Course</div>
-                <span>:</span>
-                <span class="student-info-value">
-                  <%= programCourse %> (<%= shift %>)
-                </span>
-              </div>
-            </div>
-            <div class="challan-barcode-block" style="width: 55%;">
-              <span class="challan-no-value">Challan No : <%= challanNumber %></span>
-              <div class="challan-barcode-wrap">
-                <canvas class="challan-barcode" data-challan="<%= challanNumber %>"></canvas>
-              </div>
-            </div>
-          </div>
-          <table class="fee-table">
-            <tr>
-              <td class="label">Particulars</td>
-              <td class="label amount">Amount (in Rs.)</td>
-            </tr>
-            <% feeComponents.forEach((fc, fcIndex)=> { %>
-              <tr>
-                <td style="font-size: 9pt;">
-                  <%= fc.name %>
-                </td>
-                <td class="amount">
-                  <%= fc.amount %>
-                </td>
-              </tr>
-              <% }) %>
-                <tr class="total-row">
-                  <td>Total Amount To Pay</td>
-                  <td class="amount">
-                    <%= totalPayableAmount %>
-                  </td>
-                </tr>
-                <tr class="total-row">
-                  <td colspan="2" style="font-style: italic; font-size: 9.5px; font-weight: normal; text-align: end;">
-                    (Rs. <%= totalPayableAmountInWords %>)
-
-                  </td>
-                </tr>
-          </table>
-          <div class="amount-words"></div>
-          <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
-              href="mailto:feeupdate@thebges.edu.in" style="font-weight: bold;">feeupdate@thebges.edu.in</a></div>
-          <% if (isPaid) { %>
-            <!-- Center ePAID box within remaining vertical space -->
-            <div style="flex: 1; display: flex; align-items: center; justify-content: center; ">
-              <div
-                style="font-size: 14px; border: 2px solid #000; border-radius: 10px; padding: 8px 12px; font-size: 10px; font-weight: bold; text-align: center; min-width: 220px;">
-                <% if (mode==="online" ) { %>
-                  <span style="font-size: 14px;">
-                    ePAID - <%= ePaid.orderId %>
-                  </span>
-                  <br />
-                  <span style="font-size: 14px;">
-
-                    (<%= ePaid.transactionDate %>)
-                  </span>
-                  <br /><br />
-                  <span style="font-weight: normal; font-size: 14px;">E-paid challan do not<br />require bank
-                    stamp</span>
-                  <% } else { %>
-                    <br /> <br /><br /><span style="font-size: 14px;">
-                      PAID (<%= paidDate %>)
-                    </span>
-                    <br /><br /><br />
-                    <% } %>
-              </div>
-            </div>
-            <% } else { %>
-              <div style="flex: 1; min-height: 8px;"></div>
-              <% } %>
-                <div class="footer-content">
-                  <div class="signature-row" style="border-bottom: 1px solid black;">
-                    <span style="font-weight: bolder;">Date: <span style="font-weight: normal;margin-left: 10px;">
-                        <%= challanDate %>
-                      </span></span>
-                    <span style="font-weight:bolder;" class="sig-right">Bank Official's Signature</span>
-                  </div>
-                  <div class="nb-notes">
-                    <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the
-                      receiving
-                      authority. Please retain the Money Receipt for future reference.</p>
-                    <p style="margin-bottom:5px;">N.B. 2. Please note that taking enrollment &amp; paying fees for the
-                      same
-                      alone does not make you
-                      automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is
-                      mandatory
-                      for each University Exam.</p>
-                    <p style="margin-bottom: 10px; font-weight: bold;">N.B.3. Please do not make any request to
-                      Management
-                      or
-                      Staff for refund of fees. Fees once paid is not
-                      refundable under any circumstances.</p>
-                  </div>
-                  <div class="copy-label" style="text-align: end; font-style: italic;">
-                    <%= section %>
+            <% } %>
+              <div class="challan-header">
+                <img class="college-logo"
+                  src="<%= collegeLogoDataUrl || 'https://api.academic360.app/api/v1/settings/file/4' %>"
+                  alt="College Logo" />
+                <div class="header-text">
+                  <div class="college-name">The Bhawanipur Education Society College</div>
+                  <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
+                  <div class="session">Session : <%= session %>
                   </div>
                 </div>
+              </div>
+              <div class="bank-details">
+                <p style="margin-bottom: 1px;">Federal Bank A/c 13040200023571</p>
+                <div style="display: flex; justify-content: space-between; width: 100%;">
+                  <p style="width: 50%; font-size: 9px;">Payment can be made in any branch.</p>
+                  <p style="font-weight: bold; width: 50%; text-align: right; font-size: 9px;">Preferred branch -
+                    Bhowanipore
+                  </p>
+                </div>
+              </div>
+              <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
+              <div class="student-info-wrapper">
+                <div class="student-info" style="width: 45%; ">
+                  <div class="student-info-row">
+                    <div class="student-info-label">Name</div>
+                    <span>:</span>
+                    <span class="student-info-value">
+                      <%= name %>
+                    </span>
+                  </div>
+                  <div class="student-info-row">
+                    <div class="student-info-label">UID</div>
+                    <span>:</span>
+                    <span class="student-info-value">
+                      <%= uid %>
+                    </span>
+                  </div>
+                  <div class="student-info-row">
+                    <div class="student-info-label">DOB</div>
+                    <span>:</span>
+                    <span class="student-info-value">
+                      <%= dob %>
+                    </span>
+                  </div>
+                  <div class="student-info-row">
+                    <div class="student-info-label">Mob No.</div>
+                    <span>:</span>
+                    <span class="student-info-value">
+                      <%= phone %>
+                    </span>
+                  </div>
+                  <div class="student-info-row">
+                    <div class="student-info-label">Year</div>
+                    <span>:</span>
+                    <span class="student-info-value">
+                      <%= semester %>
+                    </span>
+                  </div>
+                  <div class="student-info-row">
+                    <div class="student-info-label">Course</div>
+                    <span>:</span>
+                    <span class="student-info-value">
+                      <%= programCourse %> (<%= shift %>)
+                    </span>
+                  </div>
+                </div>
+                <div class="challan-barcode-block" style="width: 55%;">
+                  <span class="challan-no-value">Challan No : <%= challanNumber %></span>
+                  <div class="challan-barcode-wrap">
+                    <canvas class="challan-barcode" data-challan="<%= challanNumber %>"></canvas>
+                  </div>
+                </div>
+              </div>
+              <table class="fee-table">
+                <tr>
+                  <td class="label">Particulars</td>
+                  <td class="label amount">Amount (in Rs.)</td>
+                </tr>
+                <% feeComponents.forEach((fc, fcIndex)=> { %>
+                  <tr>
+                    <td style="font-size: 9pt;">
+                      <%= fc.name %>
+                    </td>
+                    <td class="amount">
+                      <%= fc.amount %>
+                    </td>
+                  </tr>
+                  <% }) %>
+                    <tr class="total-row">
+                      <td>Total Amount To Pay</td>
+                      <td class="amount">
+                        <%= totalPayableAmount %>
+                      </td>
+                    </tr>
+                    <tr class="total-row">
+                      <td colspan="2"
+                        style="font-style: italic; font-size: 9.5px; font-weight: normal; text-align: end;">
+                        (Rs. <%= totalPayableAmountInWords %>)
+
+                      </td>
+                    </tr>
+              </table>
+              <div class="amount-words"></div>
+              <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
+                  href="mailto:feeupdate@thebges.edu.in" style="font-weight: bold;">feeupdate@thebges.edu.in</a></div>
+              <% if (isPaid) { %>
+                <!-- Center ePAID box within remaining vertical space -->
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; ">
+                  <div
+                    style="font-size: 14px; border: 2px solid #000; border-radius: 10px; padding: 8px 12px; font-size: 10px; font-weight: bold; text-align: center; min-width: 220px;">
+                    <% if (mode==="online" ) { %>
+                      <span style="font-size: 14px;">
+                        ePAID - <%= ePaid.orderId %>
+                      </span>
+                      <br />
+                      <span style="font-size: 14px;">
+
+                        (<%= ePaid.transactionDate %>)
+                      </span>
+                      <br /><br />
+                      <span style="font-weight: normal; font-size: 14px;">E-paid challan do not<br />require bank
+                        stamp</span>
+                      <% } else { %>
+                        <br /> <br /><br /><span style="font-size: 14px;">
+                          PAID (<%= paidDate %>)
+                        </span>
+                        <br /><br /><br />
+                        <% } %>
+                  </div>
+                </div>
+                <% } else { %>
+                  <div style="flex: 1; min-height: 8px;"></div>
+                  <% } %>
+                    <div class="footer-content">
+                      <div class="signature-row" style="border-bottom: 1px solid black;">
+                        <span style="font-weight: bolder;">Date: <span style="font-weight: normal;margin-left: 10px;">
+                            <%= challanDate %>
+                          </span></span>
+                        <span style="font-weight:bolder;" class="sig-right">Bank Official's Signature</span>
+                      </div>
+                      <div class="nb-notes">
+                        <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the
+                          receiving
+                          authority. Please retain the Money Receipt for future reference.</p>
+                        <p style="margin-bottom:5px;">N.B. 2. Please note that taking enrollment &amp; paying fees for
+                          the
+                          same
+                          alone does not make you
+                          automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is
+                          mandatory
+                          for each University Exam.</p>
+                        <p style="margin-bottom: 10px; font-weight: bold;">N.B.3. Please do not make any request to
+                          Management
+                          or
+                          Staff for refund of fees. Fees once paid is not
+                          refundable under any circumstances.</p>
+                      </div>
+                      <div class="copy-label" style="text-align: end; font-style: italic;">
+                        <%= section %>
+                      </div>
+                    </div>
         </div>
         <% }) %>
   </div>

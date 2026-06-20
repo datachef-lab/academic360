@@ -66,6 +66,21 @@ function buildChallanNumber(
   return feeCategoryCode ? `${base}-${feeCategoryCode}` : base;
 }
 
+function extractTxnDateFromGateway(gatewayResponse: unknown): string {
+  const gr = gatewayResponse as {
+    paytm?: { callback?: Record<string, string> };
+  } | null;
+  const raw =
+    gr?.paytm?.callback?.TXNDATE ?? gr?.paytm?.callback?.txnDate ?? "";
+  return String(raw).trim();
+}
+
+function formatReceiptTxnDate(raw: string | Date | null | undefined): string {
+  if (raw == null || raw === "") return "";
+  const d = new Date(raw);
+  return Number.isFinite(d.getTime()) ? d.toLocaleDateString("en-GB") : "";
+}
+
 /**
  * First-time receipt download: assigns receipt_number and challan_generated_at.
  * If receipt_number exists but challan_generated_at is missing (legacy), sets timestamp once.
@@ -304,6 +319,7 @@ async function modelToDto(
       status: paymentModel.status,
       txnDate: paymentModel.txnDate,
       updatedAt: paymentModel.updatedAt,
+      gatewayResponse: paymentModel.gatewayResponse,
     })
     .from(paymentModel)
     .where(
@@ -351,8 +367,13 @@ async function modelToDto(
         ? "SUCCESS"
         : "PENDING";
 
+  const gatewayTxnDate =
+    extractTxnDateFromGateway(
+      (payment as { gatewayResponse?: unknown } | null)?.gatewayResponse,
+    ) || null;
   const transactionDate: FeeStudentMappingDto["transactionDate"] =
     (payment as { txnDate?: string | null } | null)?.txnDate ??
+    gatewayTxnDate ??
     (payment as { updatedAt?: Date | string | null } | null)?.updatedAt ??
     null;
 
@@ -641,13 +662,14 @@ async function generateFeeReceiptInternal(params: {
   const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
 
   const ePaid = await (async () => {
-    // Look up the canonical (linked) online payment for this fee mapping.
     const [pay] = await db
       .select({
         status: paymentModel.status,
         paymentMode: paymentModel.paymentMode,
         orderId: paymentModel.orderId,
         txnDate: paymentModel.txnDate,
+        gatewayResponse: paymentModel.gatewayResponse,
+        updatedAt: paymentModel.updatedAt,
       })
       .from(paymentModel)
       .where(
@@ -660,13 +682,16 @@ async function generateFeeReceiptInternal(params: {
     const isSuccess = String(pay?.status || "").toUpperCase() === "SUCCESS";
     const isOnline = String(pay?.paymentMode || "").toUpperCase() === "ONLINE";
     const orderId = String(pay?.orderId || "").trim();
-    const txnDateRaw = String(pay?.txnDate || "").trim();
+    let txnDateRaw = String(pay?.txnDate || "").trim();
+    if (!txnDateRaw) {
+      txnDateRaw = extractTxnDateFromGateway(pay?.gatewayResponse);
+    }
+    if (!txnDateRaw && pay?.updatedAt) {
+      txnDateRaw = String(pay.updatedAt);
+    }
     if (!isSuccess || !isOnline || !orderId || !txnDateRaw) return null;
 
-    const d = new Date(txnDateRaw);
-    const transactionDate = Number.isFinite(d.getTime())
-      ? d.toLocaleDateString("en-GB")
-      : "";
+    const transactionDate = formatReceiptTxnDate(txnDateRaw);
     if (!transactionDate) return null;
     return { orderId, transactionDate };
   })();
@@ -689,10 +714,11 @@ async function generateFeeReceiptInternal(params: {
   const mode: "online" | "offline" = ePaid != null ? "online" : "offline";
 
   const paidDateSource: Date | string | null =
-    payment?.txnDate ?? feeStudentMapping.challanGeneratedAt ?? null;
-  const paidDate = paidDateSource
-    ? new Date(paidDateSource).toLocaleDateString("en-GB")
-    : "";
+    payment?.txnDate ??
+    (payment?.updatedAt as Date | string | null | undefined) ??
+    feeStudentMapping.challanGeneratedAt ??
+    null;
+  const paidDate = paidDateSource ? formatReceiptTxnDate(paidDateSource) : "";
 
   const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
     session: session.name,

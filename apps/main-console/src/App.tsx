@@ -64,6 +64,7 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
+import ToolsPage from "./features/tools/pages/tools-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
 // import MandatorySubjectsPage from "./features/academic-year-setup/pages/mandatory-subjects-page";
 
@@ -91,6 +92,7 @@ import PromoteStudentsPage from "./pages/PromoteStudentsPage";
 import AcademicActivityPage from "./features/administration/pages/academic-activity.page";
 import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalCURegMarkingPage";
 import * as administrationModule from "./features/administration";
+import * as idCardModule from "@/features/idcard";
 // import * as resourceModule from "@/pages/resources";
 
 const router = createBrowserRouter(
@@ -195,6 +197,32 @@ const router = createBrowserRouter(
                 { path: "promotion-clauses", element: <PromotionClausesPage /> },
                 { path: "appear-types", element: <AppearTypePage /> },
               ],
+            },
+          ],
+        },
+        {
+          path: "tools",
+          element: <Outlet />,
+          children: [
+            { path: "", element: <ToolsPage /> },
+            {
+              path: "id-cards",
+              element: <idCardModule.ClassesMaster />,
+              children: [
+                { path: "", element: <idCardModule.IdCardIssuePage /> },
+                { path: "reports", element: <idCardModule.IdCardReportsPage /> },
+                { path: "templates", element: <idCardModule.IdCardTemplatesPage /> },
+                {
+                  path: "templates/:templateId/editor",
+                  element: <idCardModule.IdCardTemplateEditorPage />,
+                },
+                { path: "shifts", element: <idCardModule.ShiftsMasterPage /> },
+                { path: "sections", element: <idCardModule.SectionsMasterPage /> },
+              ],
+            },
+            {
+              path: "simulation",
+              element: <appModule.StudentConsoleSimulation />,
             },
           ],
         },
@@ -481,7 +509,6 @@ const router = createBrowserRouter(
             { path: "entry-exit", element: <libraryModule.EntryExitPage /> },
             { path: "book-circulation", element: <libraryModule.BookCirculationPage /> },
             { path: "books", element: <libraryModule.BooksPage /> },
-            { path: "copy-details", element: <libraryModule.CopyDetailsPage /> },
             { path: "journal", element: <libraryModule.JournalPage /> },
             { path: "series", element: <libraryModule.SeriesPage /> },
             { path: "publications", element: <libraryModule.PublicationsPage /> },
@@ -496,8 +523,25 @@ const router = createBrowserRouter(
             { path: "articles", element: <libraryModule.ArticlesPage /> },
             { path: "library-documents", element: <libraryModule.LibraryDocumentsPage /> },
             { path: "borrowing-types", element: <libraryModule.BorrowingTypesPage /> },
-            //   { path: "fine-management", element: <LibFineManagement /> },
-            //   { path: "lib-report", element: <LibReport /> },
+            { path: "author-types", element: <libraryModule.AuthorTypesPage /> },
+            { path: "authors", element: <libraryModule.AuthorsPage /> },
+            { path: "vendors", element: <libraryModule.VendorsPage /> },
+            { path: "holidays", element: <libraryModule.HolidaysPage /> },
+            { path: "class-holidays", element: <libraryModule.ClassHolidaysPage /> },
+            { path: "branches", element: <libraryModule.BranchesPage /> },
+            { path: "patron-categories", element: <libraryModule.PatronCategoriesPage /> },
+            { path: "item-categories", element: <libraryModule.ItemCategoriesPage /> },
+            { path: "circulation-policies", element: <libraryModule.CirculationPoliciesPage /> },
+            { path: "zones", element: <libraryModule.LibraryZonesMasterPage /> },
+            { path: "search", element: <libraryModule.LibrarySearchPage /> },
+            { path: "reading-lists", element: <libraryModule.ReadingListsPage /> },
+            { path: "academic-archives", element: <libraryModule.AcademicArchivePage /> },
+            { path: "evidence-locker", element: <libraryModule.EvidenceLockerPage /> },
+            { path: "journal-subscriptions", element: <libraryModule.JournalSubscriptionsPage /> },
+            { path: "reports", element: <libraryModule.LibraryReportsPage /> },
+            { path: "student-analytics", element: <libraryModule.StudentAnalyticsPage /> },
+            { path: "cdl/:bookId", element: <libraryModule.CdlReaderPage /> },
+            { path: "digital-twin", element: <libraryModule.DigitalTwinPage /> },
           ],
         },
 
@@ -555,6 +599,7 @@ const router = createBrowserRouter(
             { path: "admission-comm-module", element: <appModule.AdmissionCommModulePage /> },
           ],
         },
+        // Legacy alias for the old direct route — kept so deep links keep working.
         {
           path: "apps/student-console/simulation",
           element: <appModule.StudentConsoleSimulation />,

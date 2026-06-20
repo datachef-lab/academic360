@@ -1,12 +1,17 @@
 import { db, mysqlConnection } from "@/db";
 import {
+  OldAuthor,
+  OldAuthorDetail,
+  OldAuthorType,
   OldBindingType,
   OldBookEntry,
   OldBorrowingType,
+  OldClassHoliday,
   OldCopyDetails,
   OldDocumentTypeList,
   OldEnclosure,
   OldEntryMode,
+  OldHoliday,
   OldIssueReturn,
   OldJournalMaster,
   OldJournalType,
@@ -20,23 +25,31 @@ import {
   OldShelf,
   OldStatus,
   OldSubjectGroup,
+  OldVendor,
 } from "@repo/db/dtos/library";
 import {
   academicYearModel,
   addressModel,
+  classModel,
   languageMediumModel,
+  programCourseModel,
   staffModel,
   studentModel,
   subjectGroupingMainModel,
   userModel,
 } from "@repo/db/schemas";
 import {
+  authorDetailsModel,
+  authorModel,
+  authorTypeModel,
   bindingModel,
   bookCirculationModel,
   BookCirculationT,
   bookModel,
   BookT,
+  classHolidayModel,
   borrowingTypeModel,
+  ClassHolidayT,
   copyDetailsModel,
   CopyDetailsT,
   enclosureModel,
@@ -52,6 +65,9 @@ import {
   seriesModel,
   shelfModel,
   statusModel,
+  holidayModel,
+  VendorT,
+  vendorModel,
 } from "@repo/db/schemas/models/library";
 import { and, eq, ilike } from "drizzle-orm";
 import ExcelJS from "exceljs";
@@ -63,6 +79,10 @@ import {
 } from "../user/services/refactor-old-migration.service";
 import { OldStaff } from "@repo/db/legacy-system-types/users";
 import { bookReissueModel } from "@repo/db/schemas/models/library/book-reissue.model";
+import {
+  OldClass,
+  OldCourse,
+} from "@repo/db/legacy-system-types/course-design";
 
 const MIGRATION_LOG_SHEET = "migration_log";
 
@@ -548,6 +568,206 @@ async function getPeriodByOldId(oldPeriodId: number | null) {
   return (await db.insert(libraryPeriodModel).values(payload).returning())[0];
 }
 
+async function getAuthorTypeByOldId(oldAuthorTypeId: number | null) {
+  const [[oldAuthorType]] = (await mysqlConnection.query(`
+    SELECT * FROM authortype WHERE id = ${oldAuthorTypeId}
+    `)) as [OldAuthorType[], unknown];
+
+  if (!oldAuthorType) return null;
+
+  const payload = {
+    legacyAuthorTypeId: oldAuthorTypeId,
+    name: oldAuthorType.authortypeName.trim(),
+  };
+  const [existingAuthorType] = await db
+    .select()
+    .from(authorTypeModel)
+    .where(eq(authorTypeModel.legacyAuthorTypeId, oldAuthorTypeId!));
+  if (existingAuthorType) {
+    return (
+      await db
+        .update(authorTypeModel)
+        .set(payload)
+        .where(eq(authorTypeModel.id, existingAuthorType.id))
+        .returning()
+    )[0];
+  }
+}
+
+async function getAuthorByOldId(oldAuthorId: number | null) {
+  if (!oldAuthorId) return null;
+
+  const [[oldAuthor]] = (await mysqlConnection.query(`
+    SELECT * FROM author WHERE id = ${oldAuthorId}
+    `)) as [OldAuthor[], unknown];
+
+  if (!oldAuthor) return null;
+
+  const payload = {
+    legacyAuthorId: oldAuthorId,
+    name: oldAuthor.authorName.trim(),
+    authorTypeId: (await getAuthorTypeByOldId(oldAuthor.authorType ?? null))
+      ?.id,
+    shortName: oldAuthor.shortName,
+    notes: oldAuthor.notes,
+  };
+  const [existingAuthor] = await db
+    .select()
+    .from(authorModel)
+    .where(eq(authorModel.legacyAuthorId, oldAuthorId));
+  if (existingAuthor) {
+    return (
+      await db
+        .update(authorModel)
+        .set(payload)
+        .where(eq(authorModel.id, existingAuthor.id))
+        .returning()
+    )[0];
+  }
+  return (await db.insert(authorModel).values(payload).returning())[0];
+}
+
+async function getAuthorDetailByOldId(oldAuthorDetailId: number | null) {
+  if (!oldAuthorDetailId) return null;
+
+  const [[oldAuthorDetail]] = (await mysqlConnection.query(`
+    SELECT * FROM authordetailsub WHERE id = ${oldAuthorDetailId}
+    `)) as [OldAuthorDetail[], unknown];
+
+  if (!oldAuthorDetail) return null;
+
+  const payload = {
+    legacyAuthorDetailId: oldAuthorDetailId,
+    bookId: (await getBookByOldId(oldAuthorDetail.parent_id))?.id,
+    authorTypeId: (
+      await getAuthorTypeByOldId(oldAuthorDetail.authorTypeId ?? null)
+    )?.id,
+    authorId: (await getAuthorByOldId(oldAuthorDetail.authorId ?? null))?.id,
+  };
+  const [existingAuthorDetail] = await db
+    .select()
+    .from(authorDetailsModel)
+    .where(eq(authorDetailsModel.legacyAuthorDetailsId, oldAuthorDetailId));
+  if (existingAuthorDetail) {
+    return (
+      await db
+        .update(authorDetailsModel)
+        .set(payload)
+        .where(eq(authorDetailsModel.id, existingAuthorDetail.id))
+        .returning()
+    )[0];
+  }
+
+  return (
+    await db
+      .insert(authorDetailsModel)
+      .values({
+        legacyAuthorDetailsId: oldAuthorDetailId!,
+        bookId: (await getBookByOldId(oldAuthorDetail.parent_id))?.id!,
+        authorTypeId: (
+          await getAuthorTypeByOldId(oldAuthorDetail.authorTypeId ?? null)
+        )?.id!,
+        authorId: (await getAuthorByOldId(oldAuthorDetail.authorId ?? null))
+          ?.id!,
+      })
+      .returning()
+  )[0];
+}
+
+async function getHolidayByOldId(oldHolidayId: number | null) {
+  if (!oldHolidayId) return null;
+
+  const [[oldHoliday]] = (await mysqlConnection.query(`
+    SELECT * FROM holidaymain WHERE id = ${oldHolidayId}
+    `)) as [OldHoliday[], unknown];
+
+  if (!oldHoliday) return null;
+
+  const from = toPgDateStringIst(oldHoliday.fromDate);
+  const to = toPgDateStringIst(oldHoliday.toDate);
+  if (!from || !to) return null;
+
+  const payload = {
+    legacyHolidayId: oldHolidayId,
+    name: oldHoliday.holidayName.trim(),
+    from,
+    to,
+    remarks: oldHoliday.remarks,
+  };
+  const [existingHoliday] = await db
+    .select()
+    .from(holidayModel)
+    .where(eq(holidayModel.legacyHolidayId, oldHolidayId));
+  if (existingHoliday) {
+    return (
+      await db
+        .update(holidayModel)
+        .set(payload)
+        .where(eq(holidayModel.id, existingHoliday.id))
+        .returning()
+    )[0];
+  }
+  return (await db.insert(holidayModel).values(payload).returning())[0];
+}
+
+async function getClassHolidayByOldId(oldClassHolidayId: number | null) {
+  if (!oldClassHolidayId) return null;
+
+  const [[oldClassHoliday]] = (await mysqlConnection.query(`
+    SELECT * FROM holidaystudentsub WHERE id = ${oldClassHolidayId}
+    `)) as [OldClassHoliday[], unknown];
+
+  if (!oldClassHoliday) return null;
+
+  const [[oldCourse]] = (await mysqlConnection.query(`
+    SELECT * FROM course WHERE id = ${oldClassHoliday.courseId}
+    `)) as [OldCourse[], unknown];
+  if (!oldCourse) return null;
+
+  const [[oldClass]] = (await mysqlConnection.query(`
+    SELECT * FROM classes WHERE id = ${oldClassHoliday.classId}
+    `)) as [OldClass[], unknown];
+  if (!oldClass) return null;
+
+  const [programCourse] = await db
+    .select()
+    .from(programCourseModel)
+    .where(ilike(programCourseModel.name, oldCourse.courseName!.trim()));
+  if (!programCourse) return null;
+  const [classM] = await db
+    .select()
+    .from(classModel)
+    .where(ilike(classModel.name, oldClass.classname!.trim()));
+  if (!classM) return null;
+
+  const holiday = await getHolidayByOldId(oldClassHoliday.parent_id);
+  if (!holiday) return null;
+
+  const payload: ClassHolidayT = {
+    legacyHolidayStudentMappingId: oldClassHolidayId,
+    holidayId: holiday.id,
+    programCourseId: programCourse.id,
+    classId: classM.id,
+    isHoliday: bitToBool(oldClassHoliday.isHoliday),
+  };
+  const [existingClassHoliday] = await db
+    .select()
+    .from(classHolidayModel)
+    .where(
+      eq(classHolidayModel.legacyHolidayStudentMappingId, oldClassHolidayId),
+    );
+  if (existingClassHoliday) {
+    return (
+      await db
+        .update(classHolidayModel)
+        .set(payload)
+        .where(eq(classHolidayModel.id, existingClassHoliday.id))
+        .returning()
+    )[0];
+  }
+  return (await db.insert(classHolidayModel).values(payload).returning())[0];
+}
+
 async function getLibraryArticleByOldId(oldLibraryArticleId: number | null) {
   if (!oldLibraryArticleId) return null;
 
@@ -880,6 +1100,7 @@ async function getCopyDetailsByOldId(oldCopyId: number | null) {
     statusId: (await getLibraryStatusByOldId(oldCopy.statusId))?.id,
     suffix: oldCopy.suffixid,
     type: oldCopy.copyTypeId,
+    vendorId: (await getVendorByOldId(oldCopy.vendorid))?.id,
     volumeInfo: oldCopy.volInfo,
     voucherNumber: oldCopy.voucherNo,
     updatedById: (await getUserByOldId(oldCopy.modifiedById))?.id,
@@ -1012,6 +1233,62 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
   return newIssueReturn;
 }
 
+async function getVendorByOldId(oldVendorId: number | null) {
+  if (!oldVendorId) return null;
+
+  const [[oldVendor]] = (await mysqlConnection.query(`
+    SELECT * FROM procurementvendordetailmaintab WHERE id = ${oldVendorId}
+    `)) as [OldVendor[], unknown];
+
+  if (!oldVendor) return null;
+
+  const payload = {
+    legacyVendorId: oldVendorId!,
+    name: oldVendor.vendorName,
+    code: oldVendor.vendoreCode,
+    email: oldVendor.vendorEmail,
+    phone: oldVendor.vendorphoneNumber,
+    website: oldVendor.vendorWebsite,
+    personOfContact: oldVendor.contactpersonName,
+    personOfContactEmail: oldVendor.contactpersonEmail,
+    personOfContactPhone: oldVendor.contactpersonphnoneNumber,
+    pan: oldVendor.panNumber,
+  } as VendorT;
+  const [existingVendor] = await db
+    .select()
+    .from(vendorModel)
+    .where(eq(vendorModel.legacyVendorId, oldVendorId));
+  if (existingVendor) {
+    return (
+      await db
+        .update(vendorModel)
+        .set(payload)
+        .where(eq(vendorModel.id, existingVendor.id))
+        .returning()
+    )[0];
+  }
+  const newVendor = (
+    await db.insert(vendorModel).values(payload).returning()
+  )[0];
+  if (newVendor) {
+    const [existingAddress] = await db
+      .select()
+      .from(addressModel)
+      .where(eq(addressModel.vendorId, newVendor.id!));
+    if (existingAddress) {
+      await db
+        .update(addressModel)
+        .set({ address: oldVendor.vendoraddress })
+        .where(eq(addressModel.id, existingAddress.id));
+    } else {
+      await db
+        .insert(addressModel)
+        .values({ address: oldVendor.vendoraddress, vendorId: newVendor.id! });
+    }
+  }
+  return newVendor;
+}
+
 /** Legacy IRP MySQL stores naive date/datetime in India (IST, UTC+5:30). */
 const IST_OFFSET = "+05:30";
 
@@ -1120,6 +1397,36 @@ const arr: {
   fn: (id: number) => Promise<unknown>;
   sql: string;
 }[] = [
+  {
+    table: "holidaymain",
+    fn: getHolidayByOldId,
+    sql: `SELECT id FROM holidaymain;`,
+  },
+  {
+    table: "holidaystudentsub",
+    fn: getClassHolidayByOldId,
+    sql: `SELECT id FROM holidaystudentsub;`,
+  },
+  {
+    table: "author",
+    fn: getAuthorByOldId,
+    sql: `SELECT id FROM author;`,
+  },
+  {
+    table: "authordetailsub",
+    fn: getAuthorDetailByOldId,
+    sql: `SELECT id FROM authordetailsub;`,
+  },
+  {
+    table: "authortype",
+    fn: getAuthorTypeByOldId,
+    sql: `SELECT id FROM authortype;`,
+  },
+  {
+    table: "procurementvendordetailmaintab",
+    fn: getVendorByOldId,
+    sql: `SELECT id FROM procurementvendordetailmaintab;`,
+  },
   {
     table: "issuereturn",
     fn: getBookCirculationByOldId,

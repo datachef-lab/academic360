@@ -17,7 +17,7 @@ async function testCuRegistrationPdfGeneration() {
 
     const mockFormData = {
       // College Information
-      collegeLogoUrl: "https://besc.academic360.app/api/api/v1/settings/file/4",
+      collegeLogoUrl: "https://api.academic360.app/api/v1/settings/file/4",
       collegeName: "The Bhawanipur Education Society College",
       collegeAddress: "5, Lala Lajpat Rai Sarani, Kolkata - 700020",
       collegeDetails1:
@@ -138,7 +138,7 @@ async function testCuRegistrationPdfGeneration() {
         outputDirectory: "./test-output",
         uploadToS3: false, // Don't upload to S3 during tests
         collegeInfo: {
-          logoUrl: "https://besc.academic360.app/api/api/v1/settings/file/4",
+          logoUrl: "https://api.academic360.app/api/v1/settings/file/4",
           name: "The Bhawanipur Education Society College",
           address: "5, Lala Lajpat Rai Sarani, Kolkata - 700020",
           details1:

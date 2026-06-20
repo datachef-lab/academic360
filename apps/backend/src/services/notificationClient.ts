@@ -3,7 +3,12 @@ import type { NotificationDto } from "@repo/db/dtos/notifications";
 
 export async function enqueueNotification(dto: NotificationDto) {
   console.log("🚨 [notif-client] enqueueNotification function called!");
+  // Reach the notification-system. In Docker/compose this must be the service
+  // name (http://notification-worker:5010), NOT localhost (that hits the
+  // backend's own container). Prefer NOTIFICATION_SYSTEM_URL (same var the
+  // app.ts proxy uses); BACKEND_SELF_BASE kept as a legacy fallback.
   const base =
+    process.env.NOTIFICATION_SYSTEM_URL ||
     process.env.BACKEND_SELF_BASE ||
     `http://localhost:${process.env.NOTIFICATION_SYSTEM_PORT || 8080}`;
   const url = `${base}/api/notifications/enqueue`;

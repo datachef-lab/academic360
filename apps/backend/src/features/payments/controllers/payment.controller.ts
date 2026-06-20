@@ -19,6 +19,7 @@ import {
   generateOrderId,
   updatePaymentByOrderId,
   isFeeStudentMappingPaymentContext,
+  parsePaytmTxnDateInput,
 } from "../services/payment.service.js";
 import {
   createPaytmTxnToken,
@@ -33,6 +34,7 @@ import {
 import { findApplicationFormModelById } from "@/features/admissions/services/application-form.service.js";
 import { paytmConfig, isPaytmConfigured } from "../config/paytm.config.js";
 import { sendFeeReceiptEmailForPaymentId } from "../services/fee-receipt-notification.service.js";
+import { settleLibraryFinePayment } from "@/features/library/services/library-fine-payment.service.js";
 
 function normalizePaytmTxnStatus(value: unknown): string {
   return String(value ?? "")
@@ -553,14 +555,19 @@ export const paymentCallbackHandler = async (
     }
 
     const normalizedCallbackStatus = normalizePaytmTxnStatus(status);
+    const parsedCallbackTxnDate = parsePaytmTxnDateInput(txnDate);
+    let updatedPaymentOnSuccess: Awaited<
+      ReturnType<typeof updatePaymentByOrderId>
+    > | null = null;
+    let callbackUpdateFailed = false;
+
     try {
-      // Update base status columns from callback.
       if (normalizedCallbackStatus === "TXN_SUCCESS") {
-        const updatedPayment = await updatePaymentByOrderId(orderId, {
+        updatedPaymentOnSuccess = await updatePaymentByOrderId(orderId, {
           status: "SUCCESS",
           transactionId: txnId,
           bankTxnId,
-          txnDate: txnDate ? new Date(txnDate) : undefined,
+          txnDate: parsedCallbackTxnDate,
           mid,
           txnAmount,
           bankName,
@@ -570,16 +577,12 @@ export const paymentCallbackHandler = async (
           cardScheme,
           gatewayResponse: { paytm: { callback: body } },
         });
-
-        if (updatedPayment?.id) {
-          await sendFeeReceiptEmailForPaymentId(updatedPayment.id);
-        }
       } else if (normalizedCallbackStatus === "TXN_FAILURE") {
         await updatePaymentByOrderId(orderId, {
           status: "FAILED",
           transactionId: txnId,
           bankTxnId,
-          txnDate: txnDate ? new Date(txnDate) : undefined,
+          txnDate: parsedCallbackTxnDate,
           mid,
           txnAmount,
           bankName,
@@ -591,8 +594,6 @@ export const paymentCallbackHandler = async (
         });
       }
 
-      // Compulsory enrichment attempt (no skips) — store whatever Paytm returns (or errors).
-      // Re-read latest payment row so we pick up txnToken stored at initiation.
       const latest = await findPaymentByOrderId(orderId);
       const isOnline = latest?.paymentMode === "ONLINE";
       const isPaytm =
@@ -600,43 +601,66 @@ export const paymentCallbackHandler = async (
           .trim()
           .toUpperCase() === "PAYTM";
       const isManual = !!latest?.isManualEntry;
-      if (!isOnline || !isPaytm || isManual) {
+
+      if (isOnline && isPaytm && !isManual) {
+        const tokenFromDb = (
+          latest?.gatewayResponse as { paytm?: { txnToken?: string } } | null
+        )?.paytm?.txnToken;
+
+        console.info("[Paytm] compulsory enrichment start", {
+          orderId,
+          callbackStatus: status,
+          hasTxnToken: !!tokenFromDb,
+        });
+
+        const enrichResult = await enrichPaymentWithPaytmDetails(orderId, {
+          txnToken: tokenFromDb,
+        });
+
+        if (!enrichResult.success) {
+          console.error("[Paytm] compulsory enrichment failed", {
+            orderId,
+            error: enrichResult.error,
+          });
+        } else {
+          console.info("[Paytm] compulsory enrichment done", { orderId });
+        }
+      } else {
         console.info("[Paytm] skip enrichment (not eligible)", {
           orderId,
           isOnline,
           vendor: latest?.paymentGatewayVendor,
           isManualEntry: isManual,
         });
-        return;
       }
-      const tokenFromDb = (
-        latest?.gatewayResponse as { paytm?: { txnToken?: string } } | null
-      )?.paytm?.txnToken;
 
-      console.info("[Paytm] compulsory enrichment start", {
-        orderId,
-        callbackStatus: status,
-        hasTxnToken: !!tokenFromDb,
-      });
-
-      const enrichResult = await enrichPaymentWithPaytmDetails(orderId, {
-        txnToken: tokenFromDb,
-      });
-
-      if (!enrichResult.success) {
-        console.error("[Paytm] compulsory enrichment failed", {
-          orderId,
-          error: enrichResult.error,
-        });
-      } else {
-        console.info("[Paytm] compulsory enrichment done", { orderId });
+      if (updatedPaymentOnSuccess?.id) {
+        // Library-fine bridge: when the Paytm callback flips a LIBRARY_FINE
+        // payment to SUCCESS, mark the corresponding book_circulation as paid
+        // and emit LIBRARY_FINE_PAID. (Fee receipts are handled below for the
+        // FEES context — they're independent code paths.)
+        if (updatedPaymentOnSuccess.context === "LIBRARY_FINE") {
+          try {
+            await settleLibraryFinePayment(
+              updatedPaymentOnSuccess.id,
+              "SUCCESS",
+            );
+          } catch (e) {
+            console.error("[Paytm callback] library-fine settle failed", {
+              paymentId: updatedPaymentOnSuccess.id,
+              error: e,
+            });
+          }
+        } else {
+          await sendFeeReceiptEmailForPaymentId(updatedPaymentOnSuccess.id);
+        }
       }
     } catch (updateError) {
+      callbackUpdateFailed = true;
       console.error(
         `Failed to update payment for orderId ${orderId}:`,
         updateError,
       );
-      // Continue to redirect even if update fails - the payment exists
     }
 
     const fallbackUrl = process.env.CORS_ORIGIN || "http://localhost:5173";
@@ -647,8 +671,24 @@ export const paymentCallbackHandler = async (
     const frontendUrl = resolvedReturnUrl
       ? new URL(resolvedReturnUrl).origin
       : fallbackUrl;
-    const paymentResult =
+
+    const latestForRedirect = await findPaymentByOrderId(orderId);
+    let paymentResult =
       normalizedCallbackStatus === "TXN_SUCCESS" ? "success" : "failed";
+    if (normalizedCallbackStatus === "TXN_SUCCESS") {
+      if (callbackUpdateFailed) {
+        paymentResult = "failed";
+      } else if (
+        isFeeStudentMappingPaymentContext(latestForRedirect?.context ?? null)
+      ) {
+        const feePaymentReady =
+          latestForRedirect?.status === "SUCCESS" &&
+          !!latestForRedirect?.isLinked;
+        if (!feePaymentReady) paymentResult = "failed";
+      } else if (latestForRedirect?.status !== "SUCCESS") {
+        paymentResult = "failed";
+      }
+    }
     const respMsg =
       body.RESPMSG ??
       body.respMsg ??
@@ -729,6 +769,23 @@ export const paymentCallbackHandler = async (
         console.error("Failed to fetch student UID:", mappingError);
       }
     }
+
+    const gatewayTxnDate = (() => {
+      const gr = latestForRedirect?.gatewayResponse as {
+        paytm?: { callback?: Record<string, string> };
+      } | null;
+      return (
+        gr?.paytm?.callback?.TXNDATE ?? gr?.paytm?.callback?.txnDate ?? null
+      );
+    })();
+    console.info("[Paytm callback] redirect", {
+      orderId,
+      paymentResult,
+      status: latestForRedirect?.status,
+      isLinked: latestForRedirect?.isLinked,
+      txnDate: latestForRedirect?.txnDate ?? null,
+      gatewayTxnDate,
+    });
 
     res.setHeader("Content-Type", "text/html");
     res.status(200).send(

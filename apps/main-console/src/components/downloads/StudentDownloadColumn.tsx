@@ -5,8 +5,7 @@ import { FaVenus, FaMars, FaTransgender, FaGenderless, FaQuestion } from "react-
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Student } from "@/types/user/student";
-
-const profileImageUrl = import.meta.env.VITE_STUDENT_PROFILE_URL;
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
 export const studentDownloadColumns: ColumnDef<Student>[] = [
   {
@@ -29,7 +28,7 @@ export const studentDownloadColumns: ColumnDef<Student>[] = [
       };
 
       const bgColor = stringToColor(name);
-      const avatar = `${profileImageUrl}/Student_Image_${uid}.jpg`;
+      const avatar = studentAvatarUrl(uid) ?? "";
 
       return (
         <div className="flex items-center">

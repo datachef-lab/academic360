@@ -4,6 +4,15 @@ import JournalTypesMasterPage from "./JournalTypesMasterPage";
 import RacksMasterPage from "./RacksMasterPage";
 import ShelvesMasterPage from "./ShelvesMasterPage";
 import StatusesMasterPage from "./StatusesMasterPage";
+import AuthorTypesMasterPage from "./AuthorTypesMasterPage";
+import AuthorsMasterPage from "./AuthorsMasterPage";
+import VendorsMasterPage from "./VendorsMasterPage";
+import HolidaysMasterPage from "./HolidaysMasterPage";
+import ClassHolidaysMasterPage from "./ClassHolidaysMasterPage";
+import BranchesMasterPage from "./BranchesMasterPage";
+import PatronCategoriesMasterPage from "./PatronCategoriesMasterPage";
+import ItemCategoriesMasterPage from "./ItemCategoriesMasterPage";
+import CirculationPoliciesMasterPage from "./CirculationPoliciesMasterPage";
 
 // function LibraryMasterPlaceholderPage({
 //   title,
@@ -42,4 +51,40 @@ export function ArticlesPage() {
 
 export function LibraryDocumentsPage() {
   return <LibraryDocumentsMasterPage />;
+}
+
+export function AuthorTypesPage() {
+  return <AuthorTypesMasterPage />;
+}
+
+export function AuthorsPage() {
+  return <AuthorsMasterPage />;
+}
+
+export function VendorsPage() {
+  return <VendorsMasterPage />;
+}
+
+export function HolidaysPage() {
+  return <HolidaysMasterPage />;
+}
+
+export function ClassHolidaysPage() {
+  return <ClassHolidaysMasterPage />;
+}
+
+export function BranchesPage() {
+  return <BranchesMasterPage />;
+}
+
+export function PatronCategoriesPage() {
+  return <PatronCategoriesMasterPage />;
+}
+
+export function ItemCategoriesPage() {
+  return <ItemCategoriesMasterPage />;
+}
+
+export function CirculationPoliciesPage() {
+  return <CirculationPoliciesMasterPage />;
 }

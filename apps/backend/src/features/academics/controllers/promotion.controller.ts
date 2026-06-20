@@ -5,9 +5,15 @@ import {
   findPromotionByStudentIdAndClassId,
   markExamFormSubmission,
 } from "../services/promotion.service";
-import { User, userModel } from "@repo/db/schemas";
+import { User, studentModel, userModel } from "@repo/db/schemas";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
+import path from "path";
+import {
+  createUploadConfig,
+  uploadToS3,
+  UploadConfigs,
+} from "@/services/s3.service.js";
 import { exportPromotionStudentsReport } from "../services/promotion.service";
 import { socketService } from "@/services/socketService.js";
 import { parseReportExportFilters } from "@/utils/report-export-filters.js";
@@ -87,6 +93,34 @@ export async function markExamFormSubmissionHandler(
             "Invalid promotionId format",
           ),
         );
+    }
+
+    const file = req.file;
+    if (file) {
+      const ext = path.extname(file.originalname) || ".pdf";
+      const [student] = await db
+        .select({ uid: studentModel.uid })
+        .from(studentModel)
+        .where(eq(studentModel.userId, userId))
+        .limit(1);
+
+      const fileName = student?.uid
+        ? `${student.uid}${ext}`
+        : `exam-form-${promotionId}-student-${userId}${ext}`;
+
+      await uploadToS3(
+        file,
+        createUploadConfig(UploadConfigs.EXAM_FORMS.folder, {
+          customFileName: fileName,
+          maxFileSizeMB: UploadConfigs.EXAM_FORMS.maxFileSizeMB,
+          allowedMimeTypes: UploadConfigs.EXAM_FORMS.allowedMimeTypes,
+          metadata: {
+            promotionId: String(promotionId),
+            userId: String(userId),
+            studentUid: student?.uid ?? "",
+          },
+        }),
+      );
     }
 
     const updatedPromotion = await markExamFormSubmission(

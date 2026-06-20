@@ -50,6 +50,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSearchedStudents, StudentSearchItem } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 import {
   FEE_PAYMENT_MARKING_PATH,
   isFeeMarkingOnlyUser,
@@ -387,9 +388,7 @@ export default function HomeLayout() {
                       >
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
-                            <AvatarImage
-                              src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`}
-                            />
+                            <AvatarImage src={studentAvatarUrl(s.uid)} />
                             <AvatarFallback className="text-[10px]">
                               {(s.name ?? s.uid ?? "?")?.toString().charAt(0).toUpperCase()}
                             </AvatarFallback>

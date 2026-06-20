@@ -1168,6 +1168,478 @@ export async function addBoardSubject(
   return newBoardSubject;
 }
 
+/** Resolve or create session for a legacy currentsessionmaster id. */
+export async function getOrCreateSessionForLegacySessionId(
+  oldSessionId: number,
+): Promise<Session> {
+  const [[oldSession]] = (await mysqlConnection.query(`
+        SELECT *
+        FROM currentsessionmaster
+        WHERE id = ${oldSessionId};
+    `)) as [OldSession[], any];
+
+  if (!oldSession) {
+    throw new Error(`No legacy session found for id ${oldSessionId}`);
+  }
+
+  const [[oldAcademicYear]] = (await mysqlConnection.query(`
+        SELECT *
+        FROM accademicyear
+        WHERE sessionId = ${oldSession.id};
+    `)) as [OldAcademicYear[], any];
+
+  if (!oldAcademicYear) {
+    throw new Error(
+      `No academic year found for legacy session ${oldSession.sessionName}`,
+    );
+  }
+
+  const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
+  const codePrefix = Number(oldAcademicYear.accademicYearName) % 100;
+
+  let [foundAcademicYear] = await db
+    .select()
+    .from(academicYearModel)
+    .where(
+      or(
+        ilike(academicYearModel.year, academicYearName),
+        eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
+      ),
+    );
+
+  if (!foundAcademicYear) {
+    foundAcademicYear = (
+      await db
+        .insert(academicYearModel)
+        .values({
+          legacyAcademicYearId: oldAcademicYear.id,
+          year: academicYearName,
+          isCurrentYear: oldAcademicYear.presentAcademicYear,
+          codePrefix: codePrefix.toString(),
+        })
+        .returning()
+    )[0];
+  }
+
+  let [foundSession] = await db
+    .select()
+    .from(sessionModel)
+    .where(
+      or(
+        eq(sessionModel.legacySessionId, oldSession.id!),
+        eq(sessionModel.academicYearId, foundAcademicYear.id),
+        eq(sessionModel.name, oldSession.sessionName),
+      ),
+    );
+
+  if (!foundSession) {
+    foundSession = (
+      await db
+        .insert(sessionModel)
+        .values({
+          legacySessionId: oldSession.id!,
+          academicYearId: foundAcademicYear.id,
+          name: oldSession.sessionName,
+          from: new Date(oldSession.fromDate as any).toISOString().slice(0, 10),
+          to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
+          isCurrentSession: oldSession.iscurrentsession,
+          codePrefix: oldSession.codeprefix,
+        } as Session)
+        .returning()
+    )[0];
+  }
+
+  return foundSession;
+}
+
+async function getOrCreateAdmissionForSession(
+  foundSession: Session,
+): Promise<typeof admissionModel.$inferSelect> {
+  let [foundAdmission] = await db
+    .select()
+    .from(admissionModel)
+    .where(eq(admissionModel.sessionId, foundSession.id));
+
+  if (!foundAdmission) {
+    foundAdmission = (
+      await db
+        .insert(admissionModel)
+        .values({
+          sessionId: foundSession.id,
+          status: "SUBJECT_PAPER_SELECTION",
+          isClosed: false,
+          isArchived: false,
+        })
+        .returning()
+    )[0];
+  }
+
+  return foundAdmission;
+}
+
+export async function findTransferredAdmissionCourseDetailsForStudent(
+  applicationFormId: number,
+  programCourseId?: number,
+): Promise<AdmissionCourseDetails | undefined> {
+  if (programCourseId) {
+    const [row] = await db
+      .select({ admission_course_details: admissionCourseDetailsModel })
+      .from(admissionCourseDetailsModel)
+      .leftJoin(
+        admissionProgramCourseModel,
+        eq(
+          admissionCourseDetailsModel.admissionProgramCourseId,
+          admissionProgramCourseModel.id,
+        ),
+      )
+      .where(
+        and(
+          eq(admissionCourseDetailsModel.applicationFormId, applicationFormId),
+          eq(admissionCourseDetailsModel.isTransferred, true),
+          eq(admissionProgramCourseModel.programCourseId, programCourseId),
+        ),
+      );
+    return row?.admission_course_details;
+  }
+
+  const [row] = await db
+    .select()
+    .from(admissionCourseDetailsModel)
+    .where(
+      and(
+        eq(admissionCourseDetailsModel.applicationFormId, applicationFormId),
+        eq(admissionCourseDetailsModel.isTransferred, true),
+      ),
+    );
+  return row;
+}
+
+async function createBootstrapAdmissionCourseDetails(
+  applicationForm: ApplicationForm,
+  historicalRecord: OldHistoricalRecord,
+  oldStudent: OldStudent,
+): Promise<AdmissionCourseDetails> {
+  const existing = await findTransferredAdmissionCourseDetailsForStudent(
+    applicationForm.id as number,
+  );
+  if (existing) return existing;
+
+  const [[oldCourse]] = (await mysqlConnection.query(`
+        SELECT * FROM course WHERE id = ${historicalRecord.courseId}
+    `)) as [OldCourse[], any];
+
+  if (!oldCourse?.courseName) {
+    throw new Error(
+      `Course not found for historicalrecord courseId ${historicalRecord.courseId}`,
+    );
+  }
+
+  const [programCourse] = await db
+    .select()
+    .from(programCourseModel)
+    .where(ilike(programCourseModel.name, oldCourse.courseName.trim()));
+
+  if (!programCourse) {
+    throw new Error(
+      `Program course not found for legacy course ${oldCourse.courseName}`,
+    );
+  }
+
+  const classData = await addClass(historicalRecord.classId);
+  const shift = await upsertShift(historicalRecord.shiftId);
+
+  if (!shift?.id || !classData?.id) {
+    throw new Error(
+      `Missing class/shift for bootstrap admission course details (student ${oldStudent.codeNumber})`,
+    );
+  }
+
+  const [admission] = await db
+    .select()
+    .from(admissionModel)
+    .where(eq(admissionModel.id, applicationForm.admissionId as number));
+
+  let [existingAdmissionProgramCourse] = await db
+    .select()
+    .from(admissionProgramCourseModel)
+    .where(
+      and(
+        eq(admissionProgramCourseModel.programCourseId, programCourse.id!),
+        eq(admissionProgramCourseModel.admissionId, admission?.id as number),
+        eq(admissionProgramCourseModel.classId, classData.id),
+      ),
+    );
+
+  if (!existingAdmissionProgramCourse) {
+    existingAdmissionProgramCourse = (
+      await db
+        .insert(admissionProgramCourseModel)
+        .values({
+          admissionId: admission?.id as number,
+          programCourseId: programCourse.id as number,
+          classId: classData.id,
+        })
+        .returning()
+    )[0];
+  }
+
+  let studentCategory: StudentCategory | null = null;
+  if (oldStudent.studentCategoryId) {
+    studentCategory = await addStudentCategory(oldStudent.studentCategoryId);
+  }
+
+  const classRollNumber = historicalRecord.rollNo
+    ? String(historicalRecord.rollNo)
+    : oldStudent.rollNumber
+      ? String(oldStudent.rollNumber)
+      : "0";
+
+  const [created] = await db
+    .insert(admissionCourseDetailsModel)
+    .values({
+      applicationFormId: applicationForm.id as number,
+      legacyCourseDetailsId: null,
+      isTransferred: true,
+      admissionProgramCourseId: existingAdmissionProgramCourse.id!,
+      streamId: programCourse.streamId!,
+      classId: classData.id,
+      shiftId: shift.id,
+      studentCategoryId: studentCategory?.id,
+      rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : "",
+      classRollNumber,
+      appNumber: oldStudent.codeNumber || "",
+      challanNumber: "",
+      amount: 0,
+      applicationTimestamp: oldStudent.admissiondate
+        ? new Date(oldStudent.admissiondate)
+        : new Date(),
+      freeshipPercentage: 0,
+    } as AdmissionCourseDetailsT)
+    .returning();
+
+  return created;
+}
+
+/**
+ * For bootstrap students, oldStudent carries the only signals admission_additional_info
+ * can mirror (handicapped flag). Create the row if missing so the FK chain is whole.
+ */
+export async function upsertBootstrapAdditionalInfo(
+  applicationFormId: number,
+  oldStudent: OldStudent,
+): Promise<void> {
+  const [existing] = await db
+    .select()
+    .from(admissionAdditionalInfoModel)
+    .where(
+      eq(admissionAdditionalInfoModel.applicationFormId, applicationFormId),
+    );
+  if (existing) return;
+  await db.insert(admissionAdditionalInfoModel).values({
+    applicationFormId,
+    isPhysicallyChallenged: oldStudent.handicapped === "YES",
+  });
+}
+
+/**
+ * Build a minimal application form from post-admission legacy data when the
+ * pre-admission personaldetails/coursedetails chain is unavailable.
+ */
+export async function createLegacyBootstrapApplicationForm(
+  oldStudent: OldStudent,
+  student: Student,
+): Promise<{
+  applicationForm: ApplicationForm;
+  transferredAdmCourseDetails: AdmissionCourseDetails;
+}> {
+  if (student.applicationId) {
+    const [applicationForm] = await db
+      .select()
+      .from(applicationFormModel)
+      .where(eq(applicationFormModel.id, student.applicationId));
+
+    if (!applicationForm) {
+      throw new Error(
+        `Application form ${student.applicationId} not found for student ${student.uid}`,
+      );
+    }
+
+    const transferredAdmCourseDetails =
+      (await findTransferredAdmissionCourseDetailsForStudent(
+        applicationForm.id as number,
+        student.programCourseId ?? undefined,
+      )) ??
+      (student.admissionCourseDetailsId
+        ? (
+            await db
+              .select()
+              .from(admissionCourseDetailsModel)
+              .where(
+                eq(
+                  admissionCourseDetailsModel.id,
+                  student.admissionCourseDetailsId,
+                ),
+              )
+          )[0]
+        : undefined);
+
+    if (!transferredAdmCourseDetails) {
+      throw new Error(
+        `Transferred admission course details not found for student ${student.uid}`,
+      );
+    }
+
+    // Refuse to adopt an applicationForm that wasn't bootstrap-built. The bootstrap path
+    // is only legitimate when (a) the linked course_details was created with
+    // legacyCourseDetailsId IS NULL AND isTransferred = true, OR (b) the linked
+    // general_info has legacyPersonalDetailsId IS NULL. Otherwise this would silently
+    // glue post-admission data onto a happy-path applicationForm.
+    const isBootstrapTombstone =
+      transferredAdmCourseDetails.legacyCourseDetailsId == null &&
+      transferredAdmCourseDetails.isTransferred === true;
+    if (!isBootstrapTombstone) {
+      const [gi] = await db
+        .select({
+          legacyPersonalDetailsId:
+            admissionGeneralInfoModel.legacyPersonalDetailsId,
+        })
+        .from(admissionGeneralInfoModel)
+        .where(
+          eq(admissionGeneralInfoModel.applicationFormId, applicationForm.id!),
+        );
+      if (gi && gi.legacyPersonalDetailsId != null) {
+        throw new Error(
+          `Refusing bootstrap on student ${student.uid}: applicationForm ${applicationForm.id} ` +
+            `was created via the happy path (legacyCourseDetailsId=${transferredAdmCourseDetails.legacyCourseDetailsId}, ` +
+            `legacyPersonalDetailsId=${gi.legacyPersonalDetailsId}). ` +
+            `Bootstrap may not adopt a non-bootstrap form.`,
+        );
+      }
+    }
+
+    await upsertBootstrapAdditionalInfo(applicationForm.id!, oldStudent);
+    return { applicationForm, transferredAdmCourseDetails };
+  }
+
+  const [historicalRecords] = (await mysqlConnection.query(`
+        SELECT * FROM historicalrecord
+        WHERE parent_id = ${oldStudent.id}
+        ORDER BY index_col ASC
+    `)) as [OldHistoricalRecord[], any];
+
+  if (!historicalRecords?.length) {
+    throw new Error(
+      `No historicalrecord rows found for student ${oldStudent.codeNumber}`,
+    );
+  }
+
+  const firstHistoricalRecord = historicalRecords[0];
+  const presentHistoricalRecord =
+    [...historicalRecords].reverse().find((hr) => {
+      const present = hr.present as unknown;
+      return (
+        present === true ||
+        present === 1 ||
+        (Buffer.isBuffer(present) && present[0] === 1)
+      );
+    }) ?? historicalRecords[historicalRecords.length - 1];
+
+  const foundSession = await getOrCreateSessionForLegacySessionId(
+    firstHistoricalRecord.sessionid,
+  );
+  const foundAdmission = await getOrCreateAdmissionForSession(foundSession);
+
+  // Resolve UG/PG from the new-DB programCourse already linked to the student
+  // (upsertStudent ran first in processStudent). studentpersonaldetails.coursetype
+  // holds curriculum framework values like "CBCS" — NOT a UG/PG signal.
+  let level: "UNDER_GRADUATE" | "POST_GRADUATE" | null = null;
+  if (student.programCourseId) {
+    const [row] = await db
+      .select({ shortName: courseLevelModel.shortName })
+      .from(programCourseModel)
+      .leftJoin(
+        courseLevelModel,
+        eq(programCourseModel.courseLevelId, courseLevelModel.id),
+      )
+      .where(eq(programCourseModel.id, student.programCourseId));
+    const short = row?.shortName?.trim().toUpperCase();
+    if (short === "PG") level = "POST_GRADUATE";
+    else if (short === "UG") level = "UNDER_GRADUATE";
+  }
+  if (!level) {
+    const ct = oldStudent.coursetype?.trim().toUpperCase();
+    if (ct === "PG") level = "POST_GRADUATE";
+    else if (ct === "UG") level = "UNDER_GRADUATE";
+  }
+  if (!level) {
+    throw new Error(
+      `Cannot determine UG/PG level for student ${oldStudent.codeNumber}: ` +
+        `course_levels.short_name unknown and oldStudent.coursetype='${oldStudent.coursetype ?? ""}' is not UG/PG`,
+    );
+  }
+
+  const [applicationForm] = await db
+    .insert(applicationFormModel)
+    .values({
+      admissionId: foundAdmission.id!,
+      level,
+      applicationNumber: oldStudent.codeNumber || "",
+    })
+    .returning();
+
+  const [existingGeneralInfo] = await db
+    .select()
+    .from(admissionGeneralInfoModel)
+    .where(
+      eq(admissionGeneralInfoModel.applicationFormId, applicationForm.id!),
+    );
+
+  if (!existingGeneralInfo) {
+    let studentCategory: StudentCategory | null = null;
+    if (oldStudent.studentCategoryId) {
+      studentCategory = await addStudentCategory(oldStudent.studentCategoryId);
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      oldStudent.contactNo?.trim() ||
+        oldStudent.codeNumber?.trim() ||
+        "default",
+      10,
+    );
+
+    await db.insert(admissionGeneralInfoModel).values({
+      email:
+        oldStudent.email?.trim() ||
+        `${oldStudent.codeNumber?.trim()?.toUpperCase()}@thebges.edu.in`,
+      password: hashedPassword,
+      applicationFormId: applicationForm.id!,
+      residenceOfKolkata: false,
+      legacyPersonalDetailsId: null,
+      studentCategoryId: studentCategory?.id,
+      isMinority: false,
+    });
+  }
+
+  await upsertBootstrapAdditionalInfo(applicationForm.id!, oldStudent);
+
+  const transferredAdmCourseDetails =
+    await createBootstrapAdmissionCourseDetails(
+      applicationForm,
+      presentHistoricalRecord,
+      oldStudent,
+    );
+
+  console.log("[legacy-bootstrap]", {
+    uid: student.uid,
+    codeNumber: oldStudent.codeNumber,
+    applicationFormId: applicationForm.id,
+    level,
+    source: "historicalrecord",
+  });
+
+  return { applicationForm, transferredAdmCourseDetails };
+}
+
 export async function processOldStudentApplicationForm(
   oldStudent: OldStudent,
   student: Student,
@@ -1183,6 +1655,15 @@ export async function processOldStudentApplicationForm(
         JOIN studentpersonaldetails spd ON spd.admissionid = cd.id
         WHERE spd.id = ${oldStudent.id};
     `)) as [OldAdmStudentPersonalDetail[], any];
+
+  if (!oldAdmStudentPersonalDetails) {
+    console.log(
+      "No personaldetails chain for student",
+      oldStudent.codeNumber,
+      "- using legacy bootstrap from historicalrecord",
+    );
+    return createLegacyBootstrapApplicationForm(oldStudent, student);
+  }
 
   // Check if personaldetails exists
   const [existingAdmGeneralInfo] = await db
