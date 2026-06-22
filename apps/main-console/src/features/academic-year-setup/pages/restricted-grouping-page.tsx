@@ -65,10 +65,40 @@ interface UIRestrictedGrouping {
   isActive: boolean;
 }
 
+function mapDtoToUi(dto: RestrictedGroupingMainDto): UIRestrictedGrouping {
+  return {
+    id: dto.id || 0,
+    subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+    subject: dto.subject?.name || "",
+    semesters: Array.from(
+      new Set(
+        (dto.forClasses || [])
+          .map((c) => c.class?.shortName || c.class?.name || "")
+          .filter(Boolean),
+      ),
+    ),
+    cannotCombineWith: Array.from(
+      new Set(
+        (dto.cannotCombineWithSubjects || [])
+          .map((s) => s.cannotCombineWithSubject?.name || "")
+          .filter(Boolean),
+      ),
+    ),
+    applicableProgramCoursesFor: Array.from(
+      new Set(
+        (dto.applicableProgramCourses || [])
+          .map((pc) => pc.programCourse?.name || "")
+          .filter(Boolean),
+      ),
+    ),
+    isActive: dto.isActive ?? true,
+  };
+}
+
 export default function RestrictedGroupingPage() {
   const { currentAcademicYear } = useAcademicYear();
-  const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedProgramCourse, setSelectedProgramCourse] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   // Loaded data (DTO-based)
@@ -148,23 +178,7 @@ export default function RestrictedGroupingPage() {
       });
       toast.success("Restricted grouping updated");
       setIsEditOpen(false);
-      const mains = await restrictedGroupingApi.listRestrictedGroupingMains();
-      const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
-        id: dto.id || 0,
-        subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
-        subject: dto.subject?.name || "",
-        semesters: (dto.forClasses || [])
-          .map((c) => c.class?.shortName || c.class?.name || "")
-          .filter(Boolean),
-        cannotCombineWith: (dto.cannotCombineWithSubjects || [])
-          .map((s) => s.cannotCombineWithSubject?.name || "")
-          .filter(Boolean),
-        applicableProgramCoursesFor: (dto.applicableProgramCourses || [])
-          .map((pc) => pc.programCourse?.name || "")
-          .filter(Boolean),
-        isActive: dto.isActive ?? true,
-      }));
-      setRelations(ui);
+      await loadPage();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update restricted grouping";
       toast.error(message);
@@ -193,8 +207,6 @@ export default function RestrictedGroupingPage() {
           programCoursesRes.status === "fulfilled" ? programCoursesRes.value : [];
 
         if (!isMounted) return;
-        // Initial page load via server pagination loader
-        await loadPage();
 
         setAllSubjects(subjects.map((s) => s.name).filter(Boolean));
         setAllCategories(
@@ -310,63 +322,39 @@ export default function RestrictedGroupingPage() {
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   // Load page with filters/search
-  const loadPage = async () => {
+  const loadPage = async (pageOverride?: number) => {
+    const page = pageOverride ?? currentPage;
+    const programCourseId =
+      selectedProgramCourse && selectedProgramCourse !== "all"
+        ? programCourseNameToId[selectedProgramCourse]
+        : undefined;
+
     const paged = await restrictedGroupingApi.listRestrictedGroupingMainsPaginated({
-      page: currentPage,
+      page,
       pageSize: itemsPerPage,
-      search: searchTerm || "",
-      subjectType: selectedCategory || "",
+      search: searchTerm.trim() || undefined,
+      subjectType: selectedCategory && selectedCategory !== "all" ? selectedCategory : undefined,
+      programCourseId,
     });
     const mains = paged.content as RestrictedGroupingMainDto[];
-    const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
-      id: dto.id || 0,
-      subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
-      subject: dto.subject?.name || "",
-      semesters: Array.from(
-        new Set(
-          (dto.forClasses || [])
-            .map((c) => c.class?.shortName || c.class?.name || "")
-            .filter(Boolean),
-        ),
-      ),
-      cannotCombineWith: Array.from(
-        new Set(
-          (dto.cannotCombineWithSubjects || [])
-            .map((s) => s.cannotCombineWithSubject?.name || "")
-            .filter(Boolean),
-        ),
-      ),
-      applicableProgramCoursesFor: Array.from(
-        new Set(
-          (dto.applicableProgramCourses || [])
-            .map((pc) => pc.programCourse?.name || "")
-            .filter(Boolean),
-        ),
-      ),
-      isActive: dto.isActive ?? true,
-    }));
-    setRelations(ui);
+    setRelations(mains.map(mapDtoToUi));
     setTotalPages(paged.totalPages);
     setTotalItems(paged.totalElements);
   };
 
   useEffect(() => {
+    if (!accessToken) return;
     loadPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, searchTerm, selectedCategory]);
-
-  // Filter the data
-  const filteredRelations = relations.filter((item) => {
-    const programCourseMatch =
-      !selectedProgramCourse ||
-      selectedProgramCourse === "all" ||
-      item.applicableProgramCoursesFor.some((course: string) =>
-        course.includes(selectedProgramCourse),
-      );
-    const categoryMatch =
-      !selectedCategory || selectedCategory === "all" || item.subjectCategory === selectedCategory;
-    return programCourseMatch && categoryMatch;
-  });
+  }, [
+    accessToken,
+    currentPage,
+    itemsPerPage,
+    searchTerm,
+    selectedCategory,
+    selectedProgramCourse,
+    programCourseNameToId,
+  ]);
 
   const addNewRule = () => {
     const currentRules = activeTab === "category-program" ? categoryProgramRules : subjectRules;
@@ -489,23 +477,8 @@ export default function RestrictedGroupingPage() {
       toast.success(`Saved ${results.length} restricted grouping${results.length > 1 ? "s" : ""}`);
       setIsAddDialogOpen(false);
       resetDialog();
-      const mains = await restrictedGroupingApi.listRestrictedGroupingMains();
-      const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
-        id: dto.id || 0,
-        subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
-        subject: dto.subject?.name || "",
-        semesters: (dto.forClasses || [])
-          .map((c) => c.class?.shortName || c.class?.name || "")
-          .filter(Boolean),
-        cannotCombineWith: (dto.cannotCombineWithSubjects || [])
-          .map((s) => s.cannotCombineWithSubject?.name || "")
-          .filter(Boolean),
-        applicableProgramCoursesFor: (dto.applicableProgramCourses || [])
-          .map((pc) => pc.programCourse?.name || "")
-          .filter(Boolean),
-        isActive: dto.isActive ?? true,
-      }));
-      setRelations(ui);
+      setCurrentPage(1);
+      await loadPage(1);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to save restricted groupings";
       toast.error(message);
@@ -536,7 +509,7 @@ export default function RestrictedGroupingPage() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-w-0">
       {/* Fixed Header */}
       <div className="flex-shrink-0 p-4 pb-0">
         <div className="flex items-center justify-between mb-4 p-4 border rounded-md bg-background">
@@ -562,13 +535,22 @@ export default function RestrictedGroupingPage() {
             <Input
               placeholder="Search categories, programs..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="max-w-sm text-gray-700"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Select value={selectedProgramCourse} onValueChange={setSelectedProgramCourse}>
-              <SelectTrigger className="w-48 text-gray-700">
+            <Select
+              value={selectedProgramCourse}
+              onValueChange={(value) => {
+                setSelectedProgramCourse(value);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-56 text-gray-700">
                 <SelectValue placeholder="Filter by Program-Course" />
               </SelectTrigger>
               <SelectContent>
@@ -580,7 +562,13 @@ export default function RestrictedGroupingPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={(value) => {
+                setSelectedCategory(value);
+                setCurrentPage(1);
+              }}
+            >
               <SelectTrigger className="w-48 text-gray-700">
                 <SelectValue placeholder="Filter by Category" />
               </SelectTrigger>
@@ -602,36 +590,49 @@ export default function RestrictedGroupingPage() {
       </div>
 
       {/* Table with Fixed Header */}
-      <div className="flex-1 px-4 min-h-0">
-        <Card className="h-full flex flex-col">
-          <CardContent className="p-0 h-full flex flex-col">
+      <div className="flex-1 px-4 min-h-0 min-w-0">
+        <Card className="h-full flex flex-col min-w-0 overflow-hidden">
+          <CardContent className="p-0 h-full flex flex-col min-h-0 min-w-0">
             {/* Fixed Header */}
-            <div className="flex-shrink-0 border-b-2 border-l border-r border-gray-300">
-              <Table className="table-fixed">
+            <div className="flex-shrink-0 min-w-0 overflow-hidden border-b-2 border-l border-r border-t border-gray-300 rounded-t-md [scrollbar-gutter:stable]">
+              <Table
+                className="w-full table-fixed"
+                containerClassName="overflow-x-hidden max-w-full"
+              >
+                <colgroup>
+                  <col className="w-[4%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[32%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
                 <TableHeader>
                   <TableRow className="bg-gray-100 border-b-2 border-gray-300">
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-16">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-700 px-2 border-r border-gray-300">
                       Sr. No.
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-32">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-700 px-2 border-r border-gray-300">
                       Subject Category
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-48">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-700 px-2 border-r border-gray-300">
                       Subject
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-24">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-700 px-2 border-r border-gray-300">
                       Semesters
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-48">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-700 px-2 border-r border-gray-300">
                       Cannot Combine With
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-40">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-700 px-2 border-r border-gray-300">
                       Applicable Program-Courses For
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-20">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-700 px-2 border-r border-gray-300">
                       Status
                     </TableHead>
-                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-700 w-24">
+                    <TableHead className="text-center bg-gray-100 font-semibold text-gray-700 px-2 border-r border-gray-300">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -640,31 +641,44 @@ export default function RestrictedGroupingPage() {
             </div>
 
             {/* Scrollable Body */}
-            <div className="flex-1 overflow-auto border-l border-r border-gray-300">
-              <Table className="table-fixed border-collapse [&>tbody>tr]:border-b [&>tbody>tr]:border-gray-300">
+            <div className="flex-1 min-h-0 min-w-0 overflow-auto border-l border-r border-b border-gray-300 rounded-b-md [scrollbar-gutter:stable]">
+              <Table
+                className="w-full table-fixed border-collapse [&>tbody>tr]:border-b [&>tbody>tr]:border-gray-300"
+                containerClassName="overflow-x-hidden max-w-full"
+              >
+                <colgroup>
+                  <col className="w-[4%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[32%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
                 <TableBody>
-                  {filteredRelations.map((relation, index) => (
+                  {relations.map((relation, index) => (
                     <TableRow
                       key={relation.id}
                       className="hover:bg-gray-50 border-b-2 border-gray-300"
                       style={{ borderBottom: "2px solid #d1d5db" }}
                     >
-                      <TableCell className="border-r border-gray-300 w-16">
+                      <TableCell className="px-2 border-r border-gray-300 align-top">
                         {startIndex + index + 1}
                       </TableCell>
-                      <TableCell className="font-medium border-r border-gray-300 w-32">
+                      <TableCell className="px-2 border-r border-gray-300 align-top">
                         <Badge
                           variant="outline"
-                          className="border-blue-500 text-blue-700 bg-blue-50"
+                          className="border-blue-500 text-blue-700 bg-blue-50 text-xs max-w-full whitespace-normal break-words h-auto"
                         >
                           {relation.subjectCategory}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium border-r border-gray-300 w-48">
+                      <TableCell className="px-2 border-r border-gray-300 align-top whitespace-normal break-words">
                         {relation.subject}
                       </TableCell>
-                      <TableCell className="border-r border-gray-300 w-24">
-                        <div className="flex flex-wrap gap-1">
+                      <TableCell className="px-2 border-r border-gray-300 align-top">
+                        <div className="flex flex-wrap gap-1 min-w-0">
                           {(relation.semesters || []).map((semester, semIndex) => (
                             <Badge
                               key={semIndex}
@@ -676,37 +690,27 @@ export default function RestrictedGroupingPage() {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="border-r border-gray-300 w-48">
-                        <div className="flex flex-wrap gap-1">
-                          {(relation.cannotCombineWith || [])
-                            .slice(0, 2)
-                            .map((subject, subjectIndex) => (
-                              <Badge
-                                key={subjectIndex}
-                                variant="outline"
-                                className="text-xs border-red-500 text-red-700 bg-red-50"
-                              >
-                                {subject}
-                              </Badge>
-                            ))}
-                          {(relation.cannotCombineWith || []).length > 2 && (
+                      <TableCell className="px-2 border-r border-gray-300 align-top overflow-hidden">
+                        <div className="flex flex-wrap gap-1 min-w-0">
+                          {(relation.cannotCombineWith || []).map((subject, subjectIndex) => (
                             <Badge
+                              key={subjectIndex}
                               variant="outline"
-                              className="text-xs border-red-500 text-red-700 bg-red-50"
+                              className="text-xs border-red-500 text-red-700 bg-red-50 whitespace-normal break-words h-auto max-w-full"
                             >
-                              +{(relation.cannotCombineWith || []).length - 2} more
+                              {subject}
                             </Badge>
-                          )}
+                          ))}
                         </div>
                       </TableCell>
-                      <TableCell className="border-r border-gray-300 w-40">
-                        <div className="flex flex-wrap gap-1">
+                      <TableCell className="px-2 border-r border-gray-300 align-top overflow-hidden">
+                        <div className="flex flex-wrap gap-1 min-w-0">
                           {(relation.applicableProgramCoursesFor || []).map(
                             (course, courseIndex) => (
                               <Badge
                                 key={courseIndex}
                                 variant="outline"
-                                className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300"
+                                className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300 whitespace-normal break-words h-auto max-w-full"
                               >
                                 {course.split(" - ")[0]}
                               </Badge>
@@ -714,24 +718,33 @@ export default function RestrictedGroupingPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="border-r border-gray-300 w-20">
+                      <TableCell className="px-2 border-r border-gray-300 align-top">
                         <Badge
-                          variant={relation.isActive ? "default" : "secondary"}
+                          variant="outline"
                           className={
                             relation.isActive
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
+                              ? "border-green-500 text-green-700 bg-green-50"
+                              : "border-red-500 text-red-700 bg-red-50"
                           }
                         >
                           {relation.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right w-24">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(relation)}>
+                      <TableCell className="px-2 align-top">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEdit(relation)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

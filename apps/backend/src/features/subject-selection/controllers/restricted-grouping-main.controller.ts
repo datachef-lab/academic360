@@ -107,7 +107,8 @@ export const getAllRestrictedGroupingMainsHandler = async (
       page: parseInt(page, 10) || 1,
       pageSize: parseInt(pageSize, 10) || 10,
       search: search || undefined,
-      subjectType: subjectType || undefined,
+      subjectType:
+        subjectType && subjectType !== "all" ? subjectType : undefined,
       programCourseId: programCourseId ? Number(programCourseId) : undefined,
     });
     res

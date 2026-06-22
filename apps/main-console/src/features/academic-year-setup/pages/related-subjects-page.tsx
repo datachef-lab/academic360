@@ -409,6 +409,7 @@ export default function AlternativeSubjectsPage() {
       cat: grouping.subjectCategory ?? "",
       subj: grouping.subjects[0] ?? "",
     });
+    setEditIsActive(grouping.isActive ?? true);
     setIsDialogOpen(true);
   };
 
@@ -622,6 +623,7 @@ export default function AlternativeSubjectsPage() {
         programCourse: { id: programCourseId },
         subjectType: { id: subjectTypeId },
         boardSubjectName: { id: targetId },
+        isActive: editIsActive,
         relatedSubjectSubs: desiredSubsDto,
       };
       await subjectSelectionApi.updateRelatedSubjectMain(dto.id || 0, updatePayload);
@@ -661,7 +663,7 @@ export default function AlternativeSubjectsPage() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-w-0">
       {/* Fixed Header */}
       <div className="flex-shrink-0 p-4 pb-0">
         <Card className="border-none">
@@ -729,33 +731,45 @@ export default function AlternativeSubjectsPage() {
       </div>
 
       {/* Table with Fixed Header */}
-      <div className="flex-1 px-4 min-h-0">
-        <Card className="h-full flex flex-col">
-          <CardContent className="p-0 h-full flex flex-col min-h-0">
+      <div className="flex-1 px-4 min-h-0 min-w-0">
+        <Card className="h-full flex flex-col min-w-0 overflow-hidden">
+          <CardContent className="p-0 h-full flex flex-col min-h-0 min-w-0">
             {/* Fixed Header */}
-            <div className="flex-shrink-0 border-b-2 border-gray-200">
-              <Table className="table-fixed">
+            <div className="flex-shrink-0 min-w-0 overflow-hidden border-b-2 border-l border-r border-t border-gray-300 rounded-t-md [scrollbar-gutter:stable]">
+              <Table
+                className="w-full table-fixed"
+                containerClassName="overflow-x-hidden max-w-full"
+              >
+                <colgroup>
+                  <col className="w-[4%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[30%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
                 <TableHeader>
-                  <TableRow className="bg-gray-100">
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-16 border-r border-gray-300">
+                  <TableRow className="bg-gray-100 border-b-2 border-gray-300">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 px-2 border-r border-gray-300">
                       Sr. No.
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-64 border-r border-gray-300">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 px-2 border-r border-gray-300">
                       Program-Course
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-40 border-r border-gray-300">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 px-2 border-r border-gray-300">
                       Subject Category
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-56 border-r border-gray-300">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 px-2 border-r border-gray-300">
                       Subject
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 px-2 border-r border-gray-300">
                       Related Subjects
                     </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-24 border-r border-gray-300">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 px-2 border-r border-gray-300">
                       Status
                     </TableHead>
-                    <TableHead className="text-center bg-gray-100 font-semibold text-gray-900 w-24 border-r border-gray-300">
+                    <TableHead className="text-center bg-gray-100 font-semibold text-gray-900 px-2 border-r border-gray-300">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -764,8 +778,20 @@ export default function AlternativeSubjectsPage() {
             </div>
 
             {/* Scrollable Body */}
-            <div className="flex-1 overflow-auto border border-gray-300 rounded-md">
-              <Table className="table-fixed">
+            <div className="flex-1 min-h-0 min-w-0 overflow-auto border-l border-r border-b border-gray-300 rounded-b-md [scrollbar-gutter:stable]">
+              <Table
+                className="w-full table-fixed border-collapse [&>tbody>tr]:border-b [&>tbody>tr]:border-gray-300"
+                containerClassName="overflow-x-hidden max-w-full"
+              >
+                <colgroup>
+                  <col className="w-[4%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[30%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
                 <TableBody>
                   {displayGroupings.map((grouping, index) => (
                     <TableRow
@@ -773,30 +799,30 @@ export default function AlternativeSubjectsPage() {
                       className="border-b-2 border-gray-300 hover:bg-gray-50"
                       style={{ borderBottom: "2px solid #d1d5db" }}
                     >
-                      <TableCell className="w-16 border-r border-gray-300">
+                      <TableCell className="px-2 border-r border-gray-300">
                         {startIndex + index + 1}
                       </TableCell>
-                      <TableCell className="w-64 border-r border-gray-300">
+                      <TableCell className="px-2 border-r border-gray-300 align-top whitespace-normal break-words">
                         {grouping.programCourses[0]}
                       </TableCell>
-                      <TableCell className="w-40 border-r border-gray-300">
+                      <TableCell className="px-2 border-r border-gray-300 align-top">
                         <Badge
                           variant="outline"
-                          className="border-purple-500 text-purple-700 bg-purple-50 text-xs"
+                          className="border-purple-500 text-purple-700 bg-purple-50 text-xs max-w-full whitespace-normal break-words h-auto"
                         >
                           {grouping.subjectCategory}
                         </Badge>
                       </TableCell>
-                      <TableCell className="w-56 border-r border-gray-300">
+                      <TableCell className="px-2 border-r border-gray-300 align-top">
                         <Badge
                           variant="outline"
-                          className="text-xs border-red-500 text-red-700 bg-red-50"
+                          className="text-xs border-red-500 text-red-700 bg-red-50 max-w-full whitespace-normal break-words h-auto"
                         >
                           {grouping.subjects[0]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="border-r border-gray-300">
-                        <div className="flex flex-wrap gap-1 max-w-xl">
+                      <TableCell className="px-2 border-r border-gray-300 overflow-hidden">
+                        <div className="flex flex-wrap gap-1 min-w-0">
                           {grouping.subjects.slice(1).map((subject, i) => (
                             <Badge key={i} variant="outline" className={`text-xs ${altBadgeColor}`}>
                               {subject}
@@ -804,7 +830,7 @@ export default function AlternativeSubjectsPage() {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="w-24 border-r border-gray-300">
+                      <TableCell className="px-2 border-r border-gray-300">
                         <Badge
                           variant="outline"
                           className={
@@ -816,7 +842,7 @@ export default function AlternativeSubjectsPage() {
                           {grouping.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="w-24 border-r border-gray-300">
+                      <TableCell className="px-2 border-r border-gray-300">
                         <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"

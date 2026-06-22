@@ -166,17 +166,17 @@ export default function ExamFloorsPage() {
   };
 
   return (
-    <div className="p-4">
-      <Card className="border-none">
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 bg-background">
-          <div>
+    <div className="min-w-0 w-full max-w-full p-2 sm:p-4">
+      <Card className="flex min-w-0 flex-col overflow-hidden border-none">
+        <CardHeader className="mb-0 flex-shrink-0 flex-col items-start justify-between gap-3 rounded-md border bg-background p-4 sm:flex-row sm:items-center">
+          <div className="min-w-0">
             <CardTitle className="flex items-center">
-              <DoorOpen className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+              <DoorOpen className="mr-2 h-8 w-8 flex-shrink-0 rounded-md border border-slate-400 p-1" />
               Floors
             </CardTitle>
             <div className="text-muted-foreground">A list of all the Floors.</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline">
               <Upload className="mr-2 h-4 w-4" />
               Bulk Upload
@@ -212,116 +212,153 @@ export default function ExamFloorsPage() {
             </AlertDialog>
           </div>
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input
-              placeholder="Search..."
-              className="w-64"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" /> Download
-            </Button>
+        <CardContent className="flex min-h-0 flex-1 flex-col px-0 pb-0">
+          <div className="relative z-20 mb-0 flex-shrink-0 border-b bg-background p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Input
+                placeholder="Search..."
+                className="w-full max-w-xs"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+              <Button variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" /> Download
+              </Button>
+            </div>
           </div>
-          <div className="overflow-x-auto flex-1" style={{ minHeight: "420px" }}>
-            <div className="rounded-md border border-slate-300 h-full max-h-[480px] overflow-y-auto min-w-full">
-              <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
-                <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300 min-w-full">
-                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    #
-                  </div>
-                  <div className="flex-shrink-0 basis-[32%] px-3 py-2 border-r border-slate-300 flex items-center">
-                    Name
-                  </div>
-                  <div className="flex-shrink-0 basis-[20%] px-3 py-2 border-r border-slate-300 flex items-center">
-                    Short Name
-                  </div>
-                  <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Sequence
-                  </div>
-                  <div className="flex-shrink-0 basis-[12%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Status
-                  </div>
-                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 flex items-center justify-center">
-                    Actions
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white min-w-full">
-                {loading ? (
-                  <div className="flex items-center justify-center h-48 text-muted-foreground border-b border-slate-200 gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading floors...
-                  </div>
-                ) : filteredFloors.length === 0 ? (
-                  <div className="flex items-center justify-center h-48 text-muted-foreground border-b border-slate-200">
-                    No floors match your search.
-                  </div>
-                ) : (
-                  filteredFloors.map((floor, index) => (
-                    <div
-                      key={floor.id ?? `${floor.name}-${index}`}
-                      className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
-                    >
-                      <div className="flex-shrink-0 basis-[10%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        {index + 1}
-                      </div>
-                      <div className="flex-shrink-0 basis-[32%] px-3 py-3 border-r border-slate-200 flex flex-col">
-                        <span
-                          className="font-medium text-slate-800 truncate"
-                          title={floor.name ?? undefined}
-                        >
-                          {floor.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">ID: {floor.id ?? "—"}</span>
-                      </div>
-                      <div className="flex-shrink-0 basis-[20%] px-3 py-3 border-r border-slate-200 flex items-center">
-                        {floor.shortName ?? <span className="text-slate-400">—</span>}
-                      </div>
-                      <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        {floor.sequence ?? <span className="text-slate-400">—</span>}
-                      </div>
-                      <div className="flex-shrink-0 basis-[12%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            floor.isActive
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {floor.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </div>
-                      <div className="flex-shrink-0 basis-[10%] px-3 py-3 flex items-center justify-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
-                          onClick={() => handleEdit(floor)}
-                          disabled={deletingId === floor.id}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="shadow-none"
-                          onClick={() => handleDelete(floor.id!)}
-                          disabled={deletingId === floor.id}
-                        >
-                          {deletingId === floor.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="relative z-10 min-w-0 flex-shrink-0 overflow-hidden border-x border-t border-slate-300 bg-slate-100 [scrollbar-gutter:stable]">
+              <table className="w-full table-fixed border-collapse text-sm">
+                <colgroup>
+                  <col className="w-[8%]" />
+                  <col className="w-[32%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-slate-300 text-xs font-semibold uppercase text-slate-600">
+                    <th className="border-r border-slate-300 bg-slate-100 px-3 py-2 text-center">
+                      #
+                    </th>
+                    <th className="border-r border-slate-300 bg-slate-100 px-3 py-2 text-left">
+                      Name
+                    </th>
+                    <th className="border-r border-slate-300 bg-slate-100 px-3 py-2 text-left">
+                      Short Name
+                    </th>
+                    <th className="border-r border-slate-300 bg-slate-100 px-3 py-2 text-center">
+                      Sequence
+                    </th>
+                    <th className="border-r border-slate-300 bg-slate-100 px-3 py-2 text-center">
+                      Status
+                    </th>
+                    <th className="bg-slate-100 px-3 py-2 text-center">Actions</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+            <div className="max-h-[480px] min-h-[320px] min-w-0 flex-1 overflow-auto rounded-b-md border-x border-b border-slate-300 [scrollbar-gutter:stable]">
+              <table className="w-full table-fixed border-collapse text-sm">
+                <colgroup>
+                  <col className="w-[8%]" />
+                  <col className="w-[32%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
+                <tbody className="bg-white">
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="border-b border-slate-200 px-3 py-12 text-center text-muted-foreground"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading floors...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredFloors.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="border-b border-slate-200 px-3 py-12 text-center text-muted-foreground"
+                      >
+                        No floors match your search.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredFloors.map((floor, index) => (
+                      <tr
+                        key={floor.id ?? `${floor.name}-${index}`}
+                        className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
+                      >
+                        <td className="border-r border-slate-200 px-3 py-3 text-center align-top">
+                          {index + 1}
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-3 align-top">
+                          <span
+                            className="block font-medium text-slate-800 whitespace-normal break-words"
+                            title={floor.name ?? undefined}
+                          >
+                            {floor.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ID: {floor.id ?? "—"}
+                          </span>
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-3 align-top whitespace-normal break-words">
+                          {floor.shortName ?? <span className="text-slate-400">—</span>}
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-3 text-center align-top">
+                          {floor.sequence ?? <span className="text-slate-400">—</span>}
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-3 text-center align-top">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                              floor.isActive
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {floor.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-center align-top">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
+                              onClick={() => handleEdit(floor)}
+                              disabled={deletingId === floor.id}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="shadow-none"
+                              onClick={() => handleDelete(floor.id!)}
+                              disabled={deletingId === floor.id}
+                            >
+                              {deletingId === floor.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </CardContent>

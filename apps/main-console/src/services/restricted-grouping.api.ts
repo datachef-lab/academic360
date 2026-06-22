@@ -31,6 +31,7 @@ export const restrictedGroupingApi = {
     pageSize?: number;
     search?: string;
     subjectType?: string;
+    programCourseId?: number;
   }) {
     const res = await api.get<ApiResponse<PaginatedResponse<RestrictedGroupingMainDto>>>(
       `${BASE_URL}`,

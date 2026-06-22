@@ -4,7 +4,8 @@ import {
   RestrictedGroupingMain,
   RestrictedGroupingMainT,
 } from "@repo/db/schemas/models/subject-selection/restricted-grouping-main.model";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, countDistinct, eq, ilike, ne, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import {
   RestrictedGroupingMainDto,
   RestrictedGroupingClassDto,
@@ -392,6 +393,7 @@ export async function getRestrictedGroupingMainsPaginated(options: {
   const page = Math.max(1, options.page || 1);
   const pageSize = Math.max(1, Math.min(100, options.pageSize || 10));
   const offset = (page - 1) * pageSize;
+  const cannotCombineSubject = alias(subjectModel, "cannot_combine_subject");
 
   // Base select for mains with joins for filtering/search (select id only to avoid duplication noise)
   const baseQuery = db
@@ -413,15 +415,49 @@ export async function getRestrictedGroupingMainsPaginated(options: {
         restrictedGroupingProgramCourseModel.restrictedGroupingMainId,
         restrictedGroupingMainModel.id,
       ),
+    )
+    .leftJoin(
+      programCourseModel,
+      eq(
+        restrictedGroupingProgramCourseModel.programCourseId,
+        programCourseModel.id,
+      ),
+    )
+    .leftJoin(
+      restrictedGroupingSubjectModel,
+      eq(
+        restrictedGroupingSubjectModel.restrictedGroupingMainId,
+        restrictedGroupingMainModel.id,
+      ),
+    )
+    .leftJoin(
+      cannotCombineSubject,
+      eq(
+        restrictedGroupingSubjectModel.cannotCombineWithSubjectId,
+        cannotCombineSubject.id,
+      ),
     );
 
   const filters = [] as any[];
   const q = (options.search || "").trim();
   if (q) {
-    filters.push(ilike(subjectModel.name, `%${q}%`));
+    filters.push(
+      or(
+        ilike(subjectModel.name, `%${q}%`),
+        ilike(subjectTypeModel.code, `%${q}%`),
+        ilike(subjectTypeModel.name, `%${q}%`),
+        ilike(programCourseModel.name, `%${q}%`),
+        ilike(cannotCombineSubject.name, `%${q}%`),
+      ),
+    );
   }
-  if (options.subjectType) {
-    filters.push(ilike(subjectTypeModel.code, `%${options.subjectType}%`));
+  if (options.subjectType && options.subjectType !== "all") {
+    filters.push(
+      or(
+        eq(subjectTypeModel.code, options.subjectType),
+        eq(subjectTypeModel.name, options.subjectType),
+      ),
+    );
   }
   if (options.programCourseId) {
     filters.push(

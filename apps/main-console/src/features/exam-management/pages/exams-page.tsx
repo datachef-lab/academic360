@@ -73,6 +73,49 @@ import { Class } from "@/types/academics/class";
 import { Affiliation, RegulationType } from "@repo/db/index";
 import { Link } from "react-router-dom";
 
+type ExamGroupDetailRow = {
+  subject: string;
+  shifts: string;
+  categories: string[];
+};
+
+function buildExamGroupDetailRows(examGroup: ExamGroupDto): ExamGroupDetailRow[] {
+  const rows: ExamGroupDetailRow[] = [];
+
+  for (const exam of examGroup.exams) {
+    const shifts =
+      exam.examShifts
+        .map((esh) => esh.shift?.name)
+        .filter((name): name is string => !!name)
+        .join(", ") || "—";
+
+    const categories = exam.examSubjectTypes
+      .map((est) => est.subjectType?.code)
+      .filter((code): code is string => !!code);
+
+    const subjects = exam.examSubjects.filter((es) => es.subject?.name);
+
+    if (subjects.length === 0) {
+      rows.push({ subject: "—", shifts, categories });
+      continue;
+    }
+
+    for (const es of subjects) {
+      rows.push({
+        subject: es.subject!.name!,
+        shifts,
+        categories,
+      });
+    }
+  }
+
+  if (rows.length === 0) {
+    rows.push({ subject: "—", shifts: "—", categories: [] });
+  }
+
+  return rows;
+}
+
 const ExamsPage = () => {
   const { accessToken, displayFlag, user } = useAuth();
   const { currentAcademicYear, availableAcademicYears } = useAcademicYear();
@@ -1214,9 +1257,9 @@ const ExamsPage = () => {
   }
 
   return (
-    <div className="p-2 sm:p-4">
-      <Card className="border-none">
-        <CardHeader className="flex flex-col items-start mb-3 gap-4 border rounded-md p-4 sticky top-0 z-30 bg-background">
+    <div className="min-w-0 w-full max-w-full p-2 sm:p-4">
+      <Card className="flex min-w-0 flex-col overflow-hidden border-none">
+        <CardHeader className="mb-0 flex-shrink-0 flex-col items-start gap-4 rounded-md border p-4 bg-background">
           <div className="flex-1 min-w-0 w-full">
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <FileText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
@@ -1322,8 +1365,8 @@ const ExamsPage = () => {
             </AlertDialog>
           </div> */}
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="sticky top-[72px] z-40 bg-background p-2 sm:p-4 border-b flex flex-col items-start gap-3 mb-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col px-0 pb-0">
+          <div className="relative z-20 mb-0 flex-shrink-0 border-b bg-background p-2 sm:p-4">
             <div className="flex flex-wrap gap-2 items-center w-full">
               {/* <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <DialogTrigger asChild>
@@ -2150,33 +2193,54 @@ const ExamsPage = () => {
               )}
             </div> */}
           </div>
-          <div className="overflow-x-auto flex-1" style={{ minHeight: "480px" }}>
-            <div className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto min-w-full">
-              <table
-                className="w-full min-w-[900px] border-collapse text-[14px]"
-                style={{ tableLayout: "fixed" }}
-              >
-                <thead className="sticky top-0 z-[50] bg-slate-100 border-b border-slate-300 shadow-sm">
-                  <tr className="text-xs font-semibold uppercase text-slate-700 border-b border-slate-300">
-                    <th className="w-[6%] px-3 py-3 border-r border-slate-300 text-center">#</th>
-                    <th className="w-[20%] px-3 py-3 border-r border-slate-300 text-center">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="relative z-10 min-w-0 flex-shrink-0 overflow-hidden border-x border-t border-slate-300 bg-slate-100 [scrollbar-gutter:stable]">
+              <table className="w-full table-fixed border-collapse text-[14px]">
+                <colgroup>
+                  <col className="w-[5%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[8%]" />
+                </colgroup>
+                <thead className="bg-slate-100">
+                  <tr className="border-b border-slate-300 text-xs font-semibold uppercase text-slate-700">
+                    <th className="border-r border-slate-300 bg-slate-100 px-2 py-3 text-center">
+                      #
+                    </th>
+                    <th className="border-r border-slate-300 bg-slate-100 px-2 py-3 text-center">
                       Exam Group Name
                     </th>
-                    <th className="w-[18%] px-3 py-3 border-r border-slate-300 text-center">
+                    <th className="border-r border-slate-300 bg-slate-100 px-2 py-3 text-center">
                       Program Courses
                     </th>
-                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                    <th className="border-r border-slate-300 bg-slate-100 px-2 py-3 text-center">
                       Subjects
                     </th>
-                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                    <th className="border-r border-slate-300 bg-slate-100 px-2 py-3 text-center">
                       Shift(s)
                     </th>
-                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                    <th className="border-r border-slate-300 bg-slate-100 px-2 py-3 text-center">
                       Subject Category
                     </th>
-                    <th className="w-[8%] px-3 py-3 text-center">Actions</th>
+                    <th className="bg-slate-100 px-2 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
+              </table>
+            </div>
+            <div className="max-h-[520px] min-h-[320px] min-w-0 flex-1 overflow-auto rounded-b-md border-x border-b border-slate-300 [scrollbar-gutter:stable]">
+              <table className="w-full table-fixed border-collapse text-[14px]">
+                <colgroup>
+                  <col className="w-[5%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[8%]" />
+                </colgroup>
                 <tbody className="bg-white">
                   {loading ? (
                     <tr>
@@ -2201,7 +2265,6 @@ const ExamsPage = () => {
                     </tr>
                   ) : (
                     examGroups.map((examGroup: ExamGroupDto, groupIdx: number) => {
-                      // Extract all distinct program courses from the group
                       const distinctPCMap = new Map<
                         number | undefined,
                         (typeof examGroup.exams)[0]["examProgramCourses"][0]
@@ -2214,125 +2277,103 @@ const ExamsPage = () => {
                         });
                       });
                       const distinctProgramCourses = Array.from(distinctPCMap.values());
-
-                      // Extract all distinct subjects from the group
-                      const distinctSubjectMap = new Map<
-                        number | undefined,
-                        (typeof examGroup.exams)[0]["examSubjects"][0]
-                      >();
-                      examGroup.exams.forEach((exam) => {
-                        exam.examSubjects.forEach((es) => {
-                          if (es.subject?.id !== undefined) {
-                            distinctSubjectMap.set(es.subject.id, es);
-                          }
-                        });
-                      });
-                      const distinctSubjects = Array.from(distinctSubjectMap.values());
-
-                      // Extract all distinct shifts from the group
-                      const distinctShiftMap = new Map<
-                        number | undefined,
-                        (typeof examGroup.exams)[0]["examShifts"][0]
-                      >();
-                      examGroup.exams.forEach((exam) => {
-                        exam.examShifts.forEach((esh) => {
-                          if (esh.shift.id !== undefined) {
-                            distinctShiftMap.set(esh.shift.id, esh);
-                          }
-                        });
-                      });
-                      const distinctShifts = Array.from(distinctShiftMap.values());
-
-                      // Extract all distinct subject types from the group
-                      const distinctSTMap = new Map<
-                        number | undefined,
-                        (typeof examGroup.exams)[0]["examSubjectTypes"][0]
-                      >();
-                      examGroup.exams.forEach((exam) => {
-                        exam.examSubjectTypes.forEach((est) => {
-                          if (est.subjectType?.id !== undefined) {
-                            distinctSTMap.set(est.subjectType.id, est);
-                          }
-                        });
-                      });
-                      const distinctSubjectTypes = Array.from(distinctSTMap.values());
+                      const detailRows = buildExamGroupDetailRows(examGroup);
 
                       return (
                         <tr
                           key={examGroup.id}
                           className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
                         >
-                          <td className="px-3 py-3 border-r border-slate-200 text-center align-top">
+                          <td className="px-2 py-3 border-r border-slate-200 text-center align-top">
                             {(currentPage - 1) * itemsPerPage + groupIdx + 1}
                           </td>
-                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                          <td className="px-2 py-3 border-r border-slate-200 align-top whitespace-normal break-words">
                             <div className="flex flex-col gap-1">
                               <Badge
                                 variant="outline"
-                                className="text-xs border-purple-300 text-purple-700 bg-purple-50 w-fit"
+                                className="text-xs border-purple-300 text-purple-700 bg-purple-50 w-fit max-w-full whitespace-normal break-words h-auto"
                               >
                                 {uppercaseRomanNumerals(examGroup.name)}
                               </Badge>
-                              <span className="text-xs text-muted-foreground text-center">
+                              <span className="text-xs text-muted-foreground">
                                 {examGroup.examCommencementDate
                                   ? new Date(examGroup.examCommencementDate).toLocaleDateString()
-                                  : "-"}
+                                  : "—"}
                               </span>
                             </div>
                           </td>
-                          <td className="px-3 py-3 border-r border-slate-200 align-top">
-                            <div className="flex flex-col gap-1 items-center">
+                          <td className="px-2 py-3 border-r border-slate-200 align-top overflow-hidden">
+                            <div className="flex flex-col gap-1 min-w-0">
                               {distinctProgramCourses.map((pc) => (
                                 <Badge
                                   key={pc.id}
                                   variant="outline"
-                                  className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                  className="text-xs border-blue-300 text-blue-700 bg-blue-50 max-w-full whitespace-normal break-words h-auto"
                                 >
                                   {pc.programCourse.name}
                                 </Badge>
                               ))}
                             </div>
                           </td>
-                          <td className="px-3 py-3 border-r border-slate-200 align-top">
-                            <div className="flex flex-col gap-1 items-center">
-                              {distinctSubjects.map((es, subjectIndex) => (
-                                <Badge
-                                  key={`subject-${es.subject?.id}-${subjectIndex}`}
-                                  variant="outline"
-                                  className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                          <td className="px-2 py-3 border-r border-slate-200 align-top overflow-hidden">
+                            <div className="flex flex-col gap-1 min-w-0">
+                              {detailRows.map((row, rowIndex) => (
+                                <div
+                                  key={`subject-${rowIndex}`}
+                                  className="flex min-h-[28px] items-start"
                                 >
-                                  {es.subject?.name ?? "-"}
-                                </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 max-w-full whitespace-normal break-words h-auto"
+                                  >
+                                    {row.subject}
+                                  </Badge>
+                                </div>
                               ))}
                             </div>
                           </td>
-                          <td className="px-3 py-3 border-r border-slate-200 align-top">
-                            <div className="flex flex-col gap-1 items-center">
-                              {distinctShifts.map((esh) => (
-                                <Badge
-                                  key={esh.id}
-                                  variant="outline"
-                                  className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                          <td className="px-2 py-3 border-r border-slate-200 align-top overflow-hidden">
+                            <div className="flex flex-col gap-1 min-w-0">
+                              {detailRows.map((row, rowIndex) => (
+                                <div
+                                  key={`shift-${rowIndex}`}
+                                  className="flex min-h-[28px] items-start"
                                 >
-                                  {esh.shift.name}
-                                </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs border-blue-300 text-blue-700 bg-blue-50 max-w-full whitespace-normal break-words h-auto"
+                                  >
+                                    {row.shifts}
+                                  </Badge>
+                                </div>
                               ))}
                             </div>
                           </td>
-                          <td className="px-3 py-3 border-r border-slate-200 align-top">
-                            <div className="flex flex-col gap-1 items-center">
-                              {distinctSubjectTypes.map((est) => (
-                                <Badge
-                                  key={est.id}
-                                  variant="outline"
-                                  className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
+                          <td className="px-2 py-3 border-r border-slate-200 align-top overflow-hidden">
+                            <div className="flex flex-col gap-1 min-w-0">
+                              {detailRows.map((row, rowIndex) => (
+                                <div
+                                  key={`category-${rowIndex}`}
+                                  className="flex min-h-[28px] flex-wrap items-start gap-1"
                                 >
-                                  {est.subjectType?.code ?? "-"}
-                                </Badge>
+                                  {row.categories.length > 0 ? (
+                                    row.categories.map((code) => (
+                                      <Badge
+                                        key={`${rowIndex}-${code}`}
+                                        variant="outline"
+                                        className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
+                                      >
+                                        {code}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
+                                </div>
                               ))}
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-center align-top">
+                          <td className="px-2 py-3 text-center align-top">
                             <Button
                               variant="outline"
                               size="icon"
