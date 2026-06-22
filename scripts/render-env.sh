@@ -23,7 +23,11 @@ SSM_PREFIX="${SSM_PREFIX:-/a360/prod}"
 ENV_DIR="${ENV_DIR:-/opt/academic360/env}"
 
 # group (SSM sub-path) : output env filename
-GROUPS=(
+# NB: do NOT name this array GROUPS — that's a reserved bash variable holding the
+# current user's group IDs; assignments to it are silently ignored, so the loop
+# below would iterate over the runner's real groups (e.g. just "0" as root) and
+# render no env files at all.
+ENV_GROUPS=(
   "backend:backend.env"
   "student-console:student-console.env"
   "notification:notification.env"
@@ -63,7 +67,7 @@ render_group() {
   echo "rendered $ENV_DIR/$outfile ($(wc -l < "$ENV_DIR/$outfile") keys)"
 }
 
-for entry in "${GROUPS[@]}"; do
+for entry in "${ENV_GROUPS[@]}"; do
   render_group "${entry%%:*}" "${entry#*:}"
 done
 

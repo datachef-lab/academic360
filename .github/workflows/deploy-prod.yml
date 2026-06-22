@@ -52,7 +52,11 @@ env:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    # arm64 runner: the a360-prod ASG runs t4g (Graviton/arm64) instances, so
+    # images must be arm64. Building on an x86 runner produced linux/amd64 images
+    # that died on the hosts with "exec format error". ubuntu-24.04-arm builds
+    # them natively (no QEMU).
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
 
