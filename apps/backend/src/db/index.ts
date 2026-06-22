@@ -26,7 +26,7 @@ export const connectToDatabase = async () => {
   try {
     const client: PoolClient = await pool.connect(); // Test the connection ✔
     // console.log(process.env.DATABASE_URL);
-    log.info("Connected to the database successfully 🎉");
+    log.info("Connected to the database successfully 🎉 ");
     client.release(); // Release the connection back to the pool
 
     // createDefaultExamComponents();
