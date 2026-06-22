@@ -169,10 +169,31 @@ export default function IdCardIssuePage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Auto "Program course" validity (dd-mm-yyyy) for the loaded student. This
+  // also carries the student's registration academic year (the academic year
+  // of the Sem-1 promotion's session) which drives template selection below.
+  const validityQuery = useQuery({
+    queryKey: ["idcard", "validity", student?.id],
+    queryFn: () => (student ? getStudentIdCardValidity(student.id) : Promise.resolve(null)),
+    enabled: !!student,
+  });
+
+  // Templates are filtered by the student's REGISTRATION academic year (the
+  // academic year linked to the Sem-1 promotion's session), not the globally
+  // selected academic year. Fall back to the selected year when the
+  // registration year can't be determined (e.g. no Sem-1 promotion/session).
+  const registrationAcademicYearId = validityQuery.data?.registrationAcademicYearId ?? null;
+  const templateAcademicYearId = registrationAcademicYearId ?? academicYearId;
+
   const templatesQuery = useQuery({
-    queryKey: ["idcard", "templates", { academicYearId }],
-    queryFn: () => listTemplates({ academicYearId, limit: 100, includeDisabled: false }),
-    enabled: !!academicYearId,
+    queryKey: ["idcard", "templates", { academicYearId: templateAcademicYearId }],
+    queryFn: () =>
+      listTemplates({
+        academicYearId: templateAcademicYearId,
+        limit: 100,
+        includeDisabled: false,
+      }),
+    enabled: !!templateAcademicYearId,
   });
   const templates = templatesQuery.data?.rows ?? [];
 
@@ -188,15 +209,16 @@ export default function IdCardIssuePage() {
     templates.find((t) => t.id === templateId) ??
     null;
 
-  // When the academic year changes, drop the previously selected templateId
-  // so the default-template lookup below can re-pick the right one for the
-  // new year (and clear any stale composed/back artefacts).
+  // When the template academic year changes (registration year, or the
+  // selected-year fallback), drop the previously selected templateId so the
+  // default-template lookup below can re-pick the right one for the new year
+  // (and clear any stale composed/back artefacts).
   useEffect(() => {
     setTemplateId(null);
     setComposedBlob(null);
     setComposedPreview(null);
     setShowBack(false);
-  }, [academicYearId]);
+  }, [templateAcademicYearId]);
 
   useEffect(() => {
     if (!templateId && templates.length > 0) {
@@ -204,13 +226,6 @@ export default function IdCardIssuePage() {
       if (defaultTpl) setTemplateId(defaultTpl.id);
     }
   }, [templates, templateId]);
-
-  // Auto "Program course" validity (dd-mm-yyyy) for the loaded student.
-  const validityQuery = useQuery({
-    queryKey: ["idcard", "validity", student?.id],
-    queryFn: () => (student ? getStudentIdCardValidity(student.id) : Promise.resolve(null)),
-    enabled: !!student,
-  });
 
   useEffect(() => {
     setProgramValidTill(validityQuery.data?.validTill ?? null);

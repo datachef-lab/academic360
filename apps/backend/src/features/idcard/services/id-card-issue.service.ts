@@ -13,6 +13,7 @@ import {
   idCardTemplateModel,
   programCourseModel,
   promotionModel,
+  sessionModel,
   studentModel,
   userModel,
 } from "@repo/db/schemas/index.js";
@@ -303,6 +304,9 @@ export async function getStudentIdCardValidity(studentId: number) {
       startDate: promotionModel.startDate,
       className: classModel.name,
       duration: programCourseModel.duration,
+      // Registration academic year = the academic year of the Sem-1
+      // promotion's session (promotion -> session -> session.academicYear).
+      registrationAcademicYearId: sessionModel.academicYearId,
     })
     .from(promotionModel)
     .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
@@ -310,11 +314,17 @@ export async function getStudentIdCardValidity(studentId: number) {
       programCourseModel,
       eq(programCourseModel.id, promotionModel.programCourseId),
     )
+    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
     .where(eq(promotionModel.studentId, studentId))
     .orderBy(asc(promotionModel.dateOfJoining));
 
   if (promotions.length === 0) {
-    return { validTill: null, dateOfJoining: null, durationYears: null };
+    return {
+      validTill: null,
+      dateOfJoining: null,
+      durationYears: null,
+      registrationAcademicYearId: null,
+    };
   }
 
   const semOne =
@@ -326,12 +336,14 @@ export async function getStudentIdCardValidity(studentId: number) {
 
   const joining = semOne.dateOfJoining ?? semOne.startDate ?? null;
   const durationYears = semOne.duration ?? null;
+  const registrationAcademicYearId = semOne.registrationAcademicYearId ?? null;
 
   if (!joining || durationYears == null) {
     return {
       validTill: null,
       dateOfJoining: joining ? formatDDMMYYYY(new Date(joining)) : null,
       durationYears,
+      registrationAcademicYearId,
     };
   }
 
@@ -343,6 +355,7 @@ export async function getStudentIdCardValidity(studentId: number) {
     validTill: formatDDMMYYYY(till),
     dateOfJoining: formatDDMMYYYY(join),
     durationYears,
+    registrationAcademicYearId,
   };
 }
 

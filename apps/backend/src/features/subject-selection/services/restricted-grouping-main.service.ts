@@ -36,6 +36,7 @@ export interface RestrictedGroupingMainBulkUploadResult {
 
 // DTO-shaped input used by frontend and for future compatibility
 export type CreateRestrictedGroupingMainDtoInput = {
+  academicYear?: { id: number };
   subjectType: { id: number };
   subject: { id: number };
   isActive?: boolean;
@@ -82,16 +83,21 @@ export async function createRestrictedGroupingMainFromDto(
     throw new Error(`Subject not found for id=${input.subject.id}`);
   }
 
-  // 2) Check for existing main to prevent duplicates (same subjectType + subject)
+  // 2) Check for existing main to prevent duplicates (same subjectType + subject,
+  //    scoped to the academic year when provided).
+  const dupeFilters = [
+    eq(restrictedGroupingMainModel.subjectTypeId, input.subjectType.id),
+    eq(restrictedGroupingMainModel.subjectId, input.subject.id),
+  ];
+  if (input.academicYear?.id != null) {
+    dupeFilters.push(
+      eq(restrictedGroupingMainModel.academicYearId, input.academicYear.id),
+    );
+  }
   const [existingMain] = await db
     .select()
     .from(restrictedGroupingMainModel)
-    .where(
-      and(
-        eq(restrictedGroupingMainModel.subjectTypeId, input.subjectType.id),
-        eq(restrictedGroupingMainModel.subjectId, input.subject.id),
-      ),
-    );
+    .where(and(...dupeFilters));
 
   if (existingMain) {
     throw new Error(
@@ -100,6 +106,7 @@ export async function createRestrictedGroupingMainFromDto(
   }
 
   const base: RestrictedGroupingMain = {
+    academicYearId: input.academicYear?.id ?? null,
     subjectTypeId: input.subjectType.id,
     subjectId: input.subject.id,
     isActive: input.isActive ?? true,
@@ -388,6 +395,7 @@ export async function getRestrictedGroupingMainsPaginated(options: {
   search?: string;
   subjectType?: string; // code or name
   programCourseId?: number;
+  academicYearId?: number;
 }): Promise<PaginatedResponse<RestrictedGroupingMainDto>> {
   const page = Math.max(1, options.page || 1);
   const pageSize = Math.max(1, Math.min(100, options.pageSize || 10));
@@ -429,6 +437,11 @@ export async function getRestrictedGroupingMainsPaginated(options: {
         restrictedGroupingProgramCourseModel.programCourseId,
         options.programCourseId,
       ),
+    );
+  }
+  if (options.academicYearId) {
+    filters.push(
+      eq(restrictedGroupingMainModel.academicYearId, options.academicYearId),
     );
   }
 

@@ -39,6 +39,7 @@ export interface RelatedSubjectMainBulkUploadResult {
 
 // DTO-shaped input used by frontend and for future compatibility
 export type CreateRelatedSubjectMainDtoInput = {
+  academicYear?: { id: number };
   programCourse: { id: number };
   subjectType: { id: number };
   boardSubjectName: { id: number };
@@ -81,6 +82,8 @@ export async function createRelatedSubjectMainFromDto(
         .from(academicYearModel)
         .orderBy(academicYearModel.id)
         .then((rows) => rows.slice(-1));
+  // Prefer the academic year passed in (page filter); fall back to current/latest.
+  const targetYearId = input.academicYear?.id ?? latestAy?.id;
 
   // 1) Validate foreign keys exist
   const [[foundPc], [foundSt], [foundBoardSubjectName]] = await Promise.all([
@@ -121,8 +124,8 @@ export async function createRelatedSubjectMainFromDto(
           relatedSubjectMainModel.boardSubjectNameId,
           input.boardSubjectName.id,
         ),
-        latestAy?.id
-          ? eq(relatedSubjectMainModel.academicYearId, latestAy.id)
+        targetYearId
+          ? eq(relatedSubjectMainModel.academicYearId, targetYearId)
           : ne(relatedSubjectMainModel.id, -1 as any),
       ),
     );
@@ -132,7 +135,7 @@ export async function createRelatedSubjectMainFromDto(
     subjectTypeId: input.subjectType.id,
     boardSubjectNameId: input.boardSubjectName.id,
     isActive: input.isActive ?? true,
-    academicYearId: latestAy?.id as any,
+    academicYearId: targetYearId as any,
   } as RelatedSubjectMain;
 
   // Use existing main if present, otherwise create new
@@ -288,6 +291,7 @@ export async function getRelatedSubjectMainsPaginated(options: {
   search?: string;
   programCourse?: string; // name
   subjectType?: string; // code or name
+  academicYearId?: number;
 }): Promise<PaginatedResponse<RelatedSubjectMainDto>> {
   const page = Math.max(1, options.page || 1);
   const pageSize = Math.max(1, Math.min(100, options.pageSize || 10));
@@ -337,6 +341,11 @@ export async function getRelatedSubjectMainsPaginated(options: {
   }
   if (options.subjectType) {
     filters.push(ilike(subjectTypeModel.code, `%${options.subjectType}%`));
+  }
+  if (options.academicYearId) {
+    filters.push(
+      eq(relatedSubjectMainModel.academicYearId, options.academicYearId),
+    );
   }
 
   const rows = await base

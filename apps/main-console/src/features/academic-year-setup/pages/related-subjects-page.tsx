@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AcademicYearSelector } from "@/components/academic-year/AcademicYearSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -162,6 +163,7 @@ export default function AlternativeSubjectsPage() {
           page: currentPage,
           pageSize: itemsPerPage,
           search: searchTerm || undefined,
+          academicYearId: currentAcademicYear?.id,
           programCourse:
             selectedProgramCourse && selectedProgramCourse !== "all"
               ? selectedProgramCourse
@@ -221,7 +223,15 @@ export default function AlternativeSubjectsPage() {
     return () => {
       isMounted = false;
     };
-  }, [isReady, accessToken, currentPage, itemsPerPage, searchTerm, selectedProgramCourse]);
+  }, [
+    isReady,
+    accessToken,
+    currentPage,
+    itemsPerPage,
+    searchTerm,
+    selectedProgramCourse,
+    currentAcademicYear?.id,
+  ]);
 
   // Server-side pagination state (moved above)
 
@@ -351,6 +361,7 @@ export default function AlternativeSubjectsPage() {
         page: currentPage,
         pageSize: itemsPerPage,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -447,6 +458,7 @@ export default function AlternativeSubjectsPage() {
         page: 1,
         pageSize: 1000,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -493,6 +505,8 @@ export default function AlternativeSubjectsPage() {
           continue;
         }
         const payload: CreateRelatedSubjectMainInput = {
+          academicYear:
+            currentAcademicYear?.id != null ? { id: currentAcademicYear.id } : undefined,
           programCourse: { id: programCourseId },
           subjectType: { id: subjectTypeId },
           boardSubjectName: { id: Number(row.targetedSubject.split("::")[0]) },
@@ -531,6 +545,7 @@ export default function AlternativeSubjectsPage() {
         page: 1,
         pageSize: itemsPerPage,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -568,6 +583,7 @@ export default function AlternativeSubjectsPage() {
         page: 1,
         pageSize: 1000,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -632,6 +648,7 @@ export default function AlternativeSubjectsPage() {
         page: currentPage,
         pageSize: itemsPerPage,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -694,6 +711,7 @@ export default function AlternativeSubjectsPage() {
       <div className="flex-shrink-0 px-4 pb-4">
         <div className="bg-background p-4 border border-gray-200 rounded-lg flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
+            <AcademicYearSelector showLabel={false} className="w-56" />
             <Input
               placeholder="Search major or related subjects..."
               className="w-64"

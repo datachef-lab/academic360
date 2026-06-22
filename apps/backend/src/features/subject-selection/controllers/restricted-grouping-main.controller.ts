@@ -102,6 +102,7 @@ export const getAllRestrictedGroupingMainsHandler = async (
       search = "",
       subjectType = "",
       programCourseId,
+      academicYearId,
     } = req.query as Record<string, string>;
     const paged = await getRestrictedGroupingMainsPaginated({
       page: parseInt(page, 10) || 1,
@@ -109,6 +110,7 @@ export const getAllRestrictedGroupingMainsHandler = async (
       search: search || undefined,
       subjectType: subjectType || undefined,
       programCourseId: programCourseId ? Number(programCourseId) : undefined,
+      academicYearId: academicYearId ? Number(academicYearId) : undefined,
     });
     res
       .status(200)

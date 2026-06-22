@@ -1,6 +1,6 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
-import { Link, XCircle, Calendar } from "lucide-react";
+import { Link, XCircle, Layers } from "lucide-react";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const configurationLinks = [
@@ -26,9 +26,9 @@ const configurationLinks = [
   //   },
 
   {
-    title: "Semester Availability",
-    url: "/dashboard/academic-year-setup/subject-configurations/semester-availability",
-    icon: Calendar,
+    title: "Subject-selection Meta",
+    url: "/dashboard/academic-year-setup/subject-configurations/subject-selection-meta",
+    icon: Layers,
   },
 ];
 
@@ -54,10 +54,10 @@ const pageNotes = {
     description:
       "Define approved subject categories that students can choose from. These categories determine which subjects are available for selection in each program.",
   },
-  "/dashboard/academic-year-setup/subject-configurations/semester-availability": {
-    title: "Semester Availability",
+  "/dashboard/academic-year-setup/subject-configurations/subject-selection-meta": {
+    title: "Subject-selection Meta",
     description:
-      "Configure which subjects are available in specific semesters. Set credit limits and availability periods to manage course scheduling and workload distribution.",
+      "View the subject-selection groups (Minor / IDC / AEC / CVAC) configured for the selected academic year, including their subject type, applicable classes and streams.",
   },
 };
 

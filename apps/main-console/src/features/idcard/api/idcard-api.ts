@@ -145,6 +145,9 @@ export interface IdCardValidity {
   validTill: string | null; // DD-MM-YYYY
   dateOfJoining: string | null; // DD-MM-YYYY (Sem-1)
   durationYears: number | null;
+  // Registration academic year id = academic year of the Sem-1 promotion's
+  // session. Used to pick the ID-card template for this student.
+  registrationAcademicYearId: number | null;
 }
 
 export async function getStudentIdCardValidity(studentId: number) {

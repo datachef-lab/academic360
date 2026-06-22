@@ -1,9 +1,14 @@
 import { ApiResponse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
 import api from "@/utils/api";
-import type { RelatedSubjectMainDto, RelatedSubjectSubDto } from "@repo/db/dtos/subject-selection";
+import type {
+  RelatedSubjectMainDto,
+  RelatedSubjectSubDto,
+  SubjectSelectionMetaDto,
+} from "@repo/db/dtos/subject-selection";
 
 export type CreateRelatedSubjectMainInput = {
+  academicYear?: { id: number };
   programCourse: { id: number };
   subjectType: { id: number };
   boardSubjectName: { id: number };
@@ -21,8 +26,20 @@ export type CreateRelatedSubjectSubInput = {
   boardSubjectNameId: number;
 };
 
+// Update input for a subject-selection meta. Mirrors the backend update
+// service input (flat { id } arrays). academicYear/sequence are intentionally
+// omitted so they cannot be changed on update.
+export type UpdateSubjectSelectionMetaInput = {
+  label?: string;
+  subjectType?: { id: number };
+  isActive?: boolean;
+  forClasses?: { id: number }[];
+  streams?: { id: number }[];
+};
+
 const BASE_MAIN = "/api/subject-selection/related-subject-mains";
 const BASE_SUB = "/api/subject-selection/related-subject-subs";
+const BASE_META = "/api/subject-selection/metas";
 
 export const subjectSelectionApi = {
   // Related Subject Main
@@ -39,6 +56,7 @@ export const subjectSelectionApi = {
     search?: string;
     programCourse?: string;
     subjectType?: string;
+    academicYearId?: number;
   }) {
     const res = await api.get<ApiResponse<PaginatedResponse<RelatedSubjectMainDto>>>(
       `${BASE_MAIN}`,
@@ -74,6 +92,12 @@ export const subjectSelectionApi = {
   },
   async deleteRelatedSubjectSub(id: number) {
     const res = await api.delete<ApiResponse<unknown>>(`${BASE_SUB}/${id}`);
+    return res.data.payload;
+  },
+
+  // Subject Selection Meta
+  async updateSubjectSelectionMeta(id: number, payload: UpdateSubjectSelectionMetaInput) {
+    const res = await api.put<ApiResponse<SubjectSelectionMetaDto>>(`${BASE_META}/${id}`, payload);
     return res.data.payload;
   },
 };

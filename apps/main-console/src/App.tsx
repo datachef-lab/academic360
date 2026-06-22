@@ -72,7 +72,7 @@ import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/s
 import WhitelistedCategoriesPage from "./features/academic-year-setup/pages/whitelisted-categories-page";
 import AlternativeSubjectsPage from "./features/academic-year-setup/pages/related-subjects-page";
 // import RestrictedGroupingsPage from "./features/academic-year-setup/pages/restricted-grouping-page";
-import SemesterAvailabilityPage from "./features/academic-year-setup/pages/semester-availability-page";
+import SubjectSelectionMetaPage from "./features/academic-year-setup/pages/subject-selection-meta-page";
 import RestrictedGroupingPage from "./features/academic-year-setup/pages/restricted-grouping-page";
 import UnderConstructionPage from "./pages/under-construction-page";
 import AdmissionBoardMaster from "./features/academic-year-setup/layouts/admission-board-master";
@@ -186,7 +186,7 @@ const router = createBrowserRouter(
                 { path: "", element: <AlternativeSubjectsPage /> },
                 { path: "restricted-groupings", element: <RestrictedGroupingPage /> },
                 { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
-                { path: "semester-availability", element: <SemesterAvailabilityPage /> },
+                { path: "subject-selection-meta", element: <SubjectSelectionMetaPage /> },
               ],
             },
             {
