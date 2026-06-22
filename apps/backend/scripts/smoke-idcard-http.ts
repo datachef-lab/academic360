@@ -135,8 +135,6 @@ async function run() {
   fd.append("canvasWidthPx", "600");
   fd.append("canvasHeightPx", "900");
   fd.append("qrcodeSize", "80");
-  fd.append("validFrom", "2026-01-01");
-  fd.append("validTill", "2026-12-31");
   fd.append("isDefault", "false");
   fd.append(
     "templateImage",

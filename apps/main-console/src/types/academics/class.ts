@@ -4,7 +4,7 @@ export interface Class {
   type: "YEAR" | "SEMESTER";
   shortName: string | null;
   sequence?: number;
-  disabled: boolean;
+  isActive?: boolean | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { and, desc, eq, sql, max, inArray } from "drizzle-orm";
+import { and, desc, eq, sql, max, inArray, or, isNull } from "drizzle-orm";
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as sessionService from "@/features/academics/services/session.service";
 import {
@@ -573,7 +573,16 @@ async function fetchSubjectSelectionMetaData(
       updatedAt: subjectSelectionMetaModel.updatedAt,
     })
     .from(subjectSelectionMetaModel)
-    .where(eq(subjectSelectionMetaModel.academicYearId, academicYearId));
+    .where(
+      and(
+        eq(subjectSelectionMetaModel.academicYearId, academicYearId),
+        // Active = isActive true OR null (default). Hide inactive metas from students.
+        or(
+          isNull(subjectSelectionMetaModel.isActive),
+          eq(subjectSelectionMetaModel.isActive, true),
+        ),
+      ),
+    );
   //   console.log("subjectSelectionMetas:", subjectSelectionMetas);
 
   // Convert to full DTOs with related data

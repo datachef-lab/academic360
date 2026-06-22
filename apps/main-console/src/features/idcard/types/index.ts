@@ -19,6 +19,7 @@ export interface IdCardTemplateField {
   y: number;
   width: number | null;
   height: number | null;
+  fontSize: number | null;
   isVisible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -36,8 +37,6 @@ export interface IdCardTemplate {
   canvasWidthPx: number;
   canvasHeightPx: number;
   qrcodeSize: number;
-  validFrom: string | null;
-  validTill: string | null;
   isDefault: boolean;
   disabled: boolean;
   createdByUserId: number | null;
@@ -87,8 +86,6 @@ export interface IdCardTemplateUpsertPayload {
   canvasWidthPx?: number;
   canvasHeightPx?: number;
   qrcodeSize?: number;
-  validFrom?: string | null;
-  validTill?: string | null;
   isDefault?: boolean;
   disabled?: boolean;
 }
@@ -99,6 +96,7 @@ export interface IdCardTemplateFieldUpsertPayload {
   y: number;
   width?: number | null;
   height?: number | null;
+  fontSize?: number | null;
   isVisible?: boolean;
 }
 

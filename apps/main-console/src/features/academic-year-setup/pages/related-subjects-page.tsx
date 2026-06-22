@@ -404,6 +404,7 @@ export default function AlternativeSubjectsPage() {
     setEditCategory(grouping.subjectCategory ?? "");
     setEditTargetSubject(targetToken);
     setEditSelectedAlternatives(altTokens);
+    setEditIsActive(grouping.isActive ?? true);
     setEditOriginal({
       pc: grouping.programCourses[0] ?? "",
       cat: grouping.subjectCategory ?? "",
@@ -622,6 +623,7 @@ export default function AlternativeSubjectsPage() {
         programCourse: { id: programCourseId },
         subjectType: { id: subjectTypeId },
         boardSubjectName: { id: targetId },
+        isActive: editIsActive,
         relatedSubjectSubs: desiredSubsDto,
       };
       await subjectSelectionApi.updateRelatedSubjectMain(dto.id || 0, updatePayload);

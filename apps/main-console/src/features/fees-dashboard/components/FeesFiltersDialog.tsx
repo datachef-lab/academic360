@@ -131,7 +131,7 @@ export function FeesFiltersDialog({
           religionRows,
         ]) => {
           if (cancelled) return;
-          setClasses(classRows.filter((c) => !c.disabled && c.type === "SEMESTER"));
+          setClasses(classRows.filter((c) => c.isActive !== false && c.type === "SEMESTER"));
           setShifts(shiftRows.filter((s) => !s.disabled));
           setProgramCourses(Array.isArray(courseRows) ? courseRows : []);
           setCourseLevels(rowsWithId(Array.isArray(levelRows) ? levelRows : []));

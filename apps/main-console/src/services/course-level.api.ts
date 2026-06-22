@@ -6,7 +6,7 @@ export interface CourseLevel {
   name: string;
   shortName?: string | null;
   sequence?: number | null;
-  disabled: boolean;
+  isActive?: boolean | null;
   createdAt?: string;
   updatedAt?: string;
 }

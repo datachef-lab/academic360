@@ -25,6 +25,7 @@ export const idCardTemplateFieldModel = pgTable(
         y: integer().notNull().default(0),
         width: integer(),
         height: integer(),
+        fontSize: integer(),
         isVisible: boolean().notNull().default(true),
         createdAt: timestamp().notNull().defaultNow(),
         updatedAt: timestamp()

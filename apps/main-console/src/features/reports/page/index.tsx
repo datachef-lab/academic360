@@ -1178,7 +1178,7 @@ export default function ReportsPage() {
   const semesterClasses = useMemo(
     () =>
       [...classesList]
-        .filter((c) => c.type === "SEMESTER" && c.disabled !== true)
+        .filter((c) => c.type === "SEMESTER" && c.isActive !== false)
         .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)),
     [classesList],
   );

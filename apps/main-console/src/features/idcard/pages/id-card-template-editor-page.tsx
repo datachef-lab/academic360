@@ -77,6 +77,7 @@ export default function IdCardTemplateEditorPage() {
           y: existing.y,
           width: existing.width,
           height: existing.height,
+          fontSize: existing.fontSize ?? null,
           isVisible: existing.isVisible,
         };
       }
@@ -87,6 +88,7 @@ export default function IdCardTemplateEditorPage() {
         y: 0,
         width: isPhoto ? 200 : null,
         height: isPhoto ? 240 : null,
+        fontSize: null,
         isVisible: false,
       };
     });
@@ -221,7 +223,7 @@ export default function IdCardTemplateEditorPage() {
                     //   Text fields use (x, y) as the alphabetic baseline, so
                     //   the visible box sits ABOVE (x, y) by its rendered
                     //   pixel height.
-                    const fontPx = FIELD_PREVIEW_FONT_PX[d.fieldKey] ?? 22;
+                    const fontPx = d.fontSize ?? FIELD_PREVIEW_FONT_PX[d.fieldKey] ?? 22;
                     const w = isPhoto
                       ? (d.width ?? 200)
                       : isQR
@@ -263,6 +265,7 @@ export default function IdCardTemplateEditorPage() {
           <CardContent className="p-3 space-y-3 max-h-[640px] overflow-y-auto">
             {drafts.map((d) => {
               const needsDims = ID_CARD_FIELDS_WITH_DIMENSIONS.includes(d.fieldKey);
+              const isTextField = d.fieldKey !== "PHOTO" && d.fieldKey !== "QRCODE";
               return (
                 <div key={d.fieldKey} className="border rounded p-3 space-y-2">
                   <div className="flex items-center justify-between">
@@ -332,6 +335,23 @@ export default function IdCardTemplateEditorPage() {
                           />
                         </div>
                       </>
+                    )}
+                    {isTextField && (
+                      <div>
+                        <Label className="text-xs">Font Size (px)</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder={String(FIELD_PREVIEW_FONT_PX[d.fieldKey] ?? 22)}
+                          value={d.fontSize ?? ""}
+                          onChange={(e) =>
+                            updateDraft(d.fieldKey, {
+                              fontSize:
+                                e.target.value === "" ? null : Number(e.target.value) || null,
+                            })
+                          }
+                        />
+                      </div>
                     )}
                   </div>
                 </div>

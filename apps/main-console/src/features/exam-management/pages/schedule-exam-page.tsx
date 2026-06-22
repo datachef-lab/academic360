@@ -123,7 +123,7 @@ export default function ScheduleExamPage() {
     queryKey: ["classes"],
     queryFn: async () => {
       const data = await getAllClasses();
-      return Array.isArray(data) ? data.filter((c) => !c.disabled) : [];
+      return Array.isArray(data) ? data.filter((c) => c.isActive !== false) : [];
     },
     onError: (error) => {
       console.error("Error fetching classes:", error);
@@ -174,7 +174,7 @@ export default function ScheduleExamPage() {
     queryKey: ["subjects"],
     queryFn: async () => {
       const data = await getAllSubjects();
-      return Array.isArray(data) ? data.filter((s) => !s.disabled) : [];
+      return Array.isArray(data) ? data.filter((s) => s.isActive !== false) : [];
     },
     onError: (error) => {
       console.error("Error fetching subjects:", error);

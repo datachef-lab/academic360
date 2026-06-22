@@ -4,7 +4,16 @@ import {
   RelatedSubjectMain,
   RelatedSubjectMainT,
 } from "@repo/db/schemas/models/subject-selection/related-subject-main.model";
-import { and, or, countDistinct, eq, ilike, ne, desc } from "drizzle-orm";
+import {
+  and,
+  or,
+  countDistinct,
+  eq,
+  ilike,
+  ne,
+  desc,
+  isNull,
+} from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import {
   RelatedSubjectMainDto,
@@ -416,6 +425,12 @@ export async function findByAcademicYearIdAndProgramCourseId(
       and(
         eq(relatedSubjectMainModel.academicYearId, academicYearId),
         eq(relatedSubjectMainModel.programCourseId, programCourseId),
+        // Active = isActive true OR null (default). Inactive mappings are not
+        // offered to students during subject selection.
+        or(
+          isNull(relatedSubjectMainModel.isActive),
+          eq(relatedSubjectMainModel.isActive, true),
+        ),
       ),
     );
 

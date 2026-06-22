@@ -43,8 +43,6 @@ export interface CreateIdCardTemplatePayload {
     canvasWidthPx?: number;
     canvasHeightPx?: number;
     qrcodeSize?: number;
-    validFrom?: string | null;
-    validTill?: string | null;
     isDefault?: boolean;
 }
 
@@ -54,6 +52,7 @@ export interface UpsertIdCardTemplateFieldPayload {
     y: number;
     width?: number | null;
     height?: number | null;
+    fontSize?: number | null;
     isVisible?: boolean;
 }
 

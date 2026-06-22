@@ -45,8 +45,6 @@ const bodyToUpsert = (b: Record<string, unknown>): TemplateUpsertInput => ({
   canvasWidthPx: optInt(b.canvasWidthPx),
   canvasHeightPx: optInt(b.canvasHeightPx),
   qrcodeSize: optInt(b.qrcodeSize),
-  validFrom: typeof b.validFrom === "string" ? b.validFrom : null,
-  validTill: typeof b.validTill === "string" ? b.validTill : null,
   isDefault: optBool(b.isDefault),
   disabled: optBool(b.disabled),
 });

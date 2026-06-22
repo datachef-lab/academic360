@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, IdCard, Pencil, Plus, Trash2 } from "lucide-react";
+import { IdCard, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -90,7 +90,6 @@ export default function IdCardTemplatesPage() {
                 <TableHead className="w-40">Preview (Front / Back)</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Academic Year</TableHead>
-                <TableHead>Validity</TableHead>
                 <TableHead>Canvas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -155,12 +154,6 @@ export default function IdCardTemplatesPage() {
                       )}
                     </TableCell>
                     <TableCell>{row.academicYear?.year ?? "—"}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <CalendarDays className="h-3 w-3" />
-                        {row.validFrom || "—"} → {row.validTill || "—"}
-                      </div>
-                    </TableCell>
                     <TableCell className="text-xs text-gray-600">
                       {row.canvasWidthPx} × {row.canvasHeightPx}
                     </TableCell>

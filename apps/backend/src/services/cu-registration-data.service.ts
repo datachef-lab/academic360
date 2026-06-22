@@ -1341,6 +1341,7 @@ export class CuRegistrationDataService {
           and(
             eq(paperModel.programCourseId, programCourseId),
             eq(paperModel.academicYearId, academicYear.id),
+            eq(paperModel.isActive, true),
             inArray(
               paperModel.subjectTypeId,
               [dsccType?.id, mnType?.id, aecType?.id, idcType?.id].filter(
@@ -1630,6 +1631,7 @@ export class CuRegistrationDataService {
           and(
             eq(paperModel.programCourseId, programCourseId),
             eq(paperModel.academicYearId, academicYear.id),
+            eq(paperModel.isActive, true),
             inArray(paperModel.subjectTypeId, subjectTypeIds),
           ),
         );

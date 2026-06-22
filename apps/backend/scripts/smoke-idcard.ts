@@ -78,8 +78,6 @@ async function main() {
       canvasWidthPx: 600,
       canvasHeightPx: 900,
       qrcodeSize: 80,
-      validFrom: "2026-01-01",
-      validTill: "2026-12-31",
       isDefault: false,
       disabled: false,
     })

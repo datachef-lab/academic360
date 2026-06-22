@@ -79,7 +79,7 @@ const SubjectsPage = () => {
     name: string;
     code?: string | null;
     sequence?: number | null;
-    disabled: boolean;
+    isActive: boolean;
   }) => {
     setIsSubmitting(true);
     try {
@@ -87,7 +87,7 @@ const SubjectsPage = () => {
         name: data.name,
         code: data.code || null,
         sequence: data.sequence || null,
-        disabled: data.disabled,
+        isActive: data.isActive,
       };
 
       if (selectedSubject?.id) {
@@ -195,7 +195,7 @@ const SubjectsPage = () => {
         Name: subject.name,
         Code: subject.code || "-",
         Sequence: subject.sequence || "-",
-        Status: subject.disabled ? "Inactive" : "Active",
+        Status: !subject.isActive ? "Inactive" : "Active",
         "Created At": subject.createdAt,
         "Updated At": subject.updatedAt,
       }));

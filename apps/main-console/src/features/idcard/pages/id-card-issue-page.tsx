@@ -10,6 +10,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchStudentByUid } from "@/services/student";
@@ -24,6 +31,7 @@ import {
   fetchIssuePhotoBlob,
   fetchTemplateBacksideBlob,
   fetchTemplateImageBlob,
+  getStudentIdCardValidity,
   getTemplate,
   listIssues,
   listTemplates,
@@ -123,10 +131,15 @@ function extractStudentInfo(raw: any): StudentInfo {
   };
 }
 
-const todayPlusYears = (years: number) => {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + years);
-  return d.toISOString().slice(0, 10);
+// ISO (yyyy-mm-dd) <-> display (dd-mm-yyyy) helpers. The card draws / the UI
+// shows dd-mm-yyyy; the issue.validTill date column is persisted as ISO.
+const isoToDisplay = (iso: string): string => {
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}-${m}-${y}` : iso;
+};
+const displayToIso = (ddmmyyyy: string): string | null => {
+  const [d, m, y] = ddmmyyyy.split("-");
+  return d && m && y ? `${y}-${m}-${d}` : null;
 };
 
 export default function IdCardIssuePage() {
@@ -148,6 +161,11 @@ export default function IdCardIssuePage() {
   const [showHistorySheet, setShowHistorySheet] = useState(false);
   const [showBack, setShowBack] = useState(false);
   const [backImageUrl, setBackImageUrl] = useState<string | null>(null);
+  // Validity: "PROGRAM" = auto (Sem-1 dateOfJoining + programCourse.duration),
+  // "MANUAL" = operator-picked date. Both held/displayed as dd-mm-yyyy.
+  const [validityMode, setValidityMode] = useState<"PROGRAM" | "MANUAL">("PROGRAM");
+  const [manualValidTill, setManualValidTill] = useState<string>(""); // ISO yyyy-mm-dd from <input type=date>
+  const [programValidTill, setProgramValidTill] = useState<string | null>(null); // dd-mm-yyyy
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -187,7 +205,25 @@ export default function IdCardIssuePage() {
     }
   }, [templates, templateId]);
 
-  const activeValidTill = activeTemplate?.validTill ?? todayPlusYears(1);
+  // Auto "Program course" validity (dd-mm-yyyy) for the loaded student.
+  const validityQuery = useQuery({
+    queryKey: ["idcard", "validity", student?.id],
+    queryFn: () => (student ? getStudentIdCardValidity(student.id) : Promise.resolve(null)),
+    enabled: !!student,
+  });
+
+  useEffect(() => {
+    setProgramValidTill(validityQuery.data?.validTill ?? null);
+  }, [validityQuery.data?.validTill]);
+
+  // The dd-mm-yyyy value drawn on the card / shown in the UI.
+  const validTillDisplay =
+    validityMode === "MANUAL"
+      ? manualValidTill
+        ? isoToDisplay(manualValidTill)
+        : ""
+      : (programValidTill ?? "");
+  const activeValidTill = validTillDisplay;
 
   const historyQuery = useQuery({
     queryKey: ["idcard", "issues", { studentId: student?.id }],
@@ -258,6 +294,10 @@ export default function IdCardIssuePage() {
       setStudent(info);
       setRfid(info.rfidNumber ?? "");
       resetCompositionState();
+      // Default each new student back to the auto "Program course" validity.
+      setValidityMode("PROGRAM");
+      setManualValidTill("");
+      setProgramValidTill(null);
 
       // Blood group (health) and emergency phone live in separate tables keyed by
       // userId, so they aren't on the student DTO — fetch them by studentId.
@@ -373,7 +413,7 @@ export default function IdCardIssuePage() {
         if (TEXT_FIELDS.includes(field.fieldKey)) {
           const text = valueForField(field.fieldKey, student, activeValidTill);
           if (!text) continue;
-          const px = FIELD_FONT_PX[field.fieldKey] || 22;
+          const px = field.fontSize ?? (FIELD_FONT_PX[field.fieldKey] || 22);
           ctx.fillStyle = "#111";
           ctx.font = `bold ${px}px Calibri, Arial, sans-serif`;
           ctx.textBaseline = "alphabetic";
@@ -405,7 +445,7 @@ export default function IdCardIssuePage() {
       void compose();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photoBlob, activeTemplate?.id, student?.id]);
+  }, [photoBlob, activeTemplate?.id, student?.id, activeValidTill]);
 
   // Lazy-load the back-side image (proxied + authed) when the toggle is flipped.
   useEffect(() => {
@@ -438,13 +478,16 @@ export default function IdCardIssuePage() {
       if (!composedBlob) {
         throw new Error("Capture and compose the card first.");
       }
+      // validTill column is a Postgres date → persist ISO (yyyy-mm-dd); the
+      // dd-mm-yyyy form is what gets drawn on the card.
+      const validTillIso = validTillDisplay ? displayToIso(validTillDisplay) : null;
       const payload = {
         studentId: student.id,
         templateId,
         issueStatus,
         rfidNumber: rfid.trim() || null,
-        validFrom: activeTemplate?.validFrom ?? null,
-        validTill: activeTemplate?.validTill ?? null,
+        validFrom: null,
+        validTill: validTillIso,
         nameSnapshot: student.name,
         courseSnapshot: student.course,
         mobileSnapshot: student.mobile,
@@ -646,14 +689,43 @@ export default function IdCardIssuePage() {
                 <div className="text-xs text-gray-600 self-end pb-1">
                   Template:{" "}
                   <span className="font-medium text-gray-800">{activeTemplate?.name ?? "—"}</span>
-                  {activeTemplate?.validTill && (
-                    <>
-                      {" "}
-                      · Valid till{" "}
-                      <span className="font-medium text-gray-800">{activeTemplate.validTill}</span>
-                    </>
-                  )}
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-end gap-3 pt-2">
+                <div>
+                  <Label className="font-semibold">Validity</Label>
+                  <Select
+                    value={validityMode}
+                    onValueChange={(v) => setValidityMode(v as "PROGRAM" | "MANUAL")}
+                  >
+                    <SelectTrigger className="w-56 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PROGRAM">Program course (auto)</SelectItem>
+                      <SelectItem value="MANUAL">Manual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {validityMode === "MANUAL" ? (
+                  <div>
+                    <Label className="font-semibold">Valid Till</Label>
+                    <Input
+                      type="date"
+                      value={manualValidTill}
+                      onChange={(e) => setManualValidTill(e.target.value)}
+                      className="w-48 bg-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-600 self-end pb-2">
+                    Valid till{" "}
+                    <span className="font-medium text-gray-800">
+                      {validityQuery.isLoading ? "…" : (programValidTill ?? "Not available")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {hasExistingIdCard && (

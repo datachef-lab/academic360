@@ -249,6 +249,7 @@ optional_students AS (
   JOIN subject_selection_meta sm
     ON sm.id = lss.subject_selection_meta_id_fk
    AND sm.subject_type_id_fk = fp.subject_type_id_fk
+   AND (sm.is_active IS TRUE OR sm.is_active IS NULL)
   JOIN subject_selection_meta_classes smc
     ON smc.subject_selection_meta_id_fk = sm.id
    AND smc.class_id_fk = $2

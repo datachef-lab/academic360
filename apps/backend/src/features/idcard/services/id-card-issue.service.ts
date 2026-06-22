@@ -8,11 +8,15 @@ import {
   uploadToS3,
 } from "@/services/s3.service.js";
 import {
+  classModel,
   idCardIssueModel,
   idCardTemplateModel,
+  programCourseModel,
+  promotionModel,
   studentModel,
   userModel,
 } from "@repo/db/schemas/index.js";
+import { asc } from "drizzle-orm";
 
 export type IssueListFilters = {
   page: number;
@@ -204,10 +208,6 @@ export async function createIssue(
   const values = normalizeIssue(input);
 
   if (!values.uidSnapshot) values.uidSnapshot = student.uid;
-  if (!values.validFrom && template.validFrom)
-    values.validFrom = template.validFrom as unknown as string;
-  if (!values.validTill && template.validTill)
-    values.validTill = template.validTill as unknown as string;
 
   const [created] = await db
     .insert(idCardIssueModel)
@@ -275,6 +275,75 @@ export async function createIssue(
   }
 
   return issueId;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const formatDDMMYYYY = (d: Date) =>
+  `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`;
+
+/**
+ * Compute the "Program course" auto validity for a student's ID card:
+ * Semester-I promotion `dateOfJoining` + the program course's `duration`
+ * (in years). Returns the date formatted DD-MM-YYYY plus the inputs used,
+ * or nulls if either piece is missing.
+ */
+export async function getStudentIdCardValidity(studentId: number) {
+  const [student] = await db
+    .select({ id: studentModel.id })
+    .from(studentModel)
+    .where(eq(studentModel.id, studentId))
+    .limit(1);
+  if (!student) throw new ApiError(404, "Student not found.");
+
+  // Pick the Semester-I promotion (class name "SEMESTER I"); if not found,
+  // fall back to the earliest promotion by dateOfJoining / startDate.
+  const promotions = await db
+    .select({
+      dateOfJoining: promotionModel.dateOfJoining,
+      startDate: promotionModel.startDate,
+      className: classModel.name,
+      duration: programCourseModel.duration,
+    })
+    .from(promotionModel)
+    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, promotionModel.programCourseId),
+    )
+    .where(eq(promotionModel.studentId, studentId))
+    .orderBy(asc(promotionModel.dateOfJoining));
+
+  if (promotions.length === 0) {
+    return { validTill: null, dateOfJoining: null, durationYears: null };
+  }
+
+  const semOne =
+    promotions.find(
+      (p) => (p.className ?? "").trim().toUpperCase() === "SEMESTER I",
+    ) ??
+    promotions.find((p) => p.dateOfJoining != null) ??
+    promotions[0];
+
+  const joining = semOne.dateOfJoining ?? semOne.startDate ?? null;
+  const durationYears = semOne.duration ?? null;
+
+  if (!joining || durationYears == null) {
+    return {
+      validTill: null,
+      dateOfJoining: joining ? formatDDMMYYYY(new Date(joining)) : null,
+      durationYears,
+    };
+  }
+
+  const join = new Date(joining);
+  const till = new Date(join);
+  till.setFullYear(till.getFullYear() + durationYears);
+
+  return {
+    validTill: formatDDMMYYYY(till),
+    dateOfJoining: formatDDMMYYYY(join),
+    durationYears,
+  };
 }
 
 export async function deleteIssue(id: number) {

@@ -134,7 +134,7 @@ const ClassesPage = () => {
         Type: classItem.type,
         Name: classItem.name,
         "Short Name": classItem.shortName,
-        Status: classItem.disabled ? "Inactive" : "Active",
+        Status: !classItem.isActive ? "Inactive" : "Active",
         "Created At": classItem.createdAt,
         "Updated At": classItem.updatedAt,
       }));
@@ -304,7 +304,7 @@ const ClassesPage = () => {
                         <TableCell style={{ width: 320 }}>{Class.name}</TableCell>
                         <TableCell style={{ width: 140 }}>{Class.shortName}</TableCell>
                         <TableCell style={{ width: 100 }}>
-                          {Class.disabled === true ? (
+                          {!Class.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">

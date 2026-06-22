@@ -14,6 +14,7 @@ import {
   deleteIssue,
   getIssueById,
   getMostRecentIssueForStudent,
+  getStudentIdCardValidity,
   listIssuesPaginated,
 } from "@/features/idcard/services/id-card-issue.service.js";
 
@@ -149,6 +150,23 @@ export const createIssueController = async (
     res
       .status(201)
       .json(new ApiResponse(201, "SUCCESS", { id }, "Issue created."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+};
+
+export const getStudentIdCardValidityController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = optInt(req.params.studentId);
+    if (!studentId) throw new ApiError(400, "Invalid student id.");
+    const validity = await getStudentIdCardValidity(studentId);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", validity, "Validity computed."));
   } catch (e) {
     handleError(e, res, next);
   }

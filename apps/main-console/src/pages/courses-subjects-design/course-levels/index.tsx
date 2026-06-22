@@ -184,7 +184,7 @@ const CourseLevelsPage = () => {
         Name: level.name,
         "Short Name": level.shortName || "-",
         Sequence: level.sequence || "-",
-        Status: level.disabled ? "Inactive" : "Active",
+        Status: !level.isActive ? "Inactive" : "Active",
         "Created At": level.createdAt,
         "Updated At": level.updatedAt,
       }));
@@ -446,7 +446,7 @@ const CourseLevelsPage = () => {
                         <TableCell style={{ width: 200 }}>{level.shortName || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>{level.sequence || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {level.disabled ? (
+                          {!level.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">

@@ -141,6 +141,19 @@ export async function getMostRecentIssueForStudent(studentId: number) {
   return res.data.payload;
 }
 
+export interface IdCardValidity {
+  validTill: string | null; // DD-MM-YYYY
+  dateOfJoining: string | null; // DD-MM-YYYY (Sem-1)
+  durationYears: number | null;
+}
+
+export async function getStudentIdCardValidity(studentId: number) {
+  const res = await axiosInstance.get<ApiResponse<IdCardValidity>>(
+    `${BASE}/students/${studentId}/validity`,
+  );
+  return res.data.payload;
+}
+
 export async function createIssue(
   payload: IdCardIssueCreatePayload,
   files: { frontImage?: Blob | File; photoImage?: Blob | File },

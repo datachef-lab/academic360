@@ -27,6 +27,7 @@ export type FieldUpsertInput = {
   y: number;
   width?: number | null;
   height?: number | null;
+  fontSize?: number | null;
   isVisible?: boolean;
 };
 
@@ -67,6 +68,8 @@ export async function upsertFieldsBulk(
       y: Math.max(0, Math.round(raw.y ?? 0)),
       width: raw.width != null ? Math.max(0, Math.round(raw.width)) : null,
       height: raw.height != null ? Math.max(0, Math.round(raw.height)) : null,
+      fontSize:
+        raw.fontSize != null ? Math.max(1, Math.round(raw.fontSize)) : null,
       isVisible: raw.isVisible ?? true,
     });
   }
@@ -98,6 +101,7 @@ export async function upsertFieldsBulk(
             y: c.y,
             width: c.width ?? null,
             height: c.height ?? null,
+            fontSize: c.fontSize ?? null,
             isVisible: c.isVisible ?? true,
             updatedAt: new Date(),
           })
@@ -115,6 +119,7 @@ export async function upsertFieldsBulk(
           y: c.y,
           width: c.width ?? null,
           height: c.height ?? null,
+          fontSize: c.fontSize ?? null,
           isVisible: c.isVisible ?? true,
         });
       }

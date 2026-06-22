@@ -38,8 +38,6 @@ export default function TemplateUpsertDialog({
   const [canvasWidthPx, setCanvasWidthPx] = useState(template?.canvasWidthPx ?? 600);
   const [canvasHeightPx, setCanvasHeightPx] = useState(template?.canvasHeightPx ?? 900);
   const [qrcodeSize, setQrcodeSize] = useState(template?.qrcodeSize ?? 0);
-  const [validFrom, setValidFrom] = useState(template?.validFrom ?? "");
-  const [validTill, setValidTill] = useState(template?.validTill ?? "");
   const [isDefault, setIsDefault] = useState(template?.isDefault ?? false);
   const [file, setFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
@@ -50,8 +48,6 @@ export default function TemplateUpsertDialog({
     setCanvasWidthPx(template?.canvasWidthPx ?? 600);
     setCanvasHeightPx(template?.canvasHeightPx ?? 900);
     setQrcodeSize(template?.qrcodeSize ?? 0);
-    setValidFrom(template?.validFrom ?? "");
-    setValidTill(template?.validTill ?? "");
     setIsDefault(template?.isDefault ?? false);
     setFile(null);
     setBackFile(null);
@@ -64,8 +60,6 @@ export default function TemplateUpsertDialog({
     canvasWidthPx,
     canvasHeightPx,
     qrcodeSize,
-    validFrom: validFrom || null,
-    validTill: validTill || null,
     isDefault,
   });
 
@@ -144,14 +138,6 @@ export default function TemplateUpsertDialog({
                 onChange={(e) => setIsDefault(e.target.checked)}
               />
               <Label htmlFor="isDefault">Mark as default</Label>
-            </div>
-            <div>
-              <Label>Valid From</Label>
-              <Input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
-            </div>
-            <div>
-              <Label>Valid Till</Label>
-              <Input type="date" value={validTill} onChange={(e) => setValidTill(e.target.value)} />
             </div>
           </div>
           <div>

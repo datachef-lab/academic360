@@ -175,8 +175,6 @@ async function importOne(t: SnapcardTemplate) {
       canvasWidthPx: 600,
       canvasHeightPx: 900,
       qrcodeSize: Number(t.qrcode_size) || 0,
-      validFrom: null,
-      validTill: null,
       isDefault: false,
       disabled: !!t.disabled,
     })

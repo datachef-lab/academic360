@@ -20,6 +20,7 @@ import {
   deleteIssueController,
   getIssueController,
   getMostRecentIssueForStudentController,
+  getStudentIdCardValidityController,
   idCardIssueUpload,
   listIssuesController,
   streamIssueFrontImageController,
@@ -59,6 +60,8 @@ router.get(
   "/students/:studentId/most-recent-issue",
   getMostRecentIssueForStudentController,
 );
+
+router.get("/students/:studentId/validity", getStudentIdCardValidityController);
 
 // Reports
 router.get("/reports/dates", listReportDatesController);

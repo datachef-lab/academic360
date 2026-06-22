@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Stream } from "@repo/db/index";
@@ -41,6 +41,7 @@ export function StreamForm({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<StreamFormValues>({
     resolver: zodResolver(streamSchema),
@@ -51,8 +52,7 @@ export function StreamForm({
       ugPrefix: initialData?.ugPrefix || "",
       pgPrefix: initialData?.pgPrefix || "",
       sequence: initialData?.sequence || null,
-      isActive: (initialData?.isActive ??
-        (initialData?.isActive !== undefined ? !initialData.isActive : true)) as boolean,
+      isActive: initialData?.isActive ?? true,
     },
   });
 
@@ -65,8 +65,7 @@ export function StreamForm({
         ugPrefix: initialData.ugPrefix || "",
         pgPrefix: initialData.pgPrefix || "",
         sequence: initialData.sequence || null,
-        isActive: (initialData.isActive ??
-          (initialData.isActive !== undefined ? !initialData.isActive : true)) as boolean,
+        isActive: initialData.isActive ?? true,
       });
     } else {
       reset({
@@ -164,7 +163,18 @@ export function StreamForm({
         </div>
 
         <div className="flex items-center space-x-2">
-          <Checkbox id="isActive" {...register("isActive")} disabled={isLoading} />
+          <Controller
+            name="isActive"
+            control={control}
+            render={({ field }) => (
+              <Checkbox
+                id="isActive"
+                checked={!!field.value}
+                onCheckedChange={field.onChange}
+                disabled={isLoading}
+              />
+            )}
+          />
           <Label
             htmlFor="isActive"
             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"

@@ -158,7 +158,7 @@ const SubjectCategoriesPage = () => {
         Name: cat.name,
         Code: cat.code || "-",
         Sequence: cat.sequence || "-",
-        Disabled: cat.isActive ? "Yes" : "No",
+        Status: !cat.isActive ? "Inactive" : "Active",
         "Created At": cat.createdAt,
         "Updated At": cat.updatedAt,
       }));

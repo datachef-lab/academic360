@@ -209,7 +209,7 @@ const StreamsPage = () => {
         "UG Prefix": stream.ugPrefix || "-",
         "PG Prefix": stream.pgPrefix || "-",
         Sequence: stream.sequence || "-",
-        Status: stream.isActive ? "Inactive" : "Active",
+        Status: !stream.isActive ? "Inactive" : "Active",
         "Created At": stream.createdAt,
         "Updated At": stream.updatedAt,
       }));
