@@ -122,6 +122,11 @@ const CARD_THEME: Record<MetricId, { gradient: string; icon: LucideIcon; ring: s
     icon: Banknote,
     ring: "bg-white/20",
   },
+  cheque_collected: {
+    gradient: "from-[#854d0e] via-[#a16207] to-[#eab308]",
+    icon: Banknote,
+    ring: "bg-white/20",
+  },
   online_collected: {
     gradient: "from-[#0c4a6e] via-[#0284c7] to-[#38bdf8]",
     icon: Wifi,

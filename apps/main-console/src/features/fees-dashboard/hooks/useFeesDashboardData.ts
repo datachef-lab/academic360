@@ -182,51 +182,59 @@ export function useFeesDashboardData(
     }
   }, []);
 
-  const fetchDashboard = useCallback(async () => {
-    if (!canFetchDashboard) {
-      setDashboard(null);
-      setDashboardLoading(false);
+  const fetchDashboard = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!canFetchDashboard) {
+        setDashboard(null);
+        setDashboardLoading(false);
+        setDashboardError(null);
+        return;
+      }
+
+      const seq = ++fetchSeq.current;
+      // Silent refreshes (socket-driven) update data in place without flipping the
+      // loading flag — toggling it swaps widgets for skeletons and back, which
+      // collapses/expands the page and scrolls the user to the top.
+      if (!opts?.silent) setDashboardLoading(true);
       setDashboardError(null);
-      return;
-    }
+      try {
+        const corePayload = await getFeesDashboard(filters, "core");
+        if (seq !== fetchSeq.current) return;
+        setDashboard(corePayload);
+        if (!opts?.silent) setDashboardLoading(false);
 
-    const seq = ++fetchSeq.current;
-    setDashboardLoading(true);
-    setDashboardError(null);
-    try {
-      const corePayload = await getFeesDashboard(filters, "core");
-      if (seq !== fetchSeq.current) return;
-      setDashboard(corePayload);
-      setDashboardLoading(false);
-
-      void getFeesDashboard(filters, "reports")
-        .then((reportsPayload) => {
-          if (seq !== fetchSeq.current) return;
-          setDashboard((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  challansByProgram: reportsPayload.challansByProgram,
-                  enrollmentMatrix: reportsPayload.enrollmentMatrix,
-                  slabBreakdown: reportsPayload.slabBreakdown,
-                  promotionBreakdown: reportsPayload.promotionBreakdown,
-                  updatedAt: reportsPayload.updatedAt,
-                }
-              : reportsPayload,
-          );
-        })
-        .catch((e) => {
-          if (seq !== fetchSeq.current) return;
-          console.error("Fees dashboard reports section failed:", e);
-        });
-    } catch (e) {
-      if (seq !== fetchSeq.current) return;
-      console.error(e);
-      setDashboard(null);
-      setDashboardError("Could not load dashboard metrics");
-      setDashboardLoading(false);
-    }
-  }, [filtersKey, filters, canFetchDashboard]);
+        void getFeesDashboard(filters, "reports")
+          .then((reportsPayload) => {
+            if (seq !== fetchSeq.current) return;
+            setDashboard((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    challansByProgram: reportsPayload.challansByProgram,
+                    enrollmentMatrix: reportsPayload.enrollmentMatrix,
+                    slabBreakdown: reportsPayload.slabBreakdown,
+                    promotionBreakdown: reportsPayload.promotionBreakdown,
+                    updatedAt: reportsPayload.updatedAt,
+                  }
+                : reportsPayload,
+            );
+          })
+          .catch((e) => {
+            if (seq !== fetchSeq.current) return;
+            console.error("Fees dashboard reports section failed:", e);
+          });
+      } catch (e) {
+        if (seq !== fetchSeq.current) return;
+        console.error(e);
+        if (!opts?.silent) {
+          setDashboard(null);
+          setDashboardError("Could not load dashboard metrics");
+          setDashboardLoading(false);
+        }
+      }
+    },
+    [filtersKey, filters, canFetchDashboard],
+  );
 
   useEffect(() => {
     void fetchMasterData();
@@ -254,7 +262,7 @@ export function useFeesDashboardData(
         fetchMasterData({ silent: true }),
       ];
       if (canFetchDashboard) {
-        refreshTasks.push(fetchDashboard());
+        refreshTasks.push(fetchDashboard({ silent: true }));
       }
       const [semesterActivities] = await Promise.all(refreshTasks);
 

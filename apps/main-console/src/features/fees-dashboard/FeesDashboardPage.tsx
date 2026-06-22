@@ -34,7 +34,7 @@ const DASHBOARD_TABS = [
   { value: "enrollment", label: "Enrolment & fees" },
   { value: "collections", label: "Collections" },
   { value: "transactions", label: "Transactions" },
-  { value: "challans", label: "Challans" },
+  { value: "challans", label: "Receipts" },
   { value: "structures", label: "Structures" },
   { value: "slabs", label: "Slabs" },
 ] as const;

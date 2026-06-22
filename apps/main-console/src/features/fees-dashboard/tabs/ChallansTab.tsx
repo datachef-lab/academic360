@@ -16,8 +16,8 @@ import { DashboardEmptyState } from "../components/DashboardEmptyState";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 const CHALLAN_CHART_CONFIG = {
-  generated: { label: "Generated", color: "#4f46e5" },
-  pending: { label: "Not generated", color: "#f59e0b" },
+  generated: { label: "Issued", color: "#4f46e5" },
+  pending: { label: "Not issued", color: "#f59e0b" },
 } satisfies ChartConfig;
 
 export function ChallansTab() {
@@ -27,12 +27,9 @@ export function ChallansTab() {
 
   return (
     <TabPanel tab="challans" metricTheme="challans">
-      <div className="grid gap-3 lg:grid-cols-2">
-        <SemesterBreakdownPanel variant="challans" semesterNumeralOnly />
-        <SemesterBreakdownPanel variant="receipts" semesterNumeralOnly />
-      </div>
+      <SemesterBreakdownPanel variant="receipts" semesterNumeralOnly />
       <ChartCard
-        title="Challans by program"
+        title="Receipts by program"
         description="Student count"
         config={CHALLAN_CHART_CONFIG}
         xAxisTitle="Program course"
@@ -41,7 +38,7 @@ export function ChallansTab() {
         yTickLabels={buildYTickLabels(yMax)}
       >
         {chartData.length === 0 && !dashboardLoading ? (
-          <DashboardEmptyState message="No challan data by program." />
+          <DashboardEmptyState message="No receipt data by program." />
         ) : (
           <BarChart data={chartData} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e5e5" />

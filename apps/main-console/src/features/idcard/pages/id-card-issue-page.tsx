@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchStudentByUid } from "@/services/student";
+import axiosInstance from "@/utils/api";
 import { useAppSelector } from "@/store/hooks";
 import { selectCurrentAcademicYear } from "@/store/slices/academicYearSlice";
 import { AcademicYearSelector } from "@/components/academic-year";
@@ -43,6 +44,7 @@ type StudentInfo = {
   quotaType: string | null;
   section: string | null;
   classRollNumber: string | null;
+  emergencyPhone: string | null;
 };
 
 const TEXT_FIELDS: IdCardFieldKey[] = [
@@ -84,7 +86,8 @@ function valueForField(key: IdCardFieldKey, student: StudentInfo, validTill: str
     case "UID":
       return student.uid ?? "";
     case "MOBILE":
-      return student.mobile ?? "";
+      // Card "MOBILE" field shows the emergency contact number, not the student's own.
+      return student.emergencyPhone ?? student.mobile ?? "";
     case "BLOOD_GROUP":
       return student.bloodGroup ?? "";
     case "SPORTS_QUOTA":
@@ -102,9 +105,10 @@ function extractStudentInfo(raw: any): StudentInfo {
     uid: raw?.uid ?? "",
     name: raw?.user?.name ?? raw?.name ?? null,
     course:
-      raw?.programCourse?.course?.name ??
+      raw?.programCourse?.shortName ??
+      raw?.programCourse?.course?.shortName ??
       raw?.programCourse?.name ??
-      raw?.admissionCourseDetails?.programCourse?.course?.name ??
+      raw?.programCourse?.course?.name ??
       null,
     mobile:
       raw?.user?.phone ?? raw?.person?.phone ?? raw?.admissionGeneralInfo?.mobileNumber ?? null,
@@ -114,6 +118,8 @@ function extractStudentInfo(raw: any): StudentInfo {
     quotaType: raw?.admissionCourseDetails?.quota?.name ?? raw?.quotaType ?? null,
     section: raw?.section?.name ?? null,
     classRollNumber: raw?.classRollNumber ?? raw?.rollNumber ?? null,
+    // Filled in after lookup from the emergency-contact endpoint.
+    emergencyPhone: null,
   };
 }
 
@@ -252,6 +258,24 @@ export default function IdCardIssuePage() {
       setStudent(info);
       setRfid(info.rfidNumber ?? "");
       resetCompositionState();
+
+      // Blood group (health) and emergency phone live in separate tables keyed by
+      // userId, so they aren't on the student DTO — fetch them by studentId.
+      void (async () => {
+        const [healthRes, emRes] = await Promise.allSettled([
+          axiosInstance.get(`/api/health/student/${info.id}`),
+          axiosInstance.get(`/api/emergency-contact/student/${info.id}`),
+        ]);
+        const health = healthRes.status === "fulfilled" ? healthRes.value.data?.payload : null;
+        const bloodGroup = health?.bloodGroup?.type ?? health?.bloodGroup?.name ?? null;
+        const emergencyPhone =
+          emRes.status === "fulfilled" ? (emRes.value.data?.payload?.phone ?? null) : null;
+        setStudent((prev) =>
+          prev && prev.id === info.id
+            ? { ...prev, bloodGroup: bloodGroup ?? prev.bloodGroup, emergencyPhone }
+            : prev,
+        );
+      })();
     },
     onError: () => toast.error("Lookup failed. Verify the UID."),
   });
@@ -603,8 +627,7 @@ export default function IdCardIssuePage() {
                   label="Quota Type"
                   value={student.quotaType ?? student.sportsQuota ?? "-"}
                 />
-                <DetailRow label="Section" value={student.section ?? "-"} />
-                <DetailRow label="Class Roll No." value={student.classRollNumber ?? "-"} />
+                <DetailRow label="Emergency Phone" value={student.emergencyPhone ?? "-"} />
               </div>
 
               <div className="flex flex-wrap items-end gap-3 pt-2">

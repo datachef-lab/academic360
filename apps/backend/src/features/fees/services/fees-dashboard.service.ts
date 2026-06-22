@@ -12,6 +12,7 @@ import {
   programCourseModel,
   promotionModel,
   personalDetailsModel,
+  sessionModel,
   studentModel,
   userModel,
 } from "@repo/db/schemas";
@@ -77,6 +78,7 @@ export type FeesDashboardMetrics = {
   cash_receipts: number;
   cheque_receipts: number;
   cash_collected: number;
+  cheque_collected: number;
   online_collected: number;
   failed_payments: number;
   waived_amount: number;
@@ -280,6 +282,7 @@ function buildEmptyDashboardPayload(): FeesDashboardPayload {
       cash_receipts: 0,
       cheque_receipts: 0,
       cash_collected: 0,
+      cheque_collected: 0,
       online_collected: 0,
       failed_payments: 0,
       waived_amount: 0,
@@ -881,6 +884,108 @@ async function loadMasterCounts(
   };
 }
 
+/**
+ * Distinct students enrolled (via promotions) in the dashboard scope — independent of
+ * whether a fee_student_mapping exists yet. This is the true "Total students" figure;
+ * "eligible_students" (a fee mapping exists) is always a subset of it. Mirrors the
+ * promotion-based scoping used elsewhere (e.g. fee-structure.service.ts).
+ */
+async function loadEnrolledStudentCount(
+  filtersInput?: FeesDashboardFilters | null,
+): Promise<number> {
+  const filters = resolveDashboardFilters(filtersInput);
+  const parts: SQL[] = [ACTIVE_USER_SQL, NON_DEPRECATED_PROMOTION_ROW_SQL];
+
+  if (filters.academicYearIds?.length) {
+    parts.push(inArray(sessionModel.academicYearId, filters.academicYearIds));
+  }
+  if (filters.programCourseIds?.length) {
+    parts.push(
+      inArray(promotionModel.programCourseId, filters.programCourseIds),
+    );
+  }
+  if (filters.classIds?.length) {
+    parts.push(inArray(promotionModel.classId, filters.classIds));
+  }
+  if (filters.shiftIds?.length) {
+    parts.push(inArray(promotionModel.shiftId, filters.shiftIds));
+  }
+
+  // Program-course attribute filters (stream / level / regulation / affiliation).
+  const pcParts: SQL[] = [];
+  if (filters.streamIds?.length) {
+    pcParts.push(inArray(programCourseModel.streamId, filters.streamIds));
+  }
+  if (filters.courseLevelIds?.length) {
+    pcParts.push(
+      inArray(programCourseModel.courseLevelId, filters.courseLevelIds),
+    );
+  }
+  if (filters.regulationTypeIds?.length) {
+    pcParts.push(
+      inArray(programCourseModel.regulationTypeId, filters.regulationTypeIds),
+    );
+  }
+  if (filters.affiliationIds?.length) {
+    pcParts.push(
+      inArray(programCourseModel.affiliationId, filters.affiliationIds),
+    );
+  }
+  if (pcParts.length) {
+    const matchingProgramCourses = db
+      .select({ id: programCourseModel.id })
+      .from(programCourseModel)
+      .where(and(...pcParts));
+    parts.push(inArray(promotionModel.programCourseId, matchingProgramCourses));
+  }
+
+  // Demographic filters (category / religion / gender) via personal details.
+  if (
+    filters.categoryIds?.length ||
+    filters.religionIds?.length ||
+    filters.genders?.length
+  ) {
+    const pdParts: SQL[] = [];
+    if (filters.categoryIds?.length) {
+      pdParts.push(
+        inArray(personalDetailsModel.categoryId, filters.categoryIds),
+      );
+    }
+    if (filters.religionIds?.length) {
+      pdParts.push(
+        inArray(personalDetailsModel.religionId, filters.religionIds),
+      );
+    }
+    if (filters.genders?.length) {
+      pdParts.push(
+        inArray(personalDetailsModel.gender, filters.genders as never),
+      );
+    }
+    const matchingStudents = db
+      .select({ id: studentModel.id })
+      .from(studentModel)
+      .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+      .innerJoin(
+        personalDetailsModel,
+        eq(personalDetailsModel.userId, userModel.id),
+      )
+      .where(and(...pdParts));
+    parts.push(inArray(promotionModel.studentId, matchingStudents));
+  }
+
+  const [row] = await db
+    .select({
+      count: sql<number>`COUNT(DISTINCT ${promotionModel.studentId})::int`,
+    })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .where(and(...parts));
+
+  return Number(row?.count ?? 0);
+}
+
 type MappingAggregateMetrics = {
   fee_receivable: number;
   fee_collected: number;
@@ -976,7 +1081,6 @@ async function loadCoreMappingStats(
   canonicalMappingIds: number[],
 ): Promise<{
   mappingAgg: MappingAggregateMetrics;
-  totalStudents: number;
   paymentStatus: PaymentStatusRow[];
 }> {
   const failedPaymentQuery =
@@ -995,15 +1099,39 @@ async function loadCoreMappingStats(
           )
       : Promise.resolve([{ count: 0, amount: 0 }]);
 
-  const [[row], [failedPayment]] = await Promise.all([
+  // Per-student buckets so fully_paid + partial_or_unpaid == eligible_students
+  // exactly (a student with paid + unpaid mappings across semesters is classified
+  // once on their summed totals; students with nothing due count as fully paid).
+  const perStudent = db
+    .select({
+      studentId: feeStudentMappingModel.studentId,
+      totalPayable:
+        sql<number>`SUM(COALESCE(${feeStudentMappingModel.totalPayable}, 0))`.as(
+          "sp",
+        ),
+      amountPaid:
+        sql<number>`SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0))`.as(
+          "spaid",
+        ),
+    })
+    .from(feeStudentMappingModel)
+    .where(mappingWhere)
+    .groupBy(feeStudentMappingModel.studentId)
+    .as("per_student");
+
+  const bucketQuery = db
+    .select({
+      eligible_students: sql<number>`COUNT(*)::int`,
+      fully_paid: sql<number>`COUNT(*) FILTER (WHERE ${perStudent.amountPaid} >= ${perStudent.totalPayable})::int`,
+      partial_or_unpaid: sql<number>`COUNT(*) FILTER (WHERE ${perStudent.totalPayable} > 0 AND ${perStudent.amountPaid} < ${perStudent.totalPayable})::int`,
+    })
+    .from(perStudent);
+
+  const [[row], [buckets], [failedPayment]] = await Promise.all([
     db
       .select({
         fee_receivable: sql<number>`COALESCE(SUM(${feeStudentMappingModel.totalPayable}), 0)::float`,
         fee_collected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
-        eligible_students: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
-        total_students: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
-        fully_paid: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
-        partial_or_unpaid: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
         challans_generated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
         receipts_issued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
         challan_only: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
@@ -1017,6 +1145,7 @@ async function loadCoreMappingStats(
       })
       .from(feeStudentMappingModel)
       .where(mappingWhere),
+    bucketQuery,
     failedPaymentQuery,
   ]);
 
@@ -1024,8 +1153,7 @@ async function loadCoreMappingStats(
   const failedAmount = Number(failedPayment?.amount ?? 0);
 
   return {
-    mappingAgg: buildMappingAggregateMetrics(row),
-    totalStudents: Number(row?.total_students ?? 0),
+    mappingAgg: buildMappingAggregateMetrics({ ...row, ...buckets }),
     paymentStatus: buildPaymentStatusRows(row ?? {}, {
       count: failedCount,
       amount: failedAmount,
@@ -1033,20 +1161,103 @@ async function loadCoreMappingStats(
   };
 }
 
-const EMPTY_PAYMENT_AGG = {
-  transactionMix: [] as MixRow[],
-  gatewayMix: [] as MixRow[],
+/**
+ * One channel per mapping, aggregated in a single pass over payments (online >
+ * cheque > cash). Joined once to the mappings instead of a correlated EXISTS per
+ * row, so it scales to large/duplicated payment tables. Mappings with no
+ * successful payment row (legacy desk collections) aren't returned here and fall
+ * through to CASH via COALESCE at the join. Amounts always come from the ledger
+ * (amount_paid), so the split can't be inflated by duplicate payment rows.
+ */
+function paymentChannelByMappingSubquery(canonicalMappingIds: number[]) {
+  return db
+    .select({
+      mappingId: paymentModel.feeStudentMappingId,
+      channel: sql<string>`CASE
+        WHEN bool_or(${paymentModel.paymentMode}::text = 'ONLINE') THEN 'ONLINE'
+        WHEN bool_or(${paymentModel.paymentMode}::text = 'CHEQUE') THEN 'CHEQUE'
+        ELSE 'CASH'
+      END`.as("channel"),
+    })
+    .from(paymentModel)
+    .where(
+      and(
+        feePaymentContextWhere(),
+        eq(paymentModel.isLinked, true),
+        eq(paymentModel.status, "SUCCESS"),
+        inArray(paymentModel.feeStudentMappingId, canonicalMappingIds),
+      ),
+    )
+    .groupBy(paymentModel.feeStudentMappingId)
+    .as("pay_channel");
+}
+
+const EMPTY_CHANNEL_SPLIT = {
   paymentChannels: [] as PaymentChannelRow[],
-  today_collected: 0,
-  today_failed_payments: 0,
   online_receipts: 0,
   cash_receipts: 0,
   cheque_receipts: 0,
   online_collected: 0,
   cash_collected: 0,
+  cheque_collected: 0,
+};
+
+async function loadChannelLedgerSplit(
+  mappingWhere: SQL,
+  canonicalMappingIds: number[],
+): Promise<typeof EMPTY_CHANNEL_SPLIT> {
+  if (!canonicalMappingIds.length) return EMPTY_CHANNEL_SPLIT;
+  const hasCollection = sql`(COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 OR NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)`;
+  const payChannel = paymentChannelByMappingSubquery(canonicalMappingIds);
+
+  const rows = await db
+    .select({
+      channel: sql<string>`COALESCE(${payChannel.channel}, 'CASH')`.as(
+        "channel",
+      ),
+      studentCount: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
+      payers: sql<number>`COUNT(*)::int`,
+      amount: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
+    })
+    .from(feeStudentMappingModel)
+    .leftJoin(payChannel, eq(payChannel.mappingId, feeStudentMappingModel.id))
+    .where(and(mappingWhere, hasCollection))
+    // Group by the SELECT position (the COALESCE channel) to avoid drizzle
+    // re-rendering the expression with fresh bind params in GROUP BY.
+    .groupBy(sql`1`);
+
+  const find = (c: string) => rows.find((r) => String(r.channel) === c);
+  const online = find("ONLINE");
+  const cash = find("CASH");
+  const cheque = find("CHEQUE");
+
+  return {
+    paymentChannels: rows
+      .filter((r) => Number(r.amount) > 0 || Number(r.studentCount) > 0)
+      .map((r) => ({
+        channel: String(r.channel),
+        studentCount: Number(r.studentCount ?? 0),
+        amount: Math.round(Number(r.amount ?? 0)),
+      })),
+    online_collected: Math.round(Number(online?.amount ?? 0)),
+    cash_collected: Math.round(Number(cash?.amount ?? 0)),
+    cheque_collected: Math.round(Number(cheque?.amount ?? 0)),
+    online_receipts: Number(online?.payers ?? 0),
+    cash_receipts: Number(cash?.payers ?? 0),
+    cheque_receipts: Number(cheque?.payers ?? 0),
+  };
+}
+
+const EMPTY_PAYMENT_AGG = {
+  gatewayMix: [] as MixRow[],
   failed_payments: 0,
 };
 
+/**
+ * Payment-table aggregates that are NOT amount sums: online gateway-vendor mix and
+ * the failed-payment count. Amount/collected metrics come from the ledger
+ * (loadChannelLedgerSplit), never from SUM(payment.amount), to stay duplicate-proof.
+ */
 async function loadPaymentAggregates(canonicalMappingIds: number[]) {
   if (!canonicalMappingIds.length) return EMPTY_PAYMENT_AGG;
 
@@ -1057,76 +1268,33 @@ async function loadPaymentAggregates(canonicalMappingIds: number[]) {
     eq(paymentModel.status, "SUCCESS"),
   )!;
 
-  const [statusRows, todayRows, todayFailedRows, modeRows, gatewayRows] =
-    await Promise.all([
-      db
-        .select({
-          status: paymentModel.status,
-          count: sql<number>`COUNT(*)::int`,
-          amount: sql<number>`COALESCE(SUM(${paymentModel.amount}), 0)::float`,
-        })
-        .from(paymentModel)
-        .where(scoped)
-        .groupBy(paymentModel.status),
-      db
-        .select({
-          amount: sql<number>`COALESCE(SUM(${paymentModel.amount}), 0)::float`,
-        })
-        .from(paymentModel)
-        .where(
-          and(linkedSuccess, gte(paymentModel.createdAt, sql`CURRENT_DATE`)),
-        ),
-      db
-        .select({
-          count: sql<number>`COUNT(*)::int`,
-        })
-        .from(paymentModel)
-        .where(
-          and(
-            scoped,
-            eq(paymentModel.status, "FAILED"),
-            gte(paymentModel.createdAt, sql`CURRENT_DATE`),
-          ),
-        ),
-      db
-        .select({
-          mode: paymentModel.paymentMode,
-          count: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
-          amount: sql<number>`COALESCE(SUM(${paymentModel.amount}), 0)::float`,
-        })
-        .from(paymentModel)
-        .innerJoin(
-          feeStudentMappingModel,
-          eq(feeStudentMappingModel.id, paymentModel.feeStudentMappingId),
-        )
-        .where(linkedSuccess)
-        .groupBy(paymentModel.paymentMode),
-      db
-        .select({
-          gateway: GATEWAY_VENDOR_KEY_SQL,
-          count: sql<number>`COUNT(*)::int`,
-          amount: sql<number>`COALESCE(SUM(${paymentModel.amount}), 0)::float`,
-        })
-        .from(paymentModel)
-        .where(and(linkedSuccess, eq(paymentModel.paymentMode, "ONLINE")))
-        .groupBy(GATEWAY_VENDOR_KEY_SQL),
-    ]);
-
-  const todayRow = todayRows[0];
-  const todayFailedRow = todayFailedRows[0];
-
-  const transactionMix = statusRows.map((r) => ({
-    name: String(r.status),
-    count: Number(r.count ?? 0),
-    amount: Math.round(Number(r.amount ?? 0)),
-  }));
-
-  const onlineRow = modeRows.find((r) => r.mode === "ONLINE");
-  const cashRow = modeRows.find((r) => r.mode === "CASH");
-  const chequeRow = modeRows.find((r) => r.mode === "CHEQUE");
+  const [failedRow, gatewayRows] = await Promise.all([
+    db
+      .select({
+        count: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.id})::int`,
+      })
+      .from(paymentModel)
+      .innerJoin(
+        feeStudentMappingModel,
+        eq(feeStudentMappingModel.id, paymentModel.feeStudentMappingId),
+      )
+      .where(and(scoped, eq(paymentModel.status, "FAILED"))),
+    db
+      .select({
+        gateway: GATEWAY_VENDOR_KEY_SQL,
+        count: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.id})::int`,
+        amount: sql<number>`COALESCE(SUM(${paymentModel.amount}), 0)::float`,
+      })
+      .from(paymentModel)
+      .innerJoin(
+        feeStudentMappingModel,
+        eq(feeStudentMappingModel.id, paymentModel.feeStudentMappingId),
+      )
+      .where(and(linkedSuccess, eq(paymentModel.paymentMode, "ONLINE")))
+      .groupBy(GATEWAY_VENDOR_KEY_SQL),
+  ]);
 
   return {
-    transactionMix,
     gatewayMix: mergeGatewayMixRows(
       gatewayRows.map((r) => ({
         name: formatGatewayLabel(String(r.gateway ?? "UNKNOWN")),
@@ -1134,23 +1302,7 @@ async function loadPaymentAggregates(canonicalMappingIds: number[]) {
         amount: Math.round(Number(r.amount ?? 0)),
       })),
     ),
-    paymentChannels: modeRows.map((r) => ({
-      channel: String(r.mode),
-      studentCount: Number(r.count ?? 0),
-      amount: Math.round(Number(r.amount ?? 0)),
-    })),
-    today_collected: Math.round(Number(todayRow?.amount ?? 0)),
-    today_failed_payments: Number(todayFailedRow?.count ?? 0),
-    online_receipts: Number(onlineRow?.count ?? 0),
-    cash_receipts: Number(cashRow?.count ?? 0),
-    cheque_receipts: Number(chequeRow?.count ?? 0),
-    online_collected: Math.round(Number(onlineRow?.amount ?? 0)),
-    cash_collected: Math.round(
-      Number(cashRow?.amount ?? 0) + Number(chequeRow?.amount ?? 0),
-    ),
-    failed_payments: Number(
-      statusRows.find((r) => r.status === "FAILED")?.count ?? 0,
-    ),
+    failed_payments: Number(failedRow[0]?.count ?? 0),
   };
 }
 
@@ -1158,71 +1310,45 @@ async function loadSemesterBreakdown(
   mappingWhere: SQL,
   canonicalMappingIds: number[],
 ): Promise<SemesterBreakdownRow[]> {
-  const paymentScoped = paymentScopeWhere(canonicalMappingIds);
-
-  const [rows, paymentBySemester] = await Promise.all([
-    db
-      .select({
-        semester: classModel.name,
-        receivable: sql<number>`COALESCE(SUM(${feeStudentMappingModel.totalPayable}), 0)::float`,
-        collected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
-        eligibleStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
-        fullyPaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
-        unpaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
-        challansGenerated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
-        receiptsIssued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
-        challanOnly: sql<number>`COUNT(*) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
-        paidEntries: sql<number>`COUNT(*) FILTER (WHERE COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0)::int`,
-        structuresCount: sql<number>`COUNT(DISTINCT ${feeStructureModel.id})::int`,
-      })
-      .from(feeStudentMappingModel)
-      .innerJoin(
-        feeStructureModel,
-        eq(feeStudentMappingModel.feeStructureId, feeStructureModel.id),
-      )
-      .innerJoin(classModel, eq(classModel.id, feeStructureModel.classId))
-      .where(mappingWhere)
-      .groupBy(classModel.id, classModel.name)
-      .orderBy(classModel.id),
-    db
-      .select({
-        semester: classModel.name,
-        onlineCollected: sql<number>`COALESCE(SUM(CASE WHEN ${paymentModel.paymentMode} = 'ONLINE' AND ${paymentModel.status} = 'SUCCESS' AND ${paymentModel.isLinked} = true THEN ${paymentModel.amount} ELSE 0 END), 0)::float`,
-        cashCollected: sql<number>`COALESCE(SUM(CASE WHEN ${paymentModel.paymentMode} = 'CASH' AND ${paymentModel.status} = 'SUCCESS' AND ${paymentModel.isLinked} = true THEN ${paymentModel.amount} ELSE 0 END), 0)::float`,
-        chequeCollected: sql<number>`COALESCE(SUM(CASE WHEN ${paymentModel.paymentMode} = 'CHEQUE' AND ${paymentModel.status} = 'SUCCESS' AND ${paymentModel.isLinked} = true THEN ${paymentModel.amount} ELSE 0 END), 0)::float`,
-        transactionsCount: sql<number>`COUNT(${paymentModel.id})::int`,
-      })
-      .from(paymentModel)
-      .innerJoin(
-        feeStudentMappingModel,
-        eq(feeStudentMappingModel.id, paymentModel.feeStudentMappingId),
-      )
-      .innerJoin(
-        feeStructureModel,
-        eq(feeStudentMappingModel.feeStructureId, feeStructureModel.id),
-      )
-      .innerJoin(classModel, eq(classModel.id, feeStructureModel.classId))
-      .where(paymentScoped)
-      .groupBy(classModel.id, classModel.name),
-  ]);
-
-  const paymentMap = new Map(paymentBySemester.map((r) => [r.semester, r]));
+  if (!canonicalMappingIds.length) return [];
+  // Single ledger scan. Channel amounts are amount_paid split by the per-mapping
+  // channel (joined once from an aggregated payments subquery — duplicate-proof);
+  // "transactions" counts ledger entries with a collection, not payment rows.
+  const payChannel = paymentChannelByMappingSubquery(canonicalMappingIds);
+  const channelExpr = sql`COALESCE(${payChannel.channel}, 'CASH')`;
+  const rows = await db
+    .select({
+      semester: classModel.name,
+      receivable: sql<number>`COALESCE(SUM(${feeStudentMappingModel.totalPayable}), 0)::float`,
+      collected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
+      eligibleStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
+      fullyPaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
+      unpaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
+      challansGenerated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
+      receiptsIssued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
+      challanOnly: sql<number>`COUNT(*) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
+      paidEntries: sql<number>`COUNT(*) FILTER (WHERE COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0)::int`,
+      structuresCount: sql<number>`COUNT(DISTINCT ${feeStructureModel.id})::int`,
+      onlineCollected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)) FILTER (WHERE ${channelExpr} = 'ONLINE'), 0)::float`,
+      cashCollected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)) FILTER (WHERE ${channelExpr} = 'CASH'), 0)::float`,
+      chequeCollected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)) FILTER (WHERE ${channelExpr} = 'CHEQUE'), 0)::float`,
+    })
+    .from(feeStudentMappingModel)
+    .innerJoin(
+      feeStructureModel,
+      eq(feeStudentMappingModel.feeStructureId, feeStructureModel.id),
+    )
+    .innerJoin(classModel, eq(classModel.id, feeStructureModel.classId))
+    .leftJoin(payChannel, eq(payChannel.mappingId, feeStudentMappingModel.id))
+    .where(mappingWhere)
+    .groupBy(classModel.id, classModel.name)
+    .orderBy(classModel.id);
 
   return rows.map((r) => {
     const receivable = Math.round(Number(r.receivable ?? 0));
     const collected = Math.round(Number(r.collected ?? 0));
     const eligible = Number(r.eligibleStudents ?? 0);
     const challansGen = Number(r.challansGenerated ?? 0);
-    const pay = paymentMap.get(r.semester ?? "");
-    const onlineCollected = Math.round(Number(pay?.onlineCollected ?? 0));
-    const cashCollected = Math.round(Number(pay?.cashCollected ?? 0));
-    const chequeCollected = Math.round(Number(pay?.chequeCollected ?? 0));
-    const paymentTxns = Number(pay?.transactionsCount ?? 0);
-    const paidEntries = Number(r.paidEntries ?? 0);
-    const offlineFromMapping =
-      paymentTxns === 0 && paidEntries > 0
-        ? Math.max(0, collected - onlineCollected)
-        : cashCollected + chequeCollected;
 
     return {
       semester: r.semester ?? "Semester",
@@ -1236,15 +1362,11 @@ async function loadSemesterBreakdown(
       challanPending: Math.max(0, eligible - challansGen),
       challanOnly: Number(r.challanOnly ?? 0),
       receiptsIssued: Number(r.receiptsIssued ?? 0),
-      onlineCollected,
-      cashCollected:
-        paymentTxns === 0 && paidEntries > 0
-          ? offlineFromMapping
-          : cashCollected,
-      chequeCollected:
-        paymentTxns === 0 && paidEntries > 0 ? 0 : chequeCollected,
+      onlineCollected: Math.round(Number(r.onlineCollected ?? 0)),
+      cashCollected: Math.round(Number(r.cashCollected ?? 0)),
+      chequeCollected: Math.round(Number(r.chequeCollected ?? 0)),
       structuresCount: Number(r.structuresCount ?? 0),
-      transactionsCount: paymentTxns > 0 ? paymentTxns : paidEntries,
+      transactionsCount: Number(r.paidEntries ?? 0),
     };
   });
 }
@@ -1380,7 +1502,7 @@ async function loadTodayLiveMetrics(canonicalMappingIds: number[]): Promise<{
           and(
             paymentScoped,
             eq(paymentModel.status, "FAILED"),
-            isTimestampToday(paymentModel.createdAt),
+            isPaymentEventToday(),
           ),
         ),
     ]);
@@ -1396,55 +1518,6 @@ async function loadTodayLiveMetrics(canonicalMappingIds: number[]): Promise<{
     today_receipts: Number(receiptsRow?.count ?? 0),
     today_failed_payments: Number(failedRow?.count ?? 0),
   };
-}
-
-async function loadLegacyDeskCashChannelRow(
-  mappingWhere: SQL,
-): Promise<PaymentChannelRow | null> {
-  const hasCollection = sql`COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 OR NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL`;
-  const noLinkedSuccessOnMapping = sql`NOT EXISTS (
-    SELECT 1
-    FROM ${paymentModel}
-    WHERE ${paymentModel.feeStudentMappingId} = ${feeStudentMappingModel.id}
-      AND ${paymentModel.context} IN ('FEE', 'ADMISSION')
-      AND ${paymentModel.isLinked} = true
-      AND ${paymentModel.status} = 'SUCCESS'
-  )`;
-
-  const [staffCashRow] = await db
-    .select({
-      studentCount: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId})::int`,
-      amount: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
-    })
-    .from(feeStudentMappingModel)
-    .where(and(mappingWhere, hasCollection, noLinkedSuccessOnMapping));
-
-  const studentCount = Number(staffCashRow?.studentCount ?? 0);
-  const amount = Math.round(Number(staffCashRow?.amount ?? 0));
-  if (studentCount <= 0 && amount <= 0) return null;
-
-  return { channel: "CASH", studentCount, amount };
-}
-
-function mergePaymentChannelRows(
-  ...groups: (PaymentChannelRow | PaymentChannelRow[])[]
-): PaymentChannelRow[] {
-  const byChannel = new Map<string, PaymentChannelRow>();
-  for (const group of groups) {
-    const rows = Array.isArray(group) ? group : [group];
-    for (const row of rows) {
-      if (row.amount <= 0 && row.studentCount <= 0) continue;
-      const key = row.channel.toUpperCase();
-      const existing = byChannel.get(key);
-      if (!existing) {
-        byChannel.set(key, { ...row, channel: key });
-        continue;
-      }
-      existing.studentCount += row.studentCount;
-      existing.amount += row.amount;
-    }
-  }
-  return [...byChannel.values()];
 }
 
 async function loadMappingCollectionTrend(
@@ -1490,27 +1563,6 @@ async function loadMappingCollectionTrend(
       ),
     };
   });
-}
-
-function mergeCollectionTrends(
-  paymentTrend: CollectionTrendRow[],
-  mappingTrend: CollectionTrendRow[],
-): CollectionTrendRow[] {
-  if (paymentTrend.length === 0) return mappingTrend;
-  if (mappingTrend.length === 0) return paymentTrend;
-
-  const byMonth = new Map<string, CollectionTrendRow>();
-  for (const row of [...paymentTrend, ...mappingTrend]) {
-    const existing = byMonth.get(row.monthLabel);
-    if (!existing) {
-      byMonth.set(row.monthLabel, { ...row });
-      continue;
-    }
-    existing.collected =
-      Math.round((existing.collected + row.collected) * 10) / 10;
-    existing.pending = Math.min(existing.pending, row.pending);
-  }
-  return [...byMonth.values()];
 }
 
 function buildMappingTransactionMix(
@@ -1668,47 +1720,6 @@ async function loadSlabBreakdown(
   }));
 }
 
-async function loadCollectionTrend(
-  canonicalMappingIds: number[],
-  totalReceivable = 0,
-): Promise<CollectionTrendRow[]> {
-  if (!canonicalMappingIds.length) return [];
-
-  const scoped = paymentScopeWhere(canonicalMappingIds);
-
-  const rows = await db
-    .select({
-      monthLabel: sql<string>`TRIM(TO_CHAR(DATE_TRUNC('month', ${paymentModel.createdAt}), 'FMMonth YYYY'))`,
-      collected: sql<number>`COALESCE(SUM(CASE WHEN ${paymentModel.status} = 'SUCCESS' AND ${paymentModel.isLinked} = true THEN ${paymentModel.amount} ELSE 0 END), 0)::float`,
-    })
-    .from(paymentModel)
-    .where(
-      and(
-        scoped,
-        gte(paymentModel.createdAt, sql`CURRENT_DATE - INTERVAL '12 months'`),
-      ),
-    )
-    .groupBy(sql`DATE_TRUNC('month', ${paymentModel.createdAt})`)
-    .orderBy(sql`DATE_TRUNC('month', ${paymentModel.createdAt})`);
-
-  const totalRecLakh = totalReceivable / 100_000;
-  let cumulativeLakh = 0;
-
-  return rows.map((r) => {
-    const collectedLakh =
-      Math.round((Number(r.collected ?? 0) / 100_000) * 10) / 10;
-    cumulativeLakh += collectedLakh;
-    return {
-      monthLabel: String(r.monthLabel ?? ""),
-      collected: collectedLakh,
-      pending: Math.max(
-        0,
-        Math.round((totalRecLakh - cumulativeLakh) * 10) / 10,
-      ),
-    };
-  });
-}
-
 async function loadPromotionBreakdown(
   whereClause: SQL,
 ): Promise<PromotionBreakdownRow[]> {
@@ -1762,20 +1773,6 @@ async function loadPromotionBreakdown(
       collected: Math.round(Number(r.collected ?? 0)),
     };
   });
-}
-
-function channelAmounts(channels: PaymentChannelRow[]) {
-  const map = new Map(channels.map((c) => [c.channel.toUpperCase(), c]));
-  const online = map.get("ONLINE");
-  const cash = map.get("CASH");
-  const cheque = map.get("CHEQUE");
-  return {
-    onlineAmount: online?.amount ?? 0,
-    cashAmount: (cash?.amount ?? 0) + (cheque?.amount ?? 0),
-    onlineStudents: online?.studentCount ?? 0,
-    cashStudents: cash?.studentCount ?? 0,
-    chequeStudents: cheque?.studentCount ?? 0,
-  };
 }
 
 export type FeesDashboardSection = "core" | "reports" | "all";
@@ -1848,8 +1845,10 @@ export async function getFeesDashboardData(
 
   const [
     coreStats,
+    enrolledStudents,
     masterCounts,
     paymentAgg,
+    channelSplit,
     semesterBreakdown,
     hourlyActivity,
     todayLive,
@@ -1859,8 +1858,10 @@ export async function getFeesDashboardData(
     promotionBreakdown,
   ] = await Promise.all([
     loadCoreMappingStats(mappingWhere, canonicalMappingIds),
+    loadEnrolledStudentCount(filters),
     loadMasterCounts(filters),
     loadPaymentAggregates(canonicalMappingIds),
+    loadChannelLedgerSplit(mappingWhere, canonicalMappingIds),
     loadSemesterBreakdown(mappingWhere, canonicalMappingIds),
     loadHourlyActivityToday(),
     loadTodayLiveMetrics(todayMappingIds),
@@ -1878,57 +1879,34 @@ export async function getFeesDashboardData(
       : Promise.resolve([] as PromotionBreakdownRow[]),
   ]);
 
-  const {
-    mappingAgg,
-    totalStudents,
-    paymentStatus: mappingPaymentStatus,
-  } = coreStats;
+  const { mappingAgg, paymentStatus: mappingPaymentStatus } = coreStats;
 
-  const [collectionTrendFromPayments, legacyCashChannel] = await Promise.all([
-    loadCollectionTrend(canonicalMappingIds, mappingAgg.fee_receivable),
-    loadLegacyDeskCashChannelRow(mappingWhere),
-  ]);
-
-  const collectionTrendFromMappings =
-    collectionTrendFromPayments.length > 0
-      ? []
-      : await loadMappingCollectionTrend(
-          mappingWhere,
-          mappingAgg.fee_receivable,
-        );
-  const collectionTrend = mergeCollectionTrends(
-    collectionTrendFromPayments,
-    collectionTrendFromMappings,
+  // Collection trend from the ledger (amount_paid by month); payment-row sums are
+  // duplicate-inflated so they are not used here.
+  const collectionTrend = await loadMappingCollectionTrend(
+    mappingWhere,
+    mappingAgg.fee_receivable,
   );
-  const paymentChannels = mergePaymentChannelRows(
-    paymentAgg.paymentChannels,
-    ...(legacyCashChannel ? [legacyCashChannel] : []),
-  );
-  const channelTotals = channelAmounts(paymentChannels);
-  const transactionMix =
-    paymentAgg.transactionMix.length > 0
-      ? paymentAgg.transactionMix
-      : buildMappingTransactionMix(mappingAgg);
 
-  const onlineCollected = channelTotals.onlineAmount;
-  const cashCollected =
-    channelTotals.cashAmount > 0
-      ? channelTotals.cashAmount
-      : Math.max(0, mappingAgg.fee_collected - onlineCollected);
+  // Channel split + transaction mix come from the ledger, so they reconcile to
+  // fee_collected and are immune to duplicate payment rows.
+  const paymentChannels = channelSplit.paymentChannels;
+  const transactionMix = buildMappingTransactionMix(mappingAgg);
 
   const metrics: FeesDashboardMetrics = {
     ...masterCounts,
     ...mappingAgg,
-    total_students: totalStudents,
+    total_students: enrolledStudents,
     today_collected: todayLive.today_collected,
     today_failed_payments: todayLive.today_failed_payments,
     today_challans: todayLive.today_challans,
     today_receipts: todayLive.today_receipts,
-    online_receipts: channelTotals.onlineStudents,
-    cash_receipts: channelTotals.cashStudents,
-    cheque_receipts: channelTotals.chequeStudents,
-    cash_collected: cashCollected,
-    online_collected: onlineCollected,
+    online_receipts: channelSplit.online_receipts,
+    cash_receipts: channelSplit.cash_receipts,
+    cheque_receipts: channelSplit.cheque_receipts,
+    cash_collected: channelSplit.cash_collected,
+    cheque_collected: channelSplit.cheque_collected,
+    online_collected: channelSplit.online_collected,
     failed_payments: paymentAgg.failed_payments,
     late_fee_due: 0,
     semester_fee_scopes_open: 0,

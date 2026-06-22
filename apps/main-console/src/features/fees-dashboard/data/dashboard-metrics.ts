@@ -23,6 +23,7 @@ export type MetricId =
   | "cash_receipts"
   | "cheque_receipts"
   | "cash_collected"
+  | "cheque_collected"
   | "online_collected"
   | "failed_payments"
   | "waived_amount"
@@ -55,7 +56,11 @@ export const ALL_METRICS: Record<MetricId, DashboardMetric> = {
   fee_receivable: { id: "fee_receivable", label: "Fee receivable", hint: "Total payable" },
   fee_collected: { id: "fee_collected", label: "Collected", hint: "Amount paid" },
   fee_pending: { id: "fee_pending", label: "Pending", hint: "receivable − collected" },
-  total_students: { id: "total_students", label: "Total students", hint: "enrolled in scope" },
+  total_students: {
+    id: "total_students",
+    label: "Total students",
+    hint: "enrolled · active promotion in scope",
+  },
   eligible_students: {
     id: "eligible_students",
     label: "Eligible students",
@@ -70,13 +75,13 @@ export const ALL_METRICS: Record<MetricId, DashboardMetric> = {
   },
   challans_generated: {
     id: "challans_generated",
-    label: "Challans issued",
-    hint: "challanGeneratedAt set",
+    label: "Receipts issued",
+    hint: "receipt / challan issued",
   },
   challans_pending: {
     id: "challans_pending",
-    label: "Challan pending",
-    hint: "eligible − challans issued",
+    label: "Receipts pending",
+    hint: "eligible − receipts issued",
   },
   today_collected: {
     id: "today_collected",
@@ -85,8 +90,8 @@ export const ALL_METRICS: Record<MetricId, DashboardMetric> = {
   },
   today_challans: {
     id: "today_challans",
-    label: "Challans today",
-    hint: "challanGeneratedAt · today",
+    label: "Receipts today",
+    hint: "receipt / challan · today",
   },
   today_receipts: {
     id: "today_receipts",
@@ -123,7 +128,12 @@ export const ALL_METRICS: Record<MetricId, DashboardMetric> = {
     label: "Cheque receipts",
     hint: "staff-marked · CHEQUE · SUCCESS",
   },
-  cash_collected: { id: "cash_collected", label: "Cash collected", hint: "CASH + CHEQUE amount" },
+  cash_collected: { id: "cash_collected", label: "Cash collected", hint: "CASH amount" },
+  cheque_collected: {
+    id: "cheque_collected",
+    label: "Cheque collected",
+    hint: "CHEQUE amount",
+  },
   online_collected: { id: "online_collected", label: "Online collected", hint: "ONLINE amount" },
   failed_payments: { id: "failed_payments", label: "Failed", hint: "payments FAILED" },
   waived_amount: { id: "waived_amount", label: "Waived", hint: "Waived off amount" },
@@ -141,22 +151,26 @@ export const ALL_METRICS: Record<MetricId, DashboardMetric> = {
   fee_slabs_registered: {
     id: "fee_slabs_registered",
     label: "Fee slabs",
-    hint: "fee_slabs master",
+    hint: "fee_slabs master · all (unscoped)",
   },
   fee_categories_count: {
     id: "fee_categories_count",
     label: "Fee categories",
-    hint: "concession category",
+    hint: "concession category · all (unscoped)",
   },
-  fee_groups_count: { id: "fee_groups_count", label: "Fee groups", hint: "category × slab" },
+  fee_groups_count: {
+    id: "fee_groups_count",
+    label: "Fee groups",
+    hint: "category × slab · all (unscoped)",
+  },
 };
 
 export const TAB_METRICS: Record<FeesDashboardTab, MetricId[]> = {
   overview: ["fee_receivable", "fee_collected", "fee_pending", "total_students"],
   enrollment: ["fee_receivable", "fee_collected", "challans_generated", "challans_pending"],
   collections: ["fee_receivable", "fee_collected", "fee_pending", "collection_rate"],
-  transactions: ["fee_collected", "online_collected", "cash_collected", "failed_payments"],
-  challans: ["challans_generated", "challans_pending", "receipts_issued", "fee_collected"],
+  transactions: ["fee_collected", "online_collected", "cash_collected", "cheque_collected"],
+  challans: ["challans_generated", "challans_pending", "fee_collected", "collection_rate"],
   structures: [
     "fee_structures_total",
     "semester_fee_scopes_open",
@@ -195,6 +209,7 @@ export interface MetricValues {
   cash_receipts: number;
   cheque_receipts: number;
   cash_collected: number;
+  cheque_collected: number;
   online_collected: number;
   failed_payments: number;
   waived_amount: number;
@@ -227,6 +242,7 @@ export const EMPTY_METRIC_VALUES: MetricValues = {
   cash_receipts: 0,
   cheque_receipts: 0,
   cash_collected: 0,
+  cheque_collected: 0,
   online_collected: 0,
   failed_payments: 0,
   waived_amount: 0,
@@ -248,6 +264,7 @@ const INR_METRIC_IDS: Set<MetricId> = new Set([
   "waived_amount",
   "late_fee_due",
   "cash_collected",
+  "cheque_collected",
   "online_collected",
   "today_collected",
 ]);
