@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -31,60 +32,122 @@ const comboWithNone = (
 type FormState = {
   accessNumber: string;
   oldAccessNumber: string;
+  rfidNumber: string;
   isbn: string;
   publishedYear: string;
+  type: string;
+  issueType: string;
+  itemCategoryId: string;
   statusId: string;
+  bindingTypeId: string;
   entryModeId: string;
+  branchId: string;
   rackId: string;
   shelfId: string;
   enclosureId: string;
-  bindingTypeId: string;
-  priceInINR: string;
-  type: string;
-  issueType: string;
-  voucherNumber: string;
   numberOfEnclosures: string;
+  bookVolume: string;
+  bookPart: string;
+  bookPartInfo: string;
+  volumeInfo: string;
   numberOfPages: string;
+  bookSize: string;
+  prefix: string;
+  suffix: string;
+  theftBitArmed: boolean;
+  priceInINR: string;
+  priceForeignCurrency: string;
+  purchasePrice: string;
+  setPrice: string;
+  discount: string;
+  shippingCharges: string;
+  vendorId: string;
+  voucherNumber: string;
+  billDate: string;
   remarks: string;
 };
 
 const emptyForm = (): FormState => ({
   accessNumber: "",
   oldAccessNumber: "",
+  rfidNumber: "",
   isbn: "",
   publishedYear: "",
+  type: "",
+  issueType: "",
+  itemCategoryId: NONE,
   statusId: NONE,
+  bindingTypeId: NONE,
   entryModeId: NONE,
+  branchId: NONE,
   rackId: NONE,
   shelfId: NONE,
   enclosureId: NONE,
-  bindingTypeId: NONE,
-  priceInINR: "",
-  type: "",
-  issueType: "",
-  voucherNumber: "",
   numberOfEnclosures: "",
+  bookVolume: "",
+  bookPart: "",
+  bookPartInfo: "",
+  volumeInfo: "",
   numberOfPages: "",
+  bookSize: "",
+  prefix: "",
+  suffix: "",
+  theftBitArmed: false,
+  priceInINR: "",
+  priceForeignCurrency: "",
+  purchasePrice: "",
+  setPrice: "",
+  discount: "",
+  shippingCharges: "",
+  vendorId: NONE,
+  voucherNumber: "",
+  billDate: "",
   remarks: "",
 });
+
+/** Maps an ISO timestamp (or yyyy-mm-dd) to a yyyy-mm-dd value for <input type="date">. */
+const isoToDateInput = (iso: string | null): string => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+};
 
 const detailToForm = (d: CopyDetailsDetail): FormState => ({
   accessNumber: d.accessNumber ?? "",
   oldAccessNumber: d.oldAccessNumber ?? "",
+  rfidNumber: d.rfidNumber ?? "",
   isbn: d.isbn ?? "",
   publishedYear: d.publishedYear ?? "",
+  type: d.type ?? "",
+  issueType: d.issueType ?? "",
+  itemCategoryId: d.itemCategoryId != null ? String(d.itemCategoryId) : NONE,
   statusId: d.statusId != null ? String(d.statusId) : NONE,
+  bindingTypeId: d.bindingTypeId != null ? String(d.bindingTypeId) : NONE,
   entryModeId: d.enntryModeId != null ? String(d.enntryModeId) : NONE,
+  branchId: d.branchId != null ? String(d.branchId) : NONE,
   rackId: d.rackId != null ? String(d.rackId) : NONE,
   shelfId: d.shelfId != null ? String(d.shelfId) : NONE,
   enclosureId: d.enclosureId != null ? String(d.enclosureId) : NONE,
-  bindingTypeId: d.bindingTypeId != null ? String(d.bindingTypeId) : NONE,
-  priceInINR: d.priceInINR ?? "",
-  type: d.type ?? "",
-  issueType: d.issueType ?? "",
-  voucherNumber: d.voucherNumber ?? "",
   numberOfEnclosures: d.numberOfEnclosures != null ? String(d.numberOfEnclosures) : "",
+  bookVolume: d.bookVolume ?? "",
+  bookPart: d.bookPart ?? "",
+  bookPartInfo: d.bookPartInfo ?? "",
+  volumeInfo: d.volumeInfo ?? "",
   numberOfPages: d.numberOfPages != null ? String(d.numberOfPages) : "",
+  bookSize: d.bookSize ?? "",
+  prefix: d.prefix ?? "",
+  suffix: d.suffix ?? "",
+  theftBitArmed: d.theftBitArmed ?? false,
+  priceInINR: d.priceInINR ?? "",
+  priceForeignCurrency: d.priceForeignCurrency ?? "",
+  purchasePrice: d.purchasePrice ?? "",
+  setPrice: d.setPrice ?? "",
+  discount: d.discount ?? "",
+  shippingCharges: d.shippingCharges ?? "",
+  vendorId: d.vendorId != null ? String(d.vendorId) : NONE,
+  voucherNumber: d.voucherNumber ?? "",
+  billDate: isoToDateInput(d.billDate),
   remarks: d.remarks ?? "",
 });
 
@@ -99,20 +162,38 @@ const formToBody = (f: FormState, bookId: number): CopyDetailsUpsertBody => ({
   bookId,
   accessNumber: f.accessNumber.trim() || null,
   oldAccessNumber: f.oldAccessNumber.trim() || null,
+  rfidNumber: f.rfidNumber.trim() || null,
   isbn: f.isbn.trim() || null,
   publishedYear: f.publishedYear.trim() || null,
+  type: f.type.trim() || null,
+  issueType: f.issueType.trim() || null,
+  itemCategoryId: f.itemCategoryId === NONE ? null : Number(f.itemCategoryId),
   statusId: f.statusId === NONE ? null : Number(f.statusId),
+  bindingTypeId: f.bindingTypeId === NONE ? null : Number(f.bindingTypeId),
   enntryModeId: f.entryModeId === NONE ? null : Number(f.entryModeId),
+  branchId: f.branchId === NONE ? null : Number(f.branchId),
   rackId: f.rackId === NONE ? null : Number(f.rackId),
   shelfId: f.shelfId === NONE ? null : Number(f.shelfId),
   enclosureId: f.enclosureId === NONE ? null : Number(f.enclosureId),
-  bindingTypeId: f.bindingTypeId === NONE ? null : Number(f.bindingTypeId),
-  priceInINR: f.priceInINR.trim() || null,
-  type: f.type.trim() || null,
-  issueType: f.issueType.trim() || null,
-  voucherNumber: f.voucherNumber.trim() || null,
   numberOfEnclosures: parseOptionalCount(f.numberOfEnclosures),
+  bookVolume: f.bookVolume.trim() || null,
+  bookPart: f.bookPart.trim() || null,
+  bookPartInfo: f.bookPartInfo.trim() || null,
+  volumeInfo: f.volumeInfo.trim() || null,
   numberOfPages: parseOptionalCount(f.numberOfPages),
+  bookSize: f.bookSize.trim() || null,
+  prefix: f.prefix.trim() || null,
+  suffix: f.suffix.trim() || null,
+  theftBitArmed: f.theftBitArmed,
+  priceInINR: f.priceInINR.trim() || null,
+  priceForeignCurrency: f.priceForeignCurrency.trim() || null,
+  purchasePrice: f.purchasePrice.trim() || null,
+  setPrice: f.setPrice.trim() || null,
+  discount: f.discount.trim() || null,
+  shippingCharges: f.shippingCharges.trim() || null,
+  vendorId: f.vendorId === NONE ? null : Number(f.vendorId),
+  voucherNumber: f.voucherNumber.trim() || null,
+  billDate: f.billDate.trim() || null,
   remarks: f.remarks.trim() || null,
 });
 
@@ -216,6 +297,30 @@ export default function CopyDialog({
       ),
     [meta?.bindings],
   );
+  const formComboItemCategories = useMemo(
+    () =>
+      comboWithNone(
+        (meta?.itemCategories ?? []).map((o) => ({ value: String(o.id), label: o.name })),
+        "— None —",
+      ),
+    [meta?.itemCategories],
+  );
+  const formComboVendors = useMemo(
+    () =>
+      comboWithNone(
+        (meta?.vendors ?? []).map((o) => ({ value: String(o.id), label: o.name })),
+        "— None —",
+      ),
+    [meta?.vendors],
+  );
+  const formComboBranches = useMemo(
+    () =>
+      comboWithNone(
+        (meta?.branches ?? []).map((o) => ({ value: String(o.id), label: o.name })),
+        "— None —",
+      ),
+    [meta?.branches],
+  );
 
   const handleSave = async () => {
     try {
@@ -240,7 +345,7 @@ export default function CopyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
             {copyId == null ? "Add copy" : "Edit copy"}
@@ -255,146 +360,332 @@ export default function CopyDialog({
             Loading…
           </div>
         ) : (
-          <div className="grid max-h-[min(70vh,560px)] gap-3 overflow-y-auto py-2 pr-1">
-            <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid max-h-[min(70vh,560px)] gap-5 overflow-y-auto py-2 pr-1">
+            {/* Identification */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Identification
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Access number</Label>
+                  <Input
+                    value={form.accessNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, accessNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Old access number</Label>
+                  <Input
+                    value={form.oldAccessNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, oldAccessNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">RFID number</Label>
+                  <Input
+                    value={form.rfidNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, rfidNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">ISBN</Label>
+                  <Input
+                    value={form.isbn}
+                    onChange={(e) => setForm((f) => ({ ...f, isbn: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Published year</Label>
+                  <Input
+                    value={form.publishedYear}
+                    onChange={(e) => setForm((f) => ({ ...f, publishedYear: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Classification */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Classification
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Type</Label>
+                  <Input
+                    value={form.type}
+                    onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Issue type</Label>
+                  <Input
+                    value={form.issueType}
+                    onChange={(e) => setForm((f) => ({ ...f, issueType: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Item category</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Item category"
+                    value={form.itemCategoryId}
+                    dataArr={formComboItemCategories}
+                    onChange={(v) => setForm((f) => ({ ...f, itemCategoryId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Status</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Status"
+                    value={form.statusId}
+                    dataArr={formComboStatuses}
+                    onChange={(v) => setForm((f) => ({ ...f, statusId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Binding</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Binding"
+                    value={form.bindingTypeId}
+                    dataArr={formComboBindings}
+                    onChange={(v) => setForm((f) => ({ ...f, bindingTypeId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Entry mode</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Entry mode"
+                    value={form.entryModeId}
+                    dataArr={formComboEntryModes}
+                    onChange={(v) => setForm((f) => ({ ...f, entryModeId: v }))}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Location */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Location
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Branch</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Branch"
+                    value={form.branchId}
+                    dataArr={formComboBranches}
+                    onChange={(v) => setForm((f) => ({ ...f, branchId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Rack</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Rack"
+                    value={form.rackId}
+                    dataArr={formComboRacks}
+                    onChange={(v) => setForm((f) => ({ ...f, rackId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Shelf</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Shelf"
+                    value={form.shelfId}
+                    dataArr={formComboShelves}
+                    onChange={(v) => setForm((f) => ({ ...f, shelfId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Enclosure</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Enclosure"
+                    value={form.enclosureId}
+                    dataArr={formComboEnclosures}
+                    onChange={(v) => setForm((f) => ({ ...f, enclosureId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">No. of enclosures</Label>
+                  <Input
+                    value={form.numberOfEnclosures}
+                    onChange={(e) => setForm((f) => ({ ...f, numberOfEnclosures: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Physical */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Physical
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Book volume</Label>
+                  <Input
+                    value={form.bookVolume}
+                    onChange={(e) => setForm((f) => ({ ...f, bookVolume: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Book part</Label>
+                  <Input
+                    value={form.bookPart}
+                    onChange={(e) => setForm((f) => ({ ...f, bookPart: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Book part info</Label>
+                  <Input
+                    value={form.bookPartInfo}
+                    onChange={(e) => setForm((f) => ({ ...f, bookPartInfo: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Volume info</Label>
+                  <Input
+                    value={form.volumeInfo}
+                    onChange={(e) => setForm((f) => ({ ...f, volumeInfo: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">No. of pages</Label>
+                  <Input
+                    value={form.numberOfPages}
+                    onChange={(e) => setForm((f) => ({ ...f, numberOfPages: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Book size</Label>
+                  <Input
+                    value={form.bookSize}
+                    onChange={(e) => setForm((f) => ({ ...f, bookSize: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Prefix</Label>
+                  <Input
+                    value={form.prefix}
+                    onChange={(e) => setForm((f) => ({ ...f, prefix: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Suffix</Label>
+                  <Input
+                    value={form.suffix}
+                    onChange={(e) => setForm((f) => ({ ...f, suffix: e.target.value }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-6">
+                  <Label className="text-xs">Theft bit armed</Label>
+                  <Switch
+                    checked={form.theftBitArmed}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, theftBitArmed: v }))}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Pricing & acquisition */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Pricing &amp; acquisition
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Price (₹)</Label>
+                  <Input
+                    value={form.priceInINR}
+                    onChange={(e) => setForm((f) => ({ ...f, priceInINR: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Price (foreign)</Label>
+                  <Input
+                    value={form.priceForeignCurrency}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, priceForeignCurrency: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Purchase price</Label>
+                  <Input
+                    value={form.purchasePrice}
+                    onChange={(e) => setForm((f) => ({ ...f, purchasePrice: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Set price</Label>
+                  <Input
+                    value={form.setPrice}
+                    onChange={(e) => setForm((f) => ({ ...f, setPrice: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Discount</Label>
+                  <Input
+                    value={form.discount}
+                    onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Shipping charges</Label>
+                  <Input
+                    value={form.shippingCharges}
+                    onChange={(e) => setForm((f) => ({ ...f, shippingCharges: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Vendor</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Vendor"
+                    value={form.vendorId}
+                    dataArr={formComboVendors}
+                    onChange={(v) => setForm((f) => ({ ...f, vendorId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Voucher #</Label>
+                  <Input
+                    value={form.voucherNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, voucherNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Bill date</Label>
+                  <Input
+                    type="date"
+                    value={form.billDate}
+                    onChange={(e) => setForm((f) => ({ ...f, billDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Remarks */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Remarks
+              </h4>
               <div className="space-y-1.5">
-                <Label className="text-xs">Accession</Label>
                 <Input
-                  value={form.accessNumber}
-                  onChange={(e) => setForm((f) => ({ ...f, accessNumber: e.target.value }))}
+                  value={form.remarks}
+                  onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Old accession</Label>
-                <Input
-                  value={form.oldAccessNumber}
-                  onChange={(e) => setForm((f) => ({ ...f, oldAccessNumber: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">ISBN</Label>
-                <Input
-                  value={form.isbn}
-                  onChange={(e) => setForm((f) => ({ ...f, isbn: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Published year</Label>
-                <Input
-                  value={form.publishedYear}
-                  onChange={(e) => setForm((f) => ({ ...f, publishedYear: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Status</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Status"
-                  value={form.statusId}
-                  dataArr={formComboStatuses}
-                  onChange={(v) => setForm((f) => ({ ...f, statusId: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Entry mode</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Entry mode"
-                  value={form.entryModeId}
-                  dataArr={formComboEntryModes}
-                  onChange={(v) => setForm((f) => ({ ...f, entryModeId: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Rack</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Rack"
-                  value={form.rackId}
-                  dataArr={formComboRacks}
-                  onChange={(v) => setForm((f) => ({ ...f, rackId: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Shelf</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Shelf"
-                  value={form.shelfId}
-                  dataArr={formComboShelves}
-                  onChange={(v) => setForm((f) => ({ ...f, shelfId: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Enclosure</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Enclosure"
-                  value={form.enclosureId}
-                  dataArr={formComboEnclosures}
-                  onChange={(v) => setForm((f) => ({ ...f, enclosureId: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Binding</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Binding"
-                  value={form.bindingTypeId}
-                  dataArr={formComboBindings}
-                  onChange={(v) => setForm((f) => ({ ...f, bindingTypeId: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Price (₹)</Label>
-                <Input
-                  value={form.priceInINR}
-                  onChange={(e) => setForm((f) => ({ ...f, priceInINR: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Type</Label>
-                <Input
-                  value={form.type}
-                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Issue type</Label>
-                <Input
-                  value={form.issueType}
-                  onChange={(e) => setForm((f) => ({ ...f, issueType: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Voucher #</Label>
-                <Input
-                  value={form.voucherNumber}
-                  onChange={(e) => setForm((f) => ({ ...f, voucherNumber: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs"># Enclosures</Label>
-                <Input
-                  value={form.numberOfEnclosures}
-                  onChange={(e) => setForm((f) => ({ ...f, numberOfEnclosures: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs"># Pages</Label>
-                <Input
-                  value={form.numberOfPages}
-                  onChange={(e) => setForm((f) => ({ ...f, numberOfPages: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Remarks</Label>
-              <Input
-                value={form.remarks}
-                onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
-              />
-            </div>
+            </section>
           </div>
         )}
         <DialogFooter className="gap-2">

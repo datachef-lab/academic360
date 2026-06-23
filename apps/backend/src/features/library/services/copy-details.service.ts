@@ -72,6 +72,9 @@ export type CopyDetailsMetaResult = {
   shelves: Array<{ id: number; name: string }>;
   enclosures: Array<{ id: number; name: string }>;
   bindings: Array<{ id: number; name: string | null }>;
+  itemCategories: Array<{ id: number; name: string }>;
+  vendors: Array<{ id: number; name: string }>;
+  branches: Array<{ id: number; name: string }>;
 };
 
 export type CopyDetailsDetail = {
@@ -94,6 +97,24 @@ export type CopyDetailsDetail = {
   bindingTypeId: number | null;
   isbn: string | null;
   remarks: string | null;
+  branchId: number | null;
+  itemCategoryId: number | null;
+  vendorId: number | null;
+  rfidNumber: string | null;
+  theftBitArmed: boolean | null;
+  priceForeignCurrency: string | null;
+  purchasePrice: string | null;
+  setPrice: string | null;
+  discount: string | null;
+  shippingCharges: string | null;
+  bookVolume: string | null;
+  bookPart: string | null;
+  bookPartInfo: string | null;
+  volumeInfo: string | null;
+  prefix: string | null;
+  suffix: string | null;
+  bookSize: string | null;
+  billDate: string | null;
 };
 
 export type CopyDetailsUpsertInput = {
@@ -115,6 +136,24 @@ export type CopyDetailsUpsertInput = {
   bindingTypeId?: number | null;
   isbn?: string | null;
   remarks?: string | null;
+  branchId?: number | null;
+  itemCategoryId?: number | null;
+  vendorId?: number | null;
+  rfidNumber?: string | null;
+  theftBitArmed?: boolean | null;
+  priceForeignCurrency?: string | null;
+  purchasePrice?: string | null;
+  setPrice?: string | null;
+  discount?: string | null;
+  shippingCharges?: string | null;
+  bookVolume?: string | null;
+  bookPart?: string | null;
+  bookPartInfo?: string | null;
+  volumeInfo?: string | null;
+  prefix?: string | null;
+  suffix?: string | null;
+  bookSize?: string | null;
+  billDate?: string | null;
 };
 
 const buildListWhere = (
@@ -367,40 +406,65 @@ export async function getBookTitleById(bookId: number): Promise<string | null> {
 }
 
 export async function getCopyDetailsMeta(): Promise<CopyDetailsMetaResult> {
-  const [books, statuses, entryModes, racks, shelves, enclosures, bindings] =
-    await Promise.all([
-      db
-        .select({ id: bookModel.id, title: bookModel.title })
-        .from(bookModel)
-        .orderBy(desc(bookModel.id))
-        .limit(500),
-      db
-        .select({ id: statusModel.id, name: statusModel.name })
-        .from(statusModel)
-        .orderBy(desc(statusModel.id)),
-      db
-        .select({ id: entryModeModel.id, name: entryModeModel.name })
-        .from(entryModeModel)
-        .orderBy(desc(entryModeModel.id)),
-      db
-        .select({ id: rackModel.id, name: rackModel.name })
-        .from(rackModel)
-        .orderBy(desc(rackModel.id)),
-      db
-        .select({ id: shelfModel.id, name: shelfModel.name })
-        .from(shelfModel)
-        .orderBy(desc(shelfModel.id))
-        .limit(500),
-      db
-        .select({ id: enclosureModel.id, name: enclosureModel.name })
-        .from(enclosureModel)
-        .orderBy(desc(enclosureModel.id))
-        .limit(300),
-      db
-        .select({ id: bindingModel.id, name: bindingModel.name })
-        .from(bindingModel)
-        .orderBy(desc(bindingModel.id)),
-    ]);
+  const [
+    books,
+    statuses,
+    entryModes,
+    racks,
+    shelves,
+    enclosures,
+    bindings,
+    itemCategories,
+    vendors,
+    branches,
+  ] = await Promise.all([
+    db
+      .select({ id: bookModel.id, title: bookModel.title })
+      .from(bookModel)
+      .orderBy(desc(bookModel.id))
+      .limit(500),
+    db
+      .select({ id: statusModel.id, name: statusModel.name })
+      .from(statusModel)
+      .orderBy(desc(statusModel.id)),
+    db
+      .select({ id: entryModeModel.id, name: entryModeModel.name })
+      .from(entryModeModel)
+      .orderBy(desc(entryModeModel.id)),
+    db
+      .select({ id: rackModel.id, name: rackModel.name })
+      .from(rackModel)
+      .orderBy(desc(rackModel.id)),
+    db
+      .select({ id: shelfModel.id, name: shelfModel.name })
+      .from(shelfModel)
+      .orderBy(desc(shelfModel.id))
+      .limit(500),
+    db
+      .select({ id: enclosureModel.id, name: enclosureModel.name })
+      .from(enclosureModel)
+      .orderBy(desc(enclosureModel.id))
+      .limit(300),
+    db
+      .select({ id: bindingModel.id, name: bindingModel.name })
+      .from(bindingModel)
+      .orderBy(desc(bindingModel.id)),
+    db
+      .select({ id: itemCategoryModel.id, name: itemCategoryModel.name })
+      .from(itemCategoryModel)
+      .orderBy(desc(itemCategoryModel.id))
+      .limit(500),
+    db
+      .select({ id: vendorModel.id, name: vendorModel.name })
+      .from(vendorModel)
+      .orderBy(desc(vendorModel.id))
+      .limit(500),
+    db
+      .select({ id: branchModel.id, name: branchModel.name })
+      .from(branchModel)
+      .orderBy(desc(branchModel.id))
+      .limit(500),
+  ]);
 
   return {
     books,
@@ -410,6 +474,9 @@ export async function getCopyDetailsMeta(): Promise<CopyDetailsMetaResult> {
     shelves,
     enclosures,
     bindings,
+    itemCategories,
+    vendors,
+    branches,
   };
 }
 
@@ -437,11 +504,33 @@ export async function getCopyDetailsById(
       bindingTypeId: copyDetailsModel.bindingTypeId,
       isbn: copyDetailsModel.isbn,
       remarks: copyDetailsModel.remarks,
+      branchId: copyDetailsModel.branchId,
+      itemCategoryId: copyDetailsModel.itemCategoryId,
+      vendorId: copyDetailsModel.vendorId,
+      rfidNumber: copyDetailsModel.rfidNumber,
+      theftBitArmed: copyDetailsModel.theftBitArmed,
+      priceForeignCurrency: copyDetailsModel.priceForeignCurrency,
+      purchasePrice: copyDetailsModel.purchasePrice,
+      setPrice: copyDetailsModel.setPrice,
+      discount: copyDetailsModel.discount,
+      shippingCharges: copyDetailsModel.shippingCharges,
+      bookVolume: copyDetailsModel.bookVolume,
+      bookPart: copyDetailsModel.bookPart,
+      bookPartInfo: copyDetailsModel.bookPartInfo,
+      volumeInfo: copyDetailsModel.volumeInfo,
+      prefix: copyDetailsModel.prefix,
+      suffix: copyDetailsModel.suffix,
+      bookSize: copyDetailsModel.bookSize,
+      billDate: copyDetailsModel.billDate,
     })
     .from(copyDetailsModel)
     .where(eq(copyDetailsModel.id, id))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  return {
+    ...row,
+    billDate: row.billDate ? row.billDate.toISOString() : null,
+  };
 }
 
 function upsertValues(input: CopyDetailsUpsertInput) {
@@ -464,6 +553,24 @@ function upsertValues(input: CopyDetailsUpsertInput) {
     bindingTypeId: input.bindingTypeId ?? null,
     isbn: input.isbn?.trim() || null,
     remarks: input.remarks?.trim() || null,
+    branchId: input.branchId ?? null,
+    itemCategoryId: input.itemCategoryId ?? null,
+    vendorId: input.vendorId ?? null,
+    rfidNumber: input.rfidNumber?.trim() || null,
+    theftBitArmed: input.theftBitArmed ?? false,
+    priceForeignCurrency: input.priceForeignCurrency?.trim() || null,
+    purchasePrice: input.purchasePrice?.trim() || null,
+    setPrice: input.setPrice?.trim() || null,
+    discount: input.discount?.trim() || null,
+    shippingCharges: input.shippingCharges?.trim() || null,
+    bookVolume: input.bookVolume?.trim() || null,
+    bookPart: input.bookPart?.trim() || null,
+    bookPartInfo: input.bookPartInfo?.trim() || null,
+    volumeInfo: input.volumeInfo?.trim() || null,
+    prefix: input.prefix?.trim() || null,
+    suffix: input.suffix?.trim() || null,
+    bookSize: input.bookSize?.trim() || null,
+    billDate: input.billDate ? new Date(input.billDate) : null,
   };
 }
 
@@ -534,6 +641,7 @@ type CopyTemplateColumn = {
 };
 
 const COPY_TEMPLATE_COLUMNS: CopyTemplateColumn[] = [
+  // --- Identification ---
   { header: "Access Number *", key: "accessNumber", type: "string", width: 22 },
   {
     header: "Old Access Number",
@@ -541,79 +649,12 @@ const COPY_TEMPLATE_COLUMNS: CopyTemplateColumn[] = [
     type: "string",
     width: 22,
   },
+  { header: "RFID Number", key: "rfidNumber", type: "string", width: 18 },
+  { header: "ISBN", key: "isbn", type: "string", width: 18 },
+  { header: "Published Year", key: "publishedYear", type: "string", width: 14 },
+  // --- Classification ---
   { header: "Type", key: "type", type: "string", width: 14 },
   { header: "Issue Type", key: "issueType", type: "string", width: 14 },
-  { header: "RFID Number", key: "rfidNumber", type: "string", width: 18 },
-  {
-    header: "Theft Bit Armed (TRUE/FALSE)",
-    key: "theftBitArmed",
-    type: "boolean",
-    width: 14,
-  },
-  { header: "Published Year", key: "publishedYear", type: "string", width: 14 },
-  { header: "Voucher Number", key: "voucherNumber", type: "string", width: 16 },
-  {
-    header: "Number of Enclosures",
-    key: "numberOfEnclosures",
-    type: "number",
-    width: 14,
-  },
-  {
-    header: "Number of Pages",
-    key: "numberOfPages",
-    type: "number",
-    width: 14,
-  },
-  { header: "Price (INR)", key: "priceInINR", type: "string", width: 14 },
-  {
-    header: "Price (Foreign Currency)",
-    key: "priceForeignCurrency",
-    type: "string",
-    width: 18,
-  },
-  { header: "Purchase Price", key: "purchasePrice", type: "string", width: 14 },
-  { header: "Set Price", key: "setPrice", type: "string", width: 14 },
-  { header: "ISBN", key: "isbn", type: "string", width: 18 },
-  { header: "Book Volume", key: "bookVolume", type: "string", width: 14 },
-  { header: "Book Part", key: "bookPart", type: "string", width: 12 },
-  { header: "Book Part Info", key: "bookPartInfo", type: "string", width: 18 },
-  { header: "Volume Info", key: "volumeInfo", type: "string", width: 18 },
-  { header: "Remarks", key: "remarks", type: "string", width: 30 },
-  { header: "Prefix", key: "prefix", type: "string", width: 12 },
-  { header: "Suffix", key: "suffix", type: "string", width: 12 },
-  { header: "Book Size", key: "bookSize", type: "string", width: 14 },
-  {
-    header: "Bill Date (YYYY-MM-DD)",
-    key: "billDate",
-    type: "date",
-    width: 16,
-  },
-  { header: "Discount", key: "discount", type: "string", width: 12 },
-  {
-    header: "Shipping Charges",
-    key: "shippingCharges",
-    type: "string",
-    width: 14,
-  },
-  {
-    header: "Legacy Vendor ID",
-    key: "legacyVendorId",
-    type: "number",
-    width: 14,
-  },
-  {
-    header: "Legacy Copy Details ID",
-    key: "legacyCopyDetailsId",
-    type: "number",
-    width: 14,
-  },
-  {
-    header: "Branch (name)",
-    key: "branchName",
-    type: "lookup",
-    lookupTable: "branch",
-    width: 18,
-  },
   {
     header: "Item Category (name)",
     key: "itemCategoryName",
@@ -629,11 +670,26 @@ const COPY_TEMPLATE_COLUMNS: CopyTemplateColumn[] = [
     width: 16,
   },
   {
+    header: "Binding Type (name)",
+    key: "bindingTypeName",
+    type: "lookup",
+    lookupTable: "binding",
+    width: 18,
+  },
+  {
     header: "Entry Mode (name)",
     key: "entryModeName",
     type: "lookup",
     lookupTable: "entryMode",
     width: 16,
+  },
+  // --- Location ---
+  {
+    header: "Branch (name)",
+    key: "branchName",
+    type: "lookup",
+    lookupTable: "branch",
+    width: 18,
   },
   {
     header: "Rack (name)",
@@ -657,11 +713,47 @@ const COPY_TEMPLATE_COLUMNS: CopyTemplateColumn[] = [
     width: 18,
   },
   {
-    header: "Binding Type (name)",
-    key: "bindingTypeName",
-    type: "lookup",
-    lookupTable: "binding",
+    header: "Number of Enclosures",
+    key: "numberOfEnclosures",
+    type: "number",
+    width: 14,
+  },
+  // --- Physical / volume ---
+  { header: "Book Volume", key: "bookVolume", type: "string", width: 14 },
+  { header: "Book Part", key: "bookPart", type: "string", width: 12 },
+  { header: "Book Part Info", key: "bookPartInfo", type: "string", width: 18 },
+  { header: "Volume Info", key: "volumeInfo", type: "string", width: 18 },
+  {
+    header: "Number of Pages",
+    key: "numberOfPages",
+    type: "number",
+    width: 14,
+  },
+  { header: "Book Size", key: "bookSize", type: "string", width: 14 },
+  { header: "Prefix", key: "prefix", type: "string", width: 12 },
+  { header: "Suffix", key: "suffix", type: "string", width: 12 },
+  {
+    header: "Theft Bit Armed (TRUE/FALSE)",
+    key: "theftBitArmed",
+    type: "boolean",
+    width: 14,
+  },
+  // --- Pricing / acquisition ---
+  { header: "Price (INR)", key: "priceInINR", type: "string", width: 14 },
+  {
+    header: "Price (Foreign Currency)",
+    key: "priceForeignCurrency",
+    type: "string",
     width: 18,
+  },
+  { header: "Purchase Price", key: "purchasePrice", type: "string", width: 14 },
+  { header: "Set Price", key: "setPrice", type: "string", width: 14 },
+  { header: "Discount", key: "discount", type: "string", width: 12 },
+  {
+    header: "Shipping Charges",
+    key: "shippingCharges",
+    type: "string",
+    width: 14,
   },
   {
     header: "Vendor (name)",
@@ -670,12 +762,34 @@ const COPY_TEMPLATE_COLUMNS: CopyTemplateColumn[] = [
     lookupTable: "vendor",
     width: 18,
   },
+  { header: "Voucher Number", key: "voucherNumber", type: "string", width: 16 },
+  {
+    header: "Bill Date (YYYY-MM-DD)",
+    key: "billDate",
+    type: "date",
+    width: 16,
+  },
   {
     header: "Donor Person (name)",
     key: "donorPersonName",
     type: "lookup",
     lookupTable: "person",
     width: 22,
+  },
+  // --- Remarks ---
+  { header: "Remarks", key: "remarks", type: "string", width: 30 },
+  // --- Legacy ---
+  {
+    header: "Legacy Vendor ID",
+    key: "legacyVendorId",
+    type: "number",
+    width: 14,
+  },
+  {
+    header: "Legacy Copy Details ID",
+    key: "legacyCopyDetailsId",
+    type: "number",
+    width: 14,
   },
 ];
 

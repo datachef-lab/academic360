@@ -36,6 +36,9 @@ export type CopyDetailsMetaPayload = {
   shelves: Array<{ id: number; name: string }>;
   enclosures: Array<{ id: number; name: string }>;
   bindings: Array<{ id: number; name: string | null }>;
+  itemCategories: Array<{ id: number; name: string }>;
+  vendors: Array<{ id: number; name: string }>;
+  branches: Array<{ id: number; name: string }>;
 };
 
 export type CopyDetailsDetail = {
@@ -58,6 +61,24 @@ export type CopyDetailsDetail = {
   bindingTypeId: number | null;
   isbn: string | null;
   remarks: string | null;
+  branchId: number | null;
+  itemCategoryId: number | null;
+  vendorId: number | null;
+  rfidNumber: string | null;
+  theftBitArmed: boolean | null;
+  priceForeignCurrency: string | null;
+  purchasePrice: string | null;
+  setPrice: string | null;
+  discount: string | null;
+  shippingCharges: string | null;
+  bookVolume: string | null;
+  bookPart: string | null;
+  bookPartInfo: string | null;
+  volumeInfo: string | null;
+  prefix: string | null;
+  suffix: string | null;
+  bookSize: string | null;
+  billDate: string | null;
 };
 
 export type CopyDetailsUpsertBody = {
@@ -79,6 +100,24 @@ export type CopyDetailsUpsertBody = {
   bindingTypeId?: number | null;
   isbn?: string | null;
   remarks?: string | null;
+  branchId?: number | null;
+  itemCategoryId?: number | null;
+  vendorId?: number | null;
+  rfidNumber?: string | null;
+  theftBitArmed?: boolean | null;
+  priceForeignCurrency?: string | null;
+  purchasePrice?: string | null;
+  setPrice?: string | null;
+  discount?: string | null;
+  shippingCharges?: string | null;
+  bookVolume?: string | null;
+  bookPart?: string | null;
+  bookPartInfo?: string | null;
+  volumeInfo?: string | null;
+  prefix?: string | null;
+  suffix?: string | null;
+  bookSize?: string | null;
+  billDate?: string | null;
 };
 
 const BASE = "/api/library/copy-details";

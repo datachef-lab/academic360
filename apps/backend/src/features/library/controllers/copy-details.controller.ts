@@ -84,6 +84,33 @@ const bodyToUpsert = (
     bindingTypeId: parseOptionalInt(body.bindingTypeId),
     isbn: typeof body.isbn === "string" ? body.isbn : null,
     remarks: typeof body.remarks === "string" ? body.remarks : null,
+    branchId: parseOptionalInt(body.branchId),
+    itemCategoryId: parseOptionalInt(body.itemCategoryId),
+    vendorId: parseOptionalInt(body.vendorId),
+    rfidNumber: typeof body.rfidNumber === "string" ? body.rfidNumber : null,
+    theftBitArmed:
+      typeof body.theftBitArmed === "boolean"
+        ? body.theftBitArmed
+        : body.theftBitArmed === "true",
+    priceForeignCurrency:
+      typeof body.priceForeignCurrency === "string"
+        ? body.priceForeignCurrency
+        : null,
+    purchasePrice:
+      typeof body.purchasePrice === "string" ? body.purchasePrice : null,
+    setPrice: typeof body.setPrice === "string" ? body.setPrice : null,
+    discount: typeof body.discount === "string" ? body.discount : null,
+    shippingCharges:
+      typeof body.shippingCharges === "string" ? body.shippingCharges : null,
+    bookVolume: typeof body.bookVolume === "string" ? body.bookVolume : null,
+    bookPart: typeof body.bookPart === "string" ? body.bookPart : null,
+    bookPartInfo:
+      typeof body.bookPartInfo === "string" ? body.bookPartInfo : null,
+    volumeInfo: typeof body.volumeInfo === "string" ? body.volumeInfo : null,
+    prefix: typeof body.prefix === "string" ? body.prefix : null,
+    suffix: typeof body.suffix === "string" ? body.suffix : null,
+    bookSize: typeof body.bookSize === "string" ? body.bookSize : null,
+    billDate: typeof body.billDate === "string" ? body.billDate : null,
   };
 };
 
