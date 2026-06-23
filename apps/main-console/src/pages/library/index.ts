@@ -3,6 +3,7 @@ import LibraryHomePage from "./LibraryHomePage";
 import EntryExitPage from "./EntryExitPage";
 import BookCirculationPage from "./BookCirculationPage";
 import BooksPage from "./BooksPage";
+import ArticleEntryPage from "./ArticleEntryPage";
 import SeriesPage from "./SeriesPage";
 import JournalPage from "./JournalPage";
 import PublicationsPage from "./PublicationsPage";
@@ -45,6 +46,7 @@ export {
   EntryExitPage,
   BookCirculationPage,
   BooksPage,
+  ArticleEntryPage,
   SeriesPage,
   JournalPage,
   PublicationsPage,

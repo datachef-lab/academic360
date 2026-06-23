@@ -513,8 +513,14 @@ const router = createBrowserRouter(
             { path: "", element: <libraryModule.LibraryHomePage /> },
             { path: "entry-exit", element: <libraryModule.EntryExitPage /> },
             { path: "book-circulation", element: <libraryModule.BookCirculationPage /> },
-            { path: "books", element: <libraryModule.BooksPage /> },
-            { path: "journal", element: <libraryModule.JournalPage /> },
+            {
+              path: "article-entry",
+              children: [
+                { index: true, element: <libraryModule.ArticleEntryPage /> },
+                { path: "books", element: <libraryModule.BooksPage /> },
+                { path: "journal", element: <libraryModule.JournalPage /> },
+              ],
+            },
             { path: "series", element: <libraryModule.SeriesPage /> },
             { path: "publications", element: <libraryModule.PublicationsPage /> },
             { path: "enclosures", element: <libraryModule.EnclosuresPage /> },

@@ -51,13 +51,8 @@ const quickLinks = [
   },
   {
     title: "Article Entry",
-    url: "/dashboard/library/books",
+    url: "/dashboard/library/article-entry",
     icon: Book,
-  },
-  {
-    title: "Journal",
-    url: "/dashboard/library/journal",
-    icon: Newspaper,
   },
   {
     title: "Search",
@@ -235,7 +230,11 @@ export default function LibraryMaster() {
             key={link.url}
             href={link.url}
             icon={<link.icon className="h-6 w-5" />}
-            isActive={currentPath === link.url}
+            isActive={
+              link.url === "/dashboard/library"
+                ? currentPath === link.url
+                : currentPath === link.url || currentPath.startsWith(`${link.url}/`)
+            }
           >
             {link.title}
           </NavItem>
