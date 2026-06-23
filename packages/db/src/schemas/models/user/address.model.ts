@@ -15,6 +15,7 @@ import { personModel } from "./person.model";
 import { publisherModel } from "../library/publisher.model";
 import { vendorModel } from "../library/vendor.model";
 import { branchModel } from "../library/branch.model";
+import { copyDetailsModel } from "../library/copy-details.model";
 
 export const addressModel = pgTable("address", {
     id: serial().primaryKey(),
@@ -26,6 +27,7 @@ export const addressModel = pgTable("address", {
     personId: integer("person_id_fk").references(() => personModel.id),
     publisherId: integer("publisher_id_fk").references(() => publisherModel.id),
     vendorId: integer("vendor_id_fk").references(() => vendorModel.id),
+    copyDetailsId: integer("copy_details_id_fk").references(() => copyDetailsModel.id),
     libraryBranchId: integer("library_branch_id_fk").references(() => branchModel.id),
 
     type: addressTypeEnum(),

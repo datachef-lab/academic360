@@ -39,6 +39,7 @@ export type CopyDetailsMetaPayload = {
   itemCategories: Array<{ id: number; name: string }>;
   vendors: Array<{ id: number; name: string }>;
   branches: Array<{ id: number; name: string }>;
+  authorTypes: Array<{ id: number; name: string | null }>;
 };
 
 export type CopyDetailsDetail = {
@@ -79,6 +80,7 @@ export type CopyDetailsDetail = {
   suffix: string | null;
   bookSize: string | null;
   billDate: string | null;
+  authorTypeId: number | null;
 };
 
 export type CopyDetailsUpsertBody = {
@@ -118,6 +120,7 @@ export type CopyDetailsUpsertBody = {
   suffix?: string | null;
   bookSize?: string | null;
   billDate?: string | null;
+  authorTypeId?: number | null;
 };
 
 const BASE = "/api/library/copy-details";
@@ -212,6 +215,31 @@ export async function bulkUploadCopyDetails(
     },
   );
   return res.data;
+}
+
+export type CopyAddress = {
+  id: number | null;
+  addressLine: string | null;
+  countryId: number | null;
+  stateId: number | null;
+  cityId: number | null;
+  pincode: string | null;
+  landmark: string | null;
+};
+
+export type CopyAddressInput = Omit<CopyAddress, "id">;
+
+export async function getCopyAddress(copyId: number): Promise<CopyAddress> {
+  const res = await axiosInstance.get<ApiResponse<CopyAddress>>(`${BASE}/${copyId}/address`);
+  return res.data.payload;
+}
+
+export async function saveCopyAddress(
+  copyId: number,
+  input: CopyAddressInput,
+): Promise<CopyAddress> {
+  const res = await axiosInstance.put<ApiResponse<CopyAddress>>(`${BASE}/${copyId}/address`, input);
+  return res.data.payload;
 }
 
 export type CopyBulkUploadProgress = {

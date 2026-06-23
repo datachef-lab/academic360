@@ -1079,6 +1079,13 @@
       "when": 1782200000000,
       "tag": "0154_journal_published_year",
       "breakpoints": true
+    },
+    {
+      "idx": 155,
+      "version": "7",
+      "when": 1782250000000,
+      "tag": "0155_copy_author_type_and_address_copy",
+      "breakpoints": true
     }
   ]
 }

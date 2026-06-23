@@ -15,12 +15,17 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   createCopyDetails,
+  getCopyAddress,
   getCopyDetailsById,
+  saveCopyAddress,
   updateCopyDetails,
   type CopyDetailsDetail,
   type CopyDetailsMetaPayload,
   type CopyDetailsUpsertBody,
 } from "@/services/copy-details.service";
+import { getAllCountries } from "@/services/country.service";
+import { getStatesByCountry } from "@/services/state.service";
+import { getCitiesByState } from "@/services/city.service";
 
 const NONE = "__none__";
 
@@ -40,6 +45,7 @@ type FormState = {
   itemCategoryId: string;
   statusId: string;
   bindingTypeId: string;
+  authorTypeId: string;
   entryModeId: string;
   branchId: string;
   rackId: string;
@@ -78,6 +84,7 @@ const emptyForm = (): FormState => ({
   itemCategoryId: NONE,
   statusId: NONE,
   bindingTypeId: NONE,
+  authorTypeId: NONE,
   entryModeId: NONE,
   branchId: NONE,
   rackId: NONE,
@@ -124,6 +131,7 @@ const detailToForm = (d: CopyDetailsDetail): FormState => ({
   itemCategoryId: d.itemCategoryId != null ? String(d.itemCategoryId) : NONE,
   statusId: d.statusId != null ? String(d.statusId) : NONE,
   bindingTypeId: d.bindingTypeId != null ? String(d.bindingTypeId) : NONE,
+  authorTypeId: d.authorTypeId != null ? String(d.authorTypeId) : NONE,
   entryModeId: d.enntryModeId != null ? String(d.enntryModeId) : NONE,
   branchId: d.branchId != null ? String(d.branchId) : NONE,
   rackId: d.rackId != null ? String(d.rackId) : NONE,
@@ -170,6 +178,7 @@ const formToBody = (f: FormState, bookId: number): CopyDetailsUpsertBody => ({
   itemCategoryId: f.itemCategoryId === NONE ? null : Number(f.itemCategoryId),
   statusId: f.statusId === NONE ? null : Number(f.statusId),
   bindingTypeId: f.bindingTypeId === NONE ? null : Number(f.bindingTypeId),
+  authorTypeId: f.authorTypeId === NONE ? null : Number(f.authorTypeId),
   enntryModeId: f.entryModeId === NONE ? null : Number(f.entryModeId),
   branchId: f.branchId === NONE ? null : Number(f.branchId),
   rackId: f.rackId === NONE ? null : Number(f.rackId),
@@ -197,6 +206,24 @@ const formToBody = (f: FormState, bookId: number): CopyDetailsUpsertBody => ({
   remarks: f.remarks.trim() || null,
 });
 
+type GeoOption = { id: number; name: string | null };
+type CopyAddressForm = {
+  addressLine: string;
+  countryId: string;
+  stateId: string;
+  cityId: string;
+  pincode: string;
+  landmark: string;
+};
+const emptyCopyAddress = (): CopyAddressForm => ({
+  addressLine: "",
+  countryId: NONE,
+  stateId: NONE,
+  cityId: NONE,
+  pincode: "",
+  landmark: "",
+});
+
 type CopyDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -219,6 +246,11 @@ export default function CopyDialog({
   const [form, setForm] = useState<FormState>(emptyForm());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [addressForm, setAddressForm] = useState<CopyAddressForm>(emptyCopyAddress());
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [countries, setCountries] = useState<GeoOption[]>([]);
+  const [states, setStates] = useState<GeoOption[]>([]);
+  const [cities, setCities] = useState<GeoOption[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -239,6 +271,88 @@ export default function CopyDialog({
       }
     })();
   }, [open, copyId]);
+
+  // Load the copy's address into the editable form (reset for a new copy).
+  useEffect(() => {
+    if (!open) return;
+    if (copyId == null) {
+      setAddressForm(emptyCopyAddress());
+      return;
+    }
+    let cancelled = false;
+    setAddressLoading(true);
+    void getCopyAddress(copyId)
+      .then((a) => {
+        if (cancelled) return;
+        setAddressForm({
+          addressLine: a.addressLine ?? "",
+          countryId: a.countryId != null ? String(a.countryId) : NONE,
+          stateId: a.stateId != null ? String(a.stateId) : NONE,
+          cityId: a.cityId != null ? String(a.cityId) : NONE,
+          pincode: a.pincode ?? "",
+          landmark: a.landmark ?? "",
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setAddressForm(emptyCopyAddress());
+      })
+      .finally(() => {
+        if (!cancelled) setAddressLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, copyId]);
+
+  // Geo dropdown options (cascading: country -> state -> city).
+  useEffect(() => {
+    void getAllCountries()
+      .then((rows) =>
+        setCountries(
+          rows.filter((c) => c.id != null).map((c) => ({ id: c.id as number, name: c.name })),
+        ),
+      )
+      .catch(() => setCountries([]));
+  }, []);
+
+  useEffect(() => {
+    if (addressForm.countryId === NONE) {
+      setStates([]);
+      return;
+    }
+    let cancelled = false;
+    void getStatesByCountry(Number(addressForm.countryId))
+      .then((rows) => {
+        if (!cancelled) setStates(rows.map((s) => ({ id: s.id, name: s.name })));
+      })
+      .catch(() => {
+        if (!cancelled) setStates([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [addressForm.countryId]);
+
+  useEffect(() => {
+    if (addressForm.stateId === NONE) {
+      setCities([]);
+      return;
+    }
+    let cancelled = false;
+    void getCitiesByState(Number(addressForm.stateId))
+      .then((rows) => {
+        if (!cancelled)
+          setCities(
+            rows.filter((c) => c.id != null).map((c) => ({ id: c.id as number, name: c.name })),
+          );
+      })
+      .catch(() => {
+        if (!cancelled) setCities([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [addressForm.stateId]);
 
   const formComboStatuses = useMemo(
     () =>
@@ -297,6 +411,17 @@ export default function CopyDialog({
       ),
     [meta?.bindings],
   );
+  const formComboAuthorTypes = useMemo(
+    () =>
+      comboWithNone(
+        (meta?.authorTypes ?? []).map((o) => ({
+          value: String(o.id),
+          label: o.name ?? `#${o.id}`,
+        })),
+        "— None —",
+      ),
+    [meta?.authorTypes],
+  );
   const formComboItemCategories = useMemo(
     () =>
       comboWithNone(
@@ -326,12 +451,28 @@ export default function CopyDialog({
     try {
       setSaving(true);
       const body = formToBody(form, bookId);
+      let savedCopyId: number;
       if (copyId == null) {
-        await createCopyDetails(body);
+        const res = await createCopyDetails(body);
+        savedCopyId = res.payload.id;
         toast.success("Copy added");
       } else {
         await updateCopyDetails(copyId, body);
+        savedCopyId = copyId;
         toast.success("Copy updated");
+      }
+      try {
+        await saveCopyAddress(savedCopyId, {
+          addressLine: addressForm.addressLine.trim() || null,
+          countryId: addressForm.countryId === NONE ? null : Number(addressForm.countryId),
+          stateId: addressForm.stateId === NONE ? null : Number(addressForm.stateId),
+          cityId: addressForm.cityId === NONE ? null : Number(addressForm.cityId),
+          pincode: addressForm.pincode.trim() || null,
+          landmark: addressForm.landmark.trim() || null,
+        });
+      } catch (e) {
+        console.error(e);
+        toast.error("Copy saved, but address could not be saved");
       }
       onSaved();
       onOpenChange(false);
@@ -453,6 +594,16 @@ export default function CopyDialog({
                     value={form.bindingTypeId}
                     dataArr={formComboBindings}
                     onChange={(v) => setForm((f) => ({ ...f, bindingTypeId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Author type</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Author type"
+                    value={form.authorTypeId}
+                    dataArr={formComboAuthorTypes}
+                    onChange={(v) => setForm((f) => ({ ...f, authorTypeId: v }))}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -669,6 +820,95 @@ export default function CopyDialog({
                     type="date"
                     value={form.billDate}
                     onChange={(e) => setForm((f) => ({ ...f, billDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Copy address */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Copy address
+                </h4>
+                {addressLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                ) : null}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5 sm:col-span-3">
+                  <Label className="text-xs font-medium">Address line</Label>
+                  <Input
+                    className="h-10"
+                    value={addressForm.addressLine ?? ""}
+                    onChange={(e) => setAddressForm((a) => ({ ...a, addressLine: e.target.value }))}
+                    placeholder="Street / building / area"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Country</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Country"
+                    value={addressForm.countryId}
+                    dataArr={[
+                      { value: NONE, label: "— None —" },
+                      ...countries.map((c) => ({
+                        value: String(c.id),
+                        label: c.name ?? `#${c.id}`,
+                      })),
+                    ]}
+                    onChange={(v) =>
+                      setAddressForm((a) => ({ ...a, countryId: v, stateId: NONE, cityId: NONE }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">State</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder={addressForm.countryId === NONE ? "Select country first" : "State"}
+                    value={addressForm.stateId}
+                    dataArr={[
+                      { value: NONE, label: "— None —" },
+                      ...states.map((s) => ({
+                        value: String(s.id),
+                        label: s.name ?? `#${s.id}`,
+                      })),
+                    ]}
+                    onChange={(v) => setAddressForm((a) => ({ ...a, stateId: v, cityId: NONE }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">City</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder={addressForm.stateId === NONE ? "Select state first" : "City"}
+                    value={addressForm.cityId}
+                    dataArr={[
+                      { value: NONE, label: "— None —" },
+                      ...cities.map((c) => ({
+                        value: String(c.id),
+                        label: c.name ?? `#${c.id}`,
+                      })),
+                    ]}
+                    onChange={(v) => setAddressForm((a) => ({ ...a, cityId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Pincode</Label>
+                  <Input
+                    className="h-10"
+                    value={addressForm.pincode ?? ""}
+                    onChange={(e) => setAddressForm((a) => ({ ...a, pincode: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Landmark</Label>
+                  <Input
+                    className="h-10"
+                    value={addressForm.landmark ?? ""}
+                    onChange={(e) => setAddressForm((a) => ({ ...a, landmark: e.target.value }))}
                   />
                 </div>
               </div>

@@ -7,10 +7,12 @@ import {
   deleteCopyDetailsController,
   downloadCopyBulkUploadTemplateController,
   downloadCopyDetailsExcelController,
+  getCopyAddressController,
   getCopyDetailsByIdController,
   getCopyDetailsListController,
   getCopyDetailsMetaController,
   updateCopyDetailsController,
+  upsertCopyAddressController,
 } from "@/features/library/controllers/copy-details.controller.js";
 
 const router = express.Router();
@@ -26,6 +28,8 @@ router.post(
   bulkUploadCopyDetailsController,
 );
 router.get("/", getCopyDetailsListController);
+router.get("/:id/address", getCopyAddressController);
+router.put("/:id/address", upsertCopyAddressController);
 router.get("/:id", getCopyDetailsByIdController);
 router.post("/", createCopyDetailsController);
 router.put("/:id", updateCopyDetailsController);

@@ -12,6 +12,7 @@ import { personModel, userModel } from "../user";
 import { vendorModel } from "./vendor.model";
 import { branchModel } from "./branch.model";
 import { itemCategoryModel } from "./item-category.model";
+import { authorTypeModel } from "./author-type.model";
 
 export const copyDetailsModel = pgTable("copy_details", {
     id: serial().primaryKey(),
@@ -20,6 +21,8 @@ export const copyDetailsModel = pgTable("copy_details", {
         .references(() => branchModel.id),
     itemCategoryId: integer("item_category_id_fk")
         .references(() => itemCategoryModel.id),
+    authorTypeId: integer("author_type_id_fk")
+        .references(() => authorTypeModel.id),
     rfidNumber: varchar({ length: 255 }),
     theftBitArmed: boolean().notNull().default(false),
     bookId: integer("book_id_fk")

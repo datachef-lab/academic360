@@ -13,10 +13,12 @@ import {
   findCopyDetailsPaginated,
   generateCopyDetailsBulkTemplate,
   getBookTitleById,
+  getCopyAddress,
   getCopyDetailsById,
   getCopyDetailsMeta,
   importCopyDetailsForBookExcel,
   updateCopyDetails,
+  upsertCopyAddress,
   type CopyDetailsUpsertInput,
 } from "@/features/library/services/copy-details.service.js";
 import { socketService } from "@/services/socketService.js";
@@ -111,6 +113,7 @@ const bodyToUpsert = (
     suffix: typeof body.suffix === "string" ? body.suffix : null,
     bookSize: typeof body.bookSize === "string" ? body.bookSize : null,
     billDate: typeof body.billDate === "string" ? body.billDate : null,
+    authorTypeId: parseOptionalInt(body.authorTypeId),
   };
 };
 
@@ -363,6 +366,53 @@ export const deleteCopyDetailsController = async (
           "Copy details deleted successfully.",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const getCopyAddressController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) {
+      throw new ApiError(400, "Invalid copy details id.");
+    }
+    const address = await getCopyAddress(id);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", address, "Copy address fetched."));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const upsertCopyAddressController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) {
+      throw new ApiError(400, "Invalid copy details id.");
+    }
+    const { addressLine, countryId, stateId, cityId, pincode, landmark } =
+      req.body ?? {};
+    const address = await upsertCopyAddress(id, {
+      addressLine,
+      countryId: countryId == null ? null : Number(countryId),
+      stateId: stateId == null ? null : Number(stateId),
+      cityId: cityId == null ? null : Number(cityId),
+      pincode,
+      landmark,
+    });
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", address, "Copy address saved."));
   } catch (error) {
     handleError(error, res, next);
   }

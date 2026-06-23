@@ -2,6 +2,8 @@ import ExcelJS from "exceljs";
 import { db } from "@/db/index.js";
 import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import { addressModel } from "@repo/db/schemas/models/user/address.model.js";
+import { authorTypeModel } from "@repo/db/schemas/models/library/author-type.model.js";
 import { bindingModel } from "@repo/db/schemas/models/library/binding.model.js";
 import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
@@ -75,6 +77,7 @@ export type CopyDetailsMetaResult = {
   itemCategories: Array<{ id: number; name: string }>;
   vendors: Array<{ id: number; name: string }>;
   branches: Array<{ id: number; name: string }>;
+  authorTypes: Array<{ id: number; name: string | null }>;
 };
 
 export type CopyDetailsDetail = {
@@ -115,6 +118,7 @@ export type CopyDetailsDetail = {
   suffix: string | null;
   bookSize: string | null;
   billDate: string | null;
+  authorTypeId: number | null;
 };
 
 export type CopyDetailsUpsertInput = {
@@ -154,6 +158,7 @@ export type CopyDetailsUpsertInput = {
   suffix?: string | null;
   bookSize?: string | null;
   billDate?: string | null;
+  authorTypeId?: number | null;
 };
 
 const buildListWhere = (
@@ -417,6 +422,7 @@ export async function getCopyDetailsMeta(): Promise<CopyDetailsMetaResult> {
     itemCategories,
     vendors,
     branches,
+    authorTypes,
   ] = await Promise.all([
     db
       .select({ id: bookModel.id, title: bookModel.title })
@@ -464,6 +470,10 @@ export async function getCopyDetailsMeta(): Promise<CopyDetailsMetaResult> {
       .from(branchModel)
       .orderBy(desc(branchModel.id))
       .limit(500),
+    db
+      .select({ id: authorTypeModel.id, name: authorTypeModel.name })
+      .from(authorTypeModel)
+      .orderBy(desc(authorTypeModel.id)),
   ]);
 
   return {
@@ -477,6 +487,7 @@ export async function getCopyDetailsMeta(): Promise<CopyDetailsMetaResult> {
     itemCategories,
     vendors,
     branches,
+    authorTypes,
   };
 }
 
@@ -522,6 +533,7 @@ export async function getCopyDetailsById(
       suffix: copyDetailsModel.suffix,
       bookSize: copyDetailsModel.bookSize,
       billDate: copyDetailsModel.billDate,
+      authorTypeId: copyDetailsModel.authorTypeId,
     })
     .from(copyDetailsModel)
     .where(eq(copyDetailsModel.id, id))
@@ -571,6 +583,7 @@ function upsertValues(input: CopyDetailsUpsertInput) {
     suffix: input.suffix?.trim() || null,
     bookSize: input.bookSize?.trim() || null,
     billDate: input.billDate ? new Date(input.billDate) : null,
+    authorTypeId: input.authorTypeId ?? null,
   };
 }
 
@@ -615,6 +628,76 @@ export async function countCopyCirculations(
 
 export async function deleteCopyDetails(id: number): Promise<void> {
   await db.delete(copyDetailsModel).where(eq(copyDetailsModel.id, id));
+}
+
+export type CopyAddressInput = {
+  addressLine?: string | null;
+  countryId?: number | null;
+  stateId?: number | null;
+  cityId?: number | null;
+  pincode?: string | null;
+  landmark?: string | null;
+};
+
+export type CopyAddress = CopyAddressInput & { id: number | null };
+
+/** The copy's address (the first address row linked to the copy details). */
+export async function getCopyAddress(
+  copyDetailsId: number,
+): Promise<CopyAddress> {
+  const [row] = await db
+    .select({
+      id: addressModel.id,
+      addressLine: addressModel.addressLine,
+      countryId: addressModel.countryId,
+      stateId: addressModel.stateId,
+      cityId: addressModel.cityId,
+      pincode: addressModel.pincode,
+      landmark: addressModel.landmark,
+    })
+    .from(addressModel)
+    .where(eq(addressModel.copyDetailsId, copyDetailsId))
+    .limit(1);
+  return (
+    row ?? {
+      id: null,
+      addressLine: null,
+      countryId: null,
+      stateId: null,
+      cityId: null,
+      pincode: null,
+      landmark: null,
+    }
+  );
+}
+
+/** Creates or updates the copy's address (one address row per copy details). */
+export async function upsertCopyAddress(
+  copyDetailsId: number,
+  input: CopyAddressInput,
+): Promise<CopyAddress> {
+  const values = {
+    addressLine: input.addressLine?.trim() || null,
+    countryId: input.countryId ?? null,
+    stateId: input.stateId ?? null,
+    cityId: input.cityId ?? null,
+    pincode: input.pincode?.trim() || null,
+    landmark: input.landmark?.trim() || null,
+  };
+  const [existing] = await db
+    .select({ id: addressModel.id })
+    .from(addressModel)
+    .where(eq(addressModel.copyDetailsId, copyDetailsId))
+    .limit(1);
+  if (existing) {
+    await db
+      .update(addressModel)
+      .set(values)
+      .where(eq(addressModel.id, existing.id));
+  } else {
+    await db.insert(addressModel).values({ ...values, copyDetailsId });
+  }
+  return getCopyAddress(copyDetailsId);
 }
 
 // ---------------------------------------------------------------------------
