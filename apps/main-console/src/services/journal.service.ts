@@ -37,6 +37,7 @@ export type JournalDetail = {
   periodId: number | null;
   issnNumber: string | null;
   sizeInCM: string | null;
+  publishedYear: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -44,7 +45,7 @@ export type JournalDetail = {
 export type JournalMetaPayload = {
   journalTypes: Array<{ id: number; name: string | null }>;
   entryModes: Array<{ id: number; name: string | null }>;
-  publishers: Array<{ id: number; name: string | null }>;
+  publishers: Array<{ id: number; name: string | null; place: string | null }>;
   languages: Array<{ id: number; name: string | null }>;
   bindings: Array<{ id: number; name: string | null }>;
   periods: Array<{ id: number; name: string | null }>;
@@ -62,6 +63,7 @@ export type JournalUpsertBody = {
   periodId?: number | null;
   issnNumber?: string | null;
   sizeInCM?: string | null;
+  publishedYear?: string | null;
 };
 
 const BASE = "/api/library/journals";

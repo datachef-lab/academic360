@@ -62,3 +62,31 @@ export async function deleteLibraryPublisher(id: number): Promise<ApiResponse<Li
   const response = await axiosInstance.delete<ApiResponse<LibraryPublisher>>(`${BASE_URL}/${id}`);
   return response.data;
 }
+
+export type PublisherAddress = {
+  id: number | null;
+  addressLine: string | null;
+  countryId: number | null;
+  stateId: number | null;
+  cityId: number | null;
+  pincode: string | null;
+  landmark: string | null;
+};
+
+export type PublisherAddressInput = Omit<PublisherAddress, "id">;
+
+export async function getPublisherAddress(id: number): Promise<PublisherAddress> {
+  const res = await axiosInstance.get<ApiResponse<PublisherAddress>>(`${BASE_URL}/${id}/address`);
+  return res.data.payload;
+}
+
+export async function savePublisherAddress(
+  id: number,
+  payload: PublisherAddressInput,
+): Promise<PublisherAddress> {
+  const res = await axiosInstance.put<ApiResponse<PublisherAddress>>(
+    `${BASE_URL}/${id}/address`,
+    payload,
+  );
+  return res.data.payload;
+}

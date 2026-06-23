@@ -9,6 +9,8 @@ import {
   findPublisherByName,
   findPublishersPaginated,
   updatePublisher,
+  getPublisherAddress,
+  upsertPublisherAddress,
 } from "@/features/library/services/publisher.service.js";
 
 const parseId = (value?: string | string[]): number | null => {
@@ -237,6 +239,59 @@ export const deletePublisherController = async (
           deleted,
           "Publisher deleted successfully.",
         ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const getPublisherAddressController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) {
+      res.status(400).json(new ApiError(400, "Valid ID is required"));
+      return;
+    }
+    const address = await getPublisherAddress(id);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", address, "Publisher address fetched."),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const upsertPublisherAddressController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) {
+      res.status(400).json(new ApiError(400, "Valid ID is required"));
+      return;
+    }
+    const { addressLine, countryId, stateId, cityId, pincode, landmark } =
+      req.body ?? {};
+    const address = await upsertPublisherAddress(id, {
+      addressLine,
+      countryId: countryId == null ? null : Number(countryId),
+      stateId: stateId == null ? null : Number(stateId),
+      cityId: cityId == null ? null : Number(cityId),
+      pincode,
+      landmark,
+    });
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", address, "Publisher address saved."),
       );
   } catch (error) {
     handleError(error, res, next);

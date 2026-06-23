@@ -1072,6 +1072,13 @@
       "when": 1782164493217,
       "tag": "0153_elite_post",
       "breakpoints": true
+    },
+    {
+      "idx": 154,
+      "version": "7",
+      "when": 1782200000000,
+      "tag": "0154_journal_published_year",
+      "breakpoints": true
     }
   ]
 }

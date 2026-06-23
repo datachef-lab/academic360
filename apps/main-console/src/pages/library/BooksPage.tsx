@@ -69,6 +69,13 @@ import {
   type CopyDetailsListRow,
   type CopyDetailsMetaPayload,
 } from "@/services/copy-details.service";
+import { getBookAuthors, saveBookAuthors } from "@/services/library-book-authors.service";
+import { getLibraryAuthors } from "@/services/library-authors.service";
+import { getLibraryAuthorTypes } from "@/services/library-author-types.service";
+import { getPublisherAddress, savePublisherAddress } from "@/services/library-publisher.service";
+import { getAllCountries } from "@/services/country.service";
+import { getStatesByCountry } from "@/services/state.service";
+import { getCitiesByState } from "@/services/city.service";
 import { cn } from "@/lib/utils";
 import CopyDialog, { formatPriceInrDisplay } from "./components/CopyDialog";
 
@@ -343,6 +350,26 @@ const formToBody = (f: FormState): BookUpsertBody => ({
   cdlLoanHours: f.cdlLoanHours ? Number(f.cdlLoanHours) : 24,
 });
 
+type GeoOption = { id: number; name: string | null };
+type PubAddressForm = {
+  addressLine: string;
+  countryId: string;
+  stateId: string;
+  cityId: string;
+  pincode: string;
+  landmark: string;
+};
+const emptyPubAddress = (): PubAddressForm => ({
+  addressLine: "",
+  countryId: NONE,
+  stateId: NONE,
+  cityId: NONE,
+  pincode: "",
+  landmark: "",
+});
+
+type AuthorRowState = { authorId: string; authorTypeId: string };
+
 function BookRowActions({
   row,
   onEdit,
@@ -396,6 +423,14 @@ export default function BooksPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [authorRows, setAuthorRows] = useState<AuthorRowState[]>([]);
+  const [authorMasters, setAuthorMasters] = useState<{ id: number; name: string }[]>([]);
+  const [authorTypeMasters, setAuthorTypeMasters] = useState<{ id: number; name: string }[]>([]);
+  const [pubAddress, setPubAddress] = useState<PubAddressForm>(emptyPubAddress());
+  const [pubAddressLoading, setPubAddressLoading] = useState(false);
+  const [countries, setCountries] = useState<GeoOption[]>([]);
+  const [states, setStates] = useState<GeoOption[]>([]);
+  const [cities, setCities] = useState<GeoOption[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<BookListRow | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const frontCoverInputRef = useRef<HTMLInputElement | null>(null);
@@ -444,6 +479,109 @@ export default function BooksPage() {
       }
     })();
   }, []);
+
+  // Author + author-type master lists for the contributors section.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await getLibraryAuthors({ page: 1, limit: 1000 });
+        setAuthorMasters(res.payload.rows.map((r) => ({ id: r.id, name: r.name })));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    void (async () => {
+      try {
+        const res = await getLibraryAuthorTypes({ page: 1, limit: 1000 });
+        setAuthorTypeMasters(res.payload.rows.map((r) => ({ id: r.id, name: r.name })));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  // Load the selected publisher's address (place) into the editable form.
+  useEffect(() => {
+    if (!dialogOpen) return;
+    if (form.publisherId === NONE) {
+      setPubAddress(emptyPubAddress());
+      return;
+    }
+    const pubId = Number(form.publisherId);
+    let cancelled = false;
+    setPubAddressLoading(true);
+    void getPublisherAddress(pubId)
+      .then((a) => {
+        if (cancelled) return;
+        setPubAddress({
+          addressLine: a.addressLine ?? "",
+          countryId: a.countryId != null ? String(a.countryId) : NONE,
+          stateId: a.stateId != null ? String(a.stateId) : NONE,
+          cityId: a.cityId != null ? String(a.cityId) : NONE,
+          pincode: a.pincode ?? "",
+          landmark: a.landmark ?? "",
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setPubAddress(emptyPubAddress());
+      })
+      .finally(() => {
+        if (!cancelled) setPubAddressLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogOpen, form.publisherId]);
+
+  // Geo dropdown options (cascading: country -> state -> city).
+  useEffect(() => {
+    void getAllCountries()
+      .then((rows) =>
+        setCountries(
+          rows.filter((c) => c.id != null).map((c) => ({ id: c.id as number, name: c.name })),
+        ),
+      )
+      .catch(() => setCountries([]));
+  }, []);
+
+  useEffect(() => {
+    if (pubAddress.countryId === NONE) {
+      setStates([]);
+      return;
+    }
+    let cancelled = false;
+    void getStatesByCountry(Number(pubAddress.countryId))
+      .then((rows) => {
+        if (!cancelled) setStates(rows.map((s) => ({ id: s.id, name: s.name })));
+      })
+      .catch(() => {
+        if (!cancelled) setStates([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pubAddress.countryId]);
+
+  useEffect(() => {
+    if (pubAddress.stateId === NONE) {
+      setCities([]);
+      return;
+    }
+    let cancelled = false;
+    void getCitiesByState(Number(pubAddress.stateId))
+      .then((rows) => {
+        if (!cancelled)
+          setCities(
+            rows.filter((c) => c.id != null).map((c) => ({ id: c.id as number, name: c.name })),
+          );
+      })
+      .catch(() => {
+        if (!cancelled) setCities([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pubAddress.stateId]);
 
   const fetchCopiesForBook = useCallback(async (bookId: number) => {
     try {
@@ -657,6 +795,22 @@ export default function BooksPage() {
       ),
     [meta?.periods],
   );
+  const formComboAuthors = useMemo(
+    () =>
+      comboWithNone(
+        authorMasters.map((a) => ({ value: String(a.id), label: a.name })),
+        "— Select author —",
+      ),
+    [authorMasters],
+  );
+  const formComboAuthorTypes = useMemo(
+    () =>
+      comboWithNone(
+        authorTypeMasters.map((a) => ({ value: String(a.id), label: a.name })),
+        "— Select role —",
+      ),
+    [authorTypeMasters],
+  );
 
   const fetchRows = useCallback(async () => {
     try {
@@ -785,6 +939,7 @@ export default function BooksPage() {
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setAuthorRows([]);
     setDialogTab("details");
     setCopies([]);
     setDialogOpen(true);
@@ -797,10 +952,51 @@ export default function BooksPage() {
       setForm(detailToForm(res.payload));
       setDialogTab("details");
       setCopies([]);
+      setAuthorRows([]);
       setDialogOpen(true);
+      try {
+        const authors = await getBookAuthors(id);
+        setAuthorRows(
+          authors.map((a) => ({
+            authorId: String(a.authorId),
+            authorTypeId: String(a.authorTypeId),
+          })),
+        );
+      } catch (e) {
+        console.error(e);
+      }
     } catch (e) {
       console.error(e);
       toast.error("Failed to load book");
+    }
+  };
+
+  const persistBookExtras = async (bookId: number) => {
+    const validAuthors = authorRows
+      .filter((r) => r.authorId !== NONE && r.authorTypeId !== NONE)
+      .map((r) => ({ authorId: Number(r.authorId), authorTypeId: Number(r.authorTypeId) }));
+    if (validAuthors.length > 0) {
+      try {
+        await saveBookAuthors(bookId, validAuthors);
+      } catch (e) {
+        console.error(e);
+        toast.error("Book saved, but authors could not be saved");
+      }
+    }
+    if (form.publisherId !== NONE) {
+      try {
+        await savePublisherAddress(Number(form.publisherId), {
+          addressLine: pubAddress.addressLine.trim() || null,
+          countryId: pubAddress.countryId === NONE ? null : Number(pubAddress.countryId),
+          stateId: pubAddress.stateId === NONE ? null : Number(pubAddress.stateId),
+          cityId: pubAddress.cityId === NONE ? null : Number(pubAddress.cityId),
+          pincode: pubAddress.pincode.trim() || null,
+          landmark: pubAddress.landmark.trim() || null,
+        });
+      } catch (e) {
+        console.error(e);
+        toast.error("Book saved, but publisher address could not be saved");
+      }
     }
   };
 
@@ -815,10 +1011,12 @@ export default function BooksPage() {
       if (editingId == null) {
         const res = await createBook(body);
         setEditingId(res.payload.id);
+        await persistBookExtras(res.payload.id);
         toast.success("Book created — you can now add copies");
         void fetchRows();
       } else {
         await updateBook(editingId, body);
+        await persistBookExtras(editingId);
         toast.success("Book updated");
         setDialogOpen(false);
         void fetchRows();
@@ -874,10 +1072,10 @@ export default function BooksPage() {
             <div>
               <CardTitle className="flex items-center text-lg sm:text-xl">
                 <Book className="mr-2 h-8 w-8 rounded-md border p-1" />
-                Books
+                Article Entry
               </CardTitle>
               <p className="mt-1 text-[11px] text-muted-foreground sm:text-sm">
-                Catalogue titles: bibliographic data, classification, and links to journals.
+                Catalogue articles: bibliographic data, classification, and links to journals.
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -1525,6 +1723,183 @@ export default function BooksPage() {
                       onChange={(e) => setForm((f) => ({ ...f, keywords: e.target.value }))}
                     />
                   </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Authors / contributors
+                    </p>
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    {authorRows.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        No authors added yet. Use “Add author” to attach contributors and roles.
+                      </p>
+                    ) : (
+                      authorRows.map((row, idx) => (
+                        <div key={idx} className="flex items-end gap-2">
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <Label className="text-xs font-medium">Author</Label>
+                            <Combobox
+                              className="h-10"
+                              placeholder="Author"
+                              value={row.authorId}
+                              dataArr={formComboAuthors}
+                              onChange={(v) =>
+                                setAuthorRows((rows) =>
+                                  rows.map((r, i) => (i === idx ? { ...r, authorId: v } : r)),
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <Label className="text-xs font-medium">Role</Label>
+                            <Combobox
+                              className="h-10"
+                              placeholder="Role"
+                              value={row.authorTypeId}
+                              dataArr={formComboAuthorTypes}
+                              onChange={(v) =>
+                                setAuthorRows((rows) =>
+                                  rows.map((r, i) => (i === idx ? { ...r, authorTypeId: v } : r)),
+                                )
+                              }
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 shrink-0 text-red-600 hover:text-red-700"
+                            onClick={() =>
+                              setAuthorRows((rows) => rows.filter((_, i) => i !== idx))
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setAuthorRows((rows) => [...rows, { authorId: NONE, authorTypeId: NONE }])
+                      }
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add author
+                    </Button>
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Publisher place / address
+                      </p>
+                      {pubAddressLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {form.publisherId === NONE ? (
+                    <p className="text-xs text-muted-foreground sm:col-span-2">
+                      Select a publisher to view or edit its address.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label className="text-xs font-medium">Address line</Label>
+                        <Input
+                          className="h-10"
+                          value={pubAddress.addressLine ?? ""}
+                          onChange={(e) =>
+                            setPubAddress((a) => ({ ...a, addressLine: e.target.value }))
+                          }
+                          placeholder="Street / building / area"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Country</Label>
+                        <Combobox
+                          className="h-10"
+                          placeholder="Country"
+                          value={pubAddress.countryId}
+                          dataArr={[
+                            { value: NONE, label: "— None —" },
+                            ...countries.map((c) => ({
+                              value: String(c.id),
+                              label: c.name ?? `#${c.id}`,
+                            })),
+                          ]}
+                          onChange={(v) =>
+                            setPubAddress((a) => ({
+                              ...a,
+                              countryId: v,
+                              stateId: NONE,
+                              cityId: NONE,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">State</Label>
+                        <Combobox
+                          className="h-10"
+                          placeholder={
+                            pubAddress.countryId === NONE ? "Select country first" : "State"
+                          }
+                          value={pubAddress.stateId}
+                          dataArr={[
+                            { value: NONE, label: "— None —" },
+                            ...states.map((s) => ({
+                              value: String(s.id),
+                              label: s.name ?? `#${s.id}`,
+                            })),
+                          ]}
+                          onChange={(v) =>
+                            setPubAddress((a) => ({ ...a, stateId: v, cityId: NONE }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">City</Label>
+                        <Combobox
+                          className="h-10"
+                          placeholder={pubAddress.stateId === NONE ? "Select state first" : "City"}
+                          value={pubAddress.cityId}
+                          dataArr={[
+                            { value: NONE, label: "— None —" },
+                            ...cities.map((c) => ({
+                              value: String(c.id),
+                              label: c.name ?? `#${c.id}`,
+                            })),
+                          ]}
+                          onChange={(v) => setPubAddress((a) => ({ ...a, cityId: v }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Pincode</Label>
+                        <Input
+                          className="h-10"
+                          value={pubAddress.pincode ?? ""}
+                          onChange={(e) =>
+                            setPubAddress((a) => ({ ...a, pincode: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Landmark</Label>
+                        <Input
+                          className="h-10"
+                          value={pubAddress.landmark ?? ""}
+                          onChange={(e) =>
+                            setPubAddress((a) => ({ ...a, landmark: e.target.value }))
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">

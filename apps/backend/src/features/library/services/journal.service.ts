@@ -11,6 +11,8 @@ import { libraryPeriodModel } from "@repo/db/schemas/models/library/library-peri
 import { languageMediumModel } from "@repo/db/schemas/models/resources/languageMedium.model.js";
 import { subjectGroupingMainModel } from "@repo/db/schemas/models/course-design/subject-grouping-main.model.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
+import { addressModel } from "@repo/db/schemas/models/user/address.model.js";
+import { inArray } from "drizzle-orm";
 
 export type JournalListFilters = {
   page: number;
@@ -62,6 +64,7 @@ export type JournalDetail = {
   periodId: number | null;
   issnNumber: string | null;
   sizeInCM: string | null;
+  publishedYear: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -77,6 +80,7 @@ export type JournalUpsertInput = {
   periodId?: number | null;
   issnNumber?: string | null;
   sizeInCM?: string | null;
+  publishedYear?: string | null;
 };
 
 export type JournalLinkedBookRow = {
@@ -87,7 +91,7 @@ export type JournalLinkedBookRow = {
 export type JournalMetaResult = {
   journalTypes: Array<{ id: number; name: string | null }>;
   entryModes: Array<{ id: number; name: string | null }>;
-  publishers: Array<{ id: number; name: string | null }>;
+  publishers: Array<{ id: number; name: string | null; place: string | null }>;
   languages: Array<{ id: number; name: string | null }>;
   bindings: Array<{ id: number; name: string | null }>;
   periods: Array<{ id: number; name: string | null }>;
@@ -332,6 +336,7 @@ export async function getJournalById(
       periodId: journalModel.periodId,
       issnNumber: journalModel.issnNumber,
       sizeInCM: journalModel.sizeInCM,
+      publishedYear: journalModel.publishedYear,
       createdAt: journalModel.createdAt,
       updatedAt: journalModel.updatedAt,
     })
@@ -357,6 +362,7 @@ export async function createJournal(
       periodId: input.periodId ?? null,
       issnNumber: input.issnNumber?.trim() || null,
       sizeInCM: input.sizeInCM?.trim() || null,
+      publishedYear: input.publishedYear?.trim() || null,
     })
     .returning({ id: journalModel.id });
   return inserted.id;
@@ -379,6 +385,7 @@ export async function updateJournal(
       periodId: input.periodId ?? null,
       issnNumber: input.issnNumber?.trim() || null,
       sizeInCM: input.sizeInCM?.trim() || null,
+      publishedYear: input.publishedYear?.trim() || null,
       updatedAt: new Date(),
     })
     .where(eq(journalModel.id, id));
@@ -446,10 +453,34 @@ export async function getJournalMeta(): Promise<JournalMetaResult> {
       .limit(500),
   ]);
 
+  // Publisher "place" comes from the publisher's address (address.publisher_id_fk).
+  const publisherIds = publishers.map((p) => p.id);
+  const placeByPublisher = new Map<number, string>();
+  if (publisherIds.length) {
+    const addrRows = await db
+      .select({
+        publisherId: addressModel.publisherId,
+        addressLine: addressModel.addressLine,
+        landmark: addressModel.landmark,
+      })
+      .from(addressModel)
+      .where(inArray(addressModel.publisherId, publisherIds));
+    for (const a of addrRows) {
+      if (a.publisherId == null) continue;
+      const place = (a.addressLine ?? a.landmark ?? "").trim();
+      if (place && !placeByPublisher.has(a.publisherId)) {
+        placeByPublisher.set(a.publisherId, place);
+      }
+    }
+  }
+
   return {
     journalTypes,
     entryModes,
-    publishers,
+    publishers: publishers.map((p) => ({
+      ...p,
+      place: placeByPublisher.get(p.id) ?? null,
+    })),
     languages,
     bindings,
     periods,

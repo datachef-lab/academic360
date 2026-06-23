@@ -50,7 +50,7 @@ const quickLinks = [
     icon: BookOpenCheck,
   },
   {
-    title: "Books",
+    title: "Article Entry",
     url: "/dashboard/library/books",
     icon: Book,
   },
