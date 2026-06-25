@@ -7,9 +7,12 @@ export type IdCardFieldKey =
   | "SPORTS_QUOTA"
   | "QRCODE"
   | "VALID_TILL_DATE"
-  | "PHOTO";
+  | "PHOTO"
+  | "SHIFT";
 
 export type IdCardIssueStatus = "ISSUED" | "RENEWED" | "REISSUED";
+
+export type IdCardFieldAlign = "LEFT" | "CENTER" | "RIGHT";
 
 export interface IdCardTemplateField {
   id: number;
@@ -20,6 +23,7 @@ export interface IdCardTemplateField {
   width: number | null;
   height: number | null;
   fontSize: number | null;
+  align: IdCardFieldAlign;
   isVisible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -97,6 +101,7 @@ export interface IdCardTemplateFieldUpsertPayload {
   width?: number | null;
   height?: number | null;
   fontSize?: number | null;
+  align?: IdCardFieldAlign;
   isVisible?: boolean;
 }
 
@@ -127,6 +132,7 @@ export const ID_CARD_FIELD_LABELS: Record<IdCardFieldKey, string> = {
   QRCODE: "QR Code",
   VALID_TILL_DATE: "Valid Till Date",
   PHOTO: "Photo",
+  SHIFT: "Shift",
 };
 
 export const ID_CARD_FIELDS_WITH_DIMENSIONS: IdCardFieldKey[] = ["PHOTO"];
