@@ -132,7 +132,9 @@ function extractStudentInfo(raw: any): StudentInfo {
     bloodGroup: raw?.health?.bloodGroup?.type ?? raw?.health?.bloodGroup?.name ?? null,
     rfidNumber: raw?.rfidNumber ?? null,
     sportsQuota: raw?.sportsInfo?.[0]?.sportsCategory?.name ?? null,
-    quotaType: raw?.admissionCourseDetails?.quota?.name ?? raw?.quotaType ?? null,
+    // Backend only returns quotaType when the quota type is flagged to print on
+    // the ID card (already resolved to short/full name); null means don't show.
+    quotaType: raw?.quotaType ?? null,
     section: raw?.section?.name ?? null,
     classRollNumber: raw?.classRollNumber ?? raw?.rollNumber ?? null,
     shift:

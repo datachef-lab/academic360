@@ -1104,13 +1104,11 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
       })
       .from(admissionQuotaTypeModel)
       .where(eq(admissionQuotaTypeModel.id, student.quotaTypeId));
-    if (foundQuotaType) {
-      // When flagged to print on the ID card, prefer the short name (fallback
-      // to the full name); otherwise use the full name.
-      quotaType =
-        foundQuotaType.printOnIdCard && foundQuotaType.shortName
-          ? foundQuotaType.shortName
-          : foundQuotaType.name;
+    // The quota type is exposed for the ID card ONLY when it is flagged to
+    // print on the ID card. When printed, prefer the short name (falling back
+    // to the full name). When not flagged, leave it null so it isn't shown.
+    if (foundQuotaType?.printOnIdCard) {
+      quotaType = foundQuotaType.shortName || foundQuotaType.name;
     }
   }
 
