@@ -137,7 +137,7 @@ export default function AcademicYearSetupPage() {
                   </div>
 
                   {/* Illustration with description revealed on hover */}
-                  <div className="relative h-28 w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 sm:h-32">
+                  <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 sm:h-40">
                     <CardIllustration
                       name={card.illustrationName}
                       image={card.illustration ?? undefined}
