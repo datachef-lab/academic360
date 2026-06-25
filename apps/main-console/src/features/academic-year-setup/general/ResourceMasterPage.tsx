@@ -662,43 +662,53 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-3">
-            {/* main fields (2-col) */}
+            {/* text / number fields (2-col) */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {topFields.map((field) => (
-                <div key={field.key} className="flex flex-col gap-1">
-                  <Label className="text-xs">
-                    {field.label}
-                    {field.required && <span className="text-red-500"> *</span>}
-                  </Label>
-                  {field.type === "select" ? (
-                    <SearchableSelect
-                      value={form[field.key] == null ? "" : String(form[field.key])}
-                      onChange={(v) => handleSelectChange(field.key, v)}
-                      disabled={
-                        field.cascadeParentKey
-                          ? !form[field.cascadeParentKey] || form[field.cascadeParentKey] === ""
-                          : false
-                      }
-                      placeholder={
-                        field.cascadeParentKey && !form[field.cascadeParentKey]
-                          ? `Select ${field.label} (pick parent first)`
-                          : `Select ${field.label}`
-                      }
-                      options={optionsFor(field).map((o) => ({
-                        value: String(o.id),
-                        label: o.label,
-                      }))}
-                    />
-                  ) : (
+              {topFields
+                .filter((f) => f.type !== "select")
+                .map((field) => (
+                  <div key={field.key} className="flex flex-col gap-1">
+                    <Label className="text-xs">
+                      {field.label}
+                      {field.required && <span className="text-red-500"> *</span>}
+                    </Label>
                     <Input
                       type={field.type === "number" ? "number" : "text"}
                       value={form[field.key] == null ? "" : String(form[field.key])}
                       onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
                     />
-                  )}
+                  </div>
+                ))}
+            </div>
+            {/* each FK dropdown (country/state/city/…) on its own full-width row */}
+            {topFields
+              .filter((f) => f.type === "select")
+              .map((field) => (
+                <div key={field.key} className="flex flex-col gap-1">
+                  <Label className="text-xs">
+                    {field.label}
+                    {field.required && <span className="text-red-500"> *</span>}
+                  </Label>
+                  <SearchableSelect
+                    value={form[field.key] == null ? "" : String(form[field.key])}
+                    onChange={(v) => handleSelectChange(field.key, v)}
+                    disabled={
+                      field.cascadeParentKey
+                        ? !form[field.cascadeParentKey] || form[field.cascadeParentKey] === ""
+                        : false
+                    }
+                    placeholder={
+                      field.cascadeParentKey && !form[field.cascadeParentKey]
+                        ? `Select ${field.label} (pick parent first)`
+                        : `Select ${field.label}`
+                    }
+                    options={optionsFor(field).map((o) => ({
+                      value: String(o.id),
+                      label: o.label,
+                    }))}
+                  />
                 </div>
               ))}
-            </div>
             {/* sequence on its own row */}
             {seqField && (
               <div className="flex flex-col gap-1">
