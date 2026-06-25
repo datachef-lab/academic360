@@ -91,7 +91,7 @@ const searchData = [
   {
     title: "Academic Setup",
     description: "Configure academic year settings",
-    href: "/dashboard/academic-year-setup",
+    href: "/dashboard/academic-setup",
     icon: LayoutList,
     category: "Academic",
   },

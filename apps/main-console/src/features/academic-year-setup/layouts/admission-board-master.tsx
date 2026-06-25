@@ -7,12 +7,12 @@ import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 const nestedHomeLinks = [
   {
     title: "Board Subject Mappings",
-    url: "/dashboard/academic-year-setup/board-subjects/",
+    url: "/dashboard/academic-setup/admissions/master/",
     icon: GraduationCap,
   },
   {
     title: "Board Subject Mapping Papers",
-    url: "/dashboard/academic-year-setup/board-subjects/mapping-subjects",
+    url: "/dashboard/academic-setup/admissions/master/mapping-subjects",
     icon: BookText,
   },
 ];
@@ -20,12 +20,12 @@ const nestedHomeLinks = [
 const masterLinks = [
   {
     title: "Board",
-    url: "/dashboard/academic-year-setup/board-subjects/boards",
+    url: "/dashboard/academic-setup/admissions/master/boards",
     icon: ListChecks,
   },
   {
     title: "Subjects",
-    url: "/dashboard/academic-year-setup/board-subjects/subjects",
+    url: "/dashboard/academic-setup/admissions/master/subjects",
     icon: BookText,
   },
 ];

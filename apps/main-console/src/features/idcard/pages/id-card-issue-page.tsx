@@ -84,7 +84,7 @@ const FIELD_FONT_PX: Record<IdCardFieldKey, number> = {
 
 // Gap (px, at the 638x1004 canvas) between the end of the COURSE text and the
 // SHIFT text, which is rendered inline right after the course name.
-const SHIFT_GAP_PX = 14;
+const SHIFT_GAP_PX = 6;
 
 const STATUS_REMARKS: Record<IdCardIssueStatus, string> = {
   ISSUED: "First card issued",
@@ -463,7 +463,7 @@ export default function IdCardIssuePage() {
           const text = valueForField(field.fieldKey, student, activeValidTill);
           if (!text) continue;
           const px = field.fontSize ?? (FIELD_FONT_PX[field.fieldKey] || 22);
-          ctx.fillStyle = "#111";
+          ctx.fillStyle = "#000";
           ctx.font = `bold ${px}px Calibri, Arial, sans-serif`;
           ctx.textBaseline = "alphabetic";
 
@@ -729,6 +729,7 @@ export default function IdCardIssuePage() {
               <div className="grid grid-cols-1 gap-2 text-sm">
                 <DetailRow label="Student Name" value={student.name ?? "-"} />
                 <DetailRow label="Course" value={student.course ?? "-"} />
+                <DetailRow label="Shift" value={student.shift ?? "-"} />
                 <DetailRow label="Blood Group" value={student.bloodGroup ?? "-"} />
                 <DetailRow
                   label="Quota Type"

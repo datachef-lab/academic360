@@ -6,55 +6,55 @@ import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 const configurationLinks = [
   //   {
   //     title: "Rule 1: - Mandatory Subjects",
-  //     url: "/dashboard/academic-year-setup/subject-configurations",
+  //     url: "/dashboard/academic-setup/subject-configurations",
   //     icon: BookOpen,
   //   },
   {
     title: "Rule 1: - Related Subjects",
-    url: "/dashboard/academic-year-setup/subject-configurations",
+    url: "/dashboard/academic-setup/subject-configurations",
     icon: Link,
   },
   {
     title: "Rule 2: - Restricted Subjects Grouping",
-    url: "/dashboard/academic-year-setup/subject-configurations/restricted-groupings",
+    url: "/dashboard/academic-setup/subject-configurations/restricted-groupings",
     icon: XCircle,
   },
   //   {
   //     title: "Rule 4: - Whitelisted Categories",
-  //     url: "/dashboard/academic-year-setup/subject-configurations/whitelisted-categories",
+  //     url: "/dashboard/academic-setup/subject-configurations/whitelisted-categories",
   //     icon: CheckCircle,
   //   },
 
   {
     title: "Subject-selection Meta",
-    url: "/dashboard/academic-year-setup/subject-configurations/subject-selection-meta",
+    url: "/dashboard/academic-setup/subject-configurations/subject-selection-meta",
     icon: Layers,
   },
 ];
 
 // Note descriptions for each subject configuration page
 const pageNotes = {
-  "/dashboard/academic-year-setup/subject-configurations": {
+  "/dashboard/academic-setup/subject-configurations": {
     title: "Mandatory Subjects",
     description:
       "Configure mandatory subjects that will be validated during student admission application form submission. Students cannot submit their application if they haven't studied the required mandatory subjects for their chosen program.",
   },
-  "/dashboard/academic-year-setup/subject-configurations/program-course-relations": {
+  "/dashboard/academic-setup/subject-configurations/program-course-relations": {
     title: "Program-Course Relations",
     description:
       "Define relationships between programs, courses, and subjects. Set prerequisites, core/elective classifications, and class-level requirements for structured academic pathways.",
   },
-  "/dashboard/academic-year-setup/subject-configurations/restricted-groupings": {
+  "/dashboard/academic-setup/subject-configurations/restricted-groupings": {
     title: "Restricted Groupings",
     description:
       "Create restriction rules to prevent certain subject combinations. Useful for avoiding conflicts like scheduling overlaps or mutually exclusive course content.",
   },
-  "/dashboard/academic-year-setup/subject-configurations/whitelisted-categories": {
+  "/dashboard/academic-setup/subject-configurations/whitelisted-categories": {
     title: "Whitelisted Categories",
     description:
       "Define approved subject categories that students can choose from. These categories determine which subjects are available for selection in each program.",
   },
-  "/dashboard/academic-year-setup/subject-configurations/subject-selection-meta": {
+  "/dashboard/academic-setup/subject-configurations/subject-selection-meta": {
     title: "Subject-selection Meta",
     description:
       "View the subject-selection groups (Minor / IDC / AEC / CVAC) configured for the selected academic year, including their subject type, applicable classes and streams.",
@@ -78,7 +78,7 @@ export default function SubjectConfigurationMaster() {
             href={link.url}
             icon={<link.icon />}
             isActive={
-              link.url === "/dashboard/academic-year-setup/subject-configurations"
+              link.url === "/dashboard/academic-setup/subject-configurations"
                 ? currentPath === link.url
                 : currentPath.startsWith(link.url)
             }
