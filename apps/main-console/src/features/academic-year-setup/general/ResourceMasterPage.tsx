@@ -241,7 +241,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
       if (!field.virtual || !field.deriveHops) continue;
       let cur: ResourceRow | undefined = row;
       for (const hop of field.deriveHops) {
-        const fk = cur?.[hop.fromKey];
+        const fk: unknown = cur ? cur[hop.fromKey] : undefined;
         cur = fk == null ? undefined : mapsById[hop.basePath]?.get(Number(fk));
       }
       const val = cur && field.deriveValueKey ? cur[field.deriveValueKey] : undefined;
