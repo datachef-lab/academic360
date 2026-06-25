@@ -9,7 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-// import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -533,6 +540,7 @@ const SubjectPaperMappingPage = () => {
           Affiliation: affiliation?.name || "-",
           "Regulation Type": regulationType?.name || "-",
           "Academic Year": academicYear?.year || "-",
+          Status: paper.isActive !== false ? "Active" : "Inactive",
           "Exam Components":
             paper.components
               ?.map((comp: PaperComponentDto) => comp.examComponent?.name)
@@ -560,6 +568,7 @@ const SubjectPaperMappingPage = () => {
         { wch: 20 }, // Affiliation
         { wch: 15 }, // Regulation Type
         { wch: 15 }, // Academic Year
+        { wch: 10 }, // Status
         { wch: 30 }, // Exam Components
       ];
       ws["!cols"] = colWidths;
@@ -1677,119 +1686,59 @@ const SubjectPaperMappingPage = () => {
               )}
             </div>
           </div>
-          <div className="relative z-50 bg-white" style={{ height: "600px" }}>
-            <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
-              {/* Fixed Header */}
-              <div
-                className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b"
-                style={{ minWidth: "950px" }}
-              >
-                <div className="flex">
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "7%" }}
-                  >
-                    Sr. No.
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "14%" }}
-                  >
-                    Program Course
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "20%" }}
-                  >
-                    Subject & Paper
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "10%" }}
-                  >
-                    Paper Code
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "12%" }}
-                  >
-                    Subject Category
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "10%" }}
-                  >
-                    Semester
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "21%" }}
-                  >
-                    Exam Components
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 flex items-center justify-center"
-                    style={{ width: "6%" }}
-                  >
-                    Actions
-                  </div>
-                </div>
-              </div>
-
-              {/* Table Body */}
-              <div className="bg-white relative">
+          <div className="border rounded-md overflow-hidden">
+            <Table
+              className="w-full table-fixed text-sm"
+              containerClassName="overflow-x-hidden max-w-full"
+            >
+              <TableHeader>
+                <TableRow className="bg-gray-100 hover:bg-gray-100">
+                  <TableHead className="w-[4%] text-center px-2">Sr.</TableHead>
+                  <TableHead className="w-[11%] px-2">Program Course</TableHead>
+                  <TableHead className="w-[22%] px-2">Subject & Paper</TableHead>
+                  <TableHead className="w-[10%] px-2">Paper Code</TableHead>
+                  <TableHead className="w-[7%] text-center px-2">Category</TableHead>
+                  <TableHead className="w-[6%] text-center px-2">Sem.</TableHead>
+                  <TableHead className="w-[7%] text-center px-2">Status</TableHead>
+                  <TableHead className="w-[27%] px-2">Components</TableHead>
+                  <TableHead className="w-[6%] text-center px-2">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loading ? (
-                  <div
-                    className="flex items-center justify-center p-4 text-center"
-                    style={{ minWidth: "950px" }}
-                  >
-                    Loading...
-                  </div>
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-6">
+                      Loading...
+                    </TableCell>
+                  </TableRow>
                 ) : error ? (
-                  <div
-                    className="flex items-center justify-center p-4 text-center text-red-500"
-                    style={{ minWidth: "950px" }}
-                  >
-                    {error}
-                  </div>
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-6 text-red-500">
+                      {error}
+                    </TableCell>
+                  </TableRow>
                 ) : !Array.isArray(papers) || papers.length === 0 ? (
-                  <div
-                    className="flex items-center justify-center p-4 text-center"
-                    style={{ minWidth: "950px" }}
-                  >
-                    {!Array.isArray(papers)
-                      ? "Error loading data"
-                      : "No subject paper mappings found."}
-                  </div>
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-6">
+                      {!Array.isArray(papers)
+                        ? "Error loading data"
+                        : "No subject paper mappings found."}
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   papers.map((sp: PaperDto, idx: number) => (
-                    <div
-                      key={sp.id}
-                      className="flex border-b hover:bg-gray-50 group"
-                      style={{ minWidth: "950px" }}
-                    >
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                        style={{ width: "7%" }}
-                      >
-                        {idx + 1}
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex items-center"
-                        style={{ width: "14%" }}
-                      >
+                    <TableRow key={sp.id} className="group">
+                      <TableCell className="text-center px-2 py-2">{idx + 1}</TableCell>
+                      <TableCell className="px-2 py-2 break-words whitespace-normal align-top">
                         <Badge
                           variant="outline"
-                          className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                          className="text-xs border-blue-300 text-blue-700 bg-blue-50 max-w-full whitespace-normal break-words"
                         >
                           {programCourses.find((ele) => ele.id == sp.programCourseId)?.name ?? "-"}
                         </Badge>
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex flex-col"
-                        style={{ width: "20%" }}
-                      >
-                        <p>
+                      </TableCell>
+                      <TableCell className="px-2 py-2 break-words whitespace-normal align-top">
+                        <p className="break-words whitespace-normal">
                           {sp.name ?? "-"}
                           {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
                           {sp.autoAssign && (
@@ -1799,52 +1748,51 @@ const SubjectPaperMappingPage = () => {
                             </span>
                           )}
                         </p>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
-                          >
-                            {subjects.find((s) => s.id === sp.subjectId)?.name ?? "-"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                        style={{ width: "10%" }}
-                      >
+                        <Badge
+                          variant="outline"
+                          className="mt-1 text-xs border-indigo-300 text-indigo-700 bg-indigo-50 max-w-full whitespace-normal break-words"
+                        >
+                          {subjects.find((s) => s.id === sp.subjectId)?.name ?? "-"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-2 py-2 break-words whitespace-normal align-top">
                         {sp.code ?? "-"}
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                        style={{ width: "12%" }}
-                      >
+                      </TableCell>
+                      <TableCell className="text-center px-2 py-2">
                         <Badge
                           variant="outline"
                           className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
                         >
                           {subjectTypes.find((st) => st.id === sp.subjectTypeId)?.code ?? "-"}
                         </Badge>
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                        style={{ width: "10%" }}
-                      >
+                      </TableCell>
+                      <TableCell className="text-center px-2 py-2">
                         <Badge
                           variant="outline"
                           className="text-xs border-orange-300 text-orange-700 bg-orange-50"
                         >
                           {classes.find((cls) => cls.id === sp.classId)?.name.split(" ")[1] ?? "-"}
                         </Badge>
-                      </div>
-                      <div className="flex-shrink-0 p-3 border-r" style={{ width: "21%" }}>
-                        {/* Display exam component names */}
+                      </TableCell>
+                      <TableCell className="text-center px-2 py-2">
+                        {sp.isActive === false ? (
+                          <Badge variant="secondary" className="text-xs">
+                            Inactive
+                          </Badge>
+                        ) : (
+                          <Badge className="text-xs bg-green-500 text-white hover:bg-green-600">
+                            Active
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-2 py-2 break-words whitespace-normal align-top">
                         <div className="flex flex-wrap gap-1">
                           {sp.components && sp.components.length > 0 ? (
                             sp.components.map((component: PaperComponentDto, compIdx: number) => (
                               <Badge
                                 key={compIdx}
                                 variant="outline"
-                                className="text-xs border-red-300 text-red-700 bg-red-50"
+                                className="text-xs border-red-300 text-red-700 bg-red-50 whitespace-normal break-words"
                               >
                                 {component.examComponent.name}
                               </Badge>
@@ -1853,30 +1801,25 @@ const SubjectPaperMappingPage = () => {
                             <span className="text-muted-foreground text-xs">No components</span>
                           )}
                         </div>
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 flex items-center justify-center"
-                        style={{ width: "6%" }}
-                      >
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setIsPaperEditModalOpen(true);
-                              setSelectedPaperForEdit(sp);
-                            }}
-                            className="h-5 w-5 p-0"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                      </TableCell>
+                      <TableCell className="text-center px-2 py-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsPaperEditModalOpen(true);
+                            setSelectedPaperForEdit(sp);
+                          }}
+                          className="h-5 w-5 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </div>
-            </div>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
