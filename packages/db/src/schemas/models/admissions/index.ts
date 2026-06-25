@@ -1,5 +1,6 @@
 export * from "./board-subject.model";
 export * from "./adm-course-details.model";
+export * from "./admission-quota-type.model";
 export * from "./adm-student-category.model";
 export * from "./adm-subject-paper-selection";
 export * from "./admisison-additional-info.model";

@@ -158,6 +158,7 @@ function generateAddressColumns(addressDetails: any) {
 }
 import {
   admissionGeneralInfoModel,
+  admissionQuotaTypeModel,
   applicationFormModel,
 } from "@repo/db/schemas";
 import { promotionModel } from "@repo/db/schemas/models/batches";
@@ -1093,6 +1094,15 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     .from(userModel)
     .where(eq(userModel.id, student.userId as number));
 
+  let quotaType: string | null = null;
+  if (student.quotaTypeId) {
+    const [foundQuotaType] = await db
+      .select({ name: admissionQuotaTypeModel.name })
+      .from(admissionQuotaTypeModel)
+      .where(eq(admissionQuotaTypeModel.id, student.quotaTypeId));
+    quotaType = foundQuotaType?.name ?? null;
+  }
+
   return {
     ...props,
     personalEmail: foundAdmGeneralInfo?.email ?? null,
@@ -1103,6 +1113,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     currentPromotion,
     name: foundUser?.name!,
     personalDetails,
+    quotaType,
   };
 }
 

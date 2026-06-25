@@ -24,6 +24,7 @@ export interface StudentDto extends Omit<StudentT, "applicationId" | "programCou
     currentPromotion: PromotionDto | null;
     currentBatch: BatchDto | null;
     name: string;
+    quotaType: string | null;
 }
 
 export interface StaffDto extends Omit<StaffT, "shiftId"> {

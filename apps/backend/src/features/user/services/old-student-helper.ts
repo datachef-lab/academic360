@@ -80,6 +80,7 @@ import {
   BoardSubject,
   BoardSubjectName,
   cuRegistrationCorrectionRequestModel,
+  admissionQuotaTypeModel,
 } from "@repo/db/schemas/models";
 import { personTitleType } from "@repo/db/schemas/enums";
 import {
@@ -227,6 +228,24 @@ export async function addBloodGroup(
     .returning();
 
   return newBloodGroup;
+}
+
+export async function addAdmissionQuotaType(name: string) {
+  const [existingQuotaType] = await db
+    .select()
+    .from(admissionQuotaTypeModel)
+    .where(ilike(admissionQuotaTypeModel.name, name.trim()));
+  if (existingQuotaType) {
+    return existingQuotaType;
+  }
+  const [newQuotaType] = await db
+    .insert(admissionQuotaTypeModel)
+    .values({
+      name: name.trim(),
+    })
+    .returning();
+
+  return newQuotaType;
 }
 
 export async function addNationality(
@@ -609,6 +628,12 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
     .where(eq(programCourseModel.id, foundProgramCourse.id))
     .returning();
 
+  let quotaTypeId: number | undefined;
+  const qt = oldStudent.quotatype?.trim();
+  if (qt && qt !== "0") {
+    quotaTypeId = (await addAdmissionQuotaType(qt))?.id;
+  }
+
   if (existingStudent) {
     const [updatedStudent] = await db
       .update(studentModel)
@@ -616,6 +641,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
         programCourseId: foundProgramCourse.id,
+        quotaTypeId,
         community:
           oldStudent.communityid === 0 || oldStudent.communityid === null
             ? null
@@ -674,6 +700,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
         handicapped: oldStudent.handicapped === "YES" ? true : false,
         programCourseId: foundProgramCourse.id,
+        quotaTypeId,
         community:
           oldStudent.communityid === 0 || oldStudent.communityid === null
             ? null

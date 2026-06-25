@@ -1086,6 +1086,13 @@
       "when": 1782250000000,
       "tag": "0155_copy_author_type_and_address_copy",
       "breakpoints": true
+    },
+    {
+      "idx": 156,
+      "version": "7",
+      "when": 1782300000000,
+      "tag": "0156_admission_quota_types",
+      "breakpoints": true
     }
   ]
 }
