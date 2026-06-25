@@ -19,7 +19,7 @@ import {
   userModel,
   userTypeEnum,
 } from "@repo/db/schemas";
-import { and, count, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, isNull, or } from "drizzle-orm";
 import * as oldStudentPersonalDetailsHelper from "./old-student-helper";
 import * as oldStudentAdmissionServices from "./old-student.service";
 import bcrypt from "bcryptjs";
@@ -357,6 +357,63 @@ export async function processStudentsFromExcelBuffer(
     notFound,
     errors,
   };
+}
+
+/**
+ * Backfill `students.quotaTypeId` for already-imported students whose quota type
+ * is not set. For each such student it reads the legacy `studentpersonaldetails.quotatype`
+ * (matched by UID/codeNumber) and, when present and meaningful (not empty / not "0"),
+ * finds-or-creates the admission quota type and links it. Students without a legacy
+ * quota type are ignored. Idempotent and safe to re-run.
+ */
+export async function backfillStudentQuotaTypes(): Promise<{
+  scanned: number;
+  updated: number;
+  noLegacyQuota: number;
+  skipped: number;
+}> {
+  const students = await db
+    .select({ id: studentModel.id, uid: studentModel.uid })
+    .from(studentModel)
+    .where(isNull(studentModel.quotaTypeId));
+
+  let updated = 0;
+  let noLegacyQuota = 0;
+  let skipped = 0;
+
+  for (const s of students) {
+    const cleaned = (s.uid ?? "").replace(/[^A-Za-z0-9]/g, "");
+    if (!cleaned) {
+      skipped++;
+      continue;
+    }
+    try {
+      const [rows] = (await mysqlConnection.query(
+        `SELECT quotatype FROM studentpersonaldetails WHERE codeNumber = '${cleaned}' LIMIT 1;`,
+      )) as [{ quotatype: string | null }[], any];
+      const quotatype = rows?.[0]?.quotatype?.trim();
+      if (!quotatype || quotatype === "0") {
+        noLegacyQuota++;
+        continue;
+      }
+      const quotaType =
+        await oldStudentPersonalDetailsHelper.addAdmissionQuotaType(quotatype);
+      if (!quotaType?.id) {
+        skipped++;
+        continue;
+      }
+      await db
+        .update(studentModel)
+        .set({ quotaTypeId: quotaType.id })
+        .where(eq(studentModel.id, s.id));
+      updated++;
+    } catch (e) {
+      console.error(`quota backfill failed for uid ${s.uid}:`, e);
+      skipped++;
+    }
+  }
+
+  return { scanned: students.length, updated, noLegacyQuota, skipped };
 }
 
 /**

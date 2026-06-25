@@ -15,6 +15,7 @@ import {
   updateFamilyMemberTitlesController,
   bulkUpdateFamilyMemberTitlesController,
   importStudentsFromExcelController,
+  backfillStudentQuotaTypesController,
   checkExistingStudentUidsController,
   exportStudentDetailedReportController,
   exportStudentAcademicSubjectsReportController,
@@ -100,6 +101,10 @@ router.post(
   uploadMiddleware,
   importStudentsFromExcelController,
 );
+
+// POST /api/students/backfill-quota-types
+// Backfill quota type for already-imported students whose quotaTypeId is unset
+router.post("/backfill-quota-types", backfillStudentQuotaTypesController);
 
 // PUT /api/students/:uid/family-titles
 // Update family member titles (father, mother, guardian) for a student

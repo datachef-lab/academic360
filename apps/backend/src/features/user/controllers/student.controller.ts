@@ -3,7 +3,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable prefer-const */
 import { NextFunction, Request, Response } from "express";
-import { processStudentsFromExcelBuffer } from "../services/refactor-old-migration.service.js";
+import {
+  processStudentsFromExcelBuffer,
+  backfillStudentQuotaTypes,
+} from "../services/refactor-old-migration.service.js";
 // import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
 import { StudentType } from "@/types/user/student.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
@@ -820,6 +823,28 @@ export const importStudentsFromExcelController = async (
     res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", summary, "Import completed"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const backfillStudentQuotaTypesController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const summary = await backfillStudentQuotaTypes();
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          summary,
+          "Quota type backfill completed",
+        ),
+      );
   } catch (error) {
     handleError(error, res, next);
   }
