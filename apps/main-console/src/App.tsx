@@ -67,6 +67,7 @@ import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic
 import AdmissionsPage from "./features/academic-year-setup/pages/admissions-page";
 import AdmissionProgramCoursePage from "./features/academic-year-setup/pages/admission-program-course-page";
 import AdmissionsYearRedirect from "./features/academic-year-setup/pages/admissions-year-redirect";
+import ShiftSectionConfigPage from "./features/academic-year-setup/pages/shift-section-config-page";
 import GeneralMaster from "./features/academic-year-setup/layouts/general-master";
 import ResourceMasterPage from "./features/academic-year-setup/general/ResourceMasterPage";
 import { RESOURCE_CONFIGS } from "./features/academic-year-setup/general/resource-configs";
@@ -155,7 +156,7 @@ const router = createBrowserRouter(
                         />
                       ),
                     },
-                    { path: "shift-section-config", element: <UnderConstructionPage /> },
+                    { path: "shift-section-config", element: <ShiftSectionConfigPage /> },
                     {
                       path: "cancel-sources",
                       element: (

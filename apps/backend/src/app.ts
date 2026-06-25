@@ -143,6 +143,7 @@ import { resourceRealtime } from "./middlewares/resource-realtime.middleware.js"
 import admissionQuotaTypeRouter from "./features/admissions/routes/admission-quota-type.route.js";
 import cancelSourceRouter from "./features/admissions/routes/cancel-source.route.js";
 import gradeRouter from "./features/admissions/routes/grade.route.js";
+import admissionCycleRouter from "./features/admissions/routes/admission-cycle.route.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
@@ -644,6 +645,7 @@ app.use("/api/resource-usage", resourceUsageRouter);
 app.use("/api/admission-quota-types", admissionQuotaTypeRouter);
 app.use("/api/cancel-sources", cancelSourceRouter);
 app.use("/api/grades", gradeRouter);
+app.use("/api/admission-cycles", admissionCycleRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 
@@ -1065,6 +1067,7 @@ app.use("/api/resource-usage", resourceUsageRouter);
 app.use("/api/admission-quota-types", admissionQuotaTypeRouter);
 app.use("/api/cancel-sources", cancelSourceRouter);
 app.use("/api/grades", gradeRouter);
+app.use("/api/admission-cycles", admissionCycleRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 

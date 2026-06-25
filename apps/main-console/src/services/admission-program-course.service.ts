@@ -42,26 +42,27 @@ export async function deleteAdmissionCourse(id: number) {
   await axiosInstance.delete(`${COURSES}/${id}`);
 }
 
-// Admission cycles + supporting lists
-export async function getAdmissions(): Promise<
-  Array<{
-    id: number;
-    sessionId?: number;
-    isClosed?: boolean;
-    academicYear?: { id: number; year: string };
-  }>
-> {
-  const res = await axiosInstance.get("/api/admissions");
-  return payload(res.data, []);
+// Admission cycles + supporting lists (session-based; bypasses legacy /api/admissions)
+export type AdmissionCycle = {
+  id: number;
+  sessionId: number;
+  status?: string;
+  isClosed?: boolean;
+  sessionName?: string | null;
+};
+
+export async function getAdmissionCycles(): Promise<AdmissionCycle[]> {
+  const res = await axiosInstance.get("/api/admission-cycles");
+  return payload<AdmissionCycle[]>(res.data, []);
 }
 
-export async function createAdmission(data: {
+export async function createAdmissionCycle(data: {
   sessionId: number;
   status: string;
   startDate?: string | null;
   lastDate?: string | null;
 }) {
-  const res = await axiosInstance.post("/api/admissions", data);
+  const res = await axiosInstance.post("/api/admission-cycles", data);
   return payload(res.data, null);
 }
 

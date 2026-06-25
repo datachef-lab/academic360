@@ -23,25 +23,21 @@ import { SearchableSelect } from "@/features/academic-year-setup/general/Searcha
 import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 import {
   type AdmissionProgramCourse,
+  type AdmissionCycle,
   type SimpleOption,
-  getAdmissions,
+  getAdmissionCycles,
   getAdmissionCourses,
   createAdmissionCourse,
   updateAdmissionCourse,
   deleteAdmissionCourse,
-  createAdmission,
+  createAdmissionCycle,
   getSessions,
   getProgramCourses,
   getShifts,
   getClasses,
 } from "@/services/admission-program-course.service";
 
-type Admission = {
-  id: number;
-  sessionId?: number;
-  isClosed?: boolean;
-  academicYear?: { id: number; year: string };
-};
+const startYearOf = (s: string | null | undefined) => String(s ?? "").match(/\d{4}/)?.[0] ?? "";
 
 type FormState = {
   programCourseId: string;
@@ -67,7 +63,7 @@ export default function AdmissionProgramCoursePage() {
   useRestrictTempUsers();
   const currentYear = useAppSelector(selectCurrentAcademicYear);
 
-  const [admission, setAdmission] = React.useState<Admission | null>(null);
+  const [admission, setAdmission] = React.useState<AdmissionCycle | null>(null);
   const [rows, setRows] = React.useState<AdmissionProgramCourse[]>([]);
   const [programCourses, setProgramCourses] = React.useState<SimpleOption[]>([]);
   const [shifts, setShifts] = React.useState<SimpleOption[]>([]);
@@ -103,11 +99,10 @@ export default function AdmissionProgramCoursePage() {
   const resolveAdmission = React.useCallback(async () => {
     setLoading(true);
     try {
-      const all = (await getAdmissions()) as Admission[];
+      const all = await getAdmissionCycles();
+      const wanted = startYearOf(currentYear?.year);
       const match =
-        all.find((a) => a.academicYear?.id && a.academicYear.id === currentYear?.id) ??
-        all.find((a) => String(a.academicYear?.year ?? "") === String(currentYear?.year ?? "")) ??
-        null;
+        (wanted ? all.find((a) => startYearOf(a.sessionName) === wanted) : undefined) ?? null;
       setAdmission(match);
       if (match) {
         setRows(await getAdmissionCourses(match.id));
@@ -119,7 +114,7 @@ export default function AdmissionProgramCoursePage() {
     } finally {
       setLoading(false);
     }
-  }, [currentYear?.id, currentYear?.year]);
+  }, [currentYear?.year]);
 
   React.useEffect(() => {
     resolveAdmission();
@@ -212,7 +207,7 @@ export default function AdmissionProgramCoursePage() {
     }
     setCreatingCycle(true);
     try {
-      await createAdmission({
+      await createAdmissionCycle({
         sessionId: Number(cycleForm.sessionId),
         status: "DRAFT",
         startDate: cycleForm.startDate || null,
