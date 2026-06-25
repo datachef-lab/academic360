@@ -65,6 +65,9 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
 import AdmissionsPage from "./features/academic-year-setup/pages/admissions-page";
+import GeneralMaster from "./features/academic-year-setup/layouts/general-master";
+import ResourceMasterPage from "./features/academic-year-setup/general/ResourceMasterPage";
+import { RESOURCE_CONFIGS } from "./features/academic-year-setup/general/resource-configs";
 import ToolsPage from "./features/tools/pages/tools-page";
 import ShiftChangePage from "./features/tools/pages/shift-change-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
@@ -163,7 +166,17 @@ const router = createBrowserRouter(
               path: "board-subjects/*",
               element: <Navigate to="/dashboard/academic-setup/admissions/master" replace />,
             },
-            { path: "general", element: <UnderConstructionPage /> },
+            {
+              path: "general",
+              element: <GeneralMaster />,
+              children: [
+                { path: "", element: <ResourceMasterPage config={RESOURCE_CONFIGS[0]!} /> },
+                ...RESOURCE_CONFIGS.map((c) => ({
+                  path: c.key,
+                  element: <ResourceMasterPage config={c} />,
+                })),
+              ],
+            },
             {
               path: "course-design",
               element: <courseSubjectModule.CoursesSubjectsMaster />,
