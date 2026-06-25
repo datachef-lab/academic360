@@ -164,7 +164,7 @@ export default function AdmissionsPage() {
         </div>
 
         {/* Admission process timeline */}
-        <div className="mb-6 overflow-x-auto pb-2 sm:mb-8">
+        <div className="mb-6 overflow-x-auto border-y border-gray-200 py-6 sm:mb-8">
           <div className="relative flex min-w-[680px] justify-between gap-2">
             {/* connector line behind the step nodes */}
             <div className="absolute left-[10%] right-[10%] top-6 h-0.5 bg-gray-200" />

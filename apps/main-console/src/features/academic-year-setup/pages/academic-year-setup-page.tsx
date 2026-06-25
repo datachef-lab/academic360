@@ -96,7 +96,10 @@ export default function AcademicYearSetupPage() {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1">
-              <h1 className="mb-2 text-2xl font-bold text-gray-900 sm:text-3xl">Academic Setup</h1>
+              <div className="mb-2 flex items-center gap-2">
+                <GraduationCap className="h-7 w-7 text-blue-600 sm:h-8 sm:w-8" />
+                <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Academic Setup</h1>
+              </div>
               <p className="text-sm text-gray-600 sm:text-base">
                 Configure and manage courses, admissions, subject selection and promotion logic
               </p>
