@@ -17,9 +17,12 @@ const VALID_KEYS = [
   "QRCODE",
   "VALID_TILL_DATE",
   "PHOTO",
+  "SHIFT",
 ] as const;
 
 type FieldKey = (typeof VALID_KEYS)[number];
+
+export type FieldAlign = "LEFT" | "CENTER" | "RIGHT";
 
 export type FieldUpsertInput = {
   fieldKey: FieldKey;
@@ -29,7 +32,11 @@ export type FieldUpsertInput = {
   height?: number | null;
   fontSize?: number | null;
   isVisible?: boolean;
+  align?: FieldAlign;
 };
+
+const toAlign = (v: unknown): FieldAlign =>
+  v === "CENTER" || v === "RIGHT" ? v : "LEFT";
 
 const isFieldKey = (v: unknown): v is FieldKey =>
   typeof v === "string" && (VALID_KEYS as readonly string[]).includes(v);
@@ -71,6 +78,7 @@ export async function upsertFieldsBulk(
       fontSize:
         raw.fontSize != null ? Math.max(1, Math.round(raw.fontSize)) : null,
       isVisible: raw.isVisible ?? true,
+      align: toAlign(raw.align),
     });
   }
 
@@ -103,6 +111,7 @@ export async function upsertFieldsBulk(
             height: c.height ?? null,
             fontSize: c.fontSize ?? null,
             isVisible: c.isVisible ?? true,
+            align: c.align ?? "LEFT",
             updatedAt: new Date(),
           })
           .where(
@@ -121,6 +130,7 @@ export async function upsertFieldsBulk(
           height: c.height ?? null,
           fontSize: c.fontSize ?? null,
           isVisible: c.isVisible ?? true,
+          align: c.align ?? "LEFT",
         });
       }
     }

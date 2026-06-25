@@ -1,0 +1,1 @@
+ALTER TYPE "public"."id_card_field_key" ADD VALUE IF NOT EXISTS 'SHIFT';
