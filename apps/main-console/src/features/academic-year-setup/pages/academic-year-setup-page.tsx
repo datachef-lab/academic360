@@ -1,12 +1,5 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import {
-  BookOpen,
-  GraduationCap,
-  SlidersHorizontal,
-  Workflow,
-  Settings,
-  ListChecks,
-} from "lucide-react";
+import { BookOpen, GraduationCap, SlidersHorizontal, Workflow, ListChecks } from "lucide-react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
@@ -112,12 +105,6 @@ export default function AcademicYearSetupPage() {
 
         {/* Feature Cards Grid */}
         <div className="mb-6 sm:mb-8">
-          <div className="mb-4 flex items-center gap-2 sm:mb-6">
-            <Settings className="h-5 w-5 text-blue-500 sm:h-6 sm:w-6" />
-            <h2 className="text-lg font-semibold text-gray-900 sm:text-xl">
-              Academic Setup Modules
-            </h2>
-          </div>
           <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {featureCards.map((card) => (
               <Card

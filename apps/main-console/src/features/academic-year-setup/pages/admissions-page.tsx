@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Check,
   Clock,
+  MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,13 @@ const processSteps: ProcessStep[] = [
     status: "done",
     href: `${ADMISSIONS_BASE}/start`,
     icon: Flag,
+  },
+  {
+    label: "Counselling",
+    time: "Not scheduled",
+    status: "done",
+    href: `${ADMISSIONS_BASE}/counselling`,
+    icon: MessagesSquare,
   },
   {
     label: "Admission Applications",
@@ -165,9 +173,9 @@ export default function AdmissionsPage() {
 
         {/* Admission process timeline */}
         <div className="mb-6 overflow-x-auto border-y border-gray-200 py-6 sm:mb-8">
-          <div className="relative flex min-w-[680px] justify-between gap-2">
-            {/* connector line behind the step nodes */}
-            <div className="absolute left-[10%] right-[10%] top-6 h-0.5 bg-gray-200" />
+          <div className="relative flex min-w-[820px] justify-between gap-2">
+            {/* connector line behind the step nodes (centres of first & last node) */}
+            <div className="absolute left-[8.33%] right-[8.33%] top-6 h-0.5 bg-gray-200" />
             {processSteps.map((step) => {
               const Icon = step.icon;
               return (

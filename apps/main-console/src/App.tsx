@@ -149,6 +149,7 @@ const router = createBrowserRouter(
                 },
                 { path: "home", element: <UnderConstructionPage /> },
                 { path: "start", element: <UnderConstructionPage /> },
+                { path: "counselling", element: <UnderConstructionPage /> },
                 { path: "staff-management", element: <UnderConstructionPage /> },
                 { path: "help-desk", element: <UnderConstructionPage /> },
                 { path: "application-forms", element: <UnderConstructionPage /> },
