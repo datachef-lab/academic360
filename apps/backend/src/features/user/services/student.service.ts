@@ -1097,10 +1097,21 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
   let quotaType: string | null = null;
   if (student.quotaTypeId) {
     const [foundQuotaType] = await db
-      .select({ name: admissionQuotaTypeModel.name })
+      .select({
+        name: admissionQuotaTypeModel.name,
+        shortName: admissionQuotaTypeModel.shortName,
+        printOnIdCard: admissionQuotaTypeModel.printOnIdCard,
+      })
       .from(admissionQuotaTypeModel)
       .where(eq(admissionQuotaTypeModel.id, student.quotaTypeId));
-    quotaType = foundQuotaType?.name ?? null;
+    if (foundQuotaType) {
+      // When flagged to print on the ID card, prefer the short name (fallback
+      // to the full name); otherwise use the full name.
+      quotaType =
+        foundQuotaType.printOnIdCard && foundQuotaType.shortName
+          ? foundQuotaType.shortName
+          : foundQuotaType.name;
+    }
   }
 
   return {
