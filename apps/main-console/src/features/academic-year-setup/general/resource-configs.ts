@@ -416,3 +416,25 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
 export const RESOURCE_CONFIG_BY_KEY: Record<string, ResourceConfig> = Object.fromEntries(
   RESOURCE_CONFIGS.map((c) => [c.key, c]),
 );
+
+/** DB table name per resource (for the cross-DB usage-count endpoint). */
+export const RESOURCE_TABLE_BY_KEY: Record<string, string> = {
+  "blood-groups": "blood_group",
+  "annual-incomes": "annual_incomes",
+  categories: "categories",
+  religions: "religion",
+  nationalities: "nationality",
+  occupations: "occupations",
+  qualifications: "qualifications",
+  languages: "language_medium",
+  institutions: "institutions",
+  degrees: "degree",
+  countries: "countries",
+  states: "states",
+  cities: "cities",
+  districts: "districts",
+  "pickup-points": "pickup_point",
+  "police-stations": "police_station",
+  "post-offices": "post_office",
+  "disability-codes": "disability_codes",
+};

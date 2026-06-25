@@ -31,8 +31,15 @@ import {
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
+import axiosInstance from "@/utils/api";
 import { makeResourceApi, type ResourceRow } from "./resource-api";
-import type { BadgeSpec, ResourceConfig, ResourceField } from "./resource-configs";
+import { SearchableSelect } from "./SearchableSelect";
+import {
+  RESOURCE_TABLE_BY_KEY,
+  type BadgeSpec,
+  type ResourceConfig,
+  type ResourceField,
+} from "./resource-configs";
 
 type OptionRow = { id: number; label: string };
 type FormState = Record<string, string | number | boolean | null>;
@@ -94,6 +101,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [bulkRunning, setBulkRunning] = React.useState(false);
   const [bulkResult, setBulkResult] = React.useState<{ ok: number; failed: number } | null>(null);
+  const [usage, setUsage] = React.useState<Record<number, number> | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -137,6 +145,26 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
       cancelled = true;
     };
   }, [relatedBasePaths]);
+
+  // Cross-DB usage counts: how many times each row is referenced elsewhere.
+  React.useEffect(() => {
+    let cancelled = false;
+    setUsage(null);
+    const table = RESOURCE_TABLE_BY_KEY[config.key];
+    if (!table) return;
+    (async () => {
+      try {
+        const res = await axiosInstance.get(`/api/resource-usage/${table}`);
+        const payload = res.data?.payload ?? res.data;
+        if (!cancelled) setUsage((payload?.counts ?? {}) as Record<number, number>);
+      } catch {
+        if (!cancelled) setUsage({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [config.key]);
 
   const mapsById = React.useMemo(() => {
     const m: Record<string, Map<number, ResourceRow>> = {};
@@ -373,7 +401,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   React.useEffect(() => setPage(1), [search]);
 
   const colCount =
-    1 + badges.length + valueFields.length + (seqField ? 1 : 0) + boolFields.length + 1;
+    1 + badges.length + valueFields.length + (seqField ? 1 : 0) + boolFields.length + 2;
   const Icon = config.icon;
 
   return (
@@ -477,6 +505,12 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                         {f.label}
                       </TableHead>
                     ))}
+                    <TableHead
+                      className="w-[90px] bg-gray-100"
+                      title="Times referenced across the DB"
+                    >
+                      Used
+                    </TableHead>
                     <TableHead className="w-[120px] bg-gray-100">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -544,6 +578,17 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                             )}
                           </TableCell>
                         ))}
+                        <TableCell>
+                          {usage == null ? (
+                            <span className="text-muted-foreground">…</span>
+                          ) : usage[Number(row.id)] ? (
+                            <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                              {usage[Number(row.id)]}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
                             <Button
@@ -626,18 +671,24 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                     {field.required && <span className="text-red-500"> *</span>}
                   </Label>
                   {field.type === "select" ? (
-                    <select
-                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                    <SearchableSelect
                       value={form[field.key] == null ? "" : String(form[field.key])}
-                      onChange={(e) => handleSelectChange(field.key, e.target.value)}
-                    >
-                      <option value="">— Select —</option>
-                      {optionsFor(field).map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => handleSelectChange(field.key, v)}
+                      disabled={
+                        field.cascadeParentKey
+                          ? !form[field.cascadeParentKey] || form[field.cascadeParentKey] === ""
+                          : false
+                      }
+                      placeholder={
+                        field.cascadeParentKey && !form[field.cascadeParentKey]
+                          ? `Select ${field.label} (pick parent first)`
+                          : `Select ${field.label}`
+                      }
+                      options={optionsFor(field).map((o) => ({
+                        value: String(o.id),
+                        label: o.label,
+                      }))}
+                    />
                   ) : (
                     <Input
                       type={field.type === "number" ? "number" : "text"}

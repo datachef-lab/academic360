@@ -138,6 +138,7 @@ import {
   pickupPointRouter,
 } from "./features/resources/routes/index.js";
 import disabilityCodeRouter from "./features/user/routes/disabilityCode.route.js";
+import resourceUsageRouter from "./features/resources/routes/resource-usage.routes.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
@@ -634,6 +635,7 @@ app.use("/api/police-stations", policeStationRouter);
 app.use("/api/post-offices", postOfficeRouter);
 app.use("/api/pickup-points", pickupPointRouter);
 app.use("/api/disability-codes", disabilityCodeRouter);
+app.use("/api/resource-usage", resourceUsageRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 
@@ -1051,6 +1053,7 @@ app.use("/api/police-stations", policeStationRouter);
 app.use("/api/post-offices", postOfficeRouter);
 app.use("/api/pickup-points", pickupPointRouter);
 app.use("/api/disability-codes", disabilityCodeRouter);
+app.use("/api/resource-usage", resourceUsageRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 

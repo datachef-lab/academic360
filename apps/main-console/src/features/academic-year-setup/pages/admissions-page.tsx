@@ -155,16 +155,6 @@ const cards: AdmissionCard[] = [
     illustrationName: "help-desk",
   },
   {
-    title: "Notifications",
-    description: "Send emails, SMS and WhatsApp messages to applicants.",
-    icon: Bell,
-    href: `${ADMISSIONS_BASE}/notifications`,
-    iconColor: "text-rose-600",
-    items: "Email · SMS · WhatsApp",
-    illustrationName: "notifications",
-    illustration: "/academic-setup-illustrations/notifications.jpg",
-  },
-  {
     title: "Merit Listing Rules",
     description: "Define rules and criteria used to generate merit lists.",
     icon: Scale,
@@ -173,6 +163,16 @@ const cards: AdmissionCard[] = [
     items: "Rules & criteria",
     illustrationName: "merit-listing",
     illustration: "/academic-setup-illustrations/merit-listing.jpg",
+  },
+  {
+    title: "Notifications",
+    description: "Send emails, SMS and WhatsApp messages to applicants.",
+    icon: Bell,
+    href: `${ADMISSIONS_BASE}/notifications`,
+    iconColor: "text-rose-600",
+    items: "Email · SMS · WhatsApp",
+    illustrationName: "notifications",
+    illustration: "/academic-setup-illustrations/notifications.jpg",
   },
 ];
 
