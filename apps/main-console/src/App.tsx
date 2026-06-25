@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/features/dashboard/layouts/home-layout";
 
 // import StudentViewPage from "./pages/StudentViewPage";
@@ -64,6 +64,7 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
+import AdmissionsPage from "./features/academic-year-setup/pages/admissions-page";
 import ToolsPage from "./features/tools/pages/tools-page";
 import ShiftChangePage from "./features/tools/pages/shift-change-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
@@ -124,22 +125,40 @@ const router = createBrowserRouter(
         { path: "promote-students", element: <PromoteStudentsPage /> },
         { path: "academic-activity", element: <AcademicActivityPage /> },
         {
-          path: "academic-year-setup",
+          path: "academic-setup",
           element: <Outlet />,
           children: [
             { path: "", element: <AcademicYearSetupPage /> },
-            { path: "admission-stats", element: <UnderConstructionPage /> },
-            { path: "eligibility-criteria", element: <UnderConstructionPage /> },
-            { path: "merit-criteria", element: <UnderConstructionPage /> },
             {
-              path: "board-subjects",
-              element: <AdmissionBoardMaster />,
+              path: "admissions",
+              element: <Outlet />,
               children: [
-                { path: "", element: <BoardSubjectPage /> },
-                { path: "boards", element: <BoardPage /> },
-                { path: "subjects", element: <BoardSubjectNamePage /> },
-                { path: "mapping-subjects", element: <BoardSubjectUnivSubjectMappingPaper /> },
+                { path: "", element: <AdmissionsPage /> },
+                {
+                  path: "master",
+                  element: <AdmissionBoardMaster />,
+                  children: [
+                    { path: "", element: <BoardSubjectPage /> },
+                    { path: "boards", element: <BoardPage /> },
+                    { path: "subjects", element: <BoardSubjectNamePage /> },
+                    {
+                      path: "mapping-subjects",
+                      element: <BoardSubjectUnivSubjectMappingPaper />,
+                    },
+                  ],
+                },
+                { path: "home", element: <UnderConstructionPage /> },
+                { path: "staff-management", element: <UnderConstructionPage /> },
+                { path: "help-desk", element: <UnderConstructionPage /> },
+                { path: "application-forms", element: <UnderConstructionPage /> },
+                { path: "merit-listing", element: <UnderConstructionPage /> },
+                { path: "admit-students", element: <UnderConstructionPage /> },
               ],
+            },
+            // Back-compat: old board-subjects path now lives under the Admission master
+            {
+              path: "board-subjects/*",
+              element: <Navigate to="/dashboard/academic-setup/admissions/master" replace />,
             },
             {
               path: "course-design",
@@ -200,6 +219,11 @@ const router = createBrowserRouter(
               ],
             },
           ],
+        },
+        // Back-compat redirect: old "academic-year-setup" base path -> "academic-setup"
+        {
+          path: "academic-year-setup/*",
+          element: <Navigate to="/dashboard/academic-setup" replace />,
         },
         {
           path: "tools",
