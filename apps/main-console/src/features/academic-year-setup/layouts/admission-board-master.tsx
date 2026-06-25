@@ -18,7 +18,8 @@ import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 const BASE = "/dashboard/academic-setup/admissions/master";
 
 const mainLinks = [
-  { title: "Program Courses", url: `${BASE}/program-courses`, icon: Layers },
+  { title: "Eligible Program Courses", url: `${BASE}/program-courses`, icon: Layers },
+  { title: "Admission Quota Types", url: `${BASE}/quota-type`, icon: Ticket },
   { title: "Section", url: `${BASE}/sections`, icon: Rows3 },
   { title: "Cancel Source", url: `${BASE}/cancel-sources`, icon: XCircle },
   { title: "Sports Category", url: `${BASE}/sports-categories`, icon: Trophy },
@@ -28,10 +29,9 @@ const mainLinks = [
 ];
 
 const masterLinks = [
-  { title: "Admission Quota Types", url: `${BASE}/quota-type`, icon: Ticket },
-  { title: "Shift - Section Config", url: `${BASE}/shift-section-config`, icon: SlidersHorizontal },
   { title: "Board", url: `${BASE}/boards`, icon: ListChecks },
   { title: "Subjects", url: `${BASE}/subjects`, icon: BookText },
+  { title: "Shift - Section Config", url: `${BASE}/shift-section-config`, icon: SlidersHorizontal },
 ];
 
 export default function AdmissionBoardMaster() {

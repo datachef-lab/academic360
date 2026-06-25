@@ -248,7 +248,7 @@ export default function AdmissionProgramCoursePage() {
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <GraduationCap className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
-              <span className="truncate">Admission Program Courses</span>
+              <span className="truncate">Eligible Program Courses</span>
             </CardTitle>
             <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
               Program-courses offered in the admission process for{" "}
