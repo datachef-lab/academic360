@@ -65,7 +65,7 @@ export default function CardIllustration({ name, image, alt, className }: Props)
         src={image}
         alt={alt ?? name}
         className={cn(
-          "block h-auto w-full opacity-95 transition-all duration-300 group-hover:scale-[1.03] group-hover:opacity-100",
+          "h-full w-full object-contain opacity-95 transition-all duration-300 group-hover:scale-[1.03] group-hover:opacity-100",
           className,
         )}
       />
@@ -78,7 +78,7 @@ export default function CardIllustration({ name, image, alt, className }: Props)
   return (
     <div
       className={cn(
-        "relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden bg-gradient-to-br",
+        "relative flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br",
         theme.gradient,
         className,
       )}

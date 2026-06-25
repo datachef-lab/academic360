@@ -128,8 +128,21 @@ export default function AdmissionsPage() {
               onClick={() => navigate(card.href)}
             >
               <CardContent className="flex h-full flex-col p-0">
-                {/* Illustration banner — complete image, full card width */}
-                <div className="w-full overflow-hidden border-b border-gray-100 bg-white">
+                {/* Card header */}
+                <div className="flex items-center gap-3 border-b border-gray-100 p-4 sm:p-5">
+                  <div className="shrink-0 rounded-lg bg-gray-100 p-2 shadow-sm">
+                    <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <CardTitle className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
+                      {card.title}
+                    </CardTitle>
+                    <p className="truncate text-xs font-medium text-gray-500">{card.items}</p>
+                  </div>
+                </div>
+
+                {/* Illustration — complete image, uniform height */}
+                <div className="flex h-40 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 p-2 sm:h-44">
                   <CardIllustration
                     name={card.illustrationName}
                     image={card.illustration ?? undefined}
@@ -137,16 +150,8 @@ export default function AdmissionsPage() {
                   />
                 </div>
 
+                {/* Description */}
                 <div className="flex flex-1 flex-col p-4 sm:p-5">
-                  <div className="mb-2 flex items-center gap-2.5">
-                    <div className="shrink-0 rounded-lg bg-gray-100 p-2 shadow-sm">
-                      <card.icon className={`h-5 w-5 ${card.iconColor}`} />
-                    </div>
-                    <CardTitle className="text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
-                      {card.title}
-                    </CardTitle>
-                  </div>
-                  <p className="mb-1.5 text-xs font-medium text-gray-500">{card.items}</p>
                   <CardDescription className="text-xs leading-relaxed text-gray-600 transition-colors group-hover:text-gray-500 sm:text-sm">
                     {card.description}
                   </CardDescription>
