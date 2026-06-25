@@ -9,7 +9,7 @@ import {
   Trophy,
   ArrowRightLeft,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import CardIllustration, {
   type IllustrationName,
@@ -129,7 +129,7 @@ export default function AdmissionsPage() {
             >
               <CardContent className="flex h-full flex-col p-0">
                 {/* Card header */}
-                <div className="flex items-center gap-3 border-b border-gray-100 p-4 sm:p-5">
+                <div className="flex items-center gap-3 border-b border-gray-100 p-4 transition-colors group-hover:bg-gray-50 sm:p-5">
                   <div className="shrink-0 rounded-lg bg-gray-100 p-2 shadow-sm">
                     <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
                   </div>
@@ -141,20 +141,18 @@ export default function AdmissionsPage() {
                   </div>
                 </div>
 
-                {/* Illustration — complete image, full card width */}
-                <div className="w-full overflow-hidden bg-white">
+                {/* Illustration with description revealed on hover */}
+                <div className="relative h-28 w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 sm:h-32">
                   <CardIllustration
                     name={card.illustrationName}
                     image={card.illustration ?? undefined}
                     alt={`${card.title} illustration`}
                   />
-                </div>
-
-                {/* Description */}
-                <div className="flex flex-1 flex-col p-4 sm:p-5">
-                  <CardDescription className="text-xs leading-relaxed text-gray-600 transition-colors group-hover:text-gray-500 sm:text-sm">
-                    {card.description}
-                  </CardDescription>
+                  <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <p className="text-xs leading-relaxed text-white sm:text-sm">
+                      {card.description}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
