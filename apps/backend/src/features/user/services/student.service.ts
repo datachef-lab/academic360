@@ -1095,6 +1095,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     .where(eq(userModel.id, student.userId as number));
 
   let quotaType: string | null = null;
+  let quotaTypeLabel: string | null = null;
   if (student.quotaTypeId) {
     const [foundQuotaType] = await db
       .select({
@@ -1104,11 +1105,16 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
       })
       .from(admissionQuotaTypeModel)
       .where(eq(admissionQuotaTypeModel.id, student.quotaTypeId));
-    // The quota type is exposed for the ID card ONLY when it is flagged to
-    // print on the ID card. When printed, prefer the short name (falling back
-    // to the full name). When not flagged, leave it null so it isn't shown.
-    if (foundQuotaType?.printOnIdCard) {
-      quotaType = foundQuotaType.shortName || foundQuotaType.name;
+    if (foundQuotaType) {
+      // Display label for detail panels: "Name (Short Name)" — always available.
+      quotaTypeLabel = foundQuotaType.shortName
+        ? `${foundQuotaType.name} (${foundQuotaType.shortName})`
+        : foundQuotaType.name;
+      // For the ID card itself, expose the quota ONLY when flagged to print on
+      // the card (short name preferred, else full name).
+      if (foundQuotaType.printOnIdCard) {
+        quotaType = foundQuotaType.shortName || foundQuotaType.name;
+      }
     }
   }
 
@@ -1123,6 +1129,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     name: foundUser?.name!,
     personalDetails,
     quotaType,
+    quotaTypeLabel,
   };
 }
 
