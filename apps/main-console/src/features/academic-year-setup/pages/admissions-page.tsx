@@ -8,12 +8,88 @@ import {
   FileText,
   Trophy,
   ArrowRightLeft,
+  Flag,
+  ShieldCheck,
+  Check,
+  Clock,
+  type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { AcademicYearSelector } from "@/components/academic-year";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import CardIllustration, {
   type IllustrationName,
 } from "@/features/academic-year-setup/components/CardIllustration";
+
+const ADMISSIONS_BASE = "/dashboard/academic-setup/admissions";
+
+type StepStatus = "done" | "active" | "upcoming";
+
+type ProcessStep = {
+  label: string;
+  time: string;
+  status: StepStatus;
+  href: string;
+  icon: LucideIcon;
+  badge?: string;
+};
+
+// NOTE: statuses / times are placeholders — wire them to the real admission
+// schedule data once available.
+const processSteps: ProcessStep[] = [
+  {
+    label: "Start Admissions",
+    time: "Not scheduled",
+    status: "done",
+    href: `${ADMISSIONS_BASE}/start`,
+    icon: Flag,
+  },
+  {
+    label: "Admission Applications",
+    time: "Not scheduled",
+    status: "active",
+    href: `${ADMISSIONS_BASE}/application-forms`,
+    icon: FileText,
+  },
+  {
+    label: "Merit Listing",
+    time: "Not scheduled",
+    status: "upcoming",
+    href: `${ADMISSIONS_BASE}/merit-listing`,
+    icon: Trophy,
+    badge: "Round 1",
+  },
+  {
+    label: "Verification",
+    time: "Not scheduled",
+    status: "upcoming",
+    href: `${ADMISSIONS_BASE}/verification`,
+    icon: ShieldCheck,
+  },
+  {
+    label: "Data Transfer",
+    time: "Not scheduled",
+    status: "upcoming",
+    href: `${ADMISSIONS_BASE}/admit-students`,
+    icon: ArrowRightLeft,
+  },
+];
+
+const STATUS_RING: Record<StepStatus, string> = {
+  done: "border-emerald-500 bg-emerald-500 text-white",
+  active: "border-blue-600 bg-blue-600 text-white ring-4 ring-blue-100",
+  upcoming: "border-gray-300 bg-white text-gray-400",
+};
+const STATUS_LABEL: Record<StepStatus, string> = {
+  done: "Completed",
+  active: "In progress",
+  upcoming: "Upcoming",
+};
+const STATUS_LABEL_CLASS: Record<StepStatus, string> = {
+  done: "text-emerald-600",
+  active: "text-blue-600",
+  upcoming: "text-gray-400",
+};
 
 type AdmissionCard = {
   title: string;
@@ -21,7 +97,6 @@ type AdmissionCard = {
   icon: typeof Home;
   href: string;
   iconColor: string;
-  status: "Ready" | "Pending";
   items: string;
   illustrationName: IllustrationName;
   illustration?: string | null;
@@ -32,9 +107,8 @@ const cards: AdmissionCard[] = [
     title: "Admission Home",
     description: "Overview and entry point for the admissions process",
     icon: Home,
-    href: "/dashboard/academic-setup/admissions/home",
+    href: `${ADMISSIONS_BASE}/home`,
     iconColor: "text-emerald-600",
-    status: "Pending",
     items: "Overview",
     illustrationName: "admission-home",
   },
@@ -42,9 +116,8 @@ const cards: AdmissionCard[] = [
     title: "Admission Master",
     description: "Boards, subjects and board–subject mappings for admissions",
     icon: Library,
-    href: "/dashboard/academic-setup/admissions/master",
+    href: `${ADMISSIONS_BASE}/master`,
     iconColor: "text-indigo-600",
-    status: "Ready",
     items: "Boards & subjects",
     illustrationName: "admission-master",
   },
@@ -52,9 +125,8 @@ const cards: AdmissionCard[] = [
     title: "Staff & Management",
     description: "Assign and manage staff handling the admissions workflow",
     icon: Users,
-    href: "/dashboard/academic-setup/admissions/staff-management",
+    href: `${ADMISSIONS_BASE}/staff-management`,
     iconColor: "text-amber-600",
-    status: "Pending",
     items: "Staff assignment",
     illustrationName: "staff-management",
     illustration: "/academic-setup-illustrations/staff-management.jpg",
@@ -63,43 +135,10 @@ const cards: AdmissionCard[] = [
     title: "Admission Help & Support Desk",
     description: "Handle applicant queries and support requests during admissions",
     icon: LifeBuoy,
-    href: "/dashboard/academic-setup/admissions/help-desk",
+    href: `${ADMISSIONS_BASE}/help-desk`,
     iconColor: "text-sky-600",
-    status: "Pending",
     items: "Queries & support",
     illustrationName: "help-desk",
-  },
-  {
-    title: "Application Forms",
-    description: "Configure and review admission application forms",
-    icon: FileText,
-    href: "/dashboard/academic-setup/admissions/application-forms",
-    iconColor: "text-blue-600",
-    status: "Pending",
-    items: "Forms",
-    illustrationName: "application-forms",
-    illustration: "/academic-setup-illustrations/application-forms.jpg",
-  },
-  {
-    title: "Merit Listing",
-    description: "Generate and manage merit lists for applicants",
-    icon: Trophy,
-    href: "/dashboard/academic-setup/admissions/merit-listing",
-    iconColor: "text-orange-600",
-    status: "Pending",
-    items: "Merit lists",
-    illustrationName: "merit-listing",
-    illustration: "/academic-setup-illustrations/merit-listing.jpg",
-  },
-  {
-    title: "Admit Students / Data Transfer",
-    description: "Admit applicants and transfer admitted student data",
-    icon: ArrowRightLeft,
-    href: "/dashboard/academic-setup/admissions/admit-students",
-    iconColor: "text-rose-600",
-    status: "Pending",
-    items: "Admit & transfer",
-    illustrationName: "admit-students",
   },
 ];
 
@@ -110,16 +149,66 @@ export default function AdmissionsPage() {
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="mx-auto max-w-7xl p-4 sm:p-6">
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-emerald-600 sm:h-7 sm:w-7" />
-            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Admissions</h1>
+        {/* Header with academic-year selector */}
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-6 w-6 text-emerald-600 sm:h-7 sm:w-7" />
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Admissions</h1>
+            </div>
+            <p className="mt-2 text-sm text-gray-600 sm:text-base">
+              Masters, application forms, merit listing and admitting students
+            </p>
           </div>
-          <p className="mt-2 text-sm text-gray-600 sm:text-base">
-            Masters, application forms, merit listing and admitting students
-          </p>
+          <AcademicYearSelector className="w-full sm:w-64" showLabel={false} />
         </div>
 
+        {/* Admission process timeline */}
+        <div className="mb-6 overflow-x-auto pb-2 sm:mb-8">
+          <div className="relative flex min-w-[680px] justify-between gap-2">
+            {/* connector line behind the step nodes */}
+            <div className="absolute left-[10%] right-[10%] top-6 h-0.5 bg-gray-200" />
+            {processSteps.map((step) => {
+              const Icon = step.icon;
+              return (
+                <button
+                  key={step.href}
+                  onClick={() => navigate(step.href)}
+                  className="group relative z-10 flex flex-1 flex-col items-center px-1 text-center"
+                >
+                  <span
+                    className={`flex h-12 w-12 items-center justify-center rounded-full border-2 shadow-sm transition-transform group-hover:scale-105 ${STATUS_RING[step.status]}`}
+                  >
+                    {step.status === "done" ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
+                  </span>
+                  <span className="mt-2 text-xs font-semibold text-gray-900 sm:text-sm">
+                    {step.label}
+                  </span>
+                  {step.badge && (
+                    <span className="mt-0.5 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                      {step.badge}
+                    </span>
+                  )}
+                  <span className="mt-1 flex items-center gap-1 text-[11px] text-gray-500">
+                    <Clock className="h-3 w-3" />
+                    {step.time}
+                  </span>
+                  <span
+                    className={`mt-0.5 text-[11px] font-medium ${STATUS_LABEL_CLASS[step.status]}`}
+                  >
+                    {STATUS_LABEL[step.status]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Other admission modules */}
         <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {cards.map((card) => (
             <Card
