@@ -2,7 +2,6 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +16,21 @@ import {
   createAdmissionCycle,
   getSessions,
 } from "@/services/admission-program-course.service";
+
+// Placeholder phases (mirror the admissions timeline) — wire to real schedule later.
+const PHASES: { label: string; status: "done" | "active" | "upcoming" }[] = [
+  { label: "Start Admissions", status: "done" },
+  { label: "Counseling, Survey & Feedback", status: "done" },
+  { label: "Admission Applications", status: "active" },
+  { label: "Merit Listing", status: "upcoming" },
+  { label: "Verification", status: "upcoming" },
+  { label: "Data Transfer", status: "upcoming" },
+];
+const PHASE_CLASS: Record<string, string> = {
+  done: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  active: "bg-blue-100 text-blue-700 border border-blue-200",
+  upcoming: "bg-gray-100 text-gray-500 border border-gray-200",
+};
 
 const startYearOf = (s: string | null | undefined) => String(s ?? "").match(/\d{4}/)?.[0] ?? "";
 const yearLabel = (y: string | null | undefined) => {
@@ -119,14 +133,7 @@ export default function AdmissionMasterHomePage() {
                   <div className="text-base font-semibold text-gray-900">
                     {cycle.sessionName ?? yearLabel(year)}
                   </div>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline">{cycle.status ?? "DRAFT"}</Badge>
-                    {cycle.isClosed ? (
-                      <Badge variant="secondary">Closed</Badge>
-                    ) : (
-                      <Badge className="bg-green-500 text-white hover:bg-green-600">Open</Badge>
-                    )}
-                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">Admission cycle</div>
                 </div>
               </div>
             ) : (
@@ -150,8 +157,22 @@ export default function AdmissionMasterHomePage() {
             <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
               <Workflow className="h-4 w-4" /> Admission Phases
             </h3>
-            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              Phase management is under construction.
+            <div className="rounded-lg border p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {PHASES.map((p, i) => (
+                  <React.Fragment key={p.label}>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${PHASE_CLASS[p.status]}`}
+                    >
+                      {p.label}
+                    </span>
+                    {i < PHASES.length - 1 && <span className="text-gray-300">→</span>}
+                  </React.Fragment>
+                ))}
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Phases are placeholders for now — they will be configurable here.
+              </div>
             </div>
           </section>
         </CardContent>

@@ -84,7 +84,7 @@ export const ADMISSION_MASTER_CONFIGS: Record<string, ResourceConfig> = {
     key: "sports-categories",
     title: "Sports Categories",
     icon: Trophy,
-    basePath: "admissions/sports-category",
+    basePath: "sports-categories",
     table: "sports_categories",
     labelField: "name",
     fields: [

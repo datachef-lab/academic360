@@ -193,11 +193,6 @@ function LayoutHeader({
         {/* <Separator orientation="vertical" className="mr-2 h-4 hidden sm:block" /> */}
         <Breadcrumb className="min-w-0 flex-1">
           <BreadcrumbList className="flex-wrap">
-            <BreadcrumbItem className="hidden lg:inline-flex">
-              <BreadcrumbLink asChild>Academics</BreadcrumbLink>
-              <BreadcrumbSeparator className="hidden lg:inline-flex" />
-            </BreadcrumbItem>
-
             {pathSegments.map((segment, index) => {
               const prev = pathSegments[index - 1];
               const next = pathSegments[index + 1];
@@ -218,7 +213,11 @@ function LayoutHeader({
                 yearFolded && next
                   ? `Admissions (${next}-${String(Number(next) + 1).slice(-2)})`
                   : segment.replace(/-/g, " ");
-              const isLastSegment = index === pathSegments.length - 1 || yearFolded;
+              // last only if nothing follows; for a folded year, the year segment
+              // is at index+1, so this crumb is last only when that year is last.
+              const isLastSegment =
+                index === pathSegments.length - 1 ||
+                (yearFolded && index + 2 >= pathSegments.length);
 
               return (
                 <BreadcrumbItem

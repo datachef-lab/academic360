@@ -196,7 +196,14 @@ export default function AdmissionsPage() {
               Masters, application forms, merit listing and admitting students
             </p>
           </div>
-          <AcademicYearSelector className="w-full sm:w-64" showLabel={false} />
+          <AcademicYearSelector
+            className="w-full sm:w-64"
+            showLabel={false}
+            onAcademicYearChange={(y) => {
+              const m = String(y?.year ?? "").match(/\d{4}/);
+              if (m && m[0] !== year) navigate(`${ADMISSIONS_BASE}/${m[0]}`);
+            }}
+          />
         </div>
 
         {/* Admission process timeline */}

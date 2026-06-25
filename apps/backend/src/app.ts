@@ -144,6 +144,7 @@ import admissionQuotaTypeRouter from "./features/admissions/routes/admission-quo
 import cancelSourceRouter from "./features/admissions/routes/cancel-source.route.js";
 import gradeRouter from "./features/admissions/routes/grade.route.js";
 import admissionCycleRouter from "./features/admissions/routes/admission-cycle.route.js";
+import admissionSportsCategoryRouter from "./features/admissions/routes/admission-sports-category.route.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
@@ -646,6 +647,7 @@ app.use("/api/admission-quota-types", admissionQuotaTypeRouter);
 app.use("/api/cancel-sources", cancelSourceRouter);
 app.use("/api/grades", gradeRouter);
 app.use("/api/admission-cycles", admissionCycleRouter);
+app.use("/api/sports-categories", admissionSportsCategoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 
@@ -1068,6 +1070,7 @@ app.use("/api/admission-quota-types", admissionQuotaTypeRouter);
 app.use("/api/cancel-sources", cancelSourceRouter);
 app.use("/api/grades", gradeRouter);
 app.use("/api/admission-cycles", admissionCycleRouter);
+app.use("/api/sports-categories", admissionSportsCategoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 
