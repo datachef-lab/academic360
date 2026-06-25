@@ -33,7 +33,6 @@ export default function AdmissionBoardMaster() {
     { title: "Sports Category", url: `${base}/sports-categories`, icon: Trophy },
     { title: "Board Subject Mapping", url: `${base}/board-subject-mapping`, icon: GraduationCap },
     { title: "Grades", url: `${base}/grades`, icon: Star },
-    { title: "Board Subject Mapping Papers", url: `${base}/mapping-subjects`, icon: BookText },
   ];
 
   const masterLinks = [

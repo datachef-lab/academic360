@@ -8,13 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Home, PlusCircle, CalendarClock, Workflow } from "lucide-react";
 import { toast } from "sonner";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
-import { SearchableSelect } from "@/features/academic-year-setup/general/SearchableSelect";
 import {
   type AdmissionCycle,
-  type SimpleOption,
   getAdmissionCycles,
   createAdmissionCycle,
-  getSessions,
 } from "@/services/admission-program-course.service";
 
 // Placeholder phases (mirror the admissions timeline) — wire to real schedule later.
@@ -45,8 +42,7 @@ export default function AdmissionMasterHomePage() {
   const [cycle, setCycle] = React.useState<AdmissionCycle | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [isCycleOpen, setIsCycleOpen] = React.useState(false);
-  const [sessions, setSessions] = React.useState<SimpleOption[]>([]);
-  const [cycleForm, setCycleForm] = React.useState({ sessionId: "", startDate: "", lastDate: "" });
+  const [cycleForm, setCycleForm] = React.useState({ startDate: "", lastDate: "" });
   const [creating, setCreating] = React.useState(false);
 
   const load = React.useCallback(async () => {
@@ -68,30 +64,22 @@ export default function AdmissionMasterHomePage() {
     load();
   }, [load]);
 
-  const openCreate = async () => {
-    setCycleForm({ sessionId: "", startDate: "", lastDate: "" });
-    try {
-      const list = await getSessions();
-      setSessions(list);
-      // pre-select the session matching the URL year, if it exists
-      const wanted = startYearOf(year);
-      const match = list.find((s) => startYearOf(s.name) === wanted);
-      if (match) setCycleForm((p) => ({ ...p, sessionId: String(match.id) }));
-    } catch {
-      setSessions([]);
-    }
+  const openCreate = () => {
+    setCycleForm({ startDate: "", lastDate: "" });
     setIsCycleOpen(true);
   };
 
   const handleCreate = async () => {
-    if (!cycleForm.sessionId) {
-      toast.error("Session is required");
+    const y = startYearOf(year);
+    if (!y) {
+      toast.error("Invalid year");
       return;
     }
     setCreating(true);
     try {
+      // The session "YYYY-YYYY" is found-or-created server-side from the year.
       await createAdmissionCycle({
-        sessionId: Number(cycleForm.sessionId),
+        year: y,
         status: "DRAFT",
         startDate: cycleForm.startDate || null,
         lastDate: cycleForm.lastDate || null,
@@ -186,15 +174,13 @@ export default function AdmissionMasterHomePage() {
           </DialogHeader>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">
-                Session<span className="text-red-500"> *</span>
-              </Label>
-              <SearchableSelect
-                value={cycleForm.sessionId}
-                onChange={(v) => setCycleForm((p) => ({ ...p, sessionId: v }))}
-                options={sessions.map((o) => ({ value: String(o.id), label: o.name }))}
-                placeholder="Select Session"
-              />
+              <Label className="text-xs">Session</Label>
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                {startYearOf(year)}-{Number(startYearOf(year)) + 1}
+                <span className="ml-2 text-xs text-muted-foreground">
+                  (created automatically if it doesn't exist)
+                </span>
+              </div>
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">Start Date</Label>

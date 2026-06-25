@@ -39,15 +39,63 @@ router.get("/", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const { sessionId, status, startDate, lastDate } = req.body;
+    const {
+      sessionId: bodySessionId,
+      year,
+      status,
+      startDate,
+      lastDate,
+    } = req.body;
+
+    // Resolve the session: by id, else find-or-create by year (name "YYYY-YYYY").
+    let sessionId = bodySessionId ? Number(bodySessionId) : null;
     if (!sessionId) {
-      res.status(400).json(new ApiError(400, "sessionId is required"));
+      const y = Number(String(year ?? "").match(/\d{4}/)?.[0]);
+      if (!y) {
+        res
+          .status(400)
+          .json(new ApiError(400, "year (or sessionId) is required"));
+        return;
+      }
+      const name = `${y}-${y + 1}`;
+      const [existingSession] = await db
+        .select()
+        .from(sessionModel)
+        .where(eq(sessionModel.name, name));
+      if (existingSession) {
+        sessionId = existingSession.id;
+      } else {
+        const [created] = await db
+          .insert(sessionModel)
+          .values({ name, from: `${y}-06-01`, to: `${y + 1}-05-31` })
+          .returning();
+        sessionId = created.id;
+      }
+    }
+
+    // One admission cycle per session — return the existing one if present.
+    const [existingAdmission] = await db
+      .select()
+      .from(admissionModel)
+      .where(eq(admissionModel.sessionId, sessionId));
+    if (existingAdmission) {
+      res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            "SUCCESS",
+            existingAdmission,
+            "Admission cycle already exists.",
+          ),
+        );
       return;
     }
+
     const [row] = await db
       .insert(admissionModel)
       .values({
-        sessionId: Number(sessionId),
+        sessionId,
         status: status ?? "DRAFT",
         startDate: startDate || null,
         lastDate: lastDate || null,

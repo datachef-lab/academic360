@@ -57,8 +57,9 @@ export async function getAdmissionCycles(): Promise<AdmissionCycle[]> {
 }
 
 export async function createAdmissionCycle(data: {
-  sessionId: number;
-  status: string;
+  year?: string | number;
+  sessionId?: number;
+  status?: string;
   startDate?: string | null;
   lastDate?: string | null;
 }) {
