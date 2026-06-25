@@ -22,6 +22,18 @@ type FeatureCard = {
 
 const featureCards: FeatureCard[] = [
   {
+    title: "General",
+    description:
+      "General masters used across academic setup — qualifications, occupations and more.",
+    icon: ListChecks,
+    href: "/dashboard/academic-setup/general",
+    iconColor: "text-slate-600",
+    status: "Pending",
+    items: "Qualifications, occupations & masters",
+    illustrationName: "general",
+    illustration: "/academic-setup-illustrations/general.jpg",
+  },
+  {
     title: "Course Design",
     description:
       "Define program-courses, streams, subjects, paper mappings, classes and academic years.",
@@ -68,17 +80,6 @@ const featureCards: FeatureCard[] = [
     items: "Builder, clauses & appear types",
     illustrationName: "promotion-logic",
     illustration: "/academic-setup-illustrations/promotion-logic.jpg",
-  },
-  {
-    title: "General",
-    description: "General academic-setup masters, lists and miscellaneous configuration",
-    icon: ListChecks,
-    href: "/dashboard/academic-setup/general",
-    iconColor: "text-slate-600",
-    status: "Pending",
-    items: "Lists & misc settings",
-    illustrationName: "general",
-    illustration: "/academic-setup-illustrations/general.jpg",
   },
 ];
 
