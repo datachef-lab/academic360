@@ -10,6 +10,7 @@ import {
   FileText,
   Trophy,
   ArrowRightLeft,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,8 @@ export type IllustrationName =
   | "help-desk"
   | "application-forms"
   | "merit-listing"
-  | "admit-students";
+  | "admit-students"
+  | "general";
 
 const THEMES: Record<IllustrationName, { gradient: string; Icon: LucideIcon }> = {
   "course-design": { gradient: "from-blue-500 to-indigo-600", Icon: BookOpen },
@@ -45,6 +47,7 @@ const THEMES: Record<IllustrationName, { gradient: string; Icon: LucideIcon }> =
   "application-forms": { gradient: "from-blue-500 to-cyan-600", Icon: FileText },
   "merit-listing": { gradient: "from-orange-500 to-rose-600", Icon: Trophy },
   "admit-students": { gradient: "from-rose-500 to-pink-600", Icon: ArrowRightLeft },
+  general: { gradient: "from-slate-500 to-gray-600", Icon: ListChecks },
 };
 
 type Props = {
@@ -62,7 +65,7 @@ export default function CardIllustration({ name, image, alt, className }: Props)
         src={image}
         alt={alt ?? name}
         className={cn(
-          "h-full w-full object-cover opacity-95 transition-all duration-300 group-hover:scale-105 group-hover:opacity-100",
+          "block h-auto w-full opacity-95 transition-all duration-300 group-hover:scale-[1.03] group-hover:opacity-100",
           className,
         )}
       />
@@ -75,7 +78,7 @@ export default function CardIllustration({ name, image, alt, className }: Props)
   return (
     <div
       className={cn(
-        "relative flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br",
+        "relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden bg-gradient-to-br",
         theme.gradient,
         className,
       )}

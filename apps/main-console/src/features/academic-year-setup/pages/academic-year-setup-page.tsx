@@ -1,5 +1,12 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { BookOpen, GraduationCap, SlidersHorizontal, Workflow, Settings } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  SlidersHorizontal,
+  Workflow,
+  Settings,
+  ListChecks,
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
@@ -30,7 +37,7 @@ const featureCards: FeatureCard[] = [
     status: "Active",
     items: "Program-courses & subjects",
     illustrationName: "course-design",
-    illustration: null,
+    illustration: "/academic-setup-illustrations/course-design.jpg",
   },
   {
     title: "Admissions",
@@ -41,7 +48,7 @@ const featureCards: FeatureCard[] = [
     status: "Ready",
     items: "Boards, forms, merit & more",
     illustrationName: "admissions",
-    illustration: null,
+    illustration: "/academic-setup-illustrations/admissions.jpg",
   },
   {
     title: "Subject-selection Configuration",
@@ -52,7 +59,7 @@ const featureCards: FeatureCard[] = [
     status: "Pending",
     items: "Minor / IDC / AEC / CVAC",
     illustrationName: "subject-selection",
-    illustration: null,
+    illustration: "/academic-setup-illustrations/subject-selection.jpg",
   },
   {
     title: "Student Promotion Logic Builder",
@@ -63,7 +70,18 @@ const featureCards: FeatureCard[] = [
     status: "Ready",
     items: "Promotion rules",
     illustrationName: "promotion-logic",
-    illustration: null,
+    illustration: "/academic-setup-illustrations/promotion-logic.jpg",
+  },
+  {
+    title: "General",
+    description: "General academic-setup masters, lists and miscellaneous configuration",
+    icon: ListChecks,
+    href: "/dashboard/academic-setup/general",
+    iconColor: "text-slate-600",
+    status: "Pending",
+    items: "Lists & misc settings",
+    illustrationName: "general",
+    illustration: "/academic-setup-illustrations/general.jpg",
   },
 ];
 
@@ -104,32 +122,26 @@ export default function AcademicYearSetupPage() {
                 className="group cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-all duration-300 hover:border-gray-300 hover:shadow-xl"
                 onClick={() => navigate(card.href)}
               >
-                <CardContent className="p-0">
-                  <div className="p-4 pb-3 sm:p-6 sm:pb-4">
-                    <div className="mb-3 flex items-start sm:mb-4">
-                      <div className="rounded-lg bg-gray-100 p-2 shadow-sm sm:p-3">
-                        <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
+                <CardContent className="flex h-full flex-col p-0">
+                  {/* Illustration banner — complete image, full card width */}
+                  <div className="w-full overflow-hidden border-b border-gray-100 bg-white">
+                    <CardIllustration
+                      name={card.illustrationName}
+                      image={card.illustration ?? undefined}
+                      alt={`${card.title} illustration`}
+                    />
+                  </div>
+
+                  <div className="flex flex-1 flex-col p-4 sm:p-5">
+                    <div className="mb-2 flex items-center gap-2.5">
+                      <div className="shrink-0 rounded-lg bg-gray-100 p-2 shadow-sm">
+                        <card.icon className={`h-5 w-5 ${card.iconColor}`} />
                       </div>
+                      <CardTitle className="text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
+                        {card.title}
+                      </CardTitle>
                     </div>
-                    <CardTitle className="mb-2 text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
-                      {card.title}
-                    </CardTitle>
-                    <p className="mb-2 text-xs font-medium text-gray-500 sm:mb-3 sm:text-sm">
-                      {card.items}
-                    </p>
-                  </div>
-
-                  <div className="px-4 pb-4 sm:px-6 sm:pb-6">
-                    <div className="h-24 overflow-hidden rounded-lg sm:h-32">
-                      <CardIllustration
-                        name={card.illustrationName}
-                        image={card.illustration ?? undefined}
-                        alt={`${card.title} illustration`}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="px-4 pb-4 sm:px-6 sm:pb-6">
+                    <p className="mb-1.5 text-xs font-medium text-gray-500">{card.items}</p>
                     <CardDescription className="text-xs leading-relaxed text-gray-600 transition-colors group-hover:text-gray-500 sm:text-sm">
                       {card.description}
                     </CardDescription>

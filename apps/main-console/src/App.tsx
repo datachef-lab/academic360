@@ -160,6 +160,7 @@ const router = createBrowserRouter(
               path: "board-subjects/*",
               element: <Navigate to="/dashboard/academic-setup/admissions/master" replace />,
             },
+            { path: "general", element: <UnderConstructionPage /> },
             {
               path: "course-design",
               element: <courseSubjectModule.CoursesSubjectsMaster />,
