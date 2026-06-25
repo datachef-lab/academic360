@@ -11,6 +11,7 @@ import {
   Trophy,
   ArrowRightLeft,
   ListChecks,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,8 @@ export type IllustrationName =
   | "application-forms"
   | "merit-listing"
   | "admit-students"
-  | "general";
+  | "general"
+  | "notifications";
 
 const THEMES: Record<IllustrationName, { gradient: string; Icon: LucideIcon }> = {
   "course-design": { gradient: "from-blue-500 to-indigo-600", Icon: BookOpen },
@@ -48,6 +50,7 @@ const THEMES: Record<IllustrationName, { gradient: string; Icon: LucideIcon }> =
   "merit-listing": { gradient: "from-orange-500 to-rose-600", Icon: Trophy },
   "admit-students": { gradient: "from-rose-500 to-pink-600", Icon: ArrowRightLeft },
   general: { gradient: "from-slate-500 to-gray-600", Icon: ListChecks },
+  notifications: { gradient: "from-rose-500 to-pink-600", Icon: Bell },
 };
 
 type Props = {

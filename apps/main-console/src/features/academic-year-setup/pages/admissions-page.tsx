@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   GraduationCap,
   Home,
@@ -13,11 +13,15 @@ import {
   Check,
   Clock,
   MessagesSquare,
+  Bell,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { useAppSelector } from "@/store/hooks";
+import { selectAvailableAcademicYears } from "@/store/slices/academicYearSlice";
 import CardIllustration, {
   type IllustrationName,
 } from "@/features/academic-year-setup/components/CardIllustration";
@@ -44,45 +48,43 @@ const processSteps: ProcessStep[] = [
     label: "Start Admissions",
     time: "Not scheduled",
     status: "done",
-    href: `${ADMISSIONS_BASE}/start`,
+    href: "start",
     icon: Flag,
   },
   {
-    label: "Counselling",
+    label: "Counseling, Survey & Feedback",
     time: "Not scheduled",
     status: "done",
-    href: `${ADMISSIONS_BASE}/counselling`,
+    href: "counselling",
     icon: MessagesSquare,
   },
   {
     label: "Admission Applications",
     time: "Not scheduled",
     status: "active",
-    href: `${ADMISSIONS_BASE}/application-forms`,
+    href: "application-forms",
     icon: FileText,
-    image: "/academic-setup-illustrations/application-forms.jpg",
   },
   {
     label: "Merit Listing",
     time: "Not scheduled",
     status: "upcoming",
-    href: `${ADMISSIONS_BASE}/merit-listing`,
+    href: "merit-listing",
     icon: Trophy,
     badge: "Round 1",
-    image: "/academic-setup-illustrations/merit-listing.jpg",
   },
   {
     label: "Verification",
     time: "Not scheduled",
     status: "upcoming",
-    href: `${ADMISSIONS_BASE}/verification`,
+    href: "verification",
     icon: ShieldCheck,
   },
   {
     label: "Data Transfer",
     time: "Not scheduled",
     status: "upcoming",
-    href: `${ADMISSIONS_BASE}/admit-students`,
+    href: "admit-students",
     icon: ArrowRightLeft,
   },
 ];
@@ -119,25 +121,27 @@ const cards: AdmissionCard[] = [
     title: "Admission Home",
     description: "Entry point and summary of the current admission cycle.",
     icon: Home,
-    href: `${ADMISSIONS_BASE}/home`,
+    href: "home",
     iconColor: "text-emerald-600",
     items: "Overview & summary",
     illustrationName: "admission-home",
+    illustration: "/academic-setup-illustrations/admission-home.jpg",
   },
   {
     title: "Admission Master",
     description: "Manage boards, subjects and board–subject (paper) mappings used in admissions.",
     icon: Library,
-    href: `${ADMISSIONS_BASE}/master`,
+    href: "master",
     iconColor: "text-indigo-600",
     items: "Boards, subjects & mappings",
     illustrationName: "admission-master",
+    illustration: "/academic-setup-illustrations/admission-master.jpg",
   },
   {
     title: "Staff & Management",
     description: "Assign staff and manage roles handling the admission workflow.",
     icon: Users,
-    href: `${ADMISSIONS_BASE}/staff-management`,
+    href: "staff-management",
     iconColor: "text-amber-600",
     items: "Staff assignment & roles",
     illustrationName: "staff-management",
@@ -147,16 +151,81 @@ const cards: AdmissionCard[] = [
     title: "Admission Help & Support Desk",
     description: "Handle applicant queries and support tickets during admissions.",
     icon: LifeBuoy,
-    href: `${ADMISSIONS_BASE}/help-desk`,
+    href: "help-desk",
     iconColor: "text-sky-600",
     items: "Applicant queries & support",
     illustrationName: "help-desk",
+  },
+  {
+    title: "Merit Listing Rules",
+    description: "Define rules and criteria used to generate merit lists.",
+    icon: Scale,
+    href: "merit-listing-rules",
+    iconColor: "text-orange-600",
+    items: "Rules & criteria",
+    illustrationName: "merit-listing",
+    illustration: "/academic-setup-illustrations/merit-listing.jpg",
+  },
+  {
+    title: "Notifications",
+    description: "Send emails, SMS and WhatsApp messages to applicants.",
+    icon: Bell,
+    href: "notifications",
+    iconColor: "text-rose-600",
+    items: "Email · SMS · WhatsApp",
+    illustrationName: "notifications",
+    illustration: "/academic-setup-illustrations/notifications.jpg",
   },
 ];
 
 export default function AdmissionsPage() {
   useRestrictTempUsers();
   const navigate = useNavigate();
+  const { year } = useParams<{ year: string }>();
+  const go = (seg: string) => navigate(`${ADMISSIONS_BASE}/${year}/${seg}`);
+
+  const years = useAppSelector(selectAvailableAcademicYears);
+  const wanted = String(year ?? "").match(/\d{4}/)?.[0] ?? "";
+  const wantedLabel = wanted ? `${wanted}-${String(Number(wanted) + 1).slice(-2)}` : (year ?? "");
+  // Only flag as missing once the year list has actually loaded.
+  const yearMissing =
+    years.length > 0 &&
+    !!wanted &&
+    !years.some((y) => String(y.year ?? "").match(/\d{4}/)?.[0] === wanted);
+
+  const yearSelector = (
+    <AcademicYearSelector
+      className="w-full sm:w-64"
+      showLabel={false}
+      onAcademicYearChange={(y) => {
+        const m = String(y?.year ?? "").match(/\d{4}/);
+        if (m && m[0] !== year) navigate(`${ADMISSIONS_BASE}/${m[0]}`);
+      }}
+    />
+  );
+
+  if (yearMissing) {
+    return (
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="mx-auto max-w-7xl p-4 sm:p-6">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-6 w-6 text-emerald-600 sm:h-7 sm:w-7" />
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Admissions</h1>
+            </div>
+            {yearSelector}
+          </div>
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-white p-12 text-center">
+            <h2 className="text-lg font-semibold text-gray-900">Academic year not found</h2>
+            <p className="text-sm text-muted-foreground">
+              The academic year <span className="font-medium">{wantedLabel}</span> doesn&apos;t
+              exist. Please pick a valid academic year from the selector above.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100">
@@ -172,7 +241,7 @@ export default function AdmissionsPage() {
               Masters, application forms, merit listing and admitting students
             </p>
           </div>
-          <AcademicYearSelector className="w-full sm:w-64" showLabel={false} />
+          {yearSelector}
         </div>
 
         {/* Admission process timeline */}
@@ -185,7 +254,7 @@ export default function AdmissionsPage() {
               return (
                 <button
                   key={step.href}
-                  onClick={() => navigate(step.href)}
+                  onClick={() => go(step.href)}
                   className="group relative z-10 flex flex-1 flex-col items-center px-1 text-center"
                 >
                   <span
@@ -228,7 +297,7 @@ export default function AdmissionsPage() {
             <Card
               key={card.href}
               className="group cursor-pointer overflow-hidden rounded-xl border border-gray-300 bg-white transition-all duration-300 hover:border-gray-400 hover:shadow-xl"
-              onClick={() => navigate(card.href)}
+              onClick={() => go(card.href)}
             >
               <CardContent className="flex h-full flex-col p-0">
                 {/* Card header */}
