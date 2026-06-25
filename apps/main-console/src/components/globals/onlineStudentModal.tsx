@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { StudentAvatar } from "@/components/student/StudentAvatar";
 import type { OnlineStudentDto } from "@/services/student";
 import { Circle, User } from "lucide-react";
 
@@ -41,7 +42,7 @@ export function OnlineStudentsModal({
   loading,
   isError,
 }: OnlineStudentsModalProps) {
-  const columnCount = 6;
+  const columnCount = 7;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,6 +76,7 @@ export function OnlineStudentsModal({
                   <TableHead className="w-14 text-center">#</TableHead>
                   <TableHead>UID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Semester</TableHead>
                   <TableHead>Program Course</TableHead>
                   <TableHead>Shift</TableHead>
                   <TableHead>Login Time</TableHead>
@@ -118,7 +120,13 @@ export function OnlineStudentsModal({
                     <TableRow key={student.id ?? index} className="hover:bg-muted/50 transition">
                       <TableCell className="text-center font-medium">{index + 1}</TableCell>
                       <TableCell>{student.uid ?? "-"}</TableCell>
-                      <TableCell>{student.name ?? "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <StudentAvatar uid={student.uid} name={student.name} size="sm" />
+                          <span className="font-medium">{student.name ?? "-"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{student.currentPromotion?.class?.name ?? "-"}</TableCell>
                       <TableCell>{student.programCourse?.name ?? "-"}</TableCell>
                       <TableCell>{student.currentPromotion?.shift?.name ?? "-"}</TableCell>
                       <TableCell>{formatLoginTime(student.loginTime)}</TableCell>
