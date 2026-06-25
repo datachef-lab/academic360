@@ -53,6 +53,7 @@ type StudentInfo = {
   section: string | null;
   classRollNumber: string | null;
   emergencyPhone: string | null;
+  shift: string | null;
 };
 
 const TEXT_FIELDS: IdCardFieldKey[] = [
@@ -62,6 +63,7 @@ const TEXT_FIELDS: IdCardFieldKey[] = [
   "MOBILE",
   "BLOOD_GROUP",
   "SPORTS_QUOTA",
+  "SHIFT",
   "VALID_TILL_DATE",
 ];
 
@@ -74,10 +76,15 @@ const FIELD_FONT_PX: Record<IdCardFieldKey, number> = {
   MOBILE: 24,
   BLOOD_GROUP: 26,
   SPORTS_QUOTA: 26,
+  SHIFT: 24,
   VALID_TILL_DATE: 20,
   QRCODE: 0,
   PHOTO: 0,
 };
+
+// Gap (px, at the 638x1004 canvas) between the end of the COURSE text and the
+// SHIFT text, which is rendered inline right after the course name.
+const SHIFT_GAP_PX = 14;
 
 const STATUS_REMARKS: Record<IdCardIssueStatus, string> = {
   ISSUED: "First card issued",
@@ -100,6 +107,8 @@ function valueForField(key: IdCardFieldKey, student: StudentInfo, validTill: str
       return student.bloodGroup ?? "";
     case "SPORTS_QUOTA":
       return student.sportsQuota ?? student.quotaType ?? "";
+    case "SHIFT":
+      return student.shift ?? "";
     case "VALID_TILL_DATE":
       return validTill ? `Valid Till: ${validTill}` : "";
     default:
@@ -126,6 +135,8 @@ function extractStudentInfo(raw: any): StudentInfo {
     quotaType: raw?.admissionCourseDetails?.quota?.name ?? raw?.quotaType ?? null,
     section: raw?.section?.name ?? null,
     classRollNumber: raw?.classRollNumber ?? raw?.rollNumber ?? null,
+    shift:
+      raw?.currentPromotion?.shift?.name ?? raw?.promotion?.shift?.name ?? raw?.shift?.name ?? null,
     // Filled in after lookup from the emergency-contact endpoint.
     emergencyPhone: null,
   };
@@ -379,6 +390,29 @@ export default function IdCardIssuePage() {
       photoUrl = URL.createObjectURL(photoBlob);
       const photo = await loadImg(photoUrl);
 
+      // SHIFT flows inline immediately after the COURSE text. Measure the
+      // rendered course width so the shift anchor sits right after it (with a
+      // small gap), regardless of how long the program-course name is.
+      let shiftInlineAnchor: { x: number; y: number } | null = null;
+      const courseField = (activeTemplate.fields ?? []).find(
+        (f) => f.fieldKey === "COURSE" && f.isVisible !== false,
+      );
+      if (courseField) {
+        const courseText = valueForField("COURSE", student, activeValidTill);
+        if (courseText) {
+          const cpx = courseField.fontSize ?? (FIELD_FONT_PX.COURSE || 22);
+          ctx.font = `bold ${cpx}px Calibri, Arial, sans-serif`;
+          const cw = ctx.measureText(courseText).width;
+          const rightEdge =
+            courseField.align === "CENTER"
+              ? courseField.x + cw / 2
+              : courseField.align === "RIGHT"
+                ? courseField.x
+                : courseField.x + cw;
+          shiftInlineAnchor = { x: Math.round(rightEdge + SHIFT_GAP_PX), y: courseField.y };
+        }
+      }
+
       for (const field of activeTemplate.fields ?? []) {
         if (field.isVisible === false) continue;
 
@@ -432,7 +466,22 @@ export default function IdCardIssuePage() {
           ctx.fillStyle = "#111";
           ctx.font = `bold ${px}px Calibri, Arial, sans-serif`;
           ctx.textBaseline = "alphabetic";
-          ctx.fillText(text, field.x, field.y);
+
+          // SHIFT is anchored right after the COURSE text (inline) when course
+          // is present; otherwise it falls back to its own saved coordinates.
+          let drawX = field.x;
+          let drawY = field.y;
+          let alignVal: CanvasTextAlign =
+            field.align === "CENTER" ? "center" : field.align === "RIGHT" ? "right" : "left";
+          if (field.fieldKey === "SHIFT" && shiftInlineAnchor) {
+            drawX = shiftInlineAnchor.x;
+            drawY = shiftInlineAnchor.y;
+            alignVal = "left";
+          }
+
+          // (x) is the alignment anchor: left edge / centre / right edge of the text.
+          ctx.textAlign = alignVal;
+          ctx.fillText(text, drawX, drawY);
         }
       }
 

@@ -52,6 +52,7 @@ export const upsertFieldsController = async (
       width: raw?.width != null ? Number(raw.width) : null,
       height: raw?.height != null ? Number(raw.height) : null,
       fontSize: raw?.fontSize != null ? Number(raw.fontSize) : null,
+      align: raw?.align,
       isVisible:
         typeof raw?.isVisible === "boolean" ? raw.isVisible : undefined,
     }));

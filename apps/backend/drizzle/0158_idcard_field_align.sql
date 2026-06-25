@@ -1,0 +1,1 @@
+ALTER TABLE "id_card_template_fields" ADD COLUMN IF NOT EXISTS "align" varchar(10) DEFAULT 'LEFT' NOT NULL;

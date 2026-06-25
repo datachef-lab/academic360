@@ -1093,6 +1093,20 @@
       "when": 1782300000000,
       "tag": "0156_admission_quota_types",
       "breakpoints": true
+    },
+    {
+      "idx": 157,
+      "version": "7",
+      "when": 1782350000000,
+      "tag": "0157_idcard_shift_field",
+      "breakpoints": true
+    },
+    {
+      "idx": 158,
+      "version": "7",
+      "when": 1782400000000,
+      "tag": "0158_idcard_field_align",
+      "breakpoints": true
     }
   ]
 }
