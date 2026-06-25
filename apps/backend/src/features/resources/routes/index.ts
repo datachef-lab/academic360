@@ -14,6 +14,9 @@ import pickupPointRouter from "@/features/resources/routes/pickupPoint.routes.js
 import religionRouter from "@/features/resources/routes/religion.routes.js";
 import stateRouter from "@/features/resources/routes/state.routes.js";
 import annualIncomeRouter from "@/features/resources/routes/annualIncome.routes.js";
+import districtRouter from "@/features/resources/routes/district.routes.js";
+import policeStationRouter from "@/features/resources/routes/policeStation.routes.js";
+import postOfficeRouter from "@/features/resources/routes/postOffice.routes.js";
 
 export {
   bloodGroupRouter,
@@ -32,4 +35,7 @@ export {
   religionRouter,
   stateRouter,
   annualIncomeRouter,
+  districtRouter,
+  policeStationRouter,
+  postOfficeRouter,
 };

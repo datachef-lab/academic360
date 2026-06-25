@@ -65,6 +65,14 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
 import AdmissionsPage from "./features/academic-year-setup/pages/admissions-page";
+import AdmissionProgramCoursePage from "./features/academic-year-setup/pages/admission-program-course-page";
+import AdmissionsYearRedirect from "./features/academic-year-setup/pages/admissions-year-redirect";
+import ShiftSectionConfigPage from "./features/academic-year-setup/pages/shift-section-config-page";
+import AdmissionMasterHomePage from "./features/academic-year-setup/pages/admission-master-home-page";
+import GeneralMaster from "./features/academic-year-setup/layouts/general-master";
+import ResourceMasterPage from "./features/academic-year-setup/general/ResourceMasterPage";
+import { RESOURCE_CONFIGS } from "./features/academic-year-setup/general/resource-configs";
+import { ADMISSION_MASTER_CONFIGS } from "./features/academic-year-setup/general/admission-master-configs";
 import ToolsPage from "./features/tools/pages/tools-page";
 import ShiftChangePage from "./features/tools/pages/shift-change-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
@@ -133,29 +141,77 @@ const router = createBrowserRouter(
               path: "admissions",
               element: <Outlet />,
               children: [
-                { path: "", element: <AdmissionsPage /> },
+                { path: "", element: <AdmissionsYearRedirect /> },
                 {
-                  path: "master",
-                  element: <AdmissionBoardMaster />,
+                  path: ":year",
+                  element: <Outlet />,
                   children: [
-                    { path: "", element: <BoardSubjectPage /> },
-                    { path: "boards", element: <BoardPage /> },
-                    { path: "subjects", element: <BoardSubjectNamePage /> },
+                    { path: "", element: <AdmissionsPage /> },
                     {
-                      path: "mapping-subjects",
-                      element: <BoardSubjectUnivSubjectMappingPaper />,
+                      path: "master",
+                      element: <AdmissionBoardMaster />,
+                      children: [
+                        { path: "", element: <AdmissionMasterHomePage /> },
+                        { path: "program-courses", element: <AdmissionProgramCoursePage /> },
+                        {
+                          path: "quota-type",
+                          element: (
+                            <ResourceMasterPage
+                              config={ADMISSION_MASTER_CONFIGS["admission-quota-types"]!}
+                            />
+                          ),
+                        },
+                        { path: "shift-section-config", element: <ShiftSectionConfigPage /> },
+                        {
+                          path: "cancel-sources",
+                          element: (
+                            <ResourceMasterPage
+                              config={ADMISSION_MASTER_CONFIGS["cancel-sources"]!}
+                            />
+                          ),
+                        },
+                        {
+                          path: "grades",
+                          element: (
+                            <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["grades"]!} />
+                          ),
+                        },
+                        {
+                          path: "sports-categories",
+                          element: (
+                            <ResourceMasterPage
+                              config={ADMISSION_MASTER_CONFIGS["sports-categories"]!}
+                            />
+                          ),
+                        },
+                        {
+                          path: "sections",
+                          element: (
+                            <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["sections"]!} />
+                          ),
+                        },
+                        { path: "board-subject-mapping", element: <BoardSubjectPage /> },
+                        { path: "boards", element: <BoardPage /> },
+                        { path: "subjects", element: <BoardSubjectNamePage /> },
+                        {
+                          path: "mapping-subjects",
+                          element: <BoardSubjectUnivSubjectMappingPaper />,
+                        },
+                      ],
                     },
+                    { path: "home", element: <UnderConstructionPage /> },
+                    { path: "start", element: <UnderConstructionPage /> },
+                    { path: "counselling", element: <UnderConstructionPage /> },
+                    { path: "staff-management", element: <UnderConstructionPage /> },
+                    { path: "help-desk", element: <UnderConstructionPage /> },
+                    { path: "application-forms", element: <UnderConstructionPage /> },
+                    { path: "merit-listing", element: <UnderConstructionPage /> },
+                    { path: "merit-listing-rules", element: <UnderConstructionPage /> },
+                    { path: "verification", element: <UnderConstructionPage /> },
+                    { path: "admit-students", element: <UnderConstructionPage /> },
+                    { path: "notifications", element: <UnderConstructionPage /> },
                   ],
                 },
-                { path: "home", element: <UnderConstructionPage /> },
-                { path: "start", element: <UnderConstructionPage /> },
-                { path: "counselling", element: <UnderConstructionPage /> },
-                { path: "staff-management", element: <UnderConstructionPage /> },
-                { path: "help-desk", element: <UnderConstructionPage /> },
-                { path: "application-forms", element: <UnderConstructionPage /> },
-                { path: "merit-listing", element: <UnderConstructionPage /> },
-                { path: "verification", element: <UnderConstructionPage /> },
-                { path: "admit-students", element: <UnderConstructionPage /> },
               ],
             },
             // Back-compat: old board-subjects path now lives under the Admission master
@@ -163,7 +219,17 @@ const router = createBrowserRouter(
               path: "board-subjects/*",
               element: <Navigate to="/dashboard/academic-setup/admissions/master" replace />,
             },
-            { path: "general", element: <UnderConstructionPage /> },
+            {
+              path: "general",
+              element: <GeneralMaster />,
+              children: [
+                { path: "", element: <ResourceMasterPage config={RESOURCE_CONFIGS[0]!} /> },
+                ...RESOURCE_CONFIGS.map((c) => ({
+                  path: c.key,
+                  element: <ResourceMasterPage config={c} />,
+                })),
+              ],
+            },
             {
               path: "course-design",
               element: <courseSubjectModule.CoursesSubjectsMaster />,
