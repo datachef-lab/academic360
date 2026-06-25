@@ -50,9 +50,13 @@ type StudentInfo = {
   rfidNumber: string | null;
   sportsQuota: string | null;
   quotaType: string | null;
+  /** Full quota label for the details panel: "Name (Short Name)". */
+  quotaTypeLabel: string | null;
   section: string | null;
   classRollNumber: string | null;
   emergencyPhone: string | null;
+  /** Relation of the emergency contact (e.g. Father), shown after the number. */
+  emergencyRelation: string | null;
   shift: string | null;
 };
 
@@ -135,12 +139,15 @@ function extractStudentInfo(raw: any): StudentInfo {
     // Backend only returns quotaType when the quota type is flagged to print on
     // the ID card (already resolved to short/full name); null means don't show.
     quotaType: raw?.quotaType ?? null,
+    // Full label "Name (Short Name)" for the details panel (not gated).
+    quotaTypeLabel: raw?.quotaTypeLabel ?? null,
     section: raw?.section?.name ?? null,
     classRollNumber: raw?.classRollNumber ?? raw?.rollNumber ?? null,
     shift:
       raw?.currentPromotion?.shift?.name ?? raw?.promotion?.shift?.name ?? raw?.shift?.name ?? null,
     // Filled in after lookup from the emergency-contact endpoint.
     emergencyPhone: null,
+    emergencyRelation: null,
   };
 }
 
@@ -336,11 +343,17 @@ export default function IdCardIssuePage() {
         ]);
         const health = healthRes.status === "fulfilled" ? healthRes.value.data?.payload : null;
         const bloodGroup = health?.bloodGroup?.type ?? health?.bloodGroup?.name ?? null;
-        const emergencyPhone =
-          emRes.status === "fulfilled" ? (emRes.value.data?.payload?.phone ?? null) : null;
+        const emPayload = emRes.status === "fulfilled" ? emRes.value.data?.payload : null;
+        const emergencyPhone = emPayload?.phone ?? null;
+        const emergencyRelation = emPayload?.havingRelationAs ?? null;
         setStudent((prev) =>
           prev && prev.id === info.id
-            ? { ...prev, bloodGroup: bloodGroup ?? prev.bloodGroup, emergencyPhone }
+            ? {
+                ...prev,
+                bloodGroup: bloodGroup ?? prev.bloodGroup,
+                emergencyPhone,
+                emergencyRelation,
+              }
             : prev,
         );
       })();
@@ -735,9 +748,18 @@ export default function IdCardIssuePage() {
                 <DetailRow label="Blood Group" value={student.bloodGroup ?? "-"} />
                 <DetailRow
                   label="Quota Type"
-                  value={student.quotaType ?? student.sportsQuota ?? "-"}
+                  value={student.quotaTypeLabel ?? student.sportsQuota ?? "-"}
                 />
-                <DetailRow label="Emergency Phone" value={student.emergencyPhone ?? "-"} />
+                <DetailRow
+                  label="Emergency Phone"
+                  value={
+                    student.emergencyPhone
+                      ? student.emergencyRelation
+                        ? `${student.emergencyPhone} (${student.emergencyRelation})`
+                        : student.emergencyPhone
+                      : "-"
+                  }
+                />
               </div>
 
               <div className="flex flex-wrap items-end gap-3 pt-2">

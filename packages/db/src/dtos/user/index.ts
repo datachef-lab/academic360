@@ -24,7 +24,10 @@ export interface StudentDto extends Omit<StudentT, "applicationId" | "programCou
     currentPromotion: PromotionDto | null;
     currentBatch: BatchDto | null;
     name: string;
+    /** Quota type for the ID CARD: set only when flagged print-on-id-card (short name, else full). */
     quotaType: string | null;
+    /** Full quota type label for display panels: "Name (Short Name)" — always set when present. */
+    quotaTypeLabel: string | null;
 }
 
 export interface StaffDto extends Omit<StaffT, "shiftId"> {
