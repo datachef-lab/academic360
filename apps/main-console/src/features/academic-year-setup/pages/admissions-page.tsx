@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   GraduationCap,
   Home,
@@ -46,28 +46,28 @@ const processSteps: ProcessStep[] = [
     label: "Start Admissions",
     time: "Not scheduled",
     status: "done",
-    href: `${ADMISSIONS_BASE}/start`,
+    href: "start",
     icon: Flag,
   },
   {
     label: "Counseling, Survey & Feedback",
     time: "Not scheduled",
     status: "done",
-    href: `${ADMISSIONS_BASE}/counselling`,
+    href: "counselling",
     icon: MessagesSquare,
   },
   {
     label: "Admission Applications",
     time: "Not scheduled",
     status: "active",
-    href: `${ADMISSIONS_BASE}/application-forms`,
+    href: "application-forms",
     icon: FileText,
   },
   {
     label: "Merit Listing",
     time: "Not scheduled",
     status: "upcoming",
-    href: `${ADMISSIONS_BASE}/merit-listing`,
+    href: "merit-listing",
     icon: Trophy,
     badge: "Round 1",
   },
@@ -75,14 +75,14 @@ const processSteps: ProcessStep[] = [
     label: "Verification",
     time: "Not scheduled",
     status: "upcoming",
-    href: `${ADMISSIONS_BASE}/verification`,
+    href: "verification",
     icon: ShieldCheck,
   },
   {
     label: "Data Transfer",
     time: "Not scheduled",
     status: "upcoming",
-    href: `${ADMISSIONS_BASE}/admit-students`,
+    href: "admit-students",
     icon: ArrowRightLeft,
   },
 ];
@@ -119,7 +119,7 @@ const cards: AdmissionCard[] = [
     title: "Admission Home",
     description: "Entry point and summary of the current admission cycle.",
     icon: Home,
-    href: `${ADMISSIONS_BASE}/home`,
+    href: "home",
     iconColor: "text-emerald-600",
     items: "Overview & summary",
     illustrationName: "admission-home",
@@ -129,7 +129,7 @@ const cards: AdmissionCard[] = [
     title: "Admission Master",
     description: "Manage boards, subjects and board–subject (paper) mappings used in admissions.",
     icon: Library,
-    href: `${ADMISSIONS_BASE}/master`,
+    href: "master",
     iconColor: "text-indigo-600",
     items: "Boards, subjects & mappings",
     illustrationName: "admission-master",
@@ -139,7 +139,7 @@ const cards: AdmissionCard[] = [
     title: "Staff & Management",
     description: "Assign staff and manage roles handling the admission workflow.",
     icon: Users,
-    href: `${ADMISSIONS_BASE}/staff-management`,
+    href: "staff-management",
     iconColor: "text-amber-600",
     items: "Staff assignment & roles",
     illustrationName: "staff-management",
@@ -149,7 +149,7 @@ const cards: AdmissionCard[] = [
     title: "Admission Help & Support Desk",
     description: "Handle applicant queries and support tickets during admissions.",
     icon: LifeBuoy,
-    href: `${ADMISSIONS_BASE}/help-desk`,
+    href: "help-desk",
     iconColor: "text-sky-600",
     items: "Applicant queries & support",
     illustrationName: "help-desk",
@@ -158,7 +158,7 @@ const cards: AdmissionCard[] = [
     title: "Merit Listing Rules",
     description: "Define rules and criteria used to generate merit lists.",
     icon: Scale,
-    href: `${ADMISSIONS_BASE}/merit-listing-rules`,
+    href: "merit-listing-rules",
     iconColor: "text-orange-600",
     items: "Rules & criteria",
     illustrationName: "merit-listing",
@@ -168,7 +168,7 @@ const cards: AdmissionCard[] = [
     title: "Notifications",
     description: "Send emails, SMS and WhatsApp messages to applicants.",
     icon: Bell,
-    href: `${ADMISSIONS_BASE}/notifications`,
+    href: "notifications",
     iconColor: "text-rose-600",
     items: "Email · SMS · WhatsApp",
     illustrationName: "notifications",
@@ -179,6 +179,8 @@ const cards: AdmissionCard[] = [
 export default function AdmissionsPage() {
   useRestrictTempUsers();
   const navigate = useNavigate();
+  const { year } = useParams<{ year: string }>();
+  const go = (seg: string) => navigate(`${ADMISSIONS_BASE}/${year}/${seg}`);
 
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100">
@@ -207,7 +209,7 @@ export default function AdmissionsPage() {
               return (
                 <button
                   key={step.href}
-                  onClick={() => navigate(step.href)}
+                  onClick={() => go(step.href)}
                   className="group relative z-10 flex flex-1 flex-col items-center px-1 text-center"
                 >
                   <span
@@ -250,7 +252,7 @@ export default function AdmissionsPage() {
             <Card
               key={card.href}
               className="group cursor-pointer overflow-hidden rounded-xl border border-gray-300 bg-white transition-all duration-300 hover:border-gray-400 hover:shadow-xl"
-              onClick={() => navigate(card.href)}
+              onClick={() => go(card.href)}
             >
               <CardContent className="flex h-full flex-col p-0">
                 {/* Card header */}

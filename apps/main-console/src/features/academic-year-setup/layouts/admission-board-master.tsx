@@ -1,5 +1,5 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useParams } from "react-router-dom";
 import {
   GraduationCap,
   ListChecks,
@@ -11,34 +11,40 @@ import {
   Star,
   Trophy,
   Rows3,
+  Home,
 } from "lucide-react";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
-const BASE = "/dashboard/academic-setup/admissions/master";
-
-const mainLinks = [
-  { title: "Eligible Program Courses", url: `${BASE}/program-courses`, icon: Layers },
-  { title: "Admission Quota Types", url: `${BASE}/quota-type`, icon: Ticket },
-  { title: "Section", url: `${BASE}/sections`, icon: Rows3 },
-  { title: "Cancel Source", url: `${BASE}/cancel-sources`, icon: XCircle },
-  { title: "Sports Category", url: `${BASE}/sports-categories`, icon: Trophy },
-  { title: "Board Subject Mapping", url: `${BASE}/`, icon: GraduationCap },
-  { title: "Grades", url: `${BASE}/grades`, icon: Star },
-  { title: "Board Subject Mapping Papers", url: `${BASE}/mapping-subjects`, icon: BookText },
-];
-
-const masterLinks = [
-  { title: "Board", url: `${BASE}/boards`, icon: ListChecks },
-  { title: "Subjects", url: `${BASE}/subjects`, icon: BookText },
-  { title: "Shift - Section Config", url: `${BASE}/shift-section-config`, icon: SlidersHorizontal },
-];
-
 export default function AdmissionBoardMaster() {
   const location = useLocation();
   const currentPath = location.pathname;
+  const { year } = useParams<{ year: string }>();
+  const base = `/dashboard/academic-setup/admissions/${year}/master`;
 
   useRestrictTempUsers();
+
+  const mainLinks = [
+    { title: "Home", url: base, icon: Home },
+    { title: "Eligible Program Courses", url: `${base}/program-courses`, icon: Layers },
+    { title: "Admission Quota Types", url: `${base}/quota-type`, icon: Ticket },
+    { title: "Section", url: `${base}/sections`, icon: Rows3 },
+    { title: "Cancel Source", url: `${base}/cancel-sources`, icon: XCircle },
+    { title: "Sports Category", url: `${base}/sports-categories`, icon: Trophy },
+    { title: "Board Subject Mapping", url: `${base}/board-subject-mapping`, icon: GraduationCap },
+    { title: "Grades", url: `${base}/grades`, icon: Star },
+    { title: "Board Subject Mapping Papers", url: `${base}/mapping-subjects`, icon: BookText },
+  ];
+
+  const masterLinks = [
+    { title: "Board", url: `${base}/boards`, icon: ListChecks },
+    { title: "Subjects", url: `${base}/subjects`, icon: BookText },
+    {
+      title: "Shift - Section Config",
+      url: `${base}/shift-section-config`,
+      icon: SlidersHorizontal,
+    },
+  ];
 
   const rightBarContent = (
     <div className="flex h-full flex-col justify-between gap-4 py-3">

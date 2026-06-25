@@ -14,10 +14,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlusCircle, Edit, Trash2, GraduationCap, Layers } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
-import { useAppSelector } from "@/store/hooks";
-import { selectCurrentAcademicYear } from "@/store/slices/academicYearSlice";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { SearchableSelect } from "@/features/academic-year-setup/general/SearchableSelect";
 import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
@@ -30,8 +29,6 @@ import {
   createAdmissionCourse,
   updateAdmissionCourse,
   deleteAdmissionCourse,
-  createAdmissionCycle,
-  getSessions,
   getProgramCourses,
   getShifts,
   getClasses,
@@ -61,7 +58,8 @@ const emptyForm: FormState = {
 
 export default function AdmissionProgramCoursePage() {
   useRestrictTempUsers();
-  const currentYear = useAppSelector(selectCurrentAcademicYear);
+  const navigate = useNavigate();
+  const { year } = useParams<{ year: string }>();
 
   const [admission, setAdmission] = React.useState<AdmissionCycle | null>(null);
   const [rows, setRows] = React.useState<AdmissionProgramCourse[]>([]);
@@ -74,12 +72,6 @@ export default function AdmissionProgramCoursePage() {
   const [selected, setSelected] = React.useState<AdmissionProgramCourse | null>(null);
   const [form, setForm] = React.useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = React.useState(false);
-
-  // create-admission-cycle dialog
-  const [isCycleOpen, setIsCycleOpen] = React.useState(false);
-  const [sessions, setSessions] = React.useState<SimpleOption[]>([]);
-  const [cycleForm, setCycleForm] = React.useState({ sessionId: "", startDate: "", lastDate: "" });
-  const [creatingCycle, setCreatingCycle] = React.useState(false);
 
   const nameOf = (list: SimpleOption[], id: number | null | undefined) =>
     id == null ? "-" : (list.find((o) => o.id === Number(id))?.name ?? `#${id}`);
@@ -100,7 +92,7 @@ export default function AdmissionProgramCoursePage() {
     setLoading(true);
     try {
       const all = await getAdmissionCycles();
-      const wanted = startYearOf(currentYear?.year);
+      const wanted = startYearOf(year);
       const match =
         (wanted ? all.find((a) => startYearOf(a.sessionName) === wanted) : undefined) ?? null;
       setAdmission(match);
@@ -114,7 +106,7 @@ export default function AdmissionProgramCoursePage() {
     } finally {
       setLoading(false);
     }
-  }, [currentYear?.year]);
+  }, [year]);
 
   React.useEffect(() => {
     resolveAdmission();
@@ -190,39 +182,6 @@ export default function AdmissionProgramCoursePage() {
     }
   };
 
-  const openCreateCycle = async () => {
-    setCycleForm({ sessionId: "", startDate: "", lastDate: "" });
-    try {
-      setSessions(await getSessions());
-    } catch {
-      setSessions([]);
-    }
-    setIsCycleOpen(true);
-  };
-
-  const handleCreateCycle = async () => {
-    if (!cycleForm.sessionId) {
-      toast.error("Session is required");
-      return;
-    }
-    setCreatingCycle(true);
-    try {
-      await createAdmissionCycle({
-        sessionId: Number(cycleForm.sessionId),
-        status: "DRAFT",
-        startDate: cycleForm.startDate || null,
-        lastDate: cycleForm.lastDate || null,
-      });
-      toast.success("Admission cycle created");
-      setIsCycleOpen(false);
-      await resolveAdmission();
-    } catch (e) {
-      toast.error(`Failed to create cycle: ${e instanceof Error ? e.message : "error"}`);
-    } finally {
-      setCreatingCycle(false);
-    }
-  };
-
   const filtered = rows.filter((r) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
@@ -234,7 +193,8 @@ export default function AdmissionProgramCoursePage() {
     );
   });
 
-  const yearLabel = currentYear?.year ?? "selected year";
+  const m = startYearOf(year);
+  const yearLabel = m ? `${m}-${String(Number(m) + 1).slice(-2)}` : (year ?? "selected year");
 
   return (
     <div className="p-2 sm:p-4">
@@ -274,11 +234,8 @@ export default function AdmissionProgramCoursePage() {
               <div className="text-sm text-muted-foreground">
                 No admission cycle exists for <span className="font-medium">{yearLabel}</span> yet.
               </div>
-              <Button
-                onClick={openCreateCycle}
-                className="bg-purple-600 text-white hover:bg-purple-700"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" /> Create admission cycle
+              <Button variant="outline" onClick={() => navigate("..")}>
+                Create it from Admission Home
               </Button>
             </div>
           ) : (
@@ -446,52 +403,6 @@ export default function AdmissionProgramCoursePage() {
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create admission cycle */}
-      <Dialog open={isCycleOpen} onOpenChange={setIsCycleOpen}>
-        <DialogContent className="w-[95vw] max-w-md sm:w-full">
-          <DialogHeader>
-            <DialogTitle>Create Admission Cycle</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">
-                Session<span className="text-red-500"> *</span>
-              </Label>
-              <SearchableSelect
-                value={cycleForm.sessionId}
-                onChange={(v) => setCycleForm((p) => ({ ...p, sessionId: v }))}
-                options={sessions.map((o) => ({ value: String(o.id), label: o.name }))}
-                placeholder="Select Session"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Start Date</Label>
-              <Input
-                type="date"
-                value={cycleForm.startDate}
-                onChange={(e) => setCycleForm((p) => ({ ...p, startDate: e.target.value }))}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Last Date</Label>
-              <Input
-                type="date"
-                value={cycleForm.lastDate}
-                onChange={(e) => setCycleForm((p) => ({ ...p, lastDate: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div className="mt-2 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsCycleOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateCycle} disabled={creatingCycle}>
-              {creatingCycle ? "Creating..." : "Create"}
             </Button>
           </div>
         </DialogContent>
