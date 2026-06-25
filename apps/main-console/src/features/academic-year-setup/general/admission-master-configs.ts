@@ -19,6 +19,8 @@ export const ADMISSION_MASTER_CONFIGS: Record<string, ResourceConfig> = {
     labelField: "name",
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
+      { key: "shortName", label: "Short Name", type: "text" },
+      { key: "printOnIdCard", label: "Print on ID Card (use short name)", type: "boolean" },
       { key: "isActive", label: "Active", type: "boolean" },
     ],
   },

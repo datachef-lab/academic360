@@ -5,6 +5,8 @@ import z from "zod";
 export const admissionQuotaTypeModel = pgTable("admission_quota_types", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
+    shortName: varchar("short_name", { length: 255 }),
+    printOnIdCard: boolean("print_on_id_card").default(false),
     isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
