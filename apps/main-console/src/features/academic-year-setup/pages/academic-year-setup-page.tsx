@@ -22,18 +22,6 @@ type FeatureCard = {
 
 const featureCards: FeatureCard[] = [
   {
-    title: "General",
-    description:
-      "General masters used across academic setup — qualifications, occupations and more.",
-    icon: ListChecks,
-    href: "/dashboard/academic-setup/general",
-    iconColor: "text-slate-600",
-    status: "Pending",
-    items: "Qualifications, occupations & masters",
-    illustrationName: "general",
-    illustration: "/academic-setup-illustrations/general.jpg",
-  },
-  {
     title: "Course Design",
     description:
       "Define program-courses, streams, subjects, paper mappings, classes and academic years.",
@@ -81,6 +69,18 @@ const featureCards: FeatureCard[] = [
     illustrationName: "promotion-logic",
     illustration: "/academic-setup-illustrations/promotion-logic.jpg",
   },
+  {
+    title: "General",
+    description:
+      "General masters used across academic setup — qualifications, occupations and more.",
+    icon: ListChecks,
+    href: "/dashboard/academic-setup/general",
+    iconColor: "text-slate-600",
+    status: "Pending",
+    items: "Qualifications, occupations & masters",
+    illustrationName: "general",
+    illustration: "/academic-setup-illustrations/general.jpg",
+  },
 ];
 
 export default function AcademicYearSetupPage() {
@@ -114,7 +114,7 @@ export default function AcademicYearSetupPage() {
             {featureCards.map((card) => (
               <Card
                 key={card.href}
-                className="group cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-all duration-300 hover:border-gray-300 hover:shadow-xl"
+                className="group cursor-pointer overflow-hidden rounded-xl border border-gray-300 bg-white transition-all duration-300 hover:border-gray-400 hover:shadow-xl"
                 onClick={() => navigate(card.href)}
               >
                 <CardContent className="flex h-full flex-col p-0">
