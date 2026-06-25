@@ -466,6 +466,7 @@ export const idCardFieldKeyEnum = pgEnum("id_card_field_key", [
     "QRCODE",
     "VALID_TILL_DATE",
     "PHOTO",
+    "SHIFT",
 ]);
 
 export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [

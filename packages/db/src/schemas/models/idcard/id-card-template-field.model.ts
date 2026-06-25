@@ -8,6 +8,7 @@ import {
     serial,
     timestamp,
     uniqueIndex,
+    varchar,
 } from "drizzle-orm/pg-core";
 
 import { idCardFieldKeyEnum } from "@/schemas/enums";
@@ -26,6 +27,7 @@ export const idCardTemplateFieldModel = pgTable(
         width: integer(),
         height: integer(),
         fontSize: integer(),
+        align: varchar({ length: 10 }).notNull().default("LEFT"),
         isVisible: boolean().notNull().default(true),
         createdAt: timestamp().notNull().defaultNow(),
         updatedAt: timestamp()
