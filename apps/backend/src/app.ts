@@ -140,6 +140,9 @@ import {
 import disabilityCodeRouter from "./features/user/routes/disabilityCode.route.js";
 import resourceUsageRouter from "./features/resources/routes/resource-usage.routes.js";
 import { resourceRealtime } from "./middlewares/resource-realtime.middleware.js";
+import admissionQuotaTypeRouter from "./features/admissions/routes/admission-quota-type.route.js";
+import cancelSourceRouter from "./features/admissions/routes/cancel-source.route.js";
+import gradeRouter from "./features/admissions/routes/grade.route.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
@@ -638,6 +641,9 @@ app.use("/api/post-offices", postOfficeRouter);
 app.use("/api/pickup-points", pickupPointRouter);
 app.use("/api/disability-codes", disabilityCodeRouter);
 app.use("/api/resource-usage", resourceUsageRouter);
+app.use("/api/admission-quota-types", admissionQuotaTypeRouter);
+app.use("/api/cancel-sources", cancelSourceRouter);
+app.use("/api/grades", gradeRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 
@@ -1056,6 +1062,9 @@ app.use("/api/post-offices", postOfficeRouter);
 app.use("/api/pickup-points", pickupPointRouter);
 app.use("/api/disability-codes", disabilityCodeRouter);
 app.use("/api/resource-usage", resourceUsageRouter);
+app.use("/api/admission-quota-types", admissionQuotaTypeRouter);
+app.use("/api/cancel-sources", cancelSourceRouter);
+app.use("/api/grades", gradeRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 

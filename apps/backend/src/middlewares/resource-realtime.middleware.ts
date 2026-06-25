@@ -31,6 +31,12 @@ const REALTIME_RESOURCES = new Set<string>([
   "admissions/board-subjects",
   "admissions/board-subject-names",
   "admissions/courses",
+  "admissions/sports-category",
+  "admission-quota-types",
+  "cancel-sources",
+  "grades",
+  "v1/sections",
+  "v1/shifts",
 ]);
 
 /**

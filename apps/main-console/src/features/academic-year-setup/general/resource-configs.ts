@@ -68,6 +68,8 @@ export type ResourceConfig = {
   fields: ResourceField[];
   /** FK-chain badge columns shown (first) in the table. */
   badges?: BadgeSpec[];
+  /** DB table name for the usage-count endpoint (overrides RESOURCE_TABLE_BY_KEY). */
+  table?: string;
 };
 
 const BADGE_COUNTRY = "bg-blue-100 text-blue-700 border border-blue-200";

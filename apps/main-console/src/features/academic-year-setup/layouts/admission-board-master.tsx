@@ -1,38 +1,37 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
-import { GraduationCap, ListChecks, BookText, Layers } from "lucide-react";
+import {
+  GraduationCap,
+  ListChecks,
+  BookText,
+  Layers,
+  Ticket,
+  SlidersHorizontal,
+  XCircle,
+  Star,
+  Trophy,
+  Rows3,
+} from "lucide-react";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
-const nestedHomeLinks = [
-  {
-    title: "Board Subject Mappings",
-    url: "/dashboard/academic-setup/admissions/master/",
-    icon: GraduationCap,
-  },
-  {
-    title: "Board Subject Mapping Papers",
-    url: "/dashboard/academic-setup/admissions/master/mapping-subjects",
-    icon: BookText,
-  },
+const BASE = "/dashboard/academic-setup/admissions/master";
+
+const mainLinks = [
+  { title: "Program Courses", url: `${BASE}/program-courses`, icon: Layers },
+  { title: "Section", url: `${BASE}/sections`, icon: Rows3 },
+  { title: "Cancel Source", url: `${BASE}/cancel-sources`, icon: XCircle },
+  { title: "Sports Category", url: `${BASE}/sports-categories`, icon: Trophy },
+  { title: "Board Subject Mapping", url: `${BASE}/`, icon: GraduationCap },
+  { title: "Grades", url: `${BASE}/grades`, icon: Star },
+  { title: "Board Subject Mapping Papers", url: `${BASE}/mapping-subjects`, icon: BookText },
 ];
 
 const masterLinks = [
-  {
-    title: "Program Courses",
-    url: "/dashboard/academic-setup/admissions/master/program-courses",
-    icon: Layers,
-  },
-  {
-    title: "Board",
-    url: "/dashboard/academic-setup/admissions/master/boards",
-    icon: ListChecks,
-  },
-  {
-    title: "Subjects",
-    url: "/dashboard/academic-setup/admissions/master/subjects",
-    icon: BookText,
-  },
+  { title: "Admission Quota Types", url: `${BASE}/quota-type`, icon: Ticket },
+  { title: "Shift - Section Config", url: `${BASE}/shift-section-config`, icon: SlidersHorizontal },
+  { title: "Board", url: `${BASE}/boards`, icon: ListChecks },
+  { title: "Subjects", url: `${BASE}/subjects`, icon: BookText },
 ];
 
 export default function AdmissionBoardMaster() {
@@ -42,9 +41,9 @@ export default function AdmissionBoardMaster() {
   useRestrictTempUsers();
 
   const rightBarContent = (
-    <div className="flex flex-col justify-between gap-4 py-3 h-full">
+    <div className="flex h-full flex-col justify-between gap-4 py-3">
       <ul>
-        {nestedHomeLinks.map((link) => (
+        {mainLinks.map((link) => (
           <NavItem
             key={link.url}
             href={link.url}
@@ -56,7 +55,7 @@ export default function AdmissionBoardMaster() {
         ))}
       </ul>
       <div>
-        <h3 className="text-lg mx-4 mb-1 font-bold border-b">Masters</h3>
+        <h3 className="mx-4 mb-1 border-b text-lg font-bold">Masters</h3>
         <ul>
           {masterLinks.map((link) => (
             <NavItem

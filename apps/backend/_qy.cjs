@@ -1,10 +1,26 @@
-const {Client}=require("pg");(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();
-const cols=(await c.query("select column_name from information_schema.columns where table_name='admissions' order by ordinal_position")).rows.map(r=>r.column_name);
-console.log("admissions cols:", cols.join(", "));
-const r=(await c.query("select id, session_id_fk, academic_year_id_fk from admissions order by id")).rows;
-console.table(r);
-console.log("academic_years:");
-console.table((await c.query("select id, year from academic_years order by id")).rows);
-console.log("sessions:");
-console.table((await c.query("select id, name from sessions order by id")).rows);
-await c.end();})().catch(e=>console.log("ERR",e.message));
+const { Client } = require("pg");
+(async () => {
+  const c = new Client({ connectionString: process.env.DATABASE_URL });
+  await c.connect();
+  const cols = (
+    await c.query(
+      "select column_name from information_schema.columns where table_name='admissions' order by ordinal_position",
+    )
+  ).rows.map((r) => r.column_name);
+  console.log("admissions cols:", cols.join(", "));
+  const r = (
+    await c.query(
+      "select id, session_id_fk, academic_year_id_fk from admissions order by id",
+    )
+  ).rows;
+  console.table(r);
+  console.log("academic_years:");
+  console.table(
+    (await c.query("select id, year from academic_years order by id")).rows,
+  );
+  console.log("sessions:");
+  console.table(
+    (await c.query("select id, name from sessions order by id")).rows,
+  );
+  await c.end();
+})().catch((e) => console.log("ERR", e.message));

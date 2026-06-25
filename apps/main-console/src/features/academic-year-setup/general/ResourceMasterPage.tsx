@@ -152,7 +152,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   React.useEffect(() => {
     let cancelled = false;
     setUsage(null);
-    const table = RESOURCE_TABLE_BY_KEY[config.key];
+    const table = config.table ?? RESOURCE_TABLE_BY_KEY[config.key];
     if (!table) return;
     (async () => {
       try {

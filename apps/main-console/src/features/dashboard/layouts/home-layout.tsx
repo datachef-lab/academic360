@@ -199,6 +199,13 @@ function LayoutHeader({
             </BreadcrumbItem>
 
             {pathSegments.map((segment, index) => {
+              const prev = pathSegments[index - 1];
+              const next = pathSegments[index + 1];
+              const isYear = /^\d{4}$/.test(segment);
+              // Fold an admissions year (e.g. .../admissions/2025) into the
+              // "Admissions (2025-26)" crumb; don't render the year separately.
+              if (isYear && prev === "admissions") return null;
+
               const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
               // Library-only staff must not hit `/dashboard` (hook redirects → flash).
               const linkTo =
@@ -206,7 +213,12 @@ function LayoutHeader({
                   ? moduleOnlyHomePath
                   : path;
               const Icon = pathIconMap[segment];
-              const isLastSegment = index === pathSegments.length - 1;
+              const yearFolded = segment === "admissions" && !!next && /^\d{4}$/.test(next);
+              const label =
+                yearFolded && next
+                  ? `Admissions (${next}-${String(Number(next) + 1).slice(-2)})`
+                  : segment.replace(/-/g, " ");
+              const isLastSegment = index === pathSegments.length - 1 || yearFolded;
 
               return (
                 <BreadcrumbItem
@@ -221,7 +233,7 @@ function LayoutHeader({
                       {Icon && (
                         <Icon className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500 flex-shrink-0" />
                       )}
-                      <span className="capitalize truncate">{segment.replace(/-/g, " ")}</span>
+                      <span className="capitalize truncate">{label}</span>
                     </Link>
                   </BreadcrumbLink>
                   {!isLastSegment && <BreadcrumbSeparator className="hidden lg:inline-flex" />}

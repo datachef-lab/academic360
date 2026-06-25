@@ -66,9 +66,11 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
 import AdmissionsPage from "./features/academic-year-setup/pages/admissions-page";
 import AdmissionProgramCoursePage from "./features/academic-year-setup/pages/admission-program-course-page";
+import AdmissionsYearRedirect from "./features/academic-year-setup/pages/admissions-year-redirect";
 import GeneralMaster from "./features/academic-year-setup/layouts/general-master";
 import ResourceMasterPage from "./features/academic-year-setup/general/ResourceMasterPage";
 import { RESOURCE_CONFIGS } from "./features/academic-year-setup/general/resource-configs";
+import { ADMISSION_MASTER_CONFIGS } from "./features/academic-year-setup/general/admission-master-configs";
 import ToolsPage from "./features/tools/pages/tools-page";
 import ShiftChangePage from "./features/tools/pages/shift-change-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
@@ -137,13 +139,47 @@ const router = createBrowserRouter(
               path: "admissions",
               element: <Outlet />,
               children: [
-                { path: "", element: <AdmissionsPage /> },
+                { path: "", element: <AdmissionsYearRedirect /> },
+                { path: ":year", element: <AdmissionsPage /> },
                 {
                   path: "master",
                   element: <AdmissionBoardMaster />,
                   children: [
                     { path: "", element: <BoardSubjectPage /> },
                     { path: "program-courses", element: <AdmissionProgramCoursePage /> },
+                    {
+                      path: "quota-type",
+                      element: (
+                        <ResourceMasterPage
+                          config={ADMISSION_MASTER_CONFIGS["admission-quota-types"]!}
+                        />
+                      ),
+                    },
+                    { path: "shift-section-config", element: <UnderConstructionPage /> },
+                    {
+                      path: "cancel-sources",
+                      element: (
+                        <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["cancel-sources"]!} />
+                      ),
+                    },
+                    {
+                      path: "grades",
+                      element: <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["grades"]!} />,
+                    },
+                    {
+                      path: "sports-categories",
+                      element: (
+                        <ResourceMasterPage
+                          config={ADMISSION_MASTER_CONFIGS["sports-categories"]!}
+                        />
+                      ),
+                    },
+                    {
+                      path: "sections",
+                      element: (
+                        <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["sections"]!} />
+                      ),
+                    },
                     { path: "boards", element: <BoardPage /> },
                     { path: "subjects", element: <BoardSubjectNamePage /> },
                     {
