@@ -397,31 +397,42 @@ export async function addAdmissionApplicationForm(
         WHERE sessionId = ${oldSession.id};
     `)) as [OldAcademicYear[], any];
 
-  if (!oldAcademicYear) {
+  // The legacy DB sometimes has the session (e.g. a newly-created year like
+  // "2026-2027") but not the matching accademicyear row. Fall back to deriving
+  // the academic year from the session name instead of failing the import.
+  const startYear = oldAcademicYear
+    ? Number(oldAcademicYear.accademicYearName)
+    : Number(String(oldSession.sessionName).match(/\d{4}/)?.[0]);
+
+  if (!startYear || Number.isNaN(startYear)) {
     throw new Error("No academic year found");
   }
 
-  const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
-  const codePrefix = Number(oldAcademicYear.accademicYearName) % 100;
+  const academicYearName = `${startYear}-${(startYear + 1) % 100}`;
+  const codePrefix = startYear % 100;
 
+  const academicYearMatch = [ilike(academicYearModel.year, academicYearName)];
+  if (oldAcademicYear) {
+    academicYearMatch.push(
+      eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
+    );
+  }
   let [foundAcademicYear] = await db
     .select()
     .from(academicYearModel)
-    .where(
-      or(
-        ilike(academicYearModel.year, academicYearName),
-        eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
-      ),
-    );
+    .where(or(...academicYearMatch));
 
   if (!foundAcademicYear) {
     foundAcademicYear = (
       await db
         .insert(academicYearModel)
         .values({
-          legacyAcademicYearId: oldAcademicYear.id,
+          legacyAcademicYearId: oldAcademicYear?.id ?? null,
           year: academicYearName,
-          isCurrentYear: oldAcademicYear.presentAcademicYear,
+          isCurrentYear:
+            oldAcademicYear?.presentAcademicYear ??
+            oldSession.iscurrentsession ??
+            false,
           codePrefix: codePrefix.toString(),
         })
         .returning()
@@ -1188,33 +1199,44 @@ export async function getOrCreateSessionForLegacySessionId(
         WHERE sessionId = ${oldSession.id};
     `)) as [OldAcademicYear[], any];
 
-  if (!oldAcademicYear) {
+  // Legacy DB may have the session but not the matching accademicyear row for
+  // newly-created years; derive the academic year from the session name instead
+  // of failing (e.g. "2026-2027" -> 2026 -> "2026-27").
+  const startYear = oldAcademicYear
+    ? Number(oldAcademicYear.accademicYearName)
+    : Number(String(oldSession.sessionName).match(/\d{4}/)?.[0]);
+
+  if (!startYear || Number.isNaN(startYear)) {
     throw new Error(
       `No academic year found for legacy session ${oldSession.sessionName}`,
     );
   }
 
-  const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
-  const codePrefix = Number(oldAcademicYear.accademicYearName) % 100;
+  const academicYearName = `${startYear}-${(startYear + 1) % 100}`;
+  const codePrefix = startYear % 100;
 
+  const academicYearMatch = [ilike(academicYearModel.year, academicYearName)];
+  if (oldAcademicYear) {
+    academicYearMatch.push(
+      eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
+    );
+  }
   let [foundAcademicYear] = await db
     .select()
     .from(academicYearModel)
-    .where(
-      or(
-        ilike(academicYearModel.year, academicYearName),
-        eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
-      ),
-    );
+    .where(or(...academicYearMatch));
 
   if (!foundAcademicYear) {
     foundAcademicYear = (
       await db
         .insert(academicYearModel)
         .values({
-          legacyAcademicYearId: oldAcademicYear.id,
+          legacyAcademicYearId: oldAcademicYear?.id ?? null,
           year: academicYearName,
-          isCurrentYear: oldAcademicYear.presentAcademicYear,
+          isCurrentYear:
+            oldAcademicYear?.presentAcademicYear ??
+            oldSession.iscurrentsession ??
+            false,
           codePrefix: codePrefix.toString(),
         })
         .returning()
