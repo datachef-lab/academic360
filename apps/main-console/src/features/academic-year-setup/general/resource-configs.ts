@@ -13,7 +13,6 @@ import {
   Map,
   Building,
   MapPin,
-  Landmark,
   Bus,
   ShieldAlert,
   Mailbox,
@@ -34,6 +33,19 @@ export type ResourceField = {
   optionLabelKey?: string;
 };
 
+/**
+ * A colored badge column resolved by walking FK hops up the chain.
+ * e.g. a City's "Country" badge: hops [stateId→states, countryId→countries].
+ */
+export type BadgeSpec = {
+  label: string;
+  /** tailwind classes for the badge chip */
+  color: string;
+  hops: { fromKey: string; basePath: string }[];
+  /** property on the final resolved row to display (default "name") */
+  labelKey?: string;
+};
+
 export type ResourceConfig = {
   /** Route segment + nav key (e.g. "blood-groups"). */
   key: string;
@@ -44,7 +56,13 @@ export type ResourceConfig = {
   /** Primary text field used as the row's headline + search. */
   labelField: string;
   fields: ResourceField[];
+  /** FK-chain badge columns shown (first) in the table. */
+  badges?: BadgeSpec[];
 };
+
+const BADGE_COUNTRY = "bg-blue-100 text-blue-700 border border-blue-200";
+const BADGE_STATE = "bg-emerald-100 text-emerald-700 border border-emerald-200";
+const BADGE_CITY = "bg-amber-100 text-amber-700 border border-amber-200";
 
 const seq: ResourceField = { key: "sequence", label: "Sequence", type: "number" };
 const active: ResourceField = { key: "isActive", label: "Active", type: "boolean" };
@@ -154,6 +172,13 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     icon: Map,
     basePath: "states",
     labelField: "name",
+    badges: [
+      {
+        label: "Country",
+        color: BADGE_COUNTRY,
+        hops: [{ fromKey: "countryId", basePath: "countries" }],
+      },
+    ],
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {
@@ -174,6 +199,17 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     icon: Building,
     basePath: "cities",
     labelField: "name",
+    badges: [
+      {
+        label: "Country",
+        color: BADGE_COUNTRY,
+        hops: [
+          { fromKey: "stateId", basePath: "states" },
+          { fromKey: "countryId", basePath: "countries" },
+        ],
+      },
+      { label: "State", color: BADGE_STATE, hops: [{ fromKey: "stateId", basePath: "states" }] },
+    ],
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {
@@ -196,6 +232,26 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     icon: MapPin,
     basePath: "districts",
     labelField: "name",
+    badges: [
+      {
+        label: "Country",
+        color: BADGE_COUNTRY,
+        hops: [
+          { fromKey: "cityId", basePath: "cities" },
+          { fromKey: "stateId", basePath: "states" },
+          { fromKey: "countryId", basePath: "countries" },
+        ],
+      },
+      {
+        label: "State",
+        color: BADGE_STATE,
+        hops: [
+          { fromKey: "cityId", basePath: "cities" },
+          { fromKey: "stateId", basePath: "states" },
+        ],
+      },
+      { label: "City", color: BADGE_CITY, hops: [{ fromKey: "cityId", basePath: "cities" }] },
+    ],
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {
@@ -206,27 +262,6 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
         optionsBasePath: "cities",
         optionLabelKey: "name",
       },
-      seq,
-      active,
-    ],
-  },
-  {
-    key: "boards",
-    title: "Boards",
-    icon: Landmark,
-    basePath: "admissions/boards",
-    labelField: "name",
-    fields: [
-      { key: "name", label: "Name", type: "text", required: true },
-      {
-        key: "degreeId",
-        label: "Degree",
-        type: "select",
-        optionsBasePath: "degree",
-        optionLabelKey: "name",
-      },
-      { key: "code", label: "Code", type: "text" },
-      { key: "passingMarks", label: "Passing Marks", type: "number" },
       seq,
       active,
     ],
@@ -245,6 +280,17 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     icon: ShieldAlert,
     basePath: "police-stations",
     labelField: "name",
+    badges: [
+      {
+        label: "Country",
+        color: BADGE_COUNTRY,
+        hops: [
+          { fromKey: "stateId", basePath: "states" },
+          { fromKey: "countryId", basePath: "countries" },
+        ],
+      },
+      { label: "State", color: BADGE_STATE, hops: [{ fromKey: "stateId", basePath: "states" }] },
+    ],
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {
@@ -262,6 +308,17 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     icon: Mailbox,
     basePath: "post-offices",
     labelField: "name",
+    badges: [
+      {
+        label: "Country",
+        color: BADGE_COUNTRY,
+        hops: [
+          { fromKey: "stateId", basePath: "states" },
+          { fromKey: "countryId", basePath: "countries" },
+        ],
+      },
+      { label: "State", color: BADGE_STATE, hops: [{ fromKey: "stateId", basePath: "states" }] },
+    ],
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {

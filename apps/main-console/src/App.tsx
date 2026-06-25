@@ -157,8 +157,10 @@ const router = createBrowserRouter(
                 { path: "help-desk", element: <UnderConstructionPage /> },
                 { path: "application-forms", element: <UnderConstructionPage /> },
                 { path: "merit-listing", element: <UnderConstructionPage /> },
+                { path: "merit-listing-rules", element: <UnderConstructionPage /> },
                 { path: "verification", element: <UnderConstructionPage /> },
                 { path: "admit-students", element: <UnderConstructionPage /> },
+                { path: "notifications", element: <UnderConstructionPage /> },
               ],
             },
             // Back-compat: old board-subjects path now lives under the Admission master

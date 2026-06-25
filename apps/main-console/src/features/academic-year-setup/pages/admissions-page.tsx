@@ -13,6 +13,8 @@ import {
   Check,
   Clock,
   MessagesSquare,
+  Bell,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -60,7 +62,6 @@ const processSteps: ProcessStep[] = [
     status: "active",
     href: `${ADMISSIONS_BASE}/application-forms`,
     icon: FileText,
-    image: "/academic-setup-illustrations/application-forms.jpg",
   },
   {
     label: "Merit Listing",
@@ -69,7 +70,6 @@ const processSteps: ProcessStep[] = [
     href: `${ADMISSIONS_BASE}/merit-listing`,
     icon: Trophy,
     badge: "Round 1",
-    image: "/academic-setup-illustrations/merit-listing.jpg",
   },
   {
     label: "Verification",
@@ -123,6 +123,7 @@ const cards: AdmissionCard[] = [
     iconColor: "text-emerald-600",
     items: "Overview & summary",
     illustrationName: "admission-home",
+    illustration: "/academic-setup-illustrations/admission-home.jpg",
   },
   {
     title: "Admission Master",
@@ -132,6 +133,7 @@ const cards: AdmissionCard[] = [
     iconColor: "text-indigo-600",
     items: "Boards, subjects & mappings",
     illustrationName: "admission-master",
+    illustration: "/academic-setup-illustrations/admission-master.jpg",
   },
   {
     title: "Staff & Management",
@@ -151,6 +153,26 @@ const cards: AdmissionCard[] = [
     iconColor: "text-sky-600",
     items: "Applicant queries & support",
     illustrationName: "help-desk",
+  },
+  {
+    title: "Notifications",
+    description: "Send emails, SMS and WhatsApp messages to applicants.",
+    icon: Bell,
+    href: `${ADMISSIONS_BASE}/notifications`,
+    iconColor: "text-rose-600",
+    items: "Email · SMS · WhatsApp",
+    illustrationName: "notifications",
+    illustration: "/academic-setup-illustrations/notifications.jpg",
+  },
+  {
+    title: "Merit Listing Rules",
+    description: "Define rules and criteria used to generate merit lists.",
+    icon: Scale,
+    href: `${ADMISSIONS_BASE}/merit-listing-rules`,
+    iconColor: "text-orange-600",
+    items: "Rules & criteria",
+    illustrationName: "merit-listing",
+    illustration: "/academic-setup-illustrations/merit-listing.jpg",
   },
 ];
 

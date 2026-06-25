@@ -19,15 +19,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, Download, Upload, Edit, Trash2 } from "lucide-react";
+import {
+  PlusCircle,
+  Download,
+  Upload,
+  Edit,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 import { makeResourceApi, type ResourceRow } from "./resource-api";
-import type { ResourceConfig, ResourceField } from "./resource-configs";
+import type { BadgeSpec, ResourceConfig, ResourceField } from "./resource-configs";
 
 type OptionRow = { id: number; label: string };
 type FormState = Record<string, string | number | boolean | null>;
+
+const PAGE_SIZE = 15;
 
 function defaultForm(config: ResourceConfig): FormState {
   const f: FormState = {};
@@ -50,20 +60,36 @@ function rowToForm(config: ResourceConfig, row: ResourceRow): FormState {
 
 export default function ResourceMasterPage({ config }: { config: ResourceConfig }) {
   const api = React.useMemo(() => makeResourceApi(config.basePath), [config.basePath]);
-  const selectFields = React.useMemo(
-    () => config.fields.filter((f) => f.type === "select" && f.optionsBasePath),
-    [config],
+
+  // Editable form fields, split for the dialog layout.
+  const topFields = config.fields.filter((f) => f.type !== "boolean" && f.key !== "sequence");
+  const seqField = config.fields.find((f) => f.key === "sequence");
+  const boolFields = config.fields.filter((f) => f.type === "boolean");
+  // Table value columns (FK selects are shown via badges instead).
+  const valueFields = config.fields.filter(
+    (f) => f.type !== "select" && f.type !== "boolean" && f.key !== "sequence",
   );
+  const badges = config.badges ?? [];
+
+  // Every related basePath we need to load (FK select options + badge hops).
+  const relatedBasePaths = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const f of config.fields)
+      if (f.type === "select" && f.optionsBasePath) set.add(f.optionsBasePath);
+    for (const b of badges) for (const h of b.hops) set.add(h.basePath);
+    return Array.from(set);
+  }, [config]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [rows, setRows] = React.useState<ResourceRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
+  const [page, setPage] = React.useState(1);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<ResourceRow | null>(null);
   const [form, setForm] = React.useState<FormState>(defaultForm(config));
   const [submitting, setSubmitting] = React.useState(false);
-  const [options, setOptions] = React.useState<Record<string, OptionRow[]>>({});
+  const [related, setRelated] = React.useState<Record<string, ResourceRow[]>>({});
   const [isBulkOpen, setIsBulkOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [bulkRunning, setBulkRunning] = React.useState(false);
@@ -73,6 +99,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
     setLoading(true);
     try {
       const data = await api.getAll();
+      data.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
       setRows(data);
       setError(null);
     } catch (e) {
@@ -86,41 +113,57 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
 
   React.useEffect(() => {
     setSearch("");
+    setPage(1);
     setForm(defaultForm(config));
     setSelected(null);
     load();
   }, [config, load]);
 
-  // Load FK option lists for select fields (and to resolve labels in the table).
+  // Load related lists (FK options + badge chains).
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
-      const next: Record<string, OptionRow[]> = {};
-      for (const field of selectFields) {
-        const base = field.optionsBasePath!;
-        if (next[base]) continue;
+      const next: Record<string, ResourceRow[]> = {};
+      for (const base of relatedBasePaths) {
         try {
-          const opts = await makeResourceApi(base).getAll();
-          next[base] = opts.map((o) => ({
-            id: o.id,
-            label: String(o[field.optionLabelKey ?? "name"] ?? o.id),
-          }));
+          next[base] = await makeResourceApi(base).getAll();
         } catch {
           next[base] = [];
         }
       }
-      if (!cancelled) setOptions(next);
+      if (!cancelled) setRelated(next);
     })();
     return () => {
       cancelled = true;
     };
-  }, [selectFields]);
+  }, [relatedBasePaths]);
 
-  const optionLabel = (field: ResourceField, value: unknown): string => {
-    if (value == null || value === "") return "-";
-    const base = field.optionsBasePath!;
-    const match = (options[base] ?? []).find((o) => o.id === Number(value));
-    return match ? match.label : String(value);
+  const mapsById = React.useMemo(() => {
+    const m: Record<string, Map<number, ResourceRow>> = {};
+    for (const [base, list] of Object.entries(related)) {
+      m[base] = new Map(list.map((r) => [Number(r.id), r]));
+    }
+    return m;
+  }, [related]);
+
+  const optionsFor = (field: ResourceField): OptionRow[] => {
+    const list = related[field.optionsBasePath ?? ""] ?? [];
+    return list.map((o) => ({
+      id: Number(o.id),
+      label: String(o[field.optionLabelKey ?? "name"] ?? o.id),
+    }));
+  };
+
+  const resolveBadge = (row: ResourceRow, badge: BadgeSpec): string => {
+    let cur: ResourceRow | undefined = row;
+    for (const hop of badge.hops) {
+      if (!cur) return "-";
+      const fk = cur[hop.fromKey];
+      if (fk == null) return "-";
+      cur = mapsById[hop.basePath]?.get(Number(fk));
+    }
+    if (!cur) return "-";
+    return String(cur[badge.labelKey ?? "name"] ?? "-");
   };
 
   const openAdd = () => {
@@ -150,7 +193,6 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   };
 
   const handleSubmit = async () => {
-    // required validation
     for (const field of config.fields) {
       if (field.required && (form[field.key] === "" || form[field.key] == null)) {
         toast.error(`${field.label} is required`);
@@ -185,15 +227,11 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   const handleDownload = () => {
     const data = rows.map((r) => {
       const o: Record<string, unknown> = { ID: r.id };
+      for (const b of badges) o[b.label] = resolveBadge(r, b);
       for (const field of config.fields) {
+        if (field.type === "select") continue;
         o[field.label] =
-          field.type === "select"
-            ? optionLabel(field, r[field.key])
-            : field.type === "boolean"
-              ? r[field.key]
-                ? "Yes"
-                : "No"
-              : (r[field.key] ?? "");
+          field.type === "boolean" ? (r[field.key] ? "Yes" : "No") : (r[field.key] ?? "");
       }
       return o;
     });
@@ -276,14 +314,23 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   const filtered = rows.filter((r) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return config.fields.some((f) => {
-      const v = f.type === "select" ? optionLabel(f, r[f.key]) : r[f.key];
-      return String(v ?? "")
+    const inFields = config.fields.some((f) => {
+      if (f.type === "select") return false;
+      return String(r[f.key] ?? "")
         .toLowerCase()
         .includes(q);
     });
+    const inBadges = badges.some((b) => resolveBadge(r, b).toLowerCase().includes(q));
+    return inFields || inBadges;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  React.useEffect(() => setPage(1), [search]);
+
+  const colCount =
+    1 + badges.length + valueFields.length + (seqField ? 1 : 0) + boolFields.length + 1;
   const Icon = config.icon;
 
   return (
@@ -354,7 +401,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-0 z-20 mb-0 flex flex-col items-stretch gap-2 border-b bg-background p-2 sm:flex-row sm:items-center sm:p-4">
+          <div className="mb-0 flex flex-col items-stretch gap-2 border-b bg-background p-2 sm:flex-row sm:items-center sm:p-4">
             <Input
               placeholder="Search..."
               className="w-full sm:w-64"
@@ -365,64 +412,92 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
               <Download className="h-4 w-4" /> <span className="hidden sm:inline">Download</span>
             </Button>
           </div>
-          <div className="relative" style={{ height: "600px" }}>
+          <div className="relative" style={{ height: "560px" }}>
             <div className="h-full overflow-auto">
               <Table className="min-w-[640px] border">
                 <TableHeader className="sticky top-0 z-10 bg-gray-100">
                   <TableRow>
-                    <TableHead className="w-[60px]">ID</TableHead>
-                    {config.fields.map((f) => (
-                      <TableHead key={f.key}>{f.label}</TableHead>
+                    <TableHead className="w-[60px] bg-gray-100">ID</TableHead>
+                    {badges.map((b) => (
+                      <TableHead key={b.label} className="bg-gray-100">
+                        {b.label}
+                      </TableHead>
                     ))}
-                    <TableHead className="w-[120px]">Actions</TableHead>
+                    {valueFields.map((f) => (
+                      <TableHead key={f.key} className="bg-gray-100">
+                        {f.label}
+                      </TableHead>
+                    ))}
+                    {seqField && <TableHead className="bg-gray-100">Sequence</TableHead>}
+                    {boolFields.map((f) => (
+                      <TableHead key={f.key} className="bg-gray-100">
+                        {f.label}
+                      </TableHead>
+                    ))}
+                    <TableHead className="w-[120px] bg-gray-100">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={config.fields.length + 2} className="text-center">
+                      <TableCell colSpan={colCount} className="text-center">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={config.fields.length + 2}
-                        className="text-center text-red-500"
-                      >
+                      <TableCell colSpan={colCount} className="text-center text-red-500">
                         {error}
                       </TableCell>
                     </TableRow>
-                  ) : filtered.length === 0 ? (
+                  ) : paged.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={config.fields.length + 2} className="text-center">
+                      <TableCell colSpan={colCount} className="text-center">
                         No {config.title.toLowerCase()} found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((row) => (
+                    paged.map((row) => (
                       <TableRow key={row.id} className="group">
                         <TableCell>{row.id}</TableCell>
-                        {config.fields.map((f) => (
-                          <TableCell key={f.key}>
-                            {f.type === "boolean" ? (
-                              f.key === "isActive" ? (
-                                row[f.key] !== false ? (
-                                  <Badge className="bg-green-500 text-white hover:bg-green-600">
-                                    Active
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="secondary">Inactive</Badge>
-                                )
-                              ) : row[f.key] ? (
-                                "Yes"
+                        {badges.map((b) => {
+                          const v = resolveBadge(row, b);
+                          return (
+                            <TableCell key={b.label}>
+                              {v === "-" ? (
+                                <span className="text-muted-foreground">-</span>
                               ) : (
-                                "No"
+                                <span
+                                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${b.color}`}
+                                >
+                                  {v}
+                                </span>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                        {valueFields.map((f) => (
+                          <TableCell key={f.key}>
+                            {(row[f.key] as React.ReactNode) ?? "-"}
+                          </TableCell>
+                        ))}
+                        {seqField && (
+                          <TableCell>{(row.sequence as React.ReactNode) ?? "-"}</TableCell>
+                        )}
+                        {boolFields.map((f) => (
+                          <TableCell key={f.key}>
+                            {f.key === "isActive" ? (
+                              row[f.key] !== false ? (
+                                <Badge className="bg-green-500 text-white hover:bg-green-600">
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
                               )
-                            ) : f.type === "select" ? (
-                              optionLabel(f, row[f.key])
+                            ) : row[f.key] ? (
+                              "Yes"
                             ) : (
-                              ((row[f.key] as React.ReactNode) ?? "-")
+                              "No"
                             )}
                           </TableCell>
                         ))}
@@ -453,6 +528,38 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
               </Table>
             </div>
           </div>
+          {/* Pagination */}
+          <div className="flex flex-col items-center justify-between gap-2 border-t p-2 sm:flex-row sm:p-3">
+            <div className="text-xs text-muted-foreground">
+              {filtered.length === 0
+                ? "0 records"
+                : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(
+                    currentPage * PAGE_SIZE,
+                    filtered.length,
+                  )} of ${filtered.length}`}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -466,43 +573,60 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                 : `Add ${config.title.replace(/s$/, "")}`}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {config.fields.map((field) => (
-              <div key={field.key} className="flex flex-col gap-1">
-                <Label className="text-xs">
-                  {field.label}
-                  {field.required && <span className="text-red-500"> *</span>}
-                </Label>
-                {field.type === "boolean" ? (
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(form[field.key])}
-                      onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.checked }))}
-                    />
+          <div className="flex flex-col gap-3">
+            {/* main fields (2-col) */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {topFields.map((field) => (
+                <div key={field.key} className="flex flex-col gap-1">
+                  <Label className="text-xs">
                     {field.label}
-                  </label>
-                ) : field.type === "select" ? (
-                  <select
-                    className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                    value={form[field.key] == null ? "" : String(form[field.key])}
-                    onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
-                  >
-                    <option value="">— Select —</option>
-                    {(options[field.optionsBasePath!] ?? []).map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    type={field.type === "number" ? "number" : "text"}
-                    value={form[field.key] == null ? "" : String(form[field.key])}
-                    onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
-                  />
-                )}
+                    {field.required && <span className="text-red-500"> *</span>}
+                  </Label>
+                  {field.type === "select" ? (
+                    <select
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                      value={form[field.key] == null ? "" : String(form[field.key])}
+                      onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
+                    >
+                      <option value="">— Select —</option>
+                      {optionsFor(field).map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      type={field.type === "number" ? "number" : "text"}
+                      value={form[field.key] == null ? "" : String(form[field.key])}
+                      onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* sequence on its own row */}
+            {seqField && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs">{seqField.label}</Label>
+                <Input
+                  type="number"
+                  className="sm:w-48"
+                  value={form[seqField.key] == null ? "" : String(form[seqField.key])}
+                  onChange={(e) => setForm((p) => ({ ...p, [seqField.key]: e.target.value }))}
+                />
               </div>
+            )}
+            {/* each checkbox on its own row */}
+            {boolFields.map((field) => (
+              <label key={field.key} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form[field.key])}
+                  onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.checked }))}
+                />
+                {field.label}
+              </label>
             ))}
           </div>
           <div className="mt-2 flex justify-end gap-2">
