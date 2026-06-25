@@ -147,11 +147,37 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   }, [related]);
 
   const optionsFor = (field: ResourceField): OptionRow[] => {
-    const list = related[field.optionsBasePath ?? ""] ?? [];
+    let list = related[field.optionsBasePath ?? ""] ?? [];
+    if (field.cascadeParentKey && field.cascadeRefField) {
+      const parentVal = form[field.cascadeParentKey];
+      if (parentVal !== "" && parentVal != null) {
+        list = list.filter((o) => Number(o[field.cascadeRefField!]) === Number(parentVal));
+      }
+    }
     return list.map((o) => ({
       id: Number(o.id),
       label: String(o[field.optionLabelKey ?? "name"] ?? o.id),
     }));
+  };
+
+  // Changing a select clears any descendant selects that cascade from it.
+  const handleSelectChange = (key: string, value: string) => {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      const changed = [key];
+      let again = true;
+      while (again) {
+        again = false;
+        for (const f of config.fields) {
+          if (f.cascadeParentKey && changed.includes(f.cascadeParentKey) && next[f.key] !== "") {
+            next[f.key] = "";
+            changed.push(f.key);
+            again = true;
+          }
+        }
+      }
+      return next;
+    });
   };
 
   const resolveBadge = (row: ResourceRow, badge: BadgeSpec): string => {
@@ -171,15 +197,32 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
     setForm(defaultForm(config));
     setIsFormOpen(true);
   };
+  // Backfill virtual cascade fields (e.g. Country/State) from the row's FK chain.
+  const deriveVirtuals = (row: ResourceRow, base: FormState): FormState => {
+    const f = { ...base };
+    for (const field of config.fields) {
+      if (!field.virtual || !field.deriveHops) continue;
+      let cur: ResourceRow | undefined = row;
+      for (const hop of field.deriveHops) {
+        const fk = cur?.[hop.fromKey];
+        cur = fk == null ? undefined : mapsById[hop.basePath]?.get(Number(fk));
+      }
+      const val = cur && field.deriveValueKey ? cur[field.deriveValueKey] : undefined;
+      f[field.key] = val == null ? "" : (val as number);
+    }
+    return f;
+  };
+
   const openEdit = (row: ResourceRow) => {
     setSelected(row);
-    setForm(rowToForm(config, row));
+    setForm(deriveVirtuals(row, rowToForm(config, row)));
     setIsFormOpen(true);
   };
 
   const buildPayload = (state: FormState): Record<string, unknown> => {
     const payload: Record<string, unknown> = {};
     for (const field of config.fields) {
+      if (field.virtual) continue; // UI-only cascade helpers are not submitted
       const v = state[field.key];
       if (field.type === "number" || field.type === "select") {
         payload[field.key] = v === "" || v == null ? null : Number(v);
@@ -586,7 +629,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                     <select
                       className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                       value={form[field.key] == null ? "" : String(form[field.key])}
-                      onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
+                      onChange={(e) => handleSelectChange(field.key, e.target.value)}
                     >
                       <option value="">— Select —</option>
                       {optionsFor(field).map((o) => (

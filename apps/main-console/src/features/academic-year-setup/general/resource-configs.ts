@@ -31,6 +31,16 @@ export type ResourceField = {
   optionsBasePath?: string;
   /** Property on the option row to use as the visible label (default "name"). */
   optionLabelKey?: string;
+  /** UI-only cascade helper (e.g. a Country select that filters States); not submitted. */
+  virtual?: boolean;
+  /** This select's options are filtered by the value of the field with this key. */
+  cascadeParentKey?: string;
+  /** Property on this select's option rows that must equal the parent's selected id. */
+  cascadeRefField?: string;
+  /** On edit, derive this (virtual) field's value by walking these hops from the row… */
+  deriveHops?: { fromKey: string; basePath: string }[];
+  /** …then reading this property off the resolved row. */
+  deriveValueKey?: string;
 };
 
 /**
@@ -213,12 +223,24 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {
+        key: "_country",
+        label: "Country",
+        type: "select",
+        virtual: true,
+        optionsBasePath: "countries",
+        optionLabelKey: "name",
+        deriveHops: [{ fromKey: "stateId", basePath: "states" }],
+        deriveValueKey: "countryId",
+      },
+      {
         key: "stateId",
         label: "State",
         type: "select",
         required: true,
         optionsBasePath: "states",
         optionLabelKey: "name",
+        cascadeParentKey: "_country",
+        cascadeRefField: "countryId",
       },
       { key: "code", label: "Code", type: "text" },
       { key: "documentRequired", label: "Document Required", type: "boolean" },
@@ -255,12 +277,39 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {
+        key: "_country",
+        label: "Country",
+        type: "select",
+        virtual: true,
+        optionsBasePath: "countries",
+        optionLabelKey: "name",
+        deriveHops: [
+          { fromKey: "cityId", basePath: "cities" },
+          { fromKey: "stateId", basePath: "states" },
+        ],
+        deriveValueKey: "countryId",
+      },
+      {
+        key: "_state",
+        label: "State",
+        type: "select",
+        virtual: true,
+        optionsBasePath: "states",
+        optionLabelKey: "name",
+        cascadeParentKey: "_country",
+        cascadeRefField: "countryId",
+        deriveHops: [{ fromKey: "cityId", basePath: "cities" }],
+        deriveValueKey: "stateId",
+      },
+      {
         key: "cityId",
         label: "City",
         type: "select",
         required: true,
         optionsBasePath: "cities",
         optionLabelKey: "name",
+        cascadeParentKey: "_state",
+        cascadeRefField: "stateId",
       },
       seq,
       active,
@@ -294,11 +343,23 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {
+        key: "_country",
+        label: "Country",
+        type: "select",
+        virtual: true,
+        optionsBasePath: "countries",
+        optionLabelKey: "name",
+        deriveHops: [{ fromKey: "stateId", basePath: "states" }],
+        deriveValueKey: "countryId",
+      },
+      {
         key: "stateId",
         label: "State",
         type: "select",
         optionsBasePath: "states",
         optionLabelKey: "name",
+        cascadeParentKey: "_country",
+        cascadeRefField: "countryId",
       },
     ],
   },
@@ -322,11 +383,23 @@ export const RESOURCE_CONFIGS: ResourceConfig[] = [
     fields: [
       { key: "name", label: "Name", type: "text", required: true },
       {
+        key: "_country",
+        label: "Country",
+        type: "select",
+        virtual: true,
+        optionsBasePath: "countries",
+        optionLabelKey: "name",
+        deriveHops: [{ fromKey: "stateId", basePath: "states" }],
+        deriveValueKey: "countryId",
+      },
+      {
         key: "stateId",
         label: "State",
         type: "select",
         optionsBasePath: "states",
         optionLabelKey: "name",
+        cascadeParentKey: "_country",
+        cascadeRefField: "countryId",
       },
     ],
   },

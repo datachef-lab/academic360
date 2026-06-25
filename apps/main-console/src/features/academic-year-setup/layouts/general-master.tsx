@@ -13,7 +13,6 @@ export default function GeneralMaster() {
 
   const rightBarContent = (
     <div className="flex h-full flex-col gap-2 py-3">
-      <h3 className="mx-4 mb-1 border-b text-lg font-bold">General Masters</h3>
       <ul>
         {RESOURCE_CONFIGS.map((c) => {
           const href = `${GENERAL_BASE}/${c.key}`;
