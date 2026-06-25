@@ -30,6 +30,7 @@ const REALTIME_RESOURCES = new Set<string>([
   "admissions/boards",
   "admissions/board-subjects",
   "admissions/board-subject-names",
+  "admissions/courses",
 ]);
 
 /**

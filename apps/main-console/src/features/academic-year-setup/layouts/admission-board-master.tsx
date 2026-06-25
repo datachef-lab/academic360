@@ -1,6 +1,6 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
-import { GraduationCap, ListChecks, BookText } from "lucide-react";
+import { GraduationCap, ListChecks, BookText, Layers } from "lucide-react";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
@@ -18,6 +18,11 @@ const nestedHomeLinks = [
 ];
 
 const masterLinks = [
+  {
+    title: "Program Courses",
+    url: "/dashboard/academic-setup/admissions/master/program-courses",
+    icon: Layers,
+  },
   {
     title: "Board",
     url: "/dashboard/academic-setup/admissions/master/boards",

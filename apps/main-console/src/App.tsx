@@ -65,6 +65,7 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
 import AdmissionsPage from "./features/academic-year-setup/pages/admissions-page";
+import AdmissionProgramCoursePage from "./features/academic-year-setup/pages/admission-program-course-page";
 import GeneralMaster from "./features/academic-year-setup/layouts/general-master";
 import ResourceMasterPage from "./features/academic-year-setup/general/ResourceMasterPage";
 import { RESOURCE_CONFIGS } from "./features/academic-year-setup/general/resource-configs";
@@ -142,6 +143,7 @@ const router = createBrowserRouter(
                   element: <AdmissionBoardMaster />,
                   children: [
                     { path: "", element: <BoardSubjectPage /> },
+                    { path: "program-courses", element: <AdmissionProgramCoursePage /> },
                     { path: "boards", element: <BoardPage /> },
                     { path: "subjects", element: <BoardSubjectNamePage /> },
                     {
