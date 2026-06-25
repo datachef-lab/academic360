@@ -202,13 +202,17 @@ function LayoutHeader({
               if (isYear && prev === "admissions") return null;
 
               const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
+              const yearFolded = segment === "admissions" && !!next && /^\d{4}$/.test(next);
               // Library-only staff must not hit `/dashboard` (hook redirects → flash).
+              // The folded admissions crumb links straight to the year-scoped URL
+              // (.../admissions/<year>) so it doesn't bounce through the redirect.
               const linkTo =
                 moduleOnlyHomePath && index === 0 && segment === "dashboard"
                   ? moduleOnlyHomePath
-                  : path;
+                  : yearFolded
+                    ? `${path}/${next}`
+                    : path;
               const Icon = pathIconMap[segment];
-              const yearFolded = segment === "admissions" && !!next && /^\d{4}$/.test(next);
               const label =
                 yearFolded && next
                   ? `Admissions (${next}-${String(Number(next) + 1).slice(-2)})`

@@ -177,9 +177,6 @@ export default function AdmissionMasterHomePage() {
               <Label className="text-xs">Session</Label>
               <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
                 {startYearOf(year)}-{Number(startYearOf(year)) + 1}
-                <span className="ml-2 text-xs text-muted-foreground">
-                  (created automatically if it doesn't exist)
-                </span>
               </div>
             </div>
             <div className="flex flex-col gap-1">

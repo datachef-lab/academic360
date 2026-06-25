@@ -20,6 +20,8 @@ import {
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { useAppSelector } from "@/store/hooks";
+import { selectAvailableAcademicYears } from "@/store/slices/academicYearSlice";
 import CardIllustration, {
   type IllustrationName,
 } from "@/features/academic-year-setup/components/CardIllustration";
@@ -182,6 +184,49 @@ export default function AdmissionsPage() {
   const { year } = useParams<{ year: string }>();
   const go = (seg: string) => navigate(`${ADMISSIONS_BASE}/${year}/${seg}`);
 
+  const years = useAppSelector(selectAvailableAcademicYears);
+  const wanted = String(year ?? "").match(/\d{4}/)?.[0] ?? "";
+  const wantedLabel = wanted ? `${wanted}-${String(Number(wanted) + 1).slice(-2)}` : (year ?? "");
+  // Only flag as missing once the year list has actually loaded.
+  const yearMissing =
+    years.length > 0 &&
+    !!wanted &&
+    !years.some((y) => String(y.year ?? "").match(/\d{4}/)?.[0] === wanted);
+
+  const yearSelector = (
+    <AcademicYearSelector
+      className="w-full sm:w-64"
+      showLabel={false}
+      onAcademicYearChange={(y) => {
+        const m = String(y?.year ?? "").match(/\d{4}/);
+        if (m && m[0] !== year) navigate(`${ADMISSIONS_BASE}/${m[0]}`);
+      }}
+    />
+  );
+
+  if (yearMissing) {
+    return (
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="mx-auto max-w-7xl p-4 sm:p-6">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-6 w-6 text-emerald-600 sm:h-7 sm:w-7" />
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Admissions</h1>
+            </div>
+            {yearSelector}
+          </div>
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-white p-12 text-center">
+            <h2 className="text-lg font-semibold text-gray-900">Academic year not found</h2>
+            <p className="text-sm text-muted-foreground">
+              The academic year <span className="font-medium">{wantedLabel}</span> doesn&apos;t
+              exist. Please pick a valid academic year from the selector above.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="mx-auto max-w-7xl p-4 sm:p-6">
@@ -196,14 +241,7 @@ export default function AdmissionsPage() {
               Masters, application forms, merit listing and admitting students
             </p>
           </div>
-          <AcademicYearSelector
-            className="w-full sm:w-64"
-            showLabel={false}
-            onAcademicYearChange={(y) => {
-              const m = String(y?.year ?? "").match(/\d{4}/);
-              if (m && m[0] !== year) navigate(`${ADMISSIONS_BASE}/${m[0]}`);
-            }}
-          />
+          {yearSelector}
         </div>
 
         {/* Admission process timeline */}
