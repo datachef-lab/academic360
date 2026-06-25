@@ -50,7 +50,7 @@ const processSteps: ProcessStep[] = [
     icon: Flag,
   },
   {
-    label: "Counselling",
+    label: "Counseling, Survey & Feedback",
     time: "Not scheduled",
     status: "done",
     href: `${ADMISSIONS_BASE}/counselling`,

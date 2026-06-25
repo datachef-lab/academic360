@@ -241,6 +241,16 @@ class SocketService {
       // Default: assume tab is active until we hear otherwise
       this.socketTabActive.set(socket.id, true);
 
+      // Generic per-resource collaboration rooms (e.g. "resource:states").
+      socket.on("subscribe_resource", (resource: string) => {
+        if (typeof resource === "string" && resource)
+          socket.join(`resource:${resource}`);
+      });
+      socket.on("unsubscribe_resource", (resource: string) => {
+        if (typeof resource === "string" && resource)
+          socket.leave(`resource:${resource}`);
+      });
+
       // Handle user authentication and mapping
       socket.on("authenticate", async (userId: string) => {
         try {
@@ -1601,6 +1611,27 @@ class SocketService {
       log.debug(`Fees dashboard update → fees_dashboard (${payload.reason})`);
     } catch (error) {
       log.error("Error sending fees dashboard update", { error });
+    }
+  }
+
+  /**
+   * Broadcast a generic data-change to everyone viewing `resource` (its room),
+   * so other online users on that page can refresh. Used by `resourceRealtime`.
+   */
+  emitResourceChanged(
+    resource: string,
+    meta: { action: string; path?: string },
+  ) {
+    if (!this.io) return;
+    try {
+      this.io.to(`resource:${resource}`).emit("resource_changed", {
+        resource,
+        action: meta.action,
+        path: meta.path,
+        at: Date.now(),
+      });
+    } catch (error) {
+      log.error("Error emitting resource_changed", { error });
     }
   }
 }

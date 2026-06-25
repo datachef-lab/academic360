@@ -139,6 +139,7 @@ import {
 } from "./features/resources/routes/index.js";
 import disabilityCodeRouter from "./features/user/routes/disabilityCode.route.js";
 import resourceUsageRouter from "./features/resources/routes/resource-usage.routes.js";
+import { resourceRealtime } from "./middlewares/resource-realtime.middleware.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
@@ -278,6 +279,7 @@ app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ extended: true, limit: "1gb" }));
 
 app.use(cookieParser());
+app.use(resourceRealtime);
 
 // Liveness probe for the ALB target group (no auth; /api/health is the
 // student health-records feature, not a status endpoint).

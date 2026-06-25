@@ -1,4 +1,5 @@
 import React from "react";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Download, Edit, GraduationCap } from "lucide-react";
@@ -280,6 +281,7 @@ export default function BoardPage() {
   const [pageSize] = React.useState(10);
   const [totalItems, setTotalItems] = React.useState(0);
   const [selectedDegreeId, setSelectedDegreeId] = React.useState<number | undefined>(undefined);
+  const [refreshTick, setRefreshTick] = React.useState(0);
 
   // Memoize boards to prevent unnecessary re-renders
   const memoizedBoards = React.useMemo(() => boards, [boards]);
@@ -367,7 +369,13 @@ export default function BoardPage() {
       isMounted = false;
       abortController.abort();
     };
-  }, [currentPage, pageSize, searchText, selectedDegreeId]);
+  }, [currentPage, pageSize, searchText, selectedDegreeId, refreshTick]);
+
+  // Live updates: refetch when another online user changes boards.
+  useResourceRoom(
+    "admissions/boards",
+    React.useCallback(() => setRefreshTick((t) => t + 1), []),
+  );
 
   const handleEdit = React.useCallback((board: BoardDto) => {
     setSelectedBoard(board);

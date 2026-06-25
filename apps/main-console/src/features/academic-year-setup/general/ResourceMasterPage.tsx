@@ -33,6 +33,7 @@ import * as XLSX from "xlsx";
 
 import axiosInstance from "@/utils/api";
 import { makeResourceApi, type ResourceRow } from "./resource-api";
+import { useResourceRoom } from "./useResourceRoom";
 import { SearchableSelect } from "./SearchableSelect";
 import {
   RESOURCE_TABLE_BY_KEY,
@@ -102,6 +103,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   const [bulkRunning, setBulkRunning] = React.useState(false);
   const [bulkResult, setBulkResult] = React.useState<{ ok: number; failed: number } | null>(null);
   const [usage, setUsage] = React.useState<Record<number, number> | null>(null);
+  const [usageTick, setUsageTick] = React.useState(0);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -164,7 +166,14 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
     return () => {
       cancelled = true;
     };
-  }, [config.key]);
+  }, [config.key, usageTick]);
+
+  // Live collaboration: refresh when another online user changes this resource.
+  const refresh = React.useCallback(() => {
+    load();
+    setUsageTick((t) => t + 1);
+  }, [load]);
+  useResourceRoom(config.basePath, refresh);
 
   const mapsById = React.useMemo(() => {
     const m: Record<string, Map<number, ResourceRow>> = {};
