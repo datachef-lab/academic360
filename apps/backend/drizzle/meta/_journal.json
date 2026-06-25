@@ -1107,6 +1107,13 @@
       "when": 1782400000000,
       "tag": "0158_idcard_field_align",
       "breakpoints": true
+    },
+    {
+      "idx": 159,
+      "version": "7",
+      "when": 1782450000000,
+      "tag": "0159_quota_type_idcard",
+      "breakpoints": true
     }
   ]
 }

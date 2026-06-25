@@ -1,5 +1,5 @@
 import express from "express";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import { admissionQuotaTypeModel } from "@repo/db/schemas";
 import { ApiResponse } from "@/utils/ApiResonse.js";
@@ -24,14 +24,30 @@ router.get("/", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const { name, isActive } = req.body;
+    const { name, shortName, printOnIdCard, isActive } = req.body;
     if (!name || typeof name !== "string") {
       res.status(400).json(new ApiError(400, "Name is required"));
       return;
     }
+    // Quota type names must be unique (case-insensitive).
+    const [duplicate] = await db
+      .select({ id: admissionQuotaTypeModel.id })
+      .from(admissionQuotaTypeModel)
+      .where(ilike(admissionQuotaTypeModel.name, name.trim()));
+    if (duplicate) {
+      res
+        .status(409)
+        .json(new ApiError(409, `Quota type "${name.trim()}" already exists`));
+      return;
+    }
     const [row] = await db
       .insert(admissionQuotaTypeModel)
-      .values({ name, isActive: isActive ?? true })
+      .values({
+        name: name.trim(),
+        shortName: shortName?.trim() || null,
+        printOnIdCard: !!printOnIdCard,
+        isActive: isActive ?? true,
+      })
       .returning();
     res
       .status(201)
@@ -46,7 +62,30 @@ router.put("/:id", async (req, res, next) => {
     const id = Number(req.params.id);
     const data: Partial<typeof admissionQuotaTypeModel.$inferInsert> = {};
     if (req.body.name !== undefined) data.name = req.body.name;
+    if (req.body.shortName !== undefined)
+      data.shortName = req.body.shortName?.trim() || null;
+    if (req.body.printOnIdCard !== undefined)
+      data.printOnIdCard = !!req.body.printOnIdCard;
     if (req.body.isActive !== undefined) data.isActive = req.body.isActive;
+    // Guard against renaming onto an existing (case-insensitive) name.
+    if (data.name) {
+      const [duplicate] = await db
+        .select({ id: admissionQuotaTypeModel.id })
+        .from(admissionQuotaTypeModel)
+        .where(ilike(admissionQuotaTypeModel.name, data.name.trim()));
+      if (duplicate && duplicate.id !== id) {
+        res
+          .status(409)
+          .json(
+            new ApiError(
+              409,
+              `Quota type "${data.name.trim()}" already exists`,
+            ),
+          );
+        return;
+      }
+      data.name = data.name.trim();
+    }
     const [row] = await db
       .update(admissionQuotaTypeModel)
       .set(data)
