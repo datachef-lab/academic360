@@ -136,8 +136,8 @@ export default function AcademicYearSetupPage() {
                     </div>
                   </div>
 
-                  {/* Illustration — complete image, uniform height */}
-                  <div className="flex h-40 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 p-2 sm:h-44">
+                  {/* Illustration — complete image, full card width */}
+                  <div className="w-full overflow-hidden bg-white">
                     <CardIllustration
                       name={card.illustrationName}
                       image={card.illustration ?? undefined}
