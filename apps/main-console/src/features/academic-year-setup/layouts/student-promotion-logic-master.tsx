@@ -4,7 +4,7 @@ import { Tag, Workflow } from "lucide-react";
 import { Outlet } from "react-router-dom";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
-const BASE = "/dashboard/academic-year-setup/student-promotion-logic";
+const BASE = "/dashboard/academic-setup/student-promotion-logic";
 
 const nestedHomeLinks = [
   {
