@@ -2452,7 +2452,9 @@ async function loadStudentAcademicInfoAndSubjects(
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
         registrationNumber: oldStudentAcademicDetails.regno,
-        rollNumber: oldStudentAcademicDetails.rollno,
+        // Legacy academic "roll number" is stored in `regno` (the `rollno`
+        // column is unused/empty), so map the roll number from `regno`.
+        rollNumber: oldStudentAcademicDetails.regno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
         otherBoard: oldStudentAcademicDetails.otherbrd,
@@ -2525,7 +2527,9 @@ async function loadStudentAcademicInfoAndSubjects(
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
         registrationNumber: oldStudentAcademicDetails.regno,
-        rollNumber: oldStudentAcademicDetails.rollno,
+        // Legacy academic "roll number" is stored in `regno` (the `rollno`
+        // column is unused/empty), so map the roll number from `regno`.
+        rollNumber: oldStudentAcademicDetails.regno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
         otherBoard: oldStudentAcademicDetails.otherbrd,

@@ -460,14 +460,28 @@ export default function AcademicDetails({
       "previousInstituteId",
       "createdAt",
       "updatedAt",
-      // Explicitly handled below
+      // Explicitly rendered in the grid above — must not repeat in the dynamic list.
       "boardResultStatus",
+      "otherBoard",
       "percentageOfMarks",
+      "division",
+      "rank",
+      "registrationNumber",
+      "rollNumber",
+      "schoolNumber",
+      "indexNumber1",
+      "indexNumber2",
+      "studiedUpToClass",
+      "bestOfFour",
+      "oldBestOfFour",
+      "isRegisteredForUGInCU",
+      "lastSchoolName",
+      "subjectStudied",
+      // Aggregates / internal — not surfaced as loose fields.
       "totalPoints",
       "aggregate",
       "subjectsStudied",
       "totalScore",
-      "isRegisteredForUGInCU",
       "schoolName",
       "previousInstituteName",
     ]);
@@ -676,6 +690,7 @@ export default function AcademicDetails({
         {/* Move auto-generated fields to the bottom, after explicit controls */}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Board & qualification */}
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Board</Label>
             <Select
@@ -700,6 +715,14 @@ export default function AcademicDetails({
             </Select>
           </div>
           <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Other Board</Label>
+            <Input
+              value={(info as unknown as { otherBoard?: string } | null)?.otherBoard ?? ""}
+              onChange={(e) => handleInputChange("otherBoard", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Board Result Status</Label>
             <Select
               value={info?.boardResultStatus ?? ""}
@@ -717,110 +740,6 @@ export default function AcademicDetails({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Other Board</Label>
-            <Input
-              value={(info as unknown as { otherBoard?: string } | null)?.otherBoard ?? ""}
-              onChange={(e) => handleInputChange("otherBoard", e.target.value)}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Percentage Of Marks</Label>
-            <Input
-              value={info?.percentageOfMarks ?? ""}
-              type="number"
-              onChange={(e) => handleInputChange("percentageOfMarks", Number(e.target.value))}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Registration Number</Label>
-            <Input
-              value={
-                (info as unknown as { registrationNumber?: string } | null)?.registrationNumber ??
-                ""
-              }
-              onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Division</Label>
-            <Input
-              value={(info as unknown as { division?: string } | null)?.division ?? ""}
-              onChange={(e) => handleInputChange("division", e.target.value)}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Rank</Label>
-            <Input
-              value={(info as unknown as { rank?: number } | null)?.rank ?? ""}
-              type="number"
-              onChange={(e) => handleInputChange("rank", Number(e.target.value))}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Studied Up To Class</Label>
-            <Input
-              value={
-                (info as unknown as { studiedUpToClass?: number } | null)?.studiedUpToClass ?? ""
-              }
-              type="number"
-              onChange={(e) => handleInputChange("studiedUpToClass", Number(e.target.value))}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Best Of Four</Label>
-            <Input
-              value={(info as unknown as { bestOfFour?: number } | null)?.bestOfFour ?? ""}
-              type="number"
-              onChange={(e) => handleInputChange("bestOfFour", Number(e.target.value))}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Old Best Of Four</Label>
-            <Input
-              value={(info as unknown as { oldBestOfFour?: number } | null)?.oldBestOfFour ?? ""}
-              type="number"
-              onChange={(e) => handleInputChange("oldBestOfFour", Number(e.target.value))}
-              className="h-10"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Is Registered For UG in CU</Label>
-            <Select
-              value={
-                ((info as unknown as { isRegisteredForUGInCU?: boolean } | null)
-                  ?.isRegisteredForUGInCU ?? false)
-                  ? "yes"
-                  : "no"
-              }
-              onValueChange={(val) => handleInputChange("isRegisteredForUGInCU", val === "yes")}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Last School Name</Label>
-            <Input
-              value={(info as unknown as { lastSchoolName?: string } | null)?.lastSchoolName ?? ""}
-              onChange={(e) => handleInputChange("lastSchoolName", e.target.value)}
-              className="h-10"
-            />
-          </div>
-
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Specialization</Label>
             <Select
@@ -847,32 +766,6 @@ export default function AcademicDetails({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Subject Studied</Label>
-            <Input
-              value={(info as unknown as { subjectStudied?: string } | null)?.subjectStudied ?? ""}
-              onChange={(e) => handleInputChange("subjectStudied", e.target.value)}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Index Number 1</Label>
-            <Input
-              value={(info as unknown as { indexNumber1?: string } | null)?.indexNumber1 ?? ""}
-              onChange={(e) => handleInputChange("indexNumber1", e.target.value)}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Index Number 2</Label>
-            <Input
-              value={(info as unknown as { indexNumber2?: string } | null)?.indexNumber2 ?? ""}
-              onChange={(e) => handleInputChange("indexNumber2", e.target.value)}
-              className="h-10"
-            />
-          </div>
-
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Language Medium</Label>
             <Select
@@ -900,6 +793,27 @@ export default function AcademicDetails({
             </Select>
           </div>
           <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Subject Studied</Label>
+            <Input
+              value={(info as unknown as { subjectStudied?: string } | null)?.subjectStudied ?? ""}
+              onChange={(e) => handleInputChange("subjectStudied", e.target.value)}
+              className="h-10"
+            />
+          </div>
+
+          {/* Identifiers */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Registration Number</Label>
+            <Input
+              value={
+                (info as unknown as { registrationNumber?: string } | null)?.registrationNumber ??
+                ""
+              }
+              onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Roll Number</Label>
             <Input
               value={(info as unknown as { rollNumber?: string } | null)?.rollNumber ?? ""}
@@ -915,7 +829,118 @@ export default function AcademicDetails({
               className="h-10"
             />
           </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Index Number 1</Label>
+            <Input
+              value={(info as unknown as { indexNumber1?: string } | null)?.indexNumber1 ?? ""}
+              onChange={(e) => handleInputChange("indexNumber1", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Index Number 2</Label>
+            <Input
+              value={(info as unknown as { indexNumber2?: string } | null)?.indexNumber2 ?? ""}
+              onChange={(e) => handleInputChange("indexNumber2", e.target.value)}
+              className="h-10"
+            />
+          </div>
 
+          {/* Marks & performance */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Percentage Of Marks</Label>
+            <Input
+              value={info?.percentageOfMarks ?? ""}
+              type="number"
+              onChange={(e) => handleInputChange("percentageOfMarks", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Division</Label>
+            <Input
+              value={(info as unknown as { division?: string } | null)?.division ?? ""}
+              onChange={(e) => handleInputChange("division", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Rank</Label>
+            <Input
+              value={(info as unknown as { rank?: number } | null)?.rank ?? ""}
+              type="number"
+              onChange={(e) => handleInputChange("rank", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Best Of Four</Label>
+            <Input
+              value={(info as unknown as { bestOfFour?: number } | null)?.bestOfFour ?? ""}
+              type="number"
+              onChange={(e) => handleInputChange("bestOfFour", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Old Best Of Four</Label>
+            <Input
+              value={(info as unknown as { oldBestOfFour?: number } | null)?.oldBestOfFour ?? ""}
+              type="number"
+              onChange={(e) => handleInputChange("oldBestOfFour", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Studied Up To Class</Label>
+            <Input
+              value={
+                (info as unknown as { studiedUpToClass?: number } | null)?.studiedUpToClass ?? ""
+              }
+              type="number"
+              onChange={(e) => handleInputChange("studiedUpToClass", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+
+          {/* Prior schooling & registration */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Last School Name</Label>
+            <Input
+              value={(info as unknown as { lastSchoolName?: string } | null)?.lastSchoolName ?? ""}
+              onChange={(e) => handleInputChange("lastSchoolName", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Previous Institute</Label>
+            <Select
+              value={String((info as FormWithAddress | null)?.previousInstitute?.id ?? "")}
+              onValueChange={(val) =>
+                handleSelectChange(
+                  "previousInstitute",
+                  Number(val),
+                  institutions.find((i) => String(i.id) === val)?.name,
+                )
+              }
+            >
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue
+                  placeholder={
+                    (info as unknown as { previousInstituteName?: string } | null)
+                      ?.previousInstituteName ?? "Select institute"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {institutions.map((i) => (
+                  <SelectItem key={i.id} value={String(i.id)}>
+                    {i.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Previously Registered Program Course</Label>
             <Select
@@ -951,33 +976,23 @@ export default function AcademicDetails({
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Previous Institute</Label>
+            <Label className="text-xs text-gray-600">Is Registered For UG in CU</Label>
             <Select
-              value={String((info as FormWithAddress | null)?.previousInstitute?.id ?? "")}
-              onValueChange={(val) =>
-                handleSelectChange(
-                  "previousInstitute",
-                  Number(val),
-                  institutions.find((i) => String(i.id) === val)?.name,
-                )
+              value={
+                ((info as unknown as { isRegisteredForUGInCU?: boolean } | null)
+                  ?.isRegisteredForUGInCU ?? false)
+                  ? "yes"
+                  : "no"
               }
+              onValueChange={(val) => handleInputChange("isRegisteredForUGInCU", val === "yes")}
             >
               <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { previousInstituteName?: string } | null)
-                      ?.previousInstituteName ?? "Select institute"
-                  }
-                />
+                <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                {institutions.map((i) => (
-                  <SelectItem key={i.id} value={String(i.id)}>
-                    {i.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
               </SelectContent>
             </Select>
           </div>
