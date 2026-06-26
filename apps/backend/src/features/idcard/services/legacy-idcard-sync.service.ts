@@ -49,8 +49,27 @@ const toDateOnly = (v: string | Date | null | undefined): string | null => {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 };
 
-export async function syncLegacyIdCards(): Promise<void> {
-  if (process.env.IDCARD_LEGACY_SYNC !== "true") return;
+export type LegacyIdCardSyncSummary = {
+  scanned: number;
+  deduped: number;
+  inserted: number;
+  alreadyMigrated: number;
+  missingStudent: number;
+  imageFetched: number;
+  imageSkipped: number;
+  errors: number;
+};
+
+/**
+ * @param opts.force run even when IDCARD_LEGACY_SYNC is not "true" (manual API trigger).
+ *        The duplicate guard (legacyIssueId) still prevents re-inserts.
+ */
+export async function syncLegacyIdCards(opts?: {
+  force?: boolean;
+}): Promise<LegacyIdCardSyncSummary | { skipped: true }> {
+  if (!opts?.force && process.env.IDCARD_LEGACY_SYNC !== "true") {
+    return { skipped: true };
+  }
 
   const summary = {
     scanned: 0,
@@ -227,7 +246,9 @@ export async function syncLegacyIdCards(): Promise<void> {
     }
 
     console.log("[idcard-sync] done:", JSON.stringify(summary));
+    return summary;
   } catch (e) {
     console.error("[idcard-sync] fatal:", (e as Error)?.message);
+    return summary;
   }
 }
