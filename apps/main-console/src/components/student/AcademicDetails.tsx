@@ -29,6 +29,7 @@ import { cityService } from "@/services/city.service";
 import axiosInstance from "@/utils/api";
 import { toast } from "@/hooks/useToast";
 import { averageOfBestNTotals } from "@/utils/bestOfFourUtils";
+import { SearchableSelect } from "@/features/academic-year-setup/general/SearchableSelect";
 
 type AcademicDetailsProps = {
   studentAcademicDetails?: AdmissionAcademicInfoDto | null;
@@ -707,26 +708,16 @@ export default function AcademicDetails({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Board</Label>
-            <Select
+            <SearchableSelect
+              className="h-10"
               value={info?.board?.id ? String(info.board.id) : ""}
-              onValueChange={(val) => {
+              onChange={(val) => {
                 const selected = boards.find((b) => String(b.id) === val);
                 handleSelectChange("board", Number(val), selected?.name);
               }}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={(info?.board as { name?: string } | null)?.name || "Select board"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {boards.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={boards.map((b) => ({ value: String(b.id), label: b.name ?? "" }))}
+              placeholder="Select board"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Other Board</Label>
@@ -756,55 +747,29 @@ export default function AcademicDetails({
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Specialization</Label>
-            <Select
+            <SearchableSelect
+              className="h-10"
               value={String(info?.specialization?.id ?? "")}
-              onValueChange={(val) => {
+              onChange={(val) => {
                 const selected = specializations.find((s) => String(s.id) === val);
                 handleSelectChange("specialization", Number(val), selected?.name);
               }}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { specializationName?: string })?.specializationName ??
-                    "Select specialization"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {specializations.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={specializations.map((s) => ({ value: String(s.id), label: s.name ?? "" }))}
+              placeholder="Select specialization"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Language Medium</Label>
-            <Select
+            <SearchableSelect
+              className="h-10"
               value={String(info?.languageMedium?.id ?? "")}
-              onValueChange={(val) => {
+              onChange={(val) => {
                 const selected = languageMediums.find((l) => String(l.id) === val);
                 handleSelectChange("languageMedium", Number(val), selected?.name);
               }}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { languageMediumName?: string })?.languageMediumName ??
-                    "Select language medium"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {languageMediums.map((l) => (
-                  <SelectItem key={l.id} value={String(l.id)}>
-                    {l.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={languageMediums.map((l) => ({ value: String(l.id), label: l.name ?? "" }))}
+              placeholder="Select language medium"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Subject Studied</Label>
@@ -976,31 +941,22 @@ export default function AcademicDetails({
                     <tr key={idx} className="border-t">
                       <td className="px-3 py-2 text-gray-700">{idx + 1}</td>
                       <td className="px-3 py-2 text-gray-800">
-                        <Select
+                        <SearchableSelect
+                          className="h-8 min-w-[160px]"
                           value={s.boardSubject?.id ? String(s.boardSubject.id) : ""}
-                          onValueChange={(val) =>
+                          onChange={(val) =>
                             handleSubjectChangeById(
                               (s as unknown as { id?: number })?.id,
                               "boardSubjectId",
                               Number(val),
                             )
                           }
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue
-                              placeholder={
-                                s.boardSubject?.boardSubjectName?.name ?? "Select subject"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {boardSubjects.map((bs) => (
-                              <SelectItem key={bs.id} value={String(bs.id)}>
-                                {bs.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={boardSubjects.map((bs) => ({
+                            value: String(bs.id),
+                            label: bs.name ?? "",
+                          }))}
+                          placeholder="Select subject"
+                        />
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <Input
@@ -1146,43 +1102,31 @@ export default function AcademicDetails({
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Previous Institute</Label>
-            <Select
+            <SearchableSelect
+              className="h-10"
               value={String((info as FormWithAddress | null)?.previousInstitute?.id ?? "")}
-              onValueChange={(val) =>
+              onChange={(val) =>
                 handleSelectChange(
                   "previousInstitute",
                   Number(val),
                   institutions.find((i) => String(i.id) === val)?.name,
                 )
               }
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { previousInstituteName?: string } | null)
-                      ?.previousInstituteName ?? "Select institute"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {institutions.map((i) => (
-                  <SelectItem key={i.id} value={String(i.id)}>
-                    {i.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={institutions.map((i) => ({ value: String(i.id), label: i.name ?? "" }))}
+              placeholder="Select institute"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Previously Registered Program Course</Label>
-            <Select
+            <SearchableSelect
+              className="h-10"
               value={String(
                 info?.previouslyRegisteredProgramCourse?.id ??
                   (info as unknown as { previouslyRegisteredProgramCourseId?: number } | null)
                     ?.previouslyRegisteredProgramCourseId ??
                   "",
               )}
-              onValueChange={(val) => {
+              onChange={(val) => {
                 const selected = programCourses.find((p) => String(p.id) === val);
                 handleSelectChange(
                   "previouslyRegisteredProgramCourse",
@@ -1190,23 +1134,9 @@ export default function AcademicDetails({
                   selected?.name,
                 );
               }}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { previouslyRegisteredProgramCourseName?: string })
-                      ?.previouslyRegisteredProgramCourseName ?? "Select program course"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {programCourses.map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={programCourses.map((p) => ({ value: String(p.id), label: p.name ?? "" }))}
+              placeholder="Select program course"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Is Registered For UG in CU</Label>
@@ -1297,11 +1227,12 @@ export default function AcademicDetails({
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-gray-600">Country</Label>
-              <Select
+              <SearchableSelect
+                className="h-10"
                 value={String(
                   (info as FormWithAddress | null)?.lastSchoolAddress?.country?.id ?? "",
                 )}
-                onValueChange={(val) =>
+                onChange={(val) =>
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
@@ -1314,29 +1245,16 @@ export default function AcademicDetails({
                       : prev,
                   )
                 }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue
-                    placeholder={
-                      (info as FormWithAddress | null)?.lastSchoolAddress?.country?.name ??
-                      "Select country"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {countries.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={countries.map((c) => ({ value: String(c.id), label: c.name ?? "" }))}
+                placeholder="Select country"
+              />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-gray-600">State</Label>
-              <Select
+              <SearchableSelect
+                className="h-10"
                 value={String((info as FormWithAddress | null)?.lastSchoolAddress?.state?.id ?? "")}
-                onValueChange={(val) =>
+                onChange={(val) =>
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
@@ -1349,29 +1267,16 @@ export default function AcademicDetails({
                       : prev,
                   )
                 }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue
-                    placeholder={
-                      (info as FormWithAddress | null)?.lastSchoolAddress?.state?.name ??
-                      "Select state"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {states.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={states.map((s) => ({ value: String(s.id), label: s.name ?? "" }))}
+                placeholder="Select state"
+              />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-gray-600">City</Label>
-              <Select
+              <SearchableSelect
+                className="h-10"
                 value={String((info as FormWithAddress | null)?.lastSchoolAddress?.city?.id ?? "")}
-                onValueChange={(val) =>
+                onChange={(val) =>
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
@@ -1384,32 +1289,19 @@ export default function AcademicDetails({
                       : prev,
                   )
                 }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue
-                    placeholder={
-                      (info as FormWithAddress | null)?.lastSchoolAddress?.city?.name ??
-                      "Select city"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {cities.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={cities.map((c) => ({ value: String(c.id), label: c.name ?? "" }))}
+                placeholder="Select city"
+              />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-gray-600">District</Label>
-              <Select
+              <SearchableSelect
+                className="h-10"
                 value={String(
                   ((info as FormWithAddress | null)?.lastSchoolAddress?.district as NamedRef | null)
                     ?.id ?? "",
                 )}
-                onValueChange={(val) =>
+                onChange={(val) =>
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
@@ -1422,25 +1314,9 @@ export default function AcademicDetails({
                       : prev,
                   )
                 }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue
-                    placeholder={
-                      (
-                        (info as FormWithAddress | null)?.lastSchoolAddress
-                          ?.district as NamedRef | null
-                      )?.name ?? "Select district"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {districts.map((d) => (
-                    <SelectItem key={d.id} value={String(d.id)}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={districts.map((d) => ({ value: String(d.id), label: d.name ?? "" }))}
+                placeholder="Select district"
+              />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-gray-600">Pincode</Label>
