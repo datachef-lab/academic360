@@ -159,6 +159,14 @@ function checkRequiredEnvs() {
       startPaytmDowntimeScheduler();
       startLibraryReminderScheduler();
       startJournalIssuePredictorScheduler();
+      // One-time legacy ID card backfill — background, no-op unless IDCARD_LEGACY_SYNC=true.
+      void import("@/features/idcard/services/legacy-idcard-sync.service.js")
+        .then(({ syncLegacyIdCards }) => syncLegacyIdCards())
+        .catch((e) =>
+          log.error("idcard-sync failed to start", {
+            message: e instanceof Error ? e.message : String(e),
+          }),
+        );
     });
   } catch (error) {
     log.error("Failed to start the application ⚠️", {

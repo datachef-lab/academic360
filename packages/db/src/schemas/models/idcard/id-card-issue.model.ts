@@ -3,6 +3,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import {
+    bigint,
     date,
     index,
     integer,
@@ -22,6 +23,8 @@ export const idCardIssueModel = pgTable(
     "id_card_issues",
     {
         id: serial().primaryKey(),
+        // Old HRCLSMS.id_card_issues.id — set by the one-time legacy sync to keep it idempotent.
+        legacyIssueId: bigint("legacy_issue_id", { mode: "number" }).unique(),
         studentId: integer("student_id_fk")
             .notNull()
             .references(() => studentModel.id),
