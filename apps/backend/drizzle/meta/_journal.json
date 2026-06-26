@@ -1114,6 +1114,13 @@
       "when": 1782450000000,
       "tag": "0159_quota_type_idcard",
       "breakpoints": true
+    },
+    {
+      "idx": 160,
+      "version": "7",
+      "when": 1782500000000,
+      "tag": "0160_academic_best_of_five",
+      "breakpoints": true
     }
   ]
 }

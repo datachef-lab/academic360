@@ -133,7 +133,8 @@ function extractStudentInfo(raw: any): StudentInfo {
       null,
     mobile:
       raw?.user?.phone ?? raw?.person?.phone ?? raw?.admissionGeneralInfo?.mobileNumber ?? null,
-    bloodGroup: raw?.health?.bloodGroup?.type ?? raw?.health?.bloodGroup?.name ?? null,
+    bloodGroup:
+      raw?.bloodGroup ?? raw?.health?.bloodGroup?.type ?? raw?.health?.bloodGroup?.name ?? null,
     rfidNumber: raw?.rfidNumber ?? null,
     sportsQuota: raw?.sportsInfo?.[0]?.sportsCategory?.name ?? null,
     // Backend only returns quotaType when the quota type is flagged to print on
