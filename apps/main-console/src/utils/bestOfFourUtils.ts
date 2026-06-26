@@ -1,6 +1,26 @@
 import type { StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
 
 /**
+ * Best of N = the average of the best N subject totals (the agreed rule, also
+ * used by the legacy import). Considers subjects with a positive total mark.
+ * Returns null when there are no scored subjects.
+ */
+export function averageOfBestNTotals(
+  subjects: StudentAcademicSubjectsDto[],
+  n: number,
+): number | null {
+  if (!subjects || subjects.length === 0) return null;
+  const totals = subjects
+    .map((s) => Number((s as unknown as { totalMarks?: number }).totalMarks ?? 0))
+    .filter((t) => t > 0)
+    .sort((a, b) => b - a);
+  if (totals.length === 0) return null;
+  const top = totals.slice(0, n);
+  const avg = top.reduce((a, b) => a + b, 0) / top.length;
+  return Math.round(avg * 100) / 100;
+}
+
+/**
  * Calculate Best of Four percentage from subject marks
  * Best of Four is typically calculated by taking the best 4 subjects
  * and calculating the percentage based on their total marks

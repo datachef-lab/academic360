@@ -4,6 +4,7 @@ import type { HealthDto } from "@repo/db/dtos/user";
 import type { BloodGroupDto } from "@repo/db/dtos/resources";
 import {
   getHealthDetailById,
+  getHealthDetailByStudentId,
   createHealthDetail,
   updateHealthDetail,
 } from "@/services/health-details.service";
@@ -25,6 +26,7 @@ import { Save, CheckCircle } from "lucide-react";
 
 export interface HealthDetailsProps {
   healthId?: number;
+  studentId?: number;
   initialData?: HealthDto | null;
 }
 
@@ -60,7 +62,7 @@ function stripDates<T>(obj: T): T {
   return obj;
 }
 
-const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null }) => {
+const HealthDetails: FC<HealthDetailsProps> = ({ healthId, studentId, initialData = null }) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Partial<HealthDto>>({
     ...defaultHealth,
@@ -70,13 +72,21 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
 
   // Fetch health details
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["healthDetails", healthId],
+    queryKey: ["healthDetails", studentId, healthId],
     queryFn: async () => {
-      if (!healthId) return null;
-      const res = await getHealthDetailById(healthId);
-      return res.payload;
+      // Prefer the student endpoint — it returns 200 with a null payload when
+      // there's no health record (the /:id endpoint 404s, raising a noisy toast).
+      if (studentId) {
+        const res = await getHealthDetailByStudentId(studentId);
+        return res.payload;
+      }
+      if (healthId) {
+        const res = await getHealthDetailById(healthId);
+        return res.payload;
+      }
+      return null;
     },
-    enabled: !!healthId,
+    enabled: !!studentId || !!healthId,
   });
 
   // Load Blood Group options

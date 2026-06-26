@@ -28,6 +28,8 @@ export interface StudentDto extends Omit<StudentT, "applicationId" | "programCou
     quotaType: string | null;
     /** Full quota type label for display panels: "Name (Short Name)" — always set when present. */
     quotaTypeLabel: string | null;
+    /** Blood group type (e.g. "O+") resolved from the student's health record. */
+    bloodGroup: string | null;
 }
 
 export interface StaffDto extends Omit<StaffT, "shiftId"> {

@@ -62,6 +62,7 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
 
     // streamId: integer("stream_id_fk").references(() => streamModel.id).notNull(),
     bestOfFour: doublePrecision(),
+    bestOfFive: doublePrecision(),
     totalScore: doublePrecision(),
 
     oldBestOfFour: doublePrecision(),

@@ -2541,6 +2541,7 @@ async function loadStudentAcademicInfoAndSubjects(
   }
 
   // Step 3: Process subjects from old student data only
+  const subjectTotals: number[] = [];
   for (let i = 0; i < studentSubjects.length; i++) {
     const oldStudentSubject = studentSubjects[i];
 
@@ -2614,6 +2615,9 @@ async function loadStudentAcademicInfoAndSubjects(
       boardSubject = newBoardSubject;
     }
 
+    // Collect this subject's total for the best-of-N aggregate.
+    subjectTotals.push(Number(oldStudentSubject.marksObtained) || 0);
+
     // Find existing student academic subject by legacyStudentSubjectDetailsId and admissionAcademicInfoId
     const [existingSubject] = await db
       .select()
@@ -2671,6 +2675,20 @@ async function loadStudentAcademicInfoAndSubjects(
       });
     }
   }
+
+  // Best of Four / Five = average of the top 4 / top 5 subject totals.
+  const avgOfTopN = (totals: number[], n: number): number | undefined => {
+    const top = [...totals].sort((a, b) => b - a).slice(0, n);
+    if (top.length === 0) return undefined;
+    return top.reduce((a, b) => a + b, 0) / top.length;
+  };
+  await db
+    .update(admissionAcademicInfoModel)
+    .set({
+      bestOfFour: avgOfTopN(subjectTotals, 4),
+      bestOfFive: avgOfTopN(subjectTotals, 5),
+    })
+    .where(eq(admissionAcademicInfoModel.id, academicInfo.id!));
 
   console.log(
     `Processed ${studentSubjects.length} subjects for student ${student.id}, old-student-id: ${oldStudent.id}`,

@@ -28,7 +28,7 @@ import { stateService } from "@/services/state.service";
 import { cityService } from "@/services/city.service";
 import axiosInstance from "@/utils/api";
 import { toast } from "@/hooks/useToast";
-import { calculateBestOfFourWithFullMarks } from "@/utils/bestOfFourUtils";
+import { averageOfBestNTotals } from "@/utils/bestOfFourUtils";
 
 type AcademicDetailsProps = {
   studentAcademicDetails?: AdmissionAcademicInfoDto | null;
@@ -321,18 +321,24 @@ export default function AcademicDetails({
     })();
   }, [stateId, cityId]);
 
-  // Auto-calculate Best of Four when subjects or board subjects change
+  // Auto-calculate Best of Four / Best of Five (avg of best 4 / 5 subject totals)
+  // whenever the subjects change. These fields are read-only in the UI.
   useEffect(() => {
-    if (form?.subjects && boardSubjects.length > 0) {
-      const calculatedBestOfFour = calculateBestOfFourWithFullMarks(form.subjects, boardSubjects);
-      if (calculatedBestOfFour !== null && calculatedBestOfFour !== form.bestOfFour) {
-        setForm((prev) => {
-          if (!prev) return prev;
-          return { ...prev, bestOfFour: calculatedBestOfFour } as AdmissionAcademicInfoDto;
-        });
-      }
-    }
-  }, [form?.subjects, boardSubjects, form?.bestOfFour]);
+    if (!form?.subjects) return;
+    const bof = averageOfBestNTotals(form.subjects, 4);
+    const bo5 = averageOfBestNTotals(form.subjects, 5);
+    setForm((prev) => {
+      if (!prev) return prev;
+      const curBof = (prev as { bestOfFour?: number | null }).bestOfFour ?? null;
+      const curBo5 = (prev as { bestOfFive?: number | null }).bestOfFive ?? null;
+      if (bof === curBof && bo5 === curBo5) return prev;
+      return {
+        ...prev,
+        bestOfFour: bof ?? curBof,
+        bestOfFive: bo5 ?? curBo5,
+      } as AdmissionAcademicInfoDto;
+    });
+  }, [form?.subjects]);
 
   // Handlers
   const handleSelectChange = (key: string, id: number, displayName: string = "") => {
@@ -431,13 +437,12 @@ export default function AcademicDetails({
       }
       nextSubjects[targetIndex] = current as unknown as StudentAcademicSubjectsDto;
 
-      // Auto-calculate Best of Four when subject marks change
+      // Auto-calculate Best of Four / Five when subject marks change.
       const updatedForm = { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
-      const calculatedBestOfFour = calculateBestOfFourWithFullMarks(nextSubjects, boardSubjects);
-
-      if (calculatedBestOfFour !== null) {
-        (updatedForm as unknown as { bestOfFour?: number }).bestOfFour = calculatedBestOfFour;
-      }
+      const bof = averageOfBestNTotals(nextSubjects, 4);
+      const bo5 = averageOfBestNTotals(nextSubjects, 5);
+      if (bof !== null) (updatedForm as unknown as { bestOfFour?: number }).bestOfFour = bof;
+      if (bo5 !== null) (updatedForm as unknown as { bestOfFive?: number }).bestOfFive = bo5;
 
       return updatedForm;
     });
@@ -473,6 +478,7 @@ export default function AcademicDetails({
       "indexNumber2",
       "studiedUpToClass",
       "bestOfFour",
+      "bestOfFive",
       "oldBestOfFour",
       "isRegisteredForUGInCU",
       "lastSchoolName",
@@ -642,6 +648,9 @@ export default function AcademicDetails({
                 bestOfFour: ((f as unknown as { bestOfFour?: number }).bestOfFour ??
                   (original as unknown as { bestOfFour?: number }).bestOfFour ??
                   null) as number | null,
+                bestOfFive: ((f as unknown as { bestOfFive?: number }).bestOfFive ??
+                  (original as unknown as { bestOfFive?: number }).bestOfFive ??
+                  null) as number | null,
                 oldBestOfFour: ((f as unknown as { oldBestOfFour?: number }).oldBestOfFour ??
                   (original as unknown as { oldBestOfFour?: number }).oldBestOfFour ??
                   null) as number | null,
@@ -689,8 +698,13 @@ export default function AcademicDetails({
         </div>
         {/* Move auto-generated fields to the bottom, after explicit controls */}
 
+        {/* Board & qualification */}
+        <div className="mb-3 mt-1 flex items-center gap-3">
+          <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+          <div className="text-sm font-semibold text-gray-800">Board &amp; Qualification</div>
+          <div className="ml-2 flex-1 border-b border-gray-200" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Board & qualification */}
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Board</Label>
             <Select
@@ -800,8 +814,15 @@ export default function AcademicDetails({
               className="h-10"
             />
           </div>
+        </div>
 
-          {/* Identifiers */}
+        {/* Identifiers */}
+        <div className="mb-3 mt-5 flex items-center gap-3">
+          <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+          <div className="text-sm font-semibold text-gray-800">Identifiers</div>
+          <div className="ml-2 flex-1 border-b border-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Registration Number</Label>
             <Input
@@ -845,8 +866,15 @@ export default function AcademicDetails({
               className="h-10"
             />
           </div>
+        </div>
 
-          {/* Marks & performance */}
+        {/* Marks & performance */}
+        <div className="mb-3 mt-5 flex items-center gap-3">
+          <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+          <div className="text-sm font-semibold text-gray-800">Marks &amp; Performance</div>
+          <div className="ml-2 flex-1 border-b border-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Percentage Of Marks</Label>
             <Input
@@ -874,12 +902,23 @@ export default function AcademicDetails({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Best Of Four</Label>
+            <Label className="text-xs text-gray-600">Best Of Four (auto)</Label>
             <Input
               value={(info as unknown as { bestOfFour?: number } | null)?.bestOfFour ?? ""}
               type="number"
-              onChange={(e) => handleInputChange("bestOfFour", Number(e.target.value))}
-              className="h-10"
+              readOnly
+              title="Auto-calculated: average of the best 4 subject totals"
+              className="h-10 bg-muted/40"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Best Of Five (auto)</Label>
+            <Input
+              value={(info as unknown as { bestOfFive?: number } | null)?.bestOfFive ?? ""}
+              type="number"
+              readOnly
+              title="Auto-calculated: average of the best 5 subject totals"
+              className="h-10 bg-muted/40"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -902,8 +941,201 @@ export default function AcademicDetails({
               className="h-10"
             />
           </div>
+        </div>
 
-          {/* Prior schooling & registration */}
+        <div className="mt-2">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+            <div className="text-sm font-semibold text-gray-800">Subjects</div>
+            <div className="flex-1 border-b border-gray-200 ml-2" />
+          </div>
+
+          <div className="overflow-hidden rounded-md border">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="text-left font-medium px-3 py-2">#</th>
+                  <th className="text-left font-medium px-3 py-2">Subject</th>
+                  <th className="text-left font-medium px-3 py-2">Theory</th>
+                  <th className="text-left font-medium px-3 py-2">Practical</th>
+                  <th className="text-left font-medium px-3 py-2">Full</th>
+                  <th className="text-left font-medium px-3 py-2">Total</th>
+                  <th className="text-left font-medium px-3 py-2">Grade</th>
+                  <th className="text-left font-medium px-3 py-2">Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subjects.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
+                      No subjects available
+                    </td>
+                  </tr>
+                ) : (
+                  subjects.map((s, idx) => (
+                    <tr key={idx} className="border-t">
+                      <td className="px-3 py-2 text-gray-700">{idx + 1}</td>
+                      <td className="px-3 py-2 text-gray-800">
+                        <Select
+                          value={s.boardSubject?.id ? String(s.boardSubject.id) : ""}
+                          onValueChange={(val) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "boardSubjectId",
+                              Number(val),
+                            )
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue
+                              placeholder={
+                                s.boardSubject?.boardSubjectName?.name ?? "Select subject"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {boardSubjects.map((bs) => (
+                              <SelectItem key={bs.id} value={String(bs.id)}>
+                                {bs.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <Input
+                          value={
+                            (s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? ""
+                          }
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="h-8"
+                          onChange={(e) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "theoryMarks",
+                              Number(e.target.value),
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <Input
+                          value={
+                            (s as unknown as { practicalMarks?: number } | null)?.practicalMarks ??
+                            ""
+                          }
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="h-8"
+                          onChange={(e) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "practicalMarks",
+                              Number(e.target.value),
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        {(() => {
+                          const bsId = Number(
+                            (s as unknown as { boardSubjectId?: number }).boardSubjectId ??
+                              (s as unknown as { boardSubject?: { id?: number } }).boardSubject
+                                ?.id ??
+                              0,
+                          );
+                          const bs = boardSubjects.find((b) => Number(b.id) === bsId);
+                          const fullMarks =
+                            Number(bs?.fullMarksTheory ?? 0) + Number(bs?.fullMarksPractical ?? 0);
+                          return Number.isFinite(fullMarks) && fullMarks > 0 ? fullMarks : "-";
+                        })()}
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <Input
+                          value={(s as unknown as { totalMarks?: number } | null)?.totalMarks ?? ""}
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="h-8"
+                          onChange={(e) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "totalMarks",
+                              Number(e.target.value),
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <Select
+                          value={
+                            (s as unknown as { grade?: { name?: string } } | null)?.grade?.name ??
+                            ""
+                          }
+                          onValueChange={(val) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "gradeName",
+                              val,
+                            )
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gradeOptions.map((g) => (
+                              <SelectItem key={g} value={g}>
+                                {g}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <Select
+                          value={
+                            (s as unknown as { resultStatus?: string } | null)?.resultStatus ?? ""
+                          }
+                          onValueChange={(val) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "resultStatus",
+                              val,
+                            )
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Result" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {resultOptions.map((r) => (
+                              <SelectItem key={r} value={r}>
+                                {r}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {/* Prior schooling & registration */}
+        <div className="mb-3 mt-5 flex items-center gap-3">
+          <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+          <div className="text-sm font-semibold text-gray-800">
+            Prior Schooling &amp; Registration
+          </div>
+          <div className="ml-2 flex-1 border-b border-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Last School Name</Label>
             <Input
@@ -1244,191 +1476,6 @@ export default function AcademicDetails({
                 className="h-10"
               />
             </div>
-          </div>
-        </div>
-
-        <div className="mt-2">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
-            <div className="text-sm font-semibold text-gray-800">Subjects</div>
-            <div className="flex-1 border-b border-gray-200 ml-2" />
-          </div>
-
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600">
-                <tr>
-                  <th className="text-left font-medium px-3 py-2">#</th>
-                  <th className="text-left font-medium px-3 py-2">Subject</th>
-                  <th className="text-left font-medium px-3 py-2">Theory</th>
-                  <th className="text-left font-medium px-3 py-2">Practical</th>
-                  <th className="text-left font-medium px-3 py-2">Full</th>
-                  <th className="text-left font-medium px-3 py-2">Total</th>
-                  <th className="text-left font-medium px-3 py-2">Grade</th>
-                  <th className="text-left font-medium px-3 py-2">Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subjects.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
-                      No subjects available
-                    </td>
-                  </tr>
-                ) : (
-                  subjects.map((s, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="px-3 py-2 text-gray-700">{idx + 1}</td>
-                      <td className="px-3 py-2 text-gray-800">
-                        <Select
-                          value={s.boardSubject?.id ? String(s.boardSubject.id) : ""}
-                          onValueChange={(val) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "boardSubjectId",
-                              Number(val),
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue
-                              placeholder={
-                                s.boardSubject?.boardSubjectName?.name ?? "Select subject"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {boardSubjects.map((bs) => (
-                              <SelectItem key={bs.id} value={String(bs.id)}>
-                                {bs.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Input
-                          value={
-                            (s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? ""
-                          }
-                          type="number"
-                          min={0}
-                          max={100}
-                          className="h-8"
-                          onChange={(e) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "theoryMarks",
-                              Number(e.target.value),
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Input
-                          value={
-                            (s as unknown as { practicalMarks?: number } | null)?.practicalMarks ??
-                            ""
-                          }
-                          type="number"
-                          min={0}
-                          max={100}
-                          className="h-8"
-                          onChange={(e) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "practicalMarks",
-                              Number(e.target.value),
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        {(() => {
-                          const bsId = Number(
-                            (s as unknown as { boardSubjectId?: number }).boardSubjectId ??
-                              (s as unknown as { boardSubject?: { id?: number } }).boardSubject
-                                ?.id ??
-                              0,
-                          );
-                          const bs = boardSubjects.find((b) => Number(b.id) === bsId);
-                          const fullMarks =
-                            Number(bs?.fullMarksTheory ?? 0) + Number(bs?.fullMarksPractical ?? 0);
-                          return Number.isFinite(fullMarks) && fullMarks > 0 ? fullMarks : "-";
-                        })()}
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Input
-                          value={(s as unknown as { totalMarks?: number } | null)?.totalMarks ?? ""}
-                          type="number"
-                          min={0}
-                          max={100}
-                          className="h-8"
-                          onChange={(e) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "totalMarks",
-                              Number(e.target.value),
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Select
-                          value={
-                            (s as unknown as { grade?: { name?: string } } | null)?.grade?.name ??
-                            ""
-                          }
-                          onValueChange={(val) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "gradeName",
-                              val,
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gradeOptions.map((g) => (
-                              <SelectItem key={g} value={g}>
-                                {g}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Select
-                          value={
-                            (s as unknown as { resultStatus?: string } | null)?.resultStatus ?? ""
-                          }
-                          onValueChange={(val) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "resultStatus",
-                              val,
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Result" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {resultOptions.map((r) => (
-                              <SelectItem key={r} value={r}>
-                                {r}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
           </div>
         </div>
 
