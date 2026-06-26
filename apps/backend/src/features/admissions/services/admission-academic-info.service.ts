@@ -169,6 +169,8 @@ export async function updateAcademicInfo(
   if (studiedUpTo != null) base.studiedUpToClass = studiedUpTo;
   const bestOfFour = toNum((rest as any).bestOfFour);
   if (bestOfFour != null) base.bestOfFour = bestOfFour;
+  const bestOfFive = toNum((rest as any).bestOfFive);
+  if (bestOfFive != null) base.bestOfFive = bestOfFive;
   const oldBestOfFour = toNum((rest as any).oldBestOfFour);
   if (oldBestOfFour != null) base.oldBestOfFour = oldBestOfFour;
   if (typeof rest.rollNumber === "string") base.rollNumber = rest.rollNumber;
@@ -280,6 +282,25 @@ export async function updateAcademicInfo(
 
     if (addressId) {
       base.lastSchoolAddress = addressId;
+    }
+  }
+
+  // Authoritatively (re)compute Best of Four / Five from the subjects being
+  // saved: the average of the best 4 / best 5 subject totals.
+  if (Array.isArray(subjects) && subjects.length > 0) {
+    const totals = (subjects as any[])
+      .map((s) => Number(s?.totalMarks ?? 0))
+      .filter((t) => t > 0)
+      .sort((a, b) => b - a);
+    if (totals.length > 0) {
+      const avgTopN = (n: number) => {
+        const top = totals.slice(0, n);
+        return (
+          Math.round((top.reduce((a, b) => a + b, 0) / top.length) * 100) / 100
+        );
+      };
+      base.bestOfFour = avgTopN(4);
+      base.bestOfFive = avgTopN(5);
     }
   }
 

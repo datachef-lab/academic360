@@ -35,6 +35,7 @@ import {
   occupationModel,
   qualificationModel,
   annualIncomeModel,
+  bloodGroupModel,
 } from "@repo/db/schemas/models/resources";
 import { countryModel } from "@repo/db/schemas/models/resources/country.model";
 import { stateModel } from "@repo/db/schemas/models/resources/state.model";
@@ -1099,6 +1100,21 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     .from(userModel)
     .where(eq(userModel.id, student.userId as number));
 
+  // Blood group lives on the health record (keyed by userId), not the student
+  // row — resolve it here so consumers like the ID card get it on the DTO.
+  let bloodGroup: string | null = null;
+  if (student.userId) {
+    const [foundHealth] = await db
+      .select({ type: bloodGroupModel.type })
+      .from(healthModel)
+      .leftJoin(
+        bloodGroupModel,
+        eq(healthModel.bloodGroupId, bloodGroupModel.id),
+      )
+      .where(eq(healthModel.userId, student.userId));
+    bloodGroup = foundHealth?.type ?? null;
+  }
+
   let quotaType: string | null = null;
   let quotaTypeLabel: string | null = null;
   if (student.quotaTypeId) {
@@ -1135,6 +1151,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     personalDetails,
     quotaType,
     quotaTypeLabel,
+    bloodGroup,
   };
 }
 

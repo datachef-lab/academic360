@@ -28,7 +28,8 @@ import { stateService } from "@/services/state.service";
 import { cityService } from "@/services/city.service";
 import axiosInstance from "@/utils/api";
 import { toast } from "@/hooks/useToast";
-import { calculateBestOfFourWithFullMarks } from "@/utils/bestOfFourUtils";
+import { averageOfBestNTotals } from "@/utils/bestOfFourUtils";
+import { SearchableSelect } from "@/features/academic-year-setup/general/SearchableSelect";
 
 type AcademicDetailsProps = {
   studentAcademicDetails?: AdmissionAcademicInfoDto | null;
@@ -321,18 +322,24 @@ export default function AcademicDetails({
     })();
   }, [stateId, cityId]);
 
-  // Auto-calculate Best of Four when subjects or board subjects change
+  // Auto-calculate Best of Four / Best of Five (avg of best 4 / 5 subject totals)
+  // whenever the subjects change. These fields are read-only in the UI.
   useEffect(() => {
-    if (form?.subjects && boardSubjects.length > 0) {
-      const calculatedBestOfFour = calculateBestOfFourWithFullMarks(form.subjects, boardSubjects);
-      if (calculatedBestOfFour !== null && calculatedBestOfFour !== form.bestOfFour) {
-        setForm((prev) => {
-          if (!prev) return prev;
-          return { ...prev, bestOfFour: calculatedBestOfFour } as AdmissionAcademicInfoDto;
-        });
-      }
-    }
-  }, [form?.subjects, boardSubjects, form?.bestOfFour]);
+    if (!form?.subjects) return;
+    const bof = averageOfBestNTotals(form.subjects, 4);
+    const bo5 = averageOfBestNTotals(form.subjects, 5);
+    setForm((prev) => {
+      if (!prev) return prev;
+      const curBof = (prev as { bestOfFour?: number | null }).bestOfFour ?? null;
+      const curBo5 = (prev as { bestOfFive?: number | null }).bestOfFive ?? null;
+      if (bof === curBof && bo5 === curBo5) return prev;
+      return {
+        ...prev,
+        bestOfFour: bof ?? curBof,
+        bestOfFive: bo5 ?? curBo5,
+      } as AdmissionAcademicInfoDto;
+    });
+  }, [form?.subjects]);
 
   // Handlers
   const handleSelectChange = (key: string, id: number, displayName: string = "") => {
@@ -431,13 +438,12 @@ export default function AcademicDetails({
       }
       nextSubjects[targetIndex] = current as unknown as StudentAcademicSubjectsDto;
 
-      // Auto-calculate Best of Four when subject marks change
+      // Auto-calculate Best of Four / Five when subject marks change.
       const updatedForm = { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
-      const calculatedBestOfFour = calculateBestOfFourWithFullMarks(nextSubjects, boardSubjects);
-
-      if (calculatedBestOfFour !== null) {
-        (updatedForm as unknown as { bestOfFour?: number }).bestOfFour = calculatedBestOfFour;
-      }
+      const bof = averageOfBestNTotals(nextSubjects, 4);
+      const bo5 = averageOfBestNTotals(nextSubjects, 5);
+      if (bof !== null) (updatedForm as unknown as { bestOfFour?: number }).bestOfFour = bof;
+      if (bo5 !== null) (updatedForm as unknown as { bestOfFive?: number }).bestOfFive = bo5;
 
       return updatedForm;
     });
@@ -473,6 +479,7 @@ export default function AcademicDetails({
       "indexNumber2",
       "studiedUpToClass",
       "bestOfFour",
+      "bestOfFive",
       "oldBestOfFour",
       "isRegisteredForUGInCU",
       "lastSchoolName",
@@ -642,6 +649,9 @@ export default function AcademicDetails({
                 bestOfFour: ((f as unknown as { bestOfFour?: number }).bestOfFour ??
                   (original as unknown as { bestOfFour?: number }).bestOfFour ??
                   null) as number | null,
+                bestOfFive: ((f as unknown as { bestOfFive?: number }).bestOfFive ??
+                  (original as unknown as { bestOfFive?: number }).bestOfFive ??
+                  null) as number | null,
                 oldBestOfFour: ((f as unknown as { oldBestOfFour?: number }).oldBestOfFour ??
                   (original as unknown as { oldBestOfFour?: number }).oldBestOfFour ??
                   null) as number | null,
@@ -689,30 +699,25 @@ export default function AcademicDetails({
         </div>
         {/* Move auto-generated fields to the bottom, after explicit controls */}
 
+        {/* Board & qualification */}
+        <div className="mb-3 mt-1 flex items-center gap-3">
+          <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+          <div className="text-sm font-semibold text-gray-800">Board &amp; Qualification</div>
+          <div className="ml-2 flex-1 border-b border-gray-200" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Board & qualification */}
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Board</Label>
-            <Select
+            <SearchableSelect
+              className="h-10"
               value={info?.board?.id ? String(info.board.id) : ""}
-              onValueChange={(val) => {
+              onChange={(val) => {
                 const selected = boards.find((b) => String(b.id) === val);
                 handleSelectChange("board", Number(val), selected?.name);
               }}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={(info?.board as { name?: string } | null)?.name || "Select board"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {boards.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={boards.map((b) => ({ value: String(b.id), label: b.name ?? "" }))}
+              placeholder="Select board"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Other Board</Label>
@@ -742,55 +747,29 @@ export default function AcademicDetails({
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Specialization</Label>
-            <Select
+            <SearchableSelect
+              className="h-10"
               value={String(info?.specialization?.id ?? "")}
-              onValueChange={(val) => {
+              onChange={(val) => {
                 const selected = specializations.find((s) => String(s.id) === val);
                 handleSelectChange("specialization", Number(val), selected?.name);
               }}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { specializationName?: string })?.specializationName ??
-                    "Select specialization"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {specializations.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={specializations.map((s) => ({ value: String(s.id), label: s.name ?? "" }))}
+              placeholder="Select specialization"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Language Medium</Label>
-            <Select
+            <SearchableSelect
+              className="h-10"
               value={String(info?.languageMedium?.id ?? "")}
-              onValueChange={(val) => {
+              onChange={(val) => {
                 const selected = languageMediums.find((l) => String(l.id) === val);
                 handleSelectChange("languageMedium", Number(val), selected?.name);
               }}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { languageMediumName?: string })?.languageMediumName ??
-                    "Select language medium"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {languageMediums.map((l) => (
-                  <SelectItem key={l.id} value={String(l.id)}>
-                    {l.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={languageMediums.map((l) => ({ value: String(l.id), label: l.name ?? "" }))}
+              placeholder="Select language medium"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Subject Studied</Label>
@@ -800,8 +779,15 @@ export default function AcademicDetails({
               className="h-10"
             />
           </div>
+        </div>
 
-          {/* Identifiers */}
+        {/* Identifiers */}
+        <div className="mb-3 mt-5 flex items-center gap-3">
+          <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+          <div className="text-sm font-semibold text-gray-800">Identifiers</div>
+          <div className="ml-2 flex-1 border-b border-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Registration Number</Label>
             <Input
@@ -845,8 +831,15 @@ export default function AcademicDetails({
               className="h-10"
             />
           </div>
+        </div>
 
-          {/* Marks & performance */}
+        {/* Marks & performance */}
+        <div className="mb-3 mt-5 flex items-center gap-3">
+          <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+          <div className="text-sm font-semibold text-gray-800">Marks &amp; Performance</div>
+          <div className="ml-2 flex-1 border-b border-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Percentage Of Marks</Label>
             <Input
@@ -874,12 +867,23 @@ export default function AcademicDetails({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Best Of Four</Label>
+            <Label className="text-xs text-gray-600">Best Of Four (auto)</Label>
             <Input
               value={(info as unknown as { bestOfFour?: number } | null)?.bestOfFour ?? ""}
               type="number"
-              onChange={(e) => handleInputChange("bestOfFour", Number(e.target.value))}
-              className="h-10"
+              readOnly
+              title="Auto-calculated: average of the best 4 subject totals"
+              className="h-10 bg-muted/40"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Best Of Five (auto)</Label>
+            <Input
+              value={(info as unknown as { bestOfFive?: number } | null)?.bestOfFive ?? ""}
+              type="number"
+              readOnly
+              title="Auto-calculated: average of the best 5 subject totals"
+              className="h-10 bg-muted/40"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -901,349 +905,6 @@ export default function AcademicDetails({
               onChange={(e) => handleInputChange("studiedUpToClass", Number(e.target.value))}
               className="h-10"
             />
-          </div>
-
-          {/* Prior schooling & registration */}
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Last School Name</Label>
-            <Input
-              value={(info as unknown as { lastSchoolName?: string } | null)?.lastSchoolName ?? ""}
-              onChange={(e) => handleInputChange("lastSchoolName", e.target.value)}
-              className="h-10"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Previous Institute</Label>
-            <Select
-              value={String((info as FormWithAddress | null)?.previousInstitute?.id ?? "")}
-              onValueChange={(val) =>
-                handleSelectChange(
-                  "previousInstitute",
-                  Number(val),
-                  institutions.find((i) => String(i.id) === val)?.name,
-                )
-              }
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { previousInstituteName?: string } | null)
-                      ?.previousInstituteName ?? "Select institute"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {institutions.map((i) => (
-                  <SelectItem key={i.id} value={String(i.id)}>
-                    {i.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Previously Registered Program Course</Label>
-            <Select
-              value={String(
-                info?.previouslyRegisteredProgramCourse?.id ??
-                  (info as unknown as { previouslyRegisteredProgramCourseId?: number } | null)
-                    ?.previouslyRegisteredProgramCourseId ??
-                  "",
-              )}
-              onValueChange={(val) => {
-                const selected = programCourses.find((p) => String(p.id) === val);
-                handleSelectChange(
-                  "previouslyRegisteredProgramCourse",
-                  Number(val),
-                  selected?.name,
-                );
-              }}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue
-                  placeholder={
-                    (info as unknown as { previouslyRegisteredProgramCourseName?: string })
-                      ?.previouslyRegisteredProgramCourseName ?? "Select program course"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {programCourses.map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Is Registered For UG in CU</Label>
-            <Select
-              value={
-                ((info as unknown as { isRegisteredForUGInCU?: boolean } | null)
-                  ?.isRegisteredForUGInCU ?? false)
-                  ? "yes"
-                  : "no"
-              }
-              onValueChange={(val) => handleInputChange("isRegisteredForUGInCU", val === "yes")}
-            >
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="mt-2">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
-            <div className="text-sm font-semibold text-gray-800">Last School Address</div>
-            <div className="flex-1 border-b border-gray-200 ml-2" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">Address Line</Label>
-              <Input
-                value={(info as FormWithAddress | null)?.lastSchoolAddress?.addressLine ?? ""}
-                onChange={(e) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          addressLine: e.target.value,
-                        }))
-                      : prev,
-                  )
-                }
-                className="h-10"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">Landmark</Label>
-              <Input
-                value={(info as FormWithAddress | null)?.lastSchoolAddress?.landmark ?? ""}
-                onChange={(e) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          landmark: e.target.value,
-                        }))
-                      : prev,
-                  )
-                }
-                className="h-10"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">Locality Type</Label>
-              <Select
-                value={(info as FormWithAddress | null)?.lastSchoolAddress?.localityType ?? ""}
-                onValueChange={(val) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          localityType: val as "RURAL" | "URBAN",
-                        }))
-                      : prev,
-                  )
-                }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue placeholder="Select locality type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RURAL">RURAL</SelectItem>
-                  <SelectItem value="URBAN">URBAN</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">Country</Label>
-              <Select
-                value={String(
-                  (info as FormWithAddress | null)?.lastSchoolAddress?.country?.id ?? "",
-                )}
-                onValueChange={(val) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          country: {
-                            id: Number(val),
-                            name: countries.find((c) => String(c.id) === val)?.name || "",
-                          },
-                        }))
-                      : prev,
-                  )
-                }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue
-                    placeholder={
-                      (info as FormWithAddress | null)?.lastSchoolAddress?.country?.name ??
-                      "Select country"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {countries.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">State</Label>
-              <Select
-                value={String((info as FormWithAddress | null)?.lastSchoolAddress?.state?.id ?? "")}
-                onValueChange={(val) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          state: {
-                            id: Number(val),
-                            name: states.find((s) => String(s.id) === val)?.name || "",
-                          },
-                        }))
-                      : prev,
-                  )
-                }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue
-                    placeholder={
-                      (info as FormWithAddress | null)?.lastSchoolAddress?.state?.name ??
-                      "Select state"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {states.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">City</Label>
-              <Select
-                value={String((info as FormWithAddress | null)?.lastSchoolAddress?.city?.id ?? "")}
-                onValueChange={(val) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          city: {
-                            id: Number(val),
-                            name: cities.find((c) => String(c.id) === val)?.name || "",
-                          },
-                        }))
-                      : prev,
-                  )
-                }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue
-                    placeholder={
-                      (info as FormWithAddress | null)?.lastSchoolAddress?.city?.name ??
-                      "Select city"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {cities.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">District</Label>
-              <Select
-                value={String(
-                  ((info as FormWithAddress | null)?.lastSchoolAddress?.district as NamedRef | null)
-                    ?.id ?? "",
-                )}
-                onValueChange={(val) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          district: {
-                            id: Number(val),
-                            name: districts.find((d) => String(d.id) === val)?.name || "",
-                          },
-                        }))
-                      : prev,
-                  )
-                }
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue
-                    placeholder={
-                      (
-                        (info as FormWithAddress | null)?.lastSchoolAddress
-                          ?.district as NamedRef | null
-                      )?.name ?? "Select district"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {districts.map((d) => (
-                    <SelectItem key={d.id} value={String(d.id)}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">Pincode</Label>
-              <Input
-                value={(info as FormWithAddress | null)?.lastSchoolAddress?.pincode ?? ""}
-                onChange={(e) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          pincode: e.target.value,
-                        }))
-                      : prev,
-                  )
-                }
-                className="h-10"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-600">Phone</Label>
-              <Input
-                value={(info as FormWithAddress | null)?.lastSchoolAddress?.phone ?? ""}
-                onChange={(e) =>
-                  setForm((prev) =>
-                    prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({
-                          ...a,
-                          phone: e.target.value,
-                        }))
-                      : prev,
-                  )
-                }
-                className="h-10"
-              />
-            </div>
           </div>
         </div>
 
@@ -1280,31 +941,22 @@ export default function AcademicDetails({
                     <tr key={idx} className="border-t">
                       <td className="px-3 py-2 text-gray-700">{idx + 1}</td>
                       <td className="px-3 py-2 text-gray-800">
-                        <Select
+                        <SearchableSelect
+                          className="h-8 min-w-[160px]"
                           value={s.boardSubject?.id ? String(s.boardSubject.id) : ""}
-                          onValueChange={(val) =>
+                          onChange={(val) =>
                             handleSubjectChangeById(
                               (s as unknown as { id?: number })?.id,
                               "boardSubjectId",
                               Number(val),
                             )
                           }
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue
-                              placeholder={
-                                s.boardSubject?.boardSubjectName?.name ?? "Select subject"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {boardSubjects.map((bs) => (
-                              <SelectItem key={bs.id} value={String(bs.id)}>
-                                {bs.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={boardSubjects.map((bs) => ({
+                            value: String(bs.id),
+                            label: bs.name ?? "",
+                          }))}
+                          placeholder="Select subject"
+                        />
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <Input
@@ -1429,6 +1081,277 @@ export default function AcademicDetails({
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+        {/* Prior schooling & registration */}
+        <div className="mb-3 mt-5 flex items-center gap-3">
+          <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+          <div className="text-sm font-semibold text-gray-800">
+            Prior Schooling &amp; Registration
+          </div>
+          <div className="ml-2 flex-1 border-b border-gray-200" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Last School Name</Label>
+            <Input
+              value={(info as unknown as { lastSchoolName?: string } | null)?.lastSchoolName ?? ""}
+              onChange={(e) => handleInputChange("lastSchoolName", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Previous Institute</Label>
+            <SearchableSelect
+              className="h-10"
+              value={String((info as FormWithAddress | null)?.previousInstitute?.id ?? "")}
+              onChange={(val) =>
+                handleSelectChange(
+                  "previousInstitute",
+                  Number(val),
+                  institutions.find((i) => String(i.id) === val)?.name,
+                )
+              }
+              options={institutions.map((i) => ({ value: String(i.id), label: i.name ?? "" }))}
+              placeholder="Select institute"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Previously Registered Program Course</Label>
+            <SearchableSelect
+              className="h-10"
+              value={String(
+                info?.previouslyRegisteredProgramCourse?.id ??
+                  (info as unknown as { previouslyRegisteredProgramCourseId?: number } | null)
+                    ?.previouslyRegisteredProgramCourseId ??
+                  "",
+              )}
+              onChange={(val) => {
+                const selected = programCourses.find((p) => String(p.id) === val);
+                handleSelectChange(
+                  "previouslyRegisteredProgramCourse",
+                  Number(val),
+                  selected?.name,
+                );
+              }}
+              options={programCourses.map((p) => ({ value: String(p.id), label: p.name ?? "" }))}
+              placeholder="Select program course"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Is Registered For UG in CU</Label>
+            <Select
+              value={
+                ((info as unknown as { isRegisteredForUGInCU?: boolean } | null)
+                  ?.isRegisteredForUGInCU ?? false)
+                  ? "yes"
+                  : "no"
+              }
+              onValueChange={(val) => handleInputChange("isRegisteredForUGInCU", val === "yes")}
+            >
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="mt-2">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
+            <div className="text-sm font-semibold text-gray-800">Last School Address</div>
+            <div className="flex-1 border-b border-gray-200 ml-2" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">Address Line</Label>
+              <Input
+                value={(info as FormWithAddress | null)?.lastSchoolAddress?.addressLine ?? ""}
+                onChange={(e) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          addressLine: e.target.value,
+                        }))
+                      : prev,
+                  )
+                }
+                className="h-10"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">Landmark</Label>
+              <Input
+                value={(info as FormWithAddress | null)?.lastSchoolAddress?.landmark ?? ""}
+                onChange={(e) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          landmark: e.target.value,
+                        }))
+                      : prev,
+                  )
+                }
+                className="h-10"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">Locality Type</Label>
+              <Select
+                value={(info as FormWithAddress | null)?.lastSchoolAddress?.localityType ?? ""}
+                onValueChange={(val) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          localityType: val as "RURAL" | "URBAN",
+                        }))
+                      : prev,
+                  )
+                }
+              >
+                <SelectTrigger className="h-10 text-sm">
+                  <SelectValue placeholder="Select locality type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RURAL">RURAL</SelectItem>
+                  <SelectItem value="URBAN">URBAN</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">Country</Label>
+              <SearchableSelect
+                className="h-10"
+                value={String(
+                  (info as FormWithAddress | null)?.lastSchoolAddress?.country?.id ?? "",
+                )}
+                onChange={(val) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          country: {
+                            id: Number(val),
+                            name: countries.find((c) => String(c.id) === val)?.name || "",
+                          },
+                        }))
+                      : prev,
+                  )
+                }
+                options={countries.map((c) => ({ value: String(c.id), label: c.name ?? "" }))}
+                placeholder="Select country"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">State</Label>
+              <SearchableSelect
+                className="h-10"
+                value={String((info as FormWithAddress | null)?.lastSchoolAddress?.state?.id ?? "")}
+                onChange={(val) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          state: {
+                            id: Number(val),
+                            name: states.find((s) => String(s.id) === val)?.name || "",
+                          },
+                        }))
+                      : prev,
+                  )
+                }
+                options={states.map((s) => ({ value: String(s.id), label: s.name ?? "" }))}
+                placeholder="Select state"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">City</Label>
+              <SearchableSelect
+                className="h-10"
+                value={String((info as FormWithAddress | null)?.lastSchoolAddress?.city?.id ?? "")}
+                onChange={(val) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          city: {
+                            id: Number(val),
+                            name: cities.find((c) => String(c.id) === val)?.name || "",
+                          },
+                        }))
+                      : prev,
+                  )
+                }
+                options={cities.map((c) => ({ value: String(c.id), label: c.name ?? "" }))}
+                placeholder="Select city"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">District</Label>
+              <SearchableSelect
+                className="h-10"
+                value={String(
+                  ((info as FormWithAddress | null)?.lastSchoolAddress?.district as NamedRef | null)
+                    ?.id ?? "",
+                )}
+                onChange={(val) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          district: {
+                            id: Number(val),
+                            name: districts.find((d) => String(d.id) === val)?.name || "",
+                          },
+                        }))
+                      : prev,
+                  )
+                }
+                options={districts.map((d) => ({ value: String(d.id), label: d.name ?? "" }))}
+                placeholder="Select district"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">Pincode</Label>
+              <Input
+                value={(info as FormWithAddress | null)?.lastSchoolAddress?.pincode ?? ""}
+                onChange={(e) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          pincode: e.target.value,
+                        }))
+                      : prev,
+                  )
+                }
+                className="h-10"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-600">Phone</Label>
+              <Input
+                value={(info as FormWithAddress | null)?.lastSchoolAddress?.phone ?? ""}
+                onChange={(e) =>
+                  setForm((prev) =>
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          phone: e.target.value,
+                        }))
+                      : prev,
+                  )
+                }
+                className="h-10"
+              />
+            </div>
           </div>
         </div>
 
