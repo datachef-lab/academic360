@@ -23,6 +23,7 @@ import {
   getStudentIdCardValidityController,
   idCardIssueUpload,
   listIssuesController,
+  runLegacyIdCardSyncController,
   streamIssueFrontImageController,
   streamIssuePhotoImageController,
 } from "@/features/idcard/controllers/id-card-issue.controller.js";
@@ -55,6 +56,9 @@ router.get("/issues/:id", getIssueController);
 router.get("/issues/:id/front", streamIssueFrontImageController);
 router.get("/issues/:id/photo", streamIssuePhotoImageController);
 router.delete("/issues/:id", deleteIssueController);
+
+// One-time legacy backfill — manual trigger (idempotent via legacyIssueId).
+router.post("/legacy-sync", runLegacyIdCardSyncController);
 
 router.get(
   "/students/:studentId/most-recent-issue",

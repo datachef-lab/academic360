@@ -17,6 +17,7 @@ import {
   getStudentIdCardValidity,
   listIssuesPaginated,
 } from "@/features/idcard/services/id-card-issue.service.js";
+import { syncLegacyIdCards } from "@/features/idcard/services/legacy-idcard-sync.service.js";
 
 const optInt = (v: unknown): number | undefined => {
   if (v == null || v === "") return undefined;
@@ -232,6 +233,32 @@ export const deleteIssueController = async (
     res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", null, "Issue deleted."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+};
+
+/**
+ * Manual trigger for the one-time legacy ID card backfill (snapcard → new DB + S3).
+ * Forces the run regardless of IDCARD_LEGACY_SYNC; still idempotent (legacyIssueId).
+ */
+export const runLegacyIdCardSyncController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await syncLegacyIdCards({ force: true });
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Legacy ID card sync completed.",
+        ),
+      );
   } catch (e) {
     handleError(e, res, next);
   }
