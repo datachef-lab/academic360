@@ -223,6 +223,25 @@ export default function StudentPage() {
 
   const [statusOption, setStatusOption] = useState<string>(getInitialStatus());
 
+  // Quota type (admission_quota_types) — editable here, saved with the status form.
+  const { data: quotaTypes } = useQuery({
+    queryKey: ["admission-quota-types"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/api/admission-quota-types");
+      return (res.data?.payload ?? []) as Array<{
+        id: number;
+        name: string;
+        isActive?: boolean;
+      }>;
+    },
+  });
+  const [quotaTypeId, setQuotaTypeId] = useState<string>(
+    data?.quotaTypeId != null ? String(data.quotaTypeId) : "",
+  );
+  useEffect(() => {
+    setQuotaTypeId(data?.quotaTypeId != null ? String(data.quotaTypeId) : "");
+  }, [data?.quotaTypeId]);
+
   // Sync status when userData or data changes
   useEffect(() => {
     console.log("fetched data **", data);
@@ -449,6 +468,28 @@ export default function StudentPage() {
                   </SelectItem>
                   <SelectItem value="TC">Taken Transfer Certificate (TC)</SelectItem>
                   <SelectItem value="CANCELLED_ADMISSION">Cancelled Admission</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Quota type */}
+            <div className="space-y-1">
+              <Label htmlFor="quotaType" className="text-xs sm:text-sm">
+                Quota Type
+              </Label>
+              <Select
+                value={quotaTypeId || "none"}
+                onValueChange={(val) => setQuotaTypeId(val === "none" ? "" : val)}
+              >
+                <SelectTrigger id="quotaType">
+                  <SelectValue placeholder="Select quota type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {(quotaTypes ?? []).map((q) => (
+                    <SelectItem key={q.id} value={String(q.id)}>
+                      {q.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -733,6 +774,9 @@ export default function StudentPage() {
                     studentPayload.cancelledAdmissionReason = null;
                     studentPayload.cancelledAdmissionAt = null;
                   }
+
+                  // Persist the (optional) quota type along with the status form.
+                  studentPayload.quotaTypeId = quotaTypeId ? Number(quotaTypeId) : null;
 
                   await axiosInstance.put(`/api/students/${studentId}/status`, studentPayload);
 

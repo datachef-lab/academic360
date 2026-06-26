@@ -357,6 +357,7 @@ export const updateStudentStatus = async (
       cancelledAdmissionByUserId,
       alumni,
       rfidNumber,
+      quotaTypeId,
     } = req.body as any;
 
     // If cancelled and no explicit user id provided, take from auth context
@@ -392,6 +393,8 @@ export const updateStudentStatus = async (
       alumni,
       // Pass through RFID so service can persist it
       rfidNumber,
+      // Pass through quota type so service can persist it
+      quotaTypeId,
     });
 
     if (!result) {

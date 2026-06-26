@@ -383,6 +383,18 @@ export default function IdCardIssuePage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Ensure fonts are loaded before drawing text — otherwise the first compose
+    // can paint the (black) text with an unready font, leaving it invisible.
+    try {
+      await document.fonts?.ready;
+      await Promise.all([
+        document.fonts?.load?.("bold 28px Calibri"),
+        document.fonts?.load?.("bold 28px Arial"),
+      ]);
+    } catch {
+      /* fonts API unavailable — fall back to immediate draw */
+    }
+
     const loadImg = (src: string) =>
       new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
