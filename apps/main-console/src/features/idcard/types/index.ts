@@ -137,4 +137,4 @@ export const ID_CARD_FIELD_LABELS: Record<IdCardFieldKey, string> = {
   SHIFT: "Shift",
 };
 
-export const ID_CARD_FIELDS_WITH_DIMENSIONS: IdCardFieldKey[] = ["PHOTO"];
+export const ID_CARD_FIELDS_WITH_DIMENSIONS: IdCardFieldKey[] = ["PHOTO", "QRCODE"];
