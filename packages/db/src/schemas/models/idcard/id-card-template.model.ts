@@ -27,6 +27,7 @@ export const idCardTemplateModel = pgTable("id_card_templates", {
     canvasWidthPx: integer().notNull().default(638),
     canvasHeightPx: integer().notNull().default(1004),
     qrcodeSize: integer().notNull().default(0),
+    qrcodeHeight: integer().notNull().default(0),
     isDefault: boolean().notNull().default(false),
     disabled: boolean().notNull().default(false),
     createdByUserId: integer("created_by_user_id_fk").references(() => userModel.id),

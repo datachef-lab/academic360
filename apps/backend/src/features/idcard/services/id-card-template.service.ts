@@ -21,6 +21,7 @@ export type TemplateUpsertInput = {
   canvasWidthPx?: number;
   canvasHeightPx?: number;
   qrcodeSize?: number;
+  qrcodeHeight?: number;
   isDefault?: boolean;
   disabled?: boolean;
 };
@@ -42,6 +43,7 @@ const normalize = (input: TemplateUpsertInput) => ({
   canvasWidthPx: input.canvasWidthPx ?? 600,
   canvasHeightPx: input.canvasHeightPx ?? 900,
   qrcodeSize: input.qrcodeSize ?? 0,
+  qrcodeHeight: input.qrcodeHeight ?? 0,
   isDefault: input.isDefault ?? false,
   disabled: input.disabled ?? false,
 });

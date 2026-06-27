@@ -38,6 +38,7 @@ export default function TemplateUpsertDialog({
   const [canvasWidthPx, setCanvasWidthPx] = useState(template?.canvasWidthPx ?? 600);
   const [canvasHeightPx, setCanvasHeightPx] = useState(template?.canvasHeightPx ?? 900);
   const [qrcodeSize, setQrcodeSize] = useState(template?.qrcodeSize ?? 0);
+  const [qrcodeHeight, setQrcodeHeight] = useState(template?.qrcodeHeight ?? 0);
   const [isDefault, setIsDefault] = useState(template?.isDefault ?? false);
   const [file, setFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
@@ -48,6 +49,7 @@ export default function TemplateUpsertDialog({
     setCanvasWidthPx(template?.canvasWidthPx ?? 600);
     setCanvasHeightPx(template?.canvasHeightPx ?? 900);
     setQrcodeSize(template?.qrcodeSize ?? 0);
+    setQrcodeHeight(template?.qrcodeHeight ?? 0);
     setIsDefault(template?.isDefault ?? false);
     setFile(null);
     setBackFile(null);
@@ -60,6 +62,7 @@ export default function TemplateUpsertDialog({
     canvasWidthPx,
     canvasHeightPx,
     qrcodeSize,
+    qrcodeHeight,
     isDefault,
   });
 
@@ -123,12 +126,21 @@ export default function TemplateUpsertDialog({
               />
             </div>
             <div>
-              <Label>QR Code Size (px)</Label>
+              <Label>QR Code Width (px)</Label>
               <Input
                 type="number"
                 value={qrcodeSize}
                 onChange={(e) => setQrcodeSize(Number(e.target.value) || 0)}
               />
+            </div>
+            <div>
+              <Label>QR Code Height (px)</Label>
+              <Input
+                type="number"
+                value={qrcodeHeight}
+                onChange={(e) => setQrcodeHeight(Number(e.target.value) || 0)}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">0 = square (uses width)</p>
             </div>
             <div className="flex items-center gap-2 mt-6">
               <input
