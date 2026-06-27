@@ -43,6 +43,7 @@ export interface CreateIdCardTemplatePayload {
     canvasWidthPx?: number;
     canvasHeightPx?: number;
     qrcodeSize?: number;
+    qrcodeHeight?: number;
     isDefault?: boolean;
 }
 

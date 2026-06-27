@@ -1128,6 +1128,13 @@
       "when": 1782550000000,
       "tag": "0161_idcard_legacy_issue_id",
       "breakpoints": true
+    },
+    {
+      "idx": 162,
+      "version": "7",
+      "when": 1782600000000,
+      "tag": "0162_idcard_qrcode_height",
+      "breakpoints": true
     }
   ]
 }

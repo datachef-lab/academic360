@@ -41,6 +41,7 @@ export interface IdCardTemplate {
   canvasWidthPx: number;
   canvasHeightPx: number;
   qrcodeSize: number;
+  qrcodeHeight: number;
   isDefault: boolean;
   disabled: boolean;
   createdByUserId: number | null;
@@ -90,6 +91,7 @@ export interface IdCardTemplateUpsertPayload {
   canvasWidthPx?: number;
   canvasHeightPx?: number;
   qrcodeSize?: number;
+  qrcodeHeight?: number;
   isDefault?: boolean;
   disabled?: boolean;
 }

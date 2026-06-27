@@ -476,14 +476,16 @@ export default function IdCardIssuePage() {
         }
 
         if (field.fieldKey === "QRCODE") {
-          const size = activeTemplate.qrcodeSize || 80;
+          const qrW = activeTemplate.qrcodeSize || 80;
+          // Height falls back to width when 0 (square QR).
+          const qrH = activeTemplate.qrcodeHeight || qrW;
           const qrDataUrl = await QRCode.toDataURL(student.uid || "", {
             errorCorrectionLevel: "M",
             margin: 1,
-            width: size,
+            width: Math.max(qrW, qrH), // render at the larger dim, then scale to the box
           });
           const qrImg = await loadImg(qrDataUrl);
-          ctx.drawImage(qrImg, field.x, field.y, size, size);
+          ctx.drawImage(qrImg, field.x, field.y, qrW, qrH);
           continue;
         }
 
