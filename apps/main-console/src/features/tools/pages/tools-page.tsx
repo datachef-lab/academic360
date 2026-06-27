@@ -94,7 +94,7 @@ export default function ToolsPage() {
                     src={card.image}
                     alt={`${card.title} illustration`}
                     loading="lazy"
-                    className="relative h-full w-full object-contain p-4"
+                    className="relative h-full w-full object-cover"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
