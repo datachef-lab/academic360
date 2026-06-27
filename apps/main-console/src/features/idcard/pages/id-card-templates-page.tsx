@@ -34,17 +34,16 @@ export default function IdCardTemplatesPage() {
 
   const academicYearId = currentAcademicYear?.id;
 
+  // Show templates across ALL academic years (no year filter).
   const query = useQuery({
-    queryKey: ["idcard", "templates", { academicYearId, search, page }],
+    queryKey: ["idcard", "templates", { search, page }],
     queryFn: () =>
       listTemplates({
-        academicYearId,
         search: search.trim() || undefined,
         page,
         limit: 20,
         includeDisabled: true,
       }),
-    enabled: !!academicYearId,
   });
 
   const deleteMutation = useMutation({
@@ -61,7 +60,7 @@ export default function IdCardTemplatesPage() {
       <IdCardPageHeader
         icon={IdCard}
         title="ID Card Templates"
-        subtitle="Front-side templates for the selected academic year."
+        subtitle="Front-side templates across all academic years."
         actions={
           <>
             <Input
