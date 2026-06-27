@@ -21,8 +21,7 @@ const toolCards: ToolCard[] = [
     href: "/dashboard/tools/id-cards",
     iconColor: "text-rose-600",
     items: "ID card module",
-    image:
-      "https://thumbs.dreamstime.com/b/id-card-icon-comic-style-identity-badge-vector-cartoon-illustration-pictogram-access-cardholder-people-business-concept-id-card-136144413.jpg",
+    image: "/tool-illustrations/idcards.jpg",
   },
   {
     title: "Student Console Simulation",
@@ -32,8 +31,7 @@ const toolCards: ToolCard[] = [
     href: "/dashboard/tools/simulation",
     iconColor: "text-indigo-600",
     items: "Console preview",
-    image:
-      "https://c8.alamy.com/comp/2M676NN/ui-and-ux-design-abstract-concept-vector-illustration-mobile-app-ui-design-website-ux-user-interface-interaction-experience-web-development-menu-2M676NN.jpg",
+    image: "/tool-illustrations/simulation.jpg",
   },
   {
     title: "Shift Change",
@@ -43,8 +41,7 @@ const toolCards: ToolCard[] = [
     href: "/dashboard/tools/shift-change",
     iconColor: "text-violet-600",
     items: "Student shift / section / roll",
-    image:
-      "https://img.magnific.com/free-vector/mechanism-teamwork-cartoon-characters-spinning-gears-together-co-working-collaboration-partnership-team-building-cooperation-technology-concept-illustration_335657-2038.jpg",
+    image: "/tool-illustrations/shift-change.jpg",
   },
 ];
 
