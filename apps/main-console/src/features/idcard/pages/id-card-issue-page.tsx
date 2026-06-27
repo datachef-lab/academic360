@@ -388,10 +388,7 @@ export default function IdCardIssuePage() {
     // can paint the (black) text with an unready font, leaving it invisible.
     try {
       await document.fonts?.ready;
-      await Promise.all([
-        document.fonts?.load?.("bold 28px Calibri"),
-        document.fonts?.load?.("bold 28px Arial"),
-      ]);
+      await document.fonts?.load?.("bold 1em Calibri");
     } catch {
       /* fonts API unavailable — fall back to immediate draw */
     }
@@ -429,7 +426,7 @@ export default function IdCardIssuePage() {
         const courseText = valueForField("COURSE", student, activeValidTill);
         if (courseText) {
           const cpx = courseField.fontSize ?? (FIELD_FONT_PX.COURSE || 22);
-          ctx.font = `bold ${cpx}px Calibri, Arial, sans-serif`;
+          ctx.font = `bold ${cpx}px Calibri`;
           const cw = ctx.measureText(courseText).width;
           const rightEdge =
             courseField.align === "CENTER"
@@ -494,8 +491,8 @@ export default function IdCardIssuePage() {
           const text = valueForField(field.fieldKey, student, activeValidTill);
           if (!text) continue;
           const px = field.fontSize ?? (FIELD_FONT_PX[field.fieldKey] || 22);
-          ctx.fillStyle = "#000";
-          ctx.font = `bold ${px}px Calibri, Arial, sans-serif`;
+          ctx.fillStyle = "#000000";
+          ctx.font = `bold ${px}px Calibri`;
           ctx.textBaseline = "alphabetic";
 
           // SHIFT is anchored right after the COURSE text (inline) when course
