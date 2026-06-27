@@ -177,9 +177,10 @@ export default function IdCardTemplateEditorPage() {
   const boxSize = (d: FieldDraft) => {
     const isPhoto = d.fieldKey === "PHOTO";
     const isQR = d.fieldKey === "QRCODE";
-    const qr = template?.qrcodeSize || 80;
-    const w = isPhoto ? (d.width ?? 200) : isQR ? qr : 0;
-    const h = isPhoto ? (d.height ?? 240) : isQR ? qr : 0;
+    const qrW = template?.qrcodeSize || 80;
+    const qrH = template?.qrcodeHeight || qrW;
+    const w = isPhoto ? (d.width ?? 200) : isQR ? qrW : 0;
+    const h = isPhoto ? (d.height ?? 240) : isQR ? qrH : 0;
     return { isPhoto, isQR, w, h };
   };
 
@@ -277,7 +278,7 @@ export default function IdCardTemplateEditorPage() {
                     const h = isPhoto
                       ? (d.height ?? 240)
                       : isQR
-                        ? template.qrcodeSize || 80
+                        ? template.qrcodeHeight || template.qrcodeSize || 80
                         : Math.round(fontPx * 1.15);
                     let top = isPhoto || isQR ? d.y : d.y - h + Math.round(fontPx * 0.18);
                     // Text fields use (x) as the alignment anchor — mirror the
