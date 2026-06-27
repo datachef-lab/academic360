@@ -476,9 +476,10 @@ export default function IdCardIssuePage() {
         }
 
         if (field.fieldKey === "QRCODE") {
-          const qrW = activeTemplate.qrcodeSize || 80;
-          // Height falls back to width when 0 (square QR).
-          const qrH = activeTemplate.qrcodeHeight || qrW;
+          // Prefer the per-field size set in the editor; fall back to the
+          // template-level QR size, then a square default.
+          const qrW = field.width || activeTemplate.qrcodeSize || 80;
+          const qrH = field.height || activeTemplate.qrcodeHeight || qrW;
           const qrDataUrl = await QRCode.toDataURL(student.uid || "", {
             errorCorrectionLevel: "M",
             margin: 1,

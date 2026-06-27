@@ -95,12 +95,15 @@ export default function IdCardTemplateEditorPage() {
         };
       }
       const isPhoto = key === "PHOTO";
+      const isQR = key === "QRCODE";
+      const qrW = template?.qrcodeSize || 80;
+      const qrH = template?.qrcodeHeight || qrW;
       return {
         fieldKey: key,
         x: 0,
         y: 0,
-        width: isPhoto ? 200 : null,
-        height: isPhoto ? 240 : null,
+        width: isPhoto ? 200 : isQR ? qrW : null,
+        height: isPhoto ? 240 : isQR ? qrH : null,
         fontSize: null,
         align: "LEFT",
         isVisible: false,
@@ -113,8 +116,9 @@ export default function IdCardTemplateEditorPage() {
   const canvasWidth = template?.canvasWidthPx ?? 600;
   const canvasHeight = template?.canvasHeightPx ?? 900;
 
+  // Keep the preview compact so the controls panel has room (responsive).
   const previewScale = useMemo(() => {
-    return Math.min(1, 480 / canvasWidth);
+    return Math.min(1, 360 / canvasWidth);
   }, [canvasWidth]);
 
   const saveMutation = useMutation({
@@ -179,8 +183,8 @@ export default function IdCardTemplateEditorPage() {
     const isQR = d.fieldKey === "QRCODE";
     const qrW = template?.qrcodeSize || 80;
     const qrH = template?.qrcodeHeight || qrW;
-    const w = isPhoto ? (d.width ?? 200) : isQR ? qrW : 0;
-    const h = isPhoto ? (d.height ?? 240) : isQR ? qrH : 0;
+    const w = isPhoto ? (d.width ?? 200) : isQR ? (d.width ?? qrW) : 0;
+    const h = isPhoto ? (d.height ?? 240) : isQR ? (d.height ?? qrH) : 0;
     return { isPhoto, isQR, w, h };
   };
 
@@ -234,7 +238,7 @@ export default function IdCardTemplateEditorPage() {
         <Card>
           <CardContent className="p-3">
             <div
-              className="relative mx-auto border rounded overflow-hidden bg-gray-50"
+              className="relative mx-auto max-w-full border rounded overflow-hidden bg-gray-50"
               style={{
                 width: canvasWidth * previewScale,
                 height: canvasHeight * previewScale,
@@ -273,12 +277,12 @@ export default function IdCardTemplateEditorPage() {
                     const w = isPhoto
                       ? (d.width ?? 200)
                       : isQR
-                        ? template.qrcodeSize || 80
+                        ? (d.width ?? template.qrcodeSize ?? 80)
                         : Math.max(140, fontPx * 6);
                     const h = isPhoto
                       ? (d.height ?? 240)
                       : isQR
-                        ? template.qrcodeHeight || template.qrcodeSize || 80
+                        ? (d.height ?? template.qrcodeHeight ?? template.qrcodeSize ?? 80)
                         : Math.round(fontPx * 1.15);
                     let top = isPhoto || isQR ? d.y : d.y - h + Math.round(fontPx * 0.18);
                     // Text fields use (x) as the alignment anchor — mirror the

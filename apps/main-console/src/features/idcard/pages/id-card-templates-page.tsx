@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/table";
 import { useAppSelector } from "@/store/hooks";
 import { selectCurrentAcademicYear } from "@/store/slices/academicYearSlice";
-import { AcademicYearSelector } from "@/components/academic-year";
 
 import { deleteTemplate, listTemplates } from "../api/idcard-api";
 import { IdCardTemplate } from "../types";
@@ -65,7 +64,6 @@ export default function IdCardTemplatesPage() {
         subtitle="Front-side templates for the selected academic year."
         actions={
           <>
-            <AcademicYearSelector className="w-56" showLabel={false} />
             <Input
               placeholder="Search by name…"
               value={search}
