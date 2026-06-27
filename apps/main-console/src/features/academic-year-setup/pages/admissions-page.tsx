@@ -155,6 +155,7 @@ const cards: AdmissionCard[] = [
     iconColor: "text-sky-600",
     items: "Applicant queries & support",
     illustrationName: "help-desk",
+    illustration: "/academic-setup-illustrations/help-desk.jpg",
   },
   {
     title: "Merit Listing Rules",
