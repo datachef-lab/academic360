@@ -27,6 +27,7 @@ import {
 } from "@repo/db/schemas/models/subject-selection";
 import {
   paperModel,
+  paperComponentModel,
   subjectModel,
   subjectTypeModel,
   programCourseModel,
@@ -442,6 +443,7 @@ export type AcademicYearCopyResult = {
     relatedSubjects: number;
     restrictedGroupings: number;
     papers: number;
+    paperComponents: number;
   };
 };
 
@@ -499,6 +501,7 @@ export async function createAcademicYearWithCopy(
       relatedSubjects: 0,
       restrictedGroupings: 0,
       papers: 0,
+      paperComponents: 0,
     };
     if (sourceId == null || !created) {
       return {
@@ -683,25 +686,63 @@ export async function createAcademicYearWithCopy(
         ),
       );
     if (srcPapers.length) {
-      await tx.insert(paperModel).values(
-        srcPapers.map((p) => ({
-          subjectId: p.subjectId,
-          affiliationId: p.affiliationId,
-          regulationTypeId: p.regulationTypeId,
-          academicYearId: newYearId,
-          subjectTypeId: p.subjectTypeId,
-          programCourseId: p.programCourseId,
-          classId: p.classId,
-          name: p.name,
-          code: p.code,
-          isOptional: p.isOptional,
-          sequence: p.sequence,
-          isActive: p.isActive,
-          autoAssign: p.autoAssign,
-          previousPaperId: p.id,
-        })),
-      );
-      copied.papers = srcPapers.length;
+      const insertedPapers = await tx
+        .insert(paperModel)
+        .values(
+          srcPapers.map((p) => ({
+            subjectId: p.subjectId,
+            affiliationId: p.affiliationId,
+            regulationTypeId: p.regulationTypeId,
+            academicYearId: newYearId,
+            subjectTypeId: p.subjectTypeId,
+            programCourseId: p.programCourseId,
+            classId: p.classId,
+            name: p.name,
+            code: p.code,
+            isOptional: p.isOptional,
+            sequence: p.sequence,
+            isActive: p.isActive,
+            autoAssign: p.autoAssign,
+            previousPaperId: p.id,
+          })),
+        )
+        .returning({
+          id: paperModel.id,
+          previousPaperId: paperModel.previousPaperId,
+        });
+      copied.papers = insertedPapers.length;
+
+      // 4b) Paper components — clone each source paper's exam components onto its
+      // new paper. Without this the new year's papers have no components, which
+      // makes them invisible to exam scheduling (the component filter drops them).
+      const oldToNewPaperId = new Map<number, number>();
+      for (const np of insertedPapers) {
+        if (np.previousPaperId != null)
+          oldToNewPaperId.set(np.previousPaperId, np.id);
+      }
+      const srcPaperIds = srcPapers.map((p) => p.id!);
+      const srcComponents = srcPaperIds.length
+        ? await tx
+            .select()
+            .from(paperComponentModel)
+            .where(inArray(paperComponentModel.paperId, srcPaperIds))
+        : [];
+      const componentRows = srcComponents
+        .map((c) => {
+          const newPaperId = oldToNewPaperId.get(c.paperId);
+          if (newPaperId == null) return null;
+          return {
+            paperId: newPaperId,
+            examComponentId: c.examComponentId,
+            fullMarks: c.fullMarks,
+            credit: c.credit,
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => r != null);
+      if (componentRows.length) {
+        await tx.insert(paperComponentModel).values(componentRows);
+        copied.paperComponents = componentRows.length;
+      }
     }
 
     return {
