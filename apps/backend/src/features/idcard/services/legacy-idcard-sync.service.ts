@@ -136,12 +136,19 @@ export async function syncLegacyIdCards(opts?: {
     // Insert oldest-first so a RENEWED row's parent already has a new id.
     keptRows.sort((a, b) => ts(a.created_at) - ts(b.created_at) || a.id - b.id);
 
-    const studentCache = new Map<number, { id: number; uid: string } | null>();
+    const studentCache = new Map<
+      number,
+      { id: number; uid: string; previousUid: string | null } | null
+    >();
     const getStudent = async (legacyStudentId: number) => {
       if (studentCache.has(legacyStudentId))
         return studentCache.get(legacyStudentId)!;
       const [s] = await db
-        .select({ id: studentModel.id, uid: studentModel.uid })
+        .select({
+          id: studentModel.id,
+          uid: studentModel.uid,
+          previousUid: studentModel.previousUid,
+        })
         .from(studentModel)
         .where(eq(studentModel.legacyStudentId, legacyStudentId));
       const v = s ?? null;
@@ -154,7 +161,10 @@ export async function syncLegacyIdCards(opts?: {
     // is no need to store the composed card. The photo goes in BOTH photoImageKey
     // (used by the issue page to re-compose) and frontImageKey.
     const uidImageKey = new Map<string, string | null>();
-    const ensureImage = async (uid: string): Promise<string | null> => {
+    const ensureImage = async (
+      uid: string,
+      previousUid?: string | null,
+    ): Promise<string | null> => {
       if (uidImageKey.has(uid)) return uidImageKey.get(uid)!;
       const key = `idcard/legacy/${uid}.png`;
       let result: string | null = null;
@@ -163,27 +173,37 @@ export async function syncLegacyIdCards(opts?: {
           summary.imageSkipped++;
           result = key;
         } else {
-          const res = await fetch(
-            `${IMAGE_BASE_URL}?crop=true&uid=${encodeURIComponent(uid)}`,
-          );
-          if (res.ok) {
+          // The old image service is keyed by the code the student had in the
+          // legacy system. After a shift change the new uid differs, so the
+          // photo may only exist under the previous uid — try both (current
+          // first). We always store it under the current uid.
+          const candidates = [
+            ...new Set(
+              [uid, previousUid].filter((u): u is string => !!u && u !== ""),
+            ),
+          ];
+          for (const sourceUid of candidates) {
+            const res = await fetch(
+              `${IMAGE_BASE_URL}?crop=true&uid=${encodeURIComponent(sourceUid)}`,
+            );
+            if (!res.ok) continue;
             const buf = Buffer.from(await res.arrayBuffer());
-            if (buf.length) {
-              await uploadToS3(
-                {
-                  buffer: buf,
-                  originalname: `${uid}.png`,
-                  mimetype: "image/png",
-                } as unknown as Express.Multer.File,
-                {
-                  folder: "idcard/legacy",
-                  customFileName: `${uid}.png`,
-                  contentType: "image/png",
-                },
-              );
-              summary.imageFetched++;
-              result = key;
-            }
+            if (!buf.length) continue;
+            await uploadToS3(
+              {
+                buffer: buf,
+                originalname: `${uid}.png`,
+                mimetype: "image/png",
+              } as unknown as Express.Multer.File,
+              {
+                folder: "idcard/legacy",
+                customFileName: `${uid}.png`,
+                contentType: "image/png",
+              },
+            );
+            summary.imageFetched++;
+            result = key;
+            break;
           }
         }
       } catch {
@@ -220,7 +240,7 @@ export async function syncLegacyIdCards(opts?: {
         const renewedFromNew =
           parentKeptOld != null ? keptOldToNewId.get(parentKeptOld) : undefined;
 
-        const imageKey = await ensureImage(student.uid);
+        const imageKey = await ensureImage(student.uid, student.previousUid);
 
         const [inserted] = await db
           .insert(idCardIssueModel)

@@ -272,12 +272,23 @@ export async function findByUserId(userId: number): Promise<StudentDto | null> {
 }
 
 export async function findByUid(uid: string): Promise<StudentDto | null> {
+  // Match the current uid, rfid, or a PREVIOUS uid (uid changes when a student's
+  // shift changes — the old code is preserved in previousUid). Prefer a current
+  // uid/rfid hit over a previous-uid coincidence so an active code always wins.
   const [foundStudent] = await db
     .select()
     .from(studentModel)
     .where(
-      or(ilike(studentModel.uid, uid), ilike(studentModel.rfidNumber, uid)),
-    );
+      or(
+        ilike(studentModel.uid, uid),
+        ilike(studentModel.rfidNumber, uid),
+        ilike(studentModel.previousUid, uid),
+      ),
+    )
+    .orderBy(
+      sql`CASE WHEN ${studentModel.uid} ILIKE ${uid} THEN 0 WHEN ${studentModel.rfidNumber} ILIKE ${uid} THEN 1 ELSE 2 END`,
+    )
+    .limit(1);
 
   // console.log("Found student by UID:", foundStudent);
   return await modelToDto(foundStudent);
