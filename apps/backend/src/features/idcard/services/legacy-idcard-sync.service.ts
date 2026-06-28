@@ -35,7 +35,6 @@ type OldIdCardRow = {
   updated_at: string | Date | null;
 };
 
-const DEDUP_WINDOW_MS = 15_000;
 const IMAGE_BASE_URL =
   process.env.IDCARD_LEGACY_IMAGE_URL ||
   "https://bescid.academic360.app/id-card-generate/api/images";
@@ -89,7 +88,10 @@ export async function syncLegacyIdCards(opts?: {
     )) as [OldIdCardRow[], unknown];
     summary.scanned = rows.length;
 
-    // --- Dedup: per student, collapse consecutive same-status rows within 15s, keep latest.
+    // --- Dedup: per student, collapse same-status rows issued on the SAME DAY,
+    // keep the latest. The old DB has erroneous double entries (the same card
+    // saved several times minutes apart); a real reissue/renewal is a different
+    // status or a different day, so it is preserved.
     const keptRows: OldIdCardRow[] = [];
     const oldToKeptId = new Map<number, number>(); // any old id → surviving old id
     const byStudent = new Map<number, OldIdCardRow[]>();
@@ -100,28 +102,34 @@ export async function syncLegacyIdCards(opts?: {
     }
     for (const arr of byStudent.values()) {
       arr.sort((a, b) => ts(a.created_at) - ts(b.created_at) || a.id - b.id);
-      let cluster: OldIdCardRow[] = [];
-      const flush = () => {
-        if (!cluster.length) return;
-        const keep = cluster[cluster.length - 1]!; // latest in the burst
-        keptRows.push(keep);
-        for (const c of cluster) oldToKeptId.set(c.id, keep.id);
-        cluster = [];
-      };
+      // group by day + issue_status; arr is ascending so the last row of each
+      // group is the latest (collapses same-status same-day double entries).
+      const groups = new Map<string, OldIdCardRow[]>(); // "day|status" -> rows
       for (const r of arr) {
-        const last = cluster[cluster.length - 1];
-        if (
-          last &&
-          last.issue_status === r.issue_status &&
-          ts(r.created_at) - ts(last.created_at) <= DEDUP_WINDOW_MS
-        ) {
-          cluster.push(r);
-        } else {
-          flush();
-          cluster.push(r);
-        }
+        const day = toDateOnly(r.created_at) ?? String(ts(r.created_at));
+        const key = `${day}|${r.issue_status}`;
+        const g = groups.get(key);
+        if (g) g.push(r);
+        else groups.set(key, [r]);
       }
-      flush();
+      // a real reissue is a different DAY; a REISSUED on the same day as an
+      // ISSUED is a mis-tagged duplicate of that issuance -> fold it in.
+      const issuedByDay = new Map<string, OldIdCardRow>();
+      for (const [key, g] of groups) {
+        const [day, status] = key.split("|");
+        if (status === "ISSUED") issuedByDay.set(day!, g[g.length - 1]!);
+      }
+      for (const [key, g] of groups) {
+        const [day, status] = key.split("|");
+        const latest = g[g.length - 1]!;
+        if (status === "REISSUED" && issuedByDay.has(day!)) {
+          const issued = issuedByDay.get(day!)!;
+          for (const c of g) oldToKeptId.set(c.id, issued.id);
+          continue; // drop the same-day reissue duplicate
+        }
+        keptRows.push(latest);
+        for (const c of g) oldToKeptId.set(c.id, latest.id);
+      }
     }
     summary.deduped = rows.length - keptRows.length;
 
@@ -231,6 +239,9 @@ export async function syncLegacyIdCards(opts?: {
             sportsQuotaSnapshot: r.sports_quota ?? undefined,
             uidSnapshot: student.uid,
             remarks: r.remarks ?? undefined,
+            // Preserve the original old-DB timestamps instead of the sync time.
+            createdAt: new Date(r.created_at),
+            updatedAt: new Date(r.updated_at ?? r.created_at),
           })
           .returning({ id: idCardIssueModel.id });
 
