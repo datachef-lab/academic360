@@ -149,48 +149,63 @@ export async function syncLegacyIdCards(opts?: {
       return v;
     };
 
-    // One image per uid (the student's current card), uploaded once to S3.
-    const uidImageKey = new Map<string, string | null>();
-    const ensureImage = async (uid: string): Promise<string | null> => {
-      if (uidImageKey.has(uid)) return uidImageKey.get(uid)!;
-      const key = `idcard/legacy/${uid}.png`;
-      try {
-        if (await fileExistsInS3(key)) {
-          summary.imageSkipped++;
-          uidImageKey.set(uid, key);
-          return key;
-        }
-        const res = await fetch(
-          `${IMAGE_BASE_URL}?crop=true&uid=${encodeURIComponent(uid)}`,
-        );
-        if (!res.ok) {
-          uidImageKey.set(uid, null);
-          return null;
-        }
-        const buf = Buffer.from(await res.arrayBuffer());
-        if (!buf.length) {
-          uidImageKey.set(uid, null);
-          return null;
-        }
-        await uploadToS3(
-          {
-            buffer: buf,
-            originalname: `${uid}.png`,
-            mimetype: "image/png",
-          } as unknown as Express.Multer.File,
-          {
-            folder: "idcard/legacy",
-            customFileName: `${uid}.png`,
-            contentType: "image/png",
-          },
-        );
-        summary.imageFetched++;
-        uidImageKey.set(uid, key);
+    // Two images per uid: the cropped student PHOTO (crop=true, ~225x250) used to
+    // re-compose the card, and the COMPLETE front card (crop=false, ~638x1004)
+    // for the report/print. Uploaded once to S3.
+    const uidImages = new Map<
+      string,
+      { photoKey: string | null; frontKey: string | null }
+    >();
+    const fetchToS3 = async (
+      uid: string,
+      crop: boolean,
+      fileName: string,
+    ): Promise<string | null> => {
+      const key = `idcard/legacy/${fileName}`;
+      if (await fileExistsInS3(key)) {
+        summary.imageSkipped++;
         return key;
-      } catch {
-        uidImageKey.set(uid, null);
-        return null;
       }
+      const res = await fetch(
+        `${IMAGE_BASE_URL}?crop=${crop}&uid=${encodeURIComponent(uid)}`,
+      );
+      if (!res.ok) return null;
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (!buf.length) return null;
+      await uploadToS3(
+        {
+          buffer: buf,
+          originalname: fileName,
+          mimetype: "image/png",
+        } as unknown as Express.Multer.File,
+        {
+          folder: "idcard/legacy",
+          customFileName: fileName,
+          contentType: "image/png",
+        },
+      );
+      summary.imageFetched++;
+      return key;
+    };
+    const ensureImages = async (
+      uid: string,
+    ): Promise<{ photoKey: string | null; frontKey: string | null }> => {
+      const cached = uidImages.get(uid);
+      if (cached) return cached;
+      let result = {
+        photoKey: null as string | null,
+        frontKey: null as string | null,
+      };
+      try {
+        // photo stays at <uid>.png (matches images already synced earlier).
+        const photoKey = await fetchToS3(uid, true, `${uid}.png`);
+        const frontKey = await fetchToS3(uid, false, `${uid}-front.png`);
+        result = { photoKey, frontKey };
+      } catch {
+        // leave both null
+      }
+      uidImages.set(uid, result);
+      return result;
     };
 
     const keptOldToNewId = new Map<number, number>(); // surviving old id → new id
@@ -220,7 +235,7 @@ export async function syncLegacyIdCards(opts?: {
         const renewedFromNew =
           parentKeptOld != null ? keptOldToNewId.get(parentKeptOld) : undefined;
 
-        const frontImageKey = await ensureImage(student.uid);
+        const { photoKey, frontKey } = await ensureImages(student.uid);
 
         const [inserted] = await db
           .insert(idCardIssueModel)
@@ -231,7 +246,8 @@ export async function syncLegacyIdCards(opts?: {
             renewedFromIssueId: renewedFromNew ?? null,
             issueDate: new Date(r.created_at),
             validTill: toDateOnly(r.expiry_date),
-            frontImageKey: frontImageKey ?? undefined,
+            frontImageKey: frontKey ?? undefined,
+            photoImageKey: photoKey ?? undefined,
             nameSnapshot: r.name ?? undefined,
             courseSnapshot: r.course_name ?? undefined,
             bloodGroupSnapshot: r.blood_group_name ?? undefined,
