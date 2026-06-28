@@ -11,17 +11,36 @@ import { noticeModel } from "@repo/db/schemas/models/academics";
 import { paperModel } from "@repo/db/schemas/models/course-design";
 // import { feesStructureModel } from "@repo/db/schemas/models/fees";
 import { admissionModel } from "@repo/db/schemas";
+import { ensureAcademicYearStructure } from "./academic-year-structure.service.js";
 
 export async function createAcademicYear(
   academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">,
-  session: Omit<Session, "id" | "createdAt" | "updatedAt">,
+  session?: Omit<Session, "id" | "createdAt" | "updatedAt">,
 ): Promise<AcademicYear | null> {
   const [newAcademicYear] = await db
     .insert(academicYearModel)
     .values(academicYear)
     .returning();
 
-  return await newAcademicYear;
+  // Create the session (the param was previously ignored) + ensure the year's
+  // full structure via the shared idempotent helper.
+  if (newAcademicYear) {
+    await db.transaction((tx) =>
+      ensureAcademicYearStructure(tx, newAcademicYear.id, {
+        legacySession: session
+          ? {
+              legacySessionId: session.legacySessionId ?? null,
+              name: session.name ?? null,
+              from: session.from ? String(session.from) : null,
+              to: session.to ? String(session.to) : null,
+              isCurrentSession: session.isCurrentSession ?? null,
+            }
+          : null,
+      }),
+    );
+  }
+
+  return newAcademicYear;
 }
 
 export async function findAllAcademicYears(): Promise<AcademicYear[]> {

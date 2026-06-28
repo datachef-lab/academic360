@@ -27,12 +27,14 @@ import {
 } from "@repo/db/schemas/models/subject-selection";
 import {
   paperModel,
+  paperComponentModel,
   subjectModel,
   subjectTypeModel,
   programCourseModel,
   streamModel,
 } from "@repo/db/schemas/models/course-design";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
+import { ensureAcademicYearStructure } from "./academic-year-structure.service.js";
 
 /** Active = isActive true OR null (default). Inactive rows are not cloned forward. */
 function activeOnly(col: Column): SQL {
@@ -442,6 +444,7 @@ export type AcademicYearCopyResult = {
     relatedSubjects: number;
     restrictedGroupings: number;
     papers: number;
+    paperComponents: number;
   };
 };
 
@@ -453,6 +456,7 @@ export type AcademicYearCopyResult = {
 export async function createAcademicYearWithCopy(
   year: string,
   makeActive: boolean = false,
+  sessionDates?: { from?: string | null; to?: string | null },
 ): Promise<AcademicYearCopyResult> {
   const trimmed = String(year ?? "").trim();
   if (!/^\d{4}-\d{2}$/.test(trimmed)) {
@@ -499,6 +503,7 @@ export async function createAcademicYearWithCopy(
       relatedSubjects: 0,
       restrictedGroupings: 0,
       papers: 0,
+      paperComponents: 0,
     };
     if (sourceId == null || !created) {
       return {
@@ -509,200 +514,20 @@ export async function createAcademicYearWithCopy(
     }
     const newYearId = created.id;
 
-    // 1) Subject-selection metas (+ classes, streams)
-    const srcMetas = await tx
-      .select()
-      .from(subjectSelectionMetaModel)
-      .where(
-        and(
-          eq(subjectSelectionMetaModel.academicYearId, sourceId),
-          activeOnly(subjectSelectionMetaModel.isActive),
-        ),
-      );
-    for (const meta of srcMetas) {
-      const [newMeta] = await tx
-        .insert(subjectSelectionMetaModel)
-        .values({
-          academicYearId: newYearId,
-          subjectTypeId: meta.subjectTypeId,
-          label: meta.label,
-          sequence: meta.sequence,
-          isActive: meta.isActive,
-        })
-        .returning({ id: subjectSelectionMetaModel.id });
-      const classes = await tx
-        .select()
-        .from(subjectSelectionMetaClassModel)
-        .where(
-          eq(subjectSelectionMetaClassModel.subjectSelectionMetaId, meta.id),
-        );
-      if (classes.length) {
-        await tx.insert(subjectSelectionMetaClassModel).values(
-          classes.map((c) => ({
-            subjectSelectionMetaId: newMeta.id,
-            classId: c.classId,
-          })),
-        );
-      }
-      const streams = await tx
-        .select()
-        .from(subjectSelectionMetaStreamModel)
-        .where(
-          eq(subjectSelectionMetaStreamModel.subjectSelectionMetaId, meta.id),
-        );
-      if (streams.length) {
-        await tx.insert(subjectSelectionMetaStreamModel).values(
-          streams.map((s) => ({
-            subjectSelectionMetaId: newMeta.id,
-            streamId: s.streamId,
-          })),
-        );
-      }
-      copied.metas += 1;
-    }
-
-    // 2) Related subjects (+ subs)
-    const srcRel = await tx
-      .select()
-      .from(relatedSubjectMainModel)
-      .where(
-        and(
-          eq(relatedSubjectMainModel.academicYearId, sourceId),
-          activeOnly(relatedSubjectMainModel.isActive),
-        ),
-      );
-    for (const main of srcRel) {
-      const [newMain] = await tx
-        .insert(relatedSubjectMainModel)
-        .values({
-          academicYearId: newYearId,
-          programCourseId: main.programCourseId,
-          subjectTypeId: main.subjectTypeId,
-          boardSubjectNameId: main.boardSubjectNameId,
-          isActive: main.isActive,
-        })
-        .returning({ id: relatedSubjectMainModel.id });
-      const subs = await tx
-        .select()
-        .from(relatedSubjectSubModel)
-        .where(eq(relatedSubjectSubModel.relatedSubjectMainId, main.id));
-      if (subs.length) {
-        await tx.insert(relatedSubjectSubModel).values(
-          subs.map((s) => ({
-            relatedSubjectMainId: newMain.id,
-            boardSubjectNameId: s.boardSubjectNameId,
-          })),
-        );
-      }
-      copied.relatedSubjects += 1;
-    }
-
-    // 3) Restricted groupings (+ classes, program courses, subjects)
-    const srcRg = await tx
-      .select()
-      .from(restrictedGroupingMainModel)
-      .where(
-        and(
-          or(
-            eq(restrictedGroupingMainModel.academicYearId, sourceId),
-            isNull(restrictedGroupingMainModel.academicYearId),
-          ),
-          activeOnly(restrictedGroupingMainModel.isActive),
-        ),
-      );
-    for (const main of srcRg) {
-      const [newMain] = await tx
-        .insert(restrictedGroupingMainModel)
-        .values({
-          academicYearId: newYearId,
-          subjectTypeId: main.subjectTypeId,
-          subjectId: main.subjectId,
-          isActive: main.isActive,
-        })
-        .returning({ id: restrictedGroupingMainModel.id });
-      const classes = await tx
-        .select()
-        .from(restrictedGroupingClassModel)
-        .where(
-          and(
-            eq(restrictedGroupingClassModel.restrictedGroupingMainId, main.id),
-            activeOnly(restrictedGroupingClassModel.isActive),
-          ),
-        );
-      if (classes.length) {
-        await tx.insert(restrictedGroupingClassModel).values(
-          classes.map((c) => ({
-            restrictedGroupingMainId: newMain.id,
-            classId: c.classId,
-            isActive: c.isActive,
-          })),
-        );
-      }
-      const pcs = await tx
-        .select()
-        .from(restrictedGroupingProgramCourseModel)
-        .where(
-          eq(
-            restrictedGroupingProgramCourseModel.restrictedGroupingMainId,
-            main.id,
-          ),
-        );
-      if (pcs.length) {
-        await tx.insert(restrictedGroupingProgramCourseModel).values(
-          pcs.map((p) => ({
-            restrictedGroupingMainId: newMain.id,
-            programCourseId: p.programCourseId,
-          })),
-        );
-      }
-      const subjs = await tx
-        .select()
-        .from(restrictedGroupingSubjectModel)
-        .where(
-          eq(restrictedGroupingSubjectModel.restrictedGroupingMainId, main.id),
-        );
-      if (subjs.length) {
-        await tx.insert(restrictedGroupingSubjectModel).values(
-          subjs.map((s) => ({
-            restrictedGroupingMainId: newMain.id,
-            cannotCombineWithSubjectId: s.cannotCombineWithSubjectId,
-          })),
-        );
-      }
-      copied.restrictedGroupings += 1;
-    }
-
-    // 4) Papers — single batch insert, chaining previous_paper_id to the source paper.
-    const srcPapers = await tx
-      .select()
-      .from(paperModel)
-      .where(
-        and(
-          eq(paperModel.academicYearId, sourceId),
-          activeOnly(paperModel.isActive),
-        ),
-      );
-    if (srcPapers.length) {
-      await tx.insert(paperModel).values(
-        srcPapers.map((p) => ({
-          subjectId: p.subjectId,
-          affiliationId: p.affiliationId,
-          regulationTypeId: p.regulationTypeId,
-          academicYearId: newYearId,
-          subjectTypeId: p.subjectTypeId,
-          programCourseId: p.programCourseId,
-          classId: p.classId,
-          name: p.name,
-          code: p.code,
-          isOptional: p.isOptional,
-          sequence: p.sequence,
-          isActive: p.isActive,
-          autoAssign: p.autoAssign,
-          previousPaperId: p.id,
-        })),
-      );
-      copied.papers = srcPapers.length;
-    }
+    // Session + the 4 masters + papers + components, via the shared idempotent
+    // helper (source = the year we are cloning forward from).
+    const structure = await ensureAcademicYearStructure(tx, newYearId, {
+      sourceYearId: sourceId,
+      legacySession:
+        sessionDates?.from || sessionDates?.to
+          ? { from: sessionDates.from ?? null, to: sessionDates.to ?? null }
+          : null,
+    });
+    copied.metas = structure.metas;
+    copied.relatedSubjects = structure.relatedSubjects;
+    copied.restrictedGroupings = structure.restrictedGroupings;
+    copied.papers = structure.papers;
+    copied.paperComponents = structure.paperComponents;
 
     return {
       academicYear: created,

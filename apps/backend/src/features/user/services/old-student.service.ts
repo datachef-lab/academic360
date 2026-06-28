@@ -4,6 +4,7 @@ import { Pool } from "mysql2/typings/mysql/lib/Pool";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import { db, mysqlConnection } from "@/db";
+import { ensureAcademicYearStructure } from "@/features/academics/services/academic-year-structure.service.js";
 import {
   OldCourseDetails,
   OldAdmStudentPersonalDetail,
@@ -1269,6 +1270,26 @@ export async function getOrCreateSessionForLegacySessionId(
         } as Session)
         .returning()
     )[0];
+  }
+
+  // Ensure the year's masters/papers/components exist (copied from the nearest
+  // year that has them) — so importing into a year that was never set up via the
+  // wizard still gets a complete, linked structure. Idempotent + fast-path when
+  // the year already has papers; failures must not abort the student import.
+  try {
+    await db.transaction((tx) =>
+      ensureAcademicYearStructure(tx, foundAcademicYear.id, {
+        legacySession: {
+          legacySessionId: oldSession.id ?? null,
+          name: oldSession.sessionName ?? null,
+        },
+      }),
+    );
+  } catch (err) {
+    console.error(
+      `[import] ensureAcademicYearStructure failed for academic year ${foundAcademicYear.id}:`,
+      err instanceof Error ? err.message : err,
+    );
   }
 
   return foundSession;
