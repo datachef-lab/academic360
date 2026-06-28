@@ -5,12 +5,13 @@ import { idCardIssueModel, studentModel } from "@repo/db/schemas/index.js";
 import { fileExistsInS3, uploadToS3 } from "@/services/s3.service.js";
 
 /**
- * ONE-TIME legacy ID card backfill (snapcard → new DB + S3).
+ * Legacy ID card backfill (snapcard → new DB + S3).
  *
- * Runs in the background on backend startup, ONLY when `IDCARD_LEGACY_SYNC=true`.
- * It is idempotent (keyed on `legacyIssueId`) and resumable, so it is safe to
- * leave enabled across restarts. Remove this once the one-time load is done and
- * the snapcard EC2 (`13.235.168.107` / `bescid.academic360.app`) is decommissioned.
+ * Runs in the background on every backend startup. It is idempotent (entries
+ * keyed on `legacyIssueId`, images skipped when already in S3) and resumable, so
+ * it self-heals on each restart and only fills gaps. Drop the startup call once
+ * the one-time load is done and the snapcard EC2 (`13.235.168.107` /
+ * `bescid.academic360.app`) is decommissioned.
  *
  * Source mapping (user-confirmed):
  *   old id_card_issues.student_id_fk = studentpersonaldetails.id
@@ -59,16 +60,19 @@ export type LegacyIdCardSyncSummary = {
   errors: number;
 };
 
-/**
- * @param opts.force run even when IDCARD_LEGACY_SYNC is not "true" (manual API trigger).
- *        The duplicate guard (legacyIssueId) still prevents re-inserts.
- */
-export async function syncLegacyIdCards(opts?: {
-  force?: boolean;
-}): Promise<LegacyIdCardSyncSummary | { skipped: true }> {
-  if (!opts?.force && process.env.IDCARD_LEGACY_SYNC !== "true") {
+// Guards against overlapping runs (the startup backfill + the manual trigger, or
+// rapid restarts). The work itself is idempotent — already-migrated entries (by
+// legacy_issue_id) and already-uploaded images (S3 existence) are skipped — so a
+// re-run only fills gaps.
+let syncRunning = false;
+
+export async function syncLegacyIdCards(): Promise<
+  LegacyIdCardSyncSummary | { skipped: true }
+> {
+  if (syncRunning) {
     return { skipped: true };
   }
+  syncRunning = true;
 
   const summary = {
     scanned: 0,
@@ -282,5 +286,7 @@ export async function syncLegacyIdCards(opts?: {
   } catch (e) {
     console.error("[idcard-sync] fatal:", (e as Error)?.message);
     return summary;
+  } finally {
+    syncRunning = false;
   }
 }

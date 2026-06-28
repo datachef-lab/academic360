@@ -239,8 +239,8 @@ export const deleteIssueController = async (
 };
 
 /**
- * Manual trigger for the one-time legacy ID card backfill (snapcard → new DB + S3).
- * Forces the run regardless of IDCARD_LEGACY_SYNC; still idempotent (legacyIssueId).
+ * Manual trigger for the legacy ID card backfill (snapcard → new DB + S3).
+ * Idempotent (legacyIssueId); no-ops if a run is already in progress.
  */
 export const runLegacyIdCardSyncController = async (
   req: Request,
@@ -248,7 +248,7 @@ export const runLegacyIdCardSyncController = async (
   next: NextFunction,
 ) => {
   try {
-    const result = await syncLegacyIdCards({ force: true });
+    const result = await syncLegacyIdCards();
     res
       .status(200)
       .json(

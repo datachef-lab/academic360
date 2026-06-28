@@ -159,7 +159,8 @@ function checkRequiredEnvs() {
       startPaytmDowntimeScheduler();
       startLibraryReminderScheduler();
       startJournalIssuePredictorScheduler();
-      // One-time legacy ID card backfill — background, no-op unless IDCARD_LEGACY_SYNC=true.
+      // Legacy ID card backfill — background + idempotent (skips already-migrated
+      // entries and already-uploaded images), so it self-heals on every restart.
       void import("@/features/idcard/services/legacy-idcard-sync.service.js")
         .then(({ syncLegacyIdCards }) => syncLegacyIdCards())
         .catch((e) =>
