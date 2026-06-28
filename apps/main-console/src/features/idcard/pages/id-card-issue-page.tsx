@@ -373,16 +373,15 @@ export default function IdCardIssuePage() {
     setPhotoPreviewUrl(URL.createObjectURL(file));
   };
 
-  const compose = async () => {
-    if (!activeTemplate || !student || !photoBlob) {
-      toast.error("Need student, template, and photo before composing.");
-      return;
-    }
-    const canvas = canvasRef.current ?? document.createElement("canvas");
+  // Draw the full card (template bg + photo + fields + QR) for a given photo onto
+  // the given canvas and return it as a PNG blob. Pure renderer — no state writes,
+  // so it's reused both for the live composer and the read-only history viewer.
+  const renderCard = async (photoSource: Blob, canvas: HTMLCanvasElement): Promise<Blob | null> => {
+    if (!activeTemplate || !student) return null;
     canvas.width = activeTemplate.canvasWidthPx;
     canvas.height = activeTemplate.canvasHeightPx;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) return null;
 
     // Ensure fonts are loaded before drawing text — otherwise the first compose
     // can paint the (black) text with an unready font, leaving it invisible.
@@ -412,7 +411,7 @@ export default function IdCardIssuePage() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
-      photoUrl = URL.createObjectURL(photoBlob);
+      photoUrl = URL.createObjectURL(photoSource);
       const photo = await loadImg(photoUrl);
 
       // SHIFT flows inline immediately after the COURSE text. Measure the
@@ -516,18 +515,57 @@ export default function IdCardIssuePage() {
       const blob: Blob | null = await new Promise((resolve) =>
         canvas.toBlob((b) => resolve(b), "image/png", 1),
       );
-      if (!blob) {
-        toast.error("Could not compose the card image.");
-        return;
-      }
-      setComposedBlob(blob);
-      setComposedPreview(URL.createObjectURL(blob));
+      return blob;
     } catch (err) {
       console.error("compose failed", err);
       toast.error("Failed to compose card. Check template image access.");
+      return null;
     } finally {
       if (bgUrl) URL.revokeObjectURL(bgUrl);
       if (photoUrl) URL.revokeObjectURL(photoUrl);
+    }
+  };
+
+  const compose = async () => {
+    if (!activeTemplate || !student || !photoBlob) {
+      toast.error("Need student, template, and photo before composing.");
+      return;
+    }
+    const canvas = canvasRef.current ?? document.createElement("canvas");
+    const blob = await renderCard(photoBlob, canvas);
+    if (!blob) {
+      toast.error("Could not compose the card image.");
+      return;
+    }
+    setComposedBlob(blob);
+    setComposedPreview(URL.createObjectURL(blob));
+  };
+
+  // History viewer: compose a past issue's card (template + that issue's photo)
+  // into a dialog. We only store the cropped photo, so the card is re-generated.
+  const [viewCardOpen, setViewCardOpen] = useState(false);
+  const [viewCardUrl, setViewCardUrl] = useState<string | null>(null);
+  const [viewCardLoading, setViewCardLoading] = useState(false);
+  const handleViewIssueCard = async (issue: IdCardIssue) => {
+    if (!activeTemplate || !student) {
+      toast.error("Load the student first.");
+      return;
+    }
+    setViewCardOpen(true);
+    setViewCardLoading(true);
+    setViewCardUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    try {
+      const photo = await fetchIssuePhotoBlob(issue.id);
+      const blob = await renderCard(photo, document.createElement("canvas"));
+      if (blob) setViewCardUrl(URL.createObjectURL(blob));
+      else toast.error("Could not render this card.");
+    } catch {
+      toast.error("No photo stored for this issue.");
+    } finally {
+      setViewCardLoading(false);
     }
   };
 
@@ -717,17 +755,16 @@ export default function IdCardIssuePage() {
                             #{idx + 1} Type: {it.issueStatus}
                           </div>
                           <div className="flex gap-1">
-                            {it.frontImageUrl && (
-                              <a
-                                href={it.frontImageUrl}
-                                target="_blank"
-                                rel="noreferrer"
+                            {it.photoImageKey && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="text-blue-600"
+                                title="View ID card"
+                                onClick={() => void handleViewIssueCard(it)}
                               >
-                                <Button variant="ghost" size="icon">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </a>
+                                <Eye className="h-4 w-4" />
+                              </Button>
                             )}
                             <Button
                               variant="ghost"
@@ -751,6 +788,37 @@ export default function IdCardIssuePage() {
                   </div>
                 </SheetContent>
               </Sheet>
+
+              <Dialog
+                open={viewCardOpen}
+                onOpenChange={(o) => {
+                  setViewCardOpen(o);
+                  if (!o)
+                    setViewCardUrl((prev) => {
+                      if (prev) URL.revokeObjectURL(prev);
+                      return null;
+                    });
+                }}
+              >
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>ID Card</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex items-center justify-center min-h-[260px]">
+                    {viewCardLoading ? (
+                      <p className="text-sm text-gray-500">Generating card…</p>
+                    ) : viewCardUrl ? (
+                      <img
+                        src={viewCardUrl}
+                        alt="ID Card"
+                        className="max-h-[70vh] w-auto rounded-md border"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-500">No card image available.</p>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
 
             <CardContent className="space-y-3">
