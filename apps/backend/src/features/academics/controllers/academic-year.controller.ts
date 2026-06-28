@@ -47,10 +47,11 @@ export const createAcademicYearWithCopyHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const { year, makeActive } = req.body ?? {};
+    const { year, makeActive, sessionFrom, sessionTo } = req.body ?? {};
     const result = await createAcademicYearWithCopy(
       String(year ?? ""),
       Boolean(makeActive),
+      { from: sessionFrom ?? null, to: sessionTo ?? null },
     );
     res
       .status(201)

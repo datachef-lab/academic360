@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -80,6 +81,8 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
   const [preview, setPreview] = useState<AcademicYearCopyPreview | null>(null);
   const [loading, setLoading] = useState(false);
   const [makeActive, setMakeActive] = useState(false);
+  const [sessionFrom, setSessionFrom] = useState("");
+  const [sessionTo, setSessionTo] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -92,6 +95,12 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
       .then((res) => {
         if (cancelled) return;
         setPreview(res.payload);
+        // Default the session window to the academic year Jul 1 -> Jun 30.
+        const start = Number(String(res.payload?.nextYear ?? "").match(/\d{4}/)?.[0]);
+        if (start) {
+          setSessionFrom(`${start}-07-01`);
+          setSessionTo(`${start + 1}-06-30`);
+        }
       })
       .catch(() => {
         if (!cancelled) toast.error("Could not load copy preview.");
@@ -108,7 +117,12 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
     if (!preview?.nextYear) return;
     setSubmitting(true);
     try {
-      const res = await createAcademicYearWithCopy({ year: preview.nextYear, makeActive });
+      const res = await createAcademicYearWithCopy({
+        year: preview.nextYear,
+        makeActive,
+        sessionFrom: sessionFrom || null,
+        sessionTo: sessionTo || null,
+      });
       const c = res.payload.copied;
       toast.success(
         `Created ${preview.nextYear} · copied ${c.metas} metas, ${c.relatedSubjects} related, ${c.restrictedGroupings} restricted, ${c.papers} papers`,
@@ -408,17 +422,45 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
         </div>
 
         <DialogFooter className="shrink-0 flex-row items-center justify-between border-t px-6 py-4 sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Switch id="make-active" checked={makeActive} onCheckedChange={setMakeActive} />
-            <div className="leading-tight">
-              <Label htmlFor="make-active" className="text-sm">
-                Set as active year
-              </Label>
-              <p className="text-[11px] text-muted-foreground">
-                {makeActive
-                  ? "Will deactivate the current active year."
-                  : "New year will be added as inactive."}
-              </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Switch id="make-active" checked={makeActive} onCheckedChange={setMakeActive} />
+              <div className="leading-tight">
+                <Label htmlFor="make-active" className="text-sm">
+                  Set as active year
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  {makeActive
+                    ? "Will deactivate the current active year."
+                    : "New year will be added as inactive."}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="leading-tight">
+                <Label htmlFor="session-from" className="text-[11px] text-muted-foreground">
+                  Session start
+                </Label>
+                <Input
+                  id="session-from"
+                  type="date"
+                  value={sessionFrom}
+                  onChange={(e) => setSessionFrom(e.target.value)}
+                  className="h-8 w-[150px]"
+                />
+              </div>
+              <div className="leading-tight">
+                <Label htmlFor="session-to" className="text-[11px] text-muted-foreground">
+                  Session end
+                </Label>
+                <Input
+                  id="session-to"
+                  type="date"
+                  value={sessionTo}
+                  onChange={(e) => setSessionTo(e.target.value)}
+                  className="h-8 w-[150px]"
+                />
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">

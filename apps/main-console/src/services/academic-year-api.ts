@@ -97,6 +97,8 @@ export async function getAcademicYearCopyPreview(): Promise<ApiResponse<Academic
 export async function createAcademicYearWithCopy(payload: {
   year: string;
   makeActive: boolean;
+  sessionFrom?: string | null;
+  sessionTo?: string | null;
 }): Promise<ApiResponse<AcademicYearCopyResult>> {
   const response = await axiosInstance.post(`/api/v1/academics/with-copy`, payload);
   return response.data;
