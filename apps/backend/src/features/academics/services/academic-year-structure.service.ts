@@ -472,15 +472,18 @@ async function copyPapersAndComponents(
   }
 
   if (nextYear) {
+    // The next year's papers must point back to these freshly-created papers as
+    // their immediate previous year (e.g. importing 2024-25 -> update 2025-26's
+    // previous_paper_id to the new 2024-25 paper). Always re-point on a key match,
+    // not only when null, so the chain reflects the now-nearest previous year.
     const newByKey = new Map(inserted.map((p) => [paperKey(p), p.id]));
     const nextPapers = await tx
       .select()
       .from(paperModel)
       .where(eq(paperModel.academicYearId, nextYear.id));
     for (const nx of nextPapers) {
-      if (nx.previousPaperId != null) continue;
       const newId = newByKey.get(paperKey(nx));
-      if (newId != null) {
+      if (newId != null && nx.previousPaperId !== newId) {
         await tx
           .update(paperModel)
           .set({ previousPaperId: newId })

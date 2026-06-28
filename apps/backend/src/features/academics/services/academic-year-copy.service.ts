@@ -456,6 +456,7 @@ export type AcademicYearCopyResult = {
 export async function createAcademicYearWithCopy(
   year: string,
   makeActive: boolean = false,
+  sessionDates?: { from?: string | null; to?: string | null },
 ): Promise<AcademicYearCopyResult> {
   const trimmed = String(year ?? "").trim();
   if (!/^\d{4}-\d{2}$/.test(trimmed)) {
@@ -517,6 +518,10 @@ export async function createAcademicYearWithCopy(
     // helper (source = the year we are cloning forward from).
     const structure = await ensureAcademicYearStructure(tx, newYearId, {
       sourceYearId: sourceId,
+      legacySession:
+        sessionDates?.from || sessionDates?.to
+          ? { from: sessionDates.from ?? null, to: sessionDates.to ?? null }
+          : null,
     });
     copied.metas = structure.metas;
     copied.relatedSubjects = structure.relatedSubjects;
