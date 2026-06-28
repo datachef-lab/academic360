@@ -11,6 +11,7 @@ import { PassThrough } from "node:stream";
 
 import { db } from "@/db/index.js";
 import { getBufferFromS3 } from "@/services/s3.service.js";
+import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 import {
   idCardIssueModel,
   studentModel,
@@ -53,8 +54,21 @@ export async function fetchIssuesForDate(date: string): Promise<ReportRow[]> {
       phone: idCardIssueModel.mobileSnapshot,
       bloodGroup: idCardIssueModel.bloodGroupSnapshot,
       course: idCardIssueModel.courseSnapshot,
-      section: idCardIssueModel.sectionSnapshot,
-      classRollNumber: idCardIssueModel.classRollNumberSnapshot,
+      // Snapshot first (point-in-time); fall back to the student's latest
+      // promotion (legacy-synced cards never captured these snapshots).
+      section: sql<
+        string | null
+      >`COALESCE(${idCardIssueModel.sectionSnapshot}, (
+        SELECT sec.name FROM promotions pr
+        JOIN sections sec ON sec.id = pr.section_id_fk
+        WHERE pr.student_id_fk = ${idCardIssueModel.studentId}
+        ORDER BY pr.id DESC LIMIT 1))`,
+      classRollNumber: sql<
+        string | null
+      >`COALESCE(${idCardIssueModel.classRollNumberSnapshot}, ${studentModel.classRollNumber}, (
+        SELECT pr.class_roll_number FROM promotions pr
+        WHERE pr.student_id_fk = ${idCardIssueModel.studentId}
+        ORDER BY pr.id DESC LIMIT 1))`,
       validTill: idCardIssueModel.validTill,
       issueStatus: idCardIssueModel.issueStatus,
       remarks: idCardIssueModel.remarks,
@@ -93,9 +107,6 @@ export async function buildExcelReport(date: string): Promise<Buffer> {
     { header: "Remarks", key: "remarks", width: 30 },
     { header: "Created At", key: "createdAt", width: 22 },
   ];
-  ws.getRow(1).font = { bold: true };
-  ws.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
-
   rows.forEach((r) => {
     ws.addRow({
       ...r,
@@ -104,6 +115,9 @@ export async function buildExcelReport(date: string): Promise<Buffer> {
         : "",
     });
   });
+
+  // Grey header fill + grid borders + frozen header — same as the other exports.
+  applyStandardExcelReportTableStyling(ws);
 
   const buf = await wb.xlsx.writeBuffer();
   return Buffer.from(buf);
