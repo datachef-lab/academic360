@@ -1764,6 +1764,39 @@ export async function processOldStudentApplicationForm(
       );
     }
 
+    // Backfill subject selections (legacy cvsubjectselection ->
+    // adm_subject_paper_selections) on this "admission already exists" path too.
+    // The fresh-admission path below already does this; this early return used to
+    // skip it, so re-loaded students (admission info kept, student re-created)
+    // lost their subject selections. getSubjectRelatedFields is idempotent.
+    try {
+      const [academicYearRow] = await db
+        .select()
+        .from(admissionModel)
+        .leftJoin(sessionModel, eq(admissionModel.sessionId, sessionModel.id))
+        .leftJoin(
+          academicYearModel,
+          eq(sessionModel.academicYearId, academicYearModel.id),
+        )
+        .where(
+          eq(admissionModel.id, existingApplicationForm.admissionId as number),
+        );
+      const academicYear = academicYearRow?.academic_years;
+      if (academicYear && oldCourseDetails) {
+        await getSubjectRelatedFields(
+          oldCourseDetails,
+          transferredAdmCourseDetails,
+          academicYear,
+          student.id!,
+        );
+      }
+    } catch (e) {
+      console.error(
+        "subject selection backfill (existing admission) failed:",
+        (e as Error)?.message,
+      );
+    }
+
     return {
       applicationForm: existingApplicationForm,
       transferredAdmCourseDetails,

@@ -649,6 +649,47 @@ async function syncFeeStudentMapping(
     .from(feeStudentMappingModel)
     .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
 
+  // Re-read the fee category code AFTER any slab/fee-group change above, so the
+  // receipt-number suffix reflects the FINAL category (e.g. "FA"), matching the
+  // canonical receipt issuance. (The initial join captured the pre-update default
+  // category, whose code is empty.)
+  let finalCategoryCode = feeCategoryCode;
+  {
+    const [catRow] = await db
+      .select({ code: feeCategoryModel.code })
+      .from(feeStudentMappingModel)
+      .innerJoin(
+        feeGroupPromotionMappingModel,
+        eq(
+          feeGroupPromotionMappingModel.id,
+          feeStudentMappingModel.feeGroupPromotionMappingId,
+        ),
+      )
+      .innerJoin(
+        feeGroupModel,
+        eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+      )
+      .leftJoin(
+        feeCategoryModel,
+        eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+      )
+      .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!))
+      .limit(1);
+    if (catRow && catRow.code != null) finalCategoryCode = catRow.code;
+  }
+
+  // Receipt/challan number: preserve the legacy challan when present, else build
+  // `{uid}/{NN}-{feeCategoryCode}` like the canonical issuance (suffix only when
+  // the category has a code).
+  let finalReceiptNumber = challanNumber;
+  if (!finalReceiptNumber) {
+    const receiptSeq = "01";
+    const code = finalCategoryCode?.trim();
+    finalReceiptNumber = code
+      ? `${studentUid}/${receiptSeq}-${code}`
+      : `${studentUid}/${receiptSeq}`;
+  }
+
   // Map the legacy payment mode → new enum. The college recorded one of
   // "Cash" / "Bank" / "Online Payment"; a successful online record also confirms
   // ONLINE. CHEQUE is the offline non-cash bucket (bank challan/DD/deposit). The
@@ -668,6 +709,18 @@ async function syncFeeStudentMapping(
     (studentRows[0]["Online Payment Order Id"]
       ? String(studentRows[0]["Online Payment Order Id"])
       : null);
+  // The fee-receipt PDF shows the "ePaid" (online) stamp only when the linked
+  // payment is SUCCESS + ONLINE + has an orderId AND a txnDate. Legacy online rows
+  // may lack a gateway order id, so fall back to the online reference, then the
+  // receipt number — otherwise online payments would wrongly print "PAID".
+  const orderId = isOnline
+    ? (studentRows[0]["Online Payment Order Id"]
+        ? String(studentRows[0]["Online Payment Order Id"]).trim()
+        : null) ||
+      onlineRef ||
+      finalReceiptNumber ||
+      null
+    : null;
 
   // Persist the legacy payment as a linked entry tied directly to the
   // fee_student_mapping via payments.feeStudentMappingId / isLinked.
@@ -681,21 +734,12 @@ async function syncFeeStudentMapping(
       paymentMode,
       txnPaymentMode: legacyMode || null,
       bankName: isOnline ? studentRows[0]["Bank Name"]?.trim() || null : null,
+      orderId,
       txnId: isOnline ? onlineRef : null,
       isManualEntry: true,
       isLinked: true,
       txnDate,
     });
-  }
-
-  // Legacy import: when challan is missing, persist `uid/01` or `uid/01-{feeCategoryCode}` (trimmed).
-  let finalReceiptNumber = challanNumber;
-  if (!finalReceiptNumber) {
-    const receiptSeq = "01";
-    const code = feeCategoryCode?.trim();
-    finalReceiptNumber = code
-      ? `${studentUid}/${receiptSeq}-${code}`
-      : `${studentUid}/${receiptSeq}`;
   }
 
   // Update the fee-student mapping fields
