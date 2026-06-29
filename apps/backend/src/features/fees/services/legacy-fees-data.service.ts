@@ -69,7 +69,14 @@ let errorArr: ErrorRow[] = [];
 // The legacy student-fees query. Shared by the full batch load and the per-uid
 // load; pass byUid=true to filter to a single student (bind the uid as the only
 // query parameter).
-function buildLegacyFeesQuery(byUid: boolean): string {
+function buildLegacyFeesQuery(uid?: string | null): string {
+  // NOTE: a `?` placeholder cannot be used here — several column aliases contain
+  // literal '?' (e.g. 'Is Active?', 'Has Fees Paid?'), which mysql2 would mistake
+  // for bind placeholders. uids are alphanumeric codeNumbers, so inline a
+  // sanitized value instead.
+  const uidClause = uid
+    ? ` AND spd.codeNumber = '${String(uid).replace(/[^a-zA-Z0-9]/g, "")}'`
+    : "";
   return `
         SELECT
             -- Installment Id
@@ -224,7 +231,7 @@ function buildLegacyFeesQuery(byUid: boolean): string {
         LEFT JOIN studentFeesPayMode frm_sfpm On frm_sfpm.id = frm.collegePayMode
         LEFT JOIN feesinstonlinepayment p ON p.instid = inst.id AND p.status != 'Initiated'
 
-        WHERE sess.id >= 18${byUid ? " AND spd.codeNumber = ?" : ""}
+        WHERE sess.id >= 18${uidClause}
         ORDER BY sess.sessionName, crs.courseName, cl.classname, spd.codeNumber, fsb.position
         LIMIT 3000000;
     `;
@@ -272,9 +279,10 @@ export async function loadStudentFeesForUid(
   const summary = { loaded: 0, skipped: 0, errors: [] as string[] };
   const masters = await getPerUidFeesMasters();
 
-  const [rows] = (await mysqlConnection.query(buildLegacyFeesQuery(true), [
-    uid,
-  ])) as [LegacyStudentFeeMappingRow[], unknown];
+  const [rows] = (await mysqlConnection.query(buildLegacyFeesQuery(uid))) as [
+    LegacyStudentFeeMappingRow[],
+    unknown,
+  ];
   // No legacy fee installments for this student — nothing to load (not an error).
   if (!rows || rows.length === 0) return summary;
 
@@ -381,9 +389,10 @@ export async function loadStudentFees() {
 
   // Load the student fees mapping
   // console.log("Load the student fees mapping");
-  const [result] = (await mysqlConnection.query(
-    buildLegacyFeesQuery(false),
-  )) as [LegacyStudentFeeMappingRow[], unknown];
+  const [result] = (await mysqlConnection.query(buildLegacyFeesQuery())) as [
+    LegacyStudentFeeMappingRow[],
+    unknown,
+  ];
 
   // Iterate over the result
   // console.log("Iterate over the result");
