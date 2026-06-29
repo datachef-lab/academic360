@@ -260,22 +260,32 @@ async function getPerUidFeesMasters(): Promise<MasterDataType> {
  *
  * Idempotent: skips any student+fee-structure that already has fees loaded (a
  * payment or a receipt number exists), so re-runs never duplicate a payment or
- * overwrite values edited in the new DB. A failure here is the caller's to
- * swallow so it never aborts the student import.
+ * overwrite values edited in the new DB.
+ *
+ * Returns a per-student summary { loaded, skipped, errors } so the caller can
+ * surface fee-load failures (e.g. fee structure / mapping not found) to the
+ * user. "No legacy fees for this student" is not an error (empty summary).
  */
-export async function loadStudentFeesForUid(uid: string): Promise<void> {
+export async function loadStudentFeesForUid(
+  uid: string,
+): Promise<{ loaded: number; skipped: number; errors: string[] }> {
+  const summary = { loaded: 0, skipped: 0, errors: [] as string[] };
   const masters = await getPerUidFeesMasters();
 
   const [rows] = (await mysqlConnection.query(buildLegacyFeesQuery(true), [
     uid,
   ])) as [LegacyStudentFeeMappingRow[], unknown];
-  if (!rows || rows.length === 0) return;
+  // No legacy fee installments for this student — nothing to load (not an error).
+  if (!rows || rows.length === 0) return summary;
 
   const [foundStudent] = await db
     .select()
     .from(studentModel)
     .where(eq(studentModel.uid, uid));
-  if (!foundStudent) return;
+  if (!foundStudent) {
+    summary.errors.push("student not found in new DB");
+    return summary;
+  }
 
   // Group the student's rows the same way the batch loader does: one fee
   // structure per academic-year / receipt-type / course / class / shift batch.
@@ -288,12 +298,16 @@ export async function loadStudentFeesForUid(uid: string): Promise<void> {
   }
 
   for (const studentRows of groups.values()) {
+    const batchLabel = `${studentRows[0]["Academic Year"]} / ${studentRows[0]["Receipt Type"]} / ${studentRows[0].Course} / ${studentRows[0].Semester}`;
     const feeStructureResult = await syncLegacyFeeStructure(
       studentRows,
       studentRows[0].legacyFeeStructureId,
       masters,
     );
-    if (!feeStructureResult) continue;
+    if (!feeStructureResult) {
+      summary.errors.push(`fee structure not found (${batchLabel})`);
+      continue;
+    }
 
     // Newly-imported students may not have a default mapping yet — create it
     // (whole-structure ensure is idempotent) only when it is actually missing.
@@ -310,7 +324,7 @@ export async function loadStudentFeesForUid(uid: string): Promise<void> {
       await ensureDefaultFeeStudentMappingsForFeeStructure(feeStructureResult);
     }
 
-    await syncFeeStudentMapping(
+    const result = await syncFeeStudentMapping(
       studentRows,
       uid,
       feeStructureResult.id!,
@@ -329,7 +343,15 @@ export async function loadStudentFeesForUid(uid: string): Promise<void> {
           : studentRows[0]["Fees Paid Timestamp"]
         : null,
     );
+    if (result.status === "loaded") summary.loaded++;
+    else if (result.status === "skipped") summary.skipped++;
+    else
+      summary.errors.push(
+        `${result.reason ?? "fees not loaded"} (${batchLabel})`,
+      );
   }
+
+  return summary;
 }
 
 async function doSyncAllFeeStructureMapping() {
@@ -489,7 +511,7 @@ async function syncFeeStudentMapping(
   challanGeneratedAt: string | Date | null,
   challanNumber: string | null,
   txnDate: string | null,
-) {
+): Promise<{ status: "loaded" | "skipped" | "error"; reason?: string }> {
   const tmpResult = await db
     .select({
       feeStudentMapping: feeStudentMappingModel,
@@ -548,7 +570,7 @@ async function syncFeeStudentMapping(
       .where(eq(paymentModel.feeStudentMappingId, feeStudentMapping.id!))
       .limit(1);
     if (existingPayment.length > 0 || feeStudentMapping.receiptNumber) {
-      return;
+      return { status: "skipped" };
     }
   }
 
@@ -583,7 +605,10 @@ async function syncFeeStudentMapping(
     if (!tmpFg[0]?.feeGroup) {
       // console.log("Fee Group / Slab - Not Found!", feeSlab.trim());
       await captureErrorRows("Fee Group / Slab - Not Found!", studentRows);
-      return;
+      return {
+        status: "error",
+        reason: `Fee Group / Slab not found: ${feeSlab.trim()}`,
+      };
       // throw Error("Fee Group - Not Found!"); // TODO
     }
 
@@ -607,7 +632,7 @@ async function syncFeeStudentMapping(
   if (!feeStudentMapping) {
     // console.log("feeStudentMapping - Not Found!", feeSlab.trim());
     await captureErrorRows("Fee-Student Mapping - Not Found!", studentRows);
-    return;
+    return { status: "error", reason: "Fee-Student Mapping not found" };
   }
 
   [feeStudentMapping] = await db
@@ -676,6 +701,7 @@ async function syncFeeStudentMapping(
     .returning();
 
   // console.log("Saved feeStudentMapping!");
+  return { status: "loaded" };
 }
 
 async function syncLegacyFeeStructure(

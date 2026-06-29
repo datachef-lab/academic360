@@ -345,11 +345,21 @@ export async function processStudentsFromExcelBuffer(
       }
       await processStudent(oldStudent);
       // Load this student's legacy fees right after their data is in. Idempotent
-      // (skips fees already loaded); a fees failure must not abort the import.
+      // (skips fees already loaded). A fees failure must not abort the import, but
+      // any fee-load problems are surfaced in the errors array so the user knows.
       try {
-        await loadStudentFeesForUid(uid);
-      } catch (feeErr) {
-        console.log("Error loading fees for uid", uid, feeErr);
+        const feeResult = await loadStudentFeesForUid(uid);
+        if (feeResult.errors.length > 0) {
+          errors.push({
+            uid,
+            error: `fees: ${feeResult.errors.join("; ")}`,
+          });
+        }
+      } catch (feeErr: any) {
+        errors.push({
+          uid,
+          error: `fees: ${feeErr?.message || "unknown error"}`,
+        });
       }
       processed++;
     } catch (e: any) {
