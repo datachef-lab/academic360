@@ -1,4 +1,5 @@
 import { db, mysqlConnection } from "@/db";
+import { loadStudentFeesForUid } from "@/features/fees/services/legacy-fees-data.service";
 import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
 import {
   academicYearModel,
@@ -343,6 +344,13 @@ export async function processStudentsFromExcelBuffer(
         continue;
       }
       await processStudent(oldStudent);
+      // Load this student's legacy fees right after their data is in. Idempotent
+      // (skips fees already loaded); a fees failure must not abort the import.
+      try {
+        await loadStudentFeesForUid(uid);
+      } catch (feeErr) {
+        console.log("Error loading fees for uid", uid, feeErr);
+      }
       processed++;
     } catch (e: any) {
       console.log("Error processing student:", e);

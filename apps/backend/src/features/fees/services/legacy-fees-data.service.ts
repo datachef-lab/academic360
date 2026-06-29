@@ -66,34 +66,11 @@ interface ErrorRow extends LegacyStudentFeeMappingRow {
 }
 let errorArr: ErrorRow[] = [];
 
-async function doSyncAllFeeStructureMapping() {
-  const feeStructures = await db.select().from(feeStructureModel);
-  for (const feeStructure of feeStructures) {
-    await ensureDefaultFeeStudentMappingsForFeeStructure(feeStructure);
-  }
-}
-
-export async function loadStudentFees() {
-  await doSyncAllFeeStructureMapping();
-  errorArr = [];
-
-  const academicYears = await db.select().from(academicYearModel);
-  const sessions = await db.select().from(sessionModel);
-  const classes = await db.select().from(classModel);
-  const sections = await db.select().from(sectionModel);
-  const shifts = await db.select().from(shiftModel);
-
-  // Sync/Link the receipt type master
-  // console.log("Sync/Link the receipt type master");
-  const receiptTypes = await syncLegacyReceiptTypes();
-
-  // Sync/Link the fee-heads master
-  // console.log("Sync/Link the fee-heads master");
-  const feeHeads = await syncLegacyFeeHeads();
-
-  // Load the student fees mapping
-  // console.log("Load the student fees mapping");
-  const [result] = (await mysqlConnection.query(`
+// The legacy student-fees query. Shared by the full batch load and the per-uid
+// load; pass byUid=true to filter to a single student (bind the uid as the only
+// query parameter).
+function buildLegacyFeesQuery(byUid: boolean): string {
+  return `
         SELECT
             -- Installment Id
             inst.id AS installment_id,
@@ -247,10 +224,144 @@ export async function loadStudentFees() {
         LEFT JOIN studentFeesPayMode frm_sfpm On frm_sfpm.id = frm.collegePayMode
         LEFT JOIN feesinstonlinepayment p ON p.instid = inst.id AND p.status != 'Initiated'
 
-        WHERE sess.id >= 18
+        WHERE sess.id >= 18${byUid ? " AND spd.codeNumber = ?" : ""}
         ORDER BY sess.sessionName, crs.courseName, cl.classname, spd.codeNumber, fsb.position
         LIMIT 3000000;
-    `)) as [LegacyStudentFeeMappingRow[], unknown];
+    `;
+}
+
+// Per-uid masters, computed once per process (the master syncs are idempotent
+// upserts). Reused across every per-uid fees load in an import run.
+let cachedPerUidFeesMasters: MasterDataType | null = null;
+async function getPerUidFeesMasters(): Promise<MasterDataType> {
+  if (cachedPerUidFeesMasters) return cachedPerUidFeesMasters;
+  const receiptTypes = await syncLegacyReceiptTypes();
+  const feeHeads = await syncLegacyFeeHeads();
+  const academicYears = await db.select().from(academicYearModel);
+  const sessions = await db.select().from(sessionModel);
+  const classes = await db.select().from(classModel);
+  const sections = await db.select().from(sectionModel);
+  const shifts = await db.select().from(shiftModel);
+  cachedPerUidFeesMasters = {
+    feeHeads,
+    receiptTypes,
+    academicYears,
+    sessions,
+    classes,
+    sections,
+    shifts,
+  };
+  return cachedPerUidFeesMasters;
+}
+
+/**
+ * Load a single student's legacy fees by uid — intended to be called from the
+ * per-uid student import loop, right after the student's data is loaded.
+ *
+ * Idempotent: skips any student+fee-structure that already has fees loaded (a
+ * payment or a receipt number exists), so re-runs never duplicate a payment or
+ * overwrite values edited in the new DB. A failure here is the caller's to
+ * swallow so it never aborts the student import.
+ */
+export async function loadStudentFeesForUid(uid: string): Promise<void> {
+  const masters = await getPerUidFeesMasters();
+
+  const [rows] = (await mysqlConnection.query(buildLegacyFeesQuery(true), [
+    uid,
+  ])) as [LegacyStudentFeeMappingRow[], unknown];
+  if (!rows || rows.length === 0) return;
+
+  const [foundStudent] = await db
+    .select()
+    .from(studentModel)
+    .where(eq(studentModel.uid, uid));
+  if (!foundStudent) return;
+
+  // Group the student's rows the same way the batch loader does: one fee
+  // structure per academic-year / receipt-type / course / class / shift batch.
+  const groups = new Map<string, LegacyStudentFeeMappingRow[]>();
+  for (const r of rows) {
+    const key = `${r["Academic Year"]}|${r["Receipt Type"]}|${r.Course}|${r.Semester}|${r.legacyShiftId}`;
+    const g = groups.get(key);
+    if (g) g.push(r);
+    else groups.set(key, [r]);
+  }
+
+  for (const studentRows of groups.values()) {
+    const feeStructureResult = await syncLegacyFeeStructure(
+      studentRows,
+      studentRows[0].legacyFeeStructureId,
+      masters,
+    );
+    if (!feeStructureResult) continue;
+
+    // Newly-imported students may not have a default mapping yet — create it
+    // (whole-structure ensure is idempotent) only when it is actually missing.
+    const [existingMapping] = await db
+      .select({ id: feeStudentMappingModel.id })
+      .from(feeStudentMappingModel)
+      .where(
+        and(
+          eq(feeStudentMappingModel.studentId, foundStudent.id),
+          eq(feeStudentMappingModel.feeStructureId, feeStructureResult.id!),
+        ),
+      );
+    if (!existingMapping) {
+      await ensureDefaultFeeStudentMappingsForFeeStructure(feeStructureResult);
+    }
+
+    await syncFeeStudentMapping(
+      studentRows,
+      uid,
+      feeStructureResult.id!,
+      studentRows[0]["Fee Slab"]
+        ? `Slab ${studentRows[0]["Fee Slab"]}`
+        : "Slab F",
+      studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
+      studentRows[0]["Fee Receipt Entry Created At"],
+      studentRows[0]["Challan Number"] &&
+        studentRows[0]["Challan Number"].length > 0
+        ? studentRows[0]["Challan Number"]
+        : null,
+      studentRows[0]["Fees Paid Timestamp"]
+        ? studentRows[0]["Fees Paid Timestamp"] instanceof Date
+          ? studentRows[0]["Fees Paid Timestamp"].toISOString()
+          : studentRows[0]["Fees Paid Timestamp"]
+        : null,
+    );
+  }
+}
+
+async function doSyncAllFeeStructureMapping() {
+  const feeStructures = await db.select().from(feeStructureModel);
+  for (const feeStructure of feeStructures) {
+    await ensureDefaultFeeStudentMappingsForFeeStructure(feeStructure);
+  }
+}
+
+export async function loadStudentFees() {
+  await doSyncAllFeeStructureMapping();
+  errorArr = [];
+
+  const academicYears = await db.select().from(academicYearModel);
+  const sessions = await db.select().from(sessionModel);
+  const classes = await db.select().from(classModel);
+  const sections = await db.select().from(sectionModel);
+  const shifts = await db.select().from(shiftModel);
+
+  // Sync/Link the receipt type master
+  // console.log("Sync/Link the receipt type master");
+  const receiptTypes = await syncLegacyReceiptTypes();
+
+  // Sync/Link the fee-heads master
+  // console.log("Sync/Link the fee-heads master");
+  const feeHeads = await syncLegacyFeeHeads();
+
+  // Load the student fees mapping
+  // console.log("Load the student fees mapping");
+  const [result] = (await mysqlConnection.query(
+    buildLegacyFeesQuery(false),
+  )) as [LegacyStudentFeeMappingRow[], unknown];
 
   // Iterate over the result
   // console.log("Iterate over the result");
@@ -426,6 +537,21 @@ async function syncFeeStudentMapping(
     tmpResult[0]?.feeGroupPromotionMapping ?? undefined;
   const feeCategoryCode = tmpResult[0]?.feeCategoryCode ?? null;
 
+  // Idempotent guard: if this student + fee-structure already has fees loaded (a
+  // payment exists, or the mapping already carries a receipt number), skip the
+  // whole sync — never duplicate a payment or overwrite values edited in the new
+  // DB. This also makes the full batch loader safe to re-run.
+  if (feeStudentMapping) {
+    const existingPayment = await db
+      .select({ id: paymentModel.id })
+      .from(paymentModel)
+      .where(eq(paymentModel.feeStudentMappingId, feeStudentMapping.id!))
+      .limit(1);
+    if (existingPayment.length > 0 || feeStudentMapping.receiptNumber) {
+      return;
+    }
+  }
+
   // console.log(
   //   feeStructureId,
   //   feeStudentMapping,
@@ -489,7 +615,27 @@ async function syncFeeStudentMapping(
     .from(feeStudentMappingModel)
     .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
 
-  // Persist the legacy payment as a linked cash entry tied directly to the
+  // Map the legacy payment mode → new enum. The college recorded one of
+  // "Cash" / "Bank" / "Online Payment"; a successful online record also confirms
+  // ONLINE. CHEQUE is the offline non-cash bucket (bank challan/DD/deposit). The
+  // raw legacy mode is kept in txnPaymentMode so nothing is lost.
+  const legacyMode = (studentRows[0]["College Payment Mode"] ?? "").trim();
+  const onlineStatus = (studentRows[0]["Online Payment Status"] ?? "").trim();
+  const isOnline =
+    legacyMode.toLowerCase() === "online payment" ||
+    onlineStatus.toLowerCase().startsWith("success");
+  const paymentMode: "CASH" | "CHEQUE" | "ONLINE" = isOnline
+    ? "ONLINE"
+    : legacyMode.toLowerCase() === "bank"
+      ? "CHEQUE"
+      : "CASH";
+  const onlineRef =
+    (studentRows[0]["Online Payment Reference Number"]?.trim() || null) ??
+    (studentRows[0]["Online Payment Order Id"]
+      ? String(studentRows[0]["Online Payment Order Id"])
+      : null);
+
+  // Persist the legacy payment as a linked entry tied directly to the
   // fee_student_mapping via payments.feeStudentMappingId / isLinked.
   if (amountPaid) {
     await db.insert(paymentModel).values({
@@ -498,7 +644,10 @@ async function syncFeeStudentMapping(
       context: "ADMISSION",
       amount: feeStudentMapping.totalPayable,
       status: "SUCCESS",
-      paymentMode: "CASH",
+      paymentMode,
+      txnPaymentMode: legacyMode || null,
+      bankName: isOnline ? studentRows[0]["Bank Name"]?.trim() || null : null,
+      txnId: isOnline ? onlineRef : null,
       isManualEntry: true,
       isLinked: true,
       txnDate,
