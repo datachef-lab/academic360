@@ -7,6 +7,7 @@ import {
   and,
   sql,
   isNotNull,
+  isNull,
   inArray,
 } from "drizzle-orm";
 import pLimit from "p-limit";
@@ -292,6 +293,29 @@ export async function findByUid(uid: string): Promise<StudentDto | null> {
 
   // console.log("Found student by UID:", foundStudent);
   return await modelToDto(foundStudent);
+}
+
+/**
+ * Class/semester name of the student's currently ACTIVE promotion (end_date IS
+ * NULL, non-deprecated, latest). Returns null when there is no active promotion.
+ */
+export async function getActiveClassNameForStudent(
+  studentId: number,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ className: classModel.name })
+    .from(promotionModel)
+    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+    .where(
+      and(
+        eq(promotionModel.studentId, studentId),
+        eq(promotionModel.isDeprecated, false),
+        isNull(promotionModel.endDate),
+      ),
+    )
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
+  return row?.className ?? null;
 }
 
 export async function updateStudentStatusById(

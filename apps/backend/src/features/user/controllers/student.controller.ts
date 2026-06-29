@@ -193,10 +193,16 @@ export const getOnlineStudents = async (
     // Filter out any nulls just in case
     const filtered = students.filter((s) => s !== null);
 
-    const enriched = filtered.map((student) => ({
-      ...student,
-      loginTime: socketService.getOnlineStudentLoginTime(student.userId),
-    }));
+    const enriched = await Promise.all(
+      filtered.map(async (student) => ({
+        ...student,
+        loginTime: socketService.getOnlineStudentLoginTime(student.userId),
+        // Class/semester of the student's active promotion (end_date IS NULL).
+        activeClassName: await studentService.getActiveClassNameForStudent(
+          student.id as number,
+        ),
+      })),
+    );
 
     res
       .status(200)

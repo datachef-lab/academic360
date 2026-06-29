@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { OnlineStudentDto } from "@/services/student";
+import { StudentAvatar } from "@/components/student/StudentAvatar";
 import { Circle, User } from "lucide-react";
 
 interface OnlineStudentsModalProps {
@@ -41,7 +42,7 @@ export function OnlineStudentsModal({
   loading,
   isError,
 }: OnlineStudentsModalProps) {
-  const columnCount = 6;
+  const columnCount = 8;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,9 +74,11 @@ export function OnlineStudentsModal({
               <TableHeader className="bg-muted/40">
                 <TableRow>
                   <TableHead className="w-14 text-center">#</TableHead>
+                  <TableHead className="w-16 text-center">Photo</TableHead>
                   <TableHead>UID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Program Course</TableHead>
+                  <TableHead>Class</TableHead>
                   <TableHead>Shift</TableHead>
                   <TableHead>Login Time</TableHead>
                 </TableRow>
@@ -117,9 +120,17 @@ export function OnlineStudentsModal({
                   students.map((student, index) => (
                     <TableRow key={student.id ?? index} className="hover:bg-muted/50 transition">
                       <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center">
+                          <StudentAvatar uid={student.uid} name={student.name} size="sm" />
+                        </div>
+                      </TableCell>
                       <TableCell>{student.uid ?? "-"}</TableCell>
                       <TableCell>{student.name ?? "-"}</TableCell>
                       <TableCell>{student.programCourse?.name ?? "-"}</TableCell>
+                      <TableCell>
+                        {student.activeClassName ?? student.currentPromotion?.class?.name ?? "-"}
+                      </TableCell>
                       <TableCell>{student.currentPromotion?.shift?.name ?? "-"}</TableCell>
                       <TableCell>{formatLoginTime(student.loginTime)}</TableCell>
                     </TableRow>

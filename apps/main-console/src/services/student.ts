@@ -65,6 +65,8 @@ export async function getSearchedStudentsByRollNumber(
 
 export type OnlineStudentDto = StudentDto & {
   loginTime?: string | null;
+  /** Class/semester of the student's active promotion (end_date IS NULL). */
+  activeClassName?: string | null;
 };
 
 // Online students (via WebSocket tracking on backend)
