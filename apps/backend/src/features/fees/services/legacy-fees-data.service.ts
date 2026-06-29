@@ -66,16 +66,6 @@ interface ErrorRow extends LegacyStudentFeeMappingRow {
 }
 let errorArr: ErrorRow[] = [];
 
-// Build the new-DB fee slab name from the legacy "Fee Slab" value. The legacy
-// concession slab "Trial" is the same slab the new DB calls "Slab T" (the legacy
-// data carries it as both "Trial" and "T"), so normalize it. Empty -> "Slab F".
-function buildSlabName(rawSlab: string | null | undefined): string {
-  const s = (rawSlab ?? "").trim();
-  if (!s) return "Slab F";
-  const norm = s.toLowerCase() === "trial" ? "T" : s;
-  return `Slab ${norm}`;
-}
-
 // The legacy student-fees query. Shared by the full batch load and the per-uid
 // load; pass byUid=true to filter to a single student (bind the uid as the only
 // query parameter).
@@ -346,7 +336,9 @@ export async function loadStudentFeesForUid(
       studentRows,
       uid,
       feeStructureResult.id!,
-      buildSlabName(studentRows[0]["Fee Slab"]),
+      studentRows[0]["Fee Slab"]
+        ? `Slab ${studentRows[0]["Fee Slab"]}`
+        : "Slab F",
       studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
       studentRows[0]["Fee Receipt Entry Created At"],
       studentRows[0]["Challan Number"] &&
@@ -493,7 +485,9 @@ export async function loadStudentFees() {
                 studentRows,
                 uid,
                 feeStructureResult!.id!,
-                buildSlabName(studentRows[0]["Fee Slab"]),
+                studentRows[0]["Fee Slab"]
+                  ? `Slab ${studentRows[0]["Fee Slab"]}`
+                  : "Slab F",
                 studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
                 studentRows[0]["Fee Receipt Entry Created At"],
                 studentRows[0]["Challan Number"] &&
