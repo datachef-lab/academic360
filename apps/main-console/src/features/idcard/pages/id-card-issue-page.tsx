@@ -120,17 +120,28 @@ function valueForField(key: IdCardFieldKey, student: StudentInfo, validTill: str
   }
 }
 
+// First value that is a non-empty (trimmed) string, else null. Used so an empty
+// short name "" falls through to the full name (?? would keep the empty string).
+function pickText(...vals: unknown[]): string | null {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim() !== "") return v;
+  }
+  return null;
+}
+
 function extractStudentInfo(raw: any): StudentInfo {
   return {
     id: raw?.id ?? 0,
     uid: raw?.uid ?? "",
     name: raw?.user?.name ?? raw?.name ?? null,
-    course:
-      raw?.programCourse?.shortName ??
-      raw?.programCourse?.course?.shortName ??
-      raw?.programCourse?.name ??
-      raw?.programCourse?.course?.name ??
-      null,
+    // Prefer the program-course short name; fall back to the full name when the
+    // short name is not provided (null or empty).
+    course: pickText(
+      raw?.programCourse?.shortName,
+      raw?.programCourse?.course?.shortName,
+      raw?.programCourse?.name,
+      raw?.programCourse?.course?.name,
+    ),
     mobile:
       raw?.user?.phone ?? raw?.person?.phone ?? raw?.admissionGeneralInfo?.mobileNumber ?? null,
     bloodGroup:
