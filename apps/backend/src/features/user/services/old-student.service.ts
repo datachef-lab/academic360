@@ -779,9 +779,14 @@ export async function addAdmCourseApps(
       admissionCourseDetails ? admissionCourseDetails.id : "not upserted",
     );
     if (!admissionCourseDetails) {
-      throw new Error(
-        "Admission course details not added for old course detail",
+      // A single unmappable course CHOICE (e.g. the program_course master is missing
+      // for a non-admitted preference like "B.Sc. Electronics (H)") must NOT abort the
+      // whole admission build — otherwise the student is left half-loaded (no form, no
+      // promotion). Skip just this choice; the admitted course is captured below.
+      console.warn(
+        `addAdmCourseApps: skipping unmappable course detail id=${oldCourseDetail.id} courseid=${oldCourseDetail.courseid} (no program_course match)`,
       );
+      continue;
     }
     if (
       admissionCourseDetails?.legacyCourseDetailsId === oldStudent.admissionid
