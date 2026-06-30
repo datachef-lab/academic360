@@ -1708,67 +1708,47 @@ export async function processOldStudentApplicationForm(
     return createLegacyBootstrapApplicationForm(oldStudent, student);
   }
 
-  // Check if personaldetails exists
-  const [existingAdmGeneralInfo] = await db
-    .select()
-    .from(admissionGeneralInfoModel)
-    .where(
-      eq(
-        admissionGeneralInfoModel.legacyPersonalDetailsId,
-        oldAdmStudentPersonalDetails.id!,
-      ),
-    );
-
-  if (existingAdmGeneralInfo) {
-    console.log(
-      "in processOldStudentApplicationForm(), existingAdmGeneralInfo:",
-      existingAdmGeneralInfo,
-    );
-    const [existingApplicationForm] = await db
-      .select()
-      .from(applicationFormModel)
-      .where(
-        eq(applicationFormModel.id, existingAdmGeneralInfo.applicationFormId),
-      );
-
-    // Try to fetch the transferred admission course details for this application
-    const [[oldCourseDetails]] = (await mysqlConnection.query(`
+  // Idempotency MUST key on the student's OWN legacy coursedetails (unique per
+  // studentpersonaldetails record), NOT the legacy personaldetails — and NOT
+  // (personaldetails + academic year) either: the prod data shows 40 of 60 shared
+  // application forms are two DIFFERENT students in the SAME academic year, so an
+  // academic-year guard still wouldn't separate them. Legacy "transferred"
+  // coursedetails share a parent personaldetails across students, so keying on
+  // personaldetails (with or without academic year) collapsed distinct students
+  // onto one application form (e.g. 1304260022 onto 2025-26 student 1504250031's
+  // form 7512). The student's own coursedetails id is the only unique key.
+  const [[oldCourseDetails]] = (await mysqlConnection.query(`
         SELECT cd.*
         FROM coursedetails cd
         JOIN studentpersonaldetails spd ON spd.admissionid = cd.id
         WHERE spd.id = ${oldStudent.id};
     `)) as [OldCourseDetails[], any];
 
-    let [transferredAdmCourseDetails] = (await db
+  const [existingAdmCourseDetails] = (
+    oldCourseDetails
+      ? await db
+          .select()
+          .from(admissionCourseDetailsModel)
+          .where(
+            eq(
+              admissionCourseDetailsModel.legacyCourseDetailsId,
+              oldCourseDetails.id,
+            ),
+          )
+      : []
+  ) as AdmissionCourseDetails[];
+
+  // This student's own admission was already imported -> reuse ITS application form.
+  if (existingAdmCourseDetails) {
+    const transferredAdmCourseDetails = existingAdmCourseDetails;
+    const [existingApplicationForm] = await db
       .select()
-      .from(admissionCourseDetailsModel)
+      .from(applicationFormModel)
       .where(
-        eq(
-          admissionCourseDetailsModel.legacyCourseDetailsId,
-          oldCourseDetails.id,
-        ),
-      )) as AdmissionCourseDetails[];
-
-    // If no transferred row not found, add the admission course details
-    if (!transferredAdmCourseDetails) {
-      transferredAdmCourseDetails = await addAdmCourseApps(
-        oldAdmStudentPersonalDetails,
-        existingApplicationForm,
-        oldStudent,
+        eq(applicationFormModel.id, existingAdmCourseDetails.applicationFormId),
       );
-    }
 
-    if (!transferredAdmCourseDetails) {
-      throw new Error(
-        "Admission course details not found for existing application form",
-      );
-    }
-
-    // Backfill subject selections (legacy cvsubjectselection ->
-    // adm_subject_paper_selections) on this "admission already exists" path too.
-    // The fresh-admission path below already does this; this early return used to
-    // skip it, so re-loaded students (admission info kept, student re-created)
-    // lost their subject selections. getSubjectRelatedFields is idempotent.
+    // Backfill subject selections (idempotent), mirroring the fresh path below.
     try {
       const [academicYearRow] = await db
         .select()
@@ -4068,17 +4048,18 @@ export async function processOldCourseDetails(
     any,
   ];
 
+  // Dedup by the legacy coursedetails id GLOBALLY (one admission_course_details
+  // per legacy coursedetails), not per application form. Legacy "transferred"
+  // coursedetails share a parent personaldetails across students, so a new
+  // student's fresh-form import iterates another student's coursedetails too;
+  // a per-form guard would then create a duplicate acd under the wrong form and
+  // re-introduce cross-student linkage. A legacy coursedetails belongs to exactly
+  // one application, so a single acd per legacy id is the correct invariant.
   const [existingAdmOldCourseDetails] = await db
     .select()
     .from(admissionCourseDetailsModel)
     .where(
-      and(
-        eq(
-          admissionCourseDetailsModel.applicationFormId,
-          applicationForm.id as number,
-        ),
-        eq(admissionCourseDetailsModel.legacyCourseDetailsId, courseDetails.id),
-      ),
+      eq(admissionCourseDetailsModel.legacyCourseDetailsId, courseDetails.id),
     );
 
   if (existingAdmOldCourseDetails) return existingAdmOldCourseDetails;
