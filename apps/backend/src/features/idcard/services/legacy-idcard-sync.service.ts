@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, mysqlConnection } from "@/db/index.js";
 import { idCardIssueModel, studentModel } from "@repo/db/schemas/index.js";
 import { fileExistsInS3, uploadToS3 } from "@/services/s3.service.js";
+import { ensureSnapcardTemplate } from "./snapcard-template-seed.service.js";
 
 /**
  * Legacy ID card backfill (snapcard → new DB + S3).
@@ -87,6 +88,21 @@ export async function syncLegacyIdCards(): Promise<
 
   try {
     console.log("[idcard-sync] starting legacy ID card backfill…");
+
+    // Ensure the snapcard ID card template exists BEFORE loading issues — the
+    // issue display re-composes the card from the active template, so without a
+    // template the loaded cards can't render. Idempotent (skips if it already
+    // exists); a failure here must not abort the issue load.
+    try {
+      const t = await ensureSnapcardTemplate();
+      console.log("[idcard-sync] template ensure:", JSON.stringify(t));
+    } catch (e) {
+      console.error(
+        "[idcard-sync] template ensure failed:",
+        (e as Error)?.message,
+      );
+    }
+
     const [rows] = (await mysqlConnection.query(
       "SELECT * FROM id_card_issues ORDER BY student_id_fk, created_at, id",
     )) as [OldIdCardRow[], unknown];
