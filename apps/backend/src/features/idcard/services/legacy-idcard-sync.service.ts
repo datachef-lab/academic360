@@ -1,8 +1,10 @@
+import os from "node:os";
 import { eq } from "drizzle-orm";
 
 import { db, mysqlConnection } from "@/db/index.js";
 import { idCardIssueModel, studentModel } from "@repo/db/schemas/index.js";
 import { fileExistsInS3, uploadToS3 } from "@/services/s3.service.js";
+import { getRedisCommandClient } from "@/config/redis.js";
 import { ensureSnapcardTemplate } from "./snapcard-template-seed.service.js";
 
 /**
@@ -65,15 +67,51 @@ export type LegacyIdCardSyncSummary = {
 // rapid restarts). The work itself is idempotent — already-migrated entries (by
 // legacy_issue_id) and already-uploaded images (S3 existence) are skipped — so a
 // re-run only fills gaps.
+//
+// Across MULTIPLE servers (the prod ASG runs ≥2 instances behind the LB), each
+// boots and calls this, so the per-process flag is not enough: a cross-instance
+// Redis lock ensures only ONE server runs the backfill per restart. That avoids
+// duplicate work and, critically, a race on the snapcard template insert
+// (`id_card_templates` has no unique on (name, academic_year)). idcard issues are
+// already safe — `legacy_issue_id` is UNIQUE. When Redis is unavailable (dev /
+// single node) we fall back to the in-process flag.
+const SYNC_LOCK_KEY = "a360:lock:idcard-sync";
+const SYNC_LOCK_TTL_SEC = 30 * 60; // safety net if the holder dies mid-run
 let syncRunning = false;
 
 export async function syncLegacyIdCards(): Promise<
   LegacyIdCardSyncSummary | { skipped: true }
 > {
-  if (syncRunning) {
-    return { skipped: true };
+  const redis = getRedisCommandClient();
+  const lockToken = `${os.hostname()}-${process.pid}-${Date.now()}`;
+
+  if (redis) {
+    try {
+      const acquired = await redis.set(SYNC_LOCK_KEY, lockToken, {
+        NX: true,
+        EX: SYNC_LOCK_TTL_SEC,
+      });
+      if (acquired !== "OK") {
+        console.log(
+          "[idcard-sync] another instance holds the lock — skipping this run",
+        );
+        return { skipped: true };
+      }
+    } catch (e) {
+      // Redis hiccup — skip rather than risk a concurrent run; the next restart
+      // retries (the backfill self-heals).
+      console.error(
+        "[idcard-sync] redis lock acquire failed:",
+        (e as Error)?.message,
+      );
+      return { skipped: true };
+    }
+  } else {
+    if (syncRunning) {
+      return { skipped: true };
+    }
+    syncRunning = true;
   }
-  syncRunning = true;
 
   const summary = {
     scanned: 0,
@@ -303,6 +341,20 @@ export async function syncLegacyIdCards(): Promise<
     console.error("[idcard-sync] fatal:", (e as Error)?.message);
     return summary;
   } finally {
-    syncRunning = false;
+    if (redis) {
+      // Release only if we still hold the lock (our token) — never release a
+      // lock a later run re-acquired after our TTL expired.
+      try {
+        const cur = await redis.get(SYNC_LOCK_KEY);
+        if (cur === lockToken) await redis.del(SYNC_LOCK_KEY);
+      } catch (e) {
+        console.error(
+          "[idcard-sync] redis lock release failed:",
+          (e as Error)?.message,
+        );
+      }
+    } else {
+      syncRunning = false;
+    }
   }
 }
