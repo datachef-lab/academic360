@@ -19,15 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  PlusCircle,
-  Download,
-  Upload,
-  Edit,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { PlusCircle, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -45,7 +38,7 @@ import {
 type OptionRow = { id: number; label: string };
 type FormState = Record<string, string | number | boolean | null>;
 
-const PAGE_SIZE = 15;
+const DEFAULT_PAGE_SIZE = 15;
 
 function defaultForm(config: ResourceConfig): FormState {
   const f: FormState = {};
@@ -93,6 +86,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState(DEFAULT_PAGE_SIZE);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<ResourceRow | null>(null);
   const [form, setForm] = React.useState<FormState>(defaultForm(config));
@@ -404,38 +398,51 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
     return inFields || inBadges;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const currentPage = Math.min(page, totalPages);
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  React.useEffect(() => setPage(1), [search]);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
+  const paged = filtered.slice(startIndex, endIndex);
+  React.useEffect(() => setPage(1), [search, itemsPerPage]);
 
-  const colCount =
-    1 + badges.length + valueFields.length + (seqField ? 1 : 0) + boolFields.length + 2;
+  const renderBoolValue = (row: ResourceRow, field: ResourceField) => {
+    if (field.key === "isActive") {
+      return row[field.key] !== false ? (
+        <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+      ) : (
+        <Badge variant="secondary">Inactive</Badge>
+      );
+    }
+    return row[field.key] ? "Yes" : "No";
+  };
+
+  const primaryLabel = (row: ResourceRow) => String(row[config.labelField] ?? row.id ?? "—");
+
   const Icon = config.icon;
 
   return (
-    <div className="p-2 sm:p-4">
-      <Card className="border-none">
-        <CardHeader className="mb-3 flex flex-col items-start justify-between gap-4 rounded-md border p-4 sm:flex-row sm:items-center">
+    <div className="min-w-0 max-w-full overflow-x-hidden p-3 sm:p-4">
+      <Card className="border-none shadow-none sm:shadow-sm">
+        <CardHeader className="mb-3 flex flex-col gap-3 space-y-0 rounded-md border p-3 sm:flex-row sm:items-start sm:justify-between sm:p-4">
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center text-lg sm:text-xl">
-              <Icon className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
+              <Icon className="mr-2 h-6 w-6 shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
               <span className="truncate">{config.title}</span>
             </CardTitle>
             <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
               Manage {config.title.toLowerCase()}.
             </div>
           </div>
-          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-nowrap">
             <Dialog open={isBulkOpen} onOpenChange={setIsBulkOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="flex-shrink-0">
+                <Button variant="outline" className="w-full shrink-0 sm:w-auto">
                   <Upload className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Bulk Upload</span>
                   <span className="sm:hidden">Upload</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="w-[95vw] max-w-lg sm:w-full">
+              <DialogContent className="w-[calc(100vw-1rem)] max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Bulk Upload {config.title}</DialogTitle>
                 </DialogHeader>
@@ -455,15 +462,19 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                       <span className="text-red-600">Failed: {bulkResult.failed}</span>
                     </div>
                   )}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row">
                     <Button
                       onClick={handleBulkUpload}
                       disabled={!bulkFile || bulkRunning}
-                      className="flex-1"
+                      className="w-full flex-1 sm:w-auto"
                     >
                       {bulkRunning ? "Uploading..." : "Upload"}
                     </Button>
-                    <Button variant="outline" onClick={() => setIsBulkOpen(false)}>
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => setIsBulkOpen(false)}
+                    >
                       Close
                     </Button>
                   </div>
@@ -472,7 +483,7 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
             </Dialog>
             <Button
               onClick={openAdd}
-              className="flex-shrink-0 bg-purple-600 text-white hover:bg-purple-700"
+              className="w-full shrink-0 bg-purple-600 text-white hover:bg-purple-700 sm:w-auto"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Add {config.title.replace(/s$/, "")}</span>
@@ -480,76 +491,171 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="mb-0 flex flex-col items-stretch gap-2 border-b bg-background p-2 sm:flex-row sm:items-center sm:p-4">
-            <Input
-              placeholder="Search..."
-              className="w-full sm:w-64"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <Button variant="outline" className="flex-shrink-0 gap-2" onClick={handleDownload}>
-              <Download className="h-4 w-4" /> <span className="hidden sm:inline">Download</span>
-            </Button>
+        <CardContent className="px-0 sm:px-6">
+          <div className="border-b bg-background px-3 py-3 sm:px-0 sm:pb-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                placeholder="Search..."
+                className="w-full min-w-0 sm:max-w-xs"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <Button
+                variant="outline"
+                className="w-full shrink-0 gap-2 sm:w-auto"
+                onClick={handleDownload}
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+            </div>
           </div>
-          <div className="relative" style={{ height: "560px" }}>
-            <div className="h-full overflow-auto">
-              <Table className="min-w-[640px] border">
-                <TableHeader className="sticky top-0 z-10 bg-gray-100">
-                  <TableRow>
-                    <TableHead className="w-[60px] bg-gray-100">ID</TableHead>
-                    {badges.map((b) => (
-                      <TableHead key={b.label} className="bg-gray-100">
-                        {b.label}
-                      </TableHead>
-                    ))}
-                    {valueFields.map((f) => (
-                      <TableHead key={f.key} className="bg-gray-100">
-                        {f.label}
-                      </TableHead>
-                    ))}
-                    {seqField && <TableHead className="bg-gray-100">Sequence</TableHead>}
-                    {boolFields.map((f) => (
-                      <TableHead key={f.key} className="bg-gray-100">
-                        {f.label}
-                      </TableHead>
-                    ))}
-                    <TableHead
-                      className="w-[90px] bg-gray-100"
-                      title="Times referenced across the DB"
-                    >
-                      Used
-                    </TableHead>
-                    <TableHead className="w-[120px] bg-gray-100">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
+
+          {loading ? (
+            <div className="px-4 py-10 text-center text-sm text-muted-foreground">Loading...</div>
+          ) : error ? (
+            <div className="px-4 py-10 text-center text-sm text-red-500">{error}</div>
+          ) : paged.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+              No {config.title.toLowerCase()} found.
+            </div>
+          ) : (
+            <>
+              {/* Mobile card list */}
+              <div className="divide-y divide-gray-200 md:hidden">
+                {paged.map((row) => (
+                  <div key={row.id} className="space-y-3 p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600">
+                        {row.id}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold leading-snug text-gray-900">
+                          {primaryLabel(row)}
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          {badges.map((b) => {
+                            const v = resolveBadge(row, b);
+                            return v === "-" ? null : (
+                              <span
+                                key={b.label}
+                                className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${b.color}`}
+                              >
+                                {v}
+                              </span>
+                            );
+                          })}
+                          {boolFields.map((f) => (
+                            <span key={f.key}>{renderBoolValue(row, f)}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {valueFields
+                        .filter((f) => f.key !== config.labelField)
+                        .map((f) => (
+                          <div
+                            key={f.key}
+                            className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2"
+                          >
+                            <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                              {f.label}
+                            </div>
+                            <div className="mt-0.5 text-sm font-medium text-gray-900">
+                              {(row[f.key] as React.ReactNode) ?? "—"}
+                            </div>
+                          </div>
+                        ))}
+                      {seqField && (
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                            Sequence
+                          </div>
+                          <div className="mt-0.5 text-sm font-medium text-gray-900">
+                            {(row.sequence as React.ReactNode) ?? "—"}
+                          </div>
+                        </div>
+                      )}
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                          Used
+                        </div>
+                        <div className="mt-0.5 text-sm font-medium text-gray-900">
+                          {usage == null ? "…" : (usage[Number(row.id)] ?? 0)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 flex-1"
+                        onClick={() => openEdit(row)}
+                      >
+                        <Edit className="mr-1.5 h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 flex-1 text-destructive"
+                        onClick={() => handleDelete(row.id)}
+                      >
+                        <Trash2 className="mr-1.5 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table
+                  containerClassName="max-h-[min(68vh,560px)] overflow-x-hidden overflow-y-auto"
+                  className="w-full table-fixed border"
+                >
+                  <TableHeader className="sticky top-0 z-10 bg-gray-100 shadow-[0_1px_0_0_#d1d5db]">
                     <TableRow>
-                      <TableCell colSpan={colCount} className="text-center">
-                        Loading...
-                      </TableCell>
+                      <TableHead className="w-14 bg-gray-100 px-2">ID</TableHead>
+                      {badges.map((b) => (
+                        <TableHead key={b.label} className="bg-gray-100 px-2">
+                          {b.label}
+                        </TableHead>
+                      ))}
+                      {valueFields.map((f) => (
+                        <TableHead key={f.key} className="bg-gray-100 px-2">
+                          {f.label}
+                        </TableHead>
+                      ))}
+                      {seqField && (
+                        <TableHead className="w-20 bg-gray-100 px-2">Sequence</TableHead>
+                      )}
+                      {boolFields.map((f) => (
+                        <TableHead key={f.key} className="w-24 bg-gray-100 px-2">
+                          {f.label}
+                        </TableHead>
+                      ))}
+                      <TableHead
+                        className="w-16 bg-gray-100 px-2"
+                        title="Times referenced across the DB"
+                      >
+                        Used
+                      </TableHead>
+                      <TableHead className="w-24 bg-gray-100 px-2">Actions</TableHead>
                     </TableRow>
-                  ) : error ? (
-                    <TableRow>
-                      <TableCell colSpan={colCount} className="text-center text-red-500">
-                        {error}
-                      </TableCell>
-                    </TableRow>
-                  ) : paged.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={colCount} className="text-center">
-                        No {config.title.toLowerCase()} found.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paged.map((row) => (
+                  </TableHeader>
+                  <TableBody>
+                    {paged.map((row) => (
                       <TableRow key={row.id} className="group">
-                        <TableCell>{row.id}</TableCell>
+                        <TableCell className="px-2 py-2.5">{row.id}</TableCell>
                         {badges.map((b) => {
                           const v = resolveBadge(row, b);
                           return (
-                            <TableCell key={b.label}>
+                            <TableCell key={b.label} className="px-2 py-2.5">
                               {v === "-" ? (
                                 <span className="text-muted-foreground">-</span>
                               ) : (
@@ -563,31 +669,21 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                           );
                         })}
                         {valueFields.map((f) => (
-                          <TableCell key={f.key}>
+                          <TableCell key={f.key} className="px-2 py-2.5">
                             {(row[f.key] as React.ReactNode) ?? "-"}
                           </TableCell>
                         ))}
                         {seqField && (
-                          <TableCell>{(row.sequence as React.ReactNode) ?? "-"}</TableCell>
+                          <TableCell className="px-2 py-2.5">
+                            {(row.sequence as React.ReactNode) ?? "-"}
+                          </TableCell>
                         )}
                         {boolFields.map((f) => (
-                          <TableCell key={f.key}>
-                            {f.key === "isActive" ? (
-                              row[f.key] !== false ? (
-                                <Badge className="bg-green-500 text-white hover:bg-green-600">
-                                  Active
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">Inactive</Badge>
-                              )
-                            ) : row[f.key] ? (
-                              "Yes"
-                            ) : (
-                              "No"
-                            )}
+                          <TableCell key={f.key} className="px-2 py-2.5">
+                            {renderBoolValue(row, f)}
                           </TableCell>
                         ))}
-                        <TableCell>
+                        <TableCell className="px-2 py-2.5">
                           {usage == null ? (
                             <span className="text-muted-foreground">…</span>
                           ) : usage[Number(row.id)] ? (
@@ -598,8 +694,8 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                             <span className="text-muted-foreground">0</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
+                        <TableCell className="px-2 py-2.5">
+                          <div className="flex gap-1">
                             <Button
                               variant="outline"
                               size="sm"
@@ -619,58 +715,43 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-          {/* Pagination */}
-          <div className="flex flex-col items-center justify-between gap-2 border-t p-2 sm:flex-row sm:p-3">
-            <div className="text-xs text-muted-foreground">
-              {filtered.length === 0
-                ? "0 records"
-                : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(
-                    currentPage * PAGE_SIZE,
-                    filtered.length,
-                  )} of ${filtered.length}`}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-xs">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+
+          <div className="border-t border-border/60 bg-background px-3 py-2 sm:px-0 sm:py-3">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              itemsPerPage={itemsPerPage}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setPage}
+              onItemsPerPageChange={(n) => {
+                setItemsPerPage(n);
+                setPage(1);
+              }}
+              className="border-0 bg-transparent shadow-none"
+            />
           </div>
         </CardContent>
       </Card>
 
       {/* Add / Edit form */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="w-[95vw] max-w-lg sm:w-full">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(92dvh,92vh)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b px-4 py-4">
             <DialogTitle>
               {selected
                 ? `Edit ${config.title.replace(/s$/, "")}`
                 : `Add ${config.title.replace(/s$/, "")}`}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
             {/* text / number fields (2-col) */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {topFields
@@ -742,11 +823,15 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
               </label>
             ))}
           </div>
-          <div className="mt-2 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsFormOpen(false)}>
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t px-4 py-4 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setIsFormOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Saving..." : "Save"}
             </Button>
           </div>

@@ -133,11 +133,11 @@ export default function CuRegStudentPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden p-3 sm:space-y-6 sm:p-4 md:p-6">
       {/* Student Search Form */}
       <Card className="shadow-sm border border-slate-200">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
+        <CardHeader className="pb-3 sm:pb-4">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Search className="h-5 w-5 text-blue-600" />
             Student UID
           </CardTitle>
@@ -209,16 +209,24 @@ export default function CuRegStudentPage() {
 
       {/* Tabs - Only show when student is found */}
       {studentData && !shouldBlockForStatus && (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex justify-start mb-6">
-            <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-              <TabsTrigger value="subject-selection" className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4" />
-                Subject Selection
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0">
+          <div className="mb-4 overflow-x-auto sm:mb-6">
+            <TabsList className="inline-flex h-10 w-full min-w-0 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground sm:w-auto">
+              <TabsTrigger
+                value="subject-selection"
+                className="flex flex-1 items-center justify-center gap-1.5 px-2 text-xs sm:flex-none sm:gap-2 sm:px-3 sm:text-sm"
+              >
+                <BookOpen className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                <span className="sm:hidden">Subjects</span>
+                <span className="hidden sm:inline">Subject Selection</span>
               </TabsTrigger>
-              <TabsTrigger value="cu-registration" className="flex items-center gap-2">
-                <GraduationCap className="h-4 w-4" />
-                CU Registration
+              <TabsTrigger
+                value="cu-registration"
+                className="flex flex-1 items-center justify-center gap-1.5 px-2 text-xs sm:flex-none sm:gap-2 sm:px-3 sm:text-sm"
+              >
+                <GraduationCap className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                <span className="sm:hidden">CU Reg</span>
+                <span className="hidden sm:inline">CU Registration</span>
               </TabsTrigger>
             </TabsList>
           </div>

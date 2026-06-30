@@ -121,6 +121,17 @@ html {
   overflow-x: auto;
 }
 
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .custom-scroll-table {
   width: 100%;
   border-collapse: separate;

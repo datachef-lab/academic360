@@ -543,187 +543,139 @@ export default function RestrictedGroupingPage() {
     updateRule(ruleId, field, newArray);
   };
 
+  const ProgramCourseShortLabel = (course: string) => course.split(" - ")[0] ?? course;
+
+  const renderBadgeGroup = (
+    items: string[],
+    className: string,
+    maxVisible = 3,
+    format?: (item: string) => string,
+  ) => {
+    if (!items.length) return <span className="text-gray-400">—</span>;
+    const visible = items.slice(0, maxVisible);
+    const remaining = items.length - visible.length;
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        {visible.map((item, i) => (
+          <Badge key={`${item}-${i}`} variant="outline" className={`text-xs ${className}`}>
+            {format ? format(item) : item}
+          </Badge>
+        ))}
+        {remaining > 0 && (
+          <Badge variant="outline" className={`text-xs ${className}`}>
+            +{remaining} more
+          </Badge>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex min-w-0 max-w-full flex-col overflow-x-hidden">
       {/* Fixed Header */}
-      <div className="flex-shrink-0 p-4 pb-0">
-        <div className="flex items-center justify-between mb-4 p-4 border rounded-md bg-background">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-700">Restricted Groupings</h1>
-            <p className="text-gray-600 mt-1">
+      <div className="shrink-0 p-3 pb-0 sm:p-4">
+        <div className="mb-4 flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-start sm:justify-between sm:p-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-gray-700 sm:text-2xl">Restricted Groupings</h1>
+            <p className="mt-1 text-sm text-gray-600 sm:text-base">
               Define relationships between programs-courses and subjects. Configure which subjects
               belong to which programs and courses.
             </p>
           </div>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="w-full bg-purple-600 hover:bg-purple-700 sm:w-auto"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Add
           </Button>
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4 mb-4 mt-4">
-          <div className="flex-1">
+        <div className="mb-4 rounded-md border bg-background p-3 sm:p-4">
+          <div className="flex flex-col gap-3">
             <Input
               placeholder="Search categories, programs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm text-gray-700"
+              className="w-full min-w-0 text-gray-700"
             />
+
+            <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 xl:grid-cols-4">
+              <div className="min-w-0 min-[480px]:col-span-2 xl:col-span-1">
+                <AcademicYearSelector showLabel={false} className="w-full min-w-0" />
+              </div>
+
+              <div className="min-w-0 min-[480px]:col-span-2 xl:col-span-1">
+                <Select value={selectedProgramCourse} onValueChange={setSelectedProgramCourse}>
+                  <SelectTrigger className="w-full min-w-0 text-gray-700">
+                    <SelectValue placeholder="Program-Course" />
+                  </SelectTrigger>
+                  <SelectContent className="max-w-[min(100vw-2rem,28rem)]">
+                    <SelectItem value="all">All Program-Courses</SelectItem>
+                    {allProgramCourses.map((course) => (
+                      <SelectItem key={course} value={course} className="truncate">
+                        {course}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="min-w-0">
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-full min-w-0 text-gray-700">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {allCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="min-w-0 min-[480px]:col-span-2 xl:col-span-1">
+                <Button variant="outline" className="w-full min-w-0">
+                  <Download className="mr-2 h-4 w-4 shrink-0" />
+                  Download
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <AcademicYearSelector showLabel={false} className="w-full sm:w-56" />
-            <Select value={selectedProgramCourse} onValueChange={setSelectedProgramCourse}>
-              <SelectTrigger className="w-48 text-gray-700">
-                <SelectValue placeholder="Filter by Program-Course" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Program-Courses</SelectItem>
-                {allProgramCourses.map((course) => (
-                  <SelectItem key={course} value={course}>
-                    {course}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-48 text-gray-700">
-                <SelectValue placeholder="Filter by Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {allCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
         </div>
       </div>
 
-      {/* Table with Fixed Header */}
-      <div className="flex-1 px-4 min-h-0">
-        <Card className="h-full flex flex-col">
-          <CardContent className="p-0 h-full flex flex-col">
-            {/* Fixed Header */}
-            <div className="flex-shrink-0 border-b-2 border-l border-r border-gray-300">
-              <Table className="table-fixed">
-                <TableHeader>
-                  <TableRow className="bg-gray-100 border-b-2 border-gray-300">
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-16">
-                      Sr. No.
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-32">
-                      Subject Category
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-48">
-                      Subject
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-24">
-                      Semesters
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-48">
-                      Cannot Combine With
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-40">
-                      Applicable Program-Courses For
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-20">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-700 w-24">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-              </Table>
-            </div>
-
-            {/* Scrollable Body */}
-            <div className="flex-1 overflow-auto border-l border-r border-gray-300">
-              <Table className="table-fixed border-collapse [&>tbody>tr]:border-b [&>tbody>tr]:border-gray-300">
-                <TableBody>
-                  {filteredRelations.map((relation, index) => (
-                    <TableRow
-                      key={relation.id}
-                      className="hover:bg-gray-50 border-b-2 border-gray-300"
-                      style={{ borderBottom: "2px solid #d1d5db" }}
-                    >
-                      <TableCell className="border-r border-gray-300 w-16">
-                        {startIndex + index + 1}
-                      </TableCell>
-                      <TableCell className="font-medium border-r border-gray-300 w-32">
+      {/* List: mobile cards + desktop table */}
+      <div className="min-w-0 px-3 pb-2 sm:px-4 md:pb-3">
+        {filteredRelations.length === 0 ? (
+          <div className="rounded-md border px-4 py-10 text-center text-sm text-muted-foreground">
+            No restricted groupings found.
+          </div>
+        ) : (
+          <>
+            {/* Mobile card list */}
+            <div className="divide-y divide-gray-200 overflow-hidden rounded-md border md:hidden">
+              {filteredRelations.map((relation, index) => (
+                <div key={relation.id} className="space-y-3 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600">
+                      {startIndex + index + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold leading-snug text-gray-900">
+                        {relation.subject}
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="border-blue-500 text-blue-700 bg-blue-50"
+                          className="border-blue-500 bg-blue-50 text-blue-700"
                         >
                           {relation.subjectCategory}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium border-r border-gray-300 w-48">
-                        {relation.subject}
-                      </TableCell>
-                      <TableCell className="border-r border-gray-300 w-24">
-                        <div className="flex flex-wrap gap-1">
-                          {(relation.semesters || []).map((semester, semIndex) => (
-                            <Badge
-                              key={semIndex}
-                              variant="outline"
-                              className="text-xs bg-blue-50 text-blue-700 border-blue-300"
-                            >
-                              {toRomanSemester(semester)}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-r border-gray-300 w-48">
-                        <div className="flex flex-wrap gap-1">
-                          {(relation.cannotCombineWith || [])
-                            .slice(0, 2)
-                            .map((subject, subjectIndex) => (
-                              <Badge
-                                key={subjectIndex}
-                                variant="outline"
-                                className="text-xs border-red-500 text-red-700 bg-red-50"
-                              >
-                                {subject}
-                              </Badge>
-                            ))}
-                          {(relation.cannotCombineWith || []).length > 2 && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-red-500 text-red-700 bg-red-50"
-                            >
-                              +{(relation.cannotCombineWith || []).length - 2} more
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-r border-gray-300 w-40">
-                        <div className="flex flex-wrap gap-1">
-                          {(relation.applicableProgramCoursesFor || []).map(
-                            (course, courseIndex) => (
-                              <Badge
-                                key={courseIndex}
-                                variant="outline"
-                                className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300"
-                              >
-                                {course.split(" - ")[0]}
-                              </Badge>
-                            ),
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-r border-gray-300 w-20">
                         <Badge
                           variant={relation.isActive ? "default" : "secondary"}
                           className={
@@ -734,40 +686,198 @@ export default function RestrictedGroupingPage() {
                         >
                           {relation.isActive ? "Active" : "Inactive"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right w-24">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(relation)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                        Semesters
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {(relation.semesters || []).map((semester, semIndex) => (
+                          <Badge
+                            key={semIndex}
+                            variant="outline"
+                            className="border-blue-300 bg-blue-50 text-xs text-blue-700"
+                          >
+                            {toRomanSemester(semester)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                        Cannot Combine With
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {(relation.cannotCombineWith || []).map((subject, subjectIndex) => (
+                          <Badge
+                            key={subjectIndex}
+                            variant="outline"
+                            className="border-red-500 bg-red-50 text-xs text-red-700"
+                          >
+                            {subject}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                        Applicable Program-Courses
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {(relation.applicableProgramCoursesFor || []).map((course, courseIndex) => (
+                          <Badge
+                            key={courseIndex}
+                            variant="outline"
+                            className="border-indigo-300 bg-indigo-50 text-xs text-indigo-700"
+                          >
+                            {ProgramCourseShortLabel(course)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 flex-1"
+                      onClick={() => openEdit(relation)}
+                    >
+                      <Edit className="mr-1.5 h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-9 flex-1 text-destructive">
+                      <Trash2 className="mr-1.5 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Desktop table */}
+            <div className="hidden overflow-hidden rounded-md border border-gray-300 md:block">
+              <div className="max-h-[min(68vh,720px)] overflow-auto">
+                <Table className="min-w-[980px]">
+                  <TableHeader className="sticky top-0 z-10 bg-gray-100 shadow-[0_1px_0_0_#d1d5db]">
+                    <TableRow className="border-b border-gray-300 hover:bg-gray-100">
+                      <TableHead className="w-14 whitespace-nowrap border-r border-gray-300 bg-gray-100 px-3 font-semibold text-gray-700">
+                        Sr. No.
+                      </TableHead>
+                      <TableHead className="w-28 whitespace-nowrap border-r border-gray-300 bg-gray-100 px-3 font-semibold text-gray-700">
+                        Category
+                      </TableHead>
+                      <TableHead className="min-w-[7rem] whitespace-nowrap border-r border-gray-300 bg-gray-100 px-3 font-semibold text-gray-700">
+                        Subject
+                      </TableHead>
+                      <TableHead className="w-28 whitespace-nowrap border-r border-gray-300 bg-gray-100 px-3 font-semibold text-gray-700">
+                        Semesters
+                      </TableHead>
+                      <TableHead className="min-w-[9rem] whitespace-nowrap border-r border-gray-300 bg-gray-100 px-3 font-semibold text-gray-700">
+                        Cannot Combine With
+                      </TableHead>
+                      <TableHead className="min-w-[11rem] whitespace-nowrap border-r border-gray-300 bg-gray-100 px-3 font-semibold text-gray-700">
+                        Program-Courses
+                      </TableHead>
+                      <TableHead className="w-24 whitespace-nowrap border-r border-gray-300 bg-gray-100 px-3 font-semibold text-gray-700">
+                        Status
+                      </TableHead>
+                      <TableHead className="w-24 whitespace-nowrap bg-gray-100 px-3 text-right font-semibold text-gray-700">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRelations.map((relation, index) => (
+                      <TableRow key={relation.id} className="hover:bg-gray-50">
+                        <TableCell className="align-top border-r border-gray-200 px-3 py-3 text-gray-600">
+                          {startIndex + index + 1}
+                        </TableCell>
+                        <TableCell className="align-top border-r border-gray-200 px-3 py-3">
+                          <Badge
+                            variant="outline"
+                            className="border-blue-500 bg-blue-50 text-blue-700"
+                          >
+                            {relation.subjectCategory}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="align-top border-r border-gray-200 px-3 py-3 font-medium">
+                          {relation.subject}
+                        </TableCell>
+                        <TableCell className="align-top border-r border-gray-200 px-3 py-3">
+                          {renderBadgeGroup(
+                            (relation.semesters || []).map(toRomanSemester),
+                            "border-blue-300 bg-blue-50 text-blue-700",
+                            6,
+                          )}
+                        </TableCell>
+                        <TableCell className="align-top border-r border-gray-200 px-3 py-3">
+                          {renderBadgeGroup(
+                            relation.cannotCombineWith || [],
+                            "border-red-500 bg-red-50 text-red-700",
+                            2,
+                          )}
+                        </TableCell>
+                        <TableCell className="align-top border-r border-gray-200 px-3 py-3">
+                          {renderBadgeGroup(
+                            relation.applicableProgramCoursesFor || [],
+                            "border-indigo-300 bg-indigo-50 text-indigo-700",
+                            Number.POSITIVE_INFINITY,
+                            ProgramCourseShortLabel,
+                          )}
+                        </TableCell>
+                        <TableCell className="align-top border-r border-gray-200 px-3 py-3">
+                          <Badge
+                            variant={relation.isActive ? "default" : "secondary"}
+                            className={
+                              relation.isActive
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }
+                          >
+                            {relation.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="align-top px-3 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(relation)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Fixed Pagination */}
-      <div className="flex-shrink-0 p-4 pt-2">
-        <div className=" border rounded-lg">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={setItemsPerPage}
-            totalItems={totalItems}
-            startIndex={startIndex}
-            endIndex={endIndex}
-          />
-        </div>
+      {/* Pagination */}
+      <div className="relative z-10 shrink-0 border-t border-border/60 bg-background px-3 py-2 sm:px-4 sm:py-3">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+          totalItems={totalItems}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          className="border-0 bg-transparent shadow-none"
+        />
       </div>
 
       {/* Add/Edit Dialog */}
@@ -778,16 +888,16 @@ export default function RestrictedGroupingPage() {
           if (!open) resetDialog();
         }}
       >
-        <DialogContent className="max-w-7xl flex flex-col h-[98vh] overflow-y-auto !items-start !justify-start !translate-y-0 top-4 left-1/2 !transform !-translate-x-1/2">
-          <DialogHeader className="w-full border-b border-gray-300 mb-2 pb-4">
-            <div className="flex w-full items-start justify-between gap-4">
-              <div>
+        <DialogContent className="!top-4 !left-1/2 flex h-[min(98dvh,98vh)] w-[calc(100vw-1rem)] max-w-7xl !translate-x-[-50%] !translate-y-0 flex-col gap-0 overflow-hidden p-0 sm:w-full">
+          <DialogHeader className="w-full shrink-0 border-b border-gray-300 px-4 py-4 sm:px-6">
+            <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
                 <DialogTitle>Subject Relations</DialogTitle>
                 <DialogDescription>
                   Configure relations, restrictions, and applicability rules for the selected
                   subject.
                   {currentAcademicYear && (
-                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                    <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-sm">
                       <strong>Note:</strong> These mappings will be created for the academic year{" "}
                       <span className="font-semibold text-blue-700">
                         {currentAcademicYear.year}
@@ -800,8 +910,8 @@ export default function RestrictedGroupingPage() {
                   )}
                 </DialogDescription>
               </div>
-              <div className="flex justify-end rounded-md pr-7">
-                <div className="flex items-center gap-3">
+              <div className="w-full shrink-0 lg:max-w-sm lg:pr-7">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <Label
                     htmlFor="subjectSelect"
                     className="text-sm font-semibold whitespace-nowrap"
@@ -809,7 +919,7 @@ export default function RestrictedGroupingPage() {
                     For Subject:
                   </Label>
                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                    <SelectTrigger className="w-full text-gray-700">
+                    <SelectTrigger id="subjectSelect" className="w-full text-gray-700">
                       <SelectValue placeholder="Select subject..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -824,61 +934,56 @@ export default function RestrictedGroupingPage() {
               </div>
             </div>
           </DialogHeader>
-          <div className="space-y-1 h-full rounded-md">
+          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-md px-3 py-3 sm:px-4">
             {/* Tabs for Rule Types */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <div className="flex items-center justify-between mb-1 pb-4">
-                <TabsList className="flex w-auto justify-start">
-                  <TabsTrigger value="category-program">
+              <div className="mb-1 flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <TabsList className="flex h-auto w-full justify-start overflow-x-auto sm:w-auto">
+                  <TabsTrigger value="category-program" className="shrink-0 text-xs sm:text-sm">
                     Category & Program-Course Specific
                   </TabsTrigger>
-                  <TabsTrigger value="subject-specific">Subject Specific</TabsTrigger>
+                  <TabsTrigger value="subject-specific" className="shrink-0 text-xs sm:text-sm">
+                    Subject Specific
+                  </TabsTrigger>
                 </TabsList>
                 <Button
                   onClick={addNewRule}
                   size="sm"
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="w-full bg-purple-600 hover:bg-purple-700 sm:w-auto"
                   disabled={!selectedSubject || activeTab === "subject-specific"}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   Add Rule
                 </Button>
               </div>
 
               <TabsContent value="category-program" className="mt-0">
                 <Card className="flex flex-col">
-                  <CardContent className="p-0 flex flex-col">
-                    {/* Fixed Header */}
-                    <div className="flex-shrink-0 border-b-2 border-l border-r border-gray-300">
-                      <Table className="table-fixed">
+                  <CardContent className="flex flex-col p-0">
+                    <div className="overflow-x-auto border border-gray-300">
+                      <Table className="table-fixed min-w-[720px]">
                         <TableHeader>
-                          <TableRow className="bg-gray-100 border-b-2 border-gray-300">
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-16">
+                          <TableRow className="border-b-2 border-gray-300 bg-gray-100">
+                            <TableHead className="w-16 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Sr. No.
                             </TableHead>
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-40">
+                            <TableHead className="w-40 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Subject Category
                             </TableHead>
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-60">
+                            <TableHead className="w-60 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Cannot Combine With
                             </TableHead>
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-48">
+                            <TableHead className="w-48 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Applied For Semesters
                             </TableHead>
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-60">
+                            <TableHead className="w-60 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Applicable Program-Courses
                             </TableHead>
-                            <TableHead className="text-right bg-gray-100 font-semibold text-gray-700 w-20">
+                            <TableHead className="w-20 bg-gray-100 text-right font-semibold text-gray-700">
                               Actions
                             </TableHead>
                           </TableRow>
                         </TableHeader>
-                      </Table>
-                    </div>
-
-                    {/* Table Body */}
-                    <div className="border-l border-r border-gray-300">
-                      <Table className="table-fixed">
                         <TableBody>
                           {!selectedSubject ? (
                             <TableRow>
@@ -1159,38 +1264,31 @@ export default function RestrictedGroupingPage() {
 
               <TabsContent value="subject-specific" className="mt-0">
                 <Card className="flex flex-col">
-                  <CardContent className="p-0 flex flex-col">
-                    {/* Fixed Header */}
-                    <div className="flex-shrink-0 border-b-2 border-l border-r border-gray-300">
-                      <Table className="table-fixed">
+                  <CardContent className="flex flex-col p-0">
+                    <div className="overflow-x-auto border border-gray-300">
+                      <Table className="table-fixed min-w-[640px]">
                         <TableHeader>
-                          <TableRow className="bg-gray-100 border-b-2 border-gray-300">
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-16">
+                          <TableRow className="border-b-2 border-gray-300 bg-gray-100">
+                            <TableHead className="w-16 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Sr. No.
                             </TableHead>
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-48">
+                            <TableHead className="w-48 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Studied in 12th?
                             </TableHead>
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-48">
+                            <TableHead className="w-48 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Class 12th Board Pass Marks
                             </TableHead>
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-48">
+                            <TableHead className="w-48 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Min Marks Override
                             </TableHead>
-                            <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-32">
+                            <TableHead className="w-32 border-r border-gray-300 bg-gray-100 font-semibold text-gray-700">
                               Status
                             </TableHead>
-                            <TableHead className="text-right bg-gray-100 font-semibold text-gray-700 w-20">
+                            <TableHead className="w-20 bg-gray-100 text-right font-semibold text-gray-700">
                               Actions
                             </TableHead>
                           </TableRow>
                         </TableHeader>
-                      </Table>
-                    </div>
-
-                    {/* Table Body */}
-                    <div className="border-l border-r border-gray-300">
-                      <Table className="table-fixed">
                         <TableBody>
                           {!selectedSubject ? (
                             <TableRow>
@@ -1318,13 +1416,17 @@ export default function RestrictedGroupingPage() {
               </TabsContent>
             </Tabs>
           </div>
-          <DialogFooter className="relative bottom-0 flex justify-end w-full">
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+          <DialogFooter className="relative bottom-0 flex w-full shrink-0 flex-col-reverse gap-2 border-t px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setIsAddDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleSaveSubjectRules}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-purple-600 hover:bg-purple-700 sm:w-auto"
               disabled={
                 !selectedSubject ||
                 (activeTab === "category-program"
@@ -1340,117 +1442,128 @@ export default function RestrictedGroupingPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(92dvh,92vh)] w-[calc(100vw-1rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:w-full">
+          <DialogHeader className="shrink-0 border-b px-4 py-4 sm:px-6">
             <DialogTitle>Edit Restricted Grouping</DialogTitle>
             <DialogDescription>Update subject, category and related settings</DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Subject Category</Label>
-              <Select value={editCategory} onValueChange={setEditCategory}>
-                <SelectTrigger className="w-full mt-1 text-gray-700">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Subject Category</Label>
+                <Select value={editCategory} onValueChange={setEditCategory}>
+                  <SelectTrigger className="mt-1 w-full text-gray-700">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Subject</Label>
+                <Select value={editSubject} onValueChange={setEditSubject}>
+                  <SelectTrigger className="mt-1 w-full text-gray-700">
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allSubjects.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label>Subject</Label>
-              <Select value={editSubject} onValueChange={setEditSubject}>
-                <SelectTrigger className="w-full mt-1 text-gray-700">
-                  <SelectValue placeholder="Select subject" />
-                </SelectTrigger>
-                <SelectContent>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <Label>Cannot combine with</Label>
+                <div className="mt-2 h-44 overflow-auto rounded border p-3 sm:h-56">
                   {allSubjects.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
+                    <div key={s} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`cc-${s}`}
+                        checked={editCannotCombine.includes(s)}
+                        onCheckedChange={() =>
+                          toggleEditArray(s, editCannotCombine, setEditCannotCombine)
+                        }
+                      />
+                      <Label htmlFor={`cc-${s}`} className="text-sm">
+                        {s}
+                      </Label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Applicable program-courses</Label>
+                <div className="mt-2 h-44 overflow-auto rounded border p-3 sm:h-56">
+                  {allProgramCourses.map((pc) => (
+                    <div key={pc} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`pc-${pc}`}
+                        checked={editProgramCourses.includes(pc)}
+                        onCheckedChange={() =>
+                          toggleEditArray(pc, editProgramCourses, setEditProgramCourses)
+                        }
+                      />
+                      <Label htmlFor={`pc-${pc}`} className="text-sm">
+                        {pc}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="sm:col-span-2 lg:col-span-1">
+                <Label>Semesters</Label>
+                <div className="mt-2 h-44 overflow-auto rounded border p-3 sm:h-56">
+                  {allSemesters.map((sem) => (
+                    <div key={sem} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`sem-${sem}`}
+                        checked={editSemesters.includes(sem)}
+                        onCheckedChange={() =>
+                          toggleEditArray(sem, editSemesters, setEditSemesters)
+                        }
+                      />
+                      <Label htmlFor={`sem-${sem}`} className="text-sm">
+                        {sem}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="active"
+                checked={editIsActive}
+                onCheckedChange={(v) => setEditIsActive(Boolean(v))}
+              />
+              <Label htmlFor="active">Active</Label>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <div>
-              <Label>Cannot combine with</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
-                {allSubjects.map((s) => (
-                  <div key={s} className="flex items-center space-x-2 py-1">
-                    <Checkbox
-                      id={`cc-${s}`}
-                      checked={editCannotCombine.includes(s)}
-                      onCheckedChange={() =>
-                        toggleEditArray(s, editCannotCombine, setEditCannotCombine)
-                      }
-                    />
-                    <Label htmlFor={`cc-${s}`} className="text-sm">
-                      {s}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label>Applicable program-courses</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
-                {allProgramCourses.map((pc) => (
-                  <div key={pc} className="flex items-center space-x-2 py-1">
-                    <Checkbox
-                      id={`pc-${pc}`}
-                      checked={editProgramCourses.includes(pc)}
-                      onCheckedChange={() =>
-                        toggleEditArray(pc, editProgramCourses, setEditProgramCourses)
-                      }
-                    />
-                    <Label htmlFor={`pc-${pc}`} className="text-sm">
-                      {pc}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label>Semesters</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
-                {allSemesters.map((sem) => (
-                  <div key={sem} className="flex items-center space-x-2 py-1">
-                    <Checkbox
-                      id={`sem-${sem}`}
-                      checked={editSemesters.includes(sem)}
-                      onCheckedChange={() => toggleEditArray(sem, editSemesters, setEditSemesters)}
-                    />
-                    <Label htmlFor={`sem-${sem}`} className="text-sm">
-                      {sem}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 mt-4">
-            <Checkbox
-              id="active"
-              checked={editIsActive}
-              onCheckedChange={(v) => setEditIsActive(Boolean(v))}
-            />
-            <Label htmlFor="active">Active</Label>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+          <DialogFooter className="shrink-0 flex-col-reverse gap-2 border-t px-4 py-4 sm:flex-row sm:px-6">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setIsEditOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={saveEdit} className="bg-purple-600 hover:bg-purple-700">
+            <Button
+              onClick={saveEdit}
+              className="w-full bg-purple-600 hover:bg-purple-700 sm:w-auto"
+            >
               Save
             </Button>
           </DialogFooter>

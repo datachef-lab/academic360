@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year/AcademicYearSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -679,165 +679,259 @@ export default function AlternativeSubjectsPage() {
     }
   };
 
+  const renderBadgeGroup = (items: string[], className: string) => {
+    if (!items.length) return <span className="text-gray-400">—</span>;
+    return (
+      <div className="flex min-w-0 flex-wrap items-center gap-1">
+        {items.map((item, i) => (
+          <Badge key={`${item}-${i}`} variant="outline" className={`text-xs ${className}`}>
+            {item}
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="h-full flex flex-col">
-      {/* Fixed Header */}
-      <div className="flex-shrink-0 p-4 pb-0">
-        <Card className="border-none">
-          <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 bg-background">
-            <div>
-              <CardTitle className="flex items-center">
-                <XCircle className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+    <div className="flex min-w-0 max-w-full flex-col overflow-x-hidden">
+      {/* Header */}
+      <div className="shrink-0 p-3 pb-0 sm:p-4">
+        <Card className="border-none shadow-none sm:shadow-sm">
+          <CardHeader className="flex flex-col gap-3 space-y-0 rounded-md border bg-background p-3 sm:flex-row sm:items-start sm:justify-between sm:p-4">
+            <div className="min-w-0">
+              <CardTitle className="flex items-center text-lg sm:text-xl">
+                <XCircle className="mr-2 h-7 w-7 shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
                 Related Subjects
               </CardTitle>
-              <div className="text-muted-foreground">
+              <div className="mt-1 text-sm text-muted-foreground">
                 Configure related subjects mapping for each program-course.
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-                onClick={openAddDialog}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </Button>
-            </div>
+            <Button
+              className="w-full bg-purple-600 text-white hover:bg-purple-700 sm:w-auto"
+              onClick={openAddDialog}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add
+            </Button>
           </CardHeader>
         </Card>
       </div>
 
-      {/* Fixed Filters */}
-      <div className="flex-shrink-0 px-4 pb-4">
-        <div className="bg-background p-4 border border-gray-200 rounded-lg flex items-center gap-2 justify-between">
-          <div className="flex items-center gap-2">
-            <AcademicYearSelector showLabel={false} className="w-56" />
+      {/* Filters */}
+      <div className="shrink-0 px-3 pb-3 sm:px-4 sm:pb-4">
+        <div className="rounded-lg border border-gray-200 bg-background p-3 sm:p-4">
+          <div className="flex flex-col gap-3">
             <Input
               placeholder="Search major or related subjects..."
-              className="w-64"
+              className="w-full min-w-0"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
             />
-            <Select
-              value={selectedProgramCourse}
-              onValueChange={(value) => {
-                setSelectedProgramCourse(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by Program-Course" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Program-Courses</SelectItem>
-                {programCourses.map((programCourse: string) => (
-                  <SelectItem key={programCourse} value={programCourse}>
-                    {programCourse}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+            <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 xl:grid-cols-3">
+              <div className="min-w-0 min-[480px]:col-span-2 xl:col-span-1">
+                <AcademicYearSelector showLabel={false} className="w-full min-w-0" />
+              </div>
+
+              <div className="min-w-0">
+                <Select
+                  value={selectedProgramCourse}
+                  onValueChange={(value) => {
+                    setSelectedProgramCourse(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full min-w-0">
+                    <SelectValue placeholder="Program-Course" />
+                  </SelectTrigger>
+                  <SelectContent className="max-w-[min(100vw-2rem,28rem)]">
+                    <SelectItem value="all">All Program-Courses</SelectItem>
+                    {programCourses.map((programCourse: string) => (
+                      <SelectItem key={programCourse} value={programCourse} className="truncate">
+                        {programCourse}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="min-w-0 min-[480px]:col-span-2 xl:col-span-1">
+                <Button variant="outline" className="w-full min-w-0">
+                  <Download className="mr-2 h-4 w-4 shrink-0" />
+                  Download
+                </Button>
+              </div>
+            </div>
           </div>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
         </div>
       </div>
 
-      {/* Table with Fixed Header */}
-      <div className="flex-1 px-4 min-h-0">
-        <Card className="h-full flex flex-col">
-          <CardContent className="p-0 h-full flex flex-col min-h-0">
-            {/* Fixed Header */}
-            <div className="flex-shrink-0 border-b-2 border-gray-200">
-              <Table className="table-fixed">
-                <TableHeader>
-                  <TableRow className="bg-gray-100">
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-16 border-r border-gray-300">
-                      Sr. No.
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-64 border-r border-gray-300">
-                      Program-Course
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-40 border-r border-gray-300">
-                      Subject Category
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-56 border-r border-gray-300">
-                      Subject
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300">
-                      Related Subjects
-                    </TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-24 border-r border-gray-300">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-center bg-gray-100 font-semibold text-gray-900 w-24 border-r border-gray-300">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-              </Table>
-            </div>
-
-            {/* Scrollable Body */}
-            <div className="flex-1 overflow-auto border border-gray-300 rounded-md">
-              <Table className="table-fixed">
-                <TableBody>
-                  {displayGroupings.map((grouping, index) => (
-                    <TableRow
-                      key={grouping.id}
-                      className="border-b-2 border-gray-300 hover:bg-gray-50"
-                      style={{ borderBottom: "2px solid #d1d5db" }}
-                    >
-                      <TableCell className="w-16 border-r border-gray-300">
-                        {startIndex + index + 1}
-                      </TableCell>
-                      <TableCell className="w-64 border-r border-gray-300">
+      {/* List: mobile cards + desktop table */}
+      <div className="min-w-0 px-3 pb-2 sm:px-4 md:pb-3">
+        {displayGroupings.length === 0 ? (
+          <div className="rounded-md border px-4 py-10 text-center text-sm text-muted-foreground">
+            No related subject mappings found.
+          </div>
+        ) : (
+          <>
+            {/* Mobile card list */}
+            <div className="divide-y divide-gray-200 overflow-hidden rounded-md border md:hidden">
+              {displayGroupings.map((grouping, index) => (
+                <div key={grouping.id} className="space-y-3 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600">
+                      {startIndex + index + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold leading-snug text-gray-900">
                         {grouping.programCourses[0]}
-                      </TableCell>
-                      <TableCell className="w-40 border-r border-gray-300">
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="border-purple-500 text-purple-700 bg-purple-50 text-xs"
+                          className="border-purple-500 bg-purple-50 text-xs text-purple-700"
                         >
                           {grouping.subjectCategory}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="w-56 border-r border-gray-300">
                         <Badge
                           variant="outline"
-                          className="text-xs border-red-500 text-red-700 bg-red-50"
+                          className="border-red-500 bg-red-50 text-xs text-red-700"
                         >
                           {grouping.subjects[0]}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="border-r border-gray-300">
-                        <div className="flex flex-wrap gap-1 max-w-xl">
-                          {grouping.subjects.slice(1).map((subject, i) => (
-                            <Badge key={i} variant="outline" className={`text-xs ${altBadgeColor}`}>
-                              {subject}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="w-24 border-r border-gray-300">
                         <Badge
                           variant="outline"
                           className={
                             grouping.isActive
-                              ? "border-green-500 text-green-700 bg-green-50"
-                              : "border-red-500 text-red-700 bg-red-50"
+                              ? "border-green-500 bg-green-50 text-xs text-green-700"
+                              : "border-red-500 bg-red-50 text-xs text-red-700"
+                          }
+                        >
+                          {grouping.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                      Related Subjects
+                    </div>
+                    <div className="mt-1.5">
+                      {renderBadgeGroup(grouping.subjects.slice(1), altBadgeColor)}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 flex-1"
+                      onClick={() => openEditDialog(grouping)}
+                    >
+                      <Edit className="mr-1.5 h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 flex-1 text-destructive"
+                      onClick={() => openDeleteDialog(grouping)}
+                    >
+                      <Trash2 className="mr-1.5 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden rounded-md border border-gray-300 md:block">
+              <Table
+                containerClassName="max-h-[min(68vh,720px)] overflow-x-hidden overflow-y-auto"
+                className="w-full table-fixed"
+              >
+                <colgroup>
+                  <col className="w-12" />
+                  <col className="w-[22%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[11%]" />
+                  <col />
+                  <col className="w-[5.5rem]" />
+                  <col className="w-[4.5rem]" />
+                </colgroup>
+                <TableHeader className="sticky top-0 z-10 bg-gray-100 shadow-[0_1px_0_0_#d1d5db]">
+                  <TableRow className="border-b border-gray-300 hover:bg-gray-100">
+                    <TableHead className="border-r border-gray-300 bg-gray-100 px-2 py-3 text-xs font-semibold text-gray-900">
+                      #
+                    </TableHead>
+                    <TableHead className="border-r border-gray-300 bg-gray-100 px-2 py-3 text-xs font-semibold text-gray-900">
+                      Program-Course
+                    </TableHead>
+                    <TableHead className="border-r border-gray-300 bg-gray-100 px-2 py-3 text-xs font-semibold text-gray-900">
+                      Category
+                    </TableHead>
+                    <TableHead className="border-r border-gray-300 bg-gray-100 px-2 py-3 text-xs font-semibold text-gray-900">
+                      Subject
+                    </TableHead>
+                    <TableHead className="border-r border-gray-300 bg-gray-100 px-2 py-3 text-xs font-semibold text-gray-900">
+                      Related Subjects
+                    </TableHead>
+                    <TableHead className="border-r border-gray-300 bg-gray-100 px-2 py-3 text-xs font-semibold text-gray-900">
+                      Status
+                    </TableHead>
+                    <TableHead className="bg-gray-100 px-2 py-3 text-center text-xs font-semibold text-gray-900">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayGroupings.map((grouping, index) => (
+                    <TableRow key={grouping.id} className="hover:bg-gray-50">
+                      <TableCell className="align-top border-r border-gray-300 px-2 py-2.5 text-sm text-gray-600">
+                        {startIndex + index + 1}
+                      </TableCell>
+                      <TableCell className="align-top border-r border-gray-300 px-2 py-2.5 text-sm">
+                        {grouping.programCourses[0]}
+                      </TableCell>
+                      <TableCell className="align-top border-r border-gray-300 px-2 py-2.5">
+                        <Badge
+                          variant="outline"
+                          className="border-purple-500 bg-purple-50 text-xs text-purple-700"
+                        >
+                          {grouping.subjectCategory}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="align-top border-r border-gray-300 px-2 py-2.5">
+                        <Badge
+                          variant="outline"
+                          className="border-red-500 bg-red-50 text-xs text-red-700"
+                        >
+                          {grouping.subjects[0]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-0 align-top border-r border-gray-300 px-2 py-2.5">
+                        {renderBadgeGroup(grouping.subjects.slice(1), altBadgeColor)}
+                      </TableCell>
+                      <TableCell className="align-top border-r border-gray-300 px-2 py-2.5">
+                        <Badge
+                          variant="outline"
+                          className={
+                            grouping.isActive
+                              ? "border-green-500 bg-green-50 text-xs text-green-700"
+                              : "border-red-500 bg-red-50 text-xs text-red-700"
                           }
                         >
                           {grouping.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="w-24 border-r border-gray-300">
-                        <div className="flex items-center justify-center gap-1">
+                      <TableCell className="align-top px-2 py-2.5">
+                        <div className="flex items-center justify-center gap-0.5">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -861,12 +955,12 @@ export default function AlternativeSubjectsPage() {
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
+          </>
+        )}
       </div>
 
-      {/* Fixed Pagination at Bottom */}
-      <div className="flex-shrink-0 p-4 pt-0">
+      {/* Pagination */}
+      <div className="relative z-10 shrink-0 border-t border-border/60 bg-background px-3 py-2 sm:px-4 sm:py-3">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -880,13 +974,14 @@ export default function AlternativeSubjectsPage() {
             setCurrentPage(1);
           }}
           sticky={false}
+          className="border-0 bg-transparent shadow-none"
         />
       </div>
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-[90rem] w-[98vw] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(92dvh,92vh)] w-[calc(100vw-1rem)] max-w-[90rem] flex-col gap-0 overflow-hidden p-0 sm:w-[min(98vw,90rem)]">
+          <DialogHeader className="shrink-0 border-b px-4 py-4 sm:px-6">
             <DialogTitle>{dialogMode === "add" ? "Add" : "Edit"} Related Subjects</DialogTitle>
             <DialogDescription>
               {dialogMode === "add" ? (
@@ -911,402 +1006,414 @@ export default function AlternativeSubjectsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {dialogMode === "add" ? (
-            <div className="border-2 border-gray-300 rounded-md flex-1 min-h-[18rem]">
-              <div className="h-[60vh] overflow-auto">
-                <Table className="table-fixed">
-                  <TableHeader className="sticky top-0 z-10 bg-gray-100">
-                    <TableRow>
-                      <TableHead className="w-16 border-r border-gray-300">Sr. No.</TableHead>
-                      <TableHead className="w-[24rem] border-r border-gray-300">
-                        Program-Course
-                      </TableHead>
-                      <TableHead className="w-36 border-r border-gray-300">
-                        Subject Category
-                      </TableHead>
-                      <TableHead className="w-48 border-r border-gray-300">Subject</TableHead>
-                      <TableHead className="w-[22rem] border-r border-gray-300">
-                        Related Subjects
-                      </TableHead>
-                      <TableHead className="text-center w-24">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dialogRows.map((row, idx) => (
-                      <TableRow
-                        key={idx}
-                        className="border-b-2 border-gray-300 hover:bg-gray-50"
-                        style={{ borderBottom: "2px solid #d1d5db" }}
-                      >
-                        <TableCell className="border-r border-gray-200">{idx + 1}</TableCell>
-                        <TableCell className="border-r border-gray-200">
-                          <Select
-                            value={row.programCourse}
-                            onValueChange={(v) => updateRowField(idx, "programCourse", v)}
-                          >
-                            <SelectTrigger className="w-[22rem]">
-                              <SelectValue placeholder="Select program-course" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {programCourses.map((pc) => (
-                                <SelectItem key={pc} value={pc}>
-                                  {pc}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="border-r border-gray-200">
-                          <Select
-                            value={row.subjectCategory}
-                            onValueChange={(v) => updateRowField(idx, "subjectCategory", v)}
-                          >
-                            <SelectTrigger className="w-36">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {subjectCategories.map((cat) => (
-                                <SelectItem key={cat} value={cat}>
-                                  {cat}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="border-r border-gray-200">
-                          <Select
-                            value={row.targetedSubject}
-                            onValueChange={(v) => updateRowField(idx, "targetedSubject", v)}
-                          >
-                            <SelectTrigger className="w-48 truncate">
-                              <SelectValue placeholder="Select subject" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-64 overflow-auto">
-                              {allSubjects.map((s: { id: number; name: string }) => {
-                                const key = String(s.id);
-                                const value = `${s.id}::${s.name}`;
-                                const label = String(s.name);
-                                return (
-                                  <SelectItem key={key} value={value}>
-                                    {label}
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="border-r border-gray-200 w-[22rem]">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="w-full justify-between min-h-10 h-auto"
-                              >
-                                {row.alternativeSubjects.length === 0 ? (
-                                  <span className="text-muted-foreground">
-                                    Select related subjects
-                                  </span>
-                                ) : (
-                                  <div className="flex flex-wrap gap-1 items-center justify-start h-auto">
-                                    {row.alternativeSubjects.map((token) => {
-                                      const name = token.split("::").slice(1).join("::");
-                                      return (
-                                        <Badge
-                                          key={token}
-                                          variant="outline"
-                                          className={`text-xs ${altBadgeColor}`}
-                                        >
-                                          {name}
-                                        </Badge>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-[22rem] p-0 z-50 max-h-80 overflow-hidden"
-                              align="start"
-                              sideOffset={4}
-                              onWheel={(e) => e.stopPropagation()}
-                              onTouchMove={(e) => e.stopPropagation()}
-                            >
-                              <Command className="max-h-80 overflow-hidden">
-                                <CommandInput
-                                  placeholder="Search subjects..."
-                                  className="text-gray-700"
-                                />
-                                <CommandList
-                                  className="max-h-72 overflow-y-auto overscroll-contain pr-1"
-                                  onWheel={(e) => e.stopPropagation()}
-                                  onTouchMove={(e) => e.stopPropagation()}
-                                  tabIndex={0}
-                                >
-                                  <CommandEmpty>No subjects found.</CommandEmpty>
-                                  <CommandGroup>
-                                    {allSubjects.map((opt: { id: number; name: string }) => {
-                                      const token = `${opt.id}::${opt.name}`;
-                                      const selected = row.alternativeSubjects.includes(token);
-                                      return (
-                                        <CommandItem
-                                          key={String(opt.id)}
-                                          onSelect={() => {
-                                            const next = selected
-                                              ? row.alternativeSubjects.filter((v) => v !== token)
-                                              : [...row.alternativeSubjects, token];
-                                            updateRowField(idx, "alternativeSubjects", next);
-                                          }}
-                                          className="text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis"
-                                        >
-                                          <Check
-                                            className={`mr-2 h-4 w-4 ${selected ? "opacity-100" : "opacity-0"}`}
-                                          />
-                                          <span className="block truncate">{String(opt.name)}</span>
-                                        </CommandItem>
-                                      );
-                                    })}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-600 hover:text-red-700"
-                              onClick={() => deleteDialogRow(idx)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+            {dialogMode === "add" ? (
+              <div className="flex min-h-[18rem] flex-1 flex-col rounded-md border-2 border-gray-300">
+                <div className="max-h-[min(60vh,520px)] overflow-auto">
+                  <Table containerClassName="overflow-x-auto" className="min-w-[720px] table-fixed">
+                    <TableHeader className="sticky top-0 z-10 bg-gray-100">
+                      <TableRow>
+                        <TableHead className="w-16 border-r border-gray-300">Sr. No.</TableHead>
+                        <TableHead className="w-[24rem] border-r border-gray-300">
+                          Program-Course
+                        </TableHead>
+                        <TableHead className="w-36 border-r border-gray-300">
+                          Subject Category
+                        </TableHead>
+                        <TableHead className="w-48 border-r border-gray-300">Subject</TableHead>
+                        <TableHead className="w-[22rem] border-r border-gray-300">
+                          Related Subjects
+                        </TableHead>
+                        <TableHead className="text-center w-24">Action</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className="flex items-center justify-between mt-3">
-                <Button
-                  onClick={addDialogRow}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" /> Add Row
-                </Button>
-                <DialogFooter className="m-0 p-0">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveDialog}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {dialogMode === "add" ? "Save" : "Update"}
-                  </Button>
-                </DialogFooter>
-              </div>
-            </div>
-          ) : (
-            // EDIT MODE LAYOUT -------------------------------------------------
-            <div className="flex flex-col gap-4 flex-1">
-              {/* Top dropdowns */}
-              <div className="grid grid-cols-3 gap-6 pt-2 pb-2">
-                <div className="flex flex-col gap-1">
-                  <Label>Program-Course</Label>
-                  <Select value={editProgramCourse} onValueChange={setEditProgramCourse} disabled>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select program-course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {programCourses.map((pc) => (
-                        <SelectItem key={pc} value={pc}>
-                          {pc}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <Label>Subject Category</Label>
-                  <Select value={editCategory} onValueChange={setEditCategory} disabled>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjectCategories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <Label>Subject</Label>
-                  <Select value={editTargetSubject} onValueChange={setEditTargetSubject} disabled>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select targeted subject" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64 overflow-auto">
-                      {allSubjects.map((s) => {
-                        const key = String(s.id);
-                        const value = `${s.id}::${s.name}`;
-                        const label = String(s.name);
-                        return (
-                          <SelectItem key={key} value={value}>
-                            {label}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="edit-active"
-                  type="checkbox"
-                  checked={editIsActive}
-                  onChange={(e) => setEditIsActive(e.target.checked)}
-                />
-                <Label htmlFor="edit-active">Active</Label>
-              </div>
-
-              {/* Dual cards */}
-              <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
-                {/* Selected Alternatives */}
-                <div className="border rounded-md flex flex-col h-[52vh]">
-                  <div className="px-3 py-2 bg-gray-100 border-b font-semibold">
-                    Selected Related Subjects
-                  </div>
-                  <div className="p-3 flex-1 min-h-0 overflow-auto">
-                    {editSelectedAlternatives.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">
-                        No related subjects selected
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {editSelectedAlternatives.map((token) => {
-                          const name = token.split("::").slice(1).join("::");
-                          return (
-                            <div
-                              key={token}
-                              className="flex items-center justify-between gap-2 border rounded-md px-2 py-1"
+                    </TableHeader>
+                    <TableBody>
+                      {dialogRows.map((row, idx) => (
+                        <TableRow
+                          key={idx}
+                          className="border-b-2 border-gray-300 hover:bg-gray-50"
+                          style={{ borderBottom: "2px solid #d1d5db" }}
+                        >
+                          <TableCell className="border-r border-gray-200">{idx + 1}</TableCell>
+                          <TableCell className="border-r border-gray-200">
+                            <Select
+                              value={row.programCourse}
+                              onValueChange={(v) => updateRowField(idx, "programCourse", v)}
                             >
-                              <Badge variant="outline" className={`text-xs ${altBadgeColor}`}>
-                                {name}
-                              </Badge>
+                              <SelectTrigger className="w-full min-w-0">
+                                <SelectValue placeholder="Select program-course" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {programCourses.map((pc) => (
+                                  <SelectItem key={pc} value={pc}>
+                                    {pc}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="border-r border-gray-200">
+                            <Select
+                              value={row.subjectCategory}
+                              onValueChange={(v) => updateRowField(idx, "subjectCategory", v)}
+                            >
+                              <SelectTrigger className="w-36">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {subjectCategories.map((cat) => (
+                                  <SelectItem key={cat} value={cat}>
+                                    {cat}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="border-r border-gray-200">
+                            <Select
+                              value={row.targetedSubject}
+                              onValueChange={(v) => updateRowField(idx, "targetedSubject", v)}
+                            >
+                              <SelectTrigger className="w-48 truncate">
+                                <SelectValue placeholder="Select subject" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-64 overflow-auto">
+                                {allSubjects.map((s: { id: number; name: string }) => {
+                                  const key = String(s.id);
+                                  const value = `${s.id}::${s.name}`;
+                                  const label = String(s.name);
+                                  return (
+                                    <SelectItem key={key} value={value}>
+                                      {label}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="border-r border-gray-200 w-[22rem]">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className="w-full justify-between min-h-10 h-auto"
+                                >
+                                  {row.alternativeSubjects.length === 0 ? (
+                                    <span className="text-muted-foreground">
+                                      Select related subjects
+                                    </span>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-1 items-center justify-start h-auto">
+                                      {row.alternativeSubjects.map((token) => {
+                                        const name = token.split("::").slice(1).join("::");
+                                        return (
+                                          <Badge
+                                            key={token}
+                                            variant="outline"
+                                            className={`text-xs ${altBadgeColor}`}
+                                          >
+                                            {name}
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-[22rem] p-0 z-50 max-h-80 overflow-hidden"
+                                align="start"
+                                sideOffset={4}
+                                onWheel={(e) => e.stopPropagation()}
+                                onTouchMove={(e) => e.stopPropagation()}
+                              >
+                                <Command className="max-h-80 overflow-hidden">
+                                  <CommandInput
+                                    placeholder="Search subjects..."
+                                    className="text-gray-700"
+                                  />
+                                  <CommandList
+                                    className="max-h-72 overflow-y-auto overscroll-contain pr-1"
+                                    onWheel={(e) => e.stopPropagation()}
+                                    onTouchMove={(e) => e.stopPropagation()}
+                                    tabIndex={0}
+                                  >
+                                    <CommandEmpty>No subjects found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {allSubjects.map((opt: { id: number; name: string }) => {
+                                        const token = `${opt.id}::${opt.name}`;
+                                        const selected = row.alternativeSubjects.includes(token);
+                                        return (
+                                          <CommandItem
+                                            key={String(opt.id)}
+                                            onSelect={() => {
+                                              const next = selected
+                                                ? row.alternativeSubjects.filter((v) => v !== token)
+                                                : [...row.alternativeSubjects, token];
+                                              updateRowField(idx, "alternativeSubjects", next);
+                                            }}
+                                            className="text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis"
+                                          >
+                                            <Check
+                                              className={`mr-2 h-4 w-4 ${selected ? "opacity-100" : "opacity-0"}`}
+                                            />
+                                            <span className="block truncate">
+                                              {String(opt.name)}
+                                            </span>
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-red-700 bg-red-100 hover:bg-red-200 rounded"
-                                onClick={() => removeEditAlternative(token)}
+                                className="h-8 w-8 text-red-600 hover:text-red-700"
+                                onClick={() => deleteDialogRow(idx)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-3 py-2 border-t bg-gray-50 flex justify-end">
-                    <Button
-                      variant="ghost"
-                      className="bg-red-100 hover:bg-red-200 text-red-700 h-8 px-3"
-                      onClick={() => setEditSelectedAlternatives([])}
-                    >
-                      Remove All
-                    </Button>
-                  </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
 
-                {/* Available Subjects */}
-                <div className="border rounded-md flex flex-col h-[52vh]">
-                  <div className="px-3 py-2 bg-gray-100 border-b flex items-center justify-between gap-3">
-                    <div className="font-semibold">Available Related Subjects</div>
-                    <div className="w-72">
-                      <Input
-                        placeholder="Search subjects..."
-                        value={altSearch}
-                        onChange={(e) => setAltSearch(e.target.value)}
-                      />
+                <div className="mt-3 flex flex-col-reverse gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <Button
+                    onClick={addDialogRow}
+                    className="w-full bg-purple-600 text-white hover:bg-purple-700 sm:w-auto"
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Row
+                  </Button>
+                  <DialogFooter className="m-0 flex w-full flex-col-reverse gap-2 p-0 sm:w-auto sm:flex-row">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveDialog}
+                      className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
+                    >
+                      {dialogMode === "add" ? "Save" : "Update"}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              </div>
+            ) : (
+              // EDIT MODE LAYOUT -------------------------------------------------
+              <div className="flex flex-1 flex-col gap-4">
+                {/* Top dropdowns */}
+                <div className="grid grid-cols-1 gap-4 pt-2 pb-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="flex flex-col gap-1">
+                    <Label>Program-Course</Label>
+                    <Select value={editProgramCourse} onValueChange={setEditProgramCourse} disabled>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select program-course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {programCourses.map((pc) => (
+                          <SelectItem key={pc} value={pc}>
+                            {pc}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label>Subject Category</Label>
+                    <Select value={editCategory} onValueChange={setEditCategory} disabled>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjectCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label>Subject</Label>
+                    <Select value={editTargetSubject} onValueChange={setEditTargetSubject} disabled>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select targeted subject" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64 overflow-auto">
+                        {allSubjects.map((s) => {
+                          const key = String(s.id);
+                          const value = `${s.id}::${s.name}`;
+                          const label = String(s.name);
+                          return (
+                            <SelectItem key={key} value={value}>
+                              {label}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="edit-active"
+                    type="checkbox"
+                    checked={editIsActive}
+                    onChange={(e) => setEditIsActive(e.target.checked)}
+                  />
+                  <Label htmlFor="edit-active">Active</Label>
+                </div>
+
+                {/* Dual cards */}
+                <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+                  {/* Selected Alternatives */}
+                  <div className="flex h-[min(52vh,420px)] flex-col rounded-md border">
+                    <div className="px-3 py-2 bg-gray-100 border-b font-semibold">
+                      Selected Related Subjects
+                    </div>
+                    <div className="p-3 flex-1 min-h-0 overflow-auto">
+                      {editSelectedAlternatives.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">
+                          No related subjects selected
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {editSelectedAlternatives.map((token) => {
+                            const name = token.split("::").slice(1).join("::");
+                            return (
+                              <div
+                                key={token}
+                                className="flex items-center justify-between gap-2 border rounded-md px-2 py-1"
+                              >
+                                <Badge variant="outline" className={`text-xs ${altBadgeColor}`}>
+                                  {name}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-red-700 bg-red-100 hover:bg-red-200 rounded"
+                                  onClick={() => removeEditAlternative(token)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-3 py-2 border-t bg-gray-50 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        className="bg-red-100 hover:bg-red-200 text-red-700 h-8 px-3"
+                        onClick={() => setEditSelectedAlternatives([])}
+                      >
+                        Remove All
+                      </Button>
                     </div>
                   </div>
-                  <div className="p-3 flex-1 min-h-0 overflow-auto">
-                    {filteredEditAvailableAlternatives.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">
-                        No available related subjects
+
+                  {/* Available Subjects */}
+                  <div className="flex h-[min(52vh,420px)] flex-col rounded-md border">
+                    <div className="px-3 py-2 bg-gray-100 border-b flex items-center justify-between gap-3">
+                      <div className="font-semibold">Available Related Subjects</div>
+                      <div className="w-72">
+                        <Input
+                          placeholder="Search subjects..."
+                          value={altSearch}
+                          onChange={(e) => setAltSearch(e.target.value)}
+                        />
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {filteredEditAvailableAlternatives.map((s) => {
-                          const token = `${s.id}::${s.name}`;
-                          return (
-                            <div
-                              key={token}
-                              className="flex items-center justify-between gap-2 border rounded-md px-2 py-1"
-                            >
-                              <span className="text-sm text-gray-700">{String(s.name)}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-purple-700 bg-purple-100 hover:bg-purple-200 rounded"
-                                onClick={() => addEditAlternative(token)}
+                    </div>
+                    <div className="p-3 flex-1 min-h-0 overflow-auto">
+                      {filteredEditAvailableAlternatives.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">
+                          No available related subjects
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {filteredEditAvailableAlternatives.map((s) => {
+                            const token = `${s.id}::${s.name}`;
+                            return (
+                              <div
+                                key={token}
+                                className="flex items-center justify-between gap-2 border rounded-md px-2 py-1"
                               >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
+                                <span className="text-sm text-gray-700">{String(s.name)}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-purple-700 bg-purple-100 hover:bg-purple-200 rounded"
+                                  onClick={() => addEditAlternative(token)}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-3 py-2 border-t bg-gray-50 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        className="bg-purple-100 hover:bg-purple-200 text-purple-700 h-8 px-3"
+                        onClick={() => {
+                          const tokens = filteredEditAvailableAlternatives.map(
+                            (s) => `${s.id}::${s.name}`,
                           );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-3 py-2 border-t bg-gray-50 flex justify-end">
-                    <Button
-                      variant="ghost"
-                      className="bg-purple-100 hover:bg-purple-200 text-purple-700 h-8 px-3"
-                      onClick={() => {
-                        const tokens = filteredEditAvailableAlternatives.map(
-                          (s) => `${s.id}::${s.name}`,
-                        );
-                        setEditSelectedAlternatives((prev: string[]) =>
-                          Array.from(new Set([...prev, ...tokens])),
-                        );
-                      }}
-                    >
-                      Select All
-                    </Button>
+                          setEditSelectedAlternatives((prev: string[]) =>
+                            Array.from(new Set([...prev, ...tokens])),
+                          );
+                        }}
+                      >
+                        Select All
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSaveDialog}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Update
-                </Button>
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveDialog}
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
+                  >
+                    Update
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Delete confirmation */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent className="max-w-3xl w-[56rem]">
+        <AlertDialogContent className="w-[calc(100vw-1rem)] max-w-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete related subject mapping?</AlertDialogTitle>
             <AlertDialogDescription>

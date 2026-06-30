@@ -164,129 +164,187 @@ export default function AppearTypePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-[1600px] mx-auto">
+    <div className="mx-auto min-h-full min-w-0 max-w-full overflow-x-hidden p-3 sm:p-5 md:max-w-[1600px] md:p-6">
       <Card className="border border-gray-200 shadow-sm">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 pb-4">
-          <div>
-            <CardTitle className="text-xl font-semibold text-gray-900">Appear Types</CardTitle>
-            <p className="text-sm text-gray-600 mt-1">
+        <CardHeader className="flex flex-col gap-3 space-y-0 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-semibold text-gray-900 sm:text-xl">
+              Appear Types
+            </CardTitle>
+            <p className="mt-1 text-sm leading-snug text-gray-600">
               Manage promotion status / appear types (Regular, Readmission, Casual, etc.)
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full shrink-0 items-center sm:w-auto">
             <Button
               size="sm"
-              className="bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-purple-600 hover:bg-purple-700 sm:w-auto"
               type="button"
               onClick={openAddDialog}
             >
-              <PlusCircle className="h-4 w-4 mr-2" />
+              <PlusCircle className="mr-2 h-4 w-4" />
               Add
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Input
               placeholder="Search by name, type, or id…"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              className="max-w-md"
+              className="w-full sm:max-w-md"
             />
           </div>
 
-          <div className="rounded-md border border-gray-200 overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="w-12 text-center">#</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-center w-28">Status</TableHead>
-                  <TableHead className="text-right w-28">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10 text-gray-500">
-                      Loading…
-                    </TableCell>
-                  </TableRow>
-                ) : filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10 text-gray-500">
-                      No appear types yet.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filtered.map((r, i) => (
-                    <TableRow key={r.id ?? i} className="hover:bg-gray-50/80">
-                      <TableCell className="text-center text-gray-600 align-top py-3">
+          {loading ? (
+            <div className="rounded-md border border-gray-200 px-4 py-10 text-center text-sm text-gray-500">
+              Loading…
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-md border border-gray-200 px-4 py-10 text-center text-sm text-gray-500">
+              No appear types yet.
+            </div>
+          ) : (
+            <>
+              {/* Mobile card list */}
+              <div className="divide-y divide-gray-200 overflow-hidden rounded-md border border-gray-200 md:hidden">
+                {filtered.map((r, i) => (
+                  <div key={r.id ?? i} className="space-y-3 p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600">
                         {i + 1}
-                      </TableCell>
-                      <TableCell className="font-medium align-top py-3 max-w-[200px]">
-                        <span className="text-sm leading-snug">{r.name ?? "—"}</span>
-                      </TableCell>
-                      <TableCell className="align-top py-3">
-                        <Badge
-                          variant="outline"
-                          className="text-xs font-normal border-purple-200 text-purple-800 bg-purple-50/60"
-                        >
-                          {r.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center align-top py-3">
-                        {r.isActive ? (
-                          <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">
-                            Active
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">
-                            Inactive
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right align-top py-3">
-                        <div className="inline-flex gap-1 justify-end">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            type="button"
-                            className="h-8 w-8 p-0"
-                            aria-label="Edit appear type"
-                            onClick={() => openEditDialog(r)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            type="button"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            aria-label="Delete appear type"
-                            onClick={() => setDeleteTarget(r)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold leading-snug text-gray-900">
+                          {r.name ?? "—"}
                         </div>
-                      </TableCell>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="border-purple-200 bg-purple-50/60 text-xs font-normal text-purple-800"
+                          >
+                            {r.type}
+                          </Badge>
+                          {r.isActive ? (
+                            <Badge className="bg-green-500 text-xs text-white hover:bg-green-600">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Inactive
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="h-9 flex-1"
+                        onClick={() => openEditDialog(r)}
+                      >
+                        <Edit className="mr-1.5 h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="h-9 flex-1 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteTarget(r)}
+                      >
+                        <Trash2 className="mr-1.5 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden overflow-x-auto rounded-md border border-gray-200 md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="w-12 text-center">#</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="w-28 text-center">Status</TableHead>
+                      <TableHead className="w-28 text-right">Actions</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((r, i) => (
+                      <TableRow key={r.id ?? i} className="hover:bg-gray-50/80">
+                        <TableCell className="py-3 text-center align-top text-gray-600">
+                          {i + 1}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] py-3 align-top font-medium">
+                          <span className="text-sm leading-snug">{r.name ?? "—"}</span>
+                        </TableCell>
+                        <TableCell className="py-3 align-top">
+                          <Badge
+                            variant="outline"
+                            className="border-purple-200 bg-purple-50/60 text-xs font-normal text-purple-800"
+                          >
+                            {r.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3 text-center align-top">
+                          {r.isActive ? (
+                            <Badge className="bg-green-500 text-xs text-white hover:bg-green-600">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Inactive
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3 text-right align-top">
+                          <div className="inline-flex justify-end gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              type="button"
+                              className="h-8 w-8 p-0"
+                              aria-label="Edit appear type"
+                              onClick={() => openEditDialog(r)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              type="button"
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              aria-label="Delete appear type"
+                              onClick={() => setDeleteTarget(r)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
       {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(92dvh,92vh)] w-[calc(100vw-1rem)] max-w-md flex-col gap-0 overflow-hidden p-0 sm:w-full">
+          <DialogHeader className="shrink-0 border-b px-4 py-4 sm:px-6">
             <DialogTitle>{editingRow ? "Edit Appear Type" : "Add Appear Type"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
             <div className="space-y-2">
               <Label htmlFor="appear-name">Name</Label>
               <Input
@@ -302,7 +360,7 @@ export default function AppearTypePage() {
                 value={form.type}
                 onValueChange={(val) => setForm((f) => ({ ...f, type: val as FormData["type"] }))}
               >
-                <SelectTrigger id="appear-type">
+                <SelectTrigger id="appear-type" className="w-full">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,12 +381,17 @@ export default function AppearTypePage() {
               <Label htmlFor="appear-active">Active</Label>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+          <DialogFooter className="shrink-0 flex-col-reverse gap-2 border-t px-4 py-4 sm:flex-row sm:px-6">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setDialogOpen(false)}
+              disabled={saving}
+            >
               Cancel
             </Button>
             <Button
-              className="bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-purple-600 hover:bg-purple-700 sm:w-auto"
               onClick={handleSave}
               disabled={saving}
             >
@@ -345,7 +408,7 @@ export default function AppearTypePage() {
           if (!open) setDeleteTarget(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100vw-1rem)] max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Appear Type</AlertDialogTitle>
             <AlertDialogDescription>
@@ -353,10 +416,12 @@ export default function AppearTypePage() {
               cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <AlertDialogCancel className="w-full sm:w-auto" disabled={deleting}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 sm:w-auto"
               onClick={handleDelete}
               disabled={deleting}
             >

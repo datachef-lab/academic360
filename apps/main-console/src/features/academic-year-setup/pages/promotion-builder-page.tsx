@@ -352,44 +352,44 @@ export default function PromotionBuilderPage() {
 
   return (
     <div
-      className="min-h-full antialiased px-5 py-[26px] sm:px-6"
+      className="min-h-full min-w-0 max-w-full overflow-x-hidden antialiased px-3 py-4 sm:px-5 sm:py-[26px] md:px-6"
       style={{ background: ui.bg, fontFamily: "'DM Sans', system-ui, sans-serif", color: ui.text }}
     >
-      <div className="mx-auto w-full max-w-[900px] space-y-4">
+      <div className="mx-auto w-full min-w-0 max-w-[900px] space-y-3 sm:space-y-4">
         {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-3.5">
-          <div className="min-w-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3.5">
+          <div className="min-w-0 flex-1">
             <div
-              className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1"
+              className="mb-2 inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1"
               style={{ background: ui.amberBg, borderColor: ui.amberBorder }}
             >
               <Clock className="h-2.5 w-2.5 shrink-0" strokeWidth={1} style={{ color: ui.amber }} />
               <span
-                className="text-[10.5px] font-bold uppercase tracking-[0.07em]"
+                className="truncate text-[10px] font-bold uppercase tracking-[0.07em] sm:text-[10.5px]"
                 style={{ color: ui.amber, fontFamily: "'Sora', sans-serif" }}
               >
                 {erpBadgeLabel}
               </span>
             </div>
             <h1
-              className="text-[22px] font-extrabold leading-tight tracking-[-0.03em]"
+              className="text-lg font-extrabold leading-tight tracking-[-0.03em] sm:text-[22px]"
               style={{ color: ui.navy, fontFamily: "'Sora', sans-serif" }}
             >
               Student Promotion Logic Builder
             </h1>
             <p
-              className="mt-1.5 max-w-[500px] text-[13px] leading-[1.55]"
+              className="mt-1.5 max-w-none text-[12px] leading-[1.55] sm:max-w-[500px] sm:text-[13px]"
               style={{ color: ui.text2 }}
             >
               Configure semester-wise promotion rules based on{" "}
               <strong style={{ color: ui.navy2, fontWeight: 600 }}>Form Fill-up Status</strong>.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-lg border-[1.5px] px-4 py-2 text-[12.5px] font-semibold shadow-sm transition-colors hover:opacity-90"
+              className="w-full rounded-lg border-[1.5px] px-4 py-2 text-[12.5px] font-semibold shadow-sm transition-colors hover:opacity-90 sm:w-auto"
               style={{
                 borderColor: ui.border2,
                 background: ui.card,
@@ -404,7 +404,7 @@ export default function PromotionBuilderPage() {
 
         {/* Affiliation bar */}
         <div
-          className="flex flex-wrap items-center gap-3 rounded-[10px] border-[1.5px] px-4 py-2.5"
+          className="flex flex-col gap-2.5 rounded-[10px] border-[1.5px] px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-4 sm:py-2.5"
           style={{ borderColor: ui.border2, background: ui.card, boxShadow: ui.sh }}
         >
           <div className="flex shrink-0 items-center gap-1.5">
@@ -420,7 +420,7 @@ export default function PromotionBuilderPage() {
               Affiliated College
             </span>
           </div>
-          <div className="relative min-w-[170px] max-w-[300px] flex-1">
+          <div className="relative w-full min-w-0 sm:min-w-[170px] sm:max-w-[300px] sm:flex-1">
             <Select
               value={affiliationFilter === "all" ? "all" : String(affiliationFilter)}
               onValueChange={(v) => {
@@ -473,7 +473,7 @@ export default function PromotionBuilderPage() {
             </div>
           )}
           <div
-            className="ml-auto rounded-md border px-3 py-1.5"
+            className="w-full rounded-md border px-3 py-1.5 sm:ml-auto sm:w-auto"
             style={{ background: ui.card2, borderColor: ui.border }}
           >
             <span className="text-[11px]" style={{ color: ui.text3 }}>
@@ -496,13 +496,16 @@ export default function PromotionBuilderPage() {
           <div style={{ background: ui.card }}>
             {loading ? (
               <div
-                className="border-b px-6 py-16 text-center text-sm"
+                className="border-b px-4 py-12 text-center text-sm sm:px-6 sm:py-16"
                 style={{ borderColor: ui.border, color: ui.text3 }}
               >
                 Loading promotion rules…
               </div>
             ) : sorted.length === 0 ? (
-              <div className="border-b px-6 py-14 text-center" style={{ borderColor: ui.border }}>
+              <div
+                className="border-b px-4 py-10 text-center sm:px-6 sm:py-14"
+                style={{ borderColor: ui.border }}
+              >
                 <p className="text-sm font-medium" style={{ color: ui.text }}>
                   No promotion builders for this filter.
                 </p>
@@ -694,28 +697,57 @@ function BuilderRuleCard({
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="grid w-full cursor-pointer select-none items-center gap-3 border-0 bg-transparent px-[18px] py-3 text-left transition-colors hover:bg-[#F7F6F3] sm:grid-cols-[190px_minmax(0,1fr)_auto_40px]"
+            className="grid w-full cursor-pointer select-none grid-cols-1 gap-2 border-0 bg-transparent px-3 py-3 text-left transition-colors hover:bg-[#F7F6F3] sm:grid-cols-[minmax(0,190px)_minmax(0,1fr)_auto_40px] sm:items-center sm:gap-3 sm:px-[18px] sm:py-3"
             style={{
               background: open ? `${pal.bg}22` : ui.card,
               boxShadow: open ? `inset 3px 0 0 ${pal.c}` : undefined,
             }}
           >
-            <div className="flex items-center gap-2.5">
-              <SemesterBox sem={semIdx} size={36} />
-              <div>
-                <div
-                  className="text-[13px] font-bold leading-tight tracking-[-0.01em]"
-                  style={{ color: ui.text, fontFamily: "'Sora', sans-serif" }}
-                >
-                  {title}
+            <div className="flex items-center justify-between gap-2 sm:contents">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <SemesterBox sem={semIdx} size={36} />
+                <div className="min-w-0">
+                  <div
+                    className="truncate text-[13px] font-bold leading-tight tracking-[-0.01em]"
+                    style={{ color: ui.text, fontFamily: "'Sora', sans-serif" }}
+                  >
+                    {title}
+                  </div>
+                  <div className="mt-px text-[10.5px]" style={{ color: ui.text3 }}>
+                    {track === "ODD" ? "Odd track" : track === "EVEN" ? "Even track" : "—"}
+                  </div>
                 </div>
-                <div className="mt-px text-[10.5px]" style={{ color: ui.text3 }}>
-                  {track === "ODD" ? "Odd track" : track === "EVEN" ? "Even track" : "—"}
-                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2 sm:col-start-3 sm:row-start-1">
+                {serverIsAuto ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10.5px] font-semibold whitespace-nowrap sm:px-2.5 sm:text-[11px]"
+                    style={{ background: ui.greenBg, borderColor: ui.greenBorder, color: ui.green }}
+                  >
+                    ⚡ Auto
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10.5px] font-semibold whitespace-nowrap sm:px-2.5 sm:text-[11px]"
+                    style={{
+                      background: ui.violetBg,
+                      borderColor: ui.violetBorder,
+                      color: ui.violet,
+                    }}
+                  >
+                    ⚙ Conditional
+                  </span>
+                )}
+                <ChevronDown
+                  className={cn("h-3.5 w-3.5 transition-transform sm:hidden", open && "rotate-180")}
+                  strokeWidth={1.4}
+                  style={{ color: ui.text2 }}
+                />
               </div>
             </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 sm:col-start-2 sm:row-start-1">
               {serverIsAuto ? (
                 <span className="text-[11.5px] italic" style={{ color: ui.text3 }}>
                   No conditions — auto-promoted
@@ -800,29 +832,7 @@ function BuilderRuleCard({
               )}
             </div>
 
-            <div>
-              {serverIsAuto ? (
-                <span
-                  className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap"
-                  style={{ background: ui.greenBg, borderColor: ui.greenBorder, color: ui.green }}
-                >
-                  ⚡ Auto
-                </span>
-              ) : (
-                <span
-                  className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap"
-                  style={{
-                    background: ui.violetBg,
-                    borderColor: ui.violetBorder,
-                    color: ui.violet,
-                  }}
-                >
-                  ⚙ Conditional
-                </span>
-              )}
-            </div>
-
-            <div className="flex justify-center opacity-45 transition-opacity hover:opacity-100">
+            <div className="hidden justify-center opacity-45 transition-opacity hover:opacity-100 sm:col-start-4 sm:flex sm:row-start-1">
               <ChevronDown
                 className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")}
                 strokeWidth={1.4}
@@ -839,11 +849,11 @@ function BuilderRuleCard({
           >
             {/* Logic toggle strip */}
             <div
-              className="flex flex-wrap items-center gap-2 border-b px-4 py-3"
+              className="flex flex-wrap items-center gap-2 border-b px-3 py-3 sm:px-4"
               style={{ borderColor: ui.border, background: ui.card2 }}
             >
               <span
-                className="mr-1 text-[10.5px] font-bold uppercase tracking-[0.06em]"
+                className="w-full text-[10.5px] font-bold uppercase tracking-[0.06em] sm:mr-1 sm:w-auto"
                 style={{ color: ui.text3, fontFamily: "'Sora', sans-serif" }}
               >
                 Logic
@@ -852,7 +862,7 @@ function BuilderRuleCard({
                 type="button"
                 onClick={() => setDraftLogic("AUTO_PROMOTE")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] px-3 py-1.5 text-[12px] font-bold transition-all",
+                  "inline-flex w-full items-center justify-center gap-1.5 rounded-md border-[1.5px] px-3 py-2 text-[12px] font-bold transition-all sm:w-auto sm:py-1.5",
                   isAuto ? "shadow-sm" : "cursor-pointer hover:opacity-80",
                 )}
                 style={
@@ -886,7 +896,7 @@ function BuilderRuleCard({
                 type="button"
                 onClick={() => setDraftLogic("CONDITIONAL")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] px-3 py-1.5 text-[12px] font-bold transition-all",
+                  "inline-flex w-full items-center justify-center gap-1.5 rounded-md border-[1.5px] px-3 py-2 text-[12px] font-bold transition-all sm:w-auto sm:py-1.5",
                   !isAuto ? "shadow-sm" : "cursor-pointer hover:opacity-80",
                 )}
                 style={
@@ -954,7 +964,7 @@ function BuilderRuleCard({
                 <div style={{ background: ui.card }}>
                   {/* Table header */}
                   <div
-                    className="grid grid-cols-[52px_1fr_1fr_1.4fr_34px] gap-0 border-b"
+                    className="hidden grid-cols-[52px_1fr_1fr_1.4fr_34px] gap-0 border-b sm:grid"
                     style={{ background: ui.card3, borderColor: ui.border }}
                   >
                     <div className="px-3 py-2" />
@@ -994,67 +1004,81 @@ function BuilderRuleCard({
                         </div>
 
                         {/* Clause picker */}
-                        <div className="flex min-w-0 gap-2 border-b px-3 py-3 sm:border-b-0 sm:pl-0">
+                        <div className="flex min-w-0 flex-col gap-1 border-b px-3 py-3 sm:border-b-0 sm:pl-0">
                           <span
-                            className="w-8 shrink-0 pt-1 text-xs font-semibold sm:hidden"
-                            style={{ color: ui.text3 }}
+                            className="text-[10px] font-bold uppercase tracking-[0.06em] sm:hidden"
+                            style={{ color: ui.text3, fontFamily: "'Sora', sans-serif" }}
                           >
-                            {idx === 0 ? "If" : "And"}
+                            Column
                           </span>
-                          <div className="min-w-0 flex-1">
-                            <Select
-                              value={rule.clauseId != null ? String(rule.clauseId) : ""}
-                              onValueChange={(v) => updateRule(rule.key, { clauseId: Number(v) })}
+                          <div className="flex min-w-0 gap-2">
+                            <span
+                              className="w-8 shrink-0 pt-1 text-xs font-semibold sm:hidden"
+                              style={{ color: ui.text3 }}
                             >
-                              <SelectTrigger
-                                className={cn(
-                                  "h-auto min-h-[36px] w-full rounded-lg border px-3 py-2 text-xs font-medium",
-                                  failClause
-                                    ? "border-rose-300 bg-rose-50/60"
-                                    : "border-green-200 bg-white",
-                                )}
+                              {idx === 0 ? "If" : "And"}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <Select
+                                value={rule.clauseId != null ? String(rule.clauseId) : ""}
+                                onValueChange={(v) => updateRule(rule.key, { clauseId: Number(v) })}
                               >
-                                <div className="flex items-center gap-2">
-                                  {clauseObj ? (
-                                    <>
-                                      {failClause ? (
-                                        <X
-                                          className="h-4 w-4 shrink-0"
-                                          strokeWidth={1}
-                                          style={{ color: ui.rose }}
-                                        />
-                                      ) : (
-                                        <CheckSquare
-                                          className="h-4 w-4 shrink-0"
-                                          strokeWidth={1}
-                                          style={{ color: ui.green }}
-                                        />
-                                      )}
-                                      <span className="text-left leading-snug break-words">
-                                        {clauseObj.name}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span style={{ color: ui.text3 }}>Select clause…</span>
+                                <SelectTrigger
+                                  className={cn(
+                                    "h-auto min-h-[36px] w-full rounded-lg border px-3 py-2 text-xs font-medium",
+                                    failClause
+                                      ? "border-rose-300 bg-rose-50/60"
+                                      : "border-green-200 bg-white",
                                   )}
-                                </div>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {allClauses.map((c) => (
-                                  <SelectItem key={c.id} value={String(c.id)}>
-                                    {c.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {clauseObj ? (
+                                      <>
+                                        {failClause ? (
+                                          <X
+                                            className="h-4 w-4 shrink-0"
+                                            strokeWidth={1}
+                                            style={{ color: ui.rose }}
+                                          />
+                                        ) : (
+                                          <CheckSquare
+                                            className="h-4 w-4 shrink-0"
+                                            strokeWidth={1}
+                                            style={{ color: ui.green }}
+                                          />
+                                        )}
+                                        <span className="text-left leading-snug break-words">
+                                          {clauseObj.name}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span style={{ color: ui.text3 }}>Select clause…</span>
+                                    )}
+                                  </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {allClauses.map((c) => (
+                                    <SelectItem key={c.id} value={String(c.id)}>
+                                      {c.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
 
                         {/* Operator picker */}
                         <div
-                          className="flex items-center border-t border-l px-3 py-2.5 sm:border-t-0"
+                          className="flex flex-col gap-1 border-t px-3 py-2.5 sm:border-t-0 sm:border-l"
                           style={{ borderColor: ui.border }}
                         >
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-[0.06em] sm:hidden"
+                            style={{ color: ui.text3, fontFamily: "'Sora', sans-serif" }}
+                          >
+                            Operator
+                          </span>
                           <Select
                             value={rule.operator}
                             onValueChange={(v) =>
@@ -1081,9 +1105,15 @@ function BuilderRuleCard({
 
                         {/* Class multi-select */}
                         <div
-                          className="min-w-0 border-t border-l px-3 py-2.5 sm:border-t-0"
+                          className="flex min-w-0 flex-col gap-1 border-t px-3 py-2.5 sm:border-t-0 sm:border-l"
                           style={{ borderColor: ui.border }}
                         >
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-[0.06em] sm:hidden"
+                            style={{ color: ui.text3, fontFamily: "'Sora', sans-serif" }}
+                          >
+                            Value
+                          </span>
                           <ClassMultiSelect
                             allClasses={allClasses}
                             selectedIds={rule.classIds}
@@ -1095,17 +1125,18 @@ function BuilderRuleCard({
 
                         {/* Remove button */}
                         <div
-                          className="hidden items-center justify-center border-t border-l py-2 sm:flex"
+                          className="flex items-center justify-end border-t px-3 py-2 sm:col-start-5 sm:justify-center sm:border-t-0 sm:border-l sm:px-1 sm:py-2"
                           style={{ borderColor: ui.border }}
                         >
                           <button
                             type="button"
-                            className="rounded-md p-1.5 transition-colors hover:bg-red-50 hover:text-red-500"
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors hover:bg-red-50 hover:text-red-500 sm:p-1.5"
                             style={{ color: ui.text3 }}
                             onClick={() => removeClause(rule.key)}
                             aria-label="Remove clause"
                           >
                             <X className="h-4 w-4" />
+                            <span className="sm:hidden">Remove</span>
                           </button>
                         </div>
                       </div>
@@ -1217,11 +1248,14 @@ function SaveCancelBar({
 }) {
   return (
     <div
-      className="flex items-center justify-end gap-2 border-t px-4 py-3"
+      className="flex flex-col-reverse gap-2 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-4"
       style={{ borderColor: ui.border, background: ui.card2 }}
     >
       {isDirty && (
-        <span className="mr-auto text-[11px] font-medium" style={{ color: ui.amber }}>
+        <span
+          className="text-center text-[11px] font-medium sm:mr-auto sm:text-left"
+          style={{ color: ui.amber }}
+        >
           Unsaved changes
         </span>
       )}
@@ -1231,7 +1265,7 @@ function SaveCancelBar({
         size="sm"
         disabled={!isDirty || saving}
         onClick={onCancel}
-        className="text-[12.5px] font-semibold"
+        className="w-full text-[12.5px] font-semibold sm:w-auto"
       >
         Cancel
       </Button>
@@ -1240,7 +1274,7 @@ function SaveCancelBar({
         size="sm"
         disabled={!isDirty || saving}
         onClick={onSave}
-        className="gap-1 text-[12.5px] font-bold"
+        className="w-full gap-1 text-[12.5px] font-bold sm:w-auto"
         style={{
           background: isDirty ? ui.navy : undefined,
           color: isDirty ? "#fff" : undefined,
@@ -1332,7 +1366,7 @@ function ClassMultiSelect({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[260px] p-0" align="start">
+      <PopoverContent className="w-[min(280px,calc(100vw-2rem))] p-0" align="start">
         <div className="max-h-[240px] overflow-y-auto p-2">
           {sorted.map((cls) => (
             <label

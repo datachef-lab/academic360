@@ -47,6 +47,92 @@ function getPageNumbers(current: number, last: number): (number | "ellipsis")[] 
   return out;
 }
 
+function PageNavButtons({
+  displayCurrentPage,
+  displayTotalPages,
+  totalItems,
+  pageItems,
+  onPageChange,
+  className,
+}: {
+  displayCurrentPage: number;
+  displayTotalPages: number;
+  totalItems: number;
+  pageItems: (number | "ellipsis")[];
+  onPageChange: (page: number) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex shrink-0 items-center gap-1", className)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 gap-1 px-2 sm:h-9 sm:px-3"
+        onClick={() => onPageChange(Math.max(1, displayCurrentPage - 1))}
+        disabled={displayCurrentPage === 1 || totalItems === 0}
+        aria-label="Previous page"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span className="hidden sm:inline">Prev</span>
+      </Button>
+
+      <div className="flex max-w-full items-center justify-center gap-1">
+        {totalItems === 0 ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-8 min-w-8 px-0 sm:h-9 sm:min-w-9"
+            disabled
+          >
+            1
+          </Button>
+        ) : (
+          pageItems.map((item, idx) =>
+            item === "ellipsis" ? (
+              <span
+                key={`e-${idx}`}
+                className="inline-flex min-w-6 items-center justify-center text-sm text-muted-foreground sm:min-w-7"
+                aria-hidden
+              >
+                …
+              </span>
+            ) : (
+              <Button
+                key={item}
+                type="button"
+                variant={displayCurrentPage === item ? "default" : "outline"}
+                size="sm"
+                className={cn(
+                  "h-8 min-w-8 px-0 text-sm font-semibold tabular-nums sm:h-9 sm:min-w-9",
+                  displayCurrentPage === item && "pointer-events-none shadow-sm",
+                )}
+                onClick={() => onPageChange(item)}
+              >
+                {item}
+              </Button>
+            ),
+          )
+        )}
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 gap-1 px-2 sm:h-9 sm:px-3"
+        onClick={() => onPageChange(Math.min(displayTotalPages, displayCurrentPage + 1))}
+        disabled={displayCurrentPage === displayTotalPages || totalItems === 0}
+        aria-label="Next page"
+      >
+        <span className="hidden sm:inline">Next</span>
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
 export function Pagination({
   currentPage,
   totalPages,
@@ -62,6 +148,43 @@ export function Pagination({
   const displayTotalPages = Math.max(1, totalPages);
   const displayCurrentPage = totalItems === 0 ? 1 : currentPage;
   const pageItems = totalItems === 0 ? [] : getPageNumbers(displayCurrentPage, displayTotalPages);
+  const rangeEnd = Math.min(endIndex, totalItems);
+
+  const countLabel =
+    totalItems === 0 ? (
+      "No entries"
+    ) : (
+      <>
+        <span className="sm:hidden">
+          {startIndex + 1}–{rangeEnd} / {totalItems}
+        </span>
+        <span className="hidden sm:inline">
+          Showing {startIndex + 1}–{rangeEnd} of {totalItems}
+        </span>
+      </>
+    );
+
+  const perPageControl = (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <span className="hidden text-xs sm:inline sm:text-sm">Rows</span>
+      <Select
+        value={itemsPerPage.toString()}
+        onValueChange={(value) => onItemsPerPageChange(Number(value))}
+      >
+        <SelectTrigger className="h-8 w-[4.25rem] shrink-0 bg-background text-sm font-medium tabular-nums sm:h-9 sm:w-[4.5rem]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="10">10</SelectItem>
+          <SelectItem value="20">20</SelectItem>
+          <SelectItem value="25">25</SelectItem>
+          <SelectItem value="50">50</SelectItem>
+          <SelectItem value="100">100</SelectItem>
+        </SelectContent>
+      </Select>
+      <span className="text-xs sm:text-sm">per page</span>
+    </div>
+  );
 
   return (
     <div
@@ -72,99 +195,36 @@ export function Pagination({
         className,
       )}
     >
-      <div className="flex flex-col gap-4 p-4 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-6 md:gap-y-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-          <span className="whitespace-nowrap tabular-nums">
-            {totalItems === 0
-              ? "No entries"
-              : `Showing ${startIndex + 1}–${Math.min(endIndex, totalItems)} of ${totalItems}`}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline">Rows</span>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => onItemsPerPageChange(Number(value))}
-            >
-              <SelectTrigger className="h-9 w-[4.5rem] shrink-0 bg-background font-medium tabular-nums">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-muted-foreground">per page</span>
-          </div>
+      {/* Mobile layout */}
+      <div className="flex flex-col gap-2.5 p-3 sm:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <span className="min-w-0 text-sm tabular-nums text-muted-foreground">{countLabel}</span>
+          <PageNavButtons
+            displayCurrentPage={displayCurrentPage}
+            displayTotalPages={displayTotalPages}
+            totalItems={totalItems}
+            pageItems={pageItems}
+            onPageChange={onPageChange}
+          />
+        </div>
+        <div className="flex items-center justify-start">{perPageControl}</div>
+      </div>
+
+      {/* Desktop layout */}
+      <div className="hidden items-center justify-between gap-4 p-4 sm:flex lg:flex-nowrap">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground lg:flex-nowrap">
+          <span className="shrink-0 whitespace-nowrap tabular-nums">{countLabel}</span>
+          <div className="shrink-0">{perPageControl}</div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-1 md:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1 px-3"
-            onClick={() => onPageChange(Math.max(1, displayCurrentPage - 1))}
-            disabled={displayCurrentPage === 1 || totalItems === 0}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Prev</span>
-          </Button>
-
-          <div className="flex max-w-full flex-wrap items-center justify-center gap-1 px-1">
-            {totalItems === 0 ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="h-9 min-w-9 px-0"
-                disabled
-              >
-                1
-              </Button>
-            ) : (
-              pageItems.map((item, idx) =>
-                item === "ellipsis" ? (
-                  <span
-                    key={`e-${idx}`}
-                    className="inline-flex min-w-7 items-center justify-center text-sm text-muted-foreground"
-                    aria-hidden
-                  >
-                    …
-                  </span>
-                ) : (
-                  <Button
-                    key={item}
-                    type="button"
-                    variant={displayCurrentPage === item ? "default" : "outline"}
-                    size="sm"
-                    className={cn(
-                      "h-9 min-w-9 px-0 font-semibold tabular-nums",
-                      displayCurrentPage === item && "pointer-events-none shadow-sm",
-                    )}
-                    onClick={() => onPageChange(item)}
-                  >
-                    {item}
-                  </Button>
-                ),
-              )
-            )}
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1 px-3"
-            onClick={() => onPageChange(Math.min(displayTotalPages, displayCurrentPage + 1))}
-            disabled={displayCurrentPage === displayTotalPages || totalItems === 0}
-          >
-            <span className="hidden sm:inline">Next</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <PageNavButtons
+          displayCurrentPage={displayCurrentPage}
+          displayTotalPages={displayTotalPages}
+          totalItems={totalItems}
+          pageItems={pageItems}
+          onPageChange={onPageChange}
+          className="justify-end"
+        />
       </div>
     </div>
   );

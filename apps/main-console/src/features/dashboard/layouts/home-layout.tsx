@@ -345,13 +345,13 @@ export default function HomeLayout() {
     accessToken && (
       <ProtectedRouteWrapper>
         <ThemeProvider defaultTheme="light">
-          <SidebarProvider className="w-screen overflow-x-hidden">
+          <SidebarProvider className="w-full max-w-full overflow-x-hidden">
             <AppSidebar />
-            <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
+            <SidebarInset className="min-w-0 w-full max-h-screen flex-1 overflow-hidden">
               <LayoutHeader pathSegments={pathSegments} setOpen={setOpen} />
               <div
                 id={styles["shared-area"]}
-                className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden"
+                className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-hidden pt-0"
               >
                 {accessToken && <Outlet />}
               </div>

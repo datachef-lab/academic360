@@ -68,6 +68,23 @@ function roman(name: string): string {
   return (s || name).toUpperCase();
 }
 
+function getMetaSubjectTypeLabel(m: SubjectSelectionMetaDto): string | null {
+  return m.subjectType?.code || m.subjectType?.name || null;
+}
+
+function getMetaClassLabels(m: SubjectSelectionMetaDto): string[] {
+  return (m.forClasses ?? [])
+    .map((c) => c.class?.name)
+    .filter((n): n is string => !!n)
+    .map(roman);
+}
+
+function getMetaStreamLabels(m: SubjectSelectionMetaDto): string[] {
+  return (m.streams ?? [])
+    .map((s) => s.stream?.shortName || s.stream?.name || s.stream?.code)
+    .filter((n): n is string => !!n);
+}
+
 export default function SubjectSelectionMetaPage() {
   const { currentAcademicYear } = useAcademicYear();
   const [metas, setMetas] = useState<SubjectSelectionMetaDto[]>([]);
@@ -185,12 +202,12 @@ export default function SubjectSelectionMetaPage() {
   }, [metas, currentAcademicYear?.id, search]);
 
   return (
-    <div className="p-2 sm:p-4">
-      <Card className="border-none">
-        <CardHeader className="sticky top-0 z-30 mb-3 flex flex-col items-start justify-between gap-4 rounded-md border bg-background p-4 sm:flex-row sm:items-center">
+    <div className="mx-auto min-h-full min-w-0 max-w-full overflow-x-hidden p-3 sm:p-4 md:p-5">
+      <Card className="border-none shadow-none sm:shadow-sm">
+        <CardHeader className="sticky top-0 z-30 mb-3 flex flex-col items-start justify-between gap-3 rounded-md border bg-background p-3 sm:gap-4 sm:p-4 md:flex-row md:items-center">
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center text-lg sm:text-xl">
-              <Layers className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
+              <Layers className="mr-2 h-6 w-6 shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
               <span className="truncate">Subject-selection Meta</span>
             </CardTitle>
             <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
@@ -198,7 +215,7 @@ export default function SubjectSelectionMetaPage() {
               <span className="font-medium">{currentAcademicYear?.year ?? "—"}</span>.
             </div>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center md:w-auto">
             <AcademicYearSelector showLabel={false} className="w-full sm:w-56" />
             <Input
               placeholder="Search label…"
@@ -209,176 +226,224 @@ export default function SubjectSelectionMetaPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="px-0">
-          <div className="rounded-md border">
-            <Table containerClassName="h-[70vh] overflow-auto rounded-md">
-              <TableHeader className="sticky top-0 z-10 bg-gray-50">
-                <TableRow>
-                  <TableHead className="w-[35%]">Label</TableHead>
-                  <TableHead>Subject type</TableHead>
-                  <TableHead>Classes</TableHead>
-                  <TableHead>Streams</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                      <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                      Loading…
-                    </TableCell>
-                  </TableRow>
-                ) : rows.length ? (
-                  rows.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">{m.label}</TableCell>
-                      <TableCell>
-                        {m.subjectType?.code || m.subjectType?.name ? (
-                          <Badge variant="outline" className={`text-xs ${BADGE.emerald}`}>
-                            {m.subjectType?.code || m.subjectType?.name}
-                          </Badge>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {chips(
-                          (m.forClasses ?? [])
-                            .map((c) => c.class?.name)
-                            .filter((n): n is string => !!n)
-                            .map(roman),
-                          "orange",
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {chips(
-                          (m.streams ?? [])
-                            .map((s) => s.stream?.shortName || s.stream?.name || s.stream?.code)
-                            .filter((n): n is string => !!n),
-                          "violet",
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(m)}
-                          aria-label="Edit meta"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+        <CardContent className="px-0 sm:px-6">
+          {loading ? (
+            <div className="rounded-md border px-4 py-10 text-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+              Loading…
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="rounded-md border px-4 py-10 text-center text-sm text-muted-foreground">
+              No subject-selection metas for {currentAcademicYear?.year ?? "this year"}.
+            </div>
+          ) : (
+            <>
+              {/* Mobile card list */}
+              <div className="divide-y divide-gray-200 overflow-hidden rounded-md border md:hidden">
+                {rows.map((m) => {
+                  const subjectType = getMetaSubjectTypeLabel(m);
+                  const classLabels = getMetaClassLabels(m);
+                  const streamLabels = getMetaStreamLabels(m);
+                  return (
+                    <div key={m.id} className="space-y-3 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold leading-snug text-gray-900">
+                            {m.label}
+                          </div>
+                          <div className="mt-2">
+                            {subjectType ? (
+                              <Badge variant="outline" className={`text-xs ${BADGE.emerald}`}>
+                                {subjectType}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                            Classes
+                          </div>
+                          <div className="mt-1.5">{chips(classLabels, "orange")}</div>
+                        </div>
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2">
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                            Streams
+                          </div>
+                          <div className="mt-1.5">{chips(streamLabels, "violet")}</div>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 w-full"
+                        onClick={() => openEdit(m)}
+                      >
+                        <Pencil className="mr-1.5 h-4 w-4" />
+                        Edit
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden rounded-md border md:block">
+                <Table containerClassName="h-[70vh] overflow-auto rounded-md">
+                  <TableHeader className="sticky top-0 z-10 bg-gray-50">
+                    <TableRow>
+                      <TableHead className="w-[35%]">Label</TableHead>
+                      <TableHead>Subject type</TableHead>
+                      <TableHead>Classes</TableHead>
+                      <TableHead>Streams</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                      No subject-selection metas for {currentAcademicYear?.year ?? "this year"}.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((m) => {
+                      const subjectType = getMetaSubjectTypeLabel(m);
+                      return (
+                        <TableRow key={m.id}>
+                          <TableCell className="font-medium">{m.label}</TableCell>
+                          <TableCell>
+                            {subjectType ? (
+                              <Badge variant="outline" className={`text-xs ${BADGE.emerald}`}>
+                                {subjectType}
+                              </Badge>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell>{chips(getMetaClassLabels(m), "orange")}</TableCell>
+                          <TableCell>{chips(getMetaStreamLabels(m), "violet")}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEdit(m)}
+                              aria-label="Edit meta"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(92dvh,92vh)] w-[calc(100vw-1rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:w-full">
+          <DialogHeader className="shrink-0 border-b px-4 py-4 sm:px-6">
             <DialogTitle>Edit Subject-selection Meta</DialogTitle>
             <DialogDescription>
               Update the label, subject type, applicable classes, streams and status.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="meta-label">Label</Label>
-              <Input
-                id="meta-label"
-                className="mt-1"
-                value={editLabel}
-                onChange={(e) => setEditLabel(e.target.value)}
-                placeholder="Label"
-              />
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="meta-label">Label</Label>
+                <Input
+                  id="meta-label"
+                  className="mt-1"
+                  value={editLabel}
+                  onChange={(e) => setEditLabel(e.target.value)}
+                  placeholder="Label"
+                />
+              </div>
+              <div>
+                <Label>Subject type</Label>
+                <Select value={editSubjectTypeId} onValueChange={setEditSubjectTypeId}>
+                  <SelectTrigger className="mt-1 w-full text-gray-700">
+                    <SelectValue placeholder="Select subject type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjectTypes.map((st) => (
+                      <SelectItem key={st.id} value={String(st.id)}>
+                        {st.code || st.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label>Subject type</Label>
-              <Select value={editSubjectTypeId} onValueChange={setEditSubjectTypeId}>
-                <SelectTrigger className="mt-1 w-full text-gray-700">
-                  <SelectValue placeholder="Select subject type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjectTypes.map((st) => (
-                    <SelectItem key={st.id} value={String(st.id)}>
-                      {st.code || st.name}
-                    </SelectItem>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Applicable classes</Label>
+                <div className="mt-2 h-44 overflow-auto rounded border p-3 sm:h-56">
+                  {classes.map((c) => (
+                    <div key={c.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`cls-${c.id}`}
+                        checked={editClassIds.includes(c.id)}
+                        onCheckedChange={() => toggleId(c.id, editClassIds, setEditClassIds)}
+                      />
+                      <Label htmlFor={`cls-${c.id}`} className="text-sm">
+                        {c.name}
+                      </Label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Streams</Label>
+                <div className="mt-2 h-44 overflow-auto rounded border p-3 sm:h-56">
+                  {streams.map((s) => (
+                    <div key={s.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`str-${s.id}`}
+                        checked={editStreamIds.includes(s.id)}
+                        onCheckedChange={() => toggleId(s.id, editStreamIds, setEditStreamIds)}
+                      />
+                      <Label htmlFor={`str-${s.id}`} className="text-sm">
+                        {s.shortName || s.name || s.code}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="meta-active"
+                checked={editIsActive}
+                onCheckedChange={setEditIsActive}
+                className="data-[state=checked]:bg-green-600"
+              />
+              <Label
+                htmlFor="meta-active"
+                className={`text-sm font-medium ${editIsActive ? "text-green-600" : "text-red-600"}`}
+              >
+                {editIsActive ? "Active" : "Inactive"}
+              </Label>
             </div>
           </div>
 
-          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Applicable classes</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
-                {classes.map((c) => (
-                  <div key={c.id} className="flex items-center space-x-2 py-1">
-                    <Checkbox
-                      id={`cls-${c.id}`}
-                      checked={editClassIds.includes(c.id)}
-                      onCheckedChange={() => toggleId(c.id, editClassIds, setEditClassIds)}
-                    />
-                    <Label htmlFor={`cls-${c.id}`} className="text-sm">
-                      {c.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label>Streams</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
-                {streams.map((s) => (
-                  <div key={s.id} className="flex items-center space-x-2 py-1">
-                    <Checkbox
-                      id={`str-${s.id}`}
-                      checked={editStreamIds.includes(s.id)}
-                      onCheckedChange={() => toggleId(s.id, editStreamIds, setEditStreamIds)}
-                    />
-                    <Label htmlFor={`str-${s.id}`} className="text-sm">
-                      {s.shortName || s.name || s.code}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center space-x-2">
-            <Switch
-              id="meta-active"
-              checked={editIsActive}
-              onCheckedChange={setEditIsActive}
-              className="data-[state=checked]:bg-green-600"
-            />
-            <Label
-              htmlFor="meta-active"
-              className={`text-sm font-medium ${editIsActive ? "text-green-600" : "text-red-600"}`}
+          <DialogFooter className="shrink-0 flex-col-reverse gap-2 border-t px-4 py-4 sm:flex-row sm:px-6">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setIsEditOpen(false)}
+              disabled={saving}
             >
-              {editIsActive ? "Active" : "Inactive"}
-            </Label>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={saveEdit} disabled={saving}>
+            <Button className="w-full sm:w-auto" onClick={saveEdit} disabled={saving}>
               {saving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

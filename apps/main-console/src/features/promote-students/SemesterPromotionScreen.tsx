@@ -560,12 +560,14 @@ function MultiFilterSelect({
   onChange,
   placeholder,
   className,
+  maxVisibleTags = 2,
 }: {
   options: FilterOption[];
   selected: number[];
   onChange: (ids: number[]) => void;
   placeholder: string;
   className?: string;
+  maxVisibleTags?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -586,47 +588,75 @@ function MultiFilterSelect({
     onChange(selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id]);
   };
 
+  const renderSelectedSummary = () => {
+    if (selected.length === 0) {
+      return <span className="text-[var(--sp-muted)]">{placeholder}</span>;
+    }
+
+    const visibleCount = Math.min(selected.length, maxVisibleTags);
+    const hiddenCount = selected.length - visibleCount;
+
+    if (selected.length > maxVisibleTags) {
+      return (
+        <span className="inline-flex min-w-0 items-center gap-1">
+          {selectedLabels.slice(0, visibleCount).map((l, i) => (
+            <span
+              key={selected[i]}
+              className="sp-multi-filter-tag inline-flex max-w-full min-w-0 items-center gap-0.5"
+            >
+              <span className="truncate">{l}</span>
+              <X
+                className="h-3 w-3 shrink-0 cursor-pointer text-purple-500 hover:text-purple-800"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggle(selected[i]!);
+                }}
+              />
+            </span>
+          ))}
+          <span className="sp-multi-filter-tag sp-multi-filter-tag--count shrink-0">
+            +{hiddenCount}
+          </span>
+        </span>
+      );
+    }
+
+    return selectedLabels.map((l, i) => (
+      <span
+        key={selected[i]}
+        className="sp-multi-filter-tag inline-flex max-w-full min-w-0 items-center gap-0.5"
+      >
+        <span className="truncate">{l}</span>
+        <X
+          className="h-3 w-3 shrink-0 cursor-pointer text-purple-500 hover:text-purple-800"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggle(selected[i]!);
+          }}
+        />
+      </span>
+    ));
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
           className={cn(
-            "sp-pro-select-trigger flex h-auto min-h-[38px] w-full items-center gap-1.5 rounded-md border bg-[var(--sp-surface)] px-3 py-1.5 text-left text-[13px] shadow-sm transition-colors hover:bg-[var(--sp-surface2)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--sp-navy2)] focus-visible:ring-offset-0",
+            "sp-pro-select-trigger sp-multi-filter-trigger flex h-auto min-h-[38px] w-full items-center gap-1.5 rounded-md border bg-[var(--sp-surface)] px-3 py-1.5 text-left text-[13px] shadow-sm transition-colors hover:bg-[var(--sp-surface2)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--sp-navy2)] focus-visible:ring-offset-0",
             "border-[var(--sp-border)]",
             className,
           )}
         >
-          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-            {selected.length === 0 ? (
-              <span className="text-[var(--sp-muted)]">{placeholder}</span>
-            ) : selected.length <= 2 ? (
-              selectedLabels.map((l, i) => (
-                <span
-                  key={selected[i]}
-                  className="inline-flex max-w-[140px] items-center gap-0.5 truncate rounded-md border border-purple-300 bg-purple-50 px-1.5 py-0.5 text-[11px] font-semibold text-purple-800"
-                >
-                  <span className="truncate">{l}</span>
-                  <X
-                    className="h-3 w-3 shrink-0 cursor-pointer text-purple-500 hover:text-purple-800"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggle(selected[i]!);
-                    }}
-                  />
-                </span>
-              ))
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-md border border-purple-300 bg-purple-50 px-1.5 py-0.5 text-[11px] font-semibold text-purple-800">
-                {selected.length} selected
-              </span>
-            )}
+          <span className="sp-multi-filter-tags flex min-w-0 flex-1 flex-wrap items-center gap-1">
+            {renderSelectedSummary()}
           </span>
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[260px] p-0"
+        className="w-[min(300px,calc(100vw-2rem))] p-0"
         align="start"
         onOpenAutoFocus={(e) => {
           e.preventDefault();
@@ -1504,7 +1534,7 @@ export function SemesterPromotionScreen() {
               promotion builder (AUTO_PROMOTE vs CONDITIONAL).
             </p>
           </div>
-          <div className="sp-field w-full min-w-[200px] max-w-[280px]">
+          <div className="sp-field w-full sm:min-w-[200px] sm:max-w-[280px]">
             <label>Academic year</label>
             <Select
               value={academicYearId != null ? String(academicYearId) : ""}
@@ -1566,9 +1596,10 @@ export function SemesterPromotionScreen() {
                       onChange={setRegulationIds}
                     />
                   </div>
-                  <div className="sp-pro-filter">
+                  <div className="sp-pro-filter sp-pro-filter--program">
                     <MultiFilterSelect
                       placeholder="Program course"
+                      maxVisibleTags={1}
                       options={filteredProgramCourses.map((pc) => ({
                         value: pc.id as number,
                         label: pc.name ?? pc.shortName ?? `#${pc.id}`,
@@ -1577,9 +1608,10 @@ export function SemesterPromotionScreen() {
                       onChange={setProgramCourseIds}
                     />
                   </div>
-                  <div className="sp-pro-filter">
+                  <div className="sp-pro-filter sp-pro-filter--shift">
                     <MultiFilterSelect
                       placeholder="Shift"
+                      maxVisibleTags={1}
                       options={shifts.map((s) => ({ value: s.id as number, label: s.name }))}
                       selected={shiftIds}
                       onChange={setShiftIds}
@@ -1813,7 +1845,7 @@ export function SemesterPromotionScreen() {
                 </div>
 
                 <div className="sp-table-container">
-                  <div className="flex flex-col gap-2 border-b border-[var(--sp-border)] bg-[var(--sp-surface2)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <div className="flex flex-col gap-1 border-b border-[var(--sp-border)] bg-[var(--sp-surface2)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <div className="min-w-0 text-[11.5px] text-[var(--sp-muted)]">
                       {rosterLoading ? (
                         <span className="inline-flex items-center gap-2">
@@ -1827,6 +1859,9 @@ export function SemesterPromotionScreen() {
                         </span>
                       )}
                     </div>
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--sp-muted)] sm:hidden">
+                      Swipe table for more columns
+                    </span>
                   </div>
                   <div className="relative max-h-[min(520px,60vh)] touch-pan-x overflow-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
                     <div className="w-full min-w-[1080px]">
@@ -2028,14 +2063,14 @@ export function SemesterPromotionScreen() {
 
       {selectedStudentIds.size > 0 && !promotionModalOpen ? (
         <div className="sp-sel-bar">
-          <div className="flex items-center gap-2.5">
+          <div className="sp-sel-bar-summary flex min-w-0 items-center gap-2.5">
             <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--sp-amber-bd)]" />
-            <div className="sp-sel-text">
+            <div className="sp-sel-text min-w-0">
               <span className="text-[var(--sp-amber-bd)]">{selectedStudentIds.size}</span> student
               {selectedStudentIds.size === 1 ? "" : "s"} selected
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="sp-sel-bar-actions flex shrink-0 items-center gap-2">
             <Button
               type="button"
               variant="ghost"
@@ -2064,19 +2099,19 @@ export function SemesterPromotionScreen() {
           if (!open) setPromotionModal("closed");
         }}
       >
-        <AlertDialogContent className="flex max-h-[min(92vh,56rem)] max-w-3xl flex-col gap-0 overflow-hidden bg-background p-0 text-foreground shadow-lg">
-          <AlertDialogHeader className="shrink-0 space-y-0 px-6 pt-6 text-left">
+        <AlertDialogContent className="flex max-h-[min(92vh,56rem)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden bg-background p-0 text-foreground shadow-lg sm:w-full">
+          <AlertDialogHeader className="shrink-0 space-y-0 px-4 pt-5 text-left sm:px-6 sm:pt-6">
             <AlertDialogTitle>
               {promotionModal === "selectAllScope"
                 ? "Select all students for promotion?"
                 : "Confirm Semester Promotion"}
             </AlertDialogTitle>
           </AlertDialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 sm:px-6">
             <AlertDialogDescription asChild>
               <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-muted/40 px-4 py-3">
-                  <div className="min-w-0 text-center">
+                <div className="flex flex-col gap-4 rounded-lg border border-[hsl(var(--border))] bg-muted/40 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
+                  <div className="min-w-0 flex-1 text-center">
                     <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                       From
                     </div>
@@ -2099,10 +2134,10 @@ export function SemesterPromotionScreen() {
                     </div>
                   </div>
                   <ArrowRight
-                    className="h-5 w-5 shrink-0 text-muted-foreground"
+                    className="mx-auto h-5 w-5 shrink-0 rotate-90 text-muted-foreground sm:mx-0 sm:rotate-0"
                     strokeWidth={1.8}
                   />
-                  <div className="min-w-0 text-center">
+                  <div className="min-w-0 flex-1 text-center">
                     <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                       To
                     </div>
@@ -2122,7 +2157,7 @@ export function SemesterPromotionScreen() {
                       />
                     </div>
                   </div>
-                  <div className="ml-auto rounded-md bg-primary/10 px-2.5 py-1 text-xs font-bold tabular-nums text-primary">
+                  <div className="w-full rounded-md bg-primary/10 px-2.5 py-1 text-center text-xs font-bold tabular-nums text-primary sm:ml-auto sm:w-auto">
                     {promotionModal === "selectAllScope"
                       ? (selectAllScopeBreakdown?.totalSelectable ?? selectableScopeEstimate)
                       : selectedStudentIds.size}{" "}
@@ -2262,7 +2297,7 @@ export function SemesterPromotionScreen() {
               </div>
             </AlertDialogDescription>
           </div>
-          <AlertDialogFooter className="shrink-0 gap-2 border-t border-[hsl(var(--border))] bg-background px-6 py-4 sm:gap-3">
+          <AlertDialogFooter className="shrink-0 flex-col-reverse gap-2 border-t border-[hsl(var(--border))] bg-background px-4 py-4 sm:flex-row sm:gap-3 sm:px-6">
             <Button
               type="button"
               variant="outline"

@@ -139,7 +139,6 @@ type StudentSelectionsResponse = {
 
 export default function CuRegistrationForm({ studentId, studentData }: CuRegistrationFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
-  console.log("test");
   // Check if student is in BCOM program (for MDC display logic)
   const isBcomProgram = studentData?.programCourse?.course?.name
     ?.normalize("NFKD")
@@ -1781,12 +1780,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen py-4 sm:py-8">
-      <div className="mx-auto px-3 sm:px-4 max-w-6xl">
+    <div className="min-w-0 max-w-full bg-gray-50">
+      <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6 sm:mb-8">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">CU Registration</h1>
-          <div className="flex items-center space-x-4">
+        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+          <h1 className="text-lg font-bold text-gray-900 sm:text-2xl">CU Registration</h1>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Select
               value={
                 correctionRequestStatus?.status &&
@@ -1798,7 +1797,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               }
               onValueChange={handleStatusChange}
             >
-              <SelectTrigger className="bg-white text-gray-900 border-gray-300 w-64">
+              <SelectTrigger className="w-full border-gray-300 bg-white text-gray-900 sm:w-64">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -1812,6 +1811,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               disabled={!allDeclarationsCompleted}
               onClick={async () => {
                 try {
@@ -1862,7 +1862,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         </div>
 
         {/* Main Form Card */}
-        <Card className="shadow-lg border border-gray-200 bg-white rounded-lg overflow-hidden">
+        <Card className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               {/* Tab Navigation */}
@@ -1915,7 +1915,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               </div>
 
               {/* Tab Content */}
-              <div className="p-4 sm:p-6 bg-white">
+              <div className="bg-white p-3 sm:p-6">
                 {/* Personal Info Tab */}
                 <TabsContent value="personal" className="space-y-6">
                   <div>
@@ -1973,8 +1973,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                             ))}
                           </SelectContent>
                         </Select>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600">1.3 Correction Requested</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-gray-600 sm:text-sm">
+                            1.3 Correction Requested
+                          </span>
                           <Badge
                             variant={correctionFlags.gender ? "destructive" : "outline"}
                             className="text-xs"
@@ -2005,8 +2007,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                             ))}
                           </SelectContent>
                         </Select>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600">1.4 Correction Requested</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-gray-600 sm:text-sm">
+                            1.4 Correction Requested
+                          </span>
                           <Badge
                             variant={correctionFlags.nationality ? "destructive" : "outline"}
                             className="text-xs"
@@ -2053,8 +2057,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           className="bg-white text-gray-900 border-gray-300"
                           maxLength={14} // 12 digits + 2 dashes
                         />
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600">1.6 Correction Requested</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-gray-600 sm:text-sm">
+                            1.6 Correction Requested
+                          </span>
                           <Badge
                             variant={correctionFlags.aadhaarNumber ? "destructive" : "outline"}
                             className="text-xs"
@@ -2079,8 +2085,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           className="bg-white text-gray-900 border-gray-300"
                           maxLength={15} // 12 digits + 3 dashes
                         />
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600">1.7 Correction Requested</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-gray-600 sm:text-sm">
+                            1.7 Correction Requested
+                          </span>
                           <Badge
                             variant={correctionFlags.apaarId ? "destructive" : "outline"}
                             className="text-xs"
@@ -2563,12 +2571,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 {/* Subjects Overview Tab */}
                 <TabsContent value="subjects" className="space-y-6">
                   <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-lg font-semibold text-gray-900">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <h2 className="text-base font-semibold text-gray-900 sm:text-lg">
                         3.1 Subjects Overview (Semesters 1-4)
                       </h2>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">Correction Requested</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600 sm:text-sm">
+                          Correction Requested
+                        </span>
                         <Badge
                           variant={correctionFlags.subjects ? "destructive" : "outline"}
                           className="text-xs"
@@ -2579,23 +2589,23 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                     </div>
 
                     {/* Subjects Table */}
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border-collapse border border-gray-300">
+                    <div className="-mx-1 overflow-x-auto px-1 sm:mx-0 sm:px-0">
+                      <table className="min-w-[32rem] w-full border-collapse border border-gray-300 text-xs sm:min-w-full sm:text-sm">
                         <thead>
                           <tr className="bg-gray-50">
-                            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-2 py-1.5 text-left font-medium text-gray-700 sm:px-3 sm:py-2">
                               Category
                             </th>
-                            <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-1.5 py-1.5 text-center font-medium text-gray-700 sm:px-2 sm:py-2">
                               Sem 1
                             </th>
-                            <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-1.5 py-1.5 text-center font-medium text-gray-700 sm:px-2 sm:py-2">
                               Sem 2
                             </th>
-                            <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-1.5 py-1.5 text-center font-medium text-gray-700 sm:px-2 sm:py-2">
                               Sem 3
                             </th>
-                            <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-1.5 py-1.5 text-center font-medium text-gray-700 sm:px-2 sm:py-2">
                               Sem 4
                             </th>
                           </tr>
@@ -2605,7 +2615,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                             .filter(([category]) => category !== "SEC") // Remove SEC subjects from display
                             .map(([category, semesters]) => (
                               <tr key={category} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
+                                <td className="min-w-[5rem] border border-gray-300 bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-700 sm:min-w-[120px] sm:px-3 sm:py-2 sm:text-sm">
                                   {/* Show MDC instead of IDC for BCOM students */}
                                   {category === "IDC" && isBcomProgram ? "MDC" : category}
                                 </td>
@@ -2624,9 +2634,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                   return (
                                     <td
                                       key={sem}
-                                      className="border border-gray-300 px-2 py-2 min-w-[150px]"
+                                      className="min-w-[6rem] border border-gray-300 px-1.5 py-1.5 sm:min-w-[150px] sm:px-2 sm:py-2"
                                     >
-                                      <div className="text-sm text-gray-900">
+                                      <div className="text-xs text-gray-900 sm:text-sm">
                                         {(() => {
                                           // Combine all subjects (mandatory + optional) into one array
                                           const allSubjects: Array<{
@@ -2757,23 +2767,25 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 {/* Documents Tab */}
                 <TabsContent value="documents" className="space-y-6">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Uploads</h2>
+                    <h2 className="mb-4 text-base font-semibold text-gray-900 sm:text-lg">
+                      Document Uploads
+                    </h2>
 
                     {/* Documents Table with Upload Column */}
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border border-gray-300">
+                    <div className="-mx-1 overflow-x-auto px-1 sm:mx-0 sm:px-0">
+                      <table className="min-w-[36rem] w-full border border-gray-300 text-xs sm:min-w-full sm:text-sm">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-2 py-1.5 text-left font-medium text-gray-700 sm:px-4 sm:py-2">
                               Document Type
                             </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-2 py-1.5 text-left font-medium text-gray-700 sm:px-4 sm:py-2">
                               Current Document
                             </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-2 py-1.5 text-left font-medium text-gray-700 sm:px-4 sm:py-2">
                               Size
                             </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                            <th className="border border-gray-300 px-2 py-1.5 text-left font-medium text-gray-700 sm:px-4 sm:py-2">
                               Upload
                             </th>
                           </tr>
@@ -2853,10 +2865,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
                             return (
                               <tr key={docType.id} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                <td className="border border-gray-300 px-2 py-1.5 text-gray-700 sm:px-4 sm:py-2">
                                   {docType.name}
                                 </td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                <td className="border border-gray-300 px-2 py-1.5 text-gray-700 sm:px-4 sm:py-2">
                                   {existingDoc ? (
                                     <div className="flex items-center space-x-2">
                                       <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
@@ -2926,7 +2938,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                         )}
                                       </div>
                                       <div>
-                                        <p className="text-xs text-gray-600 truncate max-w-[200px]">
+                                        <p className="max-w-[8rem] truncate text-xs text-gray-600 sm:max-w-[200px]">
                                           {existingDoc.fileName as string}
                                         </p>
                                         <button
@@ -2957,11 +2969,11 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                     </span>
                                   )}
                                 </td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                <td className="border border-gray-300 px-2 py-1.5 text-gray-700 sm:px-4 sm:py-2">
                                   {fileSizeKB} kB
                                 </td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                  <div className="flex items-center space-x-2">
+                                <td className="border border-gray-300 px-2 py-1.5 text-gray-700 sm:px-4 sm:py-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <Button
                                       type="button"
                                       variant="outline"
