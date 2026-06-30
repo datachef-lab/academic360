@@ -828,7 +828,12 @@ export const importStudentsFromExcelController = async (
       return;
     }
 
-    const summary = await processStudentsFromExcelBuffer(file.buffer);
+    const progressUserId = (req as any).user?.id
+      ? String((req as any).user.id)
+      : undefined;
+    const summary = await processStudentsFromExcelBuffer(file.buffer, {
+      progressUserId,
+    });
     res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", summary, "Import completed"));

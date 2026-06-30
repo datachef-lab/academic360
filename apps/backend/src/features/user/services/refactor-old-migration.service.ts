@@ -1,5 +1,6 @@
 import { db, mysqlConnection } from "@/db";
 import { loadStudentFeesForUid } from "@/features/fees/services/legacy-fees-data.service";
+import { socketService } from "@/services/socketService";
 import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
 import {
   academicYearModel,
@@ -247,6 +248,7 @@ export async function processDataFetching(
  */
 export async function processStudentsFromExcelBuffer(
   file: Buffer | ArrayBuffer | Uint8Array,
+  opts?: { progressUserId?: string | null },
 ): Promise<{
   totalRows: number;
   totalUids: number;
@@ -336,36 +338,66 @@ export async function processStudentsFromExcelBuffer(
   let notFound = 0;
   const errors: Array<{ uid: string; error: string }> = [];
 
-  for (const uid of uids) {
+  // Live progress to the uploading user via socket (the main-console upload dialog
+  // listens for `progress_update` scoped by this operation).
+  const total = uids.length;
+  const progressOperation = "student_import_legacy_students";
+  const emitProgress = (
+    done: number,
+    status: "started" | "in_progress" | "completed",
+  ) => {
+    if (!opts?.progressUserId) return;
+    const progress = total > 0 ? Math.round((done / total) * 100) : 100;
+    socketService.sendProgressUpdate(
+      String(opts.progressUserId),
+      socketService.createExportProgressUpdate(
+        String(opts.progressUserId),
+        `Imported ${done}/${total} students`,
+        progress,
+        status,
+        undefined,
+        undefined,
+        undefined,
+        { operation: progressOperation, processed: done, total },
+      ),
+    );
+  };
+
+  emitProgress(0, "started");
+
+  for (let i = 0; i < uids.length; i++) {
+    const uid = uids[i];
     try {
       const oldStudent = await getOldStudentByUid(uid);
       if (!oldStudent) {
         notFound++;
-        continue;
-      }
-      await processStudent(oldStudent);
-      // Load this student's legacy fees right after their data is in. Idempotent
-      // (skips fees already loaded). A fees failure must not abort the import, but
-      // any fee-load problems are surfaced in the errors array so the user knows.
-      try {
-        const feeResult = await loadStudentFeesForUid(uid);
-        if (feeResult.errors.length > 0) {
+      } else {
+        await processStudent(oldStudent);
+        // Load this student's legacy fees right after their data is in. Idempotent
+        // (skips fees already loaded). A fees failure must not abort the import,
+        // but any fee-load problems are surfaced in the errors array.
+        try {
+          const feeResult = await loadStudentFeesForUid(uid);
+          if (feeResult.errors.length > 0) {
+            errors.push({
+              uid,
+              error: `fees: ${feeResult.errors.join("; ")}`,
+            });
+          }
+        } catch (feeErr: any) {
           errors.push({
             uid,
-            error: `fees: ${feeResult.errors.join("; ")}`,
+            error: `fees: ${feeErr?.message || "unknown error"}`,
           });
         }
-      } catch (feeErr: any) {
-        errors.push({
-          uid,
-          error: `fees: ${feeErr?.message || "unknown error"}`,
-        });
+        processed++;
       }
-      processed++;
     } catch (e: any) {
       console.log("Error processing student:", e);
       errors.push({ uid, error: e?.message || "Unknown error" });
     }
+    // Always emit after each uid (done = i + 1), regardless of outcome.
+    emitProgress(i + 1, i + 1 >= total ? "completed" : "in_progress");
   }
 
   return {
