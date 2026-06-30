@@ -40,6 +40,7 @@ import {
 } from "@/services/course-level.api";
 import { deleteCourseLevel, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const CourseLevelsPage = () => {
   const [courseLevels, setCourseLevels] = React.useState<CourseLevel[]>([]);
@@ -238,6 +239,11 @@ const CourseLevelsPage = () => {
       (level.shortName ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (level.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
+
+  useResourceRoom("course-design/course-levels", async () => {
+    const fresh = await getAllCourseLevels();
+    setCourseLevels(Array.isArray(fresh) ? fresh : []);
+  });
 
   return (
     <div className="p-2 sm:p-4">

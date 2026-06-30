@@ -336,7 +336,12 @@ export default function SubjectSelectionForm({
 
         // Load restricted groupings and build quick lookup by target subject name
         const programCourseId = student?.currentPromotion?.programCourse?.id as number | undefined;
-        const rgs = await fetchRestrictedGroupings({ page: 1, pageSize: 200, programCourseId });
+        const rgs = await fetchRestrictedGroupings({
+          page: 1,
+          pageSize: 200,
+          programCourseId,
+          studentId: student?.id,
+        });
         const norm = (s: string) =>
           String(s || "")
             .trim()

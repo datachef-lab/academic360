@@ -46,6 +46,7 @@ import {
   deletePromotionStatusApi,
 } from "@/services/promotion-status.api";
 import type { PromotionStatusT } from "@repo/db";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const APPEAR_TYPES = ["REGULAR", "READMISSION", "CASUAL"] as const;
 
@@ -162,6 +163,8 @@ export default function AppearTypePage() {
       setDeleting(false);
     }
   }
+
+  useResourceRoom("v1/batches/promotion-statuses", () => fetchRows());
 
   return (
     <div className="p-4 sm:p-6 max-w-[1600px] mx-auto">

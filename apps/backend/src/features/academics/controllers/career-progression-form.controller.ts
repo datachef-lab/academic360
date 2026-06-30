@@ -348,6 +348,15 @@ export async function getCareerProgressionTemplateForStudentCurrentYearHandler(
         ay = await findAcademicYearById(parsed);
       }
     }
+    // No explicit year: use the student's ACTIVE promotion -> session -> academic
+    // year (the correct per-student current year). Fall back to the global
+    // current-year flag only if the student has no active promotion.
+    if (!ay) {
+      ay =
+        await careerProgressionFormService.findAcademicYearForStudentActivePromotion(
+          studentId,
+        );
+    }
     if (!ay) {
       ay = await findCurrentAcademicYear();
     }
@@ -429,7 +438,10 @@ export async function submitCareerProgressionForStudentCurrentYearHandler(
       }
     }
     if (targetAcademicYearId == null) {
-      const ay = await findCurrentAcademicYear();
+      const ay =
+        (await careerProgressionFormService.findAcademicYearForStudentActivePromotion(
+          studentId,
+        )) ?? (await findCurrentAcademicYear());
       if (!ay?.id) {
         res
           .status(404)

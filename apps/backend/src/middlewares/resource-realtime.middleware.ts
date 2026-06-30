@@ -38,6 +38,30 @@ const REALTIME_RESOURCES = new Set<string>([
   "grades",
   "v1/sections",
   "v1/shifts",
+  // academic setup · course design
+  "course-design/papers",
+  "course-design/program-courses",
+  "course-design/subject-grouping-mains",
+  "course-design/streams",
+  "course-design/courses",
+  "course-design/course-types",
+  "course-design/course-levels",
+  "course-design/affiliations",
+  "course-design/regulation-types",
+  "course-design/subjects",
+  "course-design/subject-types",
+  "course-design/exam-components",
+  "classes",
+  // academic setup · subject-selection config
+  "subject-selection/related-subject-mains",
+  "subject-selection/restricted-grouping-mains",
+  "subject-selection/metas",
+  // academic setup · student promotion logic
+  "v1/batches/promotion-builders",
+  "v1/batches/promotion-clauses",
+  "v1/batches/promotion-statuses",
+  // academic setup · academic years
+  "v1/academics",
 ]);
 
 /**

@@ -48,6 +48,7 @@ import {
   PaginatedResponse,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import type {
   Subject,
@@ -352,6 +353,10 @@ const SubjectPaperMappingPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayFlag, accessToken]);
+
+  // Live-refresh when another online user creates/updates/deletes a paper
+  // mapping (reuses the generic resource:* socket room + resourceRealtime).
+  useResourceRoom("course-design/papers", () => fetchData(true));
 
   const handlePaperEditSubmit = async (data: PaperDto) => {
     console.log("Paper edit submitted with data:", data);
@@ -1765,7 +1770,7 @@ const SubjectPaperMappingPage = () => {
                   papers.map((sp: PaperDto, idx: number) => (
                     <div
                       key={sp.id}
-                      className="flex border-b hover:bg-gray-50 group"
+                      className={`flex border-b group ${sp.isActive === false ? "bg-red-50" : ""}`}
                       style={{ minWidth: "950px" }}
                     >
                       <div

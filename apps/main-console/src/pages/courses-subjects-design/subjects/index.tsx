@@ -40,6 +40,7 @@ import {
 } from "@/services/subject.api";
 import { deleteSubject, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const SubjectsPage = () => {
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
@@ -249,6 +250,11 @@ const SubjectsPage = () => {
       (subject.code ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (subject.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
+
+  useResourceRoom("course-design/subjects", async () => {
+    const fresh = await getAllSubjects();
+    setSubjects(Array.isArray(fresh) ? fresh : []);
+  });
 
   return (
     <div className="p-2 sm:p-4">

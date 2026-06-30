@@ -39,6 +39,7 @@ import {
   DeleteResult,
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const RegulationTypesPage = () => {
   const [searchText, setSearchText] = React.useState("");
@@ -217,6 +218,8 @@ const RegulationTypesPage = () => {
       type.name.toLowerCase().includes(searchText.toLowerCase()) ||
       (type.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false),
   );
+
+  useResourceRoom("course-design/regulation-types", () => fetchRegulationTypes());
 
   if (loading) {
     return (

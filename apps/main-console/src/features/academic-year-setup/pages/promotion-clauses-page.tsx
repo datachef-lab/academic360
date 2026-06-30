@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getPromotionClauses } from "@/services/promotion-logic.api";
 import type { PromotionClauseDto } from "@repo/db";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 export default function PromotionClausesPage() {
   const [searchText, setSearchText] = React.useState("");
@@ -38,6 +39,8 @@ export default function PromotionClausesPage() {
   React.useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useResourceRoom("v1/batches/promotion-clauses", () => fetchRows());
 
   const filtered = React.useMemo(() => {
     const q = searchText.trim().toLowerCase();

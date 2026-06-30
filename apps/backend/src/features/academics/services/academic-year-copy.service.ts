@@ -455,7 +455,9 @@ export type AcademicYearCopyResult = {
  */
 export async function createAcademicYearWithCopy(
   year: string,
-  makeActive: boolean = false,
+  // Kept for API compatibility but intentionally ignored: creating a year no
+  // longer auto-activates it / deactivates the current year (see below).
+  _makeActive: boolean = false,
   sessionDates?: { from?: string | null; to?: string | null },
 ): Promise<AcademicYearCopyResult> {
   const trimmed = String(year ?? "").trim();
@@ -485,17 +487,13 @@ export async function createAcademicYearWithCopy(
       .where(eq(academicYearModel.isCurrentYear, true));
     const sourceId = source?.id ?? null;
 
-    // Only take over the active flag when the operator opted in; otherwise the
-    // current year stays active and the new year is created inactive.
-    if (makeActive) {
-      await tx
-        .update(academicYearModel)
-        .set({ isCurrentYear: false })
-        .where(eq(academicYearModel.isCurrentYear, true));
-    }
+    // Creating a new academic year is PURELY ADDITIVE: it never changes the
+    // current-year flag of any year. The new year is added inactive and the
+    // existing current year stays current. Setting the current year is done
+    // explicitly via the Academic Years edit / set-current action.
     const [created] = await tx
       .insert(academicYearModel)
-      .values({ year: trimmed, isCurrentYear: makeActive })
+      .values({ year: trimmed, isCurrentYear: false })
       .returning();
 
     const copied = {

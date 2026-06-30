@@ -38,6 +38,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const ui = {
   bg: "#F0EEE9",
@@ -349,6 +350,8 @@ export default function PromotionBuilderPage() {
   const handleSaved = () => {
     void loadBuilders(affiliationFilter);
   };
+
+  useResourceRoom("v1/batches/promotion-builders", () => loadBuilders(affiliationFilter));
 
   return (
     <div

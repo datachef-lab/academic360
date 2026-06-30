@@ -62,6 +62,7 @@ import type { ProgramCourse, SubjectType } from "@repo/db/index";
 import { toast as sonnerToast } from "sonner";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 // import axiosInstance from "@/utils/api";
 
 // UI shape derived from backend DTOs
@@ -678,6 +679,33 @@ export default function AlternativeSubjectsPage() {
       setSaving(false);
     }
   };
+
+  useResourceRoom("subject-selection/related-subject-mains", async () => {
+    const paged = await subjectSelectionApi.listRelatedSubjectMainsPaginated({
+      page: currentPage,
+      pageSize: itemsPerPage,
+      search: searchTerm || undefined,
+      academicYearId: currentAcademicYear?.id,
+      programCourse:
+        selectedProgramCourse && selectedProgramCourse !== "all"
+          ? selectedProgramCourse
+          : undefined,
+    });
+    const data = paged.content as RelatedSubjectMainDto[];
+    const mapped: UIGrouping[] = data.map((dto) => ({
+      id: dto.id || 0,
+      programCourses: [dto.programCourse?.name || ""],
+      subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+      subjects: [
+        dto.boardSubjectName?.name || "",
+        ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+      ],
+      isActive: dto.isActive ?? true,
+    }));
+    setGroupings(mapped);
+    setTotalItems(paged.totalElements ?? 0);
+    setTotalPages(paged.totalPages ?? 1);
+  });
 
   return (
     <div className="h-full flex flex-col">

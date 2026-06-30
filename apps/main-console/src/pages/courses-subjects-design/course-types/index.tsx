@@ -43,6 +43,7 @@ import {
   DeleteResult,
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const CourseTypesPage = () => {
   const [courseTypes, setCourseTypes] = React.useState<CourseType[]>([]);
@@ -240,6 +241,11 @@ const CourseTypesPage = () => {
       (courseType.shortName ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (courseType.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
+
+  useResourceRoom("course-design/course-types", async () => {
+    const fresh = await getCourseTypes();
+    setCourseTypes(Array.isArray(fresh) ? fresh : []);
+  });
 
   return (
     <div className="p-2 sm:p-4">

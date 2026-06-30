@@ -54,6 +54,7 @@ import {
   BulkUploadRow,
   DeleteResult,
 } from "@/services/course-design.api";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 import * as XLSX from "xlsx";
 
 const ProgramCoursesPage = () => {
@@ -212,6 +213,8 @@ const ProgramCoursesPage = () => {
       setLoading(false);
     }
   };
+
+  useResourceRoom("course-design/program-courses", () => fetchProgramCourses());
 
   const handleEdit = (programCourse: ProgramCourse): void => {
     setSelectedProgramCourse(programCourse);

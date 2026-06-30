@@ -27,6 +27,7 @@ import { AcademicYear } from "@/types/academics/academic-year";
 import { getAllAcademicYears, updateAcademicYearById } from "@/services/academic-year-api";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import AddAcademicYearDialog from "./AddAcademicYearDialog";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const AcademicYearPage: React.FC = () => {
   const [data, setData] = useState<AcademicYear[]>([]);
@@ -64,6 +65,8 @@ const AcademicYearPage: React.FC = () => {
   useEffect(() => {
     fetchAcademicYears();
   }, []);
+
+  useResourceRoom("v1/academics", () => fetchAcademicYears());
 
   const filteredData = data.filter((y) => y.year.toLowerCase().includes(searchTerm.toLowerCase()));
 

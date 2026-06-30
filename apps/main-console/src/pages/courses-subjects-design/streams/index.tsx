@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { StreamForm } from "./stream-form";
 import { Label } from "@/components/ui/label";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const StreamsPage = () => {
   const [streams, setStreams] = React.useState<Stream[]>([]);
@@ -68,6 +69,11 @@ const StreamsPage = () => {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useResourceRoom("course-design/streams", async () => {
+    const freshStreams = await getAllStreams();
+    setStreams(Array.isArray(freshStreams) ? freshStreams : []);
+  });
 
   const handleEdit = (stream: Stream) => {
     setSelectedStream(stream);
