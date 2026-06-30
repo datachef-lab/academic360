@@ -40,6 +40,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AcademicYear } from "@/types/academics/academic-year";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 interface UISubjectGroupingRow {
   id: number;
@@ -135,6 +136,8 @@ function SubjectGroupingsPage() {
     // initial load
     void loadGroupings();
   }, [loadGroupings]);
+
+  useResourceRoom("course-design/subject-grouping-mains", () => loadGroupings());
 
   // Keep academic years in sync with global state
   useEffect(() => {

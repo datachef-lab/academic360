@@ -723,43 +723,53 @@ const FeesStructurePage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow className="border-b">
+                  <TableHead className="w-[70px] border-r text-center">Sr. No.</TableHead>
+                  <TableHead className="border-r">Fee Receipt</TableHead>
                   <TableHead className="w-[200px] border-r">Program Course</TableHead>
+                  <TableHead className="border-r">Semester</TableHead>
                   <TableHead className="border-r">Shift</TableHead>
-                  <TableHead className="border-r">Components</TableHead>
-                  <TableHead className="border-r">Concession Slab</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableHead className="border-r">Preview</TableHead>
+                  <TableHead className="w-[100px]">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedFeesStructures.map((fs) => {
+                {sortedFeesStructures.map((fs, idx) => {
                   const programCourseName = fs.programCourse?.name || "-";
                   const shiftName = fs.shift?.name || "-";
-                  // Get unique fee heads (since each fee head now has multiple components per slab)
-                  const allFeeHeads = fs.components
-                    .map((c) => c.feeHead)
-                    .filter(
-                      (head): head is NonNullable<typeof head> =>
-                        head !== null && head !== undefined,
-                    );
-                  const uniqueFeeHeadMap = new Map();
-                  allFeeHeads.forEach((head) => {
-                    if (head.id && !uniqueFeeHeadMap.has(head.id)) {
-                      uniqueFeeHeadMap.set(head.id, head);
-                    }
-                  });
-                  const feeHeads = Array.from(uniqueFeeHeadMap.values());
-                  const hasConcessionSlabs =
-                    fs.feeStructureSlabs && fs.feeStructureSlabs.length > 0;
+                  const receiptName = fs.receiptType?.name || "-";
+                  const semesterName = fs.class?.name || "-";
 
                   return (
-                    <TableRow key={fs.id || Math.random()} className="border-b">
+                    <TableRow key={fs.id || idx} className="border-b">
+                      <TableCell className="border-r text-center">{idx + 1}</TableCell>
+                      <TableCell className="border-r">
+                        {receiptName !== "-" ? (
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-300 text-emerald-700 bg-emerald-50"
+                          >
+                            {receiptName}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
                       <TableCell className="border-r">
                         {programCourseName !== "-" ? (
-                          <Badge
-                            variant="secondary"
-                            className="bg-blue-100 text-blue-700 hover:bg-blue-200"
-                          >
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                             {programCourseName}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="border-r">
+                        {semesterName !== "-" ? (
+                          <Badge
+                            variant="outline"
+                            className="border-purple-300 text-purple-700 bg-purple-50"
+                          >
+                            {semesterName}
                           </Badge>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -778,35 +788,14 @@ const FeesStructurePage: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell className="border-r">
-                        {feeHeads.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {feeHeads.map((feeHead) => (
-                              <Badge
-                                key={feeHead.id}
-                                variant="outline"
-                                className="border-blue-300 text-blue-700 bg-blue-50"
-                              >
-                                {feeHead.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-xs">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="border-r">
-                        {hasConcessionSlabs ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedConcessionSlabModal(fs)}
-                            className="text-xs"
-                          >
-                            Summary ({fs.feeStructureSlabs?.length || 0})
-                          </Button>
-                        ) : (
-                          <span className="text-gray-400 text-xs">-</span>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedConcessionSlabModal(fs)}
+                          className="text-xs"
+                        >
+                          Preview
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <Button

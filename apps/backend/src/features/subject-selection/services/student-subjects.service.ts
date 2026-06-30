@@ -107,6 +107,19 @@ async function findPromotionByStudentId(studentId: number) {
   };
 }
 
+/**
+ * The academic year a student belongs to, resolved as latest promotion → session
+ * → academicYear (the SAME resolution the subject-selection options use). Exposed
+ * so dependent student-scoped configs (e.g. restricted groupings) stay on exactly
+ * the same year as the student's papers/metas. Returns null if not resolvable.
+ */
+export async function getStudentAcademicYearId(
+  studentId: number,
+): Promise<number | null> {
+  const { foundSession } = await findPromotionByStudentId(studentId);
+  return foundSession?.academicYearId ?? null;
+}
+
 export async function findSubjectsSelections(studentId: number) {
   try {
     const { foundProgramCourse, foundClass, foundSession } =

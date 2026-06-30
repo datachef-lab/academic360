@@ -55,6 +55,36 @@ function computeCareerExportStudentStatus(student: {
 
 const NON_DEPRECATED_PROMOTION_SQL = sql`COALESCE(${promotionModel.isDeprecated}, false) = false`;
 
+/**
+ * The academic year a student is currently in, derived from their ACTIVE
+ * promotion (end_date IS NULL) -> session -> academic year. This is the correct
+ * per-student "current year" for career progression — the global
+ * `academic_years.is_current_year` flag can be ambiguous (e.g. more than one
+ * year flagged) or ahead of the student's actual session.
+ */
+export async function findAcademicYearForStudentActivePromotion(
+  studentId: number,
+): Promise<typeof academicYearModel.$inferSelect | null> {
+  const [row] = await db
+    .select({ ay: academicYearModel })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .innerJoin(
+      academicYearModel,
+      eq(academicYearModel.id, sessionModel.academicYearId),
+    )
+    .where(
+      and(
+        eq(promotionModel.studentId, studentId),
+        isNull(promotionModel.endDate),
+        NON_DEPRECATED_PROMOTION_SQL,
+      ),
+    )
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
+  return row?.ay ?? null;
+}
+
 async function resolvePromotionForCareerExport(
   studentId: number,
   academicYearId: number,

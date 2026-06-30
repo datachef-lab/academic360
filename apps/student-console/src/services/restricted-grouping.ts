@@ -10,6 +10,9 @@ export async function fetchRestrictedGroupings(params?: {
   search?: string;
   subjectType?: string;
   programCourseId?: number;
+  /** When set, the backend scopes groupings to this student's academic year
+   * (promotion→session→AY) and returns only active ones. */
+  studentId?: number;
 }) {
   const res = await api.get<
     ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>

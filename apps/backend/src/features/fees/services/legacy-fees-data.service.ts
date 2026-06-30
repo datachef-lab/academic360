@@ -709,17 +709,14 @@ async function syncFeeStudentMapping(
     (studentRows[0]["Online Payment Order Id"]
       ? String(studentRows[0]["Online Payment Order Id"])
       : null);
-  // The fee-receipt PDF shows the "ePaid" (online) stamp only when the linked
-  // payment is SUCCESS + ONLINE + has an orderId AND a txnDate. Legacy online rows
-  // may lack a gateway order id, so fall back to the online reference, then the
-  // receipt number — otherwise online payments would wrongly print "PAID".
+  // orderId = the legacy gateway order id (feesinstonlinepayment.id, surfaced as
+  // "Online Payment Order Id") ONLY — never the receipt/challan number. When the
+  // legacy online row is absent (no gateway record), leave orderId null; the
+  // online reference, if any, is still preserved in txnId below.
   const orderId = isOnline
-    ? (studentRows[0]["Online Payment Order Id"]
-        ? String(studentRows[0]["Online Payment Order Id"]).trim()
-        : null) ||
-      onlineRef ||
-      finalReceiptNumber ||
-      null
+    ? studentRows[0]["Online Payment Order Id"]
+      ? String(studentRows[0]["Online Payment Order Id"]).trim()
+      : null
     : null;
 
   // Persist the legacy payment as a linked entry tied directly to the

@@ -38,6 +38,7 @@ import {
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const SubjectCategoriesPage = () => {
   const [categories, setCategories] = React.useState<SubjectType[]>([]);
@@ -205,6 +206,8 @@ const SubjectCategoriesPage = () => {
       (category.name ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (category.code ?? "").toLowerCase().includes(searchText.toLowerCase()),
   );
+
+  useResourceRoom("course-design/subject-types", () => fetchCategories());
 
   return (
     <div className="p-2 sm:p-4">

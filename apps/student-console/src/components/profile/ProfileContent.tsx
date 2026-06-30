@@ -135,7 +135,7 @@ export default function ProfileContent() {
               <CardContent className="p-6">
                 <div className="text-center">
                   <div className="relative inline-block mb-4">
-                    <div className="h-24 w-24 border-4 border-white shadow-lg rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <div className="no-filter h-24 w-24 border-4 border-white shadow-lg rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
                       {getStudentImageUrl(student?.uid) ? (
                         <img
                           src={getStudentImageUrl(student?.uid) || ""}

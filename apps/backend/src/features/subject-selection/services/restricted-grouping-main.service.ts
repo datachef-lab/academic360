@@ -4,7 +4,7 @@ import {
   RestrictedGroupingMain,
   RestrictedGroupingMainT,
 } from "@repo/db/schemas/models/subject-selection/restricted-grouping-main.model";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, countDistinct, eq, ilike, isNull, ne, or } from "drizzle-orm";
 import {
   RestrictedGroupingMainDto,
   RestrictedGroupingClassDto,
@@ -396,6 +396,9 @@ export async function getRestrictedGroupingMainsPaginated(options: {
   subjectType?: string; // code or name
   programCourseId?: number;
   academicYearId?: number;
+  /** When true, only active groupings (isActive true or null). Used for the
+   * student-facing flow; the admin list leaves it off to manage inactive rows. */
+  activeOnly?: boolean;
 }): Promise<PaginatedResponse<RestrictedGroupingMainDto>> {
   const page = Math.max(1, options.page || 1);
   const pageSize = Math.max(1, Math.min(100, options.pageSize || 10));
@@ -442,6 +445,14 @@ export async function getRestrictedGroupingMainsPaginated(options: {
   if (options.academicYearId) {
     filters.push(
       eq(restrictedGroupingMainModel.academicYearId, options.academicYearId),
+    );
+  }
+  if (options.activeOnly) {
+    filters.push(
+      or(
+        isNull(restrictedGroupingMainModel.isActive),
+        eq(restrictedGroupingMainModel.isActive, true),
+      ),
     );
   }
 

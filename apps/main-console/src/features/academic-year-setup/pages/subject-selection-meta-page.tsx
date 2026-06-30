@@ -39,6 +39,7 @@ import { subjectSelectionApi } from "@/services/subject-selection.api";
 import { getSubjectTypes } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 import { getAllStreams } from "@/services/stream.api";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 import type { SubjectSelectionMetaDto } from "@repo/db/dtos/subject-selection";
 
 const BADGE = {
@@ -200,6 +201,8 @@ export default function SubjectSelectionMetaPage() {
       .filter((m) => (m.label ?? "").toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
   }, [metas, currentAcademicYear?.id, search]);
+
+  useResourceRoom("subject-selection/metas", () => loadMetas());
 
   return (
     <div className="mx-auto min-h-full min-w-0 max-w-full overflow-x-hidden p-3 sm:p-4 md:p-5">

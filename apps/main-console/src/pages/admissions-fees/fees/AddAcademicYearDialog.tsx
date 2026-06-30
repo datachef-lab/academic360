@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -80,7 +79,6 @@ function roman(name: string): string {
 export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }: Props) {
   const [preview, setPreview] = useState<AcademicYearCopyPreview | null>(null);
   const [loading, setLoading] = useState(false);
-  const [makeActive, setMakeActive] = useState(false);
   const [sessionFrom, setSessionFrom] = useState("");
   const [sessionTo, setSessionTo] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -90,7 +88,6 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
     let cancelled = false;
     setLoading(true);
     setPreview(null);
-    setMakeActive(false);
     getAcademicYearCopyPreview()
       .then((res) => {
         if (cancelled) return;
@@ -119,7 +116,7 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
     try {
       const res = await createAcademicYearWithCopy({
         year: preview.nextYear,
-        makeActive,
+        makeActive: false,
         sessionFrom: sessionFrom || null,
         sessionTo: sessionTo || null,
       });
@@ -423,18 +420,11 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
 
         <DialogFooter className="shrink-0 flex-row items-center justify-between border-t px-6 py-4 sm:justify-between">
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3">
-              <Switch id="make-active" checked={makeActive} onCheckedChange={setMakeActive} />
-              <div className="leading-tight">
-                <Label htmlFor="make-active" className="text-sm">
-                  Set as active year
-                </Label>
-                <p className="text-[11px] text-muted-foreground">
-                  {makeActive
-                    ? "Will deactivate the current active year."
-                    : "New year will be added as inactive."}
-                </p>
-              </div>
+            <div className="leading-tight">
+              <p className="text-[11px] text-muted-foreground">
+                New year is added as inactive. Set the current year from the Academic Years list
+                when you&apos;re ready.
+              </p>
             </div>
             <div className="flex items-end gap-2">
               <div className="leading-tight">
