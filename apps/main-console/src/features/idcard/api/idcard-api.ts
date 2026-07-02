@@ -55,11 +55,25 @@ export async function fetchTemplateBacksideBlob(id: number): Promise<Blob> {
   return res.data as Blob;
 }
 
+const assertImageBlob = (blob: Blob, label: string): Blob => {
+  if (!blob.size || blob.type.includes("json") || blob.type.includes("html")) {
+    throw new Error(`Invalid ${label} image response.`);
+  }
+  return blob;
+};
+
 export async function fetchIssuePhotoBlob(issueId: number): Promise<Blob> {
   const res = await axiosInstance.get(`${BASE}/issues/${issueId}/photo`, {
     responseType: "blob",
   });
-  return res.data as Blob;
+  return assertImageBlob(res.data as Blob, "photo");
+}
+
+export async function fetchIssueFrontBlob(issueId: number): Promise<Blob> {
+  const res = await axiosInstance.get(`${BASE}/issues/${issueId}/front`, {
+    responseType: "blob",
+  });
+  return assertImageBlob(res.data as Blob, "front");
 }
 
 export async function getTemplate(id: number) {
