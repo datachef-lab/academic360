@@ -104,6 +104,7 @@ import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalC
 import * as administrationModule from "./features/administration";
 import * as idCardModule from "@/features/idcard";
 // import * as resourceModule from "@/pages/resources";
+import { SettingsProvider } from "@/features/settings/providers/settings-provider";
 
 const router = createBrowserRouter(
   [
@@ -749,9 +750,9 @@ const router = createBrowserRouter(
 
 const App = () => {
   return (
-    <>
+    <SettingsProvider>
       <RouterProvider router={router} />
-    </>
+    </SettingsProvider>
   );
 };
 

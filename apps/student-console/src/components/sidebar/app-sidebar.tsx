@@ -461,7 +461,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 )}
               </div>
               <div className="grid flex-1 text-left text-sm">
-                <span className="truncate font-semibold text-wrap text-white">
+                <span className="font-semibold text-white break-words">
                   {isLoadingSettings
                     ? "Loading..."
                     : `${abbreviation || collegeName || "Student"} | Student Console`}

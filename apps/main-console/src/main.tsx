@@ -7,7 +7,9 @@ import { Toaster } from "sonner";
 import { Toaster as AppToaster } from "@/components/ui/toaster";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SettingsProvider } from "./features/settings/providers/settings-provider";
+import { BRANDING_QUERY_KEY } from "./features/settings/constants/query-keys";
+import { fetchBranding } from "./features/settings/services/branding-service";
+import { readBrandingFromCookies } from "./features/settings/utils/branding-cookies";
 import { Provider } from "react-redux";
 import { store } from "./store/store";
 
@@ -21,6 +23,14 @@ const queryClient = new QueryClient({
   },
 });
 
+const cachedBranding = readBrandingFromCookies();
+void queryClient.prefetchQuery({
+  queryKey: BRANDING_QUERY_KEY,
+  queryFn: fetchBranding,
+  staleTime: 30 * 60 * 1000,
+  initialData: cachedBranding ?? undefined,
+});
+
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Root element not found");
 const root = createRoot(rootElement);
@@ -30,10 +40,8 @@ root.render(
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <ErrorProvider>
-          <SettingsProvider>
-            <App />
-            <AppToaster />
-          </SettingsProvider>
+          <App />
+          <AppToaster />
         </ErrorProvider>
         <Toaster />
       </QueryClientProvider>
