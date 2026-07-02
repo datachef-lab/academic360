@@ -110,6 +110,11 @@ const REQUIRED_ENVS = [
   "DEVELOPER_PHONE",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
+  // HR360 SSO (OIDC relying party)
+  "SSO_ISSUER",
+  "SSO_CLIENT_ID",
+  "SSO_CLIENT_SECRET",
+  "SSO_REDIRECT_URI",
 ];
 
 function checkRequiredEnvs() {

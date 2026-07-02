@@ -564,6 +564,19 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"form">)
 
         <FieldSeparator>Or continue with</FieldSeparator>
 
+        {import.meta.env.VITE_SSO_ENABLED === "true" && (
+          <Field>
+            <Button variant="outline" type="button" className="w-full">
+              <a
+                href={`${import.meta.env.VITE_APP_BACKEND_URL}/auth/sso/login`}
+                className="text-black cursor-pointer hover:bg-gray-100 w-full flex justify-center gap-3 items-center p-2 rounded"
+              >
+                Sign in with HR360
+              </a>
+            </Button>
+          </Field>
+        )}
+
         <Field>
           <Button variant="outline" type="button">
             <a

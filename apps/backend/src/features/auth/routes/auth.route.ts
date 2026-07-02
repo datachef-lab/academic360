@@ -10,6 +10,7 @@ import {
   validateResetToken,
   simplePasswordReset,
 } from "../controllers/auth.controller.js";
+import { ssoCallback, ssoLogin } from "../controllers/sso.controller.js";
 import otpRouter from "./otp.routes.js";
 
 import { loginLimiter } from "@/middlewares/loginLimiter.middleware.js";
@@ -40,6 +41,10 @@ router.get(
     res.redirect(`${process.env.CORS_ORIGIN}/dashboard`);
   },
 );
+
+// HR360 SSO (OIDC) — staff/admin single sign-on
+router.get("/sso/login", ssoLogin);
+router.get("/sso/callback", ssoCallback);
 
 router.get("/refresh", refresh);
 

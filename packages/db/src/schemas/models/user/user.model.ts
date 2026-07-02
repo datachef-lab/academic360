@@ -15,6 +15,8 @@ export const userModel = pgTable('users', {
     whatsappNumber: varchar({ length: 255 }),
     image: varchar({ length: 255 }),
     type: userTypeEnum().notNull(),
+    // stable subject from the HR360 OIDC IdP; set on first SSO login (email is only the first-link hint)
+    ssoSub: varchar("sso_sub", { length: 64 }).unique(),
     isSuspended: boolean().default(false),
     suspendedReason: text(),
     suspendedTillDate: timestamp(),
