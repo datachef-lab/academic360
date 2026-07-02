@@ -37,8 +37,8 @@ export default function WelcomeBanner({ student }: { student: StudentDto }) {
         <Image
           src={
             (user?.payload as StudentDto)?.personalDetails?.gender === "MALE"
-              ? "https://besc.academic360.app/student-console/illustrations/welcome-illustration-male.png"
-              : "https://besc.academic360.app/student-console/illustrations/welcome-illustration-female.png"
+              ? `${process.env.NEXT_PUBLIC_URL}/illustrations/welcome-illustration-male.png`
+              : `${process.env.NEXT_PUBLIC_URL}/illustrations/welcome-illustration-female.png`
           }
           alt="Welcome Illustration"
           width={320}
