@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 
 import type { NextFunction, Request, Response } from "express";
+import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { StringValue } from "ms";
@@ -136,40 +137,76 @@ export const ssoCallback = async (
     });
     const ssoSub = String(payload.sub);
     const email = typeof payload.email === "string" ? payload.email : undefined;
+    const name = typeof payload.name === "string" ? payload.name : undefined;
 
     // match existing user: sso_sub first, then email (first-time link)
     let [foundUser] = await db
       .select()
       .from(userModel)
       .where(eq(userModel.ssoSub, ssoSub));
+
     if (!foundUser && email) {
       const [byEmail] = await db
         .select()
         .from(userModel)
         .where(eq(userModel.email, email));
-      if (
-        byEmail &&
-        (byEmail.type === "STAFF" ||
-          byEmail.type === "ADMIN" ||
-          byEmail.type === "FACULTY")
-      ) {
+      if (byEmail) {
+        if (byEmail.type === "STUDENT") {
+          // an email that belongs to a student is never a staff SSO account
+          res.redirect(`${loginUrl}?error=sso_no_account`);
+          return;
+        }
+        // link the HR360 identity to the existing academic360 user
         [foundUser] = await db
           .update(userModel)
-          .set({ ssoSub })
+          .set({ ssoSub, name: name || byEmail.name })
           .where(eq(userModel.id, byEmail.id))
           .returning();
       }
     }
 
-    if (!foundUser || foundUser.isSuspended || foundUser.isActive === false) {
-      // identity verified, but this app has not provisioned the person -> no entry
+    // JIT provisioning: first time we see this HR360 person, create a thin
+    // pointer row but leave it INACTIVE — an academic360 admin activates it.
+    // (Identity-only model: HR360 says who they are; academic360 owns access.)
+    if (!foundUser && email) {
+      const randomPassword = await bcrypt.hash(
+        crypto.randomBytes(24).toString("hex"),
+        10,
+      );
+      [foundUser] = await db
+        .insert(userModel)
+        .values({
+          name: name || email.split("@")[0],
+          email,
+          password: randomPassword, // unusable — this user can only arrive via SSO
+          type: "STAFF",
+          ssoSub,
+          isActive: false, // pending admin activation
+        })
+        .returning();
+      res.redirect(`${loginUrl}?error=sso_pending_activation`);
+      return;
+    }
+
+    if (!foundUser) {
+      // ID token had no email and no sso_sub match — cannot provision
       res.redirect(`${loginUrl}?error=sso_no_account`);
       return;
     }
+    if (foundUser.isSuspended || foundUser.isActive === false) {
+      res.redirect(`${loginUrl}?error=sso_pending_activation`);
+      return;
+    }
     if (foundUser.type === "STUDENT") {
-      // students never log in through staff SSO
       res.redirect(`${loginUrl}?error=sso_no_account`);
       return;
+    }
+    // keep the display name fresh from HR360 (source of truth)
+    if (name && name !== foundUser.name) {
+      await db
+        .update(userModel)
+        .set({ name })
+        .where(eq(userModel.id, foundUser.id));
     }
 
     const refreshToken = generateToken(

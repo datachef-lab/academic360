@@ -237,7 +237,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { login } from "@/features/auth/services/auth-service";
@@ -450,13 +450,7 @@ export default LoginPage;
 
 import { cn } from "@/lib/utils";
 
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"form">) {
   const navigate = useNavigate();
@@ -466,6 +460,21 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"form">)
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
+
+  const ssoEnabled = import.meta.env.VITE_SSO_ENABLED === "true";
+  // when SSO is on, HR360 is the only staff path; ?breakglass=1 reveals the
+  // password/Google forms for emergencies (e.g. the IdP being unreachable).
+  const breakglass = searchParams.get("breakglass") === "1";
+  const ssoOnly = ssoEnabled && !breakglass;
+
+  const SSO_ERRORS: Record<string, string> = {
+    sso_pending_activation: "Your account is verified but awaiting activation by an administrator.",
+    sso_no_account: "No academic360 access is linked to this HR360 account.",
+    sso_invalid_state: "Your sign-in session expired. Please try again.",
+    sso_failed: "Sign-in with HR360 failed. Please try again.",
+  };
+  const ssoError = SSO_ERRORS[searchParams.get("error") ?? ""];
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -506,98 +515,109 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"form">)
           <p className="text-sm text-balance">Enter your email below to login to your account</p>
         </div>
 
-        {error && (
+        {(error || ssoError) && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-800">{error}</p>
+            <p className="text-sm text-red-800">{ssoError || error}</p>
           </div>
         )}
 
-        <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input
-            id="email"
-            type="email"
-            placeholder="me@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loginMutation.isLoading}
-            className="text-gray-900 bg-white placeholder:text-gray-500 focus:ring-blue-500 focus:border-blue-500"
-            required
-          />
-        </Field>
-
-        <Field>
-          <div className="flex items-center">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <a href="#" className="ml-auto text-sm underline-offset-4 hover:underline">
-              Forgot your password?
-            </a>
-          </div>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loginMutation.isLoading}
-              className="text-gray-900 bg-white placeholder:text-gray-500 focus:ring-blue-500 focus:border-blue-500 pr-10"
-              required
-            />
-            <button
-              type="button"
-              onClick={togglePasswordVisibility}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-600 hover:text-gray-800 focus:outline-none"
-              disabled={loginMutation.isLoading}
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </Field>
-
-        <Field>
-          <Button type="submit" disabled={loginMutation.isLoading} className="w-full">
-            {loginMutation.isLoading ? "Signing in..." : "Login"}
-          </Button>
-        </Field>
-
-        <FieldSeparator>Or continue with</FieldSeparator>
-
-        {import.meta.env.VITE_SSO_ENABLED === "true" && (
+        {ssoEnabled && (
           <Field>
-            <Button variant="outline" type="button" className="w-full">
+            <Button type="button" className="w-full">
               <a
                 href={`${import.meta.env.VITE_APP_BACKEND_URL}/auth/sso/login`}
-                className="text-black cursor-pointer hover:bg-gray-100 w-full flex justify-center gap-3 items-center p-2 rounded"
+                className="w-full flex justify-center gap-3 items-center p-2 rounded text-white"
               >
                 Sign in with HR360
               </a>
             </Button>
+            {ssoOnly && (
+              <FieldDescription className="text-center">
+                Students, use the{" "}
+                <a href="/student-console" className="underline underline-offset-4">
+                  student portal
+                </a>
+                .
+              </FieldDescription>
+            )}
           </Field>
         )}
 
-        <Field>
-          <Button variant="outline" type="button">
-            <a
-              href={
-                settings.find((ele) => ele.name === "GOOGLE_CLIENT_ID")?.value
-                  ? `${import.meta.env.VITE_APP_BACKEND_URL}/auth/google`
-                  : "#"
-              }
-              className="text-black cursor-pointer hover:bg-gray-100 w-full flex justify-center gap-3 items-center p-2 rounded"
-            >
-              <FcGoogle className="size-6" />
-              Continue with Google
-            </a>
-          </Button>
-          <FieldDescription className="text-center text-white">
-            Don&apos;t have an account?{" "}
-            <a href="#" className="underline underline-offset-4 hover:text-white">
-              Contact administration
-            </a>
-          </FieldDescription>
-        </Field>
+        {!ssoOnly && (
+          <>
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <Input
+                id="email"
+                type="email"
+                placeholder="me@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loginMutation.isLoading}
+                className="text-gray-900 bg-white placeholder:text-gray-500 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </Field>
+
+            <Field>
+              <div className="flex items-center">
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <a href="#" className="ml-auto text-sm underline-offset-4 hover:underline">
+                  Forgot your password?
+                </a>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loginMutation.isLoading}
+                  className="text-gray-900 bg-white placeholder:text-gray-500 focus:ring-blue-500 focus:border-blue-500 pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-600 hover:text-gray-800 focus:outline-none"
+                  disabled={loginMutation.isLoading}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </Field>
+
+            <Field>
+              <Button type="submit" disabled={loginMutation.isLoading} className="w-full">
+                {loginMutation.isLoading ? "Signing in..." : "Login"}
+              </Button>
+            </Field>
+
+            <Field>
+              <Button variant="outline" type="button">
+                <a
+                  href={
+                    settings.find((ele) => ele.name === "GOOGLE_CLIENT_ID")?.value
+                      ? `${import.meta.env.VITE_APP_BACKEND_URL}/auth/google`
+                      : "#"
+                  }
+                  className="text-black cursor-pointer hover:bg-gray-100 w-full flex justify-center gap-3 items-center p-2 rounded"
+                >
+                  <FcGoogle className="size-6" />
+                  Continue with Google
+                </a>
+              </Button>
+              <FieldDescription className="text-center text-white">
+                Don&apos;t have an account?{" "}
+                <a href="#" className="underline underline-offset-4 hover:text-white">
+                  Contact administration
+                </a>
+              </FieldDescription>
+            </Field>
+          </>
+        )}
       </FieldGroup>
     </form>
   );
