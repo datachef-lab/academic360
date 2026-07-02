@@ -14,7 +14,7 @@ node_modules/
 /.idea
 .pnp
 .pnp.js
-
+/.claude
 .pnpm-store
 ios/
 android/

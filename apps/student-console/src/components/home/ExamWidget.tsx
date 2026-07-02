@@ -131,7 +131,7 @@ export default function ExamWidget({ exams, examGroups }: ExamWidgetProps) {
           <div
             className="w-1/2 bg-gradient-to-br flex items-center justify-center relative min-h-[200px]"
             style={{
-              backgroundImage: `url(/exam.jpg)`,
+              backgroundImage: `url(${process.env.NEXT_PUBLIC_URL}/exam.jpg)`,
               backgroundSize: "contain",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
