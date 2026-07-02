@@ -1,7 +1,8 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
 import { BarChart3, IdCard, Layers, ScanLine, Sun } from "lucide-react";
-import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { isIdCardGuestUser, useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 const pageLinks = [
   {
@@ -70,7 +71,14 @@ const isActive = (linkUrl: string, currentPath: string) => {
 export default function ClassesMaster() {
   useRestrictTempUsers();
   const location = useLocation();
+  const { user } = useAuth();
   const currentPath = location.pathname;
+
+  // Guests are limited to the issue/reissue page: hide Reports and all Masters.
+  const idCardGuest = isIdCardGuestUser(user?.email);
+  const visiblePageLinks = idCardGuest
+    ? pageLinks.filter((l) => l.url === "/dashboard/tools/id-cards")
+    : pageLinks;
 
   const matchedKey = Object.keys(pageNotes)
     .sort((a, b) => b.length - a.length)
@@ -80,7 +88,7 @@ export default function ClassesMaster() {
   const rightBarContent = (
     <div className="flex flex-col gap-3 py-3 px-1 h-full">
       <ul className="flex flex-col gap-1">
-        {pageLinks.map((link) => (
+        {visiblePageLinks.map((link) => (
           <NavItem
             key={link.url}
             href={link.url}
@@ -110,23 +118,25 @@ export default function ClassesMaster() {
         </div>
       )}
 
-      <div className="mt-auto px-3 pt-3 pb-4 border-t">
-        <div className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase mb-1">
-          Masters
+      {!idCardGuest && (
+        <div className="mt-auto px-3 pt-3 pb-4 border-t">
+          <div className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase mb-1">
+            Masters
+          </div>
+          <ul className="flex flex-col gap-1">
+            {masterLinks.map((link) => (
+              <NavItem
+                key={link.url}
+                href={link.url}
+                icon={<link.icon />}
+                isActive={isActive(link.url, currentPath)}
+              >
+                {link.title}
+              </NavItem>
+            ))}
+          </ul>
         </div>
-        <ul className="flex flex-col gap-1">
-          {masterLinks.map((link) => (
-            <NavItem
-              key={link.url}
-              href={link.url}
-              icon={<link.icon />}
-              isActive={isActive(link.url, currentPath)}
-            >
-              {link.title}
-            </NavItem>
-          ))}
-        </ul>
-      </div>
+      )}
     </div>
   );
 

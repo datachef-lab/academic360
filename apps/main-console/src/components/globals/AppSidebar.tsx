@@ -29,6 +29,7 @@ import {
   TrendingUp,
   SlidersHorizontal,
   Wrench,
+  CreditCard,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -48,6 +49,8 @@ import {
   TEMP_USER_EMAILS,
   isFeeMarkingOnlyUser,
   isLibraryOnlyUser,
+  isIdCardGuestUser,
+  ID_CARD_TOOL_PATH,
   LIBRARY_MODULE_PATH_PREFIX,
 } from "@/hooks/use-restrict-temp-users";
 
@@ -218,10 +221,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const libraryRestricted = isLibraryOnlyUser(user?.email);
   const feeMarkingRestricted = isFeeMarkingOnlyUser(user?.email);
+  const tempRestricted = !!user?.email && TEMP_USER_EMAILS.includes(user.email);
   const moduleOnlyRestricted = libraryRestricted || feeMarkingRestricted;
-  // Library-only accounts: do not duplicate "Library" in the top strip and under MODULES —
-  // only list it once under MODULES (same as other users).
-  const dashNav = moduleOnlyRestricted ? [] : data.navDash;
+  // Restricted accounts (library/fee-only and temp users) hide the top "Dashboard"
+  // link: `/dashboard` isn't an allowed route for them, so it would only flash-redirect.
+  const dashNav = moduleOnlyRestricted || tempRestricted ? [] : data.navDash;
 
   const collegeLogoSetting = settings?.find((ele) => ele.name === "College Logo Image");
   const collegeLogoSrc =
@@ -396,6 +400,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             </NavItem>
                           );
                         })}
+                      {/* Selected temp guests also get the ID card tool. */}
+                      {user?.email && isIdCardGuestUser(user.email) && (
+                        <NavItem
+                          icon={<CreditCard className="h-5 w-5" />}
+                          href={ID_CARD_TOOL_PATH}
+                          isActive={
+                            !isSearchActive && isSidebarActive(currentPath, ID_CARD_TOOL_PATH)
+                          }
+                        >
+                          <span className="text-[14px]">ID Card Tool</span>
+                        </NavItem>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -56,6 +56,8 @@ import {
   isFeeMarkingOnlyUser,
   isLibraryOnlyUser,
   LIBRARY_MODULE_PATH_PREFIX,
+  TEMP_USER_EMAILS,
+  TEMP_USER_HOME_PATH,
   useRestrictTempUsers,
 } from "@/hooks/use-restrict-temp-users";
 
@@ -171,12 +173,17 @@ function LayoutHeader({
   const { user } = useAuth();
   const libraryOnly = isLibraryOnlyUser(user?.email);
   const feeMarkingOnly = isFeeMarkingOnlyUser(user?.email);
+  const tempUser = !!user?.email && TEMP_USER_EMAILS.includes(user.email);
   const hideGlobalSearch = libraryOnly || feeMarkingOnly;
+  // Restricted users must not hit `/dashboard` (the route guard would redirect
+  // them → visible flash). Point their "Dashboard" breadcrumb at their landing page.
   const moduleOnlyHomePath = libraryOnly
     ? LIBRARY_MODULE_PATH_PREFIX
     : feeMarkingOnly
       ? FEE_PAYMENT_MARKING_PATH
-      : null;
+      : tempUser
+        ? TEMP_USER_HOME_PATH
+        : null;
 
   return (
     <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
