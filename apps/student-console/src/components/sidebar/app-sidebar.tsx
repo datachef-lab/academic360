@@ -34,7 +34,7 @@ import { fetchStudentSubjectSelections } from "@/services/subject-selection";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamDto } from "@/dtos";
 import { useAuth } from "@/hooks/use-auth";
-import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { useBranding } from "@/features/settings/hooks/use-branding";
 import { axiosInstance } from "@/lib/utils";
 import { isFirstSemesterClassName } from "@/lib/semester-class-utils";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
@@ -73,7 +73,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     abbreviation,
     logoUrl: collegeLogoUrl,
     isLoading: isLoadingSettings,
-  } = useCollegeSettings();
+  } = useBranding();
   const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
   const [hasCareerProgressionForm, setHasCareerProgressionForm] = React.useState(false);
   const [showCuRegistration, setShowCuRegistration] = React.useState(false);
