@@ -208,6 +208,10 @@ export default function IdCardIssuePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadedPhotoIssueIdRef = useRef<number | null>(null);
   const hasLocalPhotoOverrideRef = useRef(false);
+  const latestLookupRequestRef = useRef(0);
+  const prevTemplateAcademicYearIdRef = useRef<number | null | undefined>(undefined);
+  const previewLoadInFlightRef = useRef(false);
+  const [isRefreshingPreview, setIsRefreshingPreview] = useState(false);
 
   const applyComposedPreview = (blob: Blob) => {
     setComposedBlob(blob);
@@ -252,25 +256,28 @@ export default function IdCardIssuePage() {
     queryFn: () => (templateId ? getTemplate(templateId) : null),
     enabled: !!templateId,
   });
+  const templateWithFields: IdCardTemplate | null = activeTemplateQuery.data ?? null;
+  const templateFieldsReady = (templateWithFields?.fields?.length ?? 0) > 0;
   const activeTemplate: IdCardTemplate | null =
-    (activeTemplateQuery.data as IdCardTemplate | null) ??
-    templates.find((t) => t.id === templateId) ??
-    null;
+    templateWithFields ?? templates.find((t) => t.id === templateId) ?? null;
 
-  // When the template academic year changes (registration year, or the
-  // selected-year fallback), drop the previously selected templateId so the
-  // default-template lookup below can re-pick the right one for the new year
-  // (and clear any stale composed/back artefacts).
+  // When the template academic year actually changes, re-pick the default template.
   useEffect(() => {
+    if (templateAcademicYearId == null) return;
+    if (student && validityQuery.isLoading) return;
+    if (prevTemplateAcademicYearIdRef.current === templateAcademicYearId) return;
+    prevTemplateAcademicYearIdRef.current = templateAcademicYearId;
     setTemplateId(null);
-    setComposedBlob(null);
-    setComposedPreview((prev) => {
-      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return null;
-    });
     loadedPhotoIssueIdRef.current = null;
     setShowBack(false);
-  }, [templateAcademicYearId]);
+    if (!student) {
+      setComposedBlob(null);
+      setComposedPreview((prev) => {
+        if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return null;
+      });
+    }
+  }, [templateAcademicYearId, student, validityQuery.isLoading]);
 
   useEffect(() => {
     if (!templateId && templates.length > 0) {
@@ -332,49 +339,65 @@ export default function IdCardIssuePage() {
 
   const lookupMutation = useMutation({
     mutationFn: async (q: string) => fetchStudentByUid(q.trim()),
-    onSuccess: (data) => {
+  });
+
+  const handleLoadStudent = async () => {
+    const q = uidQuery.trim();
+    if (!q) return;
+    const requestId = ++latestLookupRequestRef.current;
+    try {
+      const data = await lookupMutation.mutateAsync(q);
+      if (requestId !== latestLookupRequestRef.current) return;
+
       const info = extractStudentInfo(data);
       if (!info.id) {
         toast.error("No student matched.");
         return;
       }
+
+      const isSameStudent = student?.id === info.id;
       setStudent(info);
       setRfid(info.rfidNumber ?? "");
-      resetCompositionState();
-      // Default each new student back to the auto "Program course" validity.
-      setValidityMode("PROGRAM");
-      setManualValidTill("");
-      // Preserve validity on same-student reload; clear only when switching students.
-      const isSameStudent = student?.id === info.id;
-      if (!isSameStudent) setProgramValidTill(null);
-      else void validityQuery.refetch();
 
-      // Blood group (health) and emergency phone live in separate tables keyed by
-      // userId, so they aren't on the student DTO — fetch them by studentId.
-      void (async () => {
-        const [healthRes, emRes] = await Promise.allSettled([
-          axiosInstance.get(`/api/health/student/${info.id}`),
-          axiosInstance.get(`/api/emergency-contact/student/${info.id}`),
-        ]);
-        const health = healthRes.status === "fulfilled" ? healthRes.value.data?.payload : null;
-        const bloodGroup = health?.bloodGroup?.type ?? health?.bloodGroup?.name ?? null;
-        const emPayload = emRes.status === "fulfilled" ? emRes.value.data?.payload : null;
-        const emergencyPhone = emPayload?.phone ?? null;
-        const emergencyRelation = emPayload?.havingRelationAs ?? null;
-        setStudent((prev) =>
-          prev && prev.id === info.id
-            ? {
-                ...prev,
-                bloodGroup: bloodGroup ?? prev.bloodGroup,
-                emergencyPhone,
-                emergencyRelation,
-              }
-            : prev,
-        );
-      })();
-    },
-    onError: () => toast.error("Lookup failed. Verify the UID."),
-  });
+      if (!isSameStudent) {
+        resetCompositionState();
+        setValidityMode("PROGRAM");
+        setManualValidTill("");
+        setProgramValidTill(null);
+      } else {
+        loadedPhotoIssueIdRef.current = null;
+      }
+
+      const [healthRes, emRes] = await Promise.allSettled([
+        axiosInstance.get(`/api/health/student/${info.id}`),
+        axiosInstance.get(`/api/emergency-contact/student/${info.id}`),
+      ]);
+      if (requestId !== latestLookupRequestRef.current) return;
+
+      const health = healthRes.status === "fulfilled" ? healthRes.value.data?.payload : null;
+      const bloodGroup = health?.bloodGroup?.type ?? health?.bloodGroup?.name ?? null;
+      const emPayload = emRes.status === "fulfilled" ? emRes.value.data?.payload : null;
+      const emergencyPhone = emPayload?.phone ?? null;
+      const emergencyRelation = emPayload?.havingRelationAs ?? null;
+      setStudent((prev) =>
+        prev && prev.id === info.id
+          ? {
+              ...prev,
+              bloodGroup: bloodGroup ?? prev.bloodGroup,
+              emergencyPhone,
+              emergencyRelation,
+            }
+          : prev,
+      );
+
+      if (isSameStudent) {
+        await Promise.all([validityQuery.refetch(), historyQuery.refetch()]);
+      }
+    } catch {
+      if (requestId !== latestLookupRequestRef.current) return;
+      toast.error("Lookup failed. Verify the UID.");
+    }
+  };
 
   const handleCapture = (full: Blob, cropped: Blob) => {
     loadedPhotoIssueIdRef.current = null;
@@ -404,10 +427,16 @@ export default function IdCardIssuePage() {
   // Draw the full card (template bg + photo + fields + QR) for a given photo onto
   // the given canvas and return it as a PNG blob. Pure renderer — no state writes,
   // so it's reused both for the live composer and the read-only history viewer.
-  const renderCard = async (photoSource: Blob, canvas: HTMLCanvasElement): Promise<Blob | null> => {
-    if (!activeTemplate || !student) return null;
-    canvas.width = activeTemplate.canvasWidthPx;
-    canvas.height = activeTemplate.canvasHeightPx;
+  const renderCard = async (
+    photoSource: Blob,
+    canvas: HTMLCanvasElement,
+    template: IdCardTemplate,
+    studentInfo: StudentInfo,
+    validTill: string,
+  ): Promise<Blob | null> => {
+    if (!template.fields?.length) return null;
+    canvas.width = template.canvasWidthPx;
+    canvas.height = template.canvasHeightPx;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
@@ -433,7 +462,7 @@ export default function IdCardIssuePage() {
     let bgUrl: string | null = null;
     let photoUrl: string | null = null;
     try {
-      const bgBlob = await fetchTemplateImageBlob(activeTemplate.id);
+      const bgBlob = await fetchTemplateImageBlob(template.id);
       bgUrl = URL.createObjectURL(bgBlob);
       const bg = await loadImg(bgUrl);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -446,11 +475,11 @@ export default function IdCardIssuePage() {
       // rendered course width so the shift anchor sits right after it (with a
       // small gap), regardless of how long the program-course name is.
       let shiftInlineAnchor: { x: number; y: number } | null = null;
-      const courseField = (activeTemplate.fields ?? []).find(
+      const courseField = (template.fields ?? []).find(
         (f) => f.fieldKey === "COURSE" && f.isVisible !== false,
       );
       if (courseField) {
-        const courseText = valueForField("COURSE", student, activeValidTill);
+        const courseText = valueForField("COURSE", studentInfo, validTill);
         if (courseText) {
           const cpx = courseField.fontSize ?? (FIELD_FONT_PX.COURSE || 22);
           ctx.font = `bold ${cpx}px Calibri`;
@@ -465,7 +494,7 @@ export default function IdCardIssuePage() {
         }
       }
 
-      for (const field of activeTemplate.fields ?? []) {
+      for (const field of template.fields ?? []) {
         if (field.isVisible === false) continue;
 
         if (field.fieldKey === "PHOTO") {
@@ -502,9 +531,9 @@ export default function IdCardIssuePage() {
         if (field.fieldKey === "QRCODE") {
           // Prefer the per-field size set in the editor; fall back to the
           // template-level QR size, then a square default.
-          const qrW = field.width || activeTemplate.qrcodeSize || 80;
-          const qrH = field.height || activeTemplate.qrcodeHeight || qrW;
-          const qrDataUrl = await QRCode.toDataURL(student.uid || "", {
+          const qrW = field.width || template.qrcodeSize || 80;
+          const qrH = field.height || template.qrcodeHeight || qrW;
+          const qrDataUrl = await QRCode.toDataURL(studentInfo.uid || "", {
             errorCorrectionLevel: "M",
             margin: 1,
             width: Math.max(qrW, qrH), // render at the larger dim, then scale to the box
@@ -515,7 +544,7 @@ export default function IdCardIssuePage() {
         }
 
         if (TEXT_FIELDS.includes(field.fieldKey)) {
-          const text = valueForField(field.fieldKey, student, activeValidTill);
+          const text = valueForField(field.fieldKey, studentInfo, validTill);
           if (!text) continue;
           const px = field.fontSize ?? (FIELD_FONT_PX[field.fieldKey] || 22);
           ctx.fillStyle = "#000000";
@@ -555,20 +584,31 @@ export default function IdCardIssuePage() {
   };
 
   const compose = async () => {
-    if (!activeTemplate?.fields?.length || !student || !photoBlob) {
+    if (!templateWithFields?.fields?.length || !student || !photoBlob) {
       toast.error("Need student, template, and photo before composing.");
       return;
     }
-    const ok = await composeFromPhoto(photoBlob);
+    const ok = await composeFromPhoto(photoBlob, templateWithFields, student, activeValidTill);
     if (!ok) toast.error("Could not compose the card image.");
   };
 
   const isImageBlob = (blob: Blob) =>
     blob.size > 0 && (blob.type.startsWith("image/") || blob.type === "");
 
-  const composeFromPhoto = async (photo: Blob): Promise<boolean> => {
-    if (!activeTemplate?.fields?.length || !student) return false;
-    const blob = await renderCard(photo, canvasRef.current ?? document.createElement("canvas"));
+  const composeFromPhoto = async (
+    photo: Blob,
+    template: IdCardTemplate,
+    studentInfo: StudentInfo,
+    validTill: string,
+  ): Promise<boolean> => {
+    if (!template.fields?.length) return false;
+    const blob = await renderCard(
+      photo,
+      canvasRef.current ?? document.createElement("canvas"),
+      template,
+      studentInfo,
+      validTill,
+    );
     if (!blob) return false;
     applyComposedPreview(blob);
     return true;
@@ -578,35 +618,41 @@ export default function IdCardIssuePage() {
   // full card design (background, fields, QR) is always shown.
   const loadIssuePreview = async (
     issueId: number,
-    issue?: IdCardIssue | null,
+    issue: IdCardIssue | null | undefined,
+    template: IdCardTemplate,
+    studentInfo: StudentInfo,
+    validTill: string,
   ): Promise<boolean> => {
-    if (!student) return false;
+    if (!template.fields?.length) return false;
 
-    if (activeTemplate?.fields?.length) {
-      try {
-        const photo = await fetchIssuePhotoBlob(issueId);
-        if (!isImageBlob(photo)) return false;
+    try {
+      const photo = await fetchIssuePhotoBlob(issueId);
+      if (!isImageBlob(photo)) return false;
 
-        setPhotoBlob(photo);
-        setPhotoPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(photo);
-        });
-        loadedPhotoIssueIdRef.current = issueId;
-        hasLocalPhotoOverrideRef.current = false;
+      setPhotoBlob(photo);
+      setPhotoPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(photo);
+      });
+      loadedPhotoIssueIdRef.current = issueId;
+      hasLocalPhotoOverrideRef.current = false;
 
-        if (await composeFromPhoto(photo)) {
-          return true;
-        }
-      } catch {
-        // Fall through to stored front image below.
+      if (await composeFromPhoto(photo, template, studentInfo, validTill)) {
+        return true;
       }
+    } catch {
+      // Fall through to stored front image below.
+    }
+
+    if (activeTemplateQuery.isLoading || activeTemplateQuery.isFetching) {
+      return false;
     }
 
     try {
       const front = await fetchIssueFrontBlob(issueId);
       if (isImageBlob(front)) {
         applyComposedPreview(front);
+        loadedPhotoIssueIdRef.current = issueId;
         hasLocalPhotoOverrideRef.current = false;
         return true;
       }
@@ -616,6 +662,7 @@ export default function IdCardIssuePage() {
           if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
           return issue.frontImageUrl;
         });
+        loadedPhotoIssueIdRef.current = issueId;
         hasLocalPhotoOverrideRef.current = false;
         void fetch(issue.frontImageUrl)
           .then((res) => res.blob())
@@ -634,32 +681,40 @@ export default function IdCardIssuePage() {
   // template (with fields) is ready so the composer can render correctly.
   useEffect(() => {
     if (!student || isSaving) return;
+    if (!templateFieldsReady || !templateWithFields) return;
     const recent = priorIssues[0];
     if (!recent?.id) return;
     if (!recent.photoImageKey && !recent.frontImageKey && !recent.frontImageUrl) return;
-    // Skip only if this issue is already loaded and preview still exists.
-    if (loadedPhotoIssueIdRef.current === recent.id && composedPreview) return;
-    // If operator captured/uploaded a fresh local photo, don't overwrite it.
+    if (loadedPhotoIssueIdRef.current === recent.id) return;
     if (hasLocalPhotoOverrideRef.current) return;
+    if (previewLoadInFlightRef.current) return;
 
     let cancelled = false;
-    void loadIssuePreview(recent.id, recent).then((ok) => {
-      if (!cancelled && !ok) {
-        loadedPhotoIssueIdRef.current = null;
-      }
-    });
+    previewLoadInFlightRef.current = true;
+    setIsRefreshingPreview(true);
+
+    void loadIssuePreview(recent.id, recent, templateWithFields, student, activeValidTill)
+      .then((ok) => {
+        if (!cancelled && !ok) loadedPhotoIssueIdRef.current = null;
+      })
+      .finally(() => {
+        previewLoadInFlightRef.current = false;
+        if (!cancelled) setIsRefreshingPreview(false);
+      });
 
     return () => {
       cancelled = true;
+      previewLoadInFlightRef.current = false;
+      setIsRefreshingPreview(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     student?.id,
     priorIssues[0]?.id,
     isSaving,
-    activeTemplate?.id,
-    activeTemplate?.fields?.length,
-    composedPreview,
+    templateWithFields?.id,
+    templateFieldsReady,
+    activeValidTill,
   ]);
 
   // History viewer: compose a past issue's card (template + that issue's photo)
@@ -680,7 +735,17 @@ export default function IdCardIssuePage() {
     });
     try {
       const photo = await fetchIssuePhotoBlob(issue.id);
-      const blob = await renderCard(photo, document.createElement("canvas"));
+      if (!templateWithFields?.fields?.length) {
+        toast.error("Template fields are not ready yet.");
+        return;
+      }
+      const blob = await renderCard(
+        photo,
+        document.createElement("canvas"),
+        templateWithFields,
+        student,
+        activeValidTill,
+      );
       if (blob) setViewCardUrl(URL.createObjectURL(blob));
       else toast.error("Could not render this card.");
     } catch {
@@ -693,13 +758,13 @@ export default function IdCardIssuePage() {
   // Auto-compose once student + template fields + photo are all in.
   useEffect(() => {
     if (isSaving) return;
-    if (!photoBlob || !activeTemplate?.fields?.length || !student) return;
+    if (!photoBlob || !templateFieldsReady || !templateWithFields || !student) return;
     void compose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     photoBlob,
-    activeTemplate?.id,
-    activeTemplate?.fields?.length,
+    templateWithFields?.id,
+    templateFieldsReady,
     student?.id,
     activeValidTill,
     isSaving,
@@ -763,7 +828,9 @@ export default function IdCardIssuePage() {
       const refetchResult = await historyQuery.refetch();
       const savedIssue =
         refetchResult.data?.rows?.find((row) => row.id === id) ?? refetchResult.data?.rows?.[0];
-      await loadIssuePreview(id, savedIssue);
+      if (templateWithFields?.fields?.length && student) {
+        await loadIssuePreview(id, savedIssue, templateWithFields, student, activeValidTill);
+      }
 
       try {
         await Swal.fire({
@@ -887,12 +954,12 @@ export default function IdCardIssuePage() {
               inputMode="numeric"
               onChange={(e) => setUidQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && uidQuery.trim()) lookupMutation.mutate(uidQuery);
+                if (e.key === "Enter" && uidQuery.trim()) void handleLoadStudent();
               }}
             />
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white px-6"
-              onClick={() => lookupMutation.mutate(uidQuery)}
+              onClick={() => void handleLoadStudent()}
               disabled={!uidQuery.trim() || lookupMutation.isLoading}
             >
               {lookupMutation.isLoading ? "Loading…" : "Load"}
@@ -1166,25 +1233,26 @@ export default function IdCardIssuePage() {
                     </span>
                   )
                 ) : composedPreview ? (
-                  // Front: after photo capture + compose, show the composed card.
                   <img
                     src={composedPreview}
                     alt="generated card"
                     className="max-h-full max-w-full object-contain"
                   />
-                ) : activeTemplate?.templateImageUrl ? (
-                  // Before compose finishes: show the template background.
-                  <img
-                    src={activeTemplate.templateImageUrl}
-                    alt={`${activeTemplate.name} front`}
-                    className="max-h-full max-w-full object-contain opacity-90"
-                  />
                 ) : priorIssues[0]?.frontImageUrl ? (
-                  // Last resort: stored front image from the latest issue.
                   <img
                     src={priorIssues[0].frontImageUrl}
                     alt="latest saved card"
                     className="max-h-full max-w-full object-contain"
+                  />
+                ) : isRefreshingPreview || activeTemplateQuery.isLoading ? (
+                  <span className="text-sm text-gray-500 px-4 text-center">
+                    Refreshing card preview…
+                  </span>
+                ) : activeTemplate?.templateImageUrl ? (
+                  <img
+                    src={activeTemplate.templateImageUrl}
+                    alt={`${activeTemplate.name} front`}
+                    className="max-h-full max-w-full object-contain opacity-90"
                   />
                 ) : (
                   <span className="text-sm text-gray-400 px-4 text-center">
