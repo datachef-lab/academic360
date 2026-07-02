@@ -8,7 +8,7 @@ import {
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { findBloodGroupById } from "@/features/resources/services/bloodGroup.service.js";
-import { bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
+import { bloodGroupModel } from "@repo/db/schemas/models/resources/bloodGroup.model.js";
 import { BloodGroupType } from "@/types/resources/blood-group.js";
 
 interface DateObject {
