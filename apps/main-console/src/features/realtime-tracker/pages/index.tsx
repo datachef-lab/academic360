@@ -63,6 +63,9 @@ function TrackerMain({
     queryFn: () => fetchAffiliationRegistration(apiFilters),
     enabled: filtersReady && activeTab === "affiliation",
     staleTime: 30_000,
+    // Show the previous filter set's table while the new one loads instead of
+    // dropping to a skeleton (perceived slowness on every filter change).
+    placeholderData: (prev) => prev,
   });
 
   const feeMisQuery = useQuery({
@@ -172,10 +175,13 @@ function TrackerMain({
                   Retry
                 </button>
               </div>
-            ) : misTableData && !affiliationQuery.isFetching ? (
+            ) : misTableData ? (
+              // Keep the current table visible while a refetch is in flight —
+              // blanking to the skeleton on every filter change/socket refresh
+              // makes the page feel slow.
               <MisTable data={misTableData} />
             ) : affiliationQuery.isFetching ? (
-              <MisTable data={misTableData ?? { updatedAt: "", data: [] }} isLoading />
+              <MisTable data={{ updatedAt: "", data: [] }} isLoading />
             ) : (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                 {affiliationLoading ? "Loading…" : "No data"}
