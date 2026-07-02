@@ -1024,16 +1024,20 @@ export default function IdCardIssuePage() {
                           Date:{" "}
                           {it.issueDate
                             ? (() => {
-                                // PG TIMESTAMP WITHOUT TIME ZONE stores IST (server timezone).
-                                // Append +05:30 so the browser parses it as IST, then display as IST.
+                                // The DB column is PG `timestamp without time zone`
+                                // storing IST wall-clock (server tz). Drizzle serializes
+                                // it with a MISLEADING trailing 'Z' (e.g. "…T22:19:00Z"
+                                // actually means 22:19 IST, not UTC). So we must NOT shift
+                                // it: read the literal wall-clock by formatting in UTC.
+                                // Normalize any naive string to 'Z' first.
                                 const s = it.issueDate;
-                                const ist = new Date(
+                                const d = new Date(
                                   s.endsWith("Z") || s.includes("+")
                                     ? s
-                                    : s.replace(" ", "T") + "+05:30",
+                                    : s.replace(" ", "T") + "Z",
                                 );
-                                return ist.toLocaleString("en-IN", {
-                                  timeZone: "Asia/Kolkata",
+                                return d.toLocaleString("en-IN", {
+                                  timeZone: "UTC",
                                   day: "2-digit",
                                   month: "short",
                                   year: "numeric",
