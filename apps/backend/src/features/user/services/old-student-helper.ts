@@ -2053,7 +2053,34 @@ export async function processStudent(
         student?.uid,
         cuRegistrationRequest,
       );
-      return student;
+      // Early-return ONLY when the admission is already built. A student whose
+      // earlier import failed mid-way (applicationId NULL, no promotion) was
+      // otherwise stuck forever: "data unchanged" skipped the application-form
+      // step on every re-import. Build the form now and fall through so the
+      // promotion step below also runs.
+      if (student?.applicationId) {
+        return student;
+      }
+      if (student) {
+        console.log(
+          "unchanged student has no application form - building admission:",
+          student.uid,
+        );
+        const result =
+          await oldAdmPersonalDetailsHelper.processOldStudentApplicationForm(
+            oldStudent,
+            student,
+          );
+        const [updatedStudent] = await db
+          .update(studentModel)
+          .set({
+            applicationId: result.applicationForm.id,
+            admissionCourseDetailsId: result.transferredAdmCourseDetails.id!,
+          })
+          .where(eq(studentModel.id, student.id!))
+          .returning();
+        student = updatedStudent;
+      }
     }
   }
 
