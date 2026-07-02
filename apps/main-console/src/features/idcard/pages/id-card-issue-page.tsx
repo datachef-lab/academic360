@@ -194,7 +194,6 @@ export default function IdCardIssuePage() {
   const [composedBlob, setComposedBlob] = useState<Blob | null>(null);
   const [composedPreview, setComposedPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSaveLocked, setIsSaveLocked] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showZoomedCard, setShowZoomedCard] = useState(false);
   const [showHistorySheet, setShowHistorySheet] = useState(false);
@@ -208,6 +207,7 @@ export default function IdCardIssuePage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadedPhotoIssueIdRef = useRef<number | null>(null);
+  const hasLocalPhotoOverrideRef = useRef(false);
 
   const applyComposedPreview = (blob: Blob) => {
     setComposedBlob(blob);
@@ -264,7 +264,11 @@ export default function IdCardIssuePage() {
   useEffect(() => {
     setTemplateId(null);
     setComposedBlob(null);
-    setComposedPreview(null);
+    setComposedPreview((prev) => {
+      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return null;
+    });
+    loadedPhotoIssueIdRef.current = null;
     setShowBack(false);
   }, [templateAcademicYearId]);
 
@@ -309,10 +313,7 @@ export default function IdCardIssuePage() {
   const setStatusAndRemarks = (s: IdCardIssueStatus) => {
     setIssueStatus(s);
     setRemarks(STATUS_REMARKS[s]);
-    setIsSaveLocked(false);
   };
-
-  const unlockSave = () => setIsSaveLocked(false);
 
   const resetCompositionState = () => {
     setPhotoPreviewUrl((prev) => {
@@ -326,6 +327,7 @@ export default function IdCardIssuePage() {
     setPhotoBlob(null);
     setComposedBlob(null);
     loadedPhotoIssueIdRef.current = null;
+    hasLocalPhotoOverrideRef.current = false;
   };
 
   const lookupMutation = useMutation({
@@ -338,12 +340,14 @@ export default function IdCardIssuePage() {
       }
       setStudent(info);
       setRfid(info.rfidNumber ?? "");
-      setIsSaveLocked(false);
       resetCompositionState();
       // Default each new student back to the auto "Program course" validity.
       setValidityMode("PROGRAM");
       setManualValidTill("");
-      setProgramValidTill(null);
+      // Preserve validity on same-student reload; clear only when switching students.
+      const isSameStudent = student?.id === info.id;
+      if (!isSameStudent) setProgramValidTill(null);
+      else void validityQuery.refetch();
 
       // Blood group (health) and emergency phone live in separate tables keyed by
       // userId, so they aren't on the student DTO — fetch them by studentId.
@@ -374,7 +378,7 @@ export default function IdCardIssuePage() {
 
   const handleCapture = (full: Blob, cropped: Blob) => {
     loadedPhotoIssueIdRef.current = null;
-    setIsSaveLocked(false);
+    hasLocalPhotoOverrideRef.current = true;
     setComposedBlob(null);
     setComposedPreview((prev) => {
       if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
@@ -387,7 +391,7 @@ export default function IdCardIssuePage() {
 
   const handleUpload = (file: File) => {
     loadedPhotoIssueIdRef.current = null;
-    setIsSaveLocked(false);
+    hasLocalPhotoOverrideRef.current = true;
     setComposedBlob(null);
     setComposedPreview((prev) => {
       if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
@@ -576,33 +580,34 @@ export default function IdCardIssuePage() {
     issueId: number,
     issue?: IdCardIssue | null,
   ): Promise<boolean> => {
-    if (!student || !activeTemplate?.fields?.length) return false;
+    if (!student) return false;
 
-    try {
-      const photo = await fetchIssuePhotoBlob(issueId);
-      if (!isImageBlob(photo)) return false;
+    if (activeTemplate?.fields?.length) {
+      try {
+        const photo = await fetchIssuePhotoBlob(issueId);
+        if (!isImageBlob(photo)) return false;
 
-      setPhotoBlob(photo);
-      setPhotoPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return URL.createObjectURL(photo);
-      });
-      loadedPhotoIssueIdRef.current = issueId;
+        setPhotoBlob(photo);
+        setPhotoPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(photo);
+        });
+        loadedPhotoIssueIdRef.current = issueId;
+        hasLocalPhotoOverrideRef.current = false;
 
-      if (await composeFromPhoto(photo)) {
-        setIsSaveLocked(true);
-        return true;
+        if (await composeFromPhoto(photo)) {
+          return true;
+        }
+      } catch {
+        // Fall through to stored front image below.
       }
-    } catch {
-      // Fall through to stored front image below.
     }
 
     try {
       const front = await fetchIssueFrontBlob(issueId);
       if (isImageBlob(front)) {
         applyComposedPreview(front);
-        loadedPhotoIssueIdRef.current = issueId;
-        setIsSaveLocked(true);
+        hasLocalPhotoOverrideRef.current = false;
         return true;
       }
     } catch {
@@ -611,14 +616,13 @@ export default function IdCardIssuePage() {
           if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
           return issue.frontImageUrl;
         });
-        loadedPhotoIssueIdRef.current = issueId;
+        hasLocalPhotoOverrideRef.current = false;
         void fetch(issue.frontImageUrl)
           .then((res) => res.blob())
           .then((front) => {
             if (isImageBlob(front)) setComposedBlob(front);
           })
           .catch(() => undefined);
-        setIsSaveLocked(true);
         return true;
       }
     }
@@ -629,15 +633,14 @@ export default function IdCardIssuePage() {
   // On a reissue / renewal, fetch the latest issue preview from S3 once the
   // template (with fields) is ready so the composer can render correctly.
   useEffect(() => {
-    if (!student || isSaving || !activeTemplate?.fields?.length) return;
+    if (!student || isSaving) return;
     const recent = priorIssues[0];
-    if (!recent?.id || !recent.photoImageKey) return;
-    // Already showing this issue, or the operator captured a fresh local photo.
-    if (loadedPhotoIssueIdRef.current === recent.id) {
-      setIsSaveLocked(true);
-      return;
-    }
-    if (photoBlob && loadedPhotoIssueIdRef.current === null) return;
+    if (!recent?.id) return;
+    if (!recent.photoImageKey && !recent.frontImageKey && !recent.frontImageUrl) return;
+    // Skip only if this issue is already loaded and preview still exists.
+    if (loadedPhotoIssueIdRef.current === recent.id && composedPreview) return;
+    // If operator captured/uploaded a fresh local photo, don't overwrite it.
+    if (hasLocalPhotoOverrideRef.current) return;
 
     let cancelled = false;
     void loadIssuePreview(recent.id, recent).then((ok) => {
@@ -656,6 +659,7 @@ export default function IdCardIssuePage() {
     isSaving,
     activeTemplate?.id,
     activeTemplate?.fields?.length,
+    composedPreview,
   ]);
 
   // History viewer: compose a past issue's card (template + that issue's photo)
@@ -770,7 +774,6 @@ export default function IdCardIssuePage() {
         });
       } finally {
         setIsSaving(false);
-        setIsSaveLocked(true);
       }
     },
     onError: async (e: unknown) => {
@@ -784,12 +787,11 @@ export default function IdCardIssuePage() {
         });
       } finally {
         setIsSaving(false);
-        setIsSaveLocked(false);
       }
     },
   });
 
-  const saveDisabled = !composedBlob || isSaving || saveMutation.isLoading || isSaveLocked;
+  const saveDisabled = !composedBlob || isSaving || saveMutation.isLoading;
 
   const handleSaveIdCard = () => {
     if (saveDisabled) return;
@@ -1022,10 +1024,7 @@ export default function IdCardIssuePage() {
                   <Input
                     id="rfid"
                     value={rfid}
-                    onChange={(e) => {
-                      setRfid(e.target.value);
-                      unlockSave();
-                    }}
+                    onChange={(e) => setRfid(e.target.value)}
                     placeholder="Enter RFID"
                     className="w-48 bg-white"
                   />
@@ -1041,10 +1040,7 @@ export default function IdCardIssuePage() {
                   <Label className="font-semibold">Validity</Label>
                   <Select
                     value={validityMode}
-                    onValueChange={(v) => {
-                      setValidityMode(v as "PROGRAM" | "MANUAL");
-                      unlockSave();
-                    }}
+                    onValueChange={(v) => setValidityMode(v as "PROGRAM" | "MANUAL")}
                   >
                     <SelectTrigger className="w-56 bg-white">
                       <SelectValue />
@@ -1061,10 +1057,7 @@ export default function IdCardIssuePage() {
                     <Input
                       type="date"
                       value={manualValidTill}
-                      onChange={(e) => {
-                        setManualValidTill(e.target.value);
-                        unlockSave();
-                      }}
+                      onChange={(e) => setManualValidTill(e.target.value)}
                       className="w-48 bg-white"
                     />
                   </div>
@@ -1109,10 +1102,7 @@ export default function IdCardIssuePage() {
                     <Label className="font-semibold">Remarks</Label>
                     <Textarea
                       value={remarks}
-                      onChange={(e) => {
-                        setRemarks(e.target.value);
-                        unlockSave();
-                      }}
+                      onChange={(e) => setRemarks(e.target.value)}
                       placeholder="Enter remarks"
                       rows={2}
                     />
@@ -1243,11 +1233,7 @@ export default function IdCardIssuePage() {
                 aria-disabled={saveDisabled}
                 onClick={handleSaveIdCard}
               >
-                {isSaving || saveMutation.isLoading
-                  ? "Saving…"
-                  : isSaveLocked
-                    ? "Saved"
-                    : "Save ID Card"}
+                {isSaving || saveMutation.isLoading ? "Saving…" : "Save ID Card"}
               </Button>
             </CardContent>
           </Card>
