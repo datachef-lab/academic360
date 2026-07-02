@@ -65,7 +65,7 @@ function TrackerMain({
     staleTime: 30_000,
     // Show the previous filter set's table while the new one loads instead of
     // dropping to a skeleton (perceived slowness on every filter change).
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: AffiliationRegistrationPayload | undefined) => prev,
   });
 
   const feeMisQuery = useQuery({
