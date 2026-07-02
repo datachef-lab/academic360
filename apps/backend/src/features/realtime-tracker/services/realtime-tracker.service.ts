@@ -5,6 +5,8 @@ import {
   cuRegistrationCorrectionRequestModel,
   feeStructureModel,
   feeStudentMappingModel,
+  idCardIssueModel,
+  idCardTemplateModel,
   personalDetailsModel,
   programCourseModel,
   promotionModel,
@@ -40,6 +42,7 @@ const UNPAID_MAPPING_SQL = sql`COALESCE(${feeStudentMappingModel.totalPayable}, 
 export type AffiliationRegistrationRow = {
   programCourseName: string;
   admitted: number;
+  idCardIssued: number;
   subjectSelectionDone: number;
   onlineRegDone: number;
   physicalRegDone: number;
@@ -140,6 +143,11 @@ async function buildPromotionWhere(
   const sessionIds = await resolveSessionIds(filters);
   if (sessionIds?.length) {
     parts.push(inArray(promotionModel.sessionId, sessionIds));
+  } else if (filters.academicYearIds?.length || filters.sessionIds?.length) {
+    // An academic-year/session filter that resolves to NO sessions must match
+    // nothing — silently dropping it would show all years' data as if the
+    // filter were applied (e.g. a DB without a session for the selected year).
+    parts.push(sql`FALSE`);
   }
   if (filters.classIds?.length) {
     parts.push(inArray(promotionModel.classId, filters.classIds));
@@ -203,6 +211,85 @@ const SUBJECT_SELECTION_EXISTS_SQL = sql`EXISTS (
     AND sss.is_active = TRUE
 )`;
 
+/**
+ * Students holding an ID card: at least one id_card_issues row. A student can
+ * have several rows (issued / re-issued / renewed) but counts once — the card
+ * has been provided to them either way.
+ *
+ * Academic-year scoping (when the tracker filters by AY/sessions):
+ *  - a card's year is its TEMPLATE's academic year (id_card_templates.academic_year_id_fk);
+ *  - legacy-synced cards have NO template, so those fall back to the issue date
+ *    landing inside the selected session window(s) (with a pre-session grace,
+ *    since cards are printed shortly before the session opens).
+ */
+async function buildIdCardIssuedExistsSql(
+  filters: RealtimeTrackerFilters,
+): Promise<SQL> {
+  const anyCard = sql`EXISTS (
+    SELECT 1 FROM ${idCardIssueModel} ici
+    WHERE ici.student_id_fk = ${studentModel.id}
+  )`;
+  const hasYearFilter = !!(
+    filters.academicYearIds?.length || filters.sessionIds?.length
+  );
+  if (!hasYearFilter) return anyCard;
+  const sessionIds = await resolveSessionIds(filters);
+
+  // Target academic years: from the filter, else derived from the sessions.
+  let academicYearIds = filters.academicYearIds ?? [];
+  if (!academicYearIds.length && sessionIds?.length) {
+    const rows = await db
+      .select({ ayId: sessionModel.academicYearId })
+      .from(sessionModel)
+      .where(inArray(sessionModel.id, sessionIds));
+    academicYearIds = [
+      ...new Set(
+        rows.map((r) => r.ayId).filter((id): id is number => id != null),
+      ),
+    ];
+  }
+
+  const windows = sessionIds?.length
+    ? await db
+        .select({ from: sessionModel.from, to: sessionModel.to })
+        .from(sessionModel)
+        .where(inArray(sessionModel.id, sessionIds))
+    : [];
+  const froms = windows.map((w) => w.from).filter(Boolean) as string[];
+  const tos = windows.map((w) => w.to).filter(Boolean) as string[];
+  // Year filter present but nothing resolvable -> match no cards (never all).
+  if (!academicYearIds.length && (!froms.length || !tos.length))
+    return sql`FALSE`;
+
+  const conditions: SQL[] = [];
+  if (academicYearIds.length) {
+    conditions.push(
+      sql`ict.academic_year_id_fk IN (${sql.join(
+        academicYearIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`,
+    );
+  }
+  if (froms.length && tos.length) {
+    const minFrom = froms.sort()[0];
+    const maxTo = tos.sort()[tos.length - 1];
+    // 60-day pre-session grace: cards are printed shortly BEFORE the session
+    // opens (e.g. 2026-27 cards issued 30-Jun-2026 for the 01-Jul start).
+    conditions.push(
+      sql`(ici.template_id_fk IS NULL
+        AND ici.issue_date >= (${minFrom}::date - INTERVAL '60 days')
+        AND ici.issue_date < (${maxTo}::date + INTERVAL '1 day'))`,
+    );
+  }
+
+  return sql`EXISTS (
+    SELECT 1 FROM ${idCardIssueModel} ici
+    LEFT JOIN ${idCardTemplateModel} ict ON ict.id = ici.template_id_fk
+    WHERE ici.student_id_fk = ${studentModel.id}
+      AND (${sql.join(conditions, sql` OR `)})
+  )`;
+}
+
 export async function getAffiliationRegistrationData(
   filtersInput: RealtimeTrackerFilters = {},
 ): Promise<AffiliationRegistrationPayload> {
@@ -218,11 +305,14 @@ export async function getAffiliationRegistrationData(
 
   const whereClause = whereParts.length ? and(...whereParts) : undefined;
 
+  const idCardIssuedExistsSql = await buildIdCardIssuedExistsSql(filters);
+
   const programCourseData = await db
     .select({
       programCourseId: programCourseModel.id,
       programCourseName: programCourseModel.name,
       admitted: countDistinct(studentModel.id),
+      idCardIssued: sql<number>`COUNT(DISTINCT CASE WHEN ${idCardIssuedExistsSql} THEN ${studentModel.id} END)`,
       subjectSelectionDone: sql<number>`COUNT(DISTINCT CASE WHEN ${SUBJECT_SELECTION_EXISTS_SQL} THEN ${studentModel.id} END)`,
       onlineRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.onlineRegistrationDone} = true THEN ${studentModel.id} END)`,
       physicalRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.physicalRegistrationDone} = true THEN ${studentModel.id} END)`,
@@ -249,6 +339,7 @@ export async function getAffiliationRegistrationData(
   const totalData = await db
     .select({
       admitted: countDistinct(studentModel.id),
+      idCardIssued: sql<number>`COUNT(DISTINCT CASE WHEN ${idCardIssuedExistsSql} THEN ${studentModel.id} END)`,
       subjectSelectionDone: sql<number>`COUNT(DISTINCT CASE WHEN ${SUBJECT_SELECTION_EXISTS_SQL} THEN ${studentModel.id} END)`,
       onlineRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.onlineRegistrationDone} = true THEN ${studentModel.id} END)`,
       physicalRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.physicalRegistrationDone} = true THEN ${studentModel.id} END)`,
@@ -272,6 +363,7 @@ export async function getAffiliationRegistrationData(
 
   const total = totalData[0] ?? {
     admitted: 0,
+    idCardIssued: 0,
     subjectSelectionDone: 0,
     onlineRegDone: 0,
     physicalRegDone: 0,
@@ -282,6 +374,7 @@ export async function getAffiliationRegistrationData(
       programCourseName:
         row.programCourseName || `Program Course ${row.programCourseId}`,
       admitted: Number(row.admitted),
+      idCardIssued: Number(row.idCardIssued),
       subjectSelectionDone: Number(row.subjectSelectionDone),
       onlineRegDone: Number(row.onlineRegDone),
       physicalRegDone: Number(row.physicalRegDone),
@@ -290,6 +383,7 @@ export async function getAffiliationRegistrationData(
     {
       programCourseName: "Total",
       admitted: Number(total.admitted),
+      idCardIssued: Number(total.idCardIssued),
       subjectSelectionDone: Number(total.subjectSelectionDone),
       onlineRegDone: Number(total.onlineRegDone),
       physicalRegDone: Number(total.physicalRegDone),

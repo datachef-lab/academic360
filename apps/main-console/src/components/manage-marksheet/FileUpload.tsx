@@ -186,6 +186,10 @@ import * as XLSX from "xlsx";
 
 const socket: Socket = io(import.meta.env.VITE_APP_BACKEND_URL as string, {
   path: "/socket.io/",
+  // websocket first: the socket.io default is polling-first, and long-polling
+  // needs ALB sticky sessions across instances (otherwise the handshake and
+  // follow-up requests land on different nodes -> connect/disconnect loops).
+  transports: ["websocket", "polling"],
 });
 
 const expectedHeaders = [

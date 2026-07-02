@@ -8,6 +8,8 @@ export type RealtimeTrackerFilters = FeesDashboardFilters & {
 export type AffiliationRegistrationRow = {
   programCourseName: string;
   admitted: number;
+  /** Distinct students holding an ID card (multiple issues/renewals count once). */
+  idCardIssued: number;
   subjectSelectionDone: number;
   onlineRegDone: number;
   physicalRegDone: number;
