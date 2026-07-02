@@ -1023,16 +1023,25 @@ export default function IdCardIssuePage() {
                         <div className="text-xs text-gray-600">
                           Date:{" "}
                           {it.issueDate
-                            ? new Date(it.issueDate).toLocaleString("en-IN", {
-                                timeZone: "Asia/Kolkata",
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                                hour12: true,
-                              })
+                            ? (() => {
+                                // Force UTC: PG TIMESTAMP WITHOUT TIME ZONE may arrive without 'Z'.
+                                // Appending 'Z' ensures the browser treats it as UTC before converting to IST.
+                                const s = it.issueDate;
+                                const utc = new Date(
+                                  s.endsWith("Z") || s.includes("+")
+                                    ? s
+                                    : s.replace(" ", "T") + "Z",
+                                );
+                                return utc.toLocaleString("en-IN", {
+                                  timeZone: "Asia/Kolkata",
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                });
+                              })()
                             : "—"}
                         </div>
                       </div>
