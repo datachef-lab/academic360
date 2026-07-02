@@ -995,7 +995,7 @@ export default function IdCardIssuePage() {
                       <div key={it.id} className="border rounded-md p-3 bg-white">
                         <div className="flex items-center justify-between mb-1">
                           <div className="text-sm font-semibold">
-                            #{idx + 1} Type: {it.issueStatus}
+                            #{priorIssues.length - idx} Type: {it.issueStatus}
                           </div>
                           <div className="flex gap-1">
                             {it.photoImageKey && (
