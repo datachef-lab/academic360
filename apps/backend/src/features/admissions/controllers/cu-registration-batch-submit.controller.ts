@@ -21,7 +21,6 @@ import { db } from "@/db/index.js";
 import { documentModel } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 import multer from "multer";
-import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
 import {
   convertToJpg,
   getDocumentConversionSettings,
@@ -129,18 +128,8 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       determinedStatus: newStatus,
     });
 
-    // Generate application number when all declarations are completed
-    console.info(
-      `[CU-REG BATCH SUBMIT] Generating application number for final submission`,
-    );
-
-    const applicationNumber =
-      await CuRegistrationNumberService.generateNextApplicationNumber();
-    console.info(
-      `[CU-REG BATCH SUBMIT] Generated application number: ${applicationNumber}`,
-    );
-
-    // Check if application number already exists before setting it
+    // Application number is generated inside updateCuRegistrationCorrectionRequest's
+    // transaction with an advisory lock — no need to generate it here.
     const updatePayload: any = {
       genderCorrectionRequest: parsedFlags?.gender || false,
       nationalityCorrectionRequest: parsedFlags?.nationality || false,
@@ -159,12 +148,6 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       payload: parsedPayload,
     };
 
-    // Set application number for final submission
-    updatePayload.cuRegistrationApplicationNumber = applicationNumber;
-    console.info(
-      `[CU-REG BATCH SUBMIT] Setting application number: ${applicationNumber}`,
-    );
-
     // Update the correction request with flags, payload, status, and application number
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(correctionRequestId),
@@ -172,11 +155,20 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       req.user as UserDto,
     );
 
+    // The service generates the application number atomically inside its transaction.
+    const applicationNumber = updatedRequest?.cuRegistrationApplicationNumber;
+    if (!applicationNumber) {
+      throw new ApiError(
+        500,
+        "Application number was not generated — cannot complete batch submission",
+      );
+    }
+
     console.info(
       `[CU-REG BATCH SUBMIT] Updated request status to: ${newStatus} and marked online registration as done`,
     );
     console.info(
-      `[CU-REG BATCH SUBMIT] Set all declaration flags to true for final submission - PDF generation should be triggered`,
+      `[CU-REG BATCH SUBMIT] Set all declaration flags to true for final submission - application number: ${applicationNumber}`,
     );
 
     // Update actual database fields based on correction request data

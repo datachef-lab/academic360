@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 
 import { createLogger } from "@/config/logger.js";
 import { loadLibrary } from "@/features/library/old-irp-data";
+import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
 
 const log = createLogger("db");
 // Create a connection pool
@@ -31,6 +32,7 @@ export const connectToDatabase = async () => {
 
     // createDefaultExamComponents();
     // initializeClasses();
+    initializeAcademicActivities();
     // loadDefaultSettings();
     // loadDegree();
     // loadShifts()

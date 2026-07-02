@@ -168,7 +168,6 @@ import {
 import { OldCountry } from "@repo/db/legacy-system-types/resources";
 import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
 import { bitToBool } from "./refactor-old-migration.service";
-import { CuRegistrationNumberService } from "@/services/cu-registration-number.service";
 import { CLIENT_RENEG_LIMIT } from "tls";
 
 const BATCH_SIZE = 500; // Number of rows per batch
@@ -2275,9 +2274,6 @@ async function addStudentCuRegistrationRequest(student: Student) {
     )[0];
   }
 
-  const cuRegAppNo =
-    await CuRegistrationNumberService.generateNextApplicationNumber();
-
   const [newCuRegistrationRequest] = await db
     .insert(cuRegistrationCorrectionRequestModel)
     .values({
@@ -2295,12 +2291,7 @@ async function addStudentCuRegistrationRequest(student: Student) {
     })
     .returning();
 
-  console.log(
-    "new cu registration request created for student:",
-    student.id,
-    "with application number:",
-    cuRegAppNo,
-  );
+  console.log("new cu registration request created for student:", student.id);
   return newCuRegistrationRequest;
 }
 

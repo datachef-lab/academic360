@@ -223,9 +223,13 @@ export async function createCuRegistrationCorrectionRequest(
   return await modelToDto(newRequest);
 }
 
-// Get next available CU Registration Application Number
-export async function getNextCuRegistrationApplicationNumber(): Promise<string> {
-  return await CuRegistrationNumberService.generateNextApplicationNumber();
+// Get next available CU Registration Application Number for a given academic year
+export async function getNextCuRegistrationApplicationNumber(
+  academicYearId: number,
+): Promise<string> {
+  return await CuRegistrationNumberService.generateNextApplicationNumber(
+    academicYearId,
+  );
 }
 
 // Validate CU Registration Application Number
@@ -894,8 +898,16 @@ export async function updateCuRegistrationCorrectionRequest(
       // Only generate new application number if:
       // 1. No existing application number AND
       // 2. Conditions for PDF generation are met
+      // Serialize concurrent generation per academic year via advisory lock.
+      // pg_advisory_xact_lock blocks until acquired and is released automatically on tx commit/rollback.
+      // Lock key = 1001000 + academicYearId so students in different years never block each other.
+      const ayId = existing.academicYearId ?? 0;
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${1001000 + ayId})`);
       applicationNumber =
-        await CuRegistrationNumberService.generateNextApplicationNumber();
+        await CuRegistrationNumberService.generateNextApplicationNumber(
+          ayId,
+          tx,
+        );
       setData.cuRegistrationApplicationNumber = applicationNumber;
       console.info(
         "[CU-REG CORRECTION][UPDATE] Generated new application number (none existed):",

@@ -13,7 +13,7 @@ import {
   programCourseModel,
   regulationTypeModel,
 } from "@repo/db/schemas";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getCuRegPdfPathDynamic } from "../services/cu-registration-document-path.service.js";
 import { getSignedUrlForFile, getFileFromS3 } from "@/services/s3.service.js";
 import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
@@ -155,6 +155,7 @@ export const getCuRegistrationPdfUrlByRequestId = async (
           cuRegistrationCorrectionRequestModel.subjectsDeclaration,
         documentsDeclaration:
           cuRegistrationCorrectionRequestModel.documentsDeclaration,
+        academicYearId: cuRegistrationCorrectionRequestModel.academicYearId,
         studentUid: studentModel.uid,
       })
       .from(cuRegistrationCorrectionRequestModel)
@@ -189,21 +190,26 @@ export const getCuRegistrationPdfUrlByRequestId = async (
         );
       }
 
-      // If all declarations are completed but no application number, this shouldn't happen
-      // but we'll generate one as a fallback
-      const applicationNumber =
-        await CuRegistrationNumberService.generateNextApplicationNumber();
-
-      // Update the correction request with the application number
-      await db
-        .update(cuRegistrationCorrectionRequestModel)
-        .set({ cuRegistrationApplicationNumber: applicationNumber })
-        .where(
-          eq(
-            cuRegistrationCorrectionRequestModel.id,
-            parseInt(correctionRequestId as string),
-          ),
-        );
+      // If all declarations are completed but no application number, generate one as a fallback
+      const ayId = correctionRequest.academicYearId ?? 0;
+      const applicationNumber = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${1001000 + ayId})`);
+        const num =
+          await CuRegistrationNumberService.generateNextApplicationNumber(
+            ayId,
+            tx,
+          );
+        await tx
+          .update(cuRegistrationCorrectionRequestModel)
+          .set({ cuRegistrationApplicationNumber: num })
+          .where(
+            eq(
+              cuRegistrationCorrectionRequestModel.id,
+              parseInt(correctionRequestId as string),
+            ),
+          );
+        return num;
+      });
 
       console.info(
         `[CU-REG PDF] Generated application number for completed request: ${applicationNumber}`,
