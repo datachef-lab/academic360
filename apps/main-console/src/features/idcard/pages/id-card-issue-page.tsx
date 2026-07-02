@@ -1024,15 +1024,15 @@ export default function IdCardIssuePage() {
                           Date:{" "}
                           {it.issueDate
                             ? (() => {
-                                // Force UTC: PG TIMESTAMP WITHOUT TIME ZONE may arrive without 'Z'.
-                                // Appending 'Z' ensures the browser treats it as UTC before converting to IST.
+                                // PG TIMESTAMP WITHOUT TIME ZONE stores IST (server timezone).
+                                // Append +05:30 so the browser parses it as IST, then display as IST.
                                 const s = it.issueDate;
-                                const utc = new Date(
+                                const ist = new Date(
                                   s.endsWith("Z") || s.includes("+")
                                     ? s
-                                    : s.replace(" ", "T") + "Z",
+                                    : s.replace(" ", "T") + "+05:30",
                                 );
-                                return utc.toLocaleString("en-IN", {
+                                return ist.toLocaleString("en-IN", {
                                   timeZone: "Asia/Kolkata",
                                   day: "2-digit",
                                   month: "short",
