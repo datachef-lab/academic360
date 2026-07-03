@@ -80,11 +80,12 @@ export const SIDEBAR_ENV_THEME: Record<AppEnv, SidebarEnvTheme> = {
     badge: null,
   },
   staging: {
-    headerGradient: "bg-gradient-to-r from-orange-900 to-orange-800",
-    headerHover: "hover:bg-orange-700/50",
-    surface: "bg-orange-800/95",
-    footerBorder: "border-orange-500",
-    itemHover: "hover:bg-orange-700/80",
+    // Pink (#ec4899 = pink-500), per the team's pick — unmistakably not prod.
+    headerGradient: "bg-gradient-to-r from-pink-600 to-pink-500",
+    headerHover: "hover:bg-pink-400/50",
+    surface: "bg-pink-500/95",
+    footerBorder: "border-pink-300",
+    itemHover: "hover:bg-pink-400/80",
     badge: "STAGING",
   },
   development: {

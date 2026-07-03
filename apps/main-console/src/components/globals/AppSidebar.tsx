@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useAppEnv, SIDEBAR_ENV_THEME } from "@/lib/app-env";
+import { EnvInfoDialog } from "@/components/globals/EnvInfoDialog";
 
 // Environment-aware sidebar coloring (purple = production only).
 function useSidebarEnvTheme() {
@@ -339,6 +340,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
 
         <SidebarContent className={`p-0 border-none ${ENV_THEME.surface} py-2`}>
+          <EnvInfoDialog />
           {showSkeleton ? (
             <div className="p-3 space-y-3">
               <div className="h-8 w-3/4 bg-purple-700/40 rounded animate-pulse" />
