@@ -449,12 +449,9 @@ html[data-env="development"] {
   --brandv-950: 8 12 30;
 }
 
-/* Primary/action color follows the environment brand (buttons, rings):
-   production = purple-600, staging = blue-600, development = #172554. */
-:root {
-  --primary: 271 81% 56%;
-  --ring: 271 81% 56%;
-}
+/* Primary/action color follows the environment brand (buttons, rings) in
+   STAGING and DEVELOPMENT only — production keeps its original tokens, so
+   nothing changes there. */
 html[data-env="staging"] {
   --primary: 221 83% 53%;
   --ring: 221 83% 53%;
