@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import MasterLayout from "@/components/layouts/MasterLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -101,6 +101,17 @@ function TrackerMain({
     void queryClient.invalidateQueries({ queryKey: ["rt-fee-mis", filtersKey] });
   }, [queryClient, filtersKey]);
 
+  // Global affiliation refresh: refetch with OUR filters. Trailing debounce so
+  // bursts (bulk imports, batch submits) collapse into one refetch.
+  const affiliationRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onAffiliationRefresh = useCallback(() => {
+    if (affiliationRefreshTimer.current) clearTimeout(affiliationRefreshTimer.current);
+    affiliationRefreshTimer.current = setTimeout(() => {
+      affiliationRefreshTimer.current = null;
+      void queryClient.invalidateQueries({ queryKey: ["rt-affiliation", filtersKey] });
+    }, 1000);
+  }, [queryClient, filtersKey]);
+
   const { isConnected } = useRealtimeTrackerSocket({
     userId: user?.id?.toString(),
     tab: activeTab,
@@ -108,6 +119,7 @@ function TrackerMain({
     onAffiliationUpdate,
     onFeeMisUpdate,
     onFeeMisRefresh,
+    onAffiliationRefresh,
     onError: handleSocketError,
   });
 

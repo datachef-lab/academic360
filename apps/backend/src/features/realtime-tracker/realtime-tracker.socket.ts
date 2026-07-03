@@ -53,6 +53,15 @@ export async function pushRealtimeTrackerSnapshot(
         payload as Record<string, unknown>,
         reason,
       );
+      // The room above only reaches viewers whose filter hash matches the
+      // broadcast's exactly — with the sidebar's rich default filters that
+      // almost never happens. Also tell EVERY tracker viewer to refetch with
+      // their own filters (the global-refresh pattern that makes Fee MIS
+      // reliable). Skip subscribe-time snapshots: those are one-client
+      // catch-ups, not data changes.
+      if (reason !== "subscribe") {
+        socketService.emitAffiliationRefresh(reason);
+      }
       return;
     }
     const payload = await getFeeMisData(filters);

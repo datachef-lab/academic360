@@ -466,6 +466,7 @@ export async function markPhysicalRegistrationDone(
     trigger: "cu_reg_request_update",
     affectedStudents: 1,
   });
+  void broadcastCuRegTrackerRefresh("physical_registration_done");
 
   if (!updated) {
     return null;
@@ -1690,7 +1691,26 @@ export async function updateCuRegistrationCorrectionRequest(
     );
   }
 
+  if (isFinalSubmission) {
+    void broadcastCuRegTrackerRefresh("online_registration_done");
+  }
+
   return await modelToDto(updatedRequest);
+}
+
+/**
+ * Refresh the Realtime Tracker (CU Registration tab) for all viewers after an
+ * online/physical registration status change. Debounced by the tracker's own
+ * scheduler; never fails the mutation.
+ */
+async function broadcastCuRegTrackerRefresh(reason: string): Promise<void> {
+  try {
+    const { scheduleRealtimeTrackerBroadcast } =
+      await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+    scheduleRealtimeTrackerBroadcast("affiliation", reason, {});
+  } catch (e) {
+    console.warn("[CU-REG CORRECTION] tracker refresh failed:", e);
+  }
 }
 
 // UPDATE - Approve request

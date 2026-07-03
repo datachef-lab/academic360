@@ -19,6 +19,8 @@ type UseRealtimeTrackerSocketOptions = {
   onAffiliationUpdate?: (data: AffiliationRegistrationPayload) => void;
   onFeeMisUpdate?: (data: FeeMisPayload) => void;
   onFeeMisRefresh?: () => void;
+  /** Global tracker refresh: refetch the affiliation tab with the CLIENT's own filters. */
+  onAffiliationRefresh?: () => void;
   onError?: (error: string) => void;
 };
 
@@ -29,6 +31,7 @@ export function useRealtimeTrackerSocket({
   onAffiliationUpdate,
   onFeeMisUpdate,
   onFeeMisRefresh,
+  onAffiliationRefresh,
   onError,
 }: UseRealtimeTrackerSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
@@ -45,6 +48,7 @@ export function useRealtimeTrackerSocket({
   const onAffiliationRef = useRef(onAffiliationUpdate);
   const onFeeMisRef = useRef(onFeeMisUpdate);
   const onFeeMisRefreshRef = useRef(onFeeMisRefresh);
+  const onAffiliationRefreshRef = useRef(onAffiliationRefresh);
   const onErrorRef = useRef(onError);
 
   tabRef.current = tab;
@@ -54,6 +58,7 @@ export function useRealtimeTrackerSocket({
   onAffiliationRef.current = onAffiliationUpdate;
   onFeeMisRef.current = onFeeMisUpdate;
   onFeeMisRefreshRef.current = onFeeMisRefresh;
+  onAffiliationRefreshRef.current = onAffiliationRefresh;
   onErrorRef.current = onError;
 
   const subscribe = useCallback(() => {
@@ -129,6 +134,12 @@ export function useRealtimeTrackerSocket({
 
     socket.on("fee_mis_refresh", () => {
       onFeeMisRefreshRef.current?.();
+    });
+
+    // Global refresh: the filter-hash room above only matches identical filter
+    // sets; this event reaches every viewer, who refetches with their own filters.
+    socket.on("affiliation_registration_refresh", () => {
+      onAffiliationRefreshRef.current?.();
     });
 
     return () => {

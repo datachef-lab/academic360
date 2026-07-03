@@ -1043,6 +1043,21 @@ class SocketService {
     });
   }
 
+  /**
+   * Tell all clients to refetch the CU-registration tracker tab. The
+   * filter-hash rooms only reach viewers whose EXACT filter set matches the
+   * broadcast's, which almost never happens with the sidebar's rich default
+   * filters — so, like Fee MIS, deliver a global refresh and let each client
+   * refetch with its own filters.
+   */
+  emitAffiliationRefresh(reason: string) {
+    if (!this.io) return;
+    this.io.emit("affiliation_registration_refresh", {
+      reason,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
   // Send MIS table update to all MIS dashboard rooms
   sendMisTableUpdateToAll(
     data: {
