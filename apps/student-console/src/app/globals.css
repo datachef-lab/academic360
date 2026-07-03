@@ -61,13 +61,20 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Notification color filters for SVG icons */
-    --blue-filter: invert(42%) sepia(93%) saturate(1352%) hue-rotate(199deg) brightness(101%) contrast(101%);
-    --emerald-filter: invert(42%) sepia(82%) saturate(1704%) hue-rotate(122deg) brightness(101%) contrast(101%);
-    --amber-filter: invert(70%) sepia(97%) saturate(1242%) hue-rotate(352deg) brightness(100%) contrast(101%);
-    --rose-filter: invert(34%) sepia(53%) saturate(3043%) hue-rotate(318deg) brightness(102%) contrast(101%);
-    --indigo-filter: invert(24%) sepia(96%) saturate(1335%) hue-rotate(229deg) brightness(88%) contrast(94%);
-    --violet-filter: invert(29%) sepia(92%) saturate(1269%) hue-rotate(248deg) brightness(89%) contrast(93%);
-    --red-filter: invert(28%) sepia(92%) saturate(7117%) hue-rotate(344deg) brightness(101%) contrast(118%);
+    --blue-filter: invert(42%) sepia(93%) saturate(1352%) hue-rotate(199deg) brightness(101%)
+      contrast(101%);
+    --emerald-filter: invert(42%) sepia(82%) saturate(1704%) hue-rotate(122deg) brightness(101%)
+      contrast(101%);
+    --amber-filter: invert(70%) sepia(97%) saturate(1242%) hue-rotate(352deg) brightness(100%)
+      contrast(101%);
+    --rose-filter: invert(34%) sepia(53%) saturate(3043%) hue-rotate(318deg) brightness(102%)
+      contrast(101%);
+    --indigo-filter: invert(24%) sepia(96%) saturate(1335%) hue-rotate(229deg) brightness(88%)
+      contrast(94%);
+    --violet-filter: invert(29%) sepia(92%) saturate(1269%) hue-rotate(248deg) brightness(89%)
+      contrast(93%);
+    --red-filter: invert(28%) sepia(92%) saturate(7117%) hue-rotate(344deg) brightness(101%)
+      contrast(118%);
   }
 
   .dark {
@@ -349,4 +356,21 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Environment theming (set via <html data-env="...">, applied by useAppEnv):
+   staging = pink (#ec4899), development = blue (#2563eb). Production keeps
+   the default tokens. Anything styled with the shadcn tokens (bg-primary,
+   rings, sidebar-primary, ...) follows automatically.
+--------------------------------------------------------------------------- */
+html[data-env="staging"] {
+  --primary: 330 81% 60%;
+  --ring: 330 81% 60%;
+  --sidebar-primary: 330 81% 60%;
+}
+html[data-env="development"] {
+  --primary: 221 83% 53%;
+  --ring: 221 83% 53%;
+  --sidebar-primary: 221 83% 53%;
 }

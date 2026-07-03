@@ -218,3 +218,20 @@ html {
   margin: 0.25em 0;
   padding-left: 1.25rem;
 }
+
+/* ---------------------------------------------------------------------------
+   Environment theming (set via <html data-env="...">, applied by useAppEnv):
+   staging = pink (#ec4899), development = blue (#2563eb). Production keeps
+   the default tokens. Anything styled with the shadcn tokens (bg-primary,
+   rings, sidebar-primary, ...) follows automatically.
+--------------------------------------------------------------------------- */
+html[data-env="staging"] {
+  --primary: 330 81% 60%;
+  --ring: 330 81% 60%;
+  --sidebar-primary: 330 81% 60%;
+}
+html[data-env="development"] {
+  --primary: 221 83% 53%;
+  --ring: 221 83% 53%;
+  --sidebar-primary: 221 83% 53%;
+}
