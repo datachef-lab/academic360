@@ -288,6 +288,11 @@ app.use(resourceRealtime);
 
 // Liveness probe for the ALB target group (no auth; /api/health is the
 // student health-records feature, not a status endpoint).
+// Which environment this backend runs as (drives the console's env theming).
+app.get("/api/app-env", (_req, res) => {
+  res.json({ env: process.env.NODE_ENV || "development" });
+});
+
 app.get("/healthz", (_req, res) => {
   res.status(200).send("ok");
 });
