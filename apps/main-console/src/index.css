@@ -253,16 +253,17 @@ html[data-env="staging"] {
   --brand-900: 30 58 138;
   --brand-950: 23 37 84;
 }
+/* development anchored on #0f172a (slate-900) per team pick */
 html[data-env="development"] {
-  --brand-50: 249 250 251;
-  --brand-100: 243 244 246;
-  --brand-200: 229 231 235;
-  --brand-300: 209 213 219;
-  --brand-400: 156 163 175;
-  --brand-500: 107 114 128;
-  --brand-600: 75 85 99;
-  --brand-700: 55 65 81;
-  --brand-800: 31 41 55;
-  --brand-900: 17 24 39;
-  --brand-950: 3 7 18;
+  --brand-50: 248 250 252;
+  --brand-100: 241 245 249;
+  --brand-200: 226 232 240;
+  --brand-300: 203 213 225;
+  --brand-400: 148 163 184;
+  --brand-500: 100 116 139;
+  --brand-600: 71 85 105;
+  --brand-700: 51 65 85;
+  --brand-800: 30 41 59;
+  --brand-900: 15 23 42;
+  --brand-950: 2 6 23;
 }

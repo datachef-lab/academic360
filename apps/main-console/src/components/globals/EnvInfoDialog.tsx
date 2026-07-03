@@ -26,7 +26,7 @@ export function EnvInfoDialog() {
 
   if (env === "production") return null;
 
-  const badgeClass = env === "staging" ? "bg-blue-600 text-white" : "bg-gray-600 text-white";
+  const badgeClass = env === "staging" ? "bg-blue-600 text-white" : "bg-slate-800 text-white";
   const label = env.toUpperCase();
 
   return (
@@ -65,7 +65,7 @@ export function EnvInfoDialog() {
                 {env === "staging" ? (
                   <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
                 ) : (
-                  <Code2 className="mt-0.5 h-4 w-4 shrink-0 text-gray-600" />
+                  <Code2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-700" />
                 )}
                 <span>
                   {env === "staging"
