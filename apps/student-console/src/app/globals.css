@@ -492,3 +492,14 @@ html[data-env="development"] {
   --brandb-900: 13 21 48;
   --brandb-950: 8 12 30;
 }
+
+/* Student welcome banner: production keeps its EXACT original color (#a674fe). */
+:root {
+  --brand-banner: 166 116 254;
+}
+html[data-env="staging"] {
+  --brand-banner: 37 99 235;
+}
+html[data-env="development"] {
+  --brand-banner: 23 37 84;
+}

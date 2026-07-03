@@ -101,7 +101,7 @@ export function EnvInfoDialog() {
         <DialogContent className="h-[80vh] max-h-[80vh] w-[70vw] max-w-[70vw] overflow-y-auto p-0">
           <div className="grid h-full md:grid-cols-[2fr_3fr]">
             {/* Left column: illustration filling the panel */}
-            <div className="max-h-40 overflow-hidden border-slate-200 md:max-h-none md:border-r">
+            <div className="max-h-40 overflow-hidden border-slate-300 md:max-h-none md:border-r">
               <img
                 src="/profile-info-illustration.jpg"
                 alt="Environment illustration"
@@ -111,7 +111,7 @@ export function EnvInfoDialog() {
 
             {/* Right column: header + content */}
             <div className="flex flex-col gap-4 p-6">
-              <DialogHeader className="border-b border-slate-200 pb-3">
+              <DialogHeader className="border-b border-slate-300 pb-3">
                 <DialogTitle className="flex items-center gap-2">
                   Environment
                   <Badge className={badgeClass}>{label} MODE</Badge>
@@ -148,7 +148,7 @@ export function EnvInfoDialog() {
               </div>
 
               {/* Notification routing */}
-              <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3">
+              <div className="mt-auto flex flex-col gap-3 rounded-lg border border-slate-300 bg-muted/20 p-3">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <BellRing className="h-4 w-4 text-violet-600" />
                   Notification routing
@@ -164,7 +164,7 @@ export function EnvInfoDialog() {
                     All notifications from development go <b>only to the developer</b> contact
                     configured in the backend environment — never to staff or students.
                   </p>
-                  <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-sm">
+                  <div className="space-y-2 rounded-lg border border-slate-200 bg-muted/30 p-3 text-sm">
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 shrink-0 text-slate-500" />
                       <span className="truncate">{details?.developer?.email || "—"}</span>
@@ -175,7 +175,7 @@ export function EnvInfoDialog() {
                     </div>
                   </div>
                   {details?.developer?.user ? (
-                    <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-muted/30 p-3">
                       <Avatar className="h-10 w-10">
                         {details.developer.user.image ? (
                           <AvatarImage
@@ -204,7 +204,7 @@ export function EnvInfoDialog() {
                     specifically those with staging notifications enabled:
                   </p>
                   {details?.recipients?.length ? (
-                    <div className="max-h-64 overflow-y-auto rounded-lg border">
+                    <div className="max-h-64 overflow-y-auto rounded-lg border border-slate-200">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -247,7 +247,7 @@ export function EnvInfoDialog() {
                       </Table>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-muted/30 p-3 text-sm text-muted-foreground">
                       <Users className="h-4 w-4" /> No staff currently have staging notifications
                       enabled.
                     </div>
