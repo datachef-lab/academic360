@@ -407,3 +407,44 @@ html[data-env="development"] {
   --brand-900: 2 6 23;
   --brand-950: 2 6 23;
 }
+
+/* violet scale follows the environment too (defaults = original violet). */
+:root {
+  --brandv-50: 245 243 255;
+  --brandv-100: 237 233 254;
+  --brandv-200: 221 214 254;
+  --brandv-300: 196 181 253;
+  --brandv-400: 167 139 250;
+  --brandv-500: 139 92 246;
+  --brandv-600: 124 58 237;
+  --brandv-700: 109 40 217;
+  --brandv-800: 91 33 182;
+  --brandv-900: 76 29 149;
+  --brandv-950: 46 16 101;
+}
+html[data-env="staging"] {
+  --brandv-50: 239 246 255;
+  --brandv-100: 219 234 254;
+  --brandv-200: 191 219 254;
+  --brandv-300: 147 197 253;
+  --brandv-400: 96 165 250;
+  --brandv-500: 59 130 246;
+  --brandv-600: 37 99 235;
+  --brandv-700: 29 78 216;
+  --brandv-800: 30 64 175;
+  --brandv-900: 30 58 138;
+  --brandv-950: 23 37 84;
+}
+html[data-env="development"] {
+  --brandv-50: 248 250 252;
+  --brandv-100: 241 245 249;
+  --brandv-200: 226 232 240;
+  --brandv-300: 203 213 225;
+  --brandv-400: 148 163 184;
+  --brandv-500: 71 85 105;
+  --brandv-600: 51 65 85;
+  --brandv-700: 30 41 59;
+  --brandv-800: 15 23 42;
+  --brandv-900: 2 6 23;
+  --brandv-950: 2 6 23;
+}
