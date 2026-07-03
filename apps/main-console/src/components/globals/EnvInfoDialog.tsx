@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info } from "lucide-react";
+import { Code2, Database, FlaskConical, Info, ShieldCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,11 +56,30 @@ export function EnvInfoDialog() {
               className="max-h-80 w-full rounded-xl border border-slate-300 object-contain shadow"
             />
 
-            <p className="text-center text-sm text-muted-foreground">
-              {env === "staging"
-                ? "Staging mirrors production for pre-release testing. Data here can be reset or overwritten at any time — nothing done here affects the live system."
-                : "Development is the active build environment. Data here is test data and may change or be wiped frequently — nothing done here affects the live system."}
-            </p>
+            <div className="w-full space-y-2.5 text-sm text-muted-foreground">
+              <div className="flex items-start gap-2.5">
+                {env === "staging" ? (
+                  <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-pink-500" />
+                ) : (
+                  <Code2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                )}
+                <span>
+                  {env === "staging"
+                    ? "Staging mirrors production for pre-release testing of upcoming changes."
+                    : "Development is the active build environment for work in progress."}
+                </span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Database className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <span>
+                  Data here is test data — it can change, be reset or overwritten at any time.
+                </span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <span>Nothing done here affects the live (production) system.</span>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
