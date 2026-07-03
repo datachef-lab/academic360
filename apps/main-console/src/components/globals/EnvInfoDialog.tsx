@@ -98,27 +98,30 @@ export function EnvInfoDialog() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Environment
-              <Badge className={badgeClass}>{label} MODE</Badge>
-            </DialogTitle>
-            <DialogDescription>
-              This console is currently running against the <b>{env}</b> environment.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-h-[85vh] overflow-y-auto p-0 sm:max-w-3xl">
+          <div className="grid md:grid-cols-[2fr_3fr]">
+            {/* Left column: illustration filling the panel */}
+            <div className="max-h-40 overflow-hidden md:max-h-none">
+              <img
+                src="/profile-info-illustration.jpg"
+                alt="Environment illustration"
+                className="h-full w-full rounded-t-lg object-cover md:rounded-l-lg md:rounded-tr-none"
+              />
+            </div>
 
-          {/* Banner illustration across the top */}
-          <img
-            src="/profile-info-illustration.jpg"
-            alt="Environment illustration"
-            className="h-36 w-full rounded-lg border border-slate-200 object-cover object-center"
-          />
+            {/* Right column: header + content */}
+            <div className="flex flex-col gap-4 p-6">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  Environment
+                  <Badge className={badgeClass}>{label} MODE</Badge>
+                </DialogTitle>
+                <DialogDescription>
+                  This console is currently running against the <b>{env}</b> environment.
+                </DialogDescription>
+              </DialogHeader>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Left: what this mode means */}
-            <div className="rounded-lg border bg-muted/20 p-3">
+              {/* What this mode means */}
               <div className="space-y-2.5 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2.5">
                   {env === "staging" ? (
@@ -143,14 +146,13 @@ export function EnvInfoDialog() {
                   <span>Nothing done here affects the live (production) system.</span>
                 </div>
               </div>
-            </div>
 
-            {/* Right: notification routing */}
-            <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <BellRing className="h-4 w-4 text-violet-600" />
-                Notification routing
-              </div>
+              {/* Notification routing */}
+              <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <BellRing className="h-4 w-4 text-violet-600" />
+                  Notification routing
+                </div>
 
               {loading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -252,6 +254,7 @@ export function EnvInfoDialog() {
                   )}
                 </div>
               )}
+              </div>
             </div>
           </div>
         </DialogContent>
