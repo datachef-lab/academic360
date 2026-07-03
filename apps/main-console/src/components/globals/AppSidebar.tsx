@@ -9,13 +9,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { useAppEnv, SIDEBAR_ENV_THEME } from "@/lib/app-env";
 import { EnvInfoDialog } from "@/components/globals/EnvInfoDialog";
 
-// Environment-aware sidebar coloring (purple = production only).
-function useSidebarEnvTheme() {
-  return SIDEBAR_ENV_THEME[useAppEnv()];
-}
 import {
   Settings,
   Home,
@@ -153,7 +148,6 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const ENV_THEME = useSidebarEnvTheme();
   const location = useLocation();
   const { settings } = useSettings();
   const currentPath = location.pathname;
@@ -248,15 +242,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <div className="relative">
       <Sidebar collapsible="icon" {...props} className="bg-white overflow-hidden border-none">
-        <SidebarHeader
-          className={`h-16 border-b border-purple-50/30 ${ENV_THEME.headerGradient} shadow-lg p-0`}
-        >
+        <SidebarHeader className="h-16 border-b border-purple-50/30 bg-gradient-to-r from-purple-900 to-purple-800 shadow-lg p-0">
           <div className=" h-full flex items-center w-full">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  className={`flex w-full items-center gap-3 rounded-lg p-2 text-left ${ENV_THEME.headerHover} transition-colors`}
-                >
+                <button className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-purple-700/50 transition-colors">
                   <div className="flex items-center justify-center p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
                     <Avatar className="h-8 w-8 ring-2 ring-white/20 overflow-hidden">
                       {collegeLogoSrc ? (
@@ -285,11 +275,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           : currentAcademicYear?.year || "Select Year"}
                     </p>
                   </div>
-                  {ENV_THEME.badge ? (
-                    <span className="rounded bg-white/25 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white flex-shrink-0">
-                      {ENV_THEME.badge}
-                    </span>
-                  ) : null}
                   <ChevronDown className="h-4 w-4 text-purple-200 flex-shrink-0" />
                 </button>
               </DropdownMenuTrigger>
@@ -339,7 +324,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         </SidebarHeader>
 
-        <SidebarContent className={`p-0 border-none ${ENV_THEME.surface} py-2`}>
+        <SidebarContent className="p-0 border-none bg-purple-800/95 py-2">
           <EnvInfoDialog />
           {showSkeleton ? (
             <div className="p-3 space-y-3">
@@ -492,9 +477,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           )}
         </SidebarContent>
 
-        <SidebarFooter
-          className={`mt-auto border-t ${ENV_THEME.footerBorder} ${ENV_THEME.surface}`}
-        >
+        <SidebarFooter className="mt-auto border-t border-purple-500 bg-purple-800/95">
           {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="p-1 cursor-pointer transition-colors duration-200">
@@ -557,7 +540,6 @@ interface NavItemProps {
 
 export function NavItem({ href, icon, children, isActive }: NavItemProps) {
   const { isMobile, setOpenMobile } = useSidebar();
-  const ENV_THEME = useSidebarEnvTheme();
 
   const handleClick = () => {
     // Close sidebar on mobile when link is clicked
@@ -574,7 +556,7 @@ export function NavItem({ href, icon, children, isActive }: NavItemProps) {
         " border border-transparent group flex items-center transition-all duration-150 px-6 py-1 hover:border-slate-50 text-sm font-medium relative rounded-l-md",
         isActive
           ? "bg-white hover:text-purple-600 font-semibold text-purple-600 shadow-lg"
-          : `text-white ${ENV_THEME.itemHover} hover:text-white`,
+          : "text-white hover:bg-purple-700/80 hover:text-white",
       )}
     >
       <div className="flex items-center gap-3 w-full">
