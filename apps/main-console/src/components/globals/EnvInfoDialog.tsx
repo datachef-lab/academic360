@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Code2, Database, FlaskConical, Info, ShieldCheck } from "lucide-react";
+import { BellRing, Code2, Database, FlaskConical, Info, ShieldCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useAppEnv } from "@/lib/app-env";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 /**
  * Environment indicator (development / staging ONLY — renders nothing in
@@ -19,6 +20,9 @@ import { useAppEnv } from "@/lib/app-env";
 export function EnvInfoDialog() {
   const [open, setOpen] = useState(false);
   const env = useAppEnv();
+  const { user } = useAuth();
+  const stagingNotifEnabled =
+    (user as { sendStagingNotifications?: boolean } | null)?.sendStagingNotifications === true;
 
   if (env === "production") return null;
 
@@ -78,6 +82,19 @@ export function EnvInfoDialog() {
               <div className="flex items-start gap-2.5">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <span>Nothing done here affects the live (production) system.</span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <BellRing className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                <span>
+                  Notifications from this environment go to <b>college staff only</b> — never to
+                  actual students. Your account&apos;s staging-notification flag is{" "}
+                  {stagingNotifEnabled ? (
+                    <b className="text-emerald-600">ENABLED</b>
+                  ) : (
+                    <b className="text-red-500">DISABLED</b>
+                  )}
+                  .
+                </span>
               </div>
             </div>
           </div>

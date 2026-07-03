@@ -23,6 +23,12 @@ function guessAppEnvFromHostname(): AppEnv {
   return "production";
 }
 
+function applyEnvToDocument(env: AppEnv) {
+  if (typeof document !== "undefined") {
+    document.documentElement.setAttribute("data-env", env);
+  }
+}
+
 let cachedEnv: AppEnv | null = null;
 let fetchPromise: Promise<AppEnv | null> | null = null;
 
@@ -42,14 +48,25 @@ function fetchBackendEnv(): Promise<AppEnv | null> {
  * resolves; production assumed for unknown hosts (fail-safe: no banner).
  */
 export function useAppEnv(): AppEnv {
-  const [env, setEnv] = useState<AppEnv>(cachedEnv ?? guessAppEnvFromHostname());
+  // SSR-safe: the initial render must match on server and client (Next.js
+  // hydration), so start from the cached value or "production" and only apply
+  // the hostname guess / backend answer after mount.
+  const [env, setEnv] = useState<AppEnv>(cachedEnv ?? "production");
   useEffect(() => {
-    if (cachedEnv) return;
+    if (cachedEnv) {
+      setEnv(cachedEnv);
+      applyEnvToDocument(cachedEnv);
+      return;
+    }
+    const guess = guessAppEnvFromHostname();
+    setEnv(guess);
+    applyEnvToDocument(guess);
     let cancelled = false;
     void fetchBackendEnv().then((backendEnv) => {
       if (backendEnv && !cancelled) {
         cachedEnv = backendEnv;
         setEnv(backendEnv);
+        applyEnvToDocument(backendEnv);
       }
     });
     return () => {
