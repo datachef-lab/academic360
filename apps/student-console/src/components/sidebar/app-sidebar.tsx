@@ -17,6 +17,7 @@ import {
 import { usePathname } from "next/navigation";
 
 import { NavMain } from "@/components/sidebar/nav-main";
+import { useAppEnv, STUDENT_SIDEBAR_ENV_BG } from "@/lib/app-env";
 import { NavUser } from "@/components/sidebar/nav-user";
 import {
   Sidebar,
@@ -61,6 +62,8 @@ type AcademicActivityApiDto = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // Environment-aware sidebar coloring (purple = production only).
+  const envBg = STUDENT_SIDEBAR_ENV_BG[useAppEnv()];
   const isNestedIframe = window.self !== window.top;
   const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
   const pathname = usePathname();
@@ -435,7 +438,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar variant="floating" collapsible="icon" {...props} className="rounded-md">
-      <SidebarHeader className="!bg-purple-600">
+      <SidebarHeader className={envBg}>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="cursor-default hover:bg-transparent">
@@ -471,10 +474,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="!bg-purple-600">
+      <SidebarContent className={envBg}>
         <NavMain items={navMainItems} className="p-0" />
       </SidebarContent>
-      <SidebarFooter className="!bg-purple-600 p-2">
+      <SidebarFooter className={`${envBg} p-2`}>
         <NavUser />
       </SidebarFooter>
     </Sidebar>
