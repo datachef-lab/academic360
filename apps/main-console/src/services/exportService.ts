@@ -270,6 +270,39 @@ export class ExportService {
   }
 
   /**
+   * Pre-check the import Excel: which UIDs already exist (re-synced in place)
+   * vs new. Read-only; used for the confirm dialog before importing.
+   */
+  static async precheckImportStudentsExcel(file: File): Promise<{
+    success: boolean;
+    message?: string;
+    data?: {
+      totalUids: number;
+      existingCount: number;
+      newCount: number;
+      existingUids: string[];
+      error?: string;
+    };
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await axiosInstance.post(
+        `/api/students/import-legacy-students/precheck`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return { success: true, data: response.data?.payload ?? response.data?.data };
+    } catch (error: unknown) {
+      console.error("Student import precheck error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Pre-check failed",
+      };
+    }
+  }
+
+  /**
    * Upload Excel to import/add students (legacy importer)
    * Backend: POST /api/students/import-legacy-students (multipart/form-data, field: file)
    */
