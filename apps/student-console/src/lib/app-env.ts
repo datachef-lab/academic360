@@ -75,13 +75,3 @@ export function useAppEnv(): AppEnv {
   }, []);
   return env;
 }
-
-/**
- * Student-console sidebar surface per environment: purple = production
- * (unchanged), pink (#ec4899) = staging, blue = development.
- */
-export const STUDENT_SIDEBAR_ENV_BG: Record<AppEnv, string> = {
-  production: "!bg-purple-600",
-  staging: "!bg-pink-500",
-  development: "!bg-blue-600",
-};

@@ -220,18 +220,49 @@ html {
 }
 
 /* ---------------------------------------------------------------------------
-   Environment theming (set via <html data-env="...">, applied by useAppEnv):
-   staging = pink (#ec4899), development = blue (#2563eb). Production keeps
-   the default tokens. Anything styled with the shadcn tokens (bg-primary,
-   rings, sidebar-primary, ...) follows automatically.
+   Environment brand palette (set via <html data-env="...">, by useAppEnv).
+   Tailwind's `purple` scale is remapped to these variables, so EVERY
+   purple-* utility follows the environment:
+     production (default) = the original purple, unchanged;
+     staging               = blue;
+     development           = grey.
 --------------------------------------------------------------------------- */
+:root {
+  --brand-50: 250 245 255;
+  --brand-100: 243 232 255;
+  --brand-200: 233 213 255;
+  --brand-300: 216 180 254;
+  --brand-400: 192 132 252;
+  --brand-500: 168 85 247;
+  --brand-600: 147 51 234;
+  --brand-700: 126 34 206;
+  --brand-800: 107 33 168;
+  --brand-900: 88 28 135;
+  --brand-950: 59 7 100;
+}
 html[data-env="staging"] {
-  --primary: 330 81% 60%;
-  --ring: 330 81% 60%;
-  --sidebar-primary: 330 81% 60%;
+  --brand-50: 239 246 255;
+  --brand-100: 219 234 254;
+  --brand-200: 191 219 254;
+  --brand-300: 147 197 253;
+  --brand-400: 96 165 250;
+  --brand-500: 59 130 246;
+  --brand-600: 37 99 235;
+  --brand-700: 29 78 216;
+  --brand-800: 30 64 175;
+  --brand-900: 30 58 138;
+  --brand-950: 23 37 84;
 }
 html[data-env="development"] {
-  --primary: 221 83% 53%;
-  --ring: 221 83% 53%;
-  --sidebar-primary: 221 83% 53%;
+  --brand-50: 249 250 251;
+  --brand-100: 243 244 246;
+  --brand-200: 229 231 235;
+  --brand-300: 209 213 219;
+  --brand-400: 156 163 175;
+  --brand-500: 107 114 128;
+  --brand-600: 75 85 99;
+  --brand-700: 55 65 81;
+  --brand-800: 31 41 55;
+  --brand-900: 17 24 39;
+  --brand-950: 3 7 18;
 }
