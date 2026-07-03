@@ -109,18 +109,16 @@ export function EnvInfoDialog() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            {/* Left: illustration only, filling the column height */}
-            <div className="flex">
-              <img
-                src="/profile-info-illustration.jpg"
-                alt="Environment illustration"
-                className="h-full min-h-[320px] w-full rounded-xl border border-slate-300 object-cover shadow"
-              />
-            </div>
+          {/* Banner illustration across the top */}
+          <img
+            src="/profile-info-illustration.jpg"
+            alt="Environment illustration"
+            className="h-36 w-full rounded-lg border border-slate-200 object-cover object-center"
+          />
 
-            {/* Right: what this mode means + notification routing */}
-            <div className="flex flex-col gap-3">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Left: what this mode means */}
+            <div className="rounded-lg border bg-muted/20 p-3">
               <div className="space-y-2.5 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2.5">
                   {env === "staging" ? (
@@ -145,8 +143,11 @@ export function EnvInfoDialog() {
                   <span>Nothing done here affects the live (production) system.</span>
                 </div>
               </div>
+            </div>
 
-              <div className="mt-1 flex items-center gap-2 text-sm font-semibold">
+            {/* Right: notification routing */}
+            <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
                 <BellRing className="h-4 w-4 text-violet-600" />
                 Notification routing
               </div>
