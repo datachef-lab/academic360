@@ -207,17 +207,26 @@ export async function listReportDates() {
   return res.data.payload.dates;
 }
 
-export function reportExcelUrl(date: string) {
-  return `${BASE}/reports/excel?date=${encodeURIComponent(date)}`;
+export interface ReportDateRange {
+  from: string; // YYYY-MM-DD
+  to: string; // YYYY-MM-DD
 }
 
-export function reportZipUrl(date: string) {
-  return `${BASE}/reports/zip?date=${encodeURIComponent(date)}`;
+export function reportExcelUrl({ from, to }: ReportDateRange) {
+  return `${BASE}/reports/excel?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 }
 
-export async function downloadReport(kind: "excel" | "zip", date: string, filename: string) {
+export function reportZipUrl({ from, to }: ReportDateRange) {
+  return `${BASE}/reports/zip?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+}
+
+export async function downloadReport(
+  kind: "excel" | "zip",
+  range: ReportDateRange,
+  filename: string,
+) {
   const res = await axiosInstance.get(`${BASE}/reports/${kind}`, {
-    params: { date },
+    params: { from: range.from, to: range.to },
     responseType: "blob",
   });
   const blob = new Blob([res.data]);

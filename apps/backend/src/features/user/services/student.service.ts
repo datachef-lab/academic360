@@ -1567,6 +1567,8 @@ export async function exportStudentDetailedReport(academicYearId: number) {
         std.old_uid AS student_old_uid,
         std.registration_number AS student_registration_number,
         std.roll_number AS student_roll_number,
+        ay.year AS academic_year,
+        cl.name AS semester,
         sh.name AS shift,
         sec.name AS section,
         std.rfid_number AS student_rfid_number,
@@ -1649,6 +1651,8 @@ export async function exportStudentDetailedReport(academicYearId: number) {
       LEFT JOIN family_details fd ON fd.user_id_fk = u.id
       LEFT JOIN sections sec ON sec.id = pr.section_id_fk
       LEFT JOIN shifts sh ON sh.id = pr.shift_id_fk
+      LEFT JOIN classes cl ON cl.id = pr.class_id_fk
+      LEFT JOIN academic_years ay ON ay.id = ${academicYearId}
       LEFT JOIN person father ON father.family_id_fk = fd.id AND father.type = 'FATHER'
       LEFT JOIN person mother ON mother.family_id_fk = fd.id AND mother.type = 'MOTHER'
       LEFT JOIN addr_pivot ap ON ap.personal_details_id_fk = pd.id
