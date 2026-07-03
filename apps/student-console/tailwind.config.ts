@@ -13,6 +13,32 @@ export default {
   theme: {
     extend: {
       colors: {
+        blue: {
+          50: "rgb(var(--brandb-50) / <alpha-value>)",
+          100: "rgb(var(--brandb-100) / <alpha-value>)",
+          200: "rgb(var(--brandb-200) / <alpha-value>)",
+          300: "rgb(var(--brandb-300) / <alpha-value>)",
+          400: "rgb(var(--brandb-400) / <alpha-value>)",
+          500: "rgb(var(--brandb-500) / <alpha-value>)",
+          600: "rgb(var(--brandb-600) / <alpha-value>)",
+          700: "rgb(var(--brandb-700) / <alpha-value>)",
+          800: "rgb(var(--brandb-800) / <alpha-value>)",
+          900: "rgb(var(--brandb-900) / <alpha-value>)",
+          950: "rgb(var(--brandb-950) / <alpha-value>)",
+        },
+        violet: {
+          50: "rgb(var(--brandv-50) / <alpha-value>)",
+          100: "rgb(var(--brandv-100) / <alpha-value>)",
+          200: "rgb(var(--brandv-200) / <alpha-value>)",
+          300: "rgb(var(--brandv-300) / <alpha-value>)",
+          400: "rgb(var(--brandv-400) / <alpha-value>)",
+          500: "rgb(var(--brandv-500) / <alpha-value>)",
+          600: "rgb(var(--brandv-600) / <alpha-value>)",
+          700: "rgb(var(--brandv-700) / <alpha-value>)",
+          800: "rgb(var(--brandv-800) / <alpha-value>)",
+          900: "rgb(var(--brandv-900) / <alpha-value>)",
+          950: "rgb(var(--brandv-950) / <alpha-value>)",
+        },
         purple: {
           50: "rgb(var(--brand-50) / <alpha-value>)",
           100: "rgb(var(--brand-100) / <alpha-value>)",
