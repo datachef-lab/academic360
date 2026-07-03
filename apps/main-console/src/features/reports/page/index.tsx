@@ -196,6 +196,40 @@ export default function ReportsPage() {
         console.log("Export completed via socket update");
         setIsExporting(false);
         // The modal will auto-close due to the completed status in ExportProgressDialog
+
+        // Legacy student import: show the final summary (incl. per-uid errors)
+        const meta = data.meta as
+          | {
+              operation?: string;
+              summary?: {
+                processed: number;
+                notFound: number;
+                errors: Array<{ uid: string; error: string }>;
+              };
+            }
+          | undefined;
+        if (meta?.operation === "student_import_legacy_students" && meta.summary) {
+          const { processed, notFound, errors } = meta.summary;
+          if (errors?.length) {
+            const list = errors
+              .slice(0, 10)
+              .map((e) => `<li><b>${e.uid}</b>: ${e.error}</li>`)
+              .join("");
+            void Swal.fire({
+              title: "Import completed with errors",
+              html:
+                `<div style="text-align:left"><p>${processed} processed, ${notFound} not found, <b>${errors.length} error(s)</b>:</p>` +
+                `<ul style="font-size:12px">${list}</ul>` +
+                (errors.length > 10
+                  ? `<p style="font-size:12px;color:#6b7280">…and ${errors.length - 10} more</p>`
+                  : "") +
+                `</div>`,
+              icon: "warning",
+            });
+          } else {
+            toast.success(`Import completed: ${processed} students processed.`);
+          }
+        }
       } else if (data.status === "error") {
         console.log("Export failed via socket update");
         setIsExporting(false);
@@ -590,8 +624,11 @@ export default function ReportsPage() {
       return;
     }
 
-    completeUploadProgress(operation, "Student import completed.", true);
-    toast.success("Student import completed.");
+    // The import now runs asynchronously server-side (the old synchronous
+    // request died on the ALB ~60s idle timeout for big files). The progress
+    // dialog is socket-driven; the final summary arrives with the completion
+    // event handled in handleProgressUpdate.
+    toast.info("Import started — progress will update live.");
   };
 
   const handleExcelFileSelected = async (reportId: string, e: ChangeEvent<HTMLInputElement>) => {

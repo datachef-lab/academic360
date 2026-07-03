@@ -857,12 +857,59 @@ export const importStudentsFromExcelController = async (
     const progressUserId = (req as any).user?.id
       ? String((req as any).user.id)
       : undefined;
-    const summary = await processStudentsFromExcelBuffer(file.buffer, {
-      progressUserId,
-    });
+    // Run the import in the BACKGROUND and respond immediately: the ALB cuts
+    // idle HTTP connections (~60s) long before a big import finishes, which
+    // used to surface as "Network Error" and swallow the final summary. The
+    // per-student progress is already socket-driven; the final summary (incl.
+    // the per-uid error list) is now delivered the same way.
+    const operation = "student_import_legacy_students";
+    void processStudentsFromExcelBuffer(file.buffer, { progressUserId })
+      .then((summary) => {
+        if (!progressUserId) return;
+        socketService.sendProgressUpdate(
+          progressUserId,
+          socketService.createExportProgressUpdate(
+            progressUserId,
+            `Import completed: ${summary.processed} processed, ${summary.errors.length} error(s)`,
+            100,
+            "completed",
+            undefined,
+            undefined,
+            undefined,
+            { operation, summary },
+          ),
+        );
+      })
+      .catch((error) => {
+        console.error(
+          "[import-legacy-students] background import failed:",
+          error,
+        );
+        if (!progressUserId) return;
+        socketService.sendProgressUpdate(
+          progressUserId,
+          socketService.createExportProgressUpdate(
+            progressUserId,
+            "Import failed",
+            100,
+            "error",
+            undefined,
+            undefined,
+            (error as Error)?.message,
+            { operation },
+          ),
+        );
+      });
     res
-      .status(200)
-      .json(new ApiResponse(200, "SUCCESS", summary, "Import completed"));
+      .status(202)
+      .json(
+        new ApiResponse(
+          202,
+          "SUCCESS",
+          { status: "started" },
+          "Import started; progress and the final summary arrive via socket",
+        ),
+      );
   } catch (error) {
     handleError(error, res, next);
   }
