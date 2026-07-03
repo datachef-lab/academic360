@@ -30,6 +30,7 @@ import {
   Copy,
 } from "lucide-react";
 import { toast } from "sonner";
+import Swal from "sweetalert2";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useSocket } from "@/hooks/useSocket";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
@@ -546,6 +547,40 @@ export default function ReportsPage() {
 
   const uploadImportStudentsExcel = async (file: File) => {
     const operation = "student_import_legacy_students";
+
+    // Pre-check: tell the user how many UIDs already exist (re-synced in
+    // place, no duplicates) vs new, and ask for confirmation.
+    const precheck = await ExportService.precheckImportStudentsExcel(file);
+    if (precheck.success && precheck.data && !precheck.data.error) {
+      const { totalUids, existingCount, newCount, existingUids } = precheck.data;
+      const sample = (existingUids ?? []).slice(0, 8).join(", ");
+      const confirmed = await Swal.fire({
+        title: "Confirm student import",
+        html:
+          `<div style="text-align:left">` +
+          `<p><b>${totalUids}</b> UID(s) found in the file.</p>` +
+          `<p>• <b>${existingCount}</b> already exist — they will be <b>re-synced in place</b> (missing admission/promotion/fees completed; no duplicates).</p>` +
+          `<p>• <b>${newCount}</b> are new — they will be imported.</p>` +
+          (existingCount > 0
+            ? `<p style="font-size:12px;color:#6b7280">Existing: ${sample}${existingCount > 8 ? ` … +${existingCount - 8} more` : ""}</p>`
+            : "") +
+          `</div>`,
+        icon: existingCount > 0 ? "warning" : "question",
+        showCancelButton: true,
+        confirmButtonText: "Continue import",
+        cancelButtonText: "Cancel",
+      });
+      if (!confirmed.isConfirmed) {
+        toast.info("Import cancelled.");
+        return;
+      }
+    } else if (precheck.data?.error) {
+      toast.error(precheck.data.error);
+      return;
+    }
+    // If the pre-check itself failed (network etc.), continue with the import
+    // as before rather than blocking the user.
+
     startUploadProgress(operation, "Uploading Excel to import students…");
 
     const result = await ExportService.importStudentsFromExcel(file);

@@ -5,6 +5,7 @@
 import { NextFunction, Request, Response } from "express";
 import {
   processStudentsFromExcelBuffer,
+  precheckStudentsFromExcelBuffer,
   backfillStudentQuotaTypes,
 } from "../services/refactor-old-migration.service.js";
 // import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
@@ -807,6 +808,31 @@ export const bulkUpdateFamilyMemberTitlesController = async (
       );
   } catch (error) {
     console.error("[FAMILY-TITLE-BULK] Error processing bulk update:", error);
+    handleError(error, res, next);
+  }
+};
+
+// Pre-check an import Excel: which UIDs already exist vs new (read-only)
+export const precheckImportStudentsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file || !file.buffer) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "Excel file is required under field name 'file'"),
+        );
+      return;
+    }
+    const summary = await precheckStudentsFromExcelBuffer(file.buffer);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", summary, "Pre-check completed"));
+  } catch (error) {
     handleError(error, res, next);
   }
 };
