@@ -98,10 +98,10 @@ export function EnvInfoDialog() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto p-0 sm:max-w-3xl">
-          <div className="grid md:grid-cols-[2fr_3fr]">
+        <DialogContent className="h-[80vh] max-h-[80vh] w-[70vw] max-w-[70vw] overflow-y-auto p-0">
+          <div className="grid h-full md:grid-cols-[2fr_3fr]">
             {/* Left column: illustration filling the panel */}
-            <div className="max-h-40 overflow-hidden md:max-h-none">
+            <div className="max-h-40 overflow-hidden border-slate-200 md:max-h-none md:border-r">
               <img
                 src="/profile-info-illustration.jpg"
                 alt="Environment illustration"
@@ -111,7 +111,7 @@ export function EnvInfoDialog() {
 
             {/* Right column: header + content */}
             <div className="flex flex-col gap-4 p-6">
-              <DialogHeader>
+              <DialogHeader className="border-b border-slate-200 pb-3">
                 <DialogTitle className="flex items-center gap-2">
                   Environment
                   <Badge className={badgeClass}>{label} MODE</Badge>
