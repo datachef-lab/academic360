@@ -67,6 +67,72 @@ function updateAddress(
   } as AdmissionAcademicInfoDto;
 }
 
+type RefOption = { id: number; name: string };
+
+/** Resolve FK id from nested relation object or flat *_Id column on the DTO. */
+function resolveRefId(
+  form: AdmissionAcademicInfoDto | null | undefined,
+  nestedKey: string,
+  flatKey: string,
+  fallbackFlatKey?: string,
+): string {
+  if (!form) return "";
+  const record = form as Record<string, unknown>;
+  const nested = record[nestedKey] as { id?: number } | null | undefined;
+  const flat = record[flatKey] as number | null | undefined;
+  const fallbackFlat = fallbackFlatKey
+    ? (record[fallbackFlatKey] as number | null | undefined)
+    : undefined;
+  const id = nested?.id ?? flat ?? fallbackFlat;
+  return id != null && Number(id) > 0 ? String(id) : "";
+}
+
+/** Map flat FK ids onto nested relation objects so dropdowns and save payload stay in sync. */
+function hydrateAcademicRefs(
+  form: AdmissionAcademicInfoDto,
+  options: {
+    boards: RefOption[];
+    languageMediums: RefOption[];
+    specializations: RefOption[];
+    programCourses: RefOption[];
+    institutions: RefOption[];
+  },
+): AdmissionAcademicInfoDto {
+  const next = { ...form } as AdmissionAcademicInfoDto & Record<string, unknown>;
+
+  const hydrate = (nestedKey: string, flatKey: string, list: RefOption[]) => {
+    const nested = next[nestedKey] as { id?: number } | null | undefined;
+    if (nested?.id) return;
+    const flatId = Number(next[flatKey]);
+    if (!Number.isFinite(flatId) || flatId <= 0) return;
+    const match = list.find((o) => o.id === flatId);
+    if (match) next[nestedKey] = { id: match.id, name: match.name };
+  };
+
+  hydrate("board", "boardId", options.boards);
+  hydrate("languageMedium", "languageMediumId", options.languageMediums);
+  hydrate("specialization", "specializationId", options.specializations);
+  hydrate(
+    "previouslyRegisteredProgramCourse",
+    "previouslyRegisteredProgramCourseId",
+    options.programCourses,
+  );
+
+  const prevInstId = Number(
+    next.previousInstituteId ?? (next as { previousCollegeId?: number }).previousCollegeId,
+  );
+  if (
+    !(next.previousInstitute as { id?: number } | null)?.id &&
+    Number.isFinite(prevInstId) &&
+    prevInstId > 0
+  ) {
+    const match = options.institutions.find((i) => i.id === prevInstId);
+    if (match) next.previousInstitute = { id: match.id, name: match.name };
+  }
+
+  return next as AdmissionAcademicInfoDto;
+}
+
 function Field({
   label,
   value,
@@ -233,8 +299,27 @@ export default function AcademicDetails({
 
   // Keep local state in sync if prop changes (e.g., after save/load)
   useEffect(() => {
-    setForm(studentAcademicDetails ?? null);
-  }, [studentAcademicDetails]);
+    if (!studentAcademicDetails) {
+      setForm(null);
+      return;
+    }
+    setForm(
+      hydrateAcademicRefs(studentAcademicDetails, {
+        boards,
+        languageMediums,
+        specializations,
+        programCourses,
+        institutions,
+      }),
+    );
+  }, [
+    studentAcademicDetails,
+    boards,
+    languageMediums,
+    specializations,
+    programCourses,
+    institutions,
+  ]);
 
   useEffect(() => {
     (async () => {
@@ -352,12 +437,29 @@ export default function AcademicDetails({
           languageMedium: { id?: number; name?: string | null };
           specialization: { id?: number; name?: string | null };
           previouslyRegisteredProgramCourse: { id?: number; name?: string | null };
+          previousInstitute: { id?: number; name?: string | null };
         }>;
-      if (key === "board") next.board = { ...(next.board ?? {}), id, name: displayName };
-      else if (key === "languageMedium") next.languageMedium = { id, name: displayName };
-      else if (key === "specialization") next.specialization = { id, name: displayName };
-      else if (key === "previouslyRegisteredProgramCourse")
+      if (key === "board") {
+        next.board = { ...(next.board ?? {}), id, name: displayName };
+        (next as Record<string, unknown>).boardId = id;
+      } else if (key === "languageMedium") {
+        next.languageMedium = { id, name: displayName };
+        (next as Record<string, unknown>).languageMediumId = id;
+      } else if (key === "specialization") {
+        next.specialization = { id, name: displayName };
+        (next as Record<string, unknown>).specializationId = id;
+      } else if (key === "previouslyRegisteredProgramCourse") {
         next.previouslyRegisteredProgramCourse = { id, name: displayName };
+        (next as Record<string, unknown>).previouslyRegisteredProgramCourseId = id;
+      } else if (key === "previousInstitute") {
+        if (!id || id <= 0) {
+          next.previousInstitute = undefined;
+          (next as Record<string, unknown>).previousInstituteId = null;
+        } else {
+          next.previousInstitute = { id, name: displayName };
+          (next as Record<string, unknown>).previousInstituteId = id;
+        }
+      }
       return next as AdmissionAcademicInfoDto;
     });
   };
@@ -647,6 +749,7 @@ export default function AcademicDetails({
                   (original as unknown as { indexNumber2?: string }).indexNumber2 ??
                   null) as string | null,
                 specializationId:
+                  f.specialization?.id ??
                   (f as unknown as { specializationId?: number }).specializationId ??
                   (original as unknown as { specializationId?: number }).specializationId ??
                   null,
@@ -691,7 +794,17 @@ export default function AcademicDetails({
                 );
                 // Update local form state with server response (prevents manual refresh)
                 const updated = (res as unknown as { payload?: AdmissionAcademicInfoDto })?.payload;
-                if (updated) setForm(updated);
+                if (updated) {
+                  setForm(
+                    hydrateAcademicRefs(updated, {
+                      boards,
+                      languageMediums,
+                      specializations,
+                      programCourses,
+                      institutions,
+                    }),
+                  );
+                }
                 // Revalidate relevant caches so StudentPage and other tabs reflect latest
                 queryClient.invalidateQueries({ queryKey: ["user-profile", userId || studentId] });
                 queryClient.invalidateQueries({
@@ -729,7 +842,7 @@ export default function AcademicDetails({
             <Label className="text-xs text-gray-600">Board</Label>
             <SearchableSelect
               className="h-10"
-              value={info?.board?.id ? String(info.board.id) : ""}
+              value={resolveRefId(info, "board", "boardId")}
               onChange={(val) => {
                 const selected = boards.find((b) => String(b.id) === val);
                 handleSelectChange("board", Number(val), selected?.name);
@@ -768,7 +881,7 @@ export default function AcademicDetails({
             <Label className="text-xs text-gray-600">Specialization</Label>
             <SearchableSelect
               className="h-10"
-              value={String(info?.specialization?.id ?? "")}
+              value={resolveRefId(info, "specialization", "specializationId")}
               onChange={(val) => {
                 const selected = specializations.find((s) => String(s.id) === val);
                 handleSelectChange("specialization", Number(val), selected?.name);
@@ -781,7 +894,7 @@ export default function AcademicDetails({
             <Label className="text-xs text-gray-600">Language Medium</Label>
             <SearchableSelect
               className="h-10"
-              value={String(info?.languageMedium?.id ?? "")}
+              value={resolveRefId(info, "languageMedium", "languageMediumId")}
               onChange={(val) => {
                 const selected = languageMediums.find((l) => String(l.id) === val);
                 handleSelectChange("languageMedium", Number(val), selected?.name);
@@ -1123,14 +1236,20 @@ export default function AcademicDetails({
             <Label className="text-xs text-gray-600">Previous Institute</Label>
             <SearchableSelect
               className="h-10"
-              value={String((info as FormWithAddress | null)?.previousInstitute?.id ?? "")}
-              onChange={(val) =>
-                handleSelectChange(
-                  "previousInstitute",
-                  Number(val),
-                  institutions.find((i) => String(i.id) === val)?.name,
-                )
-              }
+              value={resolveRefId(
+                info,
+                "previousInstitute",
+                "previousInstituteId",
+                "previousCollegeId",
+              )}
+              onChange={(val) => {
+                if (!val) {
+                  handleSelectChange("previousInstitute", 0, "");
+                  return;
+                }
+                const selected = institutions.find((i) => String(i.id) === val);
+                handleSelectChange("previousInstitute", Number(val), selected?.name ?? "");
+              }}
               options={institutions.map((i) => ({ value: String(i.id), label: i.name ?? "" }))}
               placeholder="Select institute"
             />
@@ -1139,11 +1258,10 @@ export default function AcademicDetails({
             <Label className="text-xs text-gray-600">Previously Registered Program Course</Label>
             <SearchableSelect
               className="h-10"
-              value={String(
-                info?.previouslyRegisteredProgramCourse?.id ??
-                  (info as unknown as { previouslyRegisteredProgramCourseId?: number } | null)
-                    ?.previouslyRegisteredProgramCourseId ??
-                  "",
+              value={resolveRefId(
+                info,
+                "previouslyRegisteredProgramCourse",
+                "previouslyRegisteredProgramCourseId",
               )}
               onChange={(val) => {
                 const selected = programCourses.find((p) => String(p.id) === val);
