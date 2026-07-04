@@ -16,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import { RefreshCw, CheckCircle2 } from "lucide-react";
 import { Country } from "@/types/resources/country.types";
 import { State } from "@/types/resources/state.types";
@@ -178,6 +179,17 @@ export default function AccommodationForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const confirm = await Swal.fire({
+      title: "Save accommodation?",
+      text: "Do you want to save the changes to this student's accommodation details?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Save",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!confirm.isConfirmed) return;
     setIsSubmitting(true);
     try {
       // Prepare data for submission
@@ -195,11 +207,21 @@ export default function AccommodationForm({
           submissionData as Partial<AccommodationDto>,
         );
         console.log("Update result:", result);
-        toast.success("Accommodation updated!");
+        await Swal.fire({
+          icon: "success",
+          title: "Saved successfully",
+          text: "Accommodation details have been updated.",
+          confirmButtonColor: "#2563eb",
+        });
       } else {
         const result = await createAccommodation(submissionData as Partial<AccommodationDto>);
         console.log("Create result:", result);
-        toast.success("Accommodation created!");
+        await Swal.fire({
+          icon: "success",
+          title: "Saved successfully",
+          text: "Accommodation details have been created.",
+          confirmButtonColor: "#2563eb",
+        });
         if (result?.payload) {
           const normalized = normalizeAccommodationData(
             result.payload as unknown as AccommodationDto,
@@ -215,9 +237,19 @@ export default function AccommodationForm({
         "response" in error &&
         (error as { response?: { status?: number } }).response?.status === 409
       ) {
-        toast.error("Duplicate entry: A record already exists for this student.");
+        await Swal.fire({
+          icon: "error",
+          title: "Duplicate entry",
+          text: "A record already exists for this student.",
+          confirmButtonColor: "#2563eb",
+        });
       } else {
-        toast.error("Failed to save Accommodation.");
+        await Swal.fire({
+          icon: "error",
+          title: "Save failed",
+          text: "Failed to save accommodation. Please try again.",
+          confirmButtonColor: "#2563eb",
+        });
         console.error("Form submission error:", error);
       }
     } finally {

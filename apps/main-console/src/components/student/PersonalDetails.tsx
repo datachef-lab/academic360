@@ -27,7 +27,8 @@ import { getDistrictsByState } from "@/services/address.service";
 import { getAllLanguageMediums } from "@/services/language-medium.service";
 import type { LanguageMedium } from "@/types/resources/language-medium.types";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import {
   updatePersonalDetail,
   updatePersonalDetailByStudentId,
@@ -376,12 +377,38 @@ export default function PersonalDetailsReadOnly({
       return updatePersonalDetailByStudentId(String(studentId), payload);
     },
     onSuccess: () => {
-      // Saved successfully
-      toast.success("Personal details saved");
       queryClient.invalidateQueries({ queryKey: ["user-profile"], exact: false });
+      Swal.fire({
+        icon: "success",
+        title: "Saved successfully",
+        text: "Personal details have been saved.",
+        confirmButtonColor: "#2563eb",
+      });
     },
-    onError: () => toast.error("Failed to save personal details"),
+    onError: () =>
+      Swal.fire({
+        icon: "error",
+        title: "Save failed",
+        text: "Failed to save personal details. Please try again.",
+        confirmButtonColor: "#2563eb",
+      }),
   });
+
+  const handleSave = async () => {
+    const result = await Swal.fire({
+      title: "Save personal details?",
+      text: "Do you want to save the changes to this student's personal details?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Save",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+    if (result.isConfirmed) {
+      mutation.mutate();
+    }
+  };
 
   return (
     <Card className="max-w-5xl mx-auto my-6 shadow border bg-white py-3">
@@ -958,7 +985,7 @@ export default function PersonalDetailsReadOnly({
       </CardContent>
       <CardFooter className="flex justify-center items-center mt-4">
         <Button
-          onClick={() => mutation.mutate()}
+          onClick={handleSave}
           disabled={mutation.isLoading}
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >

@@ -27,7 +27,8 @@ import { countryService } from "@/services/country.service";
 import { stateService } from "@/services/state.service";
 import { cityService } from "@/services/city.service";
 import axiosInstance from "@/utils/api";
-import { toast } from "@/hooks/useToast";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import { averageOfBestNTotals } from "@/utils/bestOfFourUtils";
 import { SearchableSelect } from "@/features/academic-year-setup/general/SearchableSelect";
 
@@ -520,6 +521,17 @@ export default function AcademicDetails({
             disabled={!(form as AdmissionAcademicInfoDto | null)?.id}
             onClick={async () => {
               if (!form || !(form as AdmissionAcademicInfoDto).id) return;
+              const confirm = await Swal.fire({
+                title: "Save academic details?",
+                text: "Do you want to save the changes to this student's academic details?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Save",
+                cancelButtonText: "Cancel",
+                confirmButtonColor: "#2563eb",
+                cancelButtonColor: "#6b7280",
+              });
+              if (!confirm.isConfirmed) return;
               const original = (studentAcademicDetails ?? {}) as Partial<AdmissionAcademicInfoDto>;
               const f = form as unknown as FormWithAddress;
 
@@ -685,12 +697,19 @@ export default function AcademicDetails({
                 queryClient.invalidateQueries({
                   queryKey: ["student", String(studentId || userId || "")],
                 });
-                toast({
-                  title: "Academic details updated",
-                  description: "Academic info and subjects saved successfully.",
+                await Swal.fire({
+                  icon: "success",
+                  title: "Saved successfully",
+                  text: "Academic info and subjects have been saved.",
+                  confirmButtonColor: "#2563eb",
                 });
               } catch {
-                toast({ title: "Update failed", description: "Could not save academic details." });
+                await Swal.fire({
+                  icon: "error",
+                  title: "Save failed",
+                  text: "Could not save academic details. Please try again.",
+                  confirmButtonColor: "#2563eb",
+                });
               }
             }}
           >
