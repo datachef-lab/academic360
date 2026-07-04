@@ -15,6 +15,7 @@ import {
   updateFamilyMemberTitlesController,
   bulkUpdateFamilyMemberTitlesController,
   importStudentsFromExcelController,
+  precheckImportStudentsController,
   backfillStudentQuotaTypesController,
   checkExistingStudentUidsController,
   exportStudentDetailedReportController,
@@ -92,6 +93,14 @@ router.post(
   "/bulk-update-family-titles",
   uploadMiddleware,
   bulkUpdateFamilyMemberTitlesController,
+);
+
+// POST /api/students/import-legacy-students/precheck
+// Read-only: report which UIDs in the Excel already exist vs are new
+router.post(
+  "/import-legacy-students/precheck",
+  uploadMiddleware,
+  precheckImportStudentsController,
 );
 
 // POST /api/students/import-legacy-students

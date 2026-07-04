@@ -9,6 +9,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { EnvInfoDialog } from "@/components/globals/EnvInfoDialog";
+
 import {
   Settings,
   Home,
@@ -323,6 +325,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
 
         <SidebarContent className="p-0 border-none bg-purple-800/95 py-2">
+          <EnvInfoDialog />
           {showSkeleton ? (
             <div className="p-3 space-y-3">
               <div className="h-8 w-3/4 bg-purple-700/40 rounded animate-pulse" />

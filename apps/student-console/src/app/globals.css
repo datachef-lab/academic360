@@ -61,13 +61,20 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Notification color filters for SVG icons */
-    --blue-filter: invert(42%) sepia(93%) saturate(1352%) hue-rotate(199deg) brightness(101%) contrast(101%);
-    --emerald-filter: invert(42%) sepia(82%) saturate(1704%) hue-rotate(122deg) brightness(101%) contrast(101%);
-    --amber-filter: invert(70%) sepia(97%) saturate(1242%) hue-rotate(352deg) brightness(100%) contrast(101%);
-    --rose-filter: invert(34%) sepia(53%) saturate(3043%) hue-rotate(318deg) brightness(102%) contrast(101%);
-    --indigo-filter: invert(24%) sepia(96%) saturate(1335%) hue-rotate(229deg) brightness(88%) contrast(94%);
-    --violet-filter: invert(29%) sepia(92%) saturate(1269%) hue-rotate(248deg) brightness(89%) contrast(93%);
-    --red-filter: invert(28%) sepia(92%) saturate(7117%) hue-rotate(344deg) brightness(101%) contrast(118%);
+    --blue-filter: invert(42%) sepia(93%) saturate(1352%) hue-rotate(199deg) brightness(101%)
+      contrast(101%);
+    --emerald-filter: invert(42%) sepia(82%) saturate(1704%) hue-rotate(122deg) brightness(101%)
+      contrast(101%);
+    --amber-filter: invert(70%) sepia(97%) saturate(1242%) hue-rotate(352deg) brightness(100%)
+      contrast(101%);
+    --rose-filter: invert(34%) sepia(53%) saturate(3043%) hue-rotate(318deg) brightness(102%)
+      contrast(101%);
+    --indigo-filter: invert(24%) sepia(96%) saturate(1335%) hue-rotate(229deg) brightness(88%)
+      contrast(94%);
+    --violet-filter: invert(29%) sepia(92%) saturate(1269%) hue-rotate(248deg) brightness(89%)
+      contrast(93%);
+    --red-filter: invert(28%) sepia(92%) saturate(7117%) hue-rotate(344deg) brightness(101%)
+      contrast(118%);
   }
 
   .dark {
@@ -349,4 +356,147 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Environment brand palette (set via <html data-env="...">, by useAppEnv).
+   Tailwind's `purple` scale is remapped to these variables, so EVERY
+   purple-* utility follows the environment:
+     production (default) = the original purple, unchanged;
+     staging               = blue;
+     development           = grey.
+--------------------------------------------------------------------------- */
+:root {
+  --brand-50: 250 245 255;
+  --brand-100: 243 232 255;
+  --brand-200: 233 213 255;
+  --brand-300: 216 180 254;
+  --brand-400: 192 132 252;
+  --brand-500: 168 85 247;
+  --brand-600: 147 51 234;
+  --brand-700: 126 34 206;
+  --brand-800: 107 33 168;
+  --brand-900: 88 28 135;
+  --brand-950: 59 7 100;
+}
+html[data-env="staging"] {
+  --brand-50: 239 246 255;
+  --brand-100: 219 234 254;
+  --brand-200: 191 219 254;
+  --brand-300: 147 197 253;
+  --brand-400: 96 165 250;
+  --brand-500: 59 130 246;
+  --brand-600: 37 99 235;
+  --brand-700: 29 78 216;
+  --brand-800: 30 64 175;
+  --brand-900: 30 58 138;
+  --brand-950: 23 37 84;
+}
+/* development anchored on #172554 (blue-950) per team pick. The scale is
+   shifted dark so the sidebar surface (brand-800) is EXACTLY #172554. */
+html[data-env="development"] {
+  --brand-50: 239 246 255;
+  --brand-100: 219 234 254;
+  --brand-200: 191 219 254;
+  --brand-300: 147 197 253;
+  --brand-400: 96 165 250;
+  --brand-500: 30 58 138;
+  --brand-600: 23 37 84;
+  --brand-700: 18 29 66;
+  --brand-800: 23 37 84;
+  --brand-900: 13 21 48;
+  --brand-950: 8 12 30;
+}
+
+/* violet scale follows the environment too (defaults = original violet). */
+:root {
+  --brandv-50: 245 243 255;
+  --brandv-100: 237 233 254;
+  --brandv-200: 221 214 254;
+  --brandv-300: 196 181 253;
+  --brandv-400: 167 139 250;
+  --brandv-500: 139 92 246;
+  --brandv-600: 124 58 237;
+  --brandv-700: 109 40 217;
+  --brandv-800: 91 33 182;
+  --brandv-900: 76 29 149;
+  --brandv-950: 46 16 101;
+}
+html[data-env="staging"] {
+  --brandv-50: 239 246 255;
+  --brandv-100: 219 234 254;
+  --brandv-200: 191 219 254;
+  --brandv-300: 147 197 253;
+  --brandv-400: 96 165 250;
+  --brandv-500: 59 130 246;
+  --brandv-600: 37 99 235;
+  --brandv-700: 29 78 216;
+  --brandv-800: 30 64 175;
+  --brandv-900: 30 58 138;
+  --brandv-950: 23 37 84;
+}
+html[data-env="development"] {
+  --brandv-50: 239 246 255;
+  --brandv-100: 219 234 254;
+  --brandv-200: 191 219 254;
+  --brandv-300: 147 197 253;
+  --brandv-400: 96 165 250;
+  --brandv-500: 30 58 138;
+  --brandv-600: 23 37 84;
+  --brandv-700: 18 29 66;
+  --brandv-800: 23 37 84;
+  --brandv-900: 13 21 48;
+  --brandv-950: 8 12 30;
+}
+
+/* Primary/action color follows the environment brand (buttons, rings) in
+   STAGING and DEVELOPMENT only — production keeps its original tokens, so
+   nothing changes there. */
+html[data-env="staging"] {
+  --primary: 221 83% 53%;
+  --ring: 221 83% 53%;
+}
+html[data-env="development"] {
+  --primary: 226 57% 21%;
+  --ring: 226 57% 21%;
+}
+
+/* blue scale: unchanged in production AND staging (defaults = original blue);
+   development shifts it onto the #172554 navy ramp so CTAs follow the env. */
+:root {
+  --brandb-50: 239 246 255;
+  --brandb-100: 219 234 254;
+  --brandb-200: 191 219 254;
+  --brandb-300: 147 197 253;
+  --brandb-400: 96 165 250;
+  --brandb-500: 59 130 246;
+  --brandb-600: 37 99 235;
+  --brandb-700: 29 78 216;
+  --brandb-800: 30 64 175;
+  --brandb-900: 30 58 138;
+  --brandb-950: 23 37 84;
+}
+html[data-env="development"] {
+  --brandb-50: 239 246 255;
+  --brandb-100: 219 234 254;
+  --brandb-200: 191 219 254;
+  --brandb-300: 147 197 253;
+  --brandb-400: 96 165 250;
+  --brandb-500: 30 58 138;
+  --brandb-600: 23 37 84;
+  --brandb-700: 18 29 66;
+  --brandb-800: 23 37 84;
+  --brandb-900: 13 21 48;
+  --brandb-950: 8 12 30;
+}
+
+/* Student welcome banner: production keeps its EXACT original color (#a674fe). */
+:root {
+  --brand-banner: 166 116 254;
+}
+html[data-env="staging"] {
+  --brand-banner: 37 99 235;
+}
+html[data-env="development"] {
+  --brand-banner: 23 37 84;
 }
