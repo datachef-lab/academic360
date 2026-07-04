@@ -133,91 +133,97 @@ const router = createBrowserRouter(
         { path: "promote-students", element: <PromoteStudentsPage /> },
         { path: "academic-activity", element: <AcademicActivityPage /> },
         {
+          path: "admissions",
+          element: <Outlet />,
+          children: [
+            { path: "", element: <AdmissionsYearRedirect /> },
+            {
+              path: ":year",
+              element: <Outlet />,
+              children: [
+                { path: "", element: <AdmissionsPage /> },
+                {
+                  path: "master",
+                  element: <AdmissionBoardMaster />,
+                  children: [
+                    { path: "", element: <AdmissionMasterHomePage /> },
+                    { path: "program-courses", element: <AdmissionProgramCoursePage /> },
+                    {
+                      path: "quota-type",
+                      element: (
+                        <ResourceMasterPage
+                          config={ADMISSION_MASTER_CONFIGS["admission-quota-types"]!}
+                        />
+                      ),
+                    },
+                    { path: "shift-section-config", element: <ShiftSectionConfigPage /> },
+                    {
+                      path: "cancel-sources",
+                      element: (
+                        <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["cancel-sources"]!} />
+                      ),
+                    },
+                    {
+                      path: "grades",
+                      element: <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["grades"]!} />,
+                    },
+                    {
+                      path: "sports-categories",
+                      element: (
+                        <ResourceMasterPage
+                          config={ADMISSION_MASTER_CONFIGS["sports-categories"]!}
+                        />
+                      ),
+                    },
+                    {
+                      path: "sections",
+                      element: (
+                        <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["sections"]!} />
+                      ),
+                    },
+                    { path: "board-subject-mapping", element: <BoardSubjectPage /> },
+                    { path: "boards", element: <BoardPage /> },
+                    { path: "subjects", element: <BoardSubjectNamePage /> },
+                    {
+                      path: "mapping-subjects",
+                      element: <BoardSubjectUnivSubjectMappingPaper />,
+                    },
+                  ],
+                },
+                { path: "home", element: <UnderConstructionPage /> },
+                { path: "start", element: <UnderConstructionPage /> },
+                { path: "counselling", element: <UnderConstructionPage /> },
+                { path: "staff-management", element: <UnderConstructionPage /> },
+                { path: "help-desk", element: <UnderConstructionPage /> },
+                { path: "application-forms", element: <UnderConstructionPage /> },
+                { path: "merit-listing", element: <UnderConstructionPage /> },
+                { path: "merit-listing-rules", element: <UnderConstructionPage /> },
+                { path: "verification", element: <UnderConstructionPage /> },
+                { path: "admit-students", element: <UnderConstructionPage /> },
+                { path: "notifications", element: <UnderConstructionPage /> },
+              ],
+            },
+          ],
+        },
+        {
           path: "academic-setup",
           element: <Outlet />,
           children: [
             { path: "", element: <AcademicYearSetupPage /> },
+            // Academic Events — configure admission-process schedules (dates/times).
+            // Scaffold route for now; management UI to follow.
+            { path: "academic-events", element: <UnderConstructionPage /> },
+            // Help & Support Staff — scaffold route; management UI to follow.
+            { path: "help-support-staff", element: <UnderConstructionPage /> },
+            // Back-compat: Admissions moved up to /dashboard/admissions
             {
-              path: "admissions",
-              element: <Outlet />,
-              children: [
-                { path: "", element: <AdmissionsYearRedirect /> },
-                {
-                  path: ":year",
-                  element: <Outlet />,
-                  children: [
-                    { path: "", element: <AdmissionsPage /> },
-                    {
-                      path: "master",
-                      element: <AdmissionBoardMaster />,
-                      children: [
-                        { path: "", element: <AdmissionMasterHomePage /> },
-                        { path: "program-courses", element: <AdmissionProgramCoursePage /> },
-                        {
-                          path: "quota-type",
-                          element: (
-                            <ResourceMasterPage
-                              config={ADMISSION_MASTER_CONFIGS["admission-quota-types"]!}
-                            />
-                          ),
-                        },
-                        { path: "shift-section-config", element: <ShiftSectionConfigPage /> },
-                        {
-                          path: "cancel-sources",
-                          element: (
-                            <ResourceMasterPage
-                              config={ADMISSION_MASTER_CONFIGS["cancel-sources"]!}
-                            />
-                          ),
-                        },
-                        {
-                          path: "grades",
-                          element: (
-                            <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["grades"]!} />
-                          ),
-                        },
-                        {
-                          path: "sports-categories",
-                          element: (
-                            <ResourceMasterPage
-                              config={ADMISSION_MASTER_CONFIGS["sports-categories"]!}
-                            />
-                          ),
-                        },
-                        {
-                          path: "sections",
-                          element: (
-                            <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["sections"]!} />
-                          ),
-                        },
-                        { path: "board-subject-mapping", element: <BoardSubjectPage /> },
-                        { path: "boards", element: <BoardPage /> },
-                        { path: "subjects", element: <BoardSubjectNamePage /> },
-                        {
-                          path: "mapping-subjects",
-                          element: <BoardSubjectUnivSubjectMappingPaper />,
-                        },
-                      ],
-                    },
-                    { path: "home", element: <UnderConstructionPage /> },
-                    { path: "start", element: <UnderConstructionPage /> },
-                    { path: "counselling", element: <UnderConstructionPage /> },
-                    { path: "staff-management", element: <UnderConstructionPage /> },
-                    { path: "help-desk", element: <UnderConstructionPage /> },
-                    { path: "application-forms", element: <UnderConstructionPage /> },
-                    { path: "merit-listing", element: <UnderConstructionPage /> },
-                    { path: "merit-listing-rules", element: <UnderConstructionPage /> },
-                    { path: "verification", element: <UnderConstructionPage /> },
-                    { path: "admit-students", element: <UnderConstructionPage /> },
-                    { path: "notifications", element: <UnderConstructionPage /> },
-                  ],
-                },
-              ],
+              path: "admissions/*",
+              element: <Navigate to="/dashboard/admissions" replace />,
             },
             // Back-compat: old board-subjects path now lives under the Admission master
             {
               path: "board-subjects/*",
-              element: <Navigate to="/dashboard/academic-setup/admissions/master" replace />,
+              element: <Navigate to="/dashboard/admissions" replace />,
             },
             {
               path: "general",
@@ -322,6 +328,22 @@ const router = createBrowserRouter(
             {
               path: "shift-change",
               element: <ShiftChangePage />,
+            },
+            {
+              path: "realtime-tracker",
+              element: <RealTimeTrackerPage />,
+            },
+            {
+              path: "promote-students",
+              element: <PromoteStudentsPage />,
+            },
+            {
+              path: "bulk-upload",
+              element: <BulkDataUploadPage />,
+            },
+            {
+              path: "notifications",
+              element: <NoticeMaster />,
             },
           ],
         },

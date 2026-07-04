@@ -1,5 +1,13 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { BookOpen, GraduationCap, SlidersHorizontal, Workflow, ListChecks } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  SlidersHorizontal,
+  Workflow,
+  ListChecks,
+  CalendarDays,
+  LifeBuoy,
+} from "lucide-react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
@@ -18,6 +26,8 @@ type FeatureCard = {
   illustrationName: IllustrationName;
   /** Optional real image; overrides the themed SVG when provided. */
   illustration?: string | null;
+  /** Header pill shown for not-yet-built modules (routes to Under Construction). */
+  badge?: string;
 };
 
 const featureCards: FeatureCard[] = [
@@ -32,18 +42,6 @@ const featureCards: FeatureCard[] = [
     items: "Programs, courses, subjects & papers",
     illustrationName: "course-design",
     illustration: "/academic-setup-illustrations/course-design.jpg",
-  },
-  {
-    title: "Admissions",
-    description:
-      "Run the admission process — counselling, applications, merit, verification and data transfer — with masters, staff and support.",
-    icon: GraduationCap,
-    href: "/dashboard/academic-setup/admissions",
-    iconColor: "text-emerald-600",
-    status: "Ready",
-    items: "Process, masters, staff & support",
-    illustrationName: "admissions",
-    illustration: "/academic-setup-illustrations/admissions.jpg",
   },
   {
     title: "Subject-selection Configuration",
@@ -80,6 +78,32 @@ const featureCards: FeatureCard[] = [
     items: "Qualifications, occupations & masters",
     illustrationName: "general",
     illustration: "/academic-setup-illustrations/general.jpg",
+  },
+  {
+    title: "Academic Events",
+    description:
+      "Configure and maintain admission-process schedules — dates & times for start of admissions, applications, registration, merit listing, verification and data transfer.",
+    icon: CalendarDays,
+    href: "/dashboard/academic-setup/academic-events",
+    iconColor: "text-cyan-600",
+    status: "Pending",
+    items: "Admission & process schedules",
+    illustrationName: "academic-events",
+    illustration: "/academic-setup-illustrations/academic-events.jpg",
+    badge: "Under construction",
+  },
+  {
+    title: "Help & Support Staff",
+    description:
+      "Manage help & support desk staff, their roles and assignments for handling applicant and student queries.",
+    icon: LifeBuoy,
+    href: "/dashboard/academic-setup/help-support-staff",
+    iconColor: "text-sky-600",
+    status: "Pending",
+    items: "Desk staff, roles & assignments",
+    illustrationName: "help-desk",
+    illustration: "/academic-setup-illustrations/help-desk.jpg",
+    badge: "Under construction",
   },
 ];
 
@@ -124,9 +148,16 @@ export default function AcademicYearSetupPage() {
                       <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
                     </div>
                     <div className="min-w-0">
-                      <CardTitle className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
-                        {card.title}
-                      </CardTitle>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <CardTitle className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
+                          {card.title}
+                        </CardTitle>
+                        {card.badge && (
+                          <span className="shrink-0 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                            {card.badge}
+                          </span>
+                        )}
+                      </div>
                       <p className="truncate text-xs font-medium text-gray-500">{card.items}</p>
                     </div>
                   </div>

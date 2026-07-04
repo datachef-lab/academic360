@@ -26,7 +26,7 @@ import CardIllustration, {
   type IllustrationName,
 } from "@/features/academic-year-setup/components/CardIllustration";
 
-const ADMISSIONS_BASE = "/dashboard/academic-setup/admissions";
+const ADMISSIONS_BASE = "/dashboard/admissions";
 
 type StepStatus = "done" | "active" | "upcoming";
 
@@ -114,6 +114,8 @@ type AdmissionCard = {
   items: string;
   illustrationName: IllustrationName;
   illustration?: string | null;
+  /** Header pill for not-yet-built modules (routes to Under Construction). */
+  badge?: string;
 };
 
 const cards: AdmissionCard[] = [
@@ -126,6 +128,7 @@ const cards: AdmissionCard[] = [
     items: "Overview & summary",
     illustrationName: "admission-home",
     illustration: "/academic-setup-illustrations/admission-home.jpg",
+    badge: "Under construction",
   },
   {
     title: "Admission Master",
@@ -146,6 +149,7 @@ const cards: AdmissionCard[] = [
     items: "Staff assignment & roles",
     illustrationName: "staff-management",
     illustration: "/academic-setup-illustrations/staff-management.jpg",
+    badge: "Under construction",
   },
   {
     title: "Admission Help & Support Desk",
@@ -156,6 +160,7 @@ const cards: AdmissionCard[] = [
     items: "Applicant queries & support",
     illustrationName: "help-desk",
     illustration: "/academic-setup-illustrations/help-desk.jpg",
+    badge: "Under construction",
   },
   {
     title: "Merit Listing Rules",
@@ -166,6 +171,7 @@ const cards: AdmissionCard[] = [
     items: "Rules & criteria",
     illustrationName: "merit-listing",
     illustration: "/academic-setup-illustrations/merit-listing.jpg",
+    badge: "Under construction",
   },
   {
     title: "Notifications",
@@ -176,6 +182,7 @@ const cards: AdmissionCard[] = [
     items: "Email · SMS · WhatsApp",
     illustrationName: "notifications",
     illustration: "/academic-setup-illustrations/notifications.jpg",
+    badge: "Under construction",
   },
 ];
 
@@ -307,9 +314,16 @@ export default function AdmissionsPage() {
                     <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
                   </div>
                   <div className="min-w-0">
-                    <CardTitle className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
-                      {card.title}
-                    </CardTitle>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <CardTitle className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
+                        {card.title}
+                      </CardTitle>
+                      {card.badge && (
+                        <span className="shrink-0 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                          {card.badge}
+                        </span>
+                      )}
+                    </div>
                     <p className="truncate text-xs font-medium text-gray-500">{card.items}</p>
                   </div>
                 </div>

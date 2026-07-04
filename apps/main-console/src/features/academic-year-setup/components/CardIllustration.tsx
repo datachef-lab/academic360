@@ -12,6 +12,7 @@ import {
   ArrowRightLeft,
   ListChecks,
   Bell,
+  CalendarDays,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,8 @@ export type IllustrationName =
   | "merit-listing"
   | "admit-students"
   | "general"
-  | "notifications";
+  | "notifications"
+  | "academic-events";
 
 const THEMES: Record<IllustrationName, { gradient: string; Icon: LucideIcon }> = {
   "course-design": { gradient: "from-blue-500 to-indigo-600", Icon: BookOpen },
@@ -51,6 +53,7 @@ const THEMES: Record<IllustrationName, { gradient: string; Icon: LucideIcon }> =
   "admit-students": { gradient: "from-rose-500 to-pink-600", Icon: ArrowRightLeft },
   general: { gradient: "from-slate-500 to-gray-600", Icon: ListChecks },
   notifications: { gradient: "from-rose-500 to-pink-600", Icon: Bell },
+  "academic-events": { gradient: "from-cyan-500 to-blue-600", Icon: CalendarDays },
 };
 
 type Props = {
