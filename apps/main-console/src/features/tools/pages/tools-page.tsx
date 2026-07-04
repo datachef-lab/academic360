@@ -1,5 +1,14 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { Wrench, CreditCard, MonitorPlay, ArrowLeftRight } from "lucide-react";
+import {
+  Wrench,
+  CreditCard,
+  MonitorPlay,
+  ArrowLeftRight,
+  Activity,
+  GraduationCap,
+  Layers,
+  Bell,
+} from "lucide-react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
 type ToolCard = {
@@ -43,13 +52,51 @@ const toolCards: ToolCard[] = [
     items: "Student shift / section / roll",
     image: "/tool-illustrations/shift-change.jpg",
   },
+  {
+    title: "Real Time Tracker",
+    description: "Live tracking of academic activity and events across the console in real time.",
+    icon: Activity,
+    href: "/dashboard/tools/realtime-tracker",
+    iconColor: "text-cyan-600",
+    items: "Live activity tracker",
+    image: "/tool-illustrations/realtime-tracker.jpg",
+  },
+  {
+    title: "Promote Students",
+    description:
+      "Promote students to the next class / semester based on the configured promotion logic.",
+    icon: GraduationCap,
+    href: "/dashboard/tools/promote-students",
+    iconColor: "text-emerald-600",
+    items: "Class / semester promotion",
+    image: "/tool-illustrations/promote-students.jpg",
+  },
+  {
+    title: "Bulk Data Upload",
+    description: "Upload data in bulk via spreadsheets to seed or update records across modules.",
+    icon: Layers,
+    href: "/dashboard/tools/bulk-upload",
+    iconColor: "text-amber-600",
+    items: "Spreadsheet imports",
+    image: "/tool-illustrations/bulk-upload.png",
+  },
+  {
+    title: "Notifications",
+    description:
+      "Compose and send notices, emails, SMS and WhatsApp messages to students and staff.",
+    icon: Bell,
+    href: "/dashboard/tools/notifications",
+    iconColor: "text-rose-600",
+    items: "Notices & alerts",
+    image: "/academic-setup-illustrations/notifications.jpg",
+  },
 ];
 
 export default function ToolsPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex-1 bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center gap-3">
