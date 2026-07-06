@@ -1,0 +1,3 @@
+CREATE INDEX IF NOT EXISTS "idx_promotions_session_student_active" ON "promotions" USING btree ("session_id_fk","student_id_fk") WHERE COALESCE("is_deprecated", false) = false;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_sss_student_meta_active" ON "student_subject_selections" USING btree ("student_id_fk","subject_selection_meta_id_fk","version" DESC) WHERE "is_active" = true AND COALESCE("is_deprecated", false) = false;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_papers_year_pc_active" ON "papers" USING btree ("academic_year_id_fk","programe_course_id_fk") WHERE "is_active" = true;
