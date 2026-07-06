@@ -92,6 +92,7 @@ const data = {
   navMain: [
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup*", url: "/dashboard/academic-setup", icon: LayoutList },
+    { title: "Admissions", url: "/dashboard/admissions", icon: GraduationCap },
     { title: "Promote Students", url: "/dashboard/promote-students", icon: GraduationCap },
     { title: "Academic Activity", url: "/dashboard/academic-activity", icon: SlidersHorizontal },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },

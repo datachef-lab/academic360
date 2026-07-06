@@ -128,11 +128,7 @@ async function resolveSessionIds(
 }
 
 function buildPromotionScope(): SQL[] {
-  return [
-    ACTIVE_STUDENT_SQL,
-    ACTIVE_PROMOTION_SQL,
-    eq(promotionModel.isAlumni, false),
-  ];
+  return [ACTIVE_STUDENT_SQL, eq(promotionModel.isAlumni, false)];
 }
 
 async function buildPromotionWhere(
@@ -141,13 +137,27 @@ async function buildPromotionWhere(
   const parts = buildPromotionScope();
 
   const sessionIds = await resolveSessionIds(filters);
+  // Whether the caller pinned a specific academic year / session.
+  const yearScoped = !!(
+    filters.academicYearIds?.length || filters.sessionIds?.length
+  );
+
   if (sessionIds?.length) {
     parts.push(inArray(promotionModel.sessionId, sessionIds));
-  } else if (filters.academicYearIds?.length || filters.sessionIds?.length) {
+  } else if (yearScoped) {
     // An academic-year/session filter that resolves to NO sessions must match
     // nothing — silently dropping it would show all years' data as if the
     // filter were applied (e.g. a DB without a session for the selected year).
     parts.push(sql`FALSE`);
+  }
+
+  // Live view (no year/session selected) → only ACTIVE promotions, i.e. the
+  // current enrolment snapshot. When a specific year IS selected, show that
+  // year's full cohort regardless of active state — a past year's promotions
+  // are all closed (end_date set), so the active filter would zero them out.
+  // Students are de-duplicated downstream via countDistinct(student.id).
+  if (!yearScoped) {
+    parts.push(ACTIVE_PROMOTION_SQL);
   }
   if (filters.classIds?.length) {
     parts.push(inArray(promotionModel.classId, filters.classIds));
