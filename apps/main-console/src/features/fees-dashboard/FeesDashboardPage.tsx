@@ -70,11 +70,8 @@ function FeesDashboardContent({
     <div className="min-h-full bg-[#eaeaea]">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <header className="border-b border-[#d1d1d1] bg-gradient-to-r from-[#f5f3ff] via-[#faf5ff] to-white">
-          <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 px-4 py-3 pb-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#7c3aed]">
-                Fees module
-              </p>
               <h1 className="text-xl font-bold text-[#1a1a1a]">Fees dashboard</h1>
             </div>
 

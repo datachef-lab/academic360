@@ -146,6 +146,7 @@ import cancelSourceRouter from "./features/admissions/routes/cancel-source.route
 import gradeRouter from "./features/admissions/routes/grade.route.js";
 import admissionCycleRouter from "./features/admissions/routes/admission-cycle.route.js";
 import admissionDashboardRouter from "./features/admissions/routes/admission-dashboard.route.js";
+import notificationsConsoleRouter from "./features/notifications-console/routes/notifications-console.route.js";
 import admissionSportsCategoryRouter from "./features/admissions/routes/admission-sports-category.route.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 
@@ -760,6 +761,7 @@ app.use("/api/admit-card", admitCardRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/dashboard", admissionDashboardRouter);
+app.use("/api/notifications-console", notificationsConsoleRouter);
 app.use("/api/admissions/application-forms", applicationFormRouter);
 app.use("/api/admissions/general-info", admissionGeneralInfoRouter);
 app.use("/api/admissions/academic-info", admissionAcademicInfoRouter);
@@ -1179,6 +1181,7 @@ app.use("/api/v1/courses", courseRouter);
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 
 app.use("/api/admissions/dashboard", admissionDashboardRouter);
+app.use("/api/notifications-console", notificationsConsoleRouter);
 app.use("/api/admissions/application-forms", applicationFormRouter);
 
 app.use("/api/admissions/general-info", admissionGeneralInfoRouter);

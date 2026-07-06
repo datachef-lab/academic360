@@ -24,8 +24,9 @@ export async function sendZeptoMail(
   name?: string,
 ) {
   try {
-    // Use developer email in development mode
-    const recipientEmail = NODE_ENV === "development" ? DEVELOPER_EMAIL! : to;
+    // Real recipients ONLY in production; development/staging (and any
+    // unexpected NODE_ENV) redirect to the developer inbox.
+    const recipientEmail = NODE_ENV === "production" ? to : DEVELOPER_EMAIL!;
 
     log.info(`Sending email → ${recipientEmail}`, { subject, name });
     // console.log("email subject:", subject);

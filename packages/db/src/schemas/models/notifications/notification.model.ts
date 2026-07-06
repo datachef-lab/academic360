@@ -1,4 +1,4 @@
-import { integer, json, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, json, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { applicationFormModel } from "../admissions";
 import { userModel } from "../user";
 import { notificationStatusEnum, notificationTypeEnum, notificationVariantEnum } from "@/schemas/enums";
@@ -23,6 +23,9 @@ export const notificationModel = pgTable("notifications", {
     variant: notificationVariantEnum().notNull(),
     type: notificationTypeEnum().notNull(),
     message: text("message").notNull(),
+    // Housekeeping sends (e.g. resend-verification OTPs) that must never
+    // surface in the notifications console lists/dashboard/exports.
+    isInternal: boolean("is_internal").default(false),
     status: notificationStatusEnum().notNull(),
     sentAt: timestamp("sent_at"),
     failedAt: timestamp("failed_at"),
