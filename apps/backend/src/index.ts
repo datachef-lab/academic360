@@ -168,6 +168,16 @@ function checkRequiredEnvs() {
             message: e instanceof Error ? e.message : String(e),
           }),
         );
+      // Legacy besc-admission-messaging templates — seeded from a snapshot
+      // JSON in the repo (no connectivity to the legacy box needed) and
+      // deduped, so it is safe to run on every restart.
+      void import("@/features/notifications-console/services/legacy-messaging-seed.service.js")
+        .then(({ seedLegacyMessagingMasters }) => seedLegacyMessagingMasters())
+        .catch((e) =>
+          log.error("legacy-messaging-seed failed to start", {
+            message: e instanceof Error ? e.message : String(e),
+          }),
+        );
     });
   } catch (error) {
     log.error("Failed to start the application ⚠️", {

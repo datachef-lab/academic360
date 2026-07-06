@@ -22,14 +22,11 @@ import { resetPasswordWithEmailOtp } from "@/features/auth/services/reset-passwo
 import { verifyEmailOtp } from "@/features/auth/services/reset-password.service";
 import { checkOtpStatus } from "@/features/auth/services/reset-password.service";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { useSettings } from "@/features/settings/hooks/use-settings";
+import { CollegeBrandingHeader } from "@/features/settings/components/college-branding-header";
 
 export default function ResetPasswordPage() {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const token = searchParams.get("token") || "";
-  const { settings } = useSettings();
 
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -148,28 +145,10 @@ export default function ResetPasswordPage() {
       <div className="w-full md:w-1/2 bg-gradient-to-br from-gray-900 via-slate-800 to-indigo-900 min-h-screen md:min-h-[70vh] relative shadow-2xl flex flex-col gap-4 sm:gap-6 items-center overflow-y-auto">
         {/* Branding header - always at top */}
         <div className="flex gap-3 sm:gap-4 w-full px-3 sm:px-4 pt-4">
-          <div className="inline-flex items-center space-x-3 sm:space-x-4 w-full bg-white/10 backdrop-blur-xl p-3 sm:p-4 shadow-2xl shadow-blue-500/20 border border-white/10 rounded-md">
-            <Avatar className="h-16 w-16 shadow-lg">
-              <AvatarImage
-                src={`${import.meta.env.VITE_APP_BACKEND_URL}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
-                alt="BESC Logo"
-              />
-              <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                {settings?.find((ele) => ele.name === "College Abbreviation")?.value}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-left">
-              <Badge
-                variant="outline"
-                className="text-sm font-bold text-blue-900 bg-blue-50 border-blue-200 mb-2"
-              >
-                {settings?.find((ele) => ele.name === "College Abbreviation")?.value}
-              </Badge>
-              <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-                {settings?.find((ele) => ele.name === "College Name")?.value}
-              </h1>
-            </div>
-          </div>
+          <CollegeBrandingHeader
+            className="rounded-md p-3 sm:p-4 space-x-3 sm:space-x-4"
+            avatarClassName="h-16 w-16 shadow-lg"
+          />
         </div>
         {/* Reset Card - vertically centered area */}
         <div className="flex-1 w-full flex items-start md:items-center justify-center px-3 sm:px-4 pb-8 md:pb-10">

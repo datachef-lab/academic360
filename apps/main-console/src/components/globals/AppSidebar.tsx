@@ -38,7 +38,7 @@ import { useAuth } from "@/features/auth/providers/auth-provider";
 import { SearchStudentModal } from "./SearchStudentModal";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
-import { useSettings } from "@/features/settings/hooks/use-settings";
+import { useBranding } from "@/features/settings/hooks/use-branding";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import {
   DropdownMenu,
@@ -150,7 +150,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
-  const { settings } = useSettings();
+  const { abbreviation, logoUrl } = useBranding();
   const currentPath = location.pathname;
   const { user, accessToken, isReady } = useAuth();
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
@@ -181,8 +181,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       loadAcademicYears();
     }
   }, [accessToken, availableAcademicYears.length, loadAcademicYears]);
-
-  React.useEffect(() => {}, [settings]);
 
   // Helper to check if sidebar item is active
   function isSidebarActive(currentPath: string, itemUrl: string) {
@@ -230,16 +228,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // link: `/dashboard` isn't an allowed route for them, so it would only flash-redirect.
   const dashNav = moduleOnlyRestricted || tempRestricted ? [] : data.navDash;
 
-  const collegeLogoSetting = settings?.find((ele) => ele.name === "College Logo Image");
-  const collegeLogoSrc =
-    collegeLogoSetting?.id != null
-      ? `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${collegeLogoSetting.id}${
-          collegeLogoSetting.updatedAt
-            ? `?v=${encodeURIComponent(String(collegeLogoSetting.updatedAt))}`
-            : ""
-        }`
-      : undefined;
-
   return (
     <div className="relative">
       <Sidebar collapsible="icon" {...props} className="bg-white overflow-hidden border-none">
@@ -250,12 +238,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <button className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-purple-700/50 transition-colors">
                   <div className="flex items-center justify-center p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
                     <Avatar className="h-8 w-8 ring-2 ring-white/20 overflow-hidden">
-                      {collegeLogoSrc ? (
-                        <AvatarImage
-                          src={collegeLogoSrc}
-                          alt="college-logo"
-                          className="object-cover"
-                        />
+                      {logoUrl ? (
+                        <AvatarImage src={logoUrl} alt="college-logo" className="object-cover" />
                       ) : (
                         <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-violet-600 text-white font-bold">
                           <GalleryVerticalEnd className="h-3 w-3" />
@@ -265,8 +249,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h1 className="text-base font-bold text-white leading-tight truncate">
-                      {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console
-                      Panel
+                      {abbreviation ? `${abbreviation} Console Panel` : "Console Panel"}
                     </h1>
                     <p className="text-xs text-purple-200 truncate">
                       {academicYearLoading

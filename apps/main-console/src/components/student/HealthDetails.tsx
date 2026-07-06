@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import {
   Select,
   SelectContent,
@@ -126,12 +127,22 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, studentId, initialDat
       return await createHealthDetail(request);
     },
     onSuccess: () => {
-      toast.success("Health details updated!");
       refetch();
       queryClient.invalidateQueries({ queryKey: ["user-profile"], exact: false });
+      Swal.fire({
+        icon: "success",
+        title: "Saved successfully",
+        text: "Health details have been saved.",
+        confirmButtonColor: "#2563eb",
+      });
     },
     onError: () => {
-      toast.error("Failed to update health details.");
+      Swal.fire({
+        icon: "error",
+        title: "Save failed",
+        text: "Failed to save health details. Please try again.",
+        confirmButtonColor: "#2563eb",
+      });
     },
   });
 
@@ -144,8 +155,19 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, studentId, initialDat
     setFormData((prev) => ({ ...prev, [field]: stringValue }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const result = await Swal.fire({
+      title: "Save health details?",
+      text: "Do you want to save the changes to this student's health details?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Save",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!result.isConfirmed) return;
     setShowSuccess(false);
     mutation.mutate(formData, {
       onSuccess: () => {

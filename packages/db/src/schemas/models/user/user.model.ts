@@ -22,6 +22,9 @@ export const userModel = pgTable('users', {
         .references(() => institutionalRoleModel.id),
     isActive: boolean().default(true),
     sendStagingNotifications: boolean().default(false),
+    // May approve notification resends (receives the verification OTP in
+    // staging/production). No verifiers exist by default.
+    isNotificationVerifier: boolean("is_notification_verifier").default(false),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });

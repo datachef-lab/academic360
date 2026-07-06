@@ -522,74 +522,102 @@ async function processBatch() {
       }
 
       if (env === "staging") {
-        console.log("[email.worker] sending to staging staff users");
-        // Fan-out to all STAFF who opted-in and are active/not suspended
-        const staffUsers = await db
-          .select()
-          .from(userModel)
-          .where(
-            and(
-              eq(userModel.type, "STAFF" as never),
-              eq(userModel.sendStagingNotifications, true),
-              eq(userModel.isActive, true),
-              eq(userModel.isSuspended, false),
-            ),
-          )
-          .limit(20);
-        if (staffUsers.length > 0) {
-          for (const staff of staffUsers) {
-            const recipient = asString(
-              staff.email,
-              process.env.DEVELOPER_EMAIL!,
+        // An explicit recipient list (e.g. console resend with selected
+        // staff) takes precedence over the blanket staff fan-out.
+        const explicitEmails = (
+          (notif.otherUsersEmails as string[] | null) ?? []
+        ).filter(Boolean);
+        if (explicitEmails.length > 0) {
+          for (const email of explicitEmails) {
+            console.log(
+              `[email.worker] sending (explicit staging) to: ${email}`,
             );
-            console.log(`[email.worker] sending to staff: ${recipient}`);
-            subject =
-              extractedTemplateData.subject ??
-              ((dto.templateData?.subject || "Notification") as string);
             const res = await sendZeptoMail(
-              recipient,
+              email,
               subject,
               html,
-              asString(staff.name, "User"),
+              undefined,
               dto.emailAttachments,
               asString(
                 dto.emailFromName,
-                "BESC | The Bhawanipur Education Society College - Important Notification",
+                "The Bhawanipur Education Society College - Important Notification",
+              ),
+            );
+            if (!res.ok) {
+              throw new Error(`ZeptoMail API Error: ${res.error}`);
+            }
+            await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+          }
+        } else {
+          console.log("[email.worker] sending to staging staff users");
+          // Fan-out to all STAFF who opted-in and are active/not suspended
+          const staffUsers = await db
+            .select()
+            .from(userModel)
+            .where(
+              and(
+                eq(userModel.type, "STAFF" as never),
+                eq(userModel.sendStagingNotifications, true),
+                eq(userModel.isActive, true),
+                eq(userModel.isSuspended, false),
+              ),
+            )
+            .limit(20);
+          if (staffUsers.length > 0) {
+            for (const staff of staffUsers) {
+              const recipient = asString(
+                staff.email,
+                process.env.DEVELOPER_EMAIL!,
+              );
+              console.log(`[email.worker] sending to staff: ${recipient}`);
+              subject =
+                extractedTemplateData.subject ??
+                ((dto.templateData?.subject || "Notification") as string);
+              const res = await sendZeptoMail(
+                recipient,
+                subject,
+                html,
+                asString(staff.name, "User"),
+                dto.emailAttachments,
+                asString(
+                  dto.emailFromName,
+                  "BESC | The Bhawanipur Education Society College - Important Notification",
+                ),
+              );
+              if (!res.ok) {
+                console.log(
+                  `[email.worker] ZeptoMail failed for staff ${recipient}:`,
+                  res.error,
+                );
+                throw new Error(`ZeptoMail API Error: ${res.error}`);
+              }
+              await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+            }
+          } else {
+            // Fallback to developer contact if no staff opted-in
+            console.log(
+              `[email.worker] no staff opted-in, sending to developer: ${process.env.DEVELOPER_EMAIL}`,
+            );
+            const res = await sendZeptoMail(
+              process.env.DEVELOPER_EMAIL!,
+              subject,
+              html,
+              "Developer",
+              dto.emailAttachments,
+              asString(
+                dto.emailFromName,
+                "The Bhawanipur Education Society College - Important Notification",
               ),
             );
             if (!res.ok) {
               console.log(
-                `[email.worker] ZeptoMail failed for staff ${recipient}:`,
+                `[email.worker] ZeptoMail failed for developer fallback:`,
                 res.error,
               );
               throw new Error(`ZeptoMail API Error: ${res.error}`);
             }
             await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
           }
-        } else {
-          // Fallback to developer contact if no staff opted-in
-          console.log(
-            `[email.worker] no staff opted-in, sending to developer: ${process.env.DEVELOPER_EMAIL}`,
-          );
-          const res = await sendZeptoMail(
-            process.env.DEVELOPER_EMAIL!,
-            subject,
-            html,
-            "Developer",
-            dto.emailAttachments,
-            asString(
-              dto.emailFromName,
-              "The Bhawanipur Education Society College - Important Notification",
-            ),
-          );
-          if (!res.ok) {
-            console.log(
-              `[email.worker] ZeptoMail failed for developer fallback:`,
-              res.error,
-            );
-            throw new Error(`ZeptoMail API Error: ${res.error}`);
-          }
-          await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
         }
       } else if (env === "development") {
         // development -> always send to developer

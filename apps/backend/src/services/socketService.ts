@@ -340,6 +340,50 @@ class SocketService {
         }
       });
 
+      socket.on("subscribe_notifications_dashboard", () => {
+        try {
+          socket.join("notifications_dashboard");
+          log.debug(`Socket ${socket.id} joined room: notifications_dashboard`);
+        } catch (error) {
+          log.error("Error subscribing to notifications dashboard room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_notifications_dashboard", () => {
+        try {
+          socket.leave("notifications_dashboard");
+          log.debug(`Socket ${socket.id} left room: notifications_dashboard`);
+        } catch (error) {
+          log.error("Error unsubscribing from notifications dashboard room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_automated_notifications", () => {
+        try {
+          socket.join("automated_notifications");
+          log.debug(`Socket ${socket.id} joined room: automated_notifications`);
+        } catch (error) {
+          log.error("Error subscribing to automated notifications room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_automated_notifications", () => {
+        try {
+          socket.leave("automated_notifications");
+          log.debug(`Socket ${socket.id} left room: automated_notifications`);
+        } catch (error) {
+          log.error("Error unsubscribing from automated notifications room", {
+            error,
+          });
+        }
+      });
+
       socket.on(
         "subscribe_realtime_tracker",
         async (payload: {
@@ -1626,6 +1670,39 @@ class SocketService {
       log.debug(`Fees dashboard update → fees_dashboard (${payload.reason})`);
     } catch (error) {
       log.error("Error sending fees dashboard update", { error });
+    }
+  }
+
+  sendNotificationsDashboardUpdate(payload: {
+    updatedAt: string;
+    reason: string;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send notifications dashboard update: io is null");
+      return;
+    }
+
+    try {
+      const update = {
+        id: `notifications_dashboard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "notifications_dashboard_update",
+        updatedAt: payload.updatedAt,
+        reason: payload.reason,
+      };
+
+      this.io
+        .to("notifications_dashboard")
+        .emit("notifications_dashboard_updated", update);
+      // The Automated Notifications list page watches the same enqueue funnel
+      // through its own room so only its visitors get the refresh signal.
+      this.io
+        .to("automated_notifications")
+        .emit("automated_notifications_updated", update);
+      log.debug(
+        `Notifications dashboard update → notifications_dashboard + automated_notifications (${payload.reason})`,
+      );
+    } catch (error) {
+      log.error("Error sending notifications dashboard update", { error });
     }
   }
 

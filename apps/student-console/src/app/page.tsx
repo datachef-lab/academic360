@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { useBranding } from "@/features/settings/hooks/use-branding";
 
 // Force dynamic rendering to prevent prerendering issues
 export const dynamic = "force-dynamic";
@@ -37,8 +38,8 @@ export default function SignInPage() {
   const [otpExpiry, setOtpExpiry] = useState(0);
   const router = useRouter();
   const { login } = useAuth();
-  const { collegeName, abbreviation, logoUrl, loginIllustrationUrl } = useCollegeSettings();
-  const loginHeroSrc = loginIllustrationUrl;
+  const { collegeName, abbreviation, logoUrl, loginScreenUrl } = useBranding();
+  const loginHeroSrc = loginScreenUrl;
   const [mounted, setMounted] = useState(false);
   const [usermsg, setUsermsg] = useState("");
   const [userPreview, setUserPreview] = useState<{
@@ -692,324 +693,320 @@ export default function SignInPage() {
   }
 
   return (
-    collegeName &&
-    abbreviation &&
-    logoUrl &&
-    loginIllustrationUrl && (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-950 to-indigo-900 px-4 py-6 sm:px-6 overflow-y-auto">
-        {/* Invalid user / credentials dialog */}
-        <Dialog open={invalidOpen} onOpenChange={setInvalidOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <h3 className="text-lg font-semibold">Unable to sign in</h3>
-              <p className="text-sm text-gray-600">
-                {invalidMessage || "Something went wrong while signing in."}
-              </p>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-950 to-indigo-900 px-4 py-6 sm:px-6 overflow-y-auto">
+      {/* Invalid user / credentials dialog */}
+      <Dialog open={invalidOpen} onOpenChange={setInvalidOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <h3 className="text-lg font-semibold">Unable to sign in</h3>
+            <p className="text-sm text-gray-600">
+              {invalidMessage || "Something went wrong while signing in."}
+            </p>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
-        {/* Floating card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="relative z-10 flex w-full max-w-xl sm:max-w-2xl md:max-w-6xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
-        >
-          {/* Left section */}
-          <div className="w-full bg-white p-6 sm:p-8 md:w-[58%] md:min-w-[32rem] lg:w-[50%] md:p-12 flex flex-col min-h-[600px] md:h-[680px]">
-            <div className="mb-8 flex items-center gap-3">
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={logoUrl}
-                  alt=""
-                  className="h-12 w-12 shrink-0 border-0 object-contain  bg-white"
-                />
-              ) : (
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-indigo-600 text-white">
-                  <span className="text-lg font-bold">
-                    {(abbreviation || collegeName || "S").charAt(0).toUpperCase()}
+      {/* Floating card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 flex w-full max-w-xl sm:max-w-2xl md:max-w-6xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
+      >
+        {/* Left section */}
+        <div className="w-full bg-white p-6 sm:p-8 md:w-[58%] md:min-w-[32rem] lg:w-[50%] md:p-12 flex flex-col min-h-[600px] md:h-[680px]">
+          <div className="mb-8 flex items-center gap-3">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt=""
+                className="h-12 w-12 shrink-0 border-0 object-contain  bg-white"
+              />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-indigo-600 text-white">
+                <span className="text-lg font-bold">
+                  {(abbreviation || collegeName || "S").charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              {abbreviation ? (
+                <p className="text-xs font-semibold  tracking-wide text-indigo-600">
+                  <span className="uppercase">{abbreviation}</span> | <span>Student Console</span>
+                </p>
+              ) : null}
+              <h1 className="text-xl sm:text-2xl md:text-[1.6rem] font-bold leading-snug text-gray-800">
+                {collegeName ? (
+                  <>{collegeName}</>
+                ) : (
+                  <span className="whitespace-nowrap">
+                    <span className="text-indigo-600">Student</span>{" "}
+                    <span className="text-sm font-medium text-gray-500 sm:text-base">CONSOLE</span>
                   </span>
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                {abbreviation ? (
-                  <p className="text-xs font-semibold  tracking-wide text-indigo-600">
-                    <span className="uppercase">{abbreviation}</span> | <span>Student Console</span>
-                  </p>
-                ) : null}
-                <h1 className="text-xl sm:text-2xl md:text-[1.6rem] font-bold leading-snug text-gray-800">
-                  {collegeName ? (
-                    <>{collegeName}</>
-                  ) : (
-                    <span className="whitespace-nowrap">
-                      <span className="text-indigo-600">Student</span>{" "}
-                      <span className="text-sm font-medium text-gray-500 sm:text-base">
-                        CONSOLE
-                      </span>
-                    </span>
-                  )}
-                </h1>
-              </div>
+                )}
+              </h1>
             </div>
+          </div>
 
-            <div className="mb-3">
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
-                {otpSent ? "Enter OTP" : "Sign in with UID"}
-              </h2>
-              <p className="mt-2 w-full max-w-full text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left md:whitespace-nowrap break-words">
-                {otpSent
-                  ? `OTP sent to ${uid}@thebges.edu.in`
-                  : "Enter your 10-digit UID to receive OTP"}
-              </p>
-            </div>
+          <div className="mb-3">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+              {otpSent ? "Enter OTP" : "Sign in with UID"}
+            </h2>
+            <p className="mt-2 w-full max-w-full text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left md:whitespace-nowrap break-words">
+              {otpSent
+                ? `OTP sent to ${uid}@thebges.edu.in`
+                : "Enter your 10-digit UID to receive OTP"}
+            </p>
+          </div>
 
-            <form
-              onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit}
-              className="mt-3 flex flex-col flex-1 min-h-0"
-            >
-              {/* Fixed height container for all dynamic content */}
-              <div className="flex flex-col flex-1">
-                {/* Error message area - fixed height */}
-                <div className="h-[40px] flex items-center justify-center">
-                  <AnimatePresence>
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <Alert variant="destructive">
-                          <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Input area - fixed height */}
-                <div className="h-[120px] flex flex-col justify-center">
-                  {otpSent ? (
-                    <div className="flex flex-col justify-center h-full">
-                      <label className="block text-sm font-medium text-gray-700 mb-4">
-                        Enter the 6-digit OTP sent to your email
-                      </label>
-                      <div className="flex justify-center px-2">
-                        <InputOTP
-                          maxLength={6}
-                          value={otp}
-                          onChange={(value) => setOtp(value)}
-                          className="gap-2 sm:gap-3"
-                        >
-                          <InputOTPGroup className="gap-2 sm:gap-3">
-                            <InputOTPSlot
-                              index={0}
-                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                            />
-                            <InputOTPSlot
-                              index={1}
-                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                            />
-                            <InputOTPSlot
-                              index={2}
-                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                            />
-                            <InputOTPSlot
-                              index={3}
-                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                            />
-                            <InputOTPSlot
-                              index={4}
-                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                            />
-                            <InputOTPSlot
-                              index={5}
-                              className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                            />
-                          </InputOTPGroup>
-                        </InputOTP>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col justify-center h-full">
-                      <label htmlFor="uid" className="block text-sm font-medium text-gray-700 pb-3">
-                        Enter Your UID (10 Digits){" "}
-                      </label>
-                      <div className="relative flex items-center justify-center">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </span>
-                        <Input
-                          id="uid"
-                          placeholder="ENTER 10 DIGIT UID HERE"
-                          value={uid}
-                          onChange={(e) => setUid(formatUid(e.target.value))}
-                          className="block w-full placeholder:leading-[3.5rem] placeholder:italic rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400 placeholder:text-base"
-                          style={{ fontSize: "24px" }}
-                          maxLength={10}
-                          required
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* OTP expiry message area - fixed height */}
-                <div className="h-[24px] flex items-center justify-center">
-                  {otpSent && otpExpiry > 0 && (
-                    <p className="text-xs text-gray-500 text-center">
-                      OTP expires in {formatTime(otpExpiry)}
-                    </p>
-                  )}
-                </div>
-
-                {/* User preview area - fixed height */}
-                <div className="h-[80px] flex items-center justify-center">
-                  <div className="w-full h-full rounded-lg border border-blue-200 bg-blue-50 px-4 flex items-center justify-center">
-                    {uid.replace(/\D/g, "").length === 10 ? (
-                      lookupPending ? (
-                        <div className="flex items-center gap-2">
-                          <svg className="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24">
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                              fill="none"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            />
-                          </svg>
-                          <span className="text-sm font-medium text-blue-700">
-                            Looking up user...
-                          </span>
-                        </div>
-                      ) : userPreview ? (
-                        <div className="flex flex-col items-center justify-center leading-none">
-                          <p className="text-sm sm:text-base font-bold text-gray-900 text-center truncate w-full">
-                            {userPreview.name.toUpperCase()}
-                          </p>
-                          <p className="text-xs sm:text-sm text-gray-600 text-center truncate w-full">
-                            We'll send OTP to <span className="font-bold">{userPreview.email}</span>
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs sm:text-sm text-red-600  text-center leading-none">
-                          {usermsg}
-                        </p>
-                      )
-                    ) : (
-                      <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
-                        Waiting for you to enter UID
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Button area - fixed height */}
-              <div className="h-[60px] flex flex-col justify-center">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={
-                    isLoading ||
-                    (!otpSent && (uid.replace(/\D/g, "").length !== 10 || !userPreview)) ||
-                    (otpSent && (otp.length !== 6 || otpExpiry === 0))
-                  }
-                  className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center">
-                      <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      <span className="ml-2">{otpSent ? "Verifying..." : "Sending OTP..."}</span>
-                    </div>
-                  ) : (
-                    <>
-                      <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
-                    </>
-                  )}
-                </motion.button>
-
-                {otpSent && (
-                  <div className="mt-3 flex items-center justify-between text-sm">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        // Clear OTP state and go back to UID input
-                        setOtpSent(false);
-                        setOtp("");
-                        setError("");
-                        setOtpExpiry(0);
-                        setResendCooldown(0);
-                        // Don't clear userPreview - let it stay so name badge remains visible
-                        clearOtpStorage();
-                      }}
-                      className="text-gray-600 hover:text-gray-800"
+          <form
+            onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit}
+            className="mt-3 flex flex-col flex-1 min-h-0"
+          >
+            {/* Fixed height container for all dynamic content */}
+            <div className="flex flex-col flex-1">
+              {/* Error message area - fixed height */}
+              <div className="h-[40px] flex items-center justify-center">
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
                     >
-                      Change UID
-                    </Button>
-                    {otpExpiry === 0 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={handleResendOtp}
-                        disabled={resendCooldown > 0 || isLoading}
-                        className="text-indigo-600 hover:text-indigo-800"
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Input area - fixed height */}
+              <div className="h-[120px] flex flex-col justify-center">
+                {otpSent ? (
+                  <div className="flex flex-col justify-center h-full">
+                    <label className="block text-sm font-medium text-gray-700 mb-4">
+                      Enter the 6-digit OTP sent to your email
+                    </label>
+                    <div className="flex justify-center px-2">
+                      <InputOTP
+                        maxLength={6}
+                        value={otp}
+                        onChange={(value) => setOtp(value)}
+                        className="gap-2 sm:gap-3"
                       >
-                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
-                      </Button>
-                    )}
+                        <InputOTPGroup className="gap-2 sm:gap-3">
+                          <InputOTPSlot
+                            index={0}
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={1}
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={2}
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={3}
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={4}
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={5}
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col justify-center h-full">
+                    <label htmlFor="uid" className="block text-sm font-medium text-gray-700 pb-3">
+                      Enter Your UID (10 Digits){" "}
+                    </label>
+                    <div className="relative flex items-center justify-center">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </span>
+                      <Input
+                        id="uid"
+                        placeholder="ENTER 10 DIGIT UID HERE"
+                        value={uid}
+                        onChange={(e) => setUid(formatUid(e.target.value))}
+                        className="block w-full placeholder:leading-[3.5rem] placeholder:italic rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400 placeholder:text-base"
+                        style={{ fontSize: "24px" }}
+                        maxLength={10}
+                        required
+                      />
+                    </div>
                   </div>
                 )}
               </div>
-            </form>
-          </div>
 
-          {/* Right section */}
-          <div className="hidden md:block md:w-[50%] md:flex-1">
-            <div className="relative h-full w-full min-h-[400px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={loginHeroSrc} alt="" className="object-cover w-full h-full" />
+              {/* OTP expiry message area - fixed height */}
+              <div className="h-[24px] flex items-center justify-center">
+                {otpSent && otpExpiry > 0 && (
+                  <p className="text-xs text-gray-500 text-center">
+                    OTP expires in {formatTime(otpExpiry)}
+                  </p>
+                )}
+              </div>
+
+              {/* User preview area - fixed height */}
+              <div className="h-[80px] flex items-center justify-center">
+                <div className="w-full h-full rounded-lg border border-blue-200 bg-blue-50 px-4 flex items-center justify-center">
+                  {uid.replace(/\D/g, "").length === 10 ? (
+                    lookupPending ? (
+                      <div className="flex items-center gap-2">
+                        <svg className="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium text-blue-700">
+                          Looking up user...
+                        </span>
+                      </div>
+                    ) : userPreview ? (
+                      <div className="flex flex-col items-center justify-center leading-none">
+                        <p className="text-sm sm:text-base font-bold text-gray-900 text-center truncate w-full">
+                          {userPreview.name.toUpperCase()}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-600 text-center truncate w-full">
+                          We&apos;ll send OTP to{" "}
+                          <span className="font-bold">{userPreview.email}</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs sm:text-sm text-red-600  text-center leading-none">
+                        {usermsg}
+                      </p>
+                    )
+                  ) : (
+                    <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
+                      Waiting for you to enter UID
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
+
+            {/* Button area - fixed height */}
+            <div className="h-[60px] flex flex-col justify-center">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={
+                  isLoading ||
+                  (!otpSent && (uid.replace(/\D/g, "").length !== 10 || !userPreview)) ||
+                  (otpSent && (otp.length !== 6 || otpExpiry === 0))
+                }
+                className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span className="ml-2">{otpSent ? "Verifying..." : "Sending OTP..."}</span>
+                  </div>
+                ) : (
+                  <>
+                    <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
+                  </>
+                )}
+              </motion.button>
+
+              {otpSent && (
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      // Clear OTP state and go back to UID input
+                      setOtpSent(false);
+                      setOtp("");
+                      setError("");
+                      setOtpExpiry(0);
+                      setResendCooldown(0);
+                      // Don't clear userPreview - let it stay so name badge remains visible
+                      clearOtpStorage();
+                    }}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    Change UID
+                  </Button>
+                  {otpExpiry === 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleResendOtp}
+                      disabled={resendCooldown > 0 || isLoading}
+                      className="text-indigo-600 hover:text-indigo-800"
+                    >
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {/* Right section */}
+        <div className="hidden md:block md:w-[50%] md:flex-1">
+          <div className="relative h-full w-full min-h-[400px]">
+            {loginHeroSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={loginHeroSrc} alt="" className="object-cover w-full h-full" />
+            ) : null}
           </div>
-        </motion.div>
-      </div>
-    )
+        </div>
+      </motion.div>
+    </div>
   );
 }
