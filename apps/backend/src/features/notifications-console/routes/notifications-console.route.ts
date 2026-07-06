@@ -24,11 +24,101 @@ import {
   verifyResendOtp,
   ResendError,
 } from "@/features/notifications-console/services/notifications-console.service.js";
+import {
+  createEvent,
+  deleteEvent,
+  getEvent,
+  getEventStatus,
+  getEventRecipients,
+  listEvents,
+  resolveEventScopePreview,
+  resolveScopePreviewFromInput,
+  buildEventTemplate,
+  buildMasterTemplate,
+  buildFailedRecipientsWorkbook,
+  getEventSendPreview,
+  parseEventRecipients,
+  resendEventFailed,
+  updateEvent,
+  uploadEventRecipients,
+  triggerEvent,
+  EventError,
+  type ScopeInput,
+} from "@/features/notifications-console/services/notification-events.service.js";
+import {
+  sendActionOtp,
+  verifyActionOtp,
+  consumeActionToken,
+  VerificationError,
+} from "@/features/notifications-console/services/notification-verification.service.js";
 
 const previewImageUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
 });
+
+const recipientsUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
+
+// Only triggering (the actual send) is verifier-OTP-gated. The wizard verifies
+// once (step 3) BEFORE the event exists, so the action key is per-user rather
+// than per-event.
+const EVENT_SEND_ACTION = "event-send";
+
+const EVENT_HTTP: Record<string, number> = {
+  NOT_FOUND: 404,
+  INVALID_STATE: 409,
+  NO_MASTER: 409,
+  NO_RECIPIENTS: 409,
+  NO_VERIFIERS: 409,
+  INVALID_OTP: 400,
+  INVALID_SESSION: 410,
+};
+
+function sendEventError(res: express.Response, e: unknown): boolean {
+  if (e instanceof EventError || e instanceof VerificationError) {
+    const status = EVENT_HTTP[e.code] ?? 400;
+    res
+      .status(status)
+      .json(new ApiResponse(status, "ERROR", { code: e.code }, e.message));
+    return true;
+  }
+  return false;
+}
+
+const csvIntsFromBody = (v: unknown): number[] | undefined =>
+  Array.isArray(v)
+    ? (v as unknown[]).map(Number).filter((n) => Number.isFinite(n) && n > 0)
+    : undefined;
+
+function parseScope(body: Record<string, unknown>): ScopeInput {
+  const ints = (v: unknown): number[] =>
+    Array.isArray(v)
+      ? (v as unknown[]).map(Number).filter((n) => Number.isFinite(n) && n > 0)
+      : [];
+  const strs = (v: unknown): string[] =>
+    Array.isArray(v)
+      ? (v as unknown[]).filter((x): x is string => typeof x === "string")
+      : [];
+  const s = (body.scope ?? {}) as Record<string, unknown>;
+  const one = (v: unknown): number | null => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  return {
+    academicYearId: one(s.academicYearId),
+    programCourseId: one(s.programCourseId),
+    classId: one(s.classId),
+    shiftIds: ints(s.shiftIds),
+    sectionIds: ints(s.sectionIds),
+    genders: strs(s.genders),
+    religionIds: ints(s.religionIds),
+    categoryIds: ints(s.categoryIds),
+    quotaTypeIds: ints(s.quotaTypeIds),
+  };
+}
 
 const RESEND_HTTP: Record<string, number> = {
   NOT_FOUND: 404,
@@ -451,6 +541,422 @@ router.patch("/masters/:id", async (req, res, next) => {
     res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", row, "Master updated."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Notification Events (scoped bulk campaigns). Verifier-OTP gate on create +
+// trigger reuses the shared action-verification helpers.
+// ---------------------------------------------------------------------------
+
+const eventId = (req: express.Request): number | null => {
+  const id = Number(req.params.id);
+  return Number.isFinite(id) && id > 0 ? id : null;
+};
+
+router.get("/events", async (req, res, next) => {
+  try {
+    const data = await listEvents({
+      page: posInt(req.query.page, 1),
+      limit: posInt(req.query.limit, 20, 100),
+      search: (req.query.search as string) || null,
+    });
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Events fetched."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+});
+
+// -- No-event wizard endpoints (registered before the /events/:id patterns) --
+
+router.get("/events/template", async (req, res, next) => {
+  try {
+    const masterId = Number(req.query.masterId);
+    if (!Number.isFinite(masterId) || masterId < 1) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid master id."));
+      return;
+    }
+    const wb = await buildMasterTemplate(masterId);
+    await sendWorkbook(res, wb, `event-recipients-template.xlsx`);
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.post(
+  "/events/parse",
+  recipientsUpload.single("file"),
+  async (req, res, next) => {
+    try {
+      const masterId = Number(req.body?.masterId);
+      if (!Number.isFinite(masterId) || masterId < 1) {
+        res
+          .status(400)
+          .json(new ApiResponse(400, "ERROR", null, "Invalid master id."));
+        return;
+      }
+      if (!req.file) {
+        res
+          .status(400)
+          .json(new ApiResponse(400, "ERROR", null, "No file uploaded."));
+        return;
+      }
+      const data = await parseEventRecipients(masterId, req.file);
+      res
+        .status(200)
+        .json(new ApiResponse(200, "SUCCESS", data, "Recipients parsed."));
+    } catch (e) {
+      if (sendEventError(res, e)) return;
+      handleError(e, res, next);
+    }
+  },
+);
+
+router.post("/events/resolve", async (req, res, next) => {
+  try {
+    const data = await resolveScopePreviewFromInput(parseScope(req.body ?? {}));
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Scope resolved."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+});
+
+router.get("/events/send/preview", async (_req, res, next) => {
+  try {
+    const data = await getEventSendPreview();
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Send preview."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+});
+
+router.post("/events/send/otp", async (req, res, next) => {
+  try {
+    const data = await sendActionOtp(EVENT_SEND_ACTION, requestUserId(req));
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Verification code sent."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.post("/events/send/verify", async (req, res, next) => {
+  try {
+    const otp = String(req.body?.otp ?? "").trim();
+    if (!otp) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "OTP is required."));
+      return;
+    }
+    const data = await verifyActionOtp(
+      EVENT_SEND_ACTION,
+      requestUserId(req),
+      otp,
+    );
+    res.status(200).json(new ApiResponse(200, "SUCCESS", data, "Verified."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.post("/events", async (req, res, next) => {
+  try {
+    const body = req.body ?? {};
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const masterId = Number(body.notificationMasterId);
+    const variant = typeof body.variant === "string" ? body.variant : "";
+    if (!name || !Number.isFinite(masterId) || masterId < 1 || !variant) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "ERROR",
+            null,
+            "Name, master and channel are required.",
+          ),
+        );
+      return;
+    }
+    const data = await createEvent({
+      name,
+      description:
+        typeof body.description === "string" ? body.description : null,
+      remarks: typeof body.remarks === "string" ? body.remarks : null,
+      notificationMasterId: masterId,
+      variant,
+      dataSourceMode:
+        typeof body.dataSourceMode === "string"
+          ? body.dataSourceMode
+          : "UPLOAD",
+      scope: parseScope(body),
+      recipientsFileKey:
+        typeof body.recipientsFileKey === "string" && body.recipientsFileKey
+          ? body.recipientsFileKey
+          : null,
+      createdByUserId: requestUserId(req),
+    });
+    res
+      .status(201)
+      .json(new ApiResponse(201, "SUCCESS", data, "Event created."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.get("/events/:id", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+      return;
+    }
+    const data = await getEvent(id);
+    if (!data) {
+      res
+        .status(404)
+        .json(new ApiResponse(404, "ERROR", null, "Event not found."));
+      return;
+    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Event fetched."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+});
+
+router.patch("/events/:id", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+      return;
+    }
+    const body = req.body ?? {};
+    const data = await updateEvent(id, {
+      name: typeof body.name === "string" ? body.name : undefined,
+      description:
+        typeof body.description === "string" ? body.description : undefined,
+      remarks: typeof body.remarks === "string" ? body.remarks : undefined,
+      variant: typeof body.variant === "string" ? body.variant : undefined,
+      dataSourceMode:
+        typeof body.dataSourceMode === "string"
+          ? body.dataSourceMode
+          : undefined,
+      scope: body.scope ? parseScope(body) : undefined,
+      updatedByUserId: requestUserId(req),
+    });
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Event updated."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.delete("/events/:id", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+      return;
+    }
+    await deleteEvent(id);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", null, "Event deleted."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.get("/events/:id/recipients/resolve", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+      return;
+    }
+    const data = await resolveEventScopePreview(id);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Scope resolved."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.get("/events/:id/recipients/template", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+      return;
+    }
+    const wb = await buildEventTemplate(id);
+    await sendWorkbook(res, wb, `event-${id}-recipients.xlsx`);
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.post(
+  "/events/:id/recipients/upload",
+  recipientsUpload.single("file"),
+  async (req, res, next) => {
+    try {
+      const id = eventId(req);
+      if (!id) {
+        res
+          .status(400)
+          .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+        return;
+      }
+      if (!req.file) {
+        res
+          .status(400)
+          .json(new ApiResponse(400, "ERROR", null, "No file uploaded."));
+        return;
+      }
+      const data = await uploadEventRecipients(id, req.file);
+      res
+        .status(200)
+        .json(new ApiResponse(200, "SUCCESS", data, "Recipients uploaded."));
+    } catch (e) {
+      if (sendEventError(res, e)) return;
+      handleError(e, res, next);
+    }
+  },
+);
+
+router.post("/events/:id/trigger", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    const token = String(req.body?.token ?? "");
+    if (!id || !token) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid request."));
+      return;
+    }
+    consumeActionToken(EVENT_SEND_ACTION, requestUserId(req), token);
+    const data = await triggerEvent(
+      id,
+      csvIntsFromBody(req.body?.staffUserIds),
+    );
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Event triggered."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.post("/events/:id/resend", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    const token = String(req.body?.token ?? "");
+    if (!id || !token) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid request."));
+      return;
+    }
+    consumeActionToken(EVENT_SEND_ACTION, requestUserId(req), token);
+    const data = await resendEventFailed(
+      id,
+      csvIntsFromBody(req.body?.staffUserIds),
+    );
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Resend queued."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.get("/events/:id/failed.xlsx", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+      return;
+    }
+    const wb = await buildFailedRecipientsWorkbook(id);
+    await sendWorkbook(res, wb, `event-${id}-failed.xlsx`);
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.get("/events/:id/recipients", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+      return;
+    }
+    const data = await getEventRecipients(id);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Recipients fetched."));
+  } catch (e) {
+    if (sendEventError(res, e)) return;
+    handleError(e, res, next);
+  }
+});
+
+router.get("/events/:id/status", async (req, res, next) => {
+  try {
+    const id = eventId(req);
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid event id."));
+      return;
+    }
+    const data = await getEventStatus(id);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", data, "Status fetched."));
   } catch (e) {
     handleError(e, res, next);
   }

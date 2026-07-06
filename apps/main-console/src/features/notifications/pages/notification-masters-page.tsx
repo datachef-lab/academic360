@@ -51,10 +51,10 @@ import { humanizeFieldName } from "@/features/notifications/utils/format";
 function TriggerBadge({ system }: { system: boolean }) {
   return (
     <span
-      className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${
         system
-          ? "border-violet-300 bg-violet-100 text-violet-700"
-          : "border-sky-300 bg-sky-100 text-sky-700"
+          ? "bg-violet-50 text-violet-700 ring-violet-600/20"
+          : "bg-blue-50 text-blue-700 ring-blue-600/20"
       }`}
     >
       {system ? "Auto" : "Manual"}
@@ -490,11 +490,14 @@ export default function NotificationMastersPage() {
                         <td className="px-4 py-3 text-center text-gray-600">
                           {(page - 1) * PAGE_SIZE + i + 1}
                         </td>
-                        <td className="max-w-[260px] px-4 py-3 font-medium text-gray-900">
-                          <span className="flex items-center gap-1.5">
-                            <span className="truncate">{m.name}</span>
+                        <td className="min-w-[220px] px-4 py-3 font-medium text-gray-900">
+                          <span className="flex items-start gap-1.5">
+                            <span className="whitespace-normal break-words">{m.name}</span>
                             {m.hasAttachments && (
-                              <span title="Sends a file attachment" className="flex-shrink-0">
+                              <span
+                                title="Sends a file attachment"
+                                className="mt-0.5 flex-shrink-0"
+                              >
                                 <Paperclip className="h-3.5 w-3.5 text-sky-600" />
                               </span>
                             )}
@@ -791,6 +794,12 @@ export default function NotificationMastersPage() {
                       saved with “{dialogMode === "add" ? "Create master" : "Save changes"}”.
                       {dialogMode === "edit" &&
                         " Existing fields cannot be removed — past notifications reference them."}
+                    </p>
+                  )}
+                  {!locked && (
+                    <p className="text-[11px] italic text-muted-foreground">
+                      Coming soon: map each field to a student-record data source so campaign values
+                      can be auto-filled instead of uploaded.
                     </p>
                   )}
 

@@ -228,6 +228,244 @@ export async function getNotificationStats() {
 }
 
 // ---------------------------------------------------------------------------
+// Notification Events (scoped bulk campaigns)
+// ---------------------------------------------------------------------------
+
+export interface EventScope {
+  academicYearId?: number | null;
+  programCourseId?: number | null;
+  classId?: number | null;
+  shiftIds?: number[];
+  sectionIds?: number[];
+  genders?: string[];
+  religionIds?: number[];
+  categoryIds?: number[];
+  quotaTypeIds?: number[];
+}
+
+export interface NotificationEventRow {
+  id: number;
+  name: string;
+  description: string | null;
+  remarks: string | null;
+  variant: string | null;
+  status: "DRAFT" | "READY" | "TRIGGERED";
+  dataSourceMode: string | null;
+  masterId: number | null;
+  masterName: string | null;
+  uploadSummary: { matched: number; unmatched: string[] } | null;
+  createdAt: string | null;
+  total: number;
+  sent: number;
+  failed: number;
+}
+
+export interface EventRecipientRow {
+  uid: string | null;
+  name: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  status: string | null;
+  values: Record<string, string>;
+}
+
+export async function getEventRecipientsList(id: number) {
+  const res = await axiosInstance.get<
+    ApiResponse<{ fields: string[]; recipients: EventRecipientRow[]; triggered: boolean }>
+  >(`${BASE}/events/${id}/recipients`);
+  return res.data.payload;
+}
+
+export interface NotificationEventDetail extends NotificationEventRow {
+  notificationMasterId: number | null;
+  recipientsFileKey: string | null;
+  scope: EventScope;
+}
+
+export async function listNotificationEvents(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  const res = await axiosInstance.get<
+    ApiResponse<{ rows: NotificationEventRow[]; total: number; page: number; limit: number }>
+  >(`${BASE}/events`, { params });
+  return res.data.payload;
+}
+
+export async function getNotificationEvent(id: number) {
+  const res = await axiosInstance.get<ApiResponse<NotificationEventDetail>>(`${BASE}/events/${id}`);
+  return res.data.payload;
+}
+
+export async function createNotificationEvent(input: {
+  name: string;
+  description?: string | null;
+  remarks?: string | null;
+  notificationMasterId: number;
+  variant: string;
+  dataSourceMode?: string;
+  scope: EventScope;
+  /** S3 key from parseEventRecipients — creates the event as READY. */
+  recipientsFileKey?: string | null;
+}) {
+  const res = await axiosInstance.post<ApiResponse<NotificationEventRow & { id: number }>>(
+    `${BASE}/events`,
+    input,
+  );
+  return res.data.payload;
+}
+
+export async function updateNotificationEvent(
+  id: number,
+  input: Partial<{
+    name: string;
+    description: string | null;
+    remarks: string | null;
+    variant: string;
+    dataSourceMode: string;
+    scope: EventScope;
+  }>,
+) {
+  const res = await axiosInstance.patch<ApiResponse<NotificationEventRow>>(
+    `${BASE}/events/${id}`,
+    input,
+  );
+  return res.data.payload;
+}
+
+export async function deleteNotificationEvent(id: number) {
+  await axiosInstance.delete(`${BASE}/events/${id}`);
+}
+
+export async function resolveEventScope(id: number) {
+  const res = await axiosInstance.get<
+    ApiResponse<{ count: number; sample: { uid: string; name: string | null }[] }>
+  >(`${BASE}/events/${id}/recipients/resolve`);
+  return res.data.payload;
+}
+
+export async function downloadEventTemplate(id: number) {
+  await downloadBlob(`${BASE}/events/${id}/recipients/template`, {}, `event-${id}-recipients.xlsx`);
+}
+
+export interface EventParseResult {
+  fileKey: string;
+  matched: number;
+  /** uids with no student record. */
+  unknownUids: string[];
+  /** uids whose student has no active promotion (not currently enrolled). */
+  notEnrolled: string[];
+  fields: string[];
+  sample: {
+    uid: string;
+    userId: number | null;
+    name: string | null;
+    whatsapp: string | null;
+    values: Record<string, string>;
+  }[];
+}
+
+/** Parse + stage a recipient sheet WITHOUT an event (wizard pre-confirmation). */
+export async function parseEventRecipients(masterId: number, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("masterId", String(masterId));
+  const res = await axiosInstance.post<ApiResponse<EventParseResult>>(
+    `${BASE}/events/parse`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data.payload;
+}
+
+export async function uploadEventRecipients(id: number, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await axiosInstance.post<ApiResponse<EventParseResult>>(
+    `${BASE}/events/${id}/recipients/upload`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data.payload;
+}
+
+/** Headers-only template for a master (no event needed). */
+export async function downloadMasterTemplate(masterId: number) {
+  await downloadBlob(`${BASE}/events/template`, { masterId }, `event-recipients-template.xlsx`);
+}
+
+/** Resolve a scope preview without an event row. */
+export async function resolveScopePreview(scope: EventScope) {
+  const res = await axiosInstance.post<
+    ApiResponse<{ count: number; sample: { uid: string; name: string | null }[] }>
+  >(`${BASE}/events/resolve`, { scope });
+  return res.data.payload;
+}
+
+export interface EventSendPreview {
+  mode: "development" | "staging" | "production";
+  cap: number | null;
+  targets: {
+    userId: number | null;
+    name: string;
+    type: string | null;
+    email: string | null;
+    phone: string | null;
+    whatsapp: string | null;
+  }[];
+}
+
+/** Where a send actually goes in this environment + the test cap. */
+export async function getEventSendPreview() {
+  const res = await axiosInstance.get<ApiResponse<EventSendPreview>>(`${BASE}/events/send/preview`);
+  return res.data.payload;
+}
+
+export async function triggerNotificationEvent(id: number, token: string, staffUserIds?: number[]) {
+  const res = await axiosInstance.post<
+    ApiResponse<{ enqueued: number; failed: number; capped: boolean; totalRecipients: number }>
+  >(`${BASE}/events/${id}/trigger`, { token, staffUserIds });
+  return res.data.payload;
+}
+
+/** Re-enqueue the failed recipients of a triggered event (send-OTP token). */
+export async function resendEventFailed(id: number, token: string, staffUserIds?: number[]) {
+  const res = await axiosInstance.post<
+    ApiResponse<{ enqueued: number; failed: number; capped: boolean; totalRecipients: number }>
+  >(`${BASE}/events/${id}/resend`, { token, staffUserIds });
+  return res.data.payload;
+}
+
+/** Download the failed recipients as Excel. */
+export async function downloadEventFailed(id: number) {
+  await downloadBlob(`${BASE}/events/${id}/failed.xlsx`, {}, `event-${id}-failed.xlsx`);
+}
+
+export async function getEventStatus(id: number) {
+  const res = await axiosInstance.get<
+    ApiResponse<{ total: number; sent: number; pending: number; failed: number }>
+  >(`${BASE}/events/${id}/status`);
+  return res.data.payload;
+}
+
+// Verifier-OTP gate — only sending is verification-gated (per-user action key,
+// so the wizard can verify before the event exists).
+export async function startEventSendOtp() {
+  const res = await axiosInstance.post<
+    ApiResponse<{ mode: ResendMode; verifiers: ResendVerifier[]; expiresMinutes: number }>
+  >(`${BASE}/events/send/otp`);
+  return res.data.payload;
+}
+export async function verifyEventSendOtp(otp: string) {
+  const res = await axiosInstance.post<ApiResponse<{ token: string }>>(
+    `${BASE}/events/send/verify`,
+    { otp },
+  );
+  return res.data.payload;
+}
+
+// ---------------------------------------------------------------------------
 // Dashboard
 // ---------------------------------------------------------------------------
 
