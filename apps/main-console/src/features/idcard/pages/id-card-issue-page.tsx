@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Camera, Eye, History as HistoryIcon, Printer, ScanLine, Trash2, User } from "lucide-react";
 import QRCode from "qrcode";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,10 +27,12 @@ import axiosInstance from "@/utils/api";
 import { useAppSelector } from "@/store/hooks";
 import { selectCurrentAcademicYear } from "@/store/slices/academicYearSlice";
 import { AcademicYearSelector } from "@/components/academic-year";
+import { cn } from "@/lib/utils";
 
 import {
   createIssue,
   deleteIssue,
+  fetchIssueFrontBlob,
   fetchIssuePhotoBlob,
   fetchTemplateBacksideBlob,
   fetchTemplateImageBlob,
@@ -188,6 +193,7 @@ export default function IdCardIssuePage() {
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [composedBlob, setComposedBlob] = useState<Blob | null>(null);
   const [composedPreview, setComposedPreview] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showZoomedCard, setShowZoomedCard] = useState(false);
   const [showHistorySheet, setShowHistorySheet] = useState(false);
@@ -200,6 +206,20 @@ export default function IdCardIssuePage() {
   const [programValidTill, setProgramValidTill] = useState<string | null>(null); // dd-mm-yyyy
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const loadedPhotoIssueIdRef = useRef<number | null>(null);
+  const hasLocalPhotoOverrideRef = useRef(false);
+  const latestLookupRequestRef = useRef(0);
+  const prevTemplateAcademicYearIdRef = useRef<number | null | undefined>(undefined);
+  const previewLoadInFlightRef = useRef(false);
+  const [isRefreshingPreview, setIsRefreshingPreview] = useState(false);
+
+  const applyComposedPreview = (blob: Blob) => {
+    setComposedBlob(blob);
+    setComposedPreview((prev) => {
+      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(blob);
+    });
+  };
 
   // Auto "Program course" validity (dd-mm-yyyy) for the loaded student. This
   // also carries the student's registration academic year (the academic year
@@ -236,21 +256,28 @@ export default function IdCardIssuePage() {
     queryFn: () => (templateId ? getTemplate(templateId) : null),
     enabled: !!templateId,
   });
+  const templateWithFields: IdCardTemplate | null = activeTemplateQuery.data ?? null;
+  const templateFieldsReady = (templateWithFields?.fields?.length ?? 0) > 0;
   const activeTemplate: IdCardTemplate | null =
-    (activeTemplateQuery.data as IdCardTemplate | null) ??
-    templates.find((t) => t.id === templateId) ??
-    null;
+    templateWithFields ?? templates.find((t) => t.id === templateId) ?? null;
 
-  // When the template academic year changes (registration year, or the
-  // selected-year fallback), drop the previously selected templateId so the
-  // default-template lookup below can re-pick the right one for the new year
-  // (and clear any stale composed/back artefacts).
+  // When the template academic year actually changes, re-pick the default template.
   useEffect(() => {
+    if (templateAcademicYearId == null) return;
+    if (student && validityQuery.isLoading) return;
+    if (prevTemplateAcademicYearIdRef.current === templateAcademicYearId) return;
+    prevTemplateAcademicYearIdRef.current = templateAcademicYearId;
     setTemplateId(null);
-    setComposedBlob(null);
-    setComposedPreview(null);
+    loadedPhotoIssueIdRef.current = null;
     setShowBack(false);
-  }, [templateAcademicYearId]);
+    if (!student) {
+      setComposedBlob(null);
+      setComposedPreview((prev) => {
+        if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return null;
+      });
+    }
+  }, [templateAcademicYearId, student, validityQuery.isLoading]);
 
   useEffect(() => {
     if (!templateId && templates.length > 0) {
@@ -290,96 +317,109 @@ export default function IdCardIssuePage() {
     setRemarks(STATUS_REMARKS[newStatus]);
   }, [hasExistingIdCard, student]);
 
-  // On a reissue / renewal, fetch the previously captured photo from S3 via the
-  // authed backend proxy so the composer can rebuild the card immediately —
-  // operator only needs to click Retake if they want a fresh one.
-  useEffect(() => {
-    if (!student) return;
-    if (photoBlob) return;
-    const recent = priorIssues[0];
-    if (!recent?.id || !recent.photoImageKey) return;
-    let revoke: string | null = null;
-    let cancelled = false;
-    fetchIssuePhotoBlob(recent.id)
-      .then((blob) => {
-        if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        revoke = url;
-        setPhotoBlob(blob);
-        setPhotoPreviewUrl(url);
-      })
-      .catch(() => {
-        // Non-fatal — operator can still capture a fresh photo.
-      });
-    return () => {
-      cancelled = true;
-      if (revoke) URL.revokeObjectURL(revoke);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id, priorIssues[0]?.id]);
-
   const setStatusAndRemarks = (s: IdCardIssueStatus) => {
     setIssueStatus(s);
     setRemarks(STATUS_REMARKS[s]);
   };
 
   const resetCompositionState = () => {
+    setPhotoPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setComposedPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
     setPhotoBlob(null);
-    setPhotoPreviewUrl(null);
     setComposedBlob(null);
-    setComposedPreview(null);
+    loadedPhotoIssueIdRef.current = null;
+    hasLocalPhotoOverrideRef.current = false;
   };
 
   const lookupMutation = useMutation({
     mutationFn: async (q: string) => fetchStudentByUid(q.trim()),
-    onSuccess: (data) => {
+  });
+
+  const handleLoadStudent = async () => {
+    const q = uidQuery.trim();
+    if (!q) return;
+    const requestId = ++latestLookupRequestRef.current;
+    try {
+      const data = await lookupMutation.mutateAsync(q);
+      if (requestId !== latestLookupRequestRef.current) return;
+
       const info = extractStudentInfo(data);
       if (!info.id) {
         toast.error("No student matched.");
         return;
       }
+
+      const isSameStudent = student?.id === info.id;
       setStudent(info);
       setRfid(info.rfidNumber ?? "");
-      resetCompositionState();
-      // Default each new student back to the auto "Program course" validity.
-      setValidityMode("PROGRAM");
-      setManualValidTill("");
-      setProgramValidTill(null);
 
-      // Blood group (health) and emergency phone live in separate tables keyed by
-      // userId, so they aren't on the student DTO — fetch them by studentId.
-      void (async () => {
-        const [healthRes, emRes] = await Promise.allSettled([
-          axiosInstance.get(`/api/health/student/${info.id}`),
-          axiosInstance.get(`/api/emergency-contact/student/${info.id}`),
-        ]);
-        const health = healthRes.status === "fulfilled" ? healthRes.value.data?.payload : null;
-        const bloodGroup = health?.bloodGroup?.type ?? health?.bloodGroup?.name ?? null;
-        const emPayload = emRes.status === "fulfilled" ? emRes.value.data?.payload : null;
-        const emergencyPhone = emPayload?.phone ?? null;
-        const emergencyRelation = emPayload?.havingRelationAs ?? null;
-        setStudent((prev) =>
-          prev && prev.id === info.id
-            ? {
-                ...prev,
-                bloodGroup: bloodGroup ?? prev.bloodGroup,
-                emergencyPhone,
-                emergencyRelation,
-              }
-            : prev,
-        );
-      })();
-    },
-    onError: () => toast.error("Lookup failed. Verify the UID."),
-  });
+      if (!isSameStudent) {
+        resetCompositionState();
+        setValidityMode("PROGRAM");
+        setManualValidTill("");
+        setProgramValidTill(null);
+      } else {
+        loadedPhotoIssueIdRef.current = null;
+      }
+
+      const [healthRes, emRes] = await Promise.allSettled([
+        axiosInstance.get(`/api/health/student/${info.id}`),
+        axiosInstance.get(`/api/emergency-contact/student/${info.id}`),
+      ]);
+      if (requestId !== latestLookupRequestRef.current) return;
+
+      const health = healthRes.status === "fulfilled" ? healthRes.value.data?.payload : null;
+      const bloodGroup = health?.bloodGroup?.type ?? health?.bloodGroup?.name ?? null;
+      const emPayload = emRes.status === "fulfilled" ? emRes.value.data?.payload : null;
+      const emergencyPhone = emPayload?.phone ?? null;
+      const emergencyRelation = emPayload?.havingRelationAs ?? null;
+      setStudent((prev) =>
+        prev && prev.id === info.id
+          ? {
+              ...prev,
+              bloodGroup: bloodGroup ?? prev.bloodGroup,
+              emergencyPhone,
+              emergencyRelation,
+            }
+          : prev,
+      );
+
+      if (isSameStudent) {
+        await Promise.all([validityQuery.refetch(), historyQuery.refetch()]);
+      }
+    } catch {
+      if (requestId !== latestLookupRequestRef.current) return;
+      toast.error("Lookup failed. Verify the UID.");
+    }
+  };
 
   const handleCapture = (full: Blob, cropped: Blob) => {
+    loadedPhotoIssueIdRef.current = null;
+    hasLocalPhotoOverrideRef.current = true;
+    setComposedBlob(null);
+    setComposedPreview((prev) => {
+      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return null;
+    });
     setPhotoBlob(cropped);
     setPhotoPreviewUrl(URL.createObjectURL(cropped));
     void full;
   };
 
   const handleUpload = (file: File) => {
+    loadedPhotoIssueIdRef.current = null;
+    hasLocalPhotoOverrideRef.current = true;
+    setComposedBlob(null);
+    setComposedPreview((prev) => {
+      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return null;
+    });
     setPhotoBlob(file);
     setPhotoPreviewUrl(URL.createObjectURL(file));
   };
@@ -387,10 +427,16 @@ export default function IdCardIssuePage() {
   // Draw the full card (template bg + photo + fields + QR) for a given photo onto
   // the given canvas and return it as a PNG blob. Pure renderer — no state writes,
   // so it's reused both for the live composer and the read-only history viewer.
-  const renderCard = async (photoSource: Blob, canvas: HTMLCanvasElement): Promise<Blob | null> => {
-    if (!activeTemplate || !student) return null;
-    canvas.width = activeTemplate.canvasWidthPx;
-    canvas.height = activeTemplate.canvasHeightPx;
+  const renderCard = async (
+    photoSource: Blob,
+    canvas: HTMLCanvasElement,
+    template: IdCardTemplate,
+    studentInfo: StudentInfo,
+    validTill: string,
+  ): Promise<Blob | null> => {
+    if (!template.fields?.length) return null;
+    canvas.width = template.canvasWidthPx;
+    canvas.height = template.canvasHeightPx;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
@@ -416,7 +462,7 @@ export default function IdCardIssuePage() {
     let bgUrl: string | null = null;
     let photoUrl: string | null = null;
     try {
-      const bgBlob = await fetchTemplateImageBlob(activeTemplate.id);
+      const bgBlob = await fetchTemplateImageBlob(template.id);
       bgUrl = URL.createObjectURL(bgBlob);
       const bg = await loadImg(bgUrl);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -429,11 +475,11 @@ export default function IdCardIssuePage() {
       // rendered course width so the shift anchor sits right after it (with a
       // small gap), regardless of how long the program-course name is.
       let shiftInlineAnchor: { x: number; y: number } | null = null;
-      const courseField = (activeTemplate.fields ?? []).find(
+      const courseField = (template.fields ?? []).find(
         (f) => f.fieldKey === "COURSE" && f.isVisible !== false,
       );
       if (courseField) {
-        const courseText = valueForField("COURSE", student, activeValidTill);
+        const courseText = valueForField("COURSE", studentInfo, validTill);
         if (courseText) {
           const cpx = courseField.fontSize ?? (FIELD_FONT_PX.COURSE || 22);
           ctx.font = `bold ${cpx}px Calibri`;
@@ -448,7 +494,7 @@ export default function IdCardIssuePage() {
         }
       }
 
-      for (const field of activeTemplate.fields ?? []) {
+      for (const field of template.fields ?? []) {
         if (field.isVisible === false) continue;
 
         if (field.fieldKey === "PHOTO") {
@@ -485,9 +531,9 @@ export default function IdCardIssuePage() {
         if (field.fieldKey === "QRCODE") {
           // Prefer the per-field size set in the editor; fall back to the
           // template-level QR size, then a square default.
-          const qrW = field.width || activeTemplate.qrcodeSize || 80;
-          const qrH = field.height || activeTemplate.qrcodeHeight || qrW;
-          const qrDataUrl = await QRCode.toDataURL(student.uid || "", {
+          const qrW = field.width || template.qrcodeSize || 80;
+          const qrH = field.height || template.qrcodeHeight || qrW;
+          const qrDataUrl = await QRCode.toDataURL(studentInfo.uid || "", {
             errorCorrectionLevel: "M",
             margin: 1,
             width: Math.max(qrW, qrH), // render at the larger dim, then scale to the box
@@ -498,7 +544,7 @@ export default function IdCardIssuePage() {
         }
 
         if (TEXT_FIELDS.includes(field.fieldKey)) {
-          const text = valueForField(field.fieldKey, student, activeValidTill);
+          const text = valueForField(field.fieldKey, studentInfo, validTill);
           if (!text) continue;
           const px = field.fontSize ?? (FIELD_FONT_PX[field.fieldKey] || 22);
           ctx.fillStyle = "#000000";
@@ -538,19 +584,138 @@ export default function IdCardIssuePage() {
   };
 
   const compose = async () => {
-    if (!activeTemplate || !student || !photoBlob) {
+    if (!templateWithFields?.fields?.length || !student || !photoBlob) {
       toast.error("Need student, template, and photo before composing.");
       return;
     }
-    const canvas = canvasRef.current ?? document.createElement("canvas");
-    const blob = await renderCard(photoBlob, canvas);
-    if (!blob) {
-      toast.error("Could not compose the card image.");
-      return;
-    }
-    setComposedBlob(blob);
-    setComposedPreview(URL.createObjectURL(blob));
+    const ok = await composeFromPhoto(photoBlob, templateWithFields, student, activeValidTill);
+    if (!ok) toast.error("Could not compose the card image.");
   };
+
+  const isImageBlob = (blob: Blob) =>
+    blob.size > 0 && (blob.type.startsWith("image/") || blob.type === "");
+
+  const composeFromPhoto = async (
+    photo: Blob,
+    template: IdCardTemplate,
+    studentInfo: StudentInfo,
+    validTill: string,
+  ): Promise<boolean> => {
+    if (!template.fields?.length) return false;
+    const blob = await renderCard(
+      photo,
+      canvasRef.current ?? document.createElement("canvas"),
+      template,
+      studentInfo,
+      validTill,
+    );
+    if (!blob) return false;
+    applyComposedPreview(blob);
+    return true;
+  };
+
+  // Load the latest issue photo and compose it onto the active template so the
+  // full card design (background, fields, QR) is always shown.
+  const loadIssuePreview = async (
+    issueId: number,
+    issue: IdCardIssue | null | undefined,
+    template: IdCardTemplate,
+    studentInfo: StudentInfo,
+    validTill: string,
+  ): Promise<boolean> => {
+    if (!template.fields?.length) return false;
+
+    try {
+      const photo = await fetchIssuePhotoBlob(issueId);
+      if (!isImageBlob(photo)) return false;
+
+      setPhotoBlob(photo);
+      setPhotoPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(photo);
+      });
+      loadedPhotoIssueIdRef.current = issueId;
+      hasLocalPhotoOverrideRef.current = false;
+
+      if (await composeFromPhoto(photo, template, studentInfo, validTill)) {
+        return true;
+      }
+    } catch {
+      // Fall through to stored front image below.
+    }
+
+    if (activeTemplateQuery.isLoading || activeTemplateQuery.isFetching) {
+      return false;
+    }
+
+    try {
+      const front = await fetchIssueFrontBlob(issueId);
+      if (isImageBlob(front)) {
+        applyComposedPreview(front);
+        loadedPhotoIssueIdRef.current = issueId;
+        hasLocalPhotoOverrideRef.current = false;
+        return true;
+      }
+    } catch {
+      if (issue?.frontImageUrl) {
+        setComposedPreview((prev) => {
+          if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+          return issue.frontImageUrl;
+        });
+        loadedPhotoIssueIdRef.current = issueId;
+        hasLocalPhotoOverrideRef.current = false;
+        void fetch(issue.frontImageUrl)
+          .then((res) => res.blob())
+          .then((front) => {
+            if (isImageBlob(front)) setComposedBlob(front);
+          })
+          .catch(() => undefined);
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // On a reissue / renewal, fetch the latest issue preview from S3 once the
+  // template (with fields) is ready so the composer can render correctly.
+  useEffect(() => {
+    if (!student || isSaving) return;
+    if (!templateFieldsReady || !templateWithFields) return;
+    const recent = priorIssues[0];
+    if (!recent?.id) return;
+    if (!recent.photoImageKey && !recent.frontImageKey && !recent.frontImageUrl) return;
+    if (loadedPhotoIssueIdRef.current === recent.id) return;
+    if (hasLocalPhotoOverrideRef.current) return;
+    if (previewLoadInFlightRef.current) return;
+
+    let cancelled = false;
+    previewLoadInFlightRef.current = true;
+    setIsRefreshingPreview(true);
+
+    void loadIssuePreview(recent.id, recent, templateWithFields, student, activeValidTill)
+      .then((ok) => {
+        if (!cancelled && !ok) loadedPhotoIssueIdRef.current = null;
+      })
+      .finally(() => {
+        previewLoadInFlightRef.current = false;
+        if (!cancelled) setIsRefreshingPreview(false);
+      });
+
+    return () => {
+      cancelled = true;
+      previewLoadInFlightRef.current = false;
+      setIsRefreshingPreview(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    student?.id,
+    priorIssues[0]?.id,
+    isSaving,
+    templateWithFields?.id,
+    templateFieldsReady,
+    activeValidTill,
+  ]);
 
   // History viewer: compose a past issue's card (template + that issue's photo)
   // into a dialog. We only store the cropped photo, so the card is re-generated.
@@ -570,7 +735,17 @@ export default function IdCardIssuePage() {
     });
     try {
       const photo = await fetchIssuePhotoBlob(issue.id);
-      const blob = await renderCard(photo, document.createElement("canvas"));
+      if (!templateWithFields?.fields?.length) {
+        toast.error("Template fields are not ready yet.");
+        return;
+      }
+      const blob = await renderCard(
+        photo,
+        document.createElement("canvas"),
+        templateWithFields,
+        student,
+        activeValidTill,
+      );
       if (blob) setViewCardUrl(URL.createObjectURL(blob));
       else toast.error("Could not render this card.");
     } catch {
@@ -580,13 +755,20 @@ export default function IdCardIssuePage() {
     }
   };
 
-  // Auto-compose once student + template + photo are all in.
+  // Auto-compose once student + template fields + photo are all in.
   useEffect(() => {
-    if (photoBlob && activeTemplate && student) {
-      void compose();
-    }
+    if (isSaving) return;
+    if (!photoBlob || !templateFieldsReady || !templateWithFields || !student) return;
+    void compose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photoBlob, activeTemplate?.id, student?.id, activeValidTill]);
+  }, [
+    photoBlob,
+    templateWithFields?.id,
+    templateFieldsReady,
+    student?.id,
+    activeValidTill,
+    isSaving,
+  ]);
 
   // Lazy-load the back-side image (proxied + authed) when the toggle is flipped.
   useEffect(() => {
@@ -642,19 +824,47 @@ export default function IdCardIssuePage() {
         photoImage: photoBlob ?? undefined,
       });
     },
-    onSuccess: () => {
-      toast.success("ID card saved.");
-      setComposedBlob(null);
-      setComposedPreview(null);
-      setPhotoBlob(null);
-      setPhotoPreviewUrl(null);
-      void historyQuery.refetch();
+    onSuccess: async ({ id }: { id: number }) => {
+      const refetchResult = await historyQuery.refetch();
+      const savedIssue =
+        refetchResult.data?.rows?.find((row) => row.id === id) ?? refetchResult.data?.rows?.[0];
+      if (templateWithFields?.fields?.length && student) {
+        await loadIssuePreview(id, savedIssue, templateWithFields, student, activeValidTill);
+      }
+
+      try {
+        await Swal.fire({
+          icon: "success",
+          title: "Saved successfully",
+          text: "ID card has been saved successfully.",
+          confirmButtonColor: "#2563eb",
+        });
+      } finally {
+        setIsSaving(false);
+      }
     },
-    onError: (e: unknown) => {
+    onError: async (e: unknown) => {
       const msg = e instanceof Error ? e.message : "Could not save the ID card.";
-      toast.error(msg);
+      try {
+        await Swal.fire({
+          icon: "error",
+          title: "Save failed",
+          text: msg,
+          confirmButtonColor: "#2563eb",
+        });
+      } finally {
+        setIsSaving(false);
+      }
     },
   });
+
+  const saveDisabled = !composedBlob || isSaving || saveMutation.isLoading;
+
+  const handleSaveIdCard = () => {
+    if (saveDisabled) return;
+    flushSync(() => setIsSaving(true));
+    saveMutation.mutate();
+  };
 
   const deleteIssueMutation = useMutation({
     mutationFn: (id: number) => deleteIssue(id),
@@ -664,6 +874,28 @@ export default function IdCardIssuePage() {
     },
     onError: () => toast.error("Could not delete that issue."),
   });
+
+  const handleDeleteIssue = async (issue: IdCardIssue) => {
+    await Swal.fire({
+      title: "Delete this issue record?",
+      text: "This ID card issue will be permanently removed.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      showLoaderOnConfirm: true,
+      allowOutsideClick: () => !Swal.isLoading(),
+      preConfirm: async () => {
+        try {
+          await deleteIssueMutation.mutateAsync(issue.id);
+        } catch {
+          Swal.showValidationMessage("Could not delete that issue.");
+        }
+      },
+    });
+  };
 
   const printComposedCard = () => {
     if (!composedPreview || showBack) return;
@@ -722,12 +954,12 @@ export default function IdCardIssuePage() {
               inputMode="numeric"
               onChange={(e) => setUidQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && uidQuery.trim()) lookupMutation.mutate(uidQuery);
+                if (e.key === "Enter" && uidQuery.trim()) void handleLoadStudent();
               }}
             />
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white px-6"
-              onClick={() => lookupMutation.mutate(uidQuery)}
+              onClick={() => void handleLoadStudent()}
               disabled={!uidQuery.trim() || lookupMutation.isLoading}
             >
               {lookupMutation.isLoading ? "Loading…" : "Load"}
@@ -763,7 +995,7 @@ export default function IdCardIssuePage() {
                       <div key={it.id} className="border rounded-md p-3 bg-white">
                         <div className="flex items-center justify-between mb-1">
                           <div className="text-sm font-semibold">
-                            #{idx + 1} Type: {it.issueStatus}
+                            #{priorIssues.length - idx} Type: {it.issueStatus}
                           </div>
                           <div className="flex gap-1">
                             {it.photoImageKey && (
@@ -781,10 +1013,7 @@ export default function IdCardIssuePage() {
                               variant="ghost"
                               size="icon"
                               className="text-red-600"
-                              onClick={() => {
-                                if (confirm("Delete this issue record?"))
-                                  deleteIssueMutation.mutate(it.id);
-                              }}
+                              onClick={() => void handleDeleteIssue(it)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -792,7 +1021,32 @@ export default function IdCardIssuePage() {
                         </div>
                         <div className="text-xs text-gray-600">Remarks: {it.remarks ?? "—"}</div>
                         <div className="text-xs text-gray-600">
-                          Date: {it.issueDate ? new Date(it.issueDate).toLocaleString() : "—"}
+                          Date:{" "}
+                          {it.issueDate
+                            ? (() => {
+                                // The DB column is PG `timestamp without time zone`
+                                // storing IST wall-clock (server tz). Drizzle serializes
+                                // it with a MISLEADING trailing 'Z' (e.g. "…T22:19:00Z"
+                                // actually means 22:19 IST, not UTC). So we must NOT shift
+                                // it: read the literal wall-clock by formatting in UTC.
+                                // Normalize any naive string to 'Z' first.
+                                const s = it.issueDate;
+                                const d = new Date(
+                                  s.endsWith("Z") || s.includes("+")
+                                    ? s
+                                    : s.replace(" ", "T") + "Z",
+                                );
+                                return d.toLocaleString("en-IN", {
+                                  timeZone: "UTC",
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                });
+                              })()
+                            : "—"}
                         </div>
                       </div>
                     ))}
@@ -1004,15 +1258,22 @@ export default function IdCardIssuePage() {
                     </span>
                   )
                 ) : composedPreview ? (
-                  // Front: after photo capture + compose, show the composed card.
                   <img
                     src={composedPreview}
                     alt="generated card"
                     className="max-h-full max-w-full object-contain"
                   />
+                ) : priorIssues[0]?.frontImageUrl ? (
+                  <img
+                    src={priorIssues[0].frontImageUrl}
+                    alt="latest saved card"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : isRefreshingPreview || activeTemplateQuery.isLoading ? (
+                  <span className="text-sm text-gray-500 px-4 text-center">
+                    Refreshing card preview…
+                  </span>
                 ) : activeTemplate?.templateImageUrl ? (
-                  // Front before capture: show the template background so the
-                  // operator sees the active template for the chosen year.
                   <img
                     src={activeTemplate.templateImageUrl}
                     alt={`${activeTemplate.name} front`}
@@ -1053,11 +1314,19 @@ export default function IdCardIssuePage() {
               />
 
               <Button
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={!composedBlob || saveMutation.isLoading}
-                onClick={() => saveMutation.mutate()}
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full border-0 !text-white",
+                  saveDisabled
+                    ? "pointer-events-none cursor-not-allowed !bg-blue-400 !opacity-70 hover:!bg-blue-400"
+                    : "!bg-blue-600 hover:!bg-blue-700",
+                )}
+                disabled={saveDisabled}
+                aria-disabled={saveDisabled}
+                onClick={handleSaveIdCard}
               >
-                {saveMutation.isLoading ? "Saving…" : "Save ID Card"}
+                {isSaving || saveMutation.isLoading ? "Saving…" : "Save ID Card"}
               </Button>
             </CardContent>
           </Card>

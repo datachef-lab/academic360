@@ -20,7 +20,7 @@ export default function AdmissionBoardMaster() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { year } = useParams<{ year: string }>();
-  const base = `/dashboard/academic-setup/admissions/${year}/master`;
+  const base = `/dashboard/admissions/${year}/master`;
 
   useRestrictTempUsers();
 

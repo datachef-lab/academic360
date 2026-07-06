@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import MasterLayout from "@/components/layouts/MasterLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Shield, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
@@ -55,7 +54,7 @@ function TrackerMain({
 }: TrackerMainProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [, setLastUpdate] = useState<string | null>(null);
 
   const apiFilters = useMemo(() => canonicalRealtimeTrackerFilters(filters), [filters]);
 
@@ -64,6 +63,9 @@ function TrackerMain({
     queryFn: () => fetchAffiliationRegistration(apiFilters),
     enabled: filtersReady && activeTab === "affiliation",
     staleTime: 30_000,
+    // Show the previous filter set's table while the new one loads instead of
+    // dropping to a skeleton (perceived slowness on every filter change).
+    keepPreviousData: true,
   });
 
   const feeMisQuery = useQuery({
@@ -173,10 +175,13 @@ function TrackerMain({
                   Retry
                 </button>
               </div>
-            ) : misTableData && !affiliationQuery.isFetching ? (
+            ) : misTableData ? (
+              // Keep the current table visible while a refetch is in flight —
+              // blanking to the skeleton on every filter change/socket refresh
+              // makes the page feel slow.
               <MisTable data={misTableData} />
             ) : affiliationQuery.isFetching ? (
-              <MisTable data={misTableData ?? { updatedAt: "", data: [] }} isLoading />
+              <MisTable data={{ updatedAt: "", data: [] }} isLoading />
             ) : (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                 {affiliationLoading ? "Loading…" : "No data"}
@@ -203,23 +208,6 @@ function TrackerMain({
           </div>
         </TabsContent>
       </Tabs>
-
-      <div className="shrink-0 border-t bg-white px-4 py-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <Shield className="h-3 w-3" />
-          Staff online: {isConnected && (user?.type === "ADMIN" || user?.type === "STAFF") ? 1 : 0}
-        </span>
-        <span className="flex items-center gap-1">
-          <GraduationCap className="h-3 w-3" />
-          Students online: {isConnected && user?.type === "STUDENT" ? 1 : 0}
-        </span>
-        {lastUpdate ? (
-          <span className="flex items-center gap-1">
-            <Activity className="h-3 w-3" />
-            Updated {new Date(lastUpdate).toLocaleTimeString()}
-          </span>
-        ) : null}
-      </div>
 
       {isConnected ? (
         <div className="fixed bottom-3 right-3 z-50 sm:bottom-4 sm:right-4">

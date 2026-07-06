@@ -3,6 +3,19 @@ import { Specialization } from "@/types/resources/specialization";
 
 const BASE_URL = "/api/specializations";
 
+function extractSpecializationList(responseData: unknown): Specialization[] {
+  if (responseData && typeof responseData === "object") {
+    const record = responseData as Record<string, unknown>;
+    if (Array.isArray(record.payload)) {
+      return record.payload as Specialization[];
+    }
+    if (Array.isArray(record.data)) {
+      return record.data as Specialization[];
+    }
+  }
+  return [];
+}
+
 // ============================================================================
 // GET OPERATIONS
 // ============================================================================
@@ -14,7 +27,7 @@ const BASE_URL = "/api/specializations";
 export async function getAllSpecializations(): Promise<Specialization[]> {
   try {
     const response = await axiosInstance.get(BASE_URL);
-    return response.data.payload;
+    return extractSpecializationList(response.data);
   } catch (error) {
     console.error("Error fetching specializations:", error);
     throw error;

@@ -246,16 +246,13 @@ export async function processDataFetching(
  * - Calls processStudent for each found old student
  * Returns a summary with counts and per-UID errors
  */
-export async function processStudentsFromExcelBuffer(
+/**
+ * Parse the uploaded Excel and extract the UID column values (shared by the
+ * import itself and the pre-check endpoint).
+ */
+async function parseUidsFromExcelBuffer(
   file: Buffer | ArrayBuffer | Uint8Array,
-  opts?: { progressUserId?: string | null },
-): Promise<{
-  totalRows: number;
-  totalUids: number;
-  processed: number;
-  notFound: number;
-  errors: Array<{ uid: string; error: string }>;
-}> {
+): Promise<{ totalRows: number; uids: string[]; error?: string }> {
   const workbook = new ExcelJS.Workbook();
   let dataForExcel: Buffer | Uint8Array | ArrayBuffer;
   if (Buffer.isBuffer(file)) {
@@ -269,13 +266,7 @@ export async function processStudentsFromExcelBuffer(
   const sheet = workbook.worksheets[0];
 
   if (!sheet) {
-    return {
-      totalRows: 0,
-      totalUids: 0,
-      processed: 0,
-      notFound: 0,
-      errors: [{ uid: "", error: "No worksheet in Excel" }],
-    };
+    return { totalRows: 0, uids: [], error: "No worksheet in Excel" };
   }
 
   const headerRow = sheet.getRow(1);
@@ -307,16 +298,9 @@ export async function processStudentsFromExcelBuffer(
   if (uidColIndex === -1) {
     return {
       totalRows: sheet.rowCount,
-      totalUids: 0,
-      processed: 0,
-      notFound: 0,
-      errors: [
-        {
-          uid: "",
-          error:
-            "UID column not found. Expected headers: UID / Student UID / CodeNumber",
-        },
-      ],
+      uids: [],
+      error:
+        "UID column not found. Expected headers: UID / Student UID / CodeNumber",
     };
   }
 
@@ -333,6 +317,75 @@ export async function processStudentsFromExcelBuffer(
     const uid = cleanUid(raw);
     if (uid) uids.push(uid);
   }
+  return { totalRows: sheet.rowCount, uids };
+}
+
+/**
+ * Pre-check an import file: which UIDs already exist (will be re-synced in
+ * place) vs new. Read-only — nothing is imported.
+ */
+export async function precheckStudentsFromExcelBuffer(
+  file: Buffer | ArrayBuffer | Uint8Array,
+): Promise<{
+  totalRows: number;
+  totalUids: number;
+  existingCount: number;
+  newCount: number;
+  existingUids: string[];
+  error?: string;
+}> {
+  const parsed = await parseUidsFromExcelBuffer(file);
+  if (parsed.error) {
+    return {
+      totalRows: parsed.totalRows,
+      totalUids: 0,
+      existingCount: 0,
+      newCount: 0,
+      existingUids: [],
+      error: parsed.error,
+    };
+  }
+  const uids = [...new Set(parsed.uids)];
+  const existing = uids.length
+    ? await db
+        .select({ uid: studentModel.uid })
+        .from(studentModel)
+        .where(inArray(studentModel.uid, uids))
+    : [];
+  const existingSet = new Set(
+    existing.map((r) => String(r.uid)).filter(Boolean),
+  );
+  return {
+    totalRows: parsed.totalRows,
+    totalUids: uids.length,
+    existingCount: existingSet.size,
+    newCount: uids.length - existingSet.size,
+    existingUids: [...existingSet],
+  };
+}
+
+export async function processStudentsFromExcelBuffer(
+  file: Buffer | ArrayBuffer | Uint8Array,
+  opts?: { progressUserId?: string | null },
+): Promise<{
+  totalRows: number;
+  totalUids: number;
+  processed: number;
+  notFound: number;
+  errors: Array<{ uid: string; error: string }>;
+}> {
+  const parsed = await parseUidsFromExcelBuffer(file);
+  if (parsed.error) {
+    return {
+      totalRows: parsed.totalRows,
+      totalUids: 0,
+      processed: 0,
+      notFound: 0,
+      errors: [{ uid: "", error: parsed.error }],
+    };
+  }
+
+  const uids: string[] = parsed.uids;
 
   let processed = 0;
   let notFound = 0;
@@ -401,7 +454,7 @@ export async function processStudentsFromExcelBuffer(
   }
 
   return {
-    totalRows: sheet.rowCount,
+    totalRows: parsed.totalRows,
     totalUids: uids.length,
     processed,
     notFound,

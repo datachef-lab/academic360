@@ -271,7 +271,7 @@ export default function HomeContent() {
         const socket: any = socketModule.io(origin, {
           path: socketPath,
           withCredentials: true,
-          transports: ["polling", "websocket"],
+          transports: ["websocket", "polling"], // websocket first: long-polling needs ALB sticky sessions across instances
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionAttempts: 5,

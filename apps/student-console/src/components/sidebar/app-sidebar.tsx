@@ -17,6 +17,7 @@ import {
 import { usePathname } from "next/navigation";
 
 import { NavMain } from "@/components/sidebar/nav-main";
+import { useAppEnv } from "@/lib/app-env";
 import { NavUser } from "@/components/sidebar/nav-user";
 import {
   Sidebar,
@@ -61,6 +62,8 @@ type AcademicActivityApiDto = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // Sets <html data-env> so the env-driven brand palette applies app-wide.
+  useAppEnv();
   const isNestedIframe = window.self !== window.top;
   const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
   const pathname = usePathname();
@@ -279,7 +282,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         const socket: any = socketModule.io(origin, {
           path: socketPath,
           withCredentials: true,
-          transports: ["polling", "websocket"],
+          transports: ["websocket", "polling"], // websocket first: long-polling needs ALB sticky sessions across instances
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionAttempts: 5,

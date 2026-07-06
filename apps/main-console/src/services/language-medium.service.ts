@@ -20,6 +20,34 @@ import {
 
 const BASE_URL = "/api/languages";
 
+// Backend wraps list responses in a `payload` field (see ApiResponse), while some
+// endpoints/tests may use `data`. Support both so dropdowns populate correctly.
+function extractLanguageMediumList(responseData: unknown): LanguageMedium[] {
+  if (responseData && typeof responseData === "object") {
+    const record = responseData as Record<string, unknown>;
+    if (Array.isArray(record.payload)) {
+      return record.payload as LanguageMedium[];
+    }
+    if (Array.isArray(record.data)) {
+      return record.data as LanguageMedium[];
+    }
+  }
+  return [];
+}
+
+function extractLanguageMedium(responseData: unknown): LanguageMedium {
+  if (responseData && typeof responseData === "object") {
+    const record = responseData as Record<string, unknown>;
+    if (record.payload && typeof record.payload === "object") {
+      return record.payload as LanguageMedium;
+    }
+    if (record.data && typeof record.data === "object") {
+      return record.data as LanguageMedium;
+    }
+  }
+  return responseData as LanguageMedium;
+}
+
 // ============================================================================
 // GET OPERATIONS
 // ============================================================================
@@ -31,7 +59,7 @@ const BASE_URL = "/api/languages";
 export async function getAllLanguageMediums(): Promise<LanguageMedium[]> {
   try {
     const response = await axiosInstance.get<MultipleLanguageMediumResponse>(BASE_URL);
-    return response.data.data;
+    return extractLanguageMediumList(response.data);
   } catch (error) {
     console.error("Error fetching language mediums:", error);
     throw error;
@@ -50,7 +78,7 @@ export async function getLanguageMediumById(id: number): Promise<LanguageMedium>
     }
 
     const response = await axiosInstance.get<SingleLanguageMediumResponse>(`${BASE_URL}/${id}`);
-    return response.data.data;
+    return extractLanguageMedium(response.data);
   } catch (error) {
     console.error(`Error fetching language medium with ID ${id}:`, error);
     throw error;
@@ -66,7 +94,7 @@ export async function getActiveLanguageMediums(): Promise<LanguageMedium[]> {
     const response = await axiosInstance.get<MultipleLanguageMediumResponse>(
       `${BASE_URL}?disabled=false`,
     );
-    return response.data.data;
+    return extractLanguageMediumList(response.data);
   } catch (error) {
     console.error("Error fetching active language mediums:", error);
     throw error;
@@ -91,7 +119,7 @@ export async function createLanguageMedium(
     }
 
     const response = await axiosInstance.post<SingleLanguageMediumResponse>(BASE_URL, payload);
-    return response.data.data;
+    return extractLanguageMedium(response.data);
   } catch (error) {
     console.error("Error creating language medium:", error);
     throw error;
@@ -125,7 +153,7 @@ export async function updateLanguageMedium(
       `${BASE_URL}/${id}`,
       payload,
     );
-    return response.data.data;
+    return extractLanguageMedium(response.data);
   } catch (error) {
     console.error(`Error updating language medium with ID ${id}:`, error);
     throw error;
@@ -172,7 +200,7 @@ export async function searchLanguageMediums(searchTerm: string): Promise<Languag
     const response = await axiosInstance.get<MultipleLanguageMediumResponse>(
       `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
-    return response.data.data;
+    return extractLanguageMediumList(response.data);
   } catch (error) {
     console.error("Error searching language mediums:", error);
     throw error;
@@ -197,7 +225,7 @@ export async function checkLanguageMediumExists(name: string): Promise<boolean> 
     const response = await axiosInstance.get<MultipleLanguageMediumResponse>(
       `${BASE_URL}?name=${encodeURIComponent(name.trim())}`,
     );
-    return response.data.data.length > 0;
+    return extractLanguageMediumList(response.data).length > 0;
   } catch (error) {
     console.error("Error checking language medium existence:", error);
     return false;

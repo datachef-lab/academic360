@@ -1072,8 +1072,15 @@ async function mapHealthToDto(h: Health): Promise<HealthDto> {
 async function mapAccommodationToDto(
   a: Accommodation,
 ): Promise<AccommodationDto> {
-  const address = (a as any).addressId
-    ? await fetchAddressDto((a as any).addressId)
+  // Address is linked from the address side via accommodationId (no addressId column on accommodation).
+  const [linkedAddress] = (a as any).id
+    ? await db
+        .select({ id: addressModel.id })
+        .from(addressModel)
+        .where(eq(addressModel.accommodationId, (a as any).id))
+    : [];
+  const address = linkedAddress
+    ? await fetchAddressDto(linkedAddress.id)
     : undefined;
   return {
     ...a,

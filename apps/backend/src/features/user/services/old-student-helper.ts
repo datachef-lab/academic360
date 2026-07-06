@@ -1960,15 +1960,22 @@ export async function processStudent(
   //   if (shouldUpdateStudentData && user.isActive && !user.isSuspended) {
   // Step 1: Upsert the student first
   student = await upsertStudent(oldStudent, user);
-  if (user.isActive && !user.isSuspended) {
-    // Check the student cu registration request
-    const cuRegistrationRequest =
-      await addStudentCuRegistrationRequest(student);
-    console.log(
-      "cu registration request created for student:",
-      student?.uid,
-      cuRegistrationRequest,
-    );
+  {
+    // CU registration requests are a live workflow — create them for ACTIVE
+    // students only (the intent of the original isActive gate, added 2025-10-10).
+    // The historical data import below runs for INACTIVE (cancelled/dropped)
+    // students too: their admission/profile data must still be loaded.
+    let cuRegistrationRequest: Awaited<
+      ReturnType<typeof addStudentCuRegistrationRequest>
+    > | null = null;
+    if (user.isActive && !user.isSuspended) {
+      cuRegistrationRequest = await addStudentCuRegistrationRequest(student);
+      console.log(
+        "cu registration request created for student:",
+        student?.uid,
+        cuRegistrationRequest,
+      );
+    }
     if (!cuRegistrationRequest?.cuRegistrationApplicationNumber) {
       // Step 2: Check for the accomodation
       await upsertAccommodation(oldStudent, user.id!);
@@ -2037,25 +2044,11 @@ export async function processStudent(
         );
       }
     }
-  } else {
-    // Student exists and data hasn't changed - just fetch existing student
-    student = (
-      await db
-        .select()
-        .from(studentModel)
-        .where(eq(studentModel.userId, user.id as number))
-    )[0];
-    if (user.isActive && !user.isSuspended) {
-      const cuRegistrationRequest =
-        await addStudentCuRegistrationRequest(student);
-      console.log(
-        "cu registration request created for student:",
-        student?.uid,
-        cuRegistrationRequest,
-      );
-      return student;
-    }
   }
+  // NOTE: the former `else` branch here was the INACTIVE-user path (its
+  // "data hasn't changed" comment was stale): fetch-only, no admission build.
+  // The unified block above now imports data for active AND inactive students
+  // (with CU-reg requests still active-only), so the branch is gone.
 
   // Guard: only attempt late update when student exists
   if (student) {

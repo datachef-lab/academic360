@@ -275,7 +275,39 @@ export async function createIssue(
       .where(eq(studentModel.id, student.id));
   }
 
+  void broadcastIdCardTrackerUpdate(student.id);
+
   return issueId;
+}
+
+/**
+ * Push the realtime-tracker "ID card issued" counts to online viewers after an
+ * issue is created/removed. Mirrors the subject-selection pattern: broadcast
+ * the room for the student's academic year plus the unfiltered room. Never
+ * fails the mutation.
+ */
+async function broadcastIdCardTrackerUpdate(studentId: number): Promise<void> {
+  try {
+    const { scheduleRealtimeTrackerBroadcast } =
+      await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+    const { promotionModel, sessionModel } =
+      await import("@repo/db/schemas/index.js");
+    const [row] = await db
+      .select({ academicYearId: sessionModel.academicYearId })
+      .from(promotionModel)
+      .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+      .where(eq(promotionModel.studentId, studentId))
+      .orderBy(desc(promotionModel.id))
+      .limit(1);
+    scheduleRealtimeTrackerBroadcast("affiliation", "idcard_issue_change", {});
+    if (row?.academicYearId) {
+      scheduleRealtimeTrackerBroadcast("affiliation", "idcard_issue_change", {
+        academicYearIds: [row.academicYearId],
+      });
+    }
+  } catch (e) {
+    console.error("[idcard] tracker broadcast failed:", (e as Error)?.message);
+  }
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -372,4 +404,6 @@ export async function deleteIssue(id: number) {
     await deleteFromS3(existing.frontImageKey).catch(() => undefined);
   if (existing.photoImageKey)
     await deleteFromS3(existing.photoImageKey).catch(() => undefined);
+
+  if (existing.studentId) void broadcastIdCardTrackerUpdate(existing.studentId);
 }

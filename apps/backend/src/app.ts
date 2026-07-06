@@ -9,7 +9,8 @@ import express, { Request, Response } from "express";
 import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
 import { db } from "./db/index.js";
-import { eq, ilike } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
@@ -144,6 +145,7 @@ import admissionQuotaTypeRouter from "./features/admissions/routes/admission-quo
 import cancelSourceRouter from "./features/admissions/routes/cancel-source.route.js";
 import gradeRouter from "./features/admissions/routes/grade.route.js";
 import admissionCycleRouter from "./features/admissions/routes/admission-cycle.route.js";
+import admissionDashboardRouter from "./features/admissions/routes/admission-dashboard.route.js";
 import admissionSportsCategoryRouter from "./features/admissions/routes/admission-sports-category.route.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 
@@ -288,6 +290,69 @@ app.use(resourceRealtime);
 
 // Liveness probe for the ALB target group (no auth; /api/health is the
 // student health-records feature, not a status endpoint).
+// Which environment this backend runs as (drives the console's env theming).
+app.get("/api/app-env", (_req, res) => {
+  res.json({ env: process.env.NODE_ENV || "development" });
+});
+
+// Environment notification details for the console's env dialog (auth required:
+// exposes contact info). development -> the developer contact from env vars
+// (+ the matching user, if one exists); staging -> the staff who have staging
+// notifications enabled.
+app.get("/api/app-env/details", verifyJWT, async (_req, res) => {
+  try {
+    const env = process.env.NODE_ENV || "development";
+    if (env === "development") {
+      const email = process.env.DEVELOPER_EMAIL || null;
+      const phone = process.env.DEVELOPER_PHONE || null;
+      let developerUser: {
+        name: string;
+        image: string | null;
+        type: string;
+      } | null = null;
+      if (email) {
+        const [u] = await db
+          .select({
+            name: userModel.name,
+            image: userModel.image,
+            type: userModel.type,
+          })
+          .from(userModel)
+          .where(eq(userModel.email, email))
+          .limit(1);
+        developerUser = u ?? null;
+      }
+      res.json({ env, developer: { email, phone, user: developerUser } });
+      return;
+    }
+    if (env === "staging") {
+      const recipients = await db
+        .select({
+          id: userModel.id,
+          name: userModel.name,
+          image: userModel.image,
+          email: userModel.email,
+          phone: userModel.phone,
+          type: userModel.type,
+        })
+        .from(userModel)
+        .where(
+          and(
+            eq(userModel.sendStagingNotifications, true),
+            eq(userModel.isActive, true),
+          ),
+        )
+        .orderBy(userModel.name);
+      res.json({ env, recipients });
+      return;
+    }
+    res.json({ env });
+  } catch (error) {
+    console.error("[app-env/details] failed:", error);
+    res.status(500).json({ error: "Failed to load environment details" });
+  }
+});
+
 app.get("/healthz", (_req, res) => {
   res.status(200).send("ok");
 });
@@ -694,6 +759,7 @@ app.use("/api/exam-groups", examGroupRouter);
 app.use("/api/admit-card", admitCardRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
+app.use("/api/admissions/dashboard", admissionDashboardRouter);
 app.use("/api/admissions/application-forms", applicationFormRouter);
 app.use("/api/admissions/general-info", admissionGeneralInfoRouter);
 app.use("/api/admissions/academic-info", admissionAcademicInfoRouter);
@@ -1112,6 +1178,7 @@ app.use("/api/v1/courses", courseRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 
+app.use("/api/admissions/dashboard", admissionDashboardRouter);
 app.use("/api/admissions/application-forms", applicationFormRouter);
 
 app.use("/api/admissions/general-info", admissionGeneralInfoRouter);

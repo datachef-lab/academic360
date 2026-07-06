@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Table,
   TableBody,
@@ -7,9 +7,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, CheckCircle, Globe, Building } from "lucide-react";
+import { Users, CheckCircle, Globe, Building, IdCard } from "lucide-react";
 import { MisTableData } from "../types/mis-types";
 import { cn } from "@/lib/utils";
+
+/** How long a just-updated cell stays highlighted (ms). */
+const CELL_FLASH_MS = 1600;
 
 interface MisTableProps {
   data: MisTableData;
@@ -29,8 +32,19 @@ const METRIC_COLUMNS = [
     getValue: (row: MisTableData["data"][0]) => row.admitted,
   },
   {
+    key: "idCardIssued",
+    label: "ID card issued",
+    icon: IdCard,
+    headBg: "bg-teal-600",
+    headBorder: "border-teal-700",
+    cellBg: "bg-teal-50",
+    cellBorder: "border-teal-200",
+    text: "text-teal-900",
+    getValue: (row: MisTableData["data"][0]) => row.idCardIssued ?? 0,
+  },
+  {
     key: "subjectSelectionDone",
-    label: "Subject selection done",
+    label: "Subject selection",
     icon: CheckCircle,
     headBg: "bg-green-600",
     headBorder: "border-green-700",
@@ -41,7 +55,7 @@ const METRIC_COLUMNS = [
   },
   {
     key: "onlineRegDone",
-    label: "Online reg. done",
+    label: "Online Reg.",
     icon: Globe,
     headBg: "bg-purple-600",
     headBorder: "border-purple-700",
@@ -52,7 +66,7 @@ const METRIC_COLUMNS = [
   },
   {
     key: "physicalRegDone",
-    label: "Physical reg. done",
+    label: "Physical Reg.",
     icon: Building,
     headBg: "bg-orange-600",
     headBorder: "border-orange-700",
@@ -79,6 +93,40 @@ function HeaderCell({ children, className }: { children: ReactNode; className?: 
 }
 
 export function MisTable({ data, isLoading }: MisTableProps) {
+  // Realtime change flash: remember the previous value of every (row, metric)
+  // cell; when a socket update changes a value, highlight that cell briefly so
+  // the viewer can spot exactly what moved.
+  const prevValuesRef = useRef<Map<string, number>>(new Map());
+  const [flashedCells, setFlashedCells] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const prev = prevValuesRef.current;
+    const next = new Map<string, number>();
+    const changed = new Set<string>();
+    for (const row of data.data) {
+      for (const col of METRIC_COLUMNS) {
+        const key = `${row.programCourseName}|${col.key}`;
+        const value = col.getValue(row);
+        next.set(key, value);
+        if (prev.size > 0 && prev.has(key) && prev.get(key) !== value) {
+          changed.add(key);
+        }
+      }
+    }
+    prevValuesRef.current = next;
+    if (changed.size === 0) return;
+    setFlashedCells((cur) => new Set([...cur, ...changed]));
+    // No cleanup: parent re-renders recreate `data` while fetching, and a
+    // cleanup would cancel the un-flash timer, leaving cells stuck highlighted.
+    setTimeout(() => {
+      setFlashedCells((cur) => {
+        const rest = new Set(cur);
+        changed.forEach((k) => rest.delete(k));
+        return rest;
+      });
+    }, CELL_FLASH_MS);
+  }, [data]);
+
   if (isLoading) {
     return (
       <div className="flex h-full min-h-[50vh] flex-col">
@@ -98,11 +146,12 @@ export function MisTable({ data, isLoading }: MisTableProps) {
       <div className="min-h-0 flex-1 overflow-auto">
         <Table containerClassName="overflow-x-auto" className="w-full table-fixed border-collapse">
           <colgroup>
-            <col className="w-[38%]" />
-            <col className="w-[15.5%]" />
-            <col className="w-[15.5%]" />
-            <col className="w-[15.5%]" />
-            <col className="w-[15.5%]" />
+            <col className="w-[30%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
           </colgroup>
           <TableHeader className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50">
             <TableRow className="border-b-2 border-blue-200 hover:bg-transparent">
@@ -139,21 +188,31 @@ export function MisTable({ data, isLoading }: MisTableProps) {
                   >
                     {row.programCourseName}
                   </TableCell>
-                  {METRIC_COLUMNS.map((col, colIdx) => (
-                    <TableCell
-                      key={col.key}
-                      className={cn(
-                        "px-3 py-3 text-center text-sm tabular-nums",
-                        col.cellBg,
-                        colIdx < METRIC_COLUMNS.length - 1 && `border-r-2 ${col.cellBorder}`,
-                        isTotal && "bg-blue-100",
-                      )}
-                    >
-                      <span className={cn("text-sm font-bold", col.text)}>
-                        {col.getValue(row).toLocaleString("en-IN")}
-                      </span>
-                    </TableCell>
-                  ))}
+                  {METRIC_COLUMNS.map((col, colIdx) => {
+                    const isFlashed = flashedCells.has(`${row.programCourseName}|${col.key}`);
+                    return (
+                      <TableCell
+                        key={col.key}
+                        className={cn(
+                          "px-3 py-3 text-center text-sm tabular-nums transition-colors duration-500",
+                          col.cellBg,
+                          colIdx < METRIC_COLUMNS.length - 1 && `border-r-2 ${col.cellBorder}`,
+                          isTotal && "bg-blue-100",
+                          isFlashed && "bg-yellow-200",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "inline-block text-sm font-bold transition-transform duration-300",
+                            col.text,
+                            isFlashed && "scale-150 text-base",
+                          )}
+                        >
+                          {col.getValue(row).toLocaleString("en-IN")}
+                        </span>
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               );
             })}

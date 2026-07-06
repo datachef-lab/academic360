@@ -10,7 +10,8 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import { Save, CheckCircle } from "lucide-react";
 
 interface EmergencyContactFormProps {
@@ -86,12 +87,22 @@ export default function EmergencyContactForm({
       }
     },
     onSuccess: () => {
-      toast.success("Emergency contact updated!");
       refetch();
       queryClient.invalidateQueries({ queryKey: ["user-profile"], exact: false });
+      Swal.fire({
+        icon: "success",
+        title: "Saved successfully",
+        text: "Emergency contact has been saved.",
+        confirmButtonColor: "#2563eb",
+      });
     },
     onError: () => {
-      toast.error("Failed to update emergency contact.");
+      Swal.fire({
+        icon: "error",
+        title: "Save failed",
+        text: "Failed to save emergency contact. Please try again.",
+        confirmButtonColor: "#2563eb",
+      });
     },
   });
 
@@ -99,8 +110,19 @@ export default function EmergencyContactForm({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const result = await Swal.fire({
+      title: "Save emergency contact?",
+      text: "Do you want to save the changes to this student's emergency contact?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Save",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!result.isConfirmed) return;
     setShowSuccess(false);
     mutation.mutate(formData, {
       onSuccess: () => {
