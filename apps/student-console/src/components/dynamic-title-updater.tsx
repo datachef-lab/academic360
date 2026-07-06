@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { useBranding } from "@/features/settings/hooks/use-branding";
 
 /**
  * Component to dynamically update the document title based on college settings
  *
  * This component:
- * - Fetches college name asynchronously from the database via useCollegeSettings hook
+ * - Fetches college name via shared branding cache (useBranding)
  * - Updates document.title only after data is available
  * - Uses proper dependency array with the fetched title value
  * - Includes null/undefined checks for safe rendering
@@ -15,7 +15,7 @@ import { useCollegeSettings } from "@/hooks/use-college-settings";
  * - Avoids empty dependency arrays for the title update effect
  */
 export function DynamicTitleUpdater() {
-  const { collegeName, isLoading } = useCollegeSettings();
+  const { collegeName, isLoading } = useBranding();
 
   // Effect runs only after college name is fetched from database
   // Depends on collegeName value to ensure title updates automatically

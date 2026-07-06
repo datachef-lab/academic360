@@ -16,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import { Save, CheckCircle } from "lucide-react";
 import { getAllAnnualIncomes } from "@/services/annual-income.service";
 import { getAllOccupations } from "@/services/occupation.service";
@@ -229,21 +230,44 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
     },
     onSuccess: () => {
       setShowSuccess(true);
-      toast.success("Family details updated");
       setTimeout(() => setShowSuccess(false), 1200);
       queryClient.invalidateQueries({ queryKey: ["user-profile"], exact: false });
+      Swal.fire({
+        icon: "success",
+        title: "Saved successfully",
+        text: "Family details have been saved.",
+        confirmButtonColor: "#2563eb",
+      });
     },
-    onError: () => toast.error("Failed to update family details"),
+    onError: () =>
+      Swal.fire({
+        icon: "error",
+        title: "Save failed",
+        text: "Failed to save family details. Please try again.",
+        confirmButtonColor: "#2563eb",
+      }),
   });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = await Swal.fire({
+      title: "Save family details?",
+      text: "Do you want to save the changes to this student's family details?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Save",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+    if (result.isConfirmed) {
+      mutation.mutate(formData);
+    }
+  };
 
   return (
     <Card className="max-w-5xl mx-auto my-6 shadow border bg-white py-3">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          mutation.mutate(formData);
-        }}
-      >
+      <form onSubmit={handleSubmit}>
         <CardContent className="[&_label]:text-xs [&_label]:text-gray-600">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-800">Family Details Form</h2>

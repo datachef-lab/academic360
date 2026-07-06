@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { Settings, settingsModel } from "../models/settings.model.js";
-import { and, asc, eq, ilike } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray } from "drizzle-orm";
 import { settingsVariantEnum } from "@repo/db/schemas/enums";
 import fs from "fs";
 import path from "path";
@@ -240,4 +240,85 @@ export async function getSettingFileService(idOrName: string) {
   }
 
   return null;
+}
+
+const BRANDING_SETTING_NAMES = [
+  "College Name",
+  "College Abbreviation",
+  "College Logo Image",
+  "Login Screen Image",
+] as const;
+
+export interface BrandingDto {
+  collegeName: string;
+  abbreviation: string;
+  logoUrl: string | null;
+  loginScreenUrl: string | null;
+}
+
+export function resolvePublicApiBase(req?: {
+  protocol: string;
+  get: (name: string) => string | undefined;
+}): string {
+  const fromEnv =
+    process.env.API_PUBLIC_ORIGIN?.trim() ||
+    process.env.BACKEND_PUBLIC_URL?.trim() ||
+    process.env.BACKEND_URL?.trim();
+
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, "");
+  }
+
+  if (req) {
+    return `${req.protocol}://${req.get("host")}`;
+  }
+
+  return "http://localhost:8080";
+}
+
+function buildSettingFileUrl(
+  baseUrl: string,
+  setting: { id?: number | null; updatedAt?: Date | string | null },
+): string | null {
+  if (!setting?.id) {
+    return null;
+  }
+
+  const url = `${baseUrl}/api/v1/settings/file/${setting.id}`;
+  return setting.updatedAt
+    ? `${url}?v=${encodeURIComponent(String(setting.updatedAt))}`
+    : url;
+}
+
+export async function findBranding(
+  publicApiBase: string,
+): Promise<BrandingDto> {
+  const settings = await db
+    .select()
+    .from(settingsModel)
+    .where(
+      and(
+        eq(settingsModel.variant, "GENERAL"),
+        inArray(settingsModel.name, [...BRANDING_SETTING_NAMES]),
+      ),
+    );
+
+  const byName = (name: string) =>
+    settings.find(
+      (setting) => setting.name.toLowerCase() === name.toLowerCase(),
+    );
+
+  const logoSetting = byName("College Logo Image");
+  const loginScreenSetting = byName("Login Screen Image");
+
+  return {
+    collegeName: byName("College Name")?.value ?? "",
+    abbreviation: byName("College Abbreviation")?.value ?? "",
+    logoUrl: logoSetting
+      ? buildSettingFileUrl(publicApiBase, logoSetting)
+      : null,
+    loginScreenUrl: loginScreenSetting
+      ? buildSettingFileUrl(publicApiBase, loginScreenSetting)
+      : null,
+  };
 }
