@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
 import type { NotificationDto } from "@repo/db/dtos/notifications";
+import { scheduleNotificationsDashboardBroadcast } from "@/features/notifications-console/notifications-dashboard.socket.js";
 
 export async function enqueueNotification(dto: NotificationDto) {
   console.log("🚨 [notif-client] enqueueNotification function called!");
@@ -38,5 +39,6 @@ export async function enqueueNotification(dto: NotificationDto) {
     const text = await res.text().catch(() => "");
     throw new Error(`enqueueNotification failed: ${res.status} ${text}`);
   }
+  scheduleNotificationsDashboardBroadcast(`enqueue:${dto.variant}`);
   return res.json();
 }

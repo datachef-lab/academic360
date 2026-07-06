@@ -324,6 +324,19 @@ export const notificationVariantEnum = pgEnum("notification_variant", [
     "OTHER",
 ]);
 
+// How a notification event's per-recipient field values are populated.
+export const notificationEventDataSourceEnum = pgEnum("notification_event_data_source", [
+    "UPLOAD",
+    "AUTO_FETCH",
+]);
+
+// Notification event lifecycle: DRAFT → READY (recipients staged) → TRIGGERED.
+export const notificationEventStatusEnum = pgEnum("notification_event_status", [
+    "DRAFT",
+    "READY",
+    "TRIGGERED",
+]);
+
 export const cuRegistrationCorrectionRequestStatusEnum = pgEnum("cu_registration_correction_request_status", [
     "PENDING",
     "REQUEST_CORRECTION",

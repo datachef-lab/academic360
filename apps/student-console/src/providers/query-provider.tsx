@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+// QueryClient is re-exported by @tanstack/react-query v4 via `export * from
+// "@tanstack/query-core"`, but Next's `moduleResolution: "bundler"` doesn't
+// follow that cross-package re-export, so import it from query-core directly
+// (react-query's own pinned dependency — the same 4.36.1 instance).
+import { QueryClient } from "@tanstack/query-core";
 import { BRANDING_QUERY_KEY } from "@/features/settings/constants/query-keys";
 import { fetchBranding } from "@/features/settings/services/branding-service";
 import { readBrandingFromCookies } from "@/features/settings/utils/branding-cookies";
