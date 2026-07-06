@@ -28,6 +28,8 @@ function appendReportFilters(params: URLSearchParams, filters?: ReportExportQuer
   }
 }
 
+export type ExportProgressCallback = (progress: number, message: string) => void;
+
 export interface ExportResponse {
   success: boolean;
   message: string;
@@ -197,6 +199,7 @@ export class ExportService {
   static async exportStudentSubjectsInventory(
     academicYearId: number,
     filters?: Omit<ReportExportQueryFilters, "academicYearId">,
+    onProgress?: ExportProgressCallback,
   ): Promise<ExportResponse> {
     try {
       const params = new URLSearchParams();
@@ -207,6 +210,20 @@ export class ExportService {
         {
           responseType: "blob",
           timeout: 0,
+          onDownloadProgress: (event) => {
+            if (!onProgress) return;
+            if (event.total && event.total > 0) {
+              const pct = 93 + Math.round((event.loaded / event.total) * 7);
+              const kb = Math.round(event.loaded / 1024);
+              const totalKb = Math.round(event.total / 1024);
+              onProgress(
+                Math.min(pct, 99),
+                `Receiving file (${kb.toLocaleString()} / ${totalKb.toLocaleString()} KB)...`,
+              );
+            } else {
+              onProgress(94, "Receiving file...");
+            }
+          },
         },
       );
 

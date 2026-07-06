@@ -312,6 +312,30 @@ export default function ReportsPage() {
     filterClassIds,
   ]);
 
+  const hasExportScopeFilters = useCallback(
+    () =>
+      filterRegulationIds.length > 0 ||
+      filterAffiliationIds.length > 0 ||
+      filterProgramCourseIds.length > 0 ||
+      filterClassIds.length > 0,
+    [filterRegulationIds, filterAffiliationIds, filterProgramCourseIds, filterClassIds],
+  );
+
+  const confirmBroadUniversitySubjectsExport = async (): Promise<boolean> => {
+    if (hasExportScopeFilters()) return true;
+    const result = await Swal.fire({
+      title: "Export all students?",
+      html:
+        "No regulation, affiliation, program-course, or semester filters are selected. " +
+        "This export may take longer and include <b>every student</b> in the academic year.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Export all",
+      cancelButtonText: "Cancel",
+    });
+    return result.isConfirmed;
+  };
+
   const cuZipRegulationShortName = useMemo(() => {
     if (filterRegulationIds.length !== 1) return "";
     const rt = regulationTypes.find((r) => r.id === filterRegulationIds[0]);
@@ -1035,15 +1059,12 @@ export default function ReportsPage() {
       return;
     }
 
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId,
-      type: "export_progress",
-      message: "Exporting Student University Subjects Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
-    });
+    if (!(await confirmBroadUniversitySubjectsExport())) {
+      setIsExporting(false);
+      setExportProgressOpen(false);
+      setCurrentOperation(null);
+      return;
+    }
 
     const f = buildReportFilters();
     const result = await ExportService.exportStudentSubjectsInventory(
@@ -1053,6 +1074,18 @@ export default function ReportsPage() {
         affiliationIds: f.affiliationIds,
         regulationTypeIds: f.regulationTypeIds,
         classIds: f.classIds,
+      },
+      (progress, message) => {
+        setCurrentProgressUpdate({
+          id: `export_${Date.now()}`,
+          userId,
+          type: "export_progress",
+          message,
+          progress,
+          status: progress >= 100 ? "completed" : "in_progress",
+          createdAt: new Date(),
+          meta: { operation: "student_university_subjects_export" },
+        });
       },
     );
 
@@ -1068,7 +1101,9 @@ export default function ReportsPage() {
         fileName: result.data?.fileName,
         downloadUrl: result.data?.downloadUrl,
         createdAt: new Date(),
+        meta: { operation: "student_university_subjects_export" },
       });
+      setIsExporting(false);
       toast.success("Student University Subjects Report downloaded successfully!");
     } else {
       throw new Error(result.message || "Export failed");
@@ -1139,6 +1174,7 @@ export default function ReportsPage() {
         handleDownload(
           "student-university-subjects-report",
           downloadStudentUniversitySubjectsReport,
+          "student_university_subjects_export",
         ),
       requiresAcademicYear: true,
       includesSemesterInExport: true,

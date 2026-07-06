@@ -913,9 +913,18 @@ export async function exportStudentSubjectsReportHandler(
       return;
     }
 
+    const userId =
+      (
+        req as { user?: { id?: number; userId?: number } }
+      ).user?.id?.toString() ??
+      (
+        req as { user?: { id?: number; userId?: number } }
+      ).user?.userId?.toString();
+
     const buffer = await exportStudentSubjectsReport(
       academicYearId,
       parseReportExportFilters(req.query as Record<string, unknown>),
+      userId,
     );
     const filename = `student-subjects-${academicYearId}-${
       new Date().toISOString().split("T")[0]

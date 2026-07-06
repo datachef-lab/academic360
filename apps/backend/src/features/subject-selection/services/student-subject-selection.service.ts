@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db, pool } from "@/db/index.js";
 import { and, countDistinct, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
@@ -35,7 +38,10 @@ import ExcelJS from "exceljs";
 import { socketService } from "@/services/socketService.js";
 import { enqueueNotification } from "@/services/notificationClient.js";
 import type { ReportExportFilters } from "@/utils/report-export-filters.js";
-import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import {
+  applyReportHeaderAndFreezeOnly,
+  applyStandardExcelReportTableStyling,
+} from "@/utils/excel-report-styling.js";
 import {
   getNotificationMasterIdByName,
   getNotificationMasterIdByNameAndVariant,
@@ -2167,22 +2173,14 @@ FROM (
 ${STUDENT_SUBJECTS_FINAL_WHERE_PROMOTED}`;
 
 const STUDENT_SUBJECTS_EXPORT_SQL = `
-WITH students_in_report_year AS (
+WITH students_in_report_year AS MATERIALIZED (
   SELECT DISTINCT pr.student_id_fk AS student_id
   FROM promotions pr
   JOIN sessions sess_lp ON sess_lp.id = pr.session_id_fk
   WHERE COALESCE(pr.is_deprecated, false) = false
     AND sess_lp.academic_id_fk = $1
 ),
-student_paper_years AS (
-  SELECT DISTINCT pr.student_id_fk AS student_id, sess.academic_id_fk AS academic_year_id
-  FROM promotions pr
-  JOIN sessions sess ON sess.id = pr.session_id_fk
-  WHERE COALESCE(pr.is_deprecated, false) = false
-    AND pr.student_id_fk IN (SELECT student_id FROM students_in_report_year)
-    AND sess.academic_id_fk = $1
-),
-student_program_in_year AS (
+student_program_in_year AS MATERIALIZED (
   SELECT DISTINCT pr.student_id_fk AS student_id, pr.program_course_id_fk
   FROM promotions pr
   JOIN sessions sess ON sess.id = pr.session_id_fk
@@ -2191,7 +2189,7 @@ student_program_in_year AS (
     AND sess.academic_id_fk = $1
 ),
 
-student_registration_year AS (
+student_registration_year AS MATERIALIZED (
   SELECT
          std.id AS student_id,
          LEFT(ay.year, 4) AS registration_year
@@ -2200,9 +2198,10 @@ student_registration_year AS (
   JOIN admissions adm ON adm.id = af.admission_id_fk
   JOIN sessions sess ON sess.id = adm.session_id_fk
   JOIN academic_years ay ON ay.id = sess.academic_id_fk
+  WHERE std.id IN (SELECT student_id FROM students_in_report_year)
 ),
 
-student_promotions_by_class AS (
+student_promotions_by_class AS MATERIALIZED (
   SELECT DISTINCT ON (pr.student_id_fk, pr.class_id_fk)
          pr.id AS promotion_id,
          pr.student_id_fk AS student_id,
@@ -2219,7 +2218,7 @@ student_promotions_by_class AS (
 ),
 
 /** One row per student + selection slot (meta), matching CU Registration admin form. */
-latest_student_selections AS (
+latest_student_selections AS MATERIALIZED (
   SELECT id,
          student_id_fk,
          session_id_fk,
@@ -2278,7 +2277,8 @@ mandatory AS (
       NULL::text                          AS subject_grouping_name,
       NULL::text                          AS subject_grouping_code,
       spbc.promotion_id                   AS promotion_id
-  FROM students std
+  FROM students_in_report_year sir
+  JOIN students std ON std.id = sir.student_id
   JOIN users u ON u.id = std.user_id_fk
   JOIN student_program_in_year spy ON spy.student_id = std.id
   JOIN program_courses pc ON pc.id = spy.program_course_id_fk
@@ -2286,11 +2286,7 @@ mandatory AS (
   LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
   LEFT JOIN student_registration_year sry ON sry.student_id = std.id
   JOIN papers p ON p.programe_course_id_fk = pc.id
-               AND EXISTS (
-                 SELECT 1 FROM student_paper_years spy_y
-                 WHERE spy_y.student_id = std.id
-                   AND spy_y.academic_year_id = p.academic_year_id_fk
-               )
+               AND p.academic_year_id_fk = $1
   JOIN academic_years ay ON ay.id = p.academic_year_id_fk
   LEFT JOIN student_promotions_by_class spbc
        ON spbc.student_id = std.id
@@ -2337,7 +2333,8 @@ optional_direct AS (
       NULL::text                          AS subject_grouping_name,
       NULL::text                          AS subject_grouping_code,
       spbc.promotion_id                   AS promotion_id
-  FROM students std
+  FROM students_in_report_year sir
+  JOIN students std ON std.id = sir.student_id
   JOIN users u ON u.id = std.user_id_fk
   JOIN student_program_in_year spy ON spy.student_id = std.id
   JOIN program_courses pc ON pc.id = spy.program_course_id_fk
@@ -2345,11 +2342,7 @@ optional_direct AS (
   LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
   LEFT JOIN student_registration_year sry ON sry.student_id = std.id
   JOIN papers p ON p.programe_course_id_fk = pc.id
-               AND EXISTS (
-                 SELECT 1 FROM student_paper_years spy_y
-                 WHERE spy_y.student_id = std.id
-                   AND spy_y.academic_year_id = p.academic_year_id_fk
-               )
+               AND p.academic_year_id_fk = $1
   JOIN academic_years ay ON ay.id = p.academic_year_id_fk
   JOIN classes cl ON cl.id = p.class_id_fk
   LEFT JOIN student_promotions_by_class spbc
@@ -2403,7 +2396,8 @@ optional_grouped AS (
       sgm.name                            AS subject_grouping_name,
       sgm.code                            AS subject_grouping_code,
       spbc.promotion_id                   AS promotion_id
-  FROM students std
+  FROM students_in_report_year sir
+  JOIN students std ON std.id = sir.student_id
   JOIN users u ON u.id = std.user_id_fk
   JOIN student_program_in_year spy ON spy.student_id = std.id
   JOIN program_courses pc ON pc.id = spy.program_course_id_fk
@@ -2412,11 +2406,7 @@ optional_grouped AS (
   LEFT JOIN student_registration_year sry ON sry.student_id = std.id
   JOIN papers p_sel ON p_sel.programe_course_id_fk = pc.id
                    AND p_sel.is_optional = TRUE
-                   AND EXISTS (
-                     SELECT 1 FROM student_paper_years spy_y
-                     WHERE spy_y.student_id = std.id
-                       AND spy_y.academic_year_id = p_sel.academic_year_id_fk
-                   )
+                   AND p_sel.academic_year_id_fk = $1
   JOIN academic_years ay ON ay.id = p_sel.academic_year_id_fk
   JOIN classes cl_sel ON cl_sel.id = p_sel.class_id_fk
   JOIN subjects sbj_sel ON sbj_sel.id = p_sel.subject_id_fk
@@ -2520,7 +2510,6 @@ export function buildStudentSubjectsExportSql(
   if (filters.classIds?.length) {
     const p = idx;
     values.push(filters.classIds);
-    idx++;
     classCl = `\n    AND cl.id = ANY($${p}::int[])`;
     classClAll = `\n    AND cl_all.id = ANY($${p}::int[])`;
   }
@@ -2597,66 +2586,219 @@ function calculateColumnWidth(header: string, allData?: any[]): number {
   return Math.min(calculatedWidth, 100);
 }
 
+/** Stable column order for student university subjects export (excludes internal promotion_id). */
+const STUDENT_SUBJECTS_EXPORT_COLUMNS = [
+  "student_id",
+  "uid",
+  "user_name",
+  "registration_year",
+  "promotion_academic_year",
+  "program_course",
+  "affiliation",
+  "regulation",
+  "semester",
+  "subject",
+  "subject_type",
+  "selection_label",
+  "selection_version",
+  "paper_id",
+  "paper_type",
+  "paper",
+  "paper_code",
+  "is_optional",
+  "auto_assign",
+  "is_active",
+  "subject_grouping_main_id",
+  "subject_grouping_name",
+  "subject_grouping_code",
+] as const;
+
+const STUDENT_SUBJECTS_EXPORT_COLUMN_WIDTHS: Record<
+  (typeof STUDENT_SUBJECTS_EXPORT_COLUMNS)[number],
+  number
+> = {
+  student_id: 12,
+  uid: 14,
+  user_name: 28,
+  registration_year: 18,
+  promotion_academic_year: 22,
+  program_course: 28,
+  affiliation: 22,
+  regulation: 16,
+  semester: 14,
+  subject: 40,
+  subject_type: 18,
+  selection_label: 20,
+  selection_version: 18,
+  paper_id: 10,
+  paper_type: 16,
+  paper: 40,
+  paper_code: 14,
+  is_optional: 12,
+  auto_assign: 12,
+  is_active: 10,
+  subject_grouping_main_id: 22,
+  subject_grouping_name: 24,
+  subject_grouping_code: 22,
+};
+
+/** Socket operation id — must match reports page `handleDownload` third argument. */
+export const STUDENT_UNIVERSITY_SUBJECTS_EXPORT_OPERATION =
+  "student_university_subjects_export";
+
+function emitStudentSubjectsExportProgress(
+  userId: string | undefined,
+  message: string,
+  progress: number,
+  status: "started" | "in_progress" | "completed" | "error",
+  extras?: { fileName?: string; error?: string },
+): void {
+  if (!userId) return;
+  socketService.sendProgressUpdate(
+    userId,
+    socketService.createExportProgressUpdate(
+      userId,
+      message,
+      progress,
+      status,
+      extras?.fileName,
+      undefined,
+      extras?.error,
+      { operation: STUDENT_UNIVERSITY_SUBJECTS_EXPORT_OPERATION },
+    ),
+  );
+}
+
+function buildStudentSubjectsXlsxBuffer(
+  rows: Record<string, unknown>[],
+  userId?: string,
+): Buffer {
+  if (rows.length === 0) {
+    const ws = XLSX.utils.aoa_to_sheet([["message"], ["No data available"]]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "student-subjects");
+    return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  }
+
+  const headerRow = STUDENT_SUBJECTS_EXPORT_COLUMNS.map((col) =>
+    toSentenceCase(col),
+  );
+  const aoa: unknown[][] = [headerRow];
+  const progressEvery = 5000;
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    aoa.push(
+      STUDENT_SUBJECTS_EXPORT_COLUMNS.map((col) =>
+        transformValueForExcel(row[col]),
+      ),
+    );
+    if (
+      userId &&
+      rows.length > progressEvery &&
+      i > 0 &&
+      i % progressEvery === 0
+    ) {
+      const pct = 60 + Math.floor((i / rows.length) * 20);
+      emitStudentSubjectsExportProgress(
+        userId,
+        `Building Excel (${i.toLocaleString()} / ${rows.length.toLocaleString()} rows)...`,
+        pct,
+        "in_progress",
+      );
+    }
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = STUDENT_SUBJECTS_EXPORT_COLUMNS.map((key) => {
+    const headerLen = toSentenceCase(key).length;
+    const preset = STUDENT_SUBJECTS_EXPORT_COLUMN_WIDTHS[key] ?? 14;
+    return { wch: Math.max(preset, headerLen + 2) };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "student-subjects");
+  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+}
+
 export async function exportStudentSubjectsReport(
   academicYearId: number,
   filters: ReportExportFilters = {},
+  userId?: string,
 ): Promise<Buffer> {
   const { text: trimmedQuery, values: queryValues } =
     buildStudentSubjectsExportSql(academicYearId, filters, "full");
+  const startedAt = Date.now();
   console.log(
     "[SUBJECTS-EXPORT] Running student subjects export",
     academicYearId,
     filters,
   );
 
+  emitStudentSubjectsExportProgress(
+    userId,
+    "Starting student university subjects export...",
+    5,
+    "started",
+  );
+
+  emitStudentSubjectsExportProgress(
+    userId,
+    "Fetching your university subjects and student data...",
+    15,
+    "in_progress",
+  );
+
   try {
     const { rows } = await pool.query(trimmedQuery, queryValues);
+    const queryMs = Date.now() - startedAt;
     console.log(
-      `[SUBJECTS-EXPORT] Retrieved ${rows.length} rows for academic year ${academicYearId}`,
+      `[SUBJECTS-EXPORT] Retrieved ${rows.length} rows in ${queryMs}ms for academic year ${academicYearId}`,
     );
 
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("student-subjects");
+    emitStudentSubjectsExportProgress(
+      userId,
+      `Retrieved ${rows.length.toLocaleString()} records — building Excel file...`,
+      55,
+      "in_progress",
+    );
 
-    if (rows.length === 0) {
-      sheet.columns = [{ header: "message", key: "message", width: 20 }];
-      sheet.addRow({ message: "No data available" });
-    } else {
-      // Transform rows: convert booleans to Yes/No and nulls to empty strings
-      const transformedRows = rows.map((row) => {
-        const t = transformRowForExcel(row) as Record<string, unknown>;
-        const { promotion_id: _omitPromotionId, ...rest } = t;
-        return rest;
-      });
+    const excelStartedAt = Date.now();
 
-      // Define columns from first row keys with sentence case headers
-      const headers = Object.keys(transformedRows[0]);
+    emitStudentSubjectsExportProgress(
+      userId,
+      "Writing Excel file...",
+      82,
+      "in_progress",
+    );
 
-      // Calculate column widths based on header and transformed data
-      sheet.columns = headers.map((header) => {
-        const sentenceCaseHeader = toSentenceCase(header);
-        // Get all transformed data for this column to find maximum length
-        const allColumnData = transformedRows.map((row) => row[header]);
-        const width = calculateColumnWidth(sentenceCaseHeader, allColumnData);
+    const buffer = buildStudentSubjectsXlsxBuffer(
+      rows as Record<string, unknown>[],
+      userId,
+    );
+    const filename = `student-subjects-${academicYearId}-${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
 
-        return {
-          header: sentenceCaseHeader,
-          key: header,
-          width,
-        };
-      });
+    console.log(
+      `[SUBJECTS-EXPORT] Excel built in ${Date.now() - excelStartedAt}ms (total ${Date.now() - startedAt}ms)`,
+    );
 
-      // Add transformed rows
-      transformedRows.forEach((row) => {
-        sheet.addRow(row);
-      });
+    emitStudentSubjectsExportProgress(
+      userId,
+      `Export ready (${rows.length.toLocaleString()} records) — downloading...`,
+      92,
+      "in_progress",
+      { fileName: filename },
+    );
 
-      applyStandardExcelReportTableStyling(sheet);
-    }
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+    return buffer;
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Export failed unexpectedly";
+    emitStudentSubjectsExportProgress(userId, message, 0, "error", {
+      error: message,
+    });
     console.error(
       "[SUBJECTS-EXPORT] Failed to export student subjects:",
       error,
