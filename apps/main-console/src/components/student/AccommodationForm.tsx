@@ -257,10 +257,20 @@ export default function AccommodationForm({
     }
   };
 
-  // Get current country, state, and city IDs for filtering
-  const currentCountryId = formData.address?.country?.id;
-  const currentStateId = formData.address?.state?.id;
-  const currentCityId = formData.address?.city?.id;
+  // Get current country, state, and city IDs for filtering.
+  // The load path (normalizeAccommodationData) flattens nested objects into these *Id fields,
+  // and selections also write the flat *Id, so reading the flat ids keeps display + reset correct.
+  const addr = formData.address as
+    | (Partial<AddressDto> & {
+        countryId?: number | null;
+        stateId?: number | null;
+        cityId?: number | null;
+      })
+    | null
+    | undefined;
+  const currentCountryId = addr?.countryId ?? undefined;
+  const currentStateId = addr?.stateId ?? undefined;
+  const currentCityId = addr?.cityId ?? undefined;
 
   // Filter states and cities based on selection
   const filteredStates = states.filter(

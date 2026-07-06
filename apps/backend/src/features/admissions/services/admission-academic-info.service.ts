@@ -180,6 +180,12 @@ export async function updateAcademicInfo(
     base.registrationNumber = (rest as any).registrationNumber;
   if (typeof rest.centerNumber === "string")
     base.centerNumber = rest.centerNumber;
+  if (typeof (rest as any).previousRegistrationNumber === "string")
+    base.previousRegistrationNumber = (rest as any).previousRegistrationNumber;
+  if (typeof (rest as any).examNumber === "string")
+    base.examNumber = (rest as any).examNumber;
+  const oldTotal = toNum((rest as any).oldTotalScore);
+  if (oldTotal != null) base.oldTotalScore = oldTotal;
   if (typeof rest.admitCardId === "string") base.admitCardId = rest.admitCardId;
   if (typeof rest.cuRegistrationNumber === "string")
     base.cuRegistrationNumber = rest.cuRegistrationNumber;

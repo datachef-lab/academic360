@@ -721,6 +721,19 @@ export default function AcademicDetails({
                   (f as unknown as { centerNumber?: string }).centerNumber ??
                   original.centerNumber ??
                   null,
+                previousRegistrationNumber:
+                  (f as unknown as { previousRegistrationNumber?: string })
+                    .previousRegistrationNumber ??
+                  (original as unknown as { previousRegistrationNumber?: string })
+                    .previousRegistrationNumber ??
+                  null,
+                examNumber:
+                  (f as unknown as { examNumber?: string }).examNumber ??
+                  (original as unknown as { examNumber?: string }).examNumber ??
+                  null,
+                oldTotalScore: ((f as unknown as { oldTotalScore?: number }).oldTotalScore ??
+                  (original as unknown as { oldTotalScore?: number }).oldTotalScore ??
+                  null) as number | null,
                 admitCardId:
                   (f as unknown as { admitCardId?: string }).admitCardId ??
                   original.admitCardId ??
