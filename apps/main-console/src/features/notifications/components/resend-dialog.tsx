@@ -323,7 +323,10 @@ export function ResendDialog({
                     <VerifierTable verifiers={verifiers} />
                   ) : (
                     !error && (
-                      <p className="py-4 text-sm text-[#888]">No verifier accounts found.</p>
+                      <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+                        No verifier accounts configured. Mark at least one active staff user as a
+                        notification verifier to resend in this environment.
+                      </p>
                     )
                   )}
                 </div>

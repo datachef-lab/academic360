@@ -325,12 +325,11 @@ export async function getResendVerifiers(notificationId: number) {
 
   const mode = resendMode();
   if (mode === "development") return { mode, verifiers: [developerVerifier()] };
+  // Return the real mode even when no verifier is configured — don't throw
+  // here, or the dialog can't learn the environment and falls back to showing
+  // "development". The empty list drives a "configure a verifier" note in the
+  // UI; the actual send step (startResendOtp) still enforces NO_VERIFIERS.
   const verifiers = await findVerifiers();
-  if (verifiers.length === 0)
-    throw new ResendError(
-      "NO_VERIFIERS",
-      "No verifier accounts configured. Mark at least one active user as a notification verifier.",
-    );
   return { mode, verifiers };
 }
 
