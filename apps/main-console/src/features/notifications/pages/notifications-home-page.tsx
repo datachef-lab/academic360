@@ -24,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { ChipTabs } from "@/components/ui/chipTabs";
 import { VisualCard } from "@/features/fees-dashboard/components/VisualCard";
 import { CompactPanel } from "@/features/fees-dashboard/components/CompactPanel";
 import { ChartCard, type ChartConfig } from "@/features/fees-dashboard/components/ChartCard";
@@ -39,7 +38,6 @@ import {
 import { DashboardEmptyState } from "@/features/fees-dashboard/components/DashboardEmptyState";
 import { LiveUpdatesBadge } from "@/features/fees-dashboard/components/LiveUpdatesBadge";
 import { GradientStatCard } from "@/features/notifications/components/gradient-stat-card";
-import { CohortBarChart } from "@/features/notifications/components/cohort-bar-chart";
 import { buildYTickLabels, maxFromKeys } from "@/features/fees-dashboard/utils/chart-utils";
 import { useSocket } from "@/hooks/useSocket";
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -50,7 +48,6 @@ import {
   getNotificationDashboard,
   formatNotificationTime,
   type NotificationDashboard,
-  type DimBucket,
 } from "@/features/notifications/api/notifications-api";
 import { VariantBadge } from "@/features/notifications/components/badges";
 import {
@@ -82,11 +79,8 @@ const channelConfig = {
   failed: { label: "Failed", color: FAILED_COLOR },
 } satisfies ChartConfig;
 
-const ACADEMIC_TABS = ["Program-course", "Stream", "Course", "Affiliation", "Regulation"] as const;
-
 const DASHBOARD_TABS = [
   { value: "overview", label: "Overview" },
-  { value: "cohorts", label: "Cohorts" },
   { value: "templates", label: "Templates" },
   { value: "failures", label: "Failures" },
 ] as const;
@@ -211,12 +205,20 @@ export default function NotificationsHomePage() {
   }, [currentAcademicYear?.id]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("overview");
-  const [academicTab, setAcademicTab] = useState<string>(ACADEMIC_TABS[0]);
 
   const activeFilterCount = countActiveDashFilters(filters);
 
+  // Latest-request-wins guard. On mount the first fetch fires with the default
+  // (unfiltered) filters, then the academic-year sync updates `filters` and
+  // fires a second, narrower fetch. The narrow one is smaller/faster and can
+  // land before the big unfiltered one — without this guard the late, stale
+  // response clobbers the correct filtered data (the bug where the dashboard
+  // showed all years despite the filter being set to the current year).
+  const reqIdRef = useRef(0);
+
   const fetchData = useCallback(
     async (silent: boolean) => {
+      const reqId = ++reqIdRef.current;
       if (!silent) setLoading(true);
       setError(null);
       try {
@@ -234,11 +236,13 @@ export default function NotificationsHomePage() {
           shiftIds: filters.shiftIds.map(Number),
           days,
         });
+        if (reqId !== reqIdRef.current) return; // a newer fetch superseded this one
         setData(res);
       } catch {
-        if (!silent) setError("Failed to load notification dashboard.");
+        if (reqId === reqIdRef.current && !silent)
+          setError("Failed to load notification dashboard.");
       } finally {
-        if (!silent) setLoading(false);
+        if (reqId === reqIdRef.current && !silent) setLoading(false);
       }
     },
     [filters],
@@ -272,30 +276,10 @@ export default function NotificationsHomePage() {
     return () => clearInterval(t);
   }, []);
 
-  const academicBuckets: DimBucket[] = useMemo(() => {
-    if (!data) return [];
-    switch (academicTab) {
-      case "Stream":
-        return data.byStream;
-      case "Course":
-        return data.byCourse;
-      case "Affiliation":
-        return data.byAffiliation;
-      case "Regulation":
-        return data.byRegulationType;
-      default:
-        return data.byProgramCourse;
-    }
-  }, [data, academicTab]);
-
   const triggerTotal = data ? data.byTrigger.automated + data.byTrigger.eventTriggered : 0;
 
   const paddedVariants = useMemo(() => padVariants(data?.byVariant ?? []), [data]);
   const channelYMax = Math.max(maxFromKeys(paddedVariants, ["total"]), 1);
-  const semesterData = useMemo(
-    () => [...(data?.byClass ?? [])].sort((a, b) => a.label.localeCompare(b.label)),
-    [data],
-  );
 
   return (
     <div className="min-h-full bg-[#eaeaea]">
@@ -513,50 +497,6 @@ export default function NotificationsHomePage() {
                       </span>
                     </p>
                   </CompactPanel>
-                </div>
-              </TabsContent>
-
-              {/* ------------------------------ COHORTS ------------------------------- */}
-              <TabsContent value="cohorts" className="mt-0 space-y-4 focus-visible:outline-none">
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <VisualCard
-                    title="Academic breakdown"
-                    headerRight={
-                      <ChipTabs
-                        tabs={[...ACADEMIC_TABS]}
-                        selected={academicTab}
-                        setSelected={setAcademicTab}
-                        tabClassName="text-[10px] px-2 py-0.5"
-                      />
-                    }
-                  >
-                    <CohortBarChart
-                      buckets={academicBuckets}
-                      limit={8}
-                      horizontal
-                      heightClass="h-[300px]"
-                    />
-                  </VisualCard>
-
-                  <VisualCard title="By semester">
-                    <CohortBarChart buckets={semesterData} limit={8} heightClass="h-[300px]" />
-                  </VisualCard>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                  <VisualCard title="By user type">
-                    <CohortBarChart buckets={data.byUserType} limit={5} heightClass="h-[220px]" />
-                  </VisualCard>
-                  <VisualCard title="By shift">
-                    <CohortBarChart buckets={data.byShift} limit={5} heightClass="h-[220px]" />
-                  </VisualCard>
-                  <VisualCard title="By academic year">
-                    <CohortBarChart
-                      buckets={data.byAcademicYear}
-                      limit={5}
-                      heightClass="h-[220px]"
-                    />
-                  </VisualCard>
                 </div>
               </TabsContent>
 

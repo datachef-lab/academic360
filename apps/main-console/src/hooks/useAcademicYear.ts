@@ -107,9 +107,19 @@ export const useAcademicYear = () => {
       setAvailableYears(allYears);
       console.log("Academic Year Hook: Set available years:", allYears.length);
 
-      // Find and set current academic year (the one marked as isCurrentYear)
-      const currentYear = allYears.find((year) => year.isCurrentYear === true);
-      if (currentYear && !currentAcademicYear) {
+      // Pick the current academic year = the most recently-added year. The
+      // `is_current_year` flag is unreliable (it can be missing, or left set on
+      // an older year after a session rollover), so we don't gate on it: the
+      // newest year is the working year. "Most recent" = latest `year` string,
+      // newest id as tiebreak; the flag only breaks an exact-year tie.
+      const byRecent = (a: AcademicYear, b: AcademicYear) =>
+        String(b.year ?? "").localeCompare(String(a.year ?? "")) ||
+        Number(b.isCurrentYear === true) - Number(a.isCurrentYear === true) ||
+        Number(b.id) - Number(a.id);
+      const currentYear = [...allYears].sort(byRecent)[0];
+      // Set whenever the resolved year differs — don't gate on "not already
+      // set", so a stale value (e.g. left over from a prior load) is corrected.
+      if (currentYear && currentAcademicYear?.id !== currentYear.id) {
         setCurrentYear(currentYear);
         console.log("Academic Year Hook: Set current year:", currentYear.year);
       }
