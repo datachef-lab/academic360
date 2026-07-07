@@ -1060,9 +1060,9 @@ const SubjectPaperMappingPage = () => {
   }
 
   return (
-    <div className="p-2 sm:p-4">
-      <Card className="border-none">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center mb-3 justify-between gap-4 border rounded-md p-4 sticky top-0 z-30 bg-background">
+    <div className="p-2 sm:p-4 flex h-full min-h-0 flex-col">
+      <Card className="border-none flex flex-1 min-h-0 flex-col">
+        <CardHeader className="shrink-0 flex flex-col sm:flex-row items-start sm:items-center mb-3 justify-between gap-4 border rounded-md p-4 bg-background">
           <div className="flex-1 min-w-0">
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <FileText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
@@ -1199,8 +1199,8 @@ const SubjectPaperMappingPage = () => {
             </AlertDialog>
           </div>
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="sticky top-[72px] z-40 bg-background p-2 sm:p-4 border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-0">
+        <CardContent className="px-0 flex flex-1 min-h-0 flex-col">
+          <div className="shrink-0 z-40 bg-background p-2 sm:p-4 border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-0">
             <div className="flex flex-wrap gap-2 items-center flex-1">
               <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <DialogTrigger asChild>
@@ -1682,8 +1682,8 @@ const SubjectPaperMappingPage = () => {
               )}
             </div>
           </div>
-          <div className="relative z-50 bg-white" style={{ height: "600px" }}>
-            <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
+          <div className="relative z-50 bg-white flex flex-1 min-h-0 flex-col">
+            <div className="overflow-y-auto text-[14px] overflow-x-auto flex-1 min-h-0 border rounded-md">
               {/* Fixed Header */}
               <div
                 className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b"
@@ -1888,7 +1888,7 @@ const SubjectPaperMappingPage = () => {
 
       {/* Pagination Controls */}
       {!loading && !error && totalItems > 0 && (
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
+        <div className="shrink-0 mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
           <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
             <span className="hidden sm:inline">
               Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
