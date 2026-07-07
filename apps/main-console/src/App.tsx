@@ -65,6 +65,11 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
 import AdmissionsPage from "./features/academic-year-setup/pages/admissions-page";
+import NotificationsMaster from "./features/notifications/layouts/notifications-master";
+import NotificationsHomePage from "./features/notifications/pages/notifications-home-page";
+import AutomatedNotificationsPage from "./features/notifications/pages/automated-notifications-page";
+import NotificationEventsPage from "./features/notifications/pages/notification-events-page";
+import NotificationMastersPage from "./features/notifications/pages/notification-masters-page";
 import AdmissionProgramCoursePage from "./features/academic-year-setup/pages/admission-program-course-page";
 import AdmissionsYearRedirect from "./features/academic-year-setup/pages/admissions-year-redirect";
 import ShiftSectionConfigPage from "./features/academic-year-setup/pages/shift-section-config-page";
@@ -344,7 +349,13 @@ const router = createBrowserRouter(
             },
             {
               path: "notifications",
-              element: <NoticeMaster />,
+              element: <NotificationsMaster />,
+              children: [
+                { path: "", element: <NotificationsHomePage /> },
+                { path: "automated", element: <AutomatedNotificationsPage /> },
+                { path: "events", element: <NotificationEventsPage /> },
+                { path: "masters", element: <NotificationMastersPage /> },
+              ],
             },
           ],
         },

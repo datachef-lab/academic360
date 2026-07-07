@@ -43,16 +43,6 @@ const toolCards: ToolCard[] = [
     image: "/tool-illustrations/simulation.jpg",
   },
   {
-    title: "Shift Change",
-    description:
-      "Search a student by UID and change their shift, section, or class roll number (updates UID, login email, and fees).",
-    icon: ArrowLeftRight,
-    href: "/dashboard/tools/shift-change",
-    iconColor: "text-violet-600",
-    items: "Student shift / section / roll",
-    image: "/tool-illustrations/shift-change.jpg",
-  },
-  {
     title: "Real Time Tracker",
     description: "Live tracking of academic activity and events across the console in real time.",
     icon: Activity,
@@ -79,6 +69,16 @@ const toolCards: ToolCard[] = [
     iconColor: "text-amber-600",
     items: "Spreadsheet imports",
     image: "/tool-illustrations/bulk-upload.png",
+  },
+  {
+    title: "Shift Change",
+    description:
+      "Search a student by UID and change their shift, section, or class roll number (updates UID, login email, and fees).",
+    icon: ArrowLeftRight,
+    href: "/dashboard/tools/shift-change",
+    iconColor: "text-violet-600",
+    items: "Student shift / section / roll",
+    image: "/tool-illustrations/shift-change.jpg",
   },
   {
     title: "Notifications",
