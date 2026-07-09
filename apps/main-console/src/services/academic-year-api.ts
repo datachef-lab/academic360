@@ -42,7 +42,13 @@ export async function deleteAcademicYearById(id: number): Promise<ApiResponse<nu
 export type AcademicYearCopyPreview = {
   sourceYear: { id: number; year: string } | null;
   nextYear: string;
-  counts: { metas: number; relatedSubjects: number; restrictedGroupings: number; papers: number };
+  counts: {
+    metas: number;
+    relatedSubjects: number;
+    restrictedGroupings: number;
+    subjectGroupings: number;
+    papers: number;
+  };
   metas: Array<{
     id: number;
     label: string;
@@ -66,6 +72,14 @@ export type AcademicYearCopyPreview = {
     programCourses: string[];
     cannotCombineWith: string[];
   }>;
+  subjectGroupings: Array<{
+    id: number;
+    name: string | null;
+    code: string | null;
+    subjectType: string | null;
+    subjects: string[];
+    programCourses: string[];
+  }>;
   papers: {
     total: number;
     rows: Array<{
@@ -84,7 +98,13 @@ export type AcademicYearCopyPreview = {
 export type AcademicYearCopyResult = {
   academicYear: AcademicYear;
   sourceYearId: number | null;
-  copied: { metas: number; relatedSubjects: number; restrictedGroupings: number; papers: number };
+  copied: {
+    metas: number;
+    relatedSubjects: number;
+    restrictedGroupings: number;
+    subjectGroupings: number;
+    papers: number;
+  };
 };
 
 // Preview what a new academic year will clone from the current active year

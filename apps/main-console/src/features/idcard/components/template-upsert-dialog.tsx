@@ -13,13 +13,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
 
 import { createTemplate, updateTemplate } from "../api/idcard-api";
 import { IdCardTemplate, IdCardTemplateUpsertPayload } from "../types";
 
 interface Props {
   open: boolean;
-  academicYearId: number;
+  defaultAcademicYearId: number;
   template: IdCardTemplate | null;
   onClose: () => void;
   onSaved: () => void;
@@ -27,14 +35,18 @@ interface Props {
 
 export default function TemplateUpsertDialog({
   open,
-  academicYearId,
+  defaultAcademicYearId,
   template,
   onClose,
   onSaved,
 }: Props) {
   const isEdit = !!template;
+  const { data: academicYears } = useAcademicYears();
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
+  const [academicYearId, setAcademicYearId] = useState<number | undefined>(
+    template?.academicYearId ?? defaultAcademicYearId,
+  );
   const [canvasWidthPx, setCanvasWidthPx] = useState(template?.canvasWidthPx ?? 600);
   const [canvasHeightPx, setCanvasHeightPx] = useState(template?.canvasHeightPx ?? 900);
   const [qrcodeSize, setQrcodeSize] = useState(template?.qrcodeSize ?? 0);
@@ -46,6 +58,7 @@ export default function TemplateUpsertDialog({
   useEffect(() => {
     setName(template?.name ?? "");
     setDescription(template?.description ?? "");
+    setAcademicYearId(template?.academicYearId ?? defaultAcademicYearId);
     setCanvasWidthPx(template?.canvasWidthPx ?? 600);
     setCanvasHeightPx(template?.canvasHeightPx ?? 900);
     setQrcodeSize(template?.qrcodeSize ?? 0);
@@ -53,10 +66,10 @@ export default function TemplateUpsertDialog({
     setIsDefault(template?.isDefault ?? false);
     setFile(null);
     setBackFile(null);
-  }, [template]);
+  }, [template, defaultAcademicYearId]);
 
   const buildPayload = (): IdCardTemplateUpsertPayload => ({
-    academicYearId,
+    academicYearId: academicYearId!,
     name: name.trim(),
     description: description.trim() || null,
     canvasWidthPx,
@@ -69,6 +82,7 @@ export default function TemplateUpsertDialog({
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!name.trim()) throw new Error("Template name is required.");
+      if (!academicYearId) throw new Error("Academic year is required.");
       if (!isEdit && !file) throw new Error("Template image is required.");
       const payload = buildPayload();
       if (isEdit && template) {
@@ -99,6 +113,24 @@ export default function TemplateUpsertDialog({
           <div>
             <Label>Template Name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <Label>Academic Year</Label>
+            <Select
+              value={academicYearId ? String(academicYearId) : undefined}
+              onValueChange={(v) => setAcademicYearId(Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select academic year" />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYears?.map((ay) => (
+                  <SelectItem key={ay.id} value={String(ay.id)}>
+                    {ay.year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Description</Label>

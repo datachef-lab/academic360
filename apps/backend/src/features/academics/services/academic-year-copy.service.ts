@@ -32,6 +32,9 @@ import {
   subjectTypeModel,
   programCourseModel,
   streamModel,
+  subjectGroupingMainModel,
+  subjectGroupingSubjectModel,
+  subjectGroupingProgramCourseModel,
 } from "@repo/db/schemas/models/course-design";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
 import { ensureAcademicYearStructure } from "./academic-year-structure.service.js";
@@ -51,6 +54,7 @@ export const COPYABLE_ENTITIES = [
   "metas",
   "relatedSubjects",
   "restrictedGroupings",
+  "subjectGroupings",
   "papers",
 ] as const;
 
@@ -90,6 +94,7 @@ export type AcademicYearCopyPreview = {
     metas: number;
     relatedSubjects: number;
     restrictedGroupings: number;
+    subjectGroupings: number;
     papers: number;
   };
   metas: Array<{
@@ -115,6 +120,14 @@ export type AcademicYearCopyPreview = {
     programCourses: string[];
     cannotCombineWith: string[];
   }>;
+  subjectGroupings: Array<{
+    id: number;
+    name: string | null;
+    code: string | null;
+    subjectType: string | null;
+    subjects: string[];
+    programCourses: string[];
+  }>;
   papers: {
     total: number;
     rows: Array<{
@@ -135,10 +148,17 @@ const PAPER_PREVIEW_LIMIT = 500;
 const EMPTY_PREVIEW = (nextYear: string): AcademicYearCopyPreview => ({
   sourceYear: null,
   nextYear,
-  counts: { metas: 0, relatedSubjects: 0, restrictedGroupings: 0, papers: 0 },
+  counts: {
+    metas: 0,
+    relatedSubjects: 0,
+    restrictedGroupings: 0,
+    subjectGroupings: 0,
+    papers: 0,
+  },
   metas: [],
   relatedSubjects: [],
   restrictedGroupings: [],
+  subjectGroupings: [],
   papers: { total: 0, rows: [] },
 });
 
@@ -400,6 +420,65 @@ export async function getAcademicYearCopyPreview(): Promise<AcademicYearCopyPrev
     );
   const paperTotal = Number(paperTotalRow?.total ?? 0);
 
+  // --- Subject groupings (course-design; + subjects and program-course children) ---
+  const sgMains = await db
+    .select({
+      id: subjectGroupingMainModel.id,
+      name: subjectGroupingMainModel.name,
+      code: subjectGroupingMainModel.code,
+      subjectType: SUBJECT_TYPE_LABEL,
+    })
+    .from(subjectGroupingMainModel)
+    .leftJoin(
+      subjectTypeModel,
+      eq(subjectTypeModel.id, subjectGroupingMainModel.subjectTypeId),
+    )
+    .where(
+      and(
+        eq(subjectGroupingMainModel.academicYearId, srcId),
+        activeOnly(subjectGroupingMainModel.isActive),
+      ),
+    );
+  const sgIds = sgMains.map((r) => r.id);
+  const sgSubjRows = sgIds.length
+    ? await db
+        .select({
+          parentId: subjectGroupingSubjectModel.subjectGroupingMainId,
+          value: SUBJECT_LABEL,
+        })
+        .from(subjectGroupingSubjectModel)
+        .leftJoin(
+          subjectModel,
+          eq(subjectModel.id, subjectGroupingSubjectModel.subjectId),
+        )
+        .where(
+          inArray(subjectGroupingSubjectModel.subjectGroupingMainId, sgIds),
+        )
+    : [];
+  const sgPcRows = sgIds.length
+    ? await db
+        .select({
+          parentId: subjectGroupingProgramCourseModel.subjectGroupingMainId,
+          value: programCourseModel.shortName,
+        })
+        .from(subjectGroupingProgramCourseModel)
+        .leftJoin(
+          programCourseModel,
+          eq(
+            programCourseModel.id,
+            subjectGroupingProgramCourseModel.programCourseId,
+          ),
+        )
+        .where(
+          inArray(
+            subjectGroupingProgramCourseModel.subjectGroupingMainId,
+            sgIds,
+          ),
+        )
+    : [];
+  const sgSubjects = groupChildren(sgSubjRows);
+  const sgProgramCourses = groupChildren(sgPcRows);
+
   return {
     sourceYear: source,
     nextYear,
@@ -407,6 +486,7 @@ export async function getAcademicYearCopyPreview(): Promise<AcademicYearCopyPrev
       metas: metas.length,
       relatedSubjects: relMains.length,
       restrictedGroupings: rgMains.length,
+      subjectGroupings: sgMains.length,
       papers: Number(paperTotal ?? 0),
     },
     metas: metas.map((m) => ({
@@ -432,6 +512,14 @@ export async function getAcademicYearCopyPreview(): Promise<AcademicYearCopyPrev
       programCourses: rgPcs.get(r.id) ?? [],
       cannotCombineWith: rgSubjs.get(r.id) ?? [],
     })),
+    subjectGroupings: sgMains.map((g) => ({
+      id: g.id,
+      name: g.name,
+      code: g.code,
+      subjectType: g.subjectType,
+      subjects: sgSubjects.get(g.id) ?? [],
+      programCourses: sgProgramCourses.get(g.id) ?? [],
+    })),
     papers: { total: Number(paperTotal ?? 0), rows: paperRows },
   };
 }
@@ -443,6 +531,7 @@ export type AcademicYearCopyResult = {
     metas: number;
     relatedSubjects: number;
     restrictedGroupings: number;
+    subjectGroupings: number;
     papers: number;
     paperComponents: number;
   };
@@ -500,6 +589,7 @@ export async function createAcademicYearWithCopy(
       metas: 0,
       relatedSubjects: 0,
       restrictedGroupings: 0,
+      subjectGroupings: 0,
       papers: 0,
       paperComponents: 0,
     };
@@ -524,6 +614,7 @@ export async function createAcademicYearWithCopy(
     copied.metas = structure.metas;
     copied.relatedSubjects = structure.relatedSubjects;
     copied.restrictedGroupings = structure.restrictedGroupings;
+    copied.subjectGroupings = structure.subjectGroupings;
     copied.papers = structure.papers;
     copied.paperComponents = structure.paperComponents;
 

@@ -1353,26 +1353,26 @@ export default function IdCardIssuePage() {
               <img
                 src={backImageUrl}
                 alt="zoomed back"
-                className="mx-auto max-h-[80vh] object-contain"
+                className="mx-auto max-h-[80vh] object-contain rounded-md border"
               />
             ) : activeTemplate?.backsideImageUrl ? (
               <img
                 src={activeTemplate.backsideImageUrl}
                 alt="zoomed back"
-                className="mx-auto max-h-[80vh] object-contain"
+                className="mx-auto max-h-[80vh] object-contain rounded-md border"
               />
             ) : null
           ) : composedPreview ? (
             <img
               src={composedPreview}
               alt="zoomed card"
-              className="mx-auto max-h-[80vh] object-contain"
+              className="mx-auto max-h-[80vh] object-contain rounded-md border"
             />
           ) : activeTemplate?.templateImageUrl ? (
             <img
               src={activeTemplate.templateImageUrl}
               alt="zoomed front template"
-              className="mx-auto max-h-[80vh] object-contain"
+              className="mx-auto max-h-[80vh] object-contain rounded-md border"
             />
           ) : null}
         </DialogContent>
