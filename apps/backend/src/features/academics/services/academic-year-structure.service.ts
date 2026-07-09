@@ -399,9 +399,30 @@ async function copySubjectGroupings(
       ),
     );
 
+  // Groupings already present in the target year. The table has a unique
+  // (academic_year_id, subject_type_id, name) index, so re-inserting a grouping
+  // that already exists (e.g. this ran before, or the year was seeded from a DB
+  // copy) throws and rolls back the WHOLE ensureAcademicYearStructure tx — which
+  // then repeats on every import. Skip those; reuse their id for chaining below.
+  const existingTarget = await tx
+    .select()
+    .from(subjectGroupingMainModel)
+    .where(eq(subjectGroupingMainModel.academicYearId, target.id));
+  const existingByKey = new Map(
+    existingTarget.map((m) => [groupingKey(m), m.id]),
+  );
+
   // Insert clones (previous link set below by natural key) + clone children.
   const inserted: { id: number; key: string }[] = [];
   for (const main of srcMains) {
+    const key = groupingKey(main);
+    const existingId = existingByKey.get(key);
+    if (existingId != null) {
+      // Already in the target year — leave as-is, just record for chaining.
+      inserted.push({ id: existingId, key });
+      continue;
+    }
+
     const [newMain] = await tx
       .insert(subjectGroupingMainModel)
       .values({
