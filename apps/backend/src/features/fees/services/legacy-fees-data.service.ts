@@ -231,7 +231,7 @@ function buildLegacyFeesQuery(uid?: string | null): string {
         LEFT JOIN studentFeesPayMode frm_sfpm On frm_sfpm.id = frm.collegePayMode
         LEFT JOIN feesinstonlinepayment p ON p.instid = inst.id AND p.status != 'Initiated'
 
-        WHERE sess.id >= 18${uidClause}
+        WHERE 1 = 1${uidClause}
         ORDER BY sess.sessionName, crs.courseName, cl.classname, spd.codeNumber, fsb.position
         LIMIT 3000000;
     `;
@@ -827,9 +827,21 @@ async function syncLegacyFeeStructure(
         LEFT JOIN feesheadtable fh ON fh.id = fsb.headid
         LEFT JOIN studentFeesType ft ON ft.id = fsb.feestypeid
         LEFT JOIN accademicyear ay ON ay.sessionId = sess.id
-        WHERE sess.id >= 18 AND fsm.id = ${legacyFeeStructureId}
+        WHERE fsm.id = ${legacyFeeStructureId}
         ORDER BY sess.sessionName DESC, fsm.id, fsb.index_col;
     `)) as [LegacyFeeStructureRow[], unknown];
+
+  // No legacy fee-structure detail rows for this batch (e.g. the structure is
+  // for an older session). Skip this batch gracefully — do NOT dereference
+  // result[0] below, which would throw and abort the whole student's fee load
+  // (and thus drop every other semester/class the student legitimately has).
+  if (!result || result.length === 0) {
+    await captureErrorRows(
+      "Fee Structure - legacy detail rows not found!",
+      studentRows,
+    );
+    return null;
+  }
 
   //   console.log("in syncLegacyFeeStructure(), result", result);
 
