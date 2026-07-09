@@ -60,12 +60,16 @@ jobs:
             echo "after=$(git rev-parse --short HEAD)"
 
             # 3) Install + build the apps.
+            # Build through turbo (NOT per-package `pnpm --filter build`) so
+            # unchanged packages restore dist/.next from the persistent .turbo
+            # cache (>>> FULL TURBO) instead of rebuilding from scratch every
+            # deploy. .turbo is gitignored, so `git reset --hard` above keeps it.
+            # @repo/db builds automatically as a dependency via turbo's ^build.
             pnpm install --frozen-lockfile
-            pnpm --filter @repo/db... build
-            pnpm --filter backend... build
-            pnpm --filter main-console... build
-            pnpm --filter notification-system... build
-            pnpm --filter student-console... build || echo "::warning::student-console build failed (continuing)"
+            pnpm exec turbo build --filter=backend --filter=main-console --filter=notification-system
+            # student-console isolated so a Next build failure warns instead of
+            # aborting the whole deploy (still cached via turbo).
+            pnpm exec turbo build --filter=student-console || echo "::warning::student-console build failed (continuing)"
 
             # 4) Run migrations (drizzle-kit; idempotent migrations).
             DBURL=$(grep -hE '^DATABASE_URL=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r')
