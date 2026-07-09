@@ -17,6 +17,7 @@ import {
   LayoutList,
   Megaphone,
   UserCog,
+  ClipboardCheck,
   ChevronDown,
   Calendar,
   GraduationCap,
@@ -24,6 +25,7 @@ import {
   ClipboardList,
   IndianRupee,
   CheckSquare,
+  Check,
   Activity,
   FileText,
   BookOpen,
@@ -39,6 +41,7 @@ import { SearchStudentModal } from "./SearchStudentModal";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { useBranding } from "@/features/settings/hooks/use-branding";
+import { useAppEnv } from "@/lib/app-env";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import {
   DropdownMenu,
@@ -92,10 +95,10 @@ const data = {
   navMain: [
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup*", url: "/dashboard/academic-setup", icon: LayoutList },
-    { title: "Admissions", url: "/dashboard/admissions", icon: GraduationCap },
+    { title: "Admission Process*", url: "/dashboard/admissions", icon: ClipboardCheck },
     { title: "Promote Students", url: "/dashboard/promote-students", icon: GraduationCap },
-    { title: "Academic Activity", url: "/dashboard/academic-activity", icon: SlidersHorizontal },
-    { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
+    { title: "Academic Activity*", url: "/dashboard/academic-activity", icon: SlidersHorizontal },
+    { title: "CU Registration*", url: "/dashboard/cu-registration", icon: Users },
     {
       title: "Admit Card Distributions",
       url: "/dashboard/admit-card-distributions",
@@ -107,13 +110,13 @@ const data = {
       icon: CheckSquare,
     },
     { title: "Exam Management*", url: "/dashboard/exam-management", icon: GraduationCap },
-    { title: "Real Time Tracker*", url: "/dashboard/realtime-tracker", icon: Activity },
+    { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
     { title: "Reports*", url: "/dashboard/reports", icon: ClipboardList },
     { title: "Library*", url: "/dashboard/library", icon: BookOpen },
     { title: "Fees Module*", url: "/dashboard/fees", icon: IndianRupee },
-    { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
+    { title: "Document Issuance*", url: "/dashboard/document-issuance", icon: FileText },
     { title: "Career Progression", url: "/dashboard/career-progression", icon: TrendingUp },
-    { title: "Bulk Data Upload*", url: "/dashboard/bulk-upload", icon: Layers },
+    { title: "Bulk Data Upload", url: "/dashboard/bulk-upload", icon: Layers },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
@@ -151,6 +154,7 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const { abbreviation, logoUrl } = useBranding();
+  const appEnv = useAppEnv();
   const currentPath = location.pathname;
   const { user, accessToken, isReady } = useAuth();
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
@@ -187,17 +191,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return currentPath === itemUrl || currentPath.startsWith(itemUrl + "/");
   }
 
-  // Renders a sidebar item title, highlighting a trailing "*" in red.
+  // The trailing "*" only classifies an item into "Modules" vs the unsorted
+  // group — it is never shown in the UI, so strip it from the label.
   function renderSidebarTitle(title: string): React.ReactNode {
-    if (title.endsWith("*")) {
-      return (
-        <>
-          {title.slice(0, -1)}
-          <span className="text-red-400">*</span>
-        </>
-      );
-    }
-    return title;
+    return title.endsWith("*") ? title.slice(0, -1) : title;
   }
 
   //   const handleLogout = async () => {
@@ -224,6 +221,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const feeMarkingRestricted = isFeeMarkingOnlyUser(user?.email);
   const tempRestricted = !!user?.email && TEMP_USER_EMAILS.includes(user.email);
   const moduleOnlyRestricted = libraryRestricted || feeMarkingRestricted;
+
+  // Modules/admin items still being worked on are grouped into a "Pending"
+  // section that is hidden entirely when the backend runs as production. Shared
+  // by both the module list and the Administration list.
+  const PENDING_TITLES = [
+    "Admission Process",
+    "Library",
+    "Document Issuance",
+    "Notice Management",
+    "User Groups & Accesses",
+  ];
+  const stripStar = (t: string) => t.replace(/\*+$/, "").trim();
+  const isPending = (t: string) => PENDING_TITLES.includes(stripStar(t));
+  const adminVisible =
+    !!user?.email && !tempRestricted && !libraryRestricted && !feeMarkingRestricted;
   // Restricted accounts (library/fee-only and temp users) hide the top "Dashboard"
   // link: `/dashboard` isn't an allowed route for them, so it would only flash-redirect.
   const dashNav = moduleOnlyRestricted || tempRestricted ? [] : data.navDash;
@@ -286,18 +298,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <DropdownMenuItem
                           key={year.id}
                           onClick={() => setCurrentYear(year)}
-                          className="flex items-center gap-2 cursor-pointer px-2 py-1.5"
+                          className="flex min-h-[34px] cursor-pointer items-center gap-2 px-2 py-1.5"
                         >
-                          <Calendar className="h-4 w-4 text-gray-500" />
+                          <Calendar className="h-4 w-4 shrink-0 text-gray-500" />
                           <span className="text-sm">{year.year}</span>
-                          {year.isCurrentYear === true && (
-                            <Badge variant="outline" className="ml-auto text-xs">
-                              Current
-                            </Badge>
-                          )}
-                          {currentAcademicYear?.id === year.id && (
-                            <div className="ml-auto h-2 w-2 bg-purple-600 rounded-full" />
-                          )}
+                          {/* Consistent right-side slot: optional "Current" badge
+                              + an always-rendered check (reserved space) so rows
+                              never shift horizontally or in height. */}
+                          <div className="ml-auto flex shrink-0 items-center gap-2">
+                            {year.isCurrentYear === true && (
+                              <Badge
+                                variant="outline"
+                                className="px-1.5 py-0.5 text-[10px] leading-none"
+                              >
+                                Current
+                              </Badge>
+                            )}
+                            <Check
+                              className={cn(
+                                "h-4 w-4 shrink-0 text-purple-600 transition-opacity",
+                                currentAcademicYear?.id === year.id ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                          </div>
                         </DropdownMenuItem>
                       ))
                     )}
@@ -318,9 +341,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <div className="h-8 w-1/3 bg-purple-700/40 rounded animate-pulse" />
             </div>
           ) : (
-            <div className="h-full flex flex-col justify-between ">
+            <div className="flex flex-col">
               <div className="">
-                <div className="flex flex-col h-full justify-between ">
+                <div className="flex flex-col">
                   {dashNav.length > 0 ? (
                     <div className="mb-2">
                       {dashNav.map((item) => (
@@ -340,67 +363,147 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       ))}
                     </div>
                   ) : null}
-                  {/* Masters Section */}
-                  <div className=" ">
-                    <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                      Modules
-                    </h3>
-                    <div className="space-y-1">
-                      {data.navMain
-                        .filter((item) => {
-                          if (libraryRestricted) {
-                            return (
-                              item.url === LIBRARY_MODULE_PATH_PREFIX ||
-                              item.url.startsWith(`${LIBRARY_MODULE_PATH_PREFIX}/`)
+                  {/* Modules (asterisked) + Temporary (non-asterisked). Split by
+                      the trailing "*" so the two groups get their own sub-heading
+                      like MODULES / ADMINISTRATION. */}
+                  {(() => {
+                    const visibleMain = data.navMain.filter((item) => {
+                      if (libraryRestricted) {
+                        return (
+                          item.url === LIBRARY_MODULE_PATH_PREFIX ||
+                          item.url.startsWith(`${LIBRARY_MODULE_PATH_PREFIX}/`)
+                        );
+                      }
+                      if (feeMarkingRestricted) {
+                        return item.title === "Fees Module";
+                      }
+                      // For temp users, only show Admit Card Distributions and Physical CUReg Marking
+                      if (user?.email && TEMP_USER_EMAILS.includes(user.email)) {
+                        return (
+                          item.title === "Physical CUReg Marking" ||
+                          item.title === "Admit Card Distributions"
+                        );
+                      }
+                      // For non-temp users, show all items
+                      return true;
+                    });
+                    const isAsterisked = (t: string) => t.trim().endsWith("*");
+                    // Pending items may come from the module list OR the admin
+                    // list; gather both (admin only when it's visible to the user).
+                    const pendingSource = [
+                      ...visibleMain,
+                      ...(adminVisible ? data.navAdministration : []),
+                    ];
+                    const pendingMain =
+                      appEnv === "production"
+                        ? []
+                        : pendingSource
+                            .filter((i) => isPending(i.title))
+                            .sort(
+                              (a, b) =>
+                                PENDING_TITLES.indexOf(stripStar(a.title)) -
+                                PENDING_TITLES.indexOf(stripStar(b.title)),
                             );
-                          }
-                          if (feeMarkingRestricted) {
-                            return item.title === "Fees Module";
-                          }
-                          // For temp users, only show Admit Card Distributions and Physical CUReg Marking
-                          if (user?.email && TEMP_USER_EMAILS.includes(user.email)) {
-                            return (
-                              item.title === "Physical CUReg Marking" ||
-                              item.title === "Admit Card Distributions"
-                            );
-                          }
-                          // For non-temp users, show all items
-                          return true;
-                        })
-                        .map((item) => {
-                          const href =
-                            feeMarkingRestricted && item.title === "Fees Module"
-                              ? FEE_PAYMENT_MARKING_PATH
-                              : item.url;
-                          return (
-                            <NavItem
-                              key={item.title}
-                              icon={item.icon && <item.icon className="h-5 w-5" />}
-                              href={href}
-                              isActive={!isSearchActive && isSidebarActive(currentPath, href)}
-                            >
-                              <span className="text-[14px]">
-                                {feeMarkingRestricted && item.title === "Fees Module"
-                                  ? "Fee Payment Marking"
-                                  : renderSidebarTitle(item.title)}
-                              </span>
-                            </NavItem>
-                          );
-                        })}
-                      {/* Selected temp guests also get the ID card tool. */}
-                      {user?.email && isIdCardGuestUser(user.email) && (
+                    // Everything not pending splits into Modules (asterisked) vs
+                    // Unplaced (the rest). Pending items never appear in these two.
+                    const rest = visibleMain.filter((i) => !isPending(i.title));
+                    const MODULES_ORDER = [
+                      "Academic Setup",
+                      "Academic Activity",
+                      "CU Registration",
+                      "Fees Module",
+                      "Exam Management",
+                      "Reports",
+                    ];
+                    const modulesRank = (t: string) => {
+                      const i = MODULES_ORDER.indexOf(stripStar(t));
+                      return i === -1 ? MODULES_ORDER.length : i;
+                    };
+                    const modulesMain = rest
+                      .filter((i) => isAsterisked(i.title))
+                      .sort((a, b) => modulesRank(a.title) - modulesRank(b.title));
+                    // Explicit display order for the not-yet-categorised group;
+                    // any item not listed keeps its natural order at the end.
+                    const OTHERS_ORDER = [
+                      "Real Time Tracker",
+                      "Bulk Data Upload",
+                      "Physical CUReg Marking",
+                      "Promote Students",
+                      "Career Progression",
+                    ];
+                    const othersRank = (t: string) => {
+                      const i = OTHERS_ORDER.indexOf(t);
+                      return i === -1 ? OTHERS_ORDER.length : i;
+                    };
+                    const temporaryMain = rest
+                      .filter((i) => !isAsterisked(i.title))
+                      .sort((a, b) => othersRank(a.title) - othersRank(b.title));
+                    const showIdCardGuest = !!(user?.email && isIdCardGuestUser(user.email));
+
+                    const renderMainItem = (
+                      item: (typeof data.navMain)[number] | (typeof data.navAdministration)[number],
+                    ) => {
+                      const href =
+                        feeMarkingRestricted && item.title === "Fees Module"
+                          ? FEE_PAYMENT_MARKING_PATH
+                          : item.url;
+                      return (
                         <NavItem
-                          icon={<CreditCard className="h-5 w-5" />}
-                          href={ID_CARD_TOOL_PATH}
-                          isActive={
-                            !isSearchActive && isSidebarActive(currentPath, ID_CARD_TOOL_PATH)
-                          }
+                          key={item.title}
+                          icon={item.icon && <item.icon className="h-5 w-5" />}
+                          href={href}
+                          isActive={!isSearchActive && isSidebarActive(currentPath, href)}
                         >
-                          <span className="text-[14px]">ID Card Tool</span>
+                          <span className="text-[14px]">
+                            {feeMarkingRestricted && item.title === "Fees Module"
+                              ? "Fee Payment Marking"
+                              : renderSidebarTitle(item.title)}
+                          </span>
                         </NavItem>
-                      )}
-                    </div>
-                  </div>
+                      );
+                    };
+
+                    const sectionHeading =
+                      "mb-2 px-3 pt-3 pb-2 text-xs font-medium text-purple-200 uppercase tracking-wider border-b border-white/10";
+
+                    return (
+                      <>
+                        {modulesMain.length > 0 && (
+                          <div>
+                            <h3 className={sectionHeading}>Modules</h3>
+                            <div className="space-y-1">{modulesMain.map(renderMainItem)}</div>
+                          </div>
+                        )}
+                        {(temporaryMain.length > 0 || showIdCardGuest) && (
+                          <div className="mt-4">
+                            <h3 className={sectionHeading}>Unplaced</h3>
+                            <div className="space-y-1">
+                              {temporaryMain.map(renderMainItem)}
+                              {/* Selected temp guests also get the ID card tool. */}
+                              {showIdCardGuest && (
+                                <NavItem
+                                  icon={<CreditCard className="h-5 w-5" />}
+                                  href={ID_CARD_TOOL_PATH}
+                                  isActive={
+                                    !isSearchActive &&
+                                    isSidebarActive(currentPath, ID_CARD_TOOL_PATH)
+                                  }
+                                >
+                                  <span className="text-[14px]">ID Card Tool</span>
+                                </NavItem>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {pendingMain.length > 0 && (
+                          <div className="mt-4">
+                            <h3 className={sectionHeading}>Pending</h3>
+                            <div className="space-y-1">{pendingMain.map(renderMainItem)}</div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -409,51 +512,53 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 !TEMP_USER_EMAILS.includes(user.email) &&
                 !isLibraryOnlyUser(user.email) &&
                 !isFeeMarkingOnlyUser(user.email) && (
-                  <div className="my-14">
-                    <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
+                  <div className="mt-4">
+                    <h3 className="mb-2 px-3 pt-3 pb-2 text-xs font-medium text-purple-200 uppercase tracking-wider border-b border-white/10">
                       Administration
                     </h3>
                     <div className="p">
-                      {data.navAdministration.map((item) => {
-                        const url = item.url ?? "";
-                        const isActive = !isSearchActive && isSidebarActive(currentPath, url);
+                      {data.navAdministration
+                        .filter((item) => !isPending(item.title))
+                        .map((item) => {
+                          const url = item.url ?? "";
+                          const isActive = !isSearchActive && isSidebarActive(currentPath, url);
 
-                        //   if (item.isModal) {
-                        //     return (
-                        //       <div
-                        //         key={item.title}
-                        //         onClick={() => {
-                        //           setIsSearchModalOpen(true);
-                        //           setIsSearchActive(true);
-                        //         }}
-                        //         className={cn(
-                        //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
-                        //           isSearchActive
-                        //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-                        //             : "text-white hover:text-white",
-                        //         )}
-                        //       >
-                        //         <div className="flex items-center gap-3">
-                        //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
-                        //             {item.icon && <item.icon className="h-5 w-5" />}
-                        //           </span>
-                        //           <span className="text-base">{item.title}</span>
-                        //         </div>
-                        //       </div>
-                        //     );
-                        //   }
+                          //   if (item.isModal) {
+                          //     return (
+                          //       <div
+                          //         key={item.title}
+                          //         onClick={() => {
+                          //           setIsSearchModalOpen(true);
+                          //           setIsSearchActive(true);
+                          //         }}
+                          //         className={cn(
+                          //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
+                          //           isSearchActive
+                          //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
+                          //             : "text-white hover:text-white",
+                          //         )}
+                          //       >
+                          //         <div className="flex items-center gap-3">
+                          //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
+                          //             {item.icon && <item.icon className="h-5 w-5" />}
+                          //           </span>
+                          //           <span className="text-base">{item.title}</span>
+                          //         </div>
+                          //       </div>
+                          //     );
+                          //   }
 
-                        return (
-                          <NavItem
-                            key={item.title}
-                            icon={item.icon && <item.icon className="h-5 w-5" />}
-                            href={url}
-                            isActive={isActive}
-                          >
-                            <span className="text-base">{renderSidebarTitle(item.title)}</span>
-                          </NavItem>
-                        );
-                      })}
+                          return (
+                            <NavItem
+                              key={item.title}
+                              icon={item.icon && <item.icon className="h-5 w-5" />}
+                              href={url}
+                              isActive={isActive}
+                            >
+                              <span className="text-base">{renderSidebarTitle(item.title)}</span>
+                            </NavItem>
+                          );
+                        })}
                     </div>
                   </div>
                 )}
