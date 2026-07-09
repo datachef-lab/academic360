@@ -59,6 +59,14 @@ interface FeeStructureFilters {
   shiftId: number | null;
 }
 
+const formatCurrencyValue = (value?: number | null) => {
+  const numericValue = Number(value ?? 0);
+  if (!Number.isFinite(numericValue)) {
+    return "0";
+  }
+  return numericValue.toLocaleString("en-IN");
+};
+
 const DotSpinnerLoader: React.FC = () => (
   <div className="flex items-center justify-center h-64">
     <div className="dot-spinner" role="status" aria-label="Loading fees structures">
@@ -1142,7 +1150,7 @@ const FeesStructurePage: React.FC = () => {
                         <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
                           <div className="flex justify-center">
                             <span className="text-gray-900 font-semibold">
-                              ₹{selectedConcessionSlabModal.baseAmount.toLocaleString()}
+                              ₹{formatCurrencyValue(selectedConcessionSlabModal.baseAmount)}
                             </span>
                           </div>
                         </TableCell>
@@ -1251,7 +1259,7 @@ const FeesStructurePage: React.FC = () => {
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-center border-r-2 border-gray-400 p-2 font-semibold bg-yellow-50">
-                                  ₹{componentAmount.toLocaleString()}
+                                  ₹{formatCurrencyValue(componentAmount)}
                                 </TableCell>
                                 {selectedConcessionSlabModal.feeStructureSlabs.map(
                                   (slabMapping, slabIndex) => {
@@ -1281,7 +1289,7 @@ const FeesStructurePage: React.FC = () => {
                                                   : "#e0e7ff", // indigo-100
                                         }}
                                       >
-                                        ₹{totalAfterConcession.toLocaleString()}
+                                        ₹{formatCurrencyValue(totalAfterConcession)}
                                       </TableCell>
                                     );
                                   },
@@ -1298,7 +1306,7 @@ const FeesStructurePage: React.FC = () => {
                               -
                             </TableCell>
                             <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-yellow-50">
-                              ₹{selectedConcessionSlabModal.baseAmount.toLocaleString()}
+                              ₹{formatCurrencyValue(selectedConcessionSlabModal.baseAmount)}
                             </TableCell>
                             {selectedConcessionSlabModal.feeStructureSlabs.map(
                               (slabMapping, slabIndex) => {
@@ -1339,7 +1347,7 @@ const FeesStructurePage: React.FC = () => {
                                               : "#e0e7ff", // indigo-100
                                     }}
                                   >
-                                    ₹{columnTotal.toLocaleString()}
+                                    ₹{formatCurrencyValue(columnTotal)}
                                   </TableCell>
                                 );
                               },
