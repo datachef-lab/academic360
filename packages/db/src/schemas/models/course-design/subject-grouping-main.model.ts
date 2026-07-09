@@ -6,6 +6,7 @@ import {
     timestamp,
     varchar,
     uniqueIndex,
+    type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { academicYearModel } from "../academics";
 import { subjectTypeModel } from "./subject-type.model";
@@ -27,6 +28,12 @@ export const subjectGroupingMainModel = pgTable(
         description: varchar({ length: 500 }),
 
         isActive: boolean().default(true),
+
+        // Self-referential link to the same grouping in the previous academic
+        // year (mirrors papers.previous_paper_id_fk). Set when a year's
+        // structure is copied, by natural-key match to the adjacent year.
+        previousSubjectGroupingId: integer("previous_subject_grouping_id_fk")
+            .references((): AnyPgColumn => subjectGroupingMainModel.id),
 
         createdAt: timestamp().notNull().defaultNow(),
         updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
