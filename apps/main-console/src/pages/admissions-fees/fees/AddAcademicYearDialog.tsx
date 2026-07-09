@@ -122,7 +122,7 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
       });
       const c = res.payload.copied;
       toast.success(
-        `Created ${preview.nextYear} · copied ${c.metas} metas, ${c.relatedSubjects} related, ${c.restrictedGroupings} restricted, ${c.papers} papers`,
+        `Created ${preview.nextYear} · copied ${c.metas} metas, ${c.relatedSubjects} related, ${c.restrictedGroupings} restricted, ${c.subjectGroupings} subject groupings, ${c.papers} papers`,
       );
       onCreated();
       onOpenChange(false);
@@ -191,6 +191,12 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
                       Restricted
                       <Badge variant="secondary" className="ml-1.5">
                         {counts?.restrictedGroupings ?? 0}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="subjectGroupings">
+                      Subject groupings
+                      <Badge variant="secondary" className="ml-1.5">
+                        {counts?.subjectGroupings ?? 0}
                       </Badge>
                     </TabsTrigger>
                     <TabsTrigger value="papers">
@@ -306,6 +312,45 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
                                 className="py-6 text-center text-muted-foreground"
                               >
                                 No restricted groupings to copy.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+
+                  {/* SUBJECT GROUPINGS */}
+                  <TabsContent value="subjectGroupings" className="mt-3">
+                    <div className="rounded-md border">
+                      <Table containerClassName="h-[46vh] overflow-auto rounded-md">
+                        <TableHeader className="sticky top-0 z-10 bg-gray-50">
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Subject type</TableHead>
+                            <TableHead>Subjects</TableHead>
+                            <TableHead>Program courses</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {preview?.subjectGroupings.length ? (
+                            preview.subjectGroupings.map((g) => (
+                              <TableRow key={g.id}>
+                                <TableCell className="font-medium">{g.name}</TableCell>
+                                <TableCell className="font-mono text-xs">{g.code ?? "—"}</TableCell>
+                                <TableCell>{badge(g.subjectType, "emerald")}</TableCell>
+                                <TableCell>{chips(g.subjects, "indigo")}</TableCell>
+                                <TableCell>{chips(g.programCourses, "blue")}</TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell
+                                colSpan={5}
+                                className="py-6 text-center text-muted-foreground"
+                              >
+                                No subject groupings to copy.
                               </TableCell>
                             </TableRow>
                           )}

@@ -27,6 +27,9 @@ import {
 import {
   paperModel,
   paperComponentModel,
+  subjectGroupingMainModel,
+  subjectGroupingSubjectModel,
+  subjectGroupingProgramCourseModel,
 } from "@repo/db/schemas/models/course-design";
 
 // Executor type accepted by every helper: the real db OR a transaction. Callers
@@ -48,6 +51,7 @@ export type EnsureYearStructureResult = {
   metas: number;
   relatedSubjects: number;
   restrictedGroupings: number;
+  subjectGroupings: number;
   papers: number;
   paperComponents: number;
 };
@@ -84,6 +88,7 @@ export async function ensureAcademicYearStructure(
     metas: 0,
     relatedSubjects: 0,
     restrictedGroupings: 0,
+    subjectGroupings: 0,
     papers: 0,
     paperComponents: 0,
   };
@@ -143,6 +148,7 @@ export async function ensureAcademicYearStructure(
   await copyMetas(tx, sourceId, targetYearId, result);
   await copyRelatedSubjects(tx, sourceId, targetYearId, result);
   await copyRestrictedGroupings(tx, sourceId, targetYearId, result);
+  await copySubjectGroupings(tx, sourceId, target, allYears, result);
   await copyPapersAndComponents(tx, sourceId, target, allYears, result);
 
   return result;
@@ -359,6 +365,131 @@ async function copyRestrictedGroupings(
       );
     }
     result.restrictedGroupings += 1;
+  }
+}
+
+// Cross-year identity of a subject grouping (its unique key within a year is
+// (academicYearId, subjectTypeId, name); across years the stable identity drops
+// the year). Used to stitch the previous_subject_grouping_id chain.
+const groupingKey = (g: {
+  subjectTypeId: number | null;
+  name: string | null;
+}) => `${g.subjectTypeId}|${g.name}`;
+
+/**
+ * Copy the course-design subject groupings (main + its subject and
+ * program-course children) from the source year to the target year, remapping
+ * academic_year_id, then stitch previous_subject_grouping_id to the adjacent
+ * years by natural key — mirroring papers.previous_paper_id.
+ */
+async function copySubjectGroupings(
+  tx: Dbx,
+  sourceId: number,
+  target: typeof academicYearModel.$inferSelect,
+  allYears: { id: number; year: string }[],
+  result: EnsureYearStructureResult,
+) {
+  const srcMains = await tx
+    .select()
+    .from(subjectGroupingMainModel)
+    .where(
+      and(
+        eq(subjectGroupingMainModel.academicYearId, sourceId),
+        activeOnly(subjectGroupingMainModel.isActive),
+      ),
+    );
+
+  // Insert clones (previous link set below by natural key) + clone children.
+  const inserted: { id: number; key: string }[] = [];
+  for (const main of srcMains) {
+    const [newMain] = await tx
+      .insert(subjectGroupingMainModel)
+      .values({
+        academicYearId: target.id,
+        legacySubjectGroupId: main.legacySubjectGroupId,
+        subjectTypeId: main.subjectTypeId,
+        name: main.name,
+        code: main.code,
+        description: main.description,
+        isActive: main.isActive,
+        previousSubjectGroupingId: null, // chained below by natural key
+      })
+      .returning({ id: subjectGroupingMainModel.id });
+
+    const subs = await tx
+      .select()
+      .from(subjectGroupingSubjectModel)
+      .where(eq(subjectGroupingSubjectModel.subjectGroupingMainId, main.id));
+    if (subs.length) {
+      await tx.insert(subjectGroupingSubjectModel).values(
+        subs.map((s) => ({
+          subjectGroupingMainId: newMain.id,
+          subjectId: s.subjectId,
+        })),
+      );
+    }
+
+    const pcs = await tx
+      .select()
+      .from(subjectGroupingProgramCourseModel)
+      .where(
+        eq(subjectGroupingProgramCourseModel.subjectGroupingMainId, main.id),
+      );
+    if (pcs.length) {
+      await tx.insert(subjectGroupingProgramCourseModel).values(
+        pcs.map((p) => ({
+          subjectGroupingMainId: newMain.id,
+          programCourseId: p.programCourseId,
+        })),
+      );
+    }
+
+    inserted.push({ id: newMain.id, key: groupingKey(main) });
+    result.subjectGroupings += 1;
+  }
+
+  // previous_subject_grouping_id chaining to the adjacent years (natural key).
+  const targetStart = startYearOf(target.year);
+  if (targetStart == null) return;
+  const prevYear = allYears.find(
+    (y) => startYearOf(y.year) === targetStart - 1,
+  );
+  const nextYear = allYears.find(
+    (y) => startYearOf(y.year) === targetStart + 1,
+  );
+
+  if (prevYear) {
+    const prevMains = await tx
+      .select()
+      .from(subjectGroupingMainModel)
+      .where(eq(subjectGroupingMainModel.academicYearId, prevYear.id));
+    const prevByKey = new Map(prevMains.map((m) => [groupingKey(m), m.id]));
+    for (const ins of inserted) {
+      const prevId = prevByKey.get(ins.key);
+      if (prevId != null) {
+        await tx
+          .update(subjectGroupingMainModel)
+          .set({ previousSubjectGroupingId: prevId })
+          .where(eq(subjectGroupingMainModel.id, ins.id));
+      }
+    }
+  }
+
+  if (nextYear) {
+    const newByKey = new Map(inserted.map((i) => [i.key, i.id]));
+    const nextMains = await tx
+      .select()
+      .from(subjectGroupingMainModel)
+      .where(eq(subjectGroupingMainModel.academicYearId, nextYear.id));
+    for (const nx of nextMains) {
+      const newId = newByKey.get(groupingKey(nx));
+      if (newId != null && nx.previousSubjectGroupingId !== newId) {
+        await tx
+          .update(subjectGroupingMainModel)
+          .set({ previousSubjectGroupingId: newId })
+          .where(eq(subjectGroupingMainModel.id, nx.id));
+      }
+    }
   }
 }
 

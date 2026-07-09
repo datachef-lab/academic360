@@ -233,7 +233,7 @@ export default function IdCardTemplatesPage() {
       {(creating || editing) && academicYearId && (
         <TemplateUpsertDialog
           open
-          academicYearId={academicYearId}
+          defaultAcademicYearId={academicYearId}
           template={editing}
           onClose={() => {
             setCreating(false);
