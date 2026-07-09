@@ -1,4 +1,5 @@
-import { AnyPgColumn, boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { AnyPgColumn, boolean, index, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { studentModel, userModel } from "../user";
 import { subjectModel } from "../course-design";
 import { subjectSelectionMetaModel } from "./subject-selection-meta.model";
@@ -33,7 +34,14 @@ export const studentSubjectSelectionModel = pgTable("student_subject_selections"
     changeReason: text("change_reason"), // Reason for the change (admin notes)
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // Partial index matching the tracker's SUBJECT_SELECTION_EXISTS_SQL
+    // (student_id_fk = X AND is_active = TRUE) so the correlated EXISTS is a
+    // cheap index probe instead of a per-row scan.
+    studentActiveIdx: index("student_subject_selections_student_active_idx")
+        .on(t.studentId)
+        .where(sql`${t.isActive} = true`),
+}));
 
 export const createStudentSubjectSelection = createInsertSchema(studentSubjectSelectionModel);
 

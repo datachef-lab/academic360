@@ -1,0 +1,88 @@
+name: Deploy develop / staging
+
+# Auto-redeploy the develop and staging EC2 boxes on every push to their branch.
+# These boxes run a git checkout + local Postgres + PM2 (NOT the ECR/docker prod
+# path), so the deploy is: pull -> build -> drizzle-kit migrate -> pm2 restart.
+on:
+  push:
+    branches: [develop, staging]
+  workflow_dispatch:
+
+# Never let two deploys of the same branch overlap on the same box.
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve target host
+        id: t
+        run: |
+          if [ "${{ github.ref_name }}" = "develop" ]; then
+            echo "host=${{ secrets.DEVELOP_HOST }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "host=${{ secrets.STAGING_HOST }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy over SSH (pull, build, migrate, restart)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.t.outputs.host }}
+          username: ubuntu
+          key: ${{ github.ref_name == 'develop' && secrets.DEVELOP_SSH_PRIVATE_KEY || secrets.STAGING_SSH_PRIVATE_KEY }}
+          request_pty: false
+          command_timeout: 40m
+          script: |
+            set -e
+            # 1) Locate the repo checkout (develop and staging use different paths).
+            REPO=""
+            for d in /home/ubuntu/workspace/academic360 /home/ubuntu/workspace/academic360-app/academic360; do
+              [ -f "$d/turbo.json" ] && REPO="$d" && break
+            done
+            [ -z "$REPO" ] && { echo "::error::repo checkout not found"; exit 1; }
+            cd "$REPO"
+            BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            echo "repo=$REPO branch=$BRANCH before=$(git rev-parse --short HEAD)"
+
+            # pnpm must be a real binary on PATH (nested package scripts call bare pnpm).
+            if ! command -v pnpm >/dev/null 2>&1; then
+              mkdir -p "$HOME/.local/bin"
+              printf '#!/bin/sh\nexec corepack pnpm "$@"\n' > "$HOME/.local/bin/pnpm"
+              chmod +x "$HOME/.local/bin/pnpm"
+              export PATH="$HOME/.local/bin:$PATH"
+            fi
+
+            # 2) Fast-forward to the pushed commit.
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+            echo "after=$(git rev-parse --short HEAD)"
+
+            # 3) Install + build the apps.
+            pnpm install --frozen-lockfile
+            pnpm --filter @repo/db... build
+            pnpm --filter backend... build
+            pnpm --filter main-console... build
+            pnpm --filter notification-system... build
+            pnpm --filter student-console... build || echo "::warning::student-console build failed (continuing)"
+
+            # 4) Run migrations (drizzle-kit; idempotent migrations).
+            DBURL=$(grep -hE '^DATABASE_URL=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r')
+            ( cd apps/backend && DATABASE_URL="$DBURL" npx drizzle-kit migrate )
+
+            # 5) Restart via PM2 (NODE_ENV sourced from .env so staging stays 'staging').
+            NENV=$(grep -hE '^NODE_ENV=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r'); [ -z "$NENV" ] && NENV=development
+            PM2="pm2"; command -v pm2 >/dev/null 2>&1 || PM2="npx pm2"
+            NODE_ENV="$NENV" $PM2 restart a360-backend --update-env
+            $PM2 restart a360-main-console --update-env
+            $PM2 restart a360-notifications --update-env || true
+            $PM2 restart a360-student-console --update-env || $PM2 restart student-console --update-env || true
+            $PM2 save || true
+
+            # 6) Health check.
+            for p in 8080 5000; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 6 "http://localhost:$p/healthz" 2>/dev/null || true)
+              [ "$code" = "200" ] && echo "backend healthz OK on :$p" && exit 0
+            done
+            echo "::warning::backend health check did not return 200 on :8080 or :5000"

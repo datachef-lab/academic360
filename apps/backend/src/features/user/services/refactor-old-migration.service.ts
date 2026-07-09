@@ -230,11 +230,42 @@ export async function processDataFetching(
       // Process all students in full sync - always update student data
       const student = await processStudent(oldStudent);
       console.log("Created student:", student?.uid);
+      // Live-update the affiliation tracker as each student lands (throttled).
+      try {
+        const { scheduleRealtimeTrackerThrottledBroadcast } =
+          await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+        scheduleRealtimeTrackerThrottledBroadcast(
+          "affiliation",
+          "legacy_sync",
+          {},
+        );
+      } catch (e) {
+        console.error(
+          "[LegacySync] tracker throttled broadcast failed:",
+          (e as Error)?.message,
+        );
+      }
     }
 
     console.log(
       `${stats.course} (${stats.total}) | Done loading batch ${i + 1}/${totalBatches}: ${rows.length} students`,
     );
+  }
+
+  // This full-sync creates promotions, so nudge the affiliation tab once the
+  // course's batches are in. Debounced, so repeated per-course calls collapse;
+  // never fail the sync over a broadcast.
+  if (totalStudents > 0) {
+    try {
+      const { scheduleRealtimeTrackerBroadcast } =
+        await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+      scheduleRealtimeTrackerBroadcast("affiliation", "legacy_sync", {});
+    } catch (e) {
+      console.error(
+        "[LegacySync] tracker broadcast failed:",
+        (e as Error)?.message,
+      );
+    }
   }
 }
 
@@ -444,6 +475,29 @@ export async function processStudentsFromExcelBuffer(
           });
         }
         processed++;
+        // Live-update the Real Time Tracker AS this student lands (throttled so
+        // a big import doesn't hammer the aggregation). Viewers watching the
+        // tracker see the affiliation + fee_mis counts climb during the run,
+        // not just at the end. Never fail the import over a broadcast.
+        try {
+          const { scheduleRealtimeTrackerThrottledBroadcast } =
+            await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+          scheduleRealtimeTrackerThrottledBroadcast(
+            "affiliation",
+            "legacy_import",
+            {},
+          );
+          scheduleRealtimeTrackerThrottledBroadcast(
+            "fee_mis",
+            "legacy_import",
+            {},
+          );
+        } catch (e) {
+          console.error(
+            "[LegacyImport] tracker throttled broadcast failed:",
+            (e as Error)?.message,
+          );
+        }
       }
     } catch (e: any) {
       console.log("Error processing student:", e);
@@ -451,6 +505,24 @@ export async function processStudentsFromExcelBuffer(
     }
     // Always emit after each uid (done = i + 1), regardless of outcome.
     emitProgress(i + 1, i + 1 >= total ? "completed" : "in_progress");
+  }
+
+  // This import creates promotions (affiliation stats) and loads legacy fees
+  // (fee_mis stats), so nudge both Real Time Tracker tabs once at the end.
+  // A single debounced emit per tab is right for a bulk batch; never fail the
+  // import over a broadcast.
+  if (processed > 0) {
+    try {
+      const { scheduleRealtimeTrackerBroadcast } =
+        await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+      scheduleRealtimeTrackerBroadcast("affiliation", "legacy_import", {});
+      scheduleRealtimeTrackerBroadcast("fee_mis", "legacy_import", {});
+    } catch (e) {
+      console.error(
+        "[LegacyImport] tracker broadcast failed:",
+        (e as Error)?.message,
+      );
+    }
   }
 
   return {

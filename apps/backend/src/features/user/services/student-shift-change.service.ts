@@ -1326,6 +1326,20 @@ export async function changeStudentShift(
     );
   }
 
+  // A shift change closes the old promotion and clones a new one, which can
+  // move the student between program-course rows in the Real Time Tracker.
+  // Nudge the affiliation tab live; never fail the shift change.
+  try {
+    const { scheduleRealtimeTrackerBroadcast } =
+      await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+    scheduleRealtimeTrackerBroadcast("affiliation", "shift_change", {});
+  } catch (e) {
+    console.error(
+      "[StudentShiftChange] tracker broadcast failed:",
+      (e as Error)?.message,
+    );
+  }
+
   return {
     studentId,
     previousUid: student.uid,
