@@ -14,7 +14,10 @@ const log = createLogger("db");
 export const pool = new pg.Pool({
   options: "-c timezone=Asia/Kolkata",
   connectionString: process.env.DATABASE_URL,
-  max: Math.max(1, Number(process.env.PG_POOL_MAX) || 10),
+  // Sized for IMPORT_CONCURRENCY=20 import workers (each briefly holds up to
+  // 2 connections during advisory-lock sections) plus normal request traffic.
+  // `max` is a cap, not a pre-allocation; idle connections are reaped.
+  max: Math.max(1, Number(process.env.PG_POOL_MAX) || 50),
 });
 
 // Initialize Drizzle ORM with the pool
@@ -108,7 +111,9 @@ export const mysqlConnection: MySqlPool = createPool({
   password: process.env.OLD_DB_PASSWORD!,
   database: process.env.OLD_DB_NAME!,
   waitForConnections: true,
-  connectionLimit: Math.max(1, Number(process.env.OLD_DB_POOL_LIMIT) || 10),
+  // Sized so IMPORT_CONCURRENCY=20 workers (~1 query in flight each) never
+  // queue behind each other, with headroom for other legacy readers.
+  connectionLimit: Math.max(1, Number(process.env.OLD_DB_POOL_LIMIT) || 30),
   queueLimit: 0,
   // Remote legacy host can take 8s+ to handshake; default of 10s is too tight.
   connectTimeout: 60_000,

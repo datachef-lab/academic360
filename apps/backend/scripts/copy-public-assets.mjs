@@ -1,11 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const appRoot = path.resolve(__dirname, '..');
-const distRoot = path.resolve(appRoot, 'dist/apps/backend');
+const appRoot = path.resolve(__dirname, "..");
+const distRoot = path.resolve(appRoot, "dist/apps/backend");
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -31,16 +31,25 @@ function copyFilesByExtension(srcDir, destDir, extension) {
   }
 }
 
-copyDir(path.join(appRoot, 'views'), path.join(distRoot, 'views'));
-copyDir(path.join(appRoot, 'public'), path.join(distRoot, 'public'));
-copyDir(path.join(appRoot, 'src/templates'), path.join(distRoot, 'src/templates'));
+copyDir(path.join(appRoot, "views"), path.join(distRoot, "views"));
+copyDir(path.join(appRoot, "public"), path.join(distRoot, "public"));
+copyDir(
+  path.join(appRoot, "src/templates"),
+  path.join(distRoot, "src/templates"),
+);
 
-const seedSrcDir = path.join(appRoot, 'src/features/notifications-console/seed');
-const seedDestDir = path.join(distRoot, 'src/features/notifications-console/seed');
-const previewsSrcDir = path.join(seedSrcDir, 'previews');
-const previewsDestDir = path.join(seedDestDir, 'previews');
+const seedSrcDir = path.join(
+  appRoot,
+  "src/features/notifications-console/seed",
+);
+const seedDestDir = path.join(
+  distRoot,
+  "src/features/notifications-console/seed",
+);
+const previewsSrcDir = path.join(seedSrcDir, "previews");
+const previewsDestDir = path.join(seedDestDir, "previews");
 
 ensureDir(seedDestDir);
 ensureDir(previewsDestDir);
-copyFilesByExtension(seedSrcDir, seedDestDir, '.json');
-copyFilesByExtension(previewsSrcDir, previewsDestDir, '.png');
+copyFilesByExtension(seedSrcDir, seedDestDir, ".json");
+copyFilesByExtension(previewsSrcDir, previewsDestDir, ".png");

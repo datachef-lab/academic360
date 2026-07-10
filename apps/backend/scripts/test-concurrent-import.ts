@@ -95,7 +95,7 @@ async function main() {
     const uids = readUids(fileA!);
     const buf = await buildXlsxBuffer(uids);
     console.log(
-      `[import] ${uids.length} uids, IMPORT_CONCURRENCY=${process.env.IMPORT_CONCURRENCY || "(default 4)"}`,
+      `[import] ${uids.length} uids, IMPORT_CONCURRENCY=${process.env.IMPORT_CONCURRENCY || "(default 20)"}`,
     );
     const t0 = Date.now();
     const r = await processStudentsFromExcelBuffer(buf, {
