@@ -40,7 +40,7 @@ import {
   userModel,
   UserT,
 } from "@repo/db/schemas";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, count, eq, ilike, isNotNull, ne } from "drizzle-orm";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -607,15 +607,22 @@ async function syncFeeStudentMapping(
   // payment exists, or the mapping already carries a receipt number), skip the
   // whole sync — never duplicate a payment or overwrite values edited in the new
   // DB. This also makes the full batch loader safe to re-run.
+  let hasExistingPayment = false;
   if (feeStudentMapping) {
     const existingPayment = await db
       .select({ id: paymentModel.id })
       .from(paymentModel)
       .where(eq(paymentModel.feeStudentMappingId, feeStudentMapping.id!))
       .limit(1);
-    if (existingPayment.length > 0 || feeStudentMapping.receiptNumber) {
+    hasExistingPayment = existingPayment.length > 0;
+    // Fully loaded (receipt number stamped) — never touch again.
+    if (feeStudentMapping.receiptNumber) {
       return { status: "skipped" };
     }
+    // Payment exists but NO receipt number = a previous run died between the
+    // payment insert and the mapping update. Fall through to finish the
+    // mapping (the payment insert below is guarded by hasExistingPayment, so
+    // it is never duplicated).
   }
 
   // console.log(
@@ -715,10 +722,26 @@ async function syncFeeStudentMapping(
 
   // Receipt/challan number: preserve the legacy challan when present, else build
   // `{uid}/{NN}-{feeCategoryCode}` like the canonical issuance (suffix only when
-  // the category has a code).
+  // the category has a code). NN is the student's NEXT receipt index — a
+  // hardcoded "01" collided with the UNIQUE receipt_number for every semester
+  // after the first once multi-semester fee loading started working. Safe
+  // under concurrency: the per-UID import lock means one worker per student,
+  // and a student's batches are processed sequentially within it.
   let finalReceiptNumber = challanNumber;
   if (!finalReceiptNumber) {
-    const receiptSeq = "01";
+    const [receiptCountRow] = await db
+      .select({ cnt: count() })
+      .from(feeStudentMappingModel)
+      .where(
+        and(
+          eq(feeStudentMappingModel.studentId, feeStudentMapping.studentId!),
+          isNotNull(feeStudentMappingModel.receiptNumber),
+        ),
+      );
+    const receiptSeq = String(Number(receiptCountRow?.cnt ?? 0) + 1).padStart(
+      2,
+      "0",
+    );
     const code = finalCategoryCode?.trim();
     finalReceiptNumber = code
       ? `${studentUid}/${receiptSeq}-${code}`
@@ -756,7 +779,8 @@ async function syncFeeStudentMapping(
 
   // Persist the legacy payment as a linked entry tied directly to the
   // fee_student_mapping via payments.feeStudentMappingId / isLinked.
-  if (amountPaid) {
+  // hasExistingPayment: a crashed earlier run may already have written it.
+  if (amountPaid && !hasExistingPayment) {
     await db.insert(paymentModel).values({
       userId: user?.id,
       feeStudentMappingId: feeStudentMapping.id!,
@@ -1067,6 +1091,20 @@ async function syncLegacyFeeHeads() {
   });
 }
 
+/**
+ * Legacy -> new receipt-type NAME aliases. The college renamed these when the
+ * new fee setup was configured, so the fee structures live under the new name
+ * while every legacy installment still carries the old one. Keyed by
+ * lowercased legacy name.
+ *
+ * "Annual Fees" (legacy id 2, the Sem II-VI installments) === "Enrolment Fee"
+ * in the new DB — without this alias none of those installments can resolve a
+ * fee structure and the whole annual-fees load is skipped.
+ */
+const LEGACY_RECEIPT_TYPE_ALIASES: Record<string, string> = {
+  "annual fees": "Enrolment Fee",
+};
+
 async function syncLegacyReceiptTypes() {
   const [legacyReceiptTypes] = (await mysqlConnection.query(`
         SELECT * FROM studentfeesreceipttype;
@@ -1078,10 +1116,14 @@ async function syncLegacyReceiptTypes() {
     const receiptTypes: ReceiptTypeT[] = [];
     for (const { id, ...row } of legacyReceiptTypes) {
       if (row.name.trim() == "Regular Enrolment") continue;
+      const legacyName = row.name.trim();
+      const targetName =
+        LEGACY_RECEIPT_TYPE_ALIASES[legacyName.toLowerCase()] ?? legacyName;
       const [existingReceiptType] = await db
         .select()
         .from(receiptTypeModel)
-        .where(ilike(receiptTypeModel.name, row.name.trim()));
+        .where(ilike(receiptTypeModel.name, targetName));
+      let syncedReceiptType: ReceiptTypeT;
       if (existingReceiptType) {
         const [updatedReceiptType] = await db
           .update(receiptTypeModel)
@@ -1092,17 +1134,33 @@ async function syncLegacyReceiptTypes() {
           })
           .where(eq(receiptTypeModel.id, existingReceiptType.id))
           .returning();
-        receiptTypes.push(updatedReceiptType);
+        syncedReceiptType = updatedReceiptType!;
       } else {
         const [createdReceiptType] = await db
           .insert(receiptTypeModel)
           .values({
             legacyReceiptTypeId: id,
             ...row,
-            name: row.name.trim(),
+            name: targetName,
           })
           .returning();
-        receiptTypes.push(createdReceiptType);
+        syncedReceiptType = createdReceiptType!;
+      }
+      receiptTypes.push(syncedReceiptType);
+
+      // An aliased legacy id must map to exactly ONE new row: clear it from
+      // any other row (e.g. a leftover "Annual Fees" row that an earlier,
+      // pre-alias sync stamped with the same legacy id).
+      if (targetName !== legacyName && syncedReceiptType?.id != null) {
+        await db
+          .update(receiptTypeModel)
+          .set({ legacyReceiptTypeId: null })
+          .where(
+            and(
+              eq(receiptTypeModel.legacyReceiptTypeId, id),
+              ne(receiptTypeModel.id, syncedReceiptType.id),
+            ),
+          );
       }
     }
 
