@@ -164,13 +164,24 @@ function buildLegacyFeesQuery(uid?: string | null): string {
         -- Join with the student details
         LEFT JOIN studentpersonaldetails spd ON spd.id = inst.stdid
 
-        -- Join with the batch details
-        LEFT JOIN historicalrecord h ON h.parent_id = spd.id
-        LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid
-        LEFT JOIN course crs ON crs.id = h.courseId
-        LEFT JOIN classes cl ON cl.id = h.classId
-        LEFT JOIN shift sh ON sh.id = h.shiftId
-        LEFT JOIN section sec ON sec.id = h.sectionId
+        -- The fee-structure an installment belongs to, taken DIRECTLY from the
+        -- installment. Batch details (session/course/class/shift) are then read
+        -- off the fee structure itself.
+        --
+        -- Previously the batch came from historicalrecord and the fee structure
+        -- was joined against it. historicalrecord has one row per semester and
+        -- nothing correlated it to the installment, so every installment was
+        -- multiplied by EVERY semester (a cross join): one real row plus N-1
+        -- phantom rows whose fee structure was NULL. Those phantoms became
+        -- bogus 'fee structure not found' errors and corrupted the paid flag /
+        -- challan (both read off the first row of a group). Anchoring on
+        -- inst.structid yields exactly one row per installment, and it works for
+        -- shift-change students (the structure carries its own shift).
+        LEFT JOIN feesstructuremaintab fsm ON fsm.id = inst.structid
+        LEFT JOIN currentsessionmaster sess ON sess.id = fsm.sessionid
+        LEFT JOIN course crs ON crs.id = fsm.courseId
+        LEFT JOIN classes cl ON cl.id = fsm.classId
+        LEFT JOIN shift sh ON sh.id = fsm.shiftId
         LEFT JOIN accademicyear ay ON ay.sessionId = sess.id
 
         -- Join with the fee-structure
@@ -328,69 +339,98 @@ export async function loadStudentFeesForUid(
     return summary;
   }
 
-  // Group the student's rows the same way the batch loader does: one fee
-  // structure per academic-year / receipt-type / course / class / shift batch.
-  const groups = new Map<string, LegacyStudentFeeMappingRow[]>();
+  // Group the student's rows by the legacy fee structure they belong to — that
+  // id IS the batch (academic year + receipt type + course + class + shift), so
+  // it is the exact, collision-free grouping key. Rows whose installment has no
+  // fee structure (legacy data gap) cannot be loaded at all; skip them here
+  // rather than emitting a meaningless "fee structure not found (year / / …)".
+  const groups = new Map<number, LegacyStudentFeeMappingRow[]>();
+  let rowsWithoutStructure = 0;
   for (const r of rows) {
-    const key = `${r["Academic Year"]}|${r["Receipt Type"]}|${r.Course}|${r.Semester}|${r.legacyShiftId}`;
-    const g = groups.get(key);
-    if (g) g.push(r);
-    else groups.set(key, [r]);
-  }
-
-  for (const studentRows of groups.values()) {
-    const batchLabel = `${studentRows[0]["Academic Year"]} / ${studentRows[0]["Receipt Type"]} / ${studentRows[0].Course} / ${studentRows[0].Semester}`;
-    const feeStructureResult = await syncLegacyFeeStructure(
-      studentRows,
-      studentRows[0].legacyFeeStructureId,
-      masters,
-    );
-    if (!feeStructureResult) {
-      summary.errors.push(`fee structure not found (${batchLabel})`);
+    const structureId = Number(r.legacyFeeStructureId);
+    if (!Number.isFinite(structureId) || structureId <= 0) {
+      rowsWithoutStructure++;
       continue;
     }
-
-    // Newly-imported students may not have a default mapping yet — create it
-    // (whole-structure ensure is idempotent) only when it is actually missing.
-    const [existingMapping] = await db
-      .select({ id: feeStudentMappingModel.id })
-      .from(feeStudentMappingModel)
-      .where(
-        and(
-          eq(feeStudentMappingModel.studentId, foundStudent.id),
-          eq(feeStudentMappingModel.feeStructureId, feeStructureResult.id!),
-        ),
-      );
-    if (!existingMapping) {
-      await ensureDefaultFeeStudentMappingsForFeeStructure(feeStructureResult);
-    }
-
-    const result = await syncFeeStudentMapping(
-      studentRows,
-      uid,
-      feeStructureResult.id!,
-      resolveLegacySlabName(
-        studentRows[0]["Fee Slab"],
-        studentRows[0]["Academic Year"],
-      ),
-      studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
-      studentRows[0]["Fee Receipt Entry Created At"],
-      studentRows[0]["Challan Number"] &&
-        studentRows[0]["Challan Number"].length > 0
-        ? studentRows[0]["Challan Number"]
-        : null,
-      studentRows[0]["Fees Paid Timestamp"]
-        ? studentRows[0]["Fees Paid Timestamp"] instanceof Date
-          ? studentRows[0]["Fees Paid Timestamp"].toISOString()
-          : studentRows[0]["Fees Paid Timestamp"]
-        : null,
+    const g = groups.get(structureId);
+    if (g) g.push(r);
+    else groups.set(structureId, [r]);
+  }
+  if (rowsWithoutStructure > 0) {
+    summary.errors.push(
+      `${rowsWithoutStructure} legacy installment row(s) have no fee structure in the old DB — skipped`,
     );
-    if (result.status === "loaded") summary.loaded++;
-    else if (result.status === "skipped") summary.skipped++;
-    else
-      summary.errors.push(
-        `${result.reason ?? "fees not loaded"} (${batchLabel})`,
+  }
+
+  for (const [legacyFeeStructureId, studentRows] of groups) {
+    const batchLabel = `${studentRows[0]["Academic Year"]} / ${studentRows[0]["Receipt Type"]} / ${studentRows[0].Course} / ${studentRows[0].Semester}`;
+    // Isolate every batch: a failure on one semester (e.g. a receipt-number
+    // clash) must never abort the student's remaining semesters, which used to
+    // leave later semesters silently unpaid.
+    try {
+      const feeStructureResult = await syncLegacyFeeStructure(
+        studentRows,
+        legacyFeeStructureId,
+        masters,
       );
+      if (!feeStructureResult) {
+        summary.errors.push(`fee structure not found (${batchLabel})`);
+        continue;
+      }
+
+      // Newly-imported students may not have a default mapping yet — create it
+      // (whole-structure ensure is idempotent) only when it is actually missing.
+      const [existingMapping] = await db
+        .select({ id: feeStudentMappingModel.id })
+        .from(feeStudentMappingModel)
+        .where(
+          and(
+            eq(feeStudentMappingModel.studentId, foundStudent.id),
+            eq(feeStudentMappingModel.feeStructureId, feeStructureResult.id!),
+          ),
+        );
+      if (!existingMapping) {
+        await ensureDefaultFeeStudentMappingsForFeeStructure(
+          feeStructureResult,
+        );
+      }
+
+      // Within a batch every row belongs to the SAME fee structure (rows differ
+      // only by fee-head component / installment). Treat the batch as paid when
+      // any of its installments is paid, and take the challan + timestamps from
+      // that paid row — never from an arbitrary row 0.
+      const paidRow = studentRows.find((r) => r["Has Fees Paid?"] === "Yes");
+      const sourceRow = paidRow ?? studentRows[0];
+      const result = await syncFeeStudentMapping(
+        studentRows,
+        uid,
+        feeStructureResult.id!,
+        resolveLegacySlabName(
+          sourceRow["Fee Slab"],
+          sourceRow["Academic Year"],
+        ),
+        Boolean(paidRow),
+        sourceRow["Fee Receipt Entry Created At"],
+        sourceRow["Challan Number"] && sourceRow["Challan Number"].length > 0
+          ? sourceRow["Challan Number"]
+          : null,
+        sourceRow["Fees Paid Timestamp"]
+          ? sourceRow["Fees Paid Timestamp"] instanceof Date
+            ? sourceRow["Fees Paid Timestamp"].toISOString()
+            : sourceRow["Fees Paid Timestamp"]
+          : null,
+      );
+      if (result.status === "loaded") summary.loaded++;
+      else if (result.status === "skipped") summary.skipped++;
+      else
+        summary.errors.push(
+          `${result.reason ?? "fees not loaded"} (${batchLabel})`,
+        );
+    } catch (e) {
+      summary.errors.push(
+        `${(e as Error)?.message ?? "unknown error"} (${batchLabel})`,
+      );
+    }
   }
 
   return summary;
@@ -722,15 +762,21 @@ async function syncFeeStudentMapping(
 
   // Receipt/challan number: preserve the legacy challan when present, else build
   // `{uid}/{NN}-{feeCategoryCode}` like the canonical issuance (suffix only when
-  // the category has a code). NN is the student's NEXT receipt index — a
-  // hardcoded "01" collided with the UNIQUE receipt_number for every semester
-  // after the first once multi-semester fee loading started working. Safe
-  // under concurrency: the per-UID import lock means one worker per student,
-  // and a student's batches are processed sequentially within it.
+  // the category has a code).
+  //
+  // NN must be the student's next FREE index, not simply (count + 1): legacy
+  // challans use the very same `{uid}/{NN}` shape, so counting collided with an
+  // already-imported challan (e.g. a generated "1304230036/02" hitting the
+  // legacy challan "1304230036/02"). That violated UNIQUE(receipt_number),
+  // threw mid-update, and — with no per-batch guard — aborted every remaining
+  // semester for that student, leaving them "Pending" despite being paid.
+  // Scanning the numbers already taken by THIS student and skipping past them
+  // makes the generated number collision-free. Safe under concurrency: the
+  // per-UID import lock means one worker per student.
   let finalReceiptNumber = challanNumber;
   if (!finalReceiptNumber) {
-    const [receiptCountRow] = await db
-      .select({ cnt: count() })
+    const takenRows = await db
+      .select({ receiptNumber: feeStudentMappingModel.receiptNumber })
       .from(feeStudentMappingModel)
       .where(
         and(
@@ -738,14 +784,17 @@ async function syncFeeStudentMapping(
           isNotNull(feeStudentMappingModel.receiptNumber),
         ),
       );
-    const receiptSeq = String(Number(receiptCountRow?.cnt ?? 0) + 1).padStart(
-      2,
-      "0",
+    const taken = new Set(
+      takenRows.map((r) => r.receiptNumber).filter(Boolean) as string[],
     );
     const code = finalCategoryCode?.trim();
-    finalReceiptNumber = code
-      ? `${studentUid}/${receiptSeq}-${code}`
-      : `${studentUid}/${receiptSeq}`;
+    const build = (n: number) => {
+      const seq = String(n).padStart(2, "0");
+      return code ? `${studentUid}/${seq}-${code}` : `${studentUid}/${seq}`;
+    };
+    let seq = 1;
+    while (taken.has(build(seq))) seq++;
+    finalReceiptNumber = build(seq);
   }
 
   // Map the legacy payment mode → new enum. The college recorded one of
