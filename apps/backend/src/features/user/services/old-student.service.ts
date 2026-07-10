@@ -4,6 +4,7 @@ import { Pool } from "mysql2/typings/mysql/lib/Pool";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import { db, mysqlConnection } from "@/db";
+import { getOrCreateWithLock, findOrCreate } from "@/utils/db-concurrency.js";
 import { ensureAcademicYearStructure } from "@/features/academics/services/academic-year-structure.service.js";
 import {
   OldCourseDetails,
@@ -418,55 +419,69 @@ export async function addAdmissionApplicationForm(
       eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
     );
   }
-  let [foundAcademicYear] = await db
-    .select()
-    .from(academicYearModel)
-    .where(or(...academicYearMatch));
+  // academic_years/sessions have NO unique constraint on their natural keys —
+  // concurrent import workers must serialize the miss path or they silently
+  // duplicate the year/session. Lock keys are shared with getMetadata in
+  // refactor-old-migration.service.ts (identical key strings, per year).
+  const foundAcademicYear = await getOrCreateWithLock(
+    `import:ay:${academicYearName}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(academicYearModel)
+          .where(or(...academicYearMatch))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(academicYearModel)
+          .values({
+            legacyAcademicYearId: oldAcademicYear?.id ?? null,
+            year: academicYearName,
+            isCurrentYear:
+              oldAcademicYear?.presentAcademicYear ??
+              oldSession.iscurrentsession ??
+              false,
+            codePrefix: codePrefix.toString(),
+          })
+          .returning()
+      )[0]!,
+  );
 
-  if (!foundAcademicYear) {
-    foundAcademicYear = (
-      await db
-        .insert(academicYearModel)
-        .values({
-          legacyAcademicYearId: oldAcademicYear?.id ?? null,
-          year: academicYearName,
-          isCurrentYear:
-            oldAcademicYear?.presentAcademicYear ??
-            oldSession.iscurrentsession ??
-            false,
-          codePrefix: codePrefix.toString(),
-        })
-        .returning()
-    )[0];
-  }
-
-  let [foundSession] = await db
-    .select()
-    .from(sessionModel)
-    .where(
-      or(
-        eq(sessionModel.legacySessionId, oldSession.id!),
-        eq(sessionModel.academicYearId, foundAcademicYear.id),
-        eq(sessionModel.name, oldSession.sessionName),
-      ),
-    );
-
-  if (!foundSession) {
-    foundSession = (
-      await db
-        .insert(sessionModel)
-        .values({
-          legacySessionId: oldSession.id!,
-          academicYearId: foundAcademicYear.id,
-          name: oldSession.sessionName,
-          from: new Date(oldSession.fromDate as any).toISOString().slice(0, 10),
-          to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
-          isCurrentSession: oldSession.iscurrentsession,
-          codePrefix: oldSession.codeprefix,
-        } as Session)
-        .returning()
-    )[0];
-  }
+  const foundSession = await getOrCreateWithLock(
+    `import:session:${foundAcademicYear.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(sessionModel)
+          .where(
+            or(
+              eq(sessionModel.legacySessionId, oldSession.id!),
+              eq(sessionModel.academicYearId, foundAcademicYear.id),
+              eq(sessionModel.name, oldSession.sessionName),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(sessionModel)
+          .values({
+            legacySessionId: oldSession.id!,
+            academicYearId: foundAcademicYear.id,
+            name: oldSession.sessionName,
+            from: new Date(oldSession.fromDate as any)
+              .toISOString()
+              .slice(0, 10),
+            to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
+            isCurrentSession: oldSession.iscurrentsession,
+            codePrefix: oldSession.codeprefix,
+          } as Session)
+          .returning()
+      )[0]!,
+  );
 
   let [foundAdmission] = await db
     .select()
@@ -1227,55 +1242,69 @@ export async function getOrCreateSessionForLegacySessionId(
       eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
     );
   }
-  let [foundAcademicYear] = await db
-    .select()
-    .from(academicYearModel)
-    .where(or(...academicYearMatch));
+  // academic_years/sessions have NO unique constraint on their natural keys —
+  // concurrent import workers must serialize the miss path or they silently
+  // duplicate the year/session. Lock keys are shared with getMetadata in
+  // refactor-old-migration.service.ts (identical key strings, per year).
+  const foundAcademicYear = await getOrCreateWithLock(
+    `import:ay:${academicYearName}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(academicYearModel)
+          .where(or(...academicYearMatch))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(academicYearModel)
+          .values({
+            legacyAcademicYearId: oldAcademicYear?.id ?? null,
+            year: academicYearName,
+            isCurrentYear:
+              oldAcademicYear?.presentAcademicYear ??
+              oldSession.iscurrentsession ??
+              false,
+            codePrefix: codePrefix.toString(),
+          })
+          .returning()
+      )[0]!,
+  );
 
-  if (!foundAcademicYear) {
-    foundAcademicYear = (
-      await db
-        .insert(academicYearModel)
-        .values({
-          legacyAcademicYearId: oldAcademicYear?.id ?? null,
-          year: academicYearName,
-          isCurrentYear:
-            oldAcademicYear?.presentAcademicYear ??
-            oldSession.iscurrentsession ??
-            false,
-          codePrefix: codePrefix.toString(),
-        })
-        .returning()
-    )[0];
-  }
-
-  let [foundSession] = await db
-    .select()
-    .from(sessionModel)
-    .where(
-      or(
-        eq(sessionModel.legacySessionId, oldSession.id!),
-        eq(sessionModel.academicYearId, foundAcademicYear.id),
-        eq(sessionModel.name, oldSession.sessionName),
-      ),
-    );
-
-  if (!foundSession) {
-    foundSession = (
-      await db
-        .insert(sessionModel)
-        .values({
-          legacySessionId: oldSession.id!,
-          academicYearId: foundAcademicYear.id,
-          name: oldSession.sessionName,
-          from: new Date(oldSession.fromDate as any).toISOString().slice(0, 10),
-          to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
-          isCurrentSession: oldSession.iscurrentsession,
-          codePrefix: oldSession.codeprefix,
-        } as Session)
-        .returning()
-    )[0];
-  }
+  const foundSession = await getOrCreateWithLock(
+    `import:session:${foundAcademicYear.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(sessionModel)
+          .where(
+            or(
+              eq(sessionModel.legacySessionId, oldSession.id!),
+              eq(sessionModel.academicYearId, foundAcademicYear.id),
+              eq(sessionModel.name, oldSession.sessionName),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(sessionModel)
+          .values({
+            legacySessionId: oldSession.id!,
+            academicYearId: foundAcademicYear.id,
+            name: oldSession.sessionName,
+            from: new Date(oldSession.fromDate as any)
+              .toISOString()
+              .slice(0, 10),
+            to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
+            isCurrentSession: oldSession.iscurrentsession,
+            codePrefix: oldSession.codeprefix,
+          } as Session)
+          .returning()
+      )[0]!,
+  );
 
   // Ensure the year's masters/papers/components exist (copied from the nearest
   // year that has them) — so importing into a year that was never set up via the
@@ -1407,29 +1436,41 @@ async function createBootstrapAdmissionCourseDetails(
     .from(admissionModel)
     .where(eq(admissionModel.id, applicationForm.admissionId as number));
 
-  let [existingAdmissionProgramCourse] = await db
-    .select()
-    .from(admissionProgramCourseModel)
-    .where(
-      and(
-        eq(admissionProgramCourseModel.programCourseId, programCourse.id!),
-        eq(admissionProgramCourseModel.admissionId, admission?.id as number),
-        eq(admissionProgramCourseModel.classId, classData.id),
-      ),
-    );
-
-  if (!existingAdmissionProgramCourse) {
-    existingAdmissionProgramCourse = (
-      await db
-        .insert(admissionProgramCourseModel)
-        .values({
-          admissionId: admission?.id as number,
-          programCourseId: programCourse.id as number,
-          classId: classData.id,
-        })
-        .returning()
-    )[0];
-  }
+  // admission_program_courses has no unique on (admission, programCourse,
+  // class) — serialize concurrent creators of the same triple.
+  const existingAdmissionProgramCourse = await getOrCreateWithLock(
+    `import:apc:${admission?.id}:${programCourse.id}:${classData.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(admissionProgramCourseModel)
+          .where(
+            and(
+              eq(
+                admissionProgramCourseModel.programCourseId,
+                programCourse.id!,
+              ),
+              eq(
+                admissionProgramCourseModel.admissionId,
+                admission?.id as number,
+              ),
+              eq(admissionProgramCourseModel.classId, classData.id),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(admissionProgramCourseModel)
+          .values({
+            admissionId: admission?.id as number,
+            programCourseId: programCourse.id as number,
+            classId: classData.id,
+          })
+          .returning()
+      )[0]!,
+  );
 
   let studentCategory: StudentCategory | null = null;
   if (oldStudent.studentCategoryId) {
@@ -1974,32 +2015,31 @@ export async function addSection(
     return undefined;
   }
 
-  const [existingSection] = await db
-    .select()
-    .from(sectionModel)
-    .where(
-      and(
-        eq(sectionModel.name, oldSection.sectionName.trim()),
-        eq(sectionModel.legacySectionId, oldSection.id!),
-      ),
-    );
-
-  let newSection: Section | undefined;
-  if (existingSection) {
-    return existingSection;
-  } else {
-    newSection = (
-      await db
-        .insert(sectionModel)
-        .values({
-          name: oldSection.sectionName.trim(),
-          legacySectionId: oldSection.id!,
-        })
-        .returning()
-    )[0];
-  }
-
-  return newSection;
+  // sections.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(sectionModel)
+          .where(
+            and(
+              eq(sectionModel.name, oldSection.sectionName.trim()),
+              eq(sectionModel.legacySectionId, oldSection.id!),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(sectionModel)
+          .values({
+            name: oldSection.sectionName.trim(),
+            legacySectionId: oldSection.id!,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addInstitution(
@@ -2117,58 +2157,67 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
     return undefined;
   }
 
-  const [existingBoard] = await db
-    .select()
-    .from(boardModel)
-    .where(
-      and(
-        ilike(boardModel.name, oldBoard.boardName.trim()),
-        eq(boardModel.legacyBoardId, oldBoard.id!),
-      ),
-    );
+  // boards has no unique on its natural key — serialize concurrent creators
+  // of the same legacy board (the nested degree get-or-create rides along
+  // inside the locked miss path).
+  return getOrCreateWithLock(
+    `import:board:${oldBoard.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(boardModel)
+          .where(
+            and(
+              ilike(boardModel.name, oldBoard.boardName.trim()),
+              eq(boardModel.legacyBoardId, oldBoard.id!),
+            ),
+          )
+      )[0],
+    async () => {
+      let degree: Degree | undefined;
+      const [degreeRows] = (await mysqlConnection.query(
+        `SELECT * FROM degree WHERE id = ${oldBoard.degreeid}`,
+      )) as [OldDegree[], any];
+      const [oldDegree] = degreeRows;
 
-  if (existingBoard) {
-    return existingBoard;
-  }
+      if (oldDegree) {
+        const [existingDegree] = await db
+          .select()
+          .from(degreeModel)
+          .where(eq(degreeModel.name, oldDegree.degreeName.trim()));
 
-  let degree: Degree | undefined;
-  const [degreeRows] = (await mysqlConnection.query(
-    `SELECT * FROM degree WHERE id = ${oldBoard.degreeid}`,
-  )) as [OldDegree[], any];
-  const [oldDegree] = degreeRows;
+        if (existingDegree) {
+          degree = existingDegree;
+        } else {
+          const [newDegree] = await db
+            .insert(degreeModel)
+            .values({
+              name: oldDegree.degreeName.trim(),
+              legacyDegreeId: oldDegree.id,
+            })
+            .returning();
+          degree = newDegree;
+        }
+      }
 
-  if (oldDegree) {
-    const [existingDegree] = await db
-      .select()
-      .from(degreeModel)
-      .where(eq(degreeModel.name, oldDegree.degreeName.trim()));
-
-    if (existingDegree) {
-      degree = existingDegree;
-    } else {
-      const [newDegree] = await db
-        .insert(degreeModel)
+      const [newBoard] = await db
+        .insert(boardModel)
         .values({
-          name: oldDegree.degreeName.trim(),
-          legacyDegreeId: oldDegree.id,
+          legacyBoardId: oldBoard.id,
+          name: oldBoard.boardName.trim(),
+          degreeId: degree ? degree.id : undefined,
+          passingMarks: oldBoard.passmrks
+            ? Number(oldBoard.passmrks)
+            : undefined,
+          code:
+            oldBoard.code && oldBoard.code !== "" ? oldBoard.code : undefined,
         })
         .returning();
-      degree = newDegree;
-    }
-  }
 
-  const [newBoard] = await db
-    .insert(boardModel)
-    .values({
-      legacyBoardId: oldBoard.id,
-      name: oldBoard.boardName.trim(),
-      degreeId: degree ? degree.id : undefined,
-      passingMarks: oldBoard.passmrks ? Number(oldBoard.passmrks) : undefined,
-      code: oldBoard.code && oldBoard.code !== "" ? oldBoard.code : undefined,
-    })
-    .returning();
-
-  return newBoard;
+      return newBoard!;
+    },
+  );
 }
 
 // export async function addUser(
@@ -2588,22 +2637,26 @@ export async function addAccommodation(
 }
 
 export async function addOccupation(name: string, legacyOccupationId: number) {
-  const [existingOccupation] = await db
-    .select()
-    .from(occupationModel)
-    .where(ilike(occupationModel.name, name.trim()));
-  if (existingOccupation) {
-    return existingOccupation;
-  }
-  const [newOccupation] = await db
-    .insert(occupationModel)
-    .values({
-      name: name.trim(),
-      legacyOccupationId: legacyOccupationId,
-    })
-    .returning();
-
-  return newOccupation;
+  // occupations.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(occupationModel)
+          .where(ilike(occupationModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(occupationModel)
+          .values({
+            name: name.trim(),
+            legacyOccupationId: legacyOccupationId,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addBloodGroup(type: string, legacyBloodGroupId?: number) {
@@ -2627,23 +2680,29 @@ export async function addNationality(
   code: number | undefined | null,
   legacyNationalityId?: number,
 ) {
-  const [existingNationality] = await db
-    .select()
-    .from(nationalityModel)
-    .where(ilike(nationalityModel.name, name.trim()));
-  if (existingNationality) {
-    return existingNationality;
-  }
-  const [newNationality] = await db
-    .insert(nationalityModel)
-    .values({
-      legacyNationalityId: legacyNationalityId,
-      name: name.trim(),
-      code,
-    })
-    .returning();
-
-  return newNationality;
+  // nationalities has no unique on name — serialize concurrent creators
+  // (same lock key as addNationality in old-student-helper.ts).
+  return getOrCreateWithLock(
+    `import:nationality:${name.trim().toLowerCase()}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(nationalityModel)
+          .where(ilike(nationalityModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(nationalityModel)
+          .values({
+            legacyNationalityId: legacyNationalityId,
+            name: name.trim(),
+            code,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addCategory(
@@ -2652,46 +2711,53 @@ export async function addCategory(
   documentRequired: boolean | undefined,
   legacyCategoryId: number,
 ) {
-  // Check if category exists by name OR code
-  const [existingCategory] = await db
-    .select()
-    .from(categoryModel)
-    .where(
-      or(
-        ilike(categoryModel.name, name.trim()),
-        ilike(categoryModel.code, code),
-      ),
-    );
-  if (existingCategory) {
-    return existingCategory;
-  }
-  const [newCategory] = await db
-    .insert(categoryModel)
-    .values({
-      legacyCategoryId: legacyCategoryId,
-      name: name.trim(),
-      code,
-      documentRequired,
-    })
-    .returning();
-
-  return newCategory;
+  // categories.name and .code are UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(categoryModel)
+          .where(
+            or(
+              ilike(categoryModel.name, name.trim()),
+              ilike(categoryModel.code, code),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(categoryModel)
+          .values({
+            legacyCategoryId: legacyCategoryId,
+            name: name.trim(),
+            code,
+            documentRequired,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addReligion(name: string, legacyReligionId: number) {
-  const [existingReligion] = await db
-    .select()
-    .from(religionModel)
-    .where(ilike(religionModel.name, name.trim()));
-  if (existingReligion) {
-    return existingReligion;
-  }
-  const [newReligion] = await db
-    .insert(religionModel)
-    .values({ legacyReligionId: legacyReligionId, name: name.trim() })
-    .returning();
-
-  return newReligion;
+  // religions.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(religionModel)
+          .where(ilike(religionModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(religionModel)
+          .values({ legacyReligionId: legacyReligionId, name: name.trim() })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addLanguageMedium(
@@ -2760,27 +2826,31 @@ export async function loadAllCountry() {
 
 export async function addCountry(oldCountry: OldCountry) {
   console.log("oldCountry:", oldCountry);
-  const [existingCountry] = await db
-    .select()
-    .from(countryModel)
-    .where(
-      and(
-        ilike(countryModel.name, oldCountry.countryName.trim()),
-        eq(countryModel.legacyCountryId, oldCountry.id),
-      ),
-    );
-  if (existingCountry) {
-    return existingCountry;
-  }
-  const [newCountry] = await db
-    .insert(countryModel)
-    .values({
-      legacyCountryId: oldCountry.id,
-      name: oldCountry.countryName.trim(),
-    })
-    .returning();
-
-  return newCountry;
+  // countries has UNIQUE(legacyCountryId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(countryModel)
+          .where(
+            and(
+              ilike(countryModel.name, oldCountry.countryName.trim()),
+              eq(countryModel.legacyCountryId, oldCountry.id),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(countryModel)
+          .values({
+            legacyCountryId: oldCountry.id,
+            name: oldCountry.countryName.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addStateByCityMaintabOrLegacyStateId(
@@ -2825,31 +2895,33 @@ export async function addStateByCityMaintabOrLegacyStateId(
     return null;
   }
 
-  // Check if state exists
-  const [existingState] = await db
-    .select()
-    .from(stateModel)
-    .where(
-      and(
-        ilike(stateModel.name, oldState.stateName.trim()),
-        eq(stateModel.countryId, country.id),
-        eq(stateModel.legacyStateId, oldState.id),
-      ),
-    );
-  if (existingState) {
-    return existingState;
-  }
-
-  const [newState] = await db
-    .insert(stateModel)
-    .values({
-      countryId: country.id,
-      legacyStateId: oldState.id,
-      name: oldState.stateName.trim(),
-    })
-    .returning();
-
-  return newState;
+  // states has UNIQUE(legacyStateId, countryId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(stateModel)
+          .where(
+            and(
+              ilike(stateModel.name, oldState.stateName.trim()),
+              eq(stateModel.countryId, country.id),
+              eq(stateModel.legacyStateId, oldState.id),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(stateModel)
+          .values({
+            countryId: country.id,
+            legacyStateId: oldState.id,
+            name: oldState.stateName.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function loadAllState() {
@@ -2900,30 +2972,32 @@ export async function addStateByName(name: string) {
     console.log("country not found", oldCountry);
     return null;
   }
-  const [existingState] = await db
-    .select()
-    .from(stateModel)
-    .where(
-      and(
-        ilike(stateModel.name, oldState.stateName.trim()),
-        eq(stateModel.countryId, country.id),
-      ),
-    );
-
-  if (existingState) {
-    return existingState;
-  }
-
-  const [newState] = await db
-    .insert(stateModel)
-    .values({
-      countryId: country.id,
-      name: oldState.stateName.trim(),
-      legacyStateId: oldState.id,
-    })
-    .returning();
-
-  return newState;
+  // states has UNIQUE(legacyStateId, countryId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(stateModel)
+          .where(
+            and(
+              ilike(stateModel.name, oldState.stateName.trim()),
+              eq(stateModel.countryId, country.id),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(stateModel)
+          .values({
+            countryId: country.id,
+            name: oldState.stateName.trim(),
+            legacyStateId: oldState.id,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function loadAllPostOffice() {
@@ -3094,29 +3168,33 @@ export async function addCity(oldCityId: number) {
   }
 
   const normalizedCityName = oldCitySubtab.cityname.trim();
-  const [existingCity] = await db
-    .select({ id: cityModel.id })
-    .from(cityModel)
-    .where(
-      and(
-        eq(cityModel.stateId, state.id),
-        ilike(cityModel.name, normalizedCityName),
-        eq(cityModel.legacyCityId, oldCityId),
-      ),
-    );
-  if (existingCity) {
-    return existingCity;
-  }
-
-  const [newCity] = await db
-    .insert(cityModel)
-    .values({
-      stateId: state.id,
-      legacyCityId: oldCityId,
-      name: normalizedCityName,
-    })
-    .returning();
-  return newCity;
+  // cities has UNIQUE(legacyCityId, stateId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select({ id: cityModel.id })
+          .from(cityModel)
+          .where(
+            and(
+              eq(cityModel.stateId, state.id),
+              ilike(cityModel.name, normalizedCityName),
+              eq(cityModel.legacyCityId, oldCityId),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(cityModel)
+          .values({
+            stateId: state.id,
+            legacyCityId: oldCityId,
+            name: normalizedCityName,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function loadAllDistrict() {
@@ -3161,44 +3239,33 @@ export async function addDistrict(oldDistrictId: number) {
     return null;
   }
 
-  const [existingDistrict] = await db
-    .select()
-    .from(districtModel)
-    .where(
-      and(
-        ilike(districtModel.name, oldDistrict.name.trim()),
-        eq(districtModel.cityId, city.id),
-        eq(districtModel.legacyDistrictId, oldDistrictId),
-      ),
-    );
-  if (existingDistrict) {
-    console.log(
-      "addDistrict(): existingDistrict found",
-      existingDistrict.id,
-      "for oldDistrictId",
-      oldDistrictId,
-    );
-    return existingDistrict;
-  }
-
-  const [newDistrict] = await db
-    .insert(districtModel)
-    .values({
-      cityId: city.id,
-      legacyDistrictId: oldDistrictId,
-      name: oldDistrict.name.trim(),
-    })
-    .returning();
-
-  console.log(
-    "addDistrict(): created new district",
-    newDistrict.id,
-    "for oldDistrictId",
-    oldDistrictId,
-    "cityId",
-    city.id,
+  // districts has UNIQUE(legacyDistrictId, cityId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(districtModel)
+          .where(
+            and(
+              ilike(districtModel.name, oldDistrict.name.trim()),
+              eq(districtModel.cityId, city.id),
+              eq(districtModel.legacyDistrictId, oldDistrictId),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(districtModel)
+          .values({
+            cityId: city.id,
+            legacyDistrictId: oldDistrictId,
+            name: oldDistrict.name.trim(),
+          })
+          .returning()
+      )[0]!,
   );
-  return newDistrict;
 }
 
 export async function categorizeIncome(income: string | null | undefined) {
@@ -4177,32 +4244,41 @@ export async function processOldCourseDetails(
   // const [session] = await db.select().from(sessionModel).where(eq(sessionModel.id, admission?.sessionId as number));
   // const [academicYear] = await db.select().from(academicYearModel).where(eq(academicYearModel.id, session?.academicYearId as number));
 
-  let [existingAdmissionProgramCourse] = await db
-    .select()
-    .from(admissionProgramCourseModel)
-    .where(
-      and(
-        eq(
-          admissionProgramCourseModel.programCourseId,
-          programCourse.id! as number,
-        ),
-        eq(admissionProgramCourseModel.admissionId, admission?.id as number),
-        eq(admissionProgramCourseModel.classId, classData?.id as number),
-      ),
-    );
-
-  if (!existingAdmissionProgramCourse) {
-    existingAdmissionProgramCourse = (
-      await db
-        .insert(admissionProgramCourseModel)
-        .values({
-          admissionId: admission?.id as number,
-          programCourseId: programCourse.id as number,
-          classId: classData?.id as number,
-        })
-        .returning()
-    )[0];
-  }
+  // admission_program_courses has no unique on (admission, programCourse,
+  // class) — serialize concurrent creators of the same triple.
+  const existingAdmissionProgramCourse = await getOrCreateWithLock(
+    `import:apc:${admission?.id}:${programCourse.id}:${classData?.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(admissionProgramCourseModel)
+          .where(
+            and(
+              eq(
+                admissionProgramCourseModel.programCourseId,
+                programCourse.id! as number,
+              ),
+              eq(
+                admissionProgramCourseModel.admissionId,
+                admission?.id as number,
+              ),
+              eq(admissionProgramCourseModel.classId, classData?.id as number),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(admissionProgramCourseModel)
+          .values({
+            admissionId: admission?.id as number,
+            programCourseId: programCourse.id as number,
+            classId: classData?.id as number,
+          })
+          .returning()
+      )[0]!,
+  );
 
   let cancelByUser: User | undefined;
   if (courseDetails.canceluserid) {
@@ -4907,34 +4983,43 @@ export async function upsertShift(oldShiftId: number | null) {
 
   if (!shiftRow) return null;
 
-  const [foundShift] = await db
-    .select()
-    .from(shiftModel)
-    .where(ilike(shiftModel.name, shiftRow.shiftName.trim()));
+  // shifts has no unique on name — serialize concurrent creators of the same
+  // shift (same lock key as addShift in old-student-helper.ts).
+  const shiftName = shiftRow.shiftName.trim();
+  const shift = await getOrCreateWithLock(
+    `import:shift:${shiftName.toLowerCase()}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(shiftModel)
+          .where(ilike(shiftModel.name, shiftName))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(shiftModel)
+          .values({
+            legacyShiftId: oldShiftId,
+            name: shiftName,
+            codePrefix: shiftRow.codeprefix?.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 
-  if (foundShift) {
-    const [updatedShift] = await db
-      .update(shiftModel)
-      .set({
-        name: shiftRow.shiftName.trim(),
-        codePrefix: shiftRow.codeprefix?.trim(),
-      })
-      .where(eq(shiftModel.id, foundShift.id as number))
-      .returning();
+  // Preserve the refresh-on-upsert semantics (values derive from the same
+  // legacy row, so a redundant self-update is harmless).
+  const [updatedShift] = await db
+    .update(shiftModel)
+    .set({
+      name: shiftName,
+      codePrefix: shiftRow.codeprefix?.trim(),
+    })
+    .where(eq(shiftModel.id, shift.id as number))
+    .returning();
 
-    return updatedShift;
-  }
-
-  return (
-    await db
-      .insert(shiftModel)
-      .values({
-        legacyShiftId: oldShiftId,
-        name: shiftRow.shiftName.trim(),
-        codePrefix: shiftRow.codeprefix?.trim(),
-      })
-      .returning()
-  )[0];
+  return updatedShift;
 }
 
 export async function addMeritList(oldMeritListId: number | null) {

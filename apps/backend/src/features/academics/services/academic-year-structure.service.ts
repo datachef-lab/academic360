@@ -6,6 +6,7 @@ import {
   inArray,
   isNull,
   or,
+  sql,
   type SQL,
   type Column,
 } from "drizzle-orm";
@@ -92,6 +93,16 @@ export async function ensureAcademicYearStructure(
     papers: 0,
     paperComponents: 0,
   };
+
+  // Serialize per academic year: concurrent import workers all call this per
+  // student, and two cold-path copies of the same (or adjacent) year collide
+  // on the unique indexes and roll the whole tx back. Key convention mirrors
+  // the CU-registration locks (1001000 + ayId). The papers fast-path below
+  // re-checks AFTER the lock, so a waiter queued behind a cold-path copier
+  // exits cheaply once the copy is committed.
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(${1002000 + targetYearId})`,
+  );
 
   const [target] = await tx
     .select()
