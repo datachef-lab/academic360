@@ -184,14 +184,18 @@ function buildLegacyFeesQuery(uid?: string | null): string {
         LEFT JOIN shift sh ON sh.id = fsm.shiftId
         LEFT JOIN accademicyear ay ON ay.sessionId = sess.id
 
-        -- Join with the fee-structure
-        LEFT JOIN feesstructuremaintab fsm ON (
-            fsm.id = inst.structid
-            AND fsm.courseId = crs.id
-            AND fsm.classId = cl.id
-            AND fsm.sessionid = sess.id
-            AND fsm.shiftId = sh.id
+        -- Section comes from the student's historicalrecord row for exactly the
+        -- batch this fee structure belongs to. Correlating on all four batch
+        -- columns keeps this 1:1 with the installment (no cross join).
+        LEFT JOIN historicalrecord h ON (
+            h.parent_id = spd.id
+            AND h.sessionid = fsm.sessionid
+            AND h.courseId = fsm.courseId
+            AND h.classId = fsm.classId
+            AND h.shiftId = fsm.shiftId
         )
+        LEFT JOIN section sec ON sec.id = h.sectionId
+
         LEFT JOIN studentfeesreceipttype rt ON rt.id = fsm.receipttype
         LEFT JOIN feesquarter fq ON fq.id = fsm.feesquarterid
         LEFT JOIN classes adv_cl ON adv_cl.id = fsm.advanceclassid
