@@ -1,4 +1,5 @@
 import { db, mysqlConnection } from "@/db";
+import { withAdvisoryXactLock } from "@/utils/db-concurrency.js";
 import {
   LegacyFeeHead,
   LegacyFeeStructureRow,
@@ -39,7 +40,7 @@ import {
   userModel,
   UserT,
 } from "@repo/db/schemas";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, count, eq, ilike, isNotNull, ne } from "drizzle-orm";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -237,28 +238,60 @@ function buildLegacyFeesQuery(uid?: string | null): string {
     `;
 }
 
+/**
+ * Resolve the new-DB fee-slab name for a legacy slab letter, per batch.
+ * For the 2023-24 and 2024-25 sessions the slab letters were renamed when the
+ * new fee groups were configured: legacy M -> Slab O, legacy S -> Slab M.
+ * Every other letter/session maps 1:1 (X -> "Slab X"); a missing legacy slab
+ * falls back to "Slab F". If the target slab doesn't exist in this DB yet
+ * (e.g. Slab O pre-prod-sync), the existing "Fee Group / Slab - Not Found!"
+ * per-uid error surfaces it — the import is not aborted.
+ */
+function resolveLegacySlabName(
+  rawSlab: string | null | undefined,
+  academicYear: string | null | undefined,
+): string {
+  const slab = String(rawSlab ?? "").trim();
+  if (!slab) return "Slab F";
+  const startYear = Number(String(academicYear ?? "").slice(0, 4));
+  if (startYear === 2023 || startYear === 2024) {
+    if (slab.toUpperCase() === "M") return "Slab O";
+    if (slab.toUpperCase() === "S") return "Slab M";
+  }
+  return `Slab ${slab}`;
+}
+
 // Per-uid masters, computed once per process (the master syncs are idempotent
 // upserts). Reused across every per-uid fees load in an import run.
-let cachedPerUidFeesMasters: MasterDataType | null = null;
-async function getPerUidFeesMasters(): Promise<MasterDataType> {
-  if (cachedPerUidFeesMasters) return cachedPerUidFeesMasters;
-  const receiptTypes = await syncLegacyReceiptTypes();
-  const feeHeads = await syncLegacyFeeHeads();
-  const academicYears = await db.select().from(academicYearModel);
-  const sessions = await db.select().from(sessionModel);
-  const classes = await db.select().from(classModel);
-  const sections = await db.select().from(sectionModel);
-  const shifts = await db.select().from(shiftModel);
-  cachedPerUidFeesMasters = {
-    feeHeads,
-    receiptTypes,
-    academicYears,
-    sessions,
-    classes,
-    sections,
-    shifts,
-  };
-  return cachedPerUidFeesMasters;
+// Single-flight: the PROMISE is cached (assigned synchronously), so concurrent
+// import workers hitting a cold cache share one build instead of all running
+// the receipt-type/fee-head syncs at once. A failed build clears the cache so
+// it doesn't poison the process.
+let cachedPerUidFeesMastersPromise: Promise<MasterDataType> | null = null;
+function getPerUidFeesMasters(): Promise<MasterDataType> {
+  if (cachedPerUidFeesMastersPromise) return cachedPerUidFeesMastersPromise;
+  cachedPerUidFeesMastersPromise = (async () => {
+    const receiptTypes = await syncLegacyReceiptTypes();
+    const feeHeads = await syncLegacyFeeHeads();
+    const academicYears = await db.select().from(academicYearModel);
+    const sessions = await db.select().from(sessionModel);
+    const classes = await db.select().from(classModel);
+    const sections = await db.select().from(sectionModel);
+    const shifts = await db.select().from(shiftModel);
+    return {
+      feeHeads,
+      receiptTypes,
+      academicYears,
+      sessions,
+      classes,
+      sections,
+      shifts,
+    };
+  })();
+  cachedPerUidFeesMastersPromise.catch(() => {
+    cachedPerUidFeesMastersPromise = null;
+  });
+  return cachedPerUidFeesMastersPromise;
 }
 
 /**
@@ -336,9 +369,10 @@ export async function loadStudentFeesForUid(
       studentRows,
       uid,
       feeStructureResult.id!,
-      studentRows[0]["Fee Slab"]
-        ? `Slab ${studentRows[0]["Fee Slab"]}`
-        : "Slab F",
+      resolveLegacySlabName(
+        studentRows[0]["Fee Slab"],
+        studentRows[0]["Academic Year"],
+      ),
       studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
       studentRows[0]["Fee Receipt Entry Created At"],
       studentRows[0]["Challan Number"] &&
@@ -485,9 +519,10 @@ export async function loadStudentFees() {
                 studentRows,
                 uid,
                 feeStructureResult!.id!,
-                studentRows[0]["Fee Slab"]
-                  ? `Slab ${studentRows[0]["Fee Slab"]}`
-                  : "Slab F",
+                resolveLegacySlabName(
+                  studentRows[0]["Fee Slab"],
+                  studentRows[0]["Academic Year"],
+                ),
                 studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
                 studentRows[0]["Fee Receipt Entry Created At"],
                 studentRows[0]["Challan Number"] &&
@@ -572,15 +607,22 @@ async function syncFeeStudentMapping(
   // payment exists, or the mapping already carries a receipt number), skip the
   // whole sync — never duplicate a payment or overwrite values edited in the new
   // DB. This also makes the full batch loader safe to re-run.
+  let hasExistingPayment = false;
   if (feeStudentMapping) {
     const existingPayment = await db
       .select({ id: paymentModel.id })
       .from(paymentModel)
       .where(eq(paymentModel.feeStudentMappingId, feeStudentMapping.id!))
       .limit(1);
-    if (existingPayment.length > 0 || feeStudentMapping.receiptNumber) {
+    hasExistingPayment = existingPayment.length > 0;
+    // Fully loaded (receipt number stamped) — never touch again.
+    if (feeStudentMapping.receiptNumber) {
       return { status: "skipped" };
     }
+    // Payment exists but NO receipt number = a previous run died between the
+    // payment insert and the mapping update. Fall through to finish the
+    // mapping (the payment insert below is guarded by hasExistingPayment, so
+    // it is never duplicated).
   }
 
   // console.log(
@@ -680,10 +722,26 @@ async function syncFeeStudentMapping(
 
   // Receipt/challan number: preserve the legacy challan when present, else build
   // `{uid}/{NN}-{feeCategoryCode}` like the canonical issuance (suffix only when
-  // the category has a code).
+  // the category has a code). NN is the student's NEXT receipt index — a
+  // hardcoded "01" collided with the UNIQUE receipt_number for every semester
+  // after the first once multi-semester fee loading started working. Safe
+  // under concurrency: the per-UID import lock means one worker per student,
+  // and a student's batches are processed sequentially within it.
   let finalReceiptNumber = challanNumber;
   if (!finalReceiptNumber) {
-    const receiptSeq = "01";
+    const [receiptCountRow] = await db
+      .select({ cnt: count() })
+      .from(feeStudentMappingModel)
+      .where(
+        and(
+          eq(feeStudentMappingModel.studentId, feeStudentMapping.studentId!),
+          isNotNull(feeStudentMappingModel.receiptNumber),
+        ),
+      );
+    const receiptSeq = String(Number(receiptCountRow?.cnt ?? 0) + 1).padStart(
+      2,
+      "0",
+    );
     const code = finalCategoryCode?.trim();
     finalReceiptNumber = code
       ? `${studentUid}/${receiptSeq}-${code}`
@@ -721,7 +779,8 @@ async function syncFeeStudentMapping(
 
   // Persist the legacy payment as a linked entry tied directly to the
   // fee_student_mapping via payments.feeStudentMappingId / isLinked.
-  if (amountPaid) {
+  // hasExistingPayment: a crashed earlier run may already have written it.
+  if (amountPaid && !hasExistingPayment) {
     await db.insert(paymentModel).values({
       userId: user?.id,
       feeStudentMappingId: feeStudentMapping.id!,
@@ -994,76 +1053,119 @@ async function syncLegacyFeeHeads() {
         SELECT * FROM feesheadtable;
     `)) as [LegacyFeeHead[], unknown];
 
-  const feeHeads: FeeHeadT[] = [];
-  for (const { id, ...row } of legacyFeeHeads) {
-    const [existingFeeHead] = await db
-      .select()
-      .from(feeHeadModel)
-      .where(ilike(feeHeadModel.name, row.name.trim()));
+  // fee_heads has no unique on name — serialize this master sync so
+  // concurrent cold-cache callers (and other backend instances) can't
+  // double-insert. Cross-process safe; the table is tiny so the lock is brief.
+  return withAdvisoryXactLock("import:fees:fee-heads", async () => {
+    const feeHeads: FeeHeadT[] = [];
+    for (const { id, ...row } of legacyFeeHeads) {
+      const [existingFeeHead] = await db
+        .select()
+        .from(feeHeadModel)
+        .where(ilike(feeHeadModel.name, row.name.trim()));
 
-    if (existingFeeHead) {
-      const [updatedFeeHead] = await db
-        .update(feeHeadModel)
-        .set({
-          legacyFeeHeadId: id,
-          name: row.name.trim(),
-        })
-        .where(eq(feeHeadModel.id, existingFeeHead.id))
-        .returning();
-      feeHeads.push(updatedFeeHead);
-    } else {
-      const [createdFeeHead] = await db
-        .insert(feeHeadModel)
-        .values({
-          legacyFeeHeadId: id,
-          ...row,
-          name: row.name.trim(),
-        })
-        .returning();
-      feeHeads.push(createdFeeHead);
+      if (existingFeeHead) {
+        const [updatedFeeHead] = await db
+          .update(feeHeadModel)
+          .set({
+            legacyFeeHeadId: id,
+            name: row.name.trim(),
+          })
+          .where(eq(feeHeadModel.id, existingFeeHead.id))
+          .returning();
+        feeHeads.push(updatedFeeHead);
+      } else {
+        const [createdFeeHead] = await db
+          .insert(feeHeadModel)
+          .values({
+            legacyFeeHeadId: id,
+            ...row,
+            name: row.name.trim(),
+          })
+          .returning();
+        feeHeads.push(createdFeeHead);
+      }
     }
-  }
 
-  return feeHeads;
+    return feeHeads;
+  });
 }
+
+/**
+ * Legacy -> new receipt-type NAME aliases. The college renamed these when the
+ * new fee setup was configured, so the fee structures live under the new name
+ * while every legacy installment still carries the old one. Keyed by
+ * lowercased legacy name.
+ *
+ * "Annual Fees" (legacy id 2, the Sem II-VI installments) === "Enrolment Fee"
+ * in the new DB — without this alias none of those installments can resolve a
+ * fee structure and the whole annual-fees load is skipped.
+ */
+const LEGACY_RECEIPT_TYPE_ALIASES: Record<string, string> = {
+  "annual fees": "Enrolment Fee",
+};
 
 async function syncLegacyReceiptTypes() {
   const [legacyReceiptTypes] = (await mysqlConnection.query(`
         SELECT * FROM studentfeesreceipttype;
     `)) as [LegacyReceiptType[], unknown];
 
-  const receiptTypes: ReceiptTypeT[] = [];
-  for (const { id, ...row } of legacyReceiptTypes) {
-    if (row.name.trim() == "Regular Enrolment") continue;
-    const [existingReceiptType] = await db
-      .select()
-      .from(receiptTypeModel)
-      .where(ilike(receiptTypeModel.name, row.name.trim()));
-    if (existingReceiptType) {
-      const [updatedReceiptType] = await db
-        .update(receiptTypeModel)
-        .set({
-          legacyReceiptTypeId: id,
-          chk: row.chk,
-          splType: row.spltype,
-        })
-        .where(eq(receiptTypeModel.id, existingReceiptType.id))
-        .returning();
-      receiptTypes.push(updatedReceiptType);
-    } else {
-      const [createdReceiptType] = await db
-        .insert(receiptTypeModel)
-        .values({
-          legacyReceiptTypeId: id,
-          ...row,
-          name: row.name.trim(),
-        })
-        .returning();
-      receiptTypes.push(createdReceiptType);
-    }
-  }
+  // receipt_types has no unique on name — serialize this master sync (same
+  // rationale as syncLegacyFeeHeads above).
+  return withAdvisoryXactLock("import:fees:receipt-types", async () => {
+    const receiptTypes: ReceiptTypeT[] = [];
+    for (const { id, ...row } of legacyReceiptTypes) {
+      if (row.name.trim() == "Regular Enrolment") continue;
+      const legacyName = row.name.trim();
+      const targetName =
+        LEGACY_RECEIPT_TYPE_ALIASES[legacyName.toLowerCase()] ?? legacyName;
+      const [existingReceiptType] = await db
+        .select()
+        .from(receiptTypeModel)
+        .where(ilike(receiptTypeModel.name, targetName));
+      let syncedReceiptType: ReceiptTypeT;
+      if (existingReceiptType) {
+        const [updatedReceiptType] = await db
+          .update(receiptTypeModel)
+          .set({
+            legacyReceiptTypeId: id,
+            chk: row.chk,
+            splType: row.spltype,
+          })
+          .where(eq(receiptTypeModel.id, existingReceiptType.id))
+          .returning();
+        syncedReceiptType = updatedReceiptType!;
+      } else {
+        const [createdReceiptType] = await db
+          .insert(receiptTypeModel)
+          .values({
+            legacyReceiptTypeId: id,
+            ...row,
+            name: targetName,
+          })
+          .returning();
+        syncedReceiptType = createdReceiptType!;
+      }
+      receiptTypes.push(syncedReceiptType);
 
-  return receiptTypes;
+      // An aliased legacy id must map to exactly ONE new row: clear it from
+      // any other row (e.g. a leftover "Annual Fees" row that an earlier,
+      // pre-alias sync stamped with the same legacy id).
+      if (targetName !== legacyName && syncedReceiptType?.id != null) {
+        await db
+          .update(receiptTypeModel)
+          .set({ legacyReceiptTypeId: null })
+          .where(
+            and(
+              eq(receiptTypeModel.legacyReceiptTypeId, id),
+              ne(receiptTypeModel.id, syncedReceiptType.id),
+            ),
+          );
+      }
+    }
+
+    return receiptTypes;
+  });
 }
 
 /** Only parse with Kolkata + DD/MM/YYYY … when the string actually looks like that (avoids misparsing ISO/other strings and prevents dayjs timezone from throwing RangeError on bad internals). */

@@ -4,6 +4,7 @@ import { NextFunction, Request, Response } from "express";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import { db, mysqlConnection } from "@/db/index.js";
+import { getOrCreateWithLock, findOrCreate } from "@/utils/db-concurrency.js";
 
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
@@ -188,22 +189,27 @@ export async function addOccupation(
   db: DbType,
   legacyOccupationId: number,
 ) {
-  const [existingOccupation] = await db
-    .select()
-    .from(occupationModel)
-    .where(ilike(occupationModel.name, name.trim()));
-  if (existingOccupation) {
-    return existingOccupation;
-  }
-  const [newOccupation] = await db
-    .insert(occupationModel)
-    .values({
-      name: name.trim(),
-      legacyOccupationId: legacyOccupationId,
-    })
-    .returning();
-
-  return newOccupation;
+  // occupations.name is UNIQUE — on a concurrent-create race, re-find the
+  // winner's row instead of failing this student.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(occupationModel)
+          .where(ilike(occupationModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(occupationModel)
+          .values({
+            name: name.trim(),
+            legacyOccupationId: legacyOccupationId,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addBloodGroup(
@@ -230,21 +236,25 @@ export async function addBloodGroup(
 }
 
 export async function addAdmissionQuotaType(name: string) {
-  const [existingQuotaType] = await db
-    .select()
-    .from(admissionQuotaTypeModel)
-    .where(ilike(admissionQuotaTypeModel.name, name.trim()));
-  if (existingQuotaType) {
-    return existingQuotaType;
-  }
-  const [newQuotaType] = await db
-    .insert(admissionQuotaTypeModel)
-    .values({
-      name: name.trim(),
-    })
-    .returning();
-
-  return newQuotaType;
+  // admission_quota_types.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(admissionQuotaTypeModel)
+          .where(ilike(admissionQuotaTypeModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(admissionQuotaTypeModel)
+          .values({
+            name: name.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addNationality(
@@ -253,23 +263,28 @@ export async function addNationality(
   db: DbType,
   legacyNationalityId?: number,
 ) {
-  const [existingNationality] = await db
-    .select()
-    .from(nationalityModel)
-    .where(ilike(nationalityModel.name, name.trim()));
-  if (existingNationality) {
-    return existingNationality;
-  }
-  const [newNationality] = await db
-    .insert(nationalityModel)
-    .values({
-      legacyNationalityId: legacyNationalityId,
-      name: name.trim(),
-      code,
-    })
-    .returning();
-
-  return newNationality;
+  // nationalities has no unique on name — serialize concurrent creators.
+  return getOrCreateWithLock(
+    `import:nationality:${name.trim().toLowerCase()}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(nationalityModel)
+          .where(ilike(nationalityModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(nationalityModel)
+          .values({
+            legacyNationalityId: legacyNationalityId,
+            name: name.trim(),
+            code,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addCategory(
@@ -279,30 +294,33 @@ export async function addCategory(
   db: DbType,
   legacyCategoryId: number,
 ) {
-  // Check if category exists by name OR code
-  const [existingCategory] = await db
-    .select()
-    .from(categoryModel)
-    .where(
-      or(
-        ilike(categoryModel.name, name.trim().toUpperCase()),
-        ilike(categoryModel.code, code),
-      ),
-    );
-  if (existingCategory) {
-    return existingCategory;
-  }
-  const [newCategory] = await db
-    .insert(categoryModel)
-    .values({
-      legacyCategoryId: legacyCategoryId,
-      name: name.trim().toUpperCase(),
-      code,
-      documentRequired,
-    })
-    .returning();
-
-  return newCategory;
+  // categories.name and .code are UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(categoryModel)
+          .where(
+            or(
+              ilike(categoryModel.name, name.trim().toUpperCase()),
+              ilike(categoryModel.code, code),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(categoryModel)
+          .values({
+            legacyCategoryId: legacyCategoryId,
+            name: name.trim().toUpperCase(),
+            code,
+            documentRequired,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addReligion(
@@ -310,19 +328,23 @@ export async function addReligion(
   db: DbType,
   legacyReligionId: number,
 ) {
-  const [existingReligion] = await db
-    .select()
-    .from(religionModel)
-    .where(ilike(religionModel.name, name.trim().toUpperCase()));
-  if (existingReligion) {
-    return existingReligion;
-  }
-  const [newReligion] = await db
-    .insert(religionModel)
-    .values({ legacyReligionId: legacyReligionId, name: name.trim() })
-    .returning();
-
-  return newReligion;
+  // religions.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(religionModel)
+          .where(ilike(religionModel.name, name.trim().toUpperCase()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(religionModel)
+          .values({ legacyReligionId: legacyReligionId, name: name.trim() })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addLanguageMedium(
@@ -2743,58 +2765,74 @@ async function upsertPromotionFromHistoricalRecord(
         SELECT * FROM promotionstatus WHERE id = ${oldHistoricalRecord.promotionstatus}
     `)) as [OldPromotionStatus[], any];
 
-  let [foundPromotionStatus] = await db
-    .select()
-    .from(promotionStatusModel)
-    .where(
-      eq(promotionStatusModel.legacyPromotionStatusId, oldPromotionStatus?.id!),
-    );
-
-  if (!foundPromotionStatus && oldPromotionStatus) {
-    foundPromotionStatus = (
-      await db
-        .insert(promotionStatusModel)
-        .values({
-          legacyPromotionStatusId: oldPromotionStatus.id!,
-          name: oldPromotionStatus.name!,
-          type: oldPromotionStatus.spltype.toUpperCase().trim() as
-            | "REGULAR"
-            | "READMISSION"
-            | "CASUAL",
-        })
-        .returning()
-    )[0];
-  }
+  // promotion_status / board_result_status have no unique on their legacy
+  // ids — serialize concurrent creators of the same status row.
+  const foundPromotionStatus = oldPromotionStatus
+    ? await getOrCreateWithLock(
+        `import:promotion-status:${oldPromotionStatus.id}`,
+        async () =>
+          (
+            await db
+              .select()
+              .from(promotionStatusModel)
+              .where(
+                eq(
+                  promotionStatusModel.legacyPromotionStatusId,
+                  oldPromotionStatus.id!,
+                ),
+              )
+          )[0],
+        async () =>
+          (
+            await db
+              .insert(promotionStatusModel)
+              .values({
+                legacyPromotionStatusId: oldPromotionStatus.id!,
+                name: oldPromotionStatus.name!,
+                type: oldPromotionStatus.spltype.toUpperCase().trim() as
+                  | "REGULAR"
+                  | "READMISSION"
+                  | "CASUAL",
+              })
+              .returning()
+          )[0]!,
+      )
+    : undefined;
 
   let foundBoardResultStatus: BoardResultStatus | undefined;
   if (oldHistoricalRecord.boardresultid) {
-    foundBoardResultStatus = (
-      await db
-        .select()
-        .from(boardResultStatusModel)
-        .where(
-          eq(
-            boardResultStatusModel.legacyBoardResultStatusId,
-            oldHistoricalRecord.boardresultid,
-          ),
-        )
-    )[0];
+    const boardResultId = oldHistoricalRecord.boardresultid;
+    const findBoardResultStatus = async () =>
+      (
+        await db
+          .select()
+          .from(boardResultStatusModel)
+          .where(
+            eq(boardResultStatusModel.legacyBoardResultStatusId, boardResultId),
+          )
+      )[0];
 
+    foundBoardResultStatus = await findBoardResultStatus();
     if (!foundBoardResultStatus) {
       const [[oldBoardResultStatus]] = (await mysqlConnection.query(`
-                SELECT * FROM boardresultstatus WHERE id = ${oldHistoricalRecord.boardresultid}
+                SELECT * FROM boardresultstatus WHERE id = ${boardResultId}
             `)) as [OldBoardResultStatus[], any];
       if (oldBoardResultStatus) {
-        foundBoardResultStatus = (
-          await db
-            .insert(boardResultStatusModel)
-            .values({
-              legacyBoardResultStatusId: oldBoardResultStatus.id!,
-              name: oldBoardResultStatus.name!,
-              spclType: oldBoardResultStatus.spcltype,
-            })
-            .returning()
-        )[0];
+        foundBoardResultStatus = await getOrCreateWithLock(
+          `import:board-result-status:${boardResultId}`,
+          findBoardResultStatus,
+          async () =>
+            (
+              await db
+                .insert(boardResultStatusModel)
+                .values({
+                  legacyBoardResultStatusId: oldBoardResultStatus.id!,
+                  name: oldBoardResultStatus.name!,
+                  spclType: oldBoardResultStatus.spcltype,
+                })
+                .returning()
+            )[0]!,
+        );
       }
     }
   }
@@ -3451,23 +3489,30 @@ async function addShift(oldShiftId: number | null) {
 
   if (!shiftRow) return null;
 
-  const [foundShift] = await db
-    .select()
-    .from(shiftModel)
-    .where(ilike(shiftModel.name, shiftRow.shiftName.trim()));
-
-  if (foundShift) return foundShift;
-
-  return (
-    await db
-      .insert(shiftModel)
-      .values({
-        legacyShiftId: oldShiftId,
-        name: shiftRow.shiftName.trim(),
-        codePrefix: shiftRow.codeprefix?.trim(),
-      })
-      .returning()
-  )[0];
+  // shifts has no unique on name — serialize concurrent creators of the same
+  // shift (same lock key as upsertShift in old-student.service.ts).
+  const shiftName = shiftRow.shiftName.trim();
+  return getOrCreateWithLock(
+    `import:shift:${shiftName.toLowerCase()}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(shiftModel)
+          .where(ilike(shiftModel.name, shiftName))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(shiftModel)
+          .values({
+            legacyShiftId: oldShiftId,
+            name: shiftName,
+            codePrefix: shiftRow.codeprefix?.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 async function addMeritList(oldMeritListId: number | null) {

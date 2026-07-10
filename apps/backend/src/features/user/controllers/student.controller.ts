@@ -857,13 +857,22 @@ export const importStudentsFromExcelController = async (
     const progressUserId = (req as any).user?.id
       ? String((req as any).user.id)
       : undefined;
+    // Shown to OTHER uploaders who hit the same UID while this import runs.
+    const uploaderName = (req as any).user?.name
+      ? String((req as any).user.name)
+      : (req as any).user?.email
+        ? String((req as any).user.email)
+        : null;
     // Run the import in the BACKGROUND and respond immediately: the ALB cuts
     // idle HTTP connections (~60s) long before a big import finishes, which
     // used to surface as "Network Error" and swallow the final summary. The
     // per-student progress is already socket-driven; the final summary (incl.
     // the per-uid error list) is now delivered the same way.
     const operation = "student_import_legacy_students";
-    void processStudentsFromExcelBuffer(file.buffer, { progressUserId })
+    void processStudentsFromExcelBuffer(file.buffer, {
+      progressUserId,
+      uploaderName,
+    })
       .then((summary) => {
         if (!progressUserId) return;
         socketService.sendProgressUpdate(
