@@ -47,7 +47,10 @@ import timezone from "dayjs/plugin/timezone.js";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 
 import { updateFeeGroupPromotionMapping } from "./fee-group-promotion-mapping.service";
-import { ensureDefaultFeeStudentMappingsForFeeStructure } from "./fee-structure.service";
+import {
+  ensureDefaultFeeStudentMappingsForFeeStructure,
+  calculateTotalPayableForFeeStudentMapping,
+} from "./fee-structure.service";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -741,6 +744,34 @@ async function syncFeeStudentMapping(
     .from(feeStudentMappingModel)
     .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
 
+  // Recompute total_payable for the slab actually assigned above. The mapping
+  // was created by ensureDefault with the DEFAULT (Slab F) amount; the slab
+  // change re-points its fee group but does not recompute the amount, so the
+  // re-read still carries the full pre-concession figure. Without this, a
+  // concession student's amount_paid and payments.amount (both written from
+  // totalPayable below) capture the full amount while total_payable later
+  // settles to the concession amount via the fan-out — leaving the three
+  // internally inconsistent. Compute the slab-correct amount here and persist
+  // it so all three agree.
+  let effectiveTotalPayable = feeStudentMapping.totalPayable;
+  if (feeStudentMapping.feeGroupPromotionMappingId) {
+    const [freshFgpm] = await db
+      .select()
+      .from(feeGroupPromotionMappingModel)
+      .where(
+        eq(
+          feeGroupPromotionMappingModel.id,
+          feeStudentMapping.feeGroupPromotionMappingId,
+        ),
+      );
+    if (freshFgpm) {
+      effectiveTotalPayable = await calculateTotalPayableForFeeStudentMapping(
+        feeStructureId,
+        freshFgpm,
+      );
+    }
+  }
+
   // Re-read the fee category code AFTER any slab/fee-group change above, so the
   // receipt-number suffix reflects the FINAL category (e.g. "FA"), matching the
   // canonical receipt issuance. (The initial join captured the pre-update default
@@ -844,7 +875,7 @@ async function syncFeeStudentMapping(
       userId: user?.id,
       feeStudentMappingId: feeStudentMapping.id!,
       context: "ADMISSION",
-      amount: feeStudentMapping.totalPayable,
+      amount: effectiveTotalPayable,
       status: "SUCCESS",
       paymentMode,
       txnPaymentMode: legacyMode || null,
@@ -861,7 +892,8 @@ async function syncFeeStudentMapping(
   await db
     .update(feeStudentMappingModel)
     .set({
-      amountPaid: amountPaid ? feeStudentMapping.totalPayable : null,
+      totalPayable: effectiveTotalPayable,
+      amountPaid: amountPaid ? effectiveTotalPayable : null,
       challanGeneratedAt: formatDate(txnDate) ?? new Date(),
       receiptNumber: finalReceiptNumber,
     })
