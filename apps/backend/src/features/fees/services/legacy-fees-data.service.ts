@@ -269,7 +269,13 @@ function resolveLegacySlabName(
   const slab = String(rawSlab ?? "").trim();
   if (!slab) return "Slab F";
   const startYear = Number(String(academicYear ?? "").slice(0, 4));
-  if (startYear === 2023 || startYear === 2024) {
+  // Legacy concession slabs were renamed in the new DB. Verified against IRP for
+  // the imported cohort: legacy "S" -> new "Slab M" matches the paid amount to
+  // the rupee in every year (48/48 in 2025-26, same as 2023-24 / 2024-25), and
+  // legacy "M" -> new "Slab O". New "Slab S" is a distinct zero-amount slab, so
+  // leaving legacy "S" as "Slab S" yields total_payable = 0 (wrong). This remap
+  // holds for all imported sessions, not just 2023-24 / 2024-25.
+  if (startYear === 2023 || startYear === 2024 || startYear === 2025) {
     if (slab.toUpperCase() === "M") return "Slab O";
     if (slab.toUpperCase() === "S") return "Slab M";
   }
