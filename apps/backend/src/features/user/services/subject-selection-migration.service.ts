@@ -28,6 +28,12 @@ type Bridges = {
   legacyClassIds: number[]; // for SQL IN(...)
   subjectMap: Map<number, number>; // legacy subject id -> new subject id
   subjectTypeMap: Map<number, number>; // legacy subject type id -> new
+  // Course-scoped subject-type overrides, applied before the global subjectTypeMap.
+  // legacy courseId -> (legacy subjectTypeId -> new subjectTypeId). Used because a
+  // few General-degree courses file legacy optional papers under a subject type
+  // whose new-DB equivalent carries no selection metas, so the paper must resolve
+  // to a different (metas-carrying) new type for that course only.
+  courseScopedTypeRemap: Map<number, Map<number, number>>;
   sessionMap: Map<number, { id: number; academicYearId: number | null }>;
   metasInDb: (typeof subjectSelectionMetaModel.$inferSelect)[];
   metaClassesByMeta: Map<number, Set<number>>;
@@ -153,6 +159,37 @@ async function buildBridges(): Promise<Bridges> {
       subjectTypeMap.set(st.legacySubjectTypeId, st.id!);
   }
 
+  // Course-scoped subject-type overrides.
+  // B.Com (G): legacy optional papers filed under "Minor Programme" belong to the
+  // new "Minor Course" type. Legacy "Minor Programme" is otherwise bridged to the
+  // new "Minor Programme" type, which has no selection metas, so those selections
+  // would be dropped. Only B.Com (G) files legacy Minor-Programme optional papers,
+  // and this override is scoped to that course so no other course is affected.
+  const courseScopedTypeRemap = new Map<number, Map<number, number>>();
+  const newTypeIdByName = new Map<string, number>();
+  for (const st of subjectTypes) newTypeIdByName.set(norm(st.name), st.id!);
+  const [legacySubjectTypes]: any = await mysqlConnection.query(
+    "SELECT id, subjectTypeName FROM subjecttype",
+  );
+  const legacyTypeIdByName = new Map<string, number>();
+  for (const lt of legacySubjectTypes)
+    legacyTypeIdByName.set(norm(lt.subjectTypeName), Number(lt.id));
+  const [legacyCourses]: any = await mysqlConnection.query(
+    "SELECT id, courseName FROM course",
+  );
+  const legacyMinorProgrammeTypeId = legacyTypeIdByName.get("minor programme");
+  const newMinorCourseTypeId = newTypeIdByName.get("minor course");
+  if (legacyMinorProgrammeTypeId != null && newMinorCourseTypeId != null) {
+    for (const c of legacyCourses) {
+      if (norm(c.courseName) === "b.com (g)") {
+        courseScopedTypeRemap.set(
+          Number(c.id),
+          new Map([[legacyMinorProgrammeTypeId, newMinorCourseTypeId]]),
+        );
+      }
+    }
+  }
+
   // Sessions
   const sessions = await db.select().from(sessionModel);
   const sessionMap = new Map<
@@ -193,6 +230,7 @@ async function buildBridges(): Promise<Bridges> {
     legacyClassIds,
     subjectMap,
     subjectTypeMap,
+    courseScopedTypeRemap,
     sessionMap,
     metasInDb,
     metaClassesByMeta,
@@ -264,7 +302,7 @@ export async function migrateSubjectSelectionForStudent(
 
   const [legacyRows]: any = await mysqlConnection.query(
     `
-    SELECT m.sessionId, m.classId, p.subjectTypeId, p.subjectId
+    SELECT m.sessionId, m.classId, m.courseId, p.subjectTypeId, p.subjectId
     FROM studentpaperlinkingstudentlist ss
     JOIN studentpaperlinkingpaperlist p ON p.id = ss.parent_id
     JOIN studentpaperlinkingmain m      ON m.id = p.parent_id
@@ -290,7 +328,12 @@ export async function migrateSubjectSelectionForStudent(
       result.skippedClass++;
       continue;
     }
-    const newSubjectTypeId = b.subjectTypeMap.get(Number(row.subjectTypeId));
+    // Course-scoped override (e.g. B.Com (G) "Minor Programme" -> "Minor Course")
+    // takes precedence over the global subject-type bridge.
+    const remapForCourse = b.courseScopedTypeRemap.get(Number(row.courseId));
+    const newSubjectTypeId =
+      remapForCourse?.get(Number(row.subjectTypeId)) ??
+      b.subjectTypeMap.get(Number(row.subjectTypeId));
     if (!newSubjectTypeId) {
       result.skippedMeta++;
       continue;
