@@ -594,41 +594,111 @@ export default function ReportsPage() {
       // server skips them and reports each in the final summary).
       const locked = inProgressByOthers ?? [];
       let lockedHtml = "";
+      const lockedUidList = locked.map((l) => l.uid);
       if (locked.length > 0) {
-        const byUser = new Map<string, string[]>();
-        for (const l of locked) {
-          const who = l.userName || "another user";
-          byUser.set(who, [...(byUser.get(who) ?? []), l.uid]);
-        }
-        const lines = [...byUser.entries()]
-          .map(([who, us]) => {
-            const shown = us.slice(0, 8).join(", ");
-            return `<li><b>${who}</b> is importing: ${shown}${us.length > 8 ? ` … +${us.length - 8} more` : ""}</li>`;
-          })
+        // If every lock is held by the CURRENT user, this is their own earlier
+        // upload still running (or its locks not yet expired) — say so instead
+        // of "someone else".
+        const allMine =
+          userId && locked.every((l) => l.userId != null && String(l.userId) === userId);
+        // Show EVERY locked UID in a fixed-height scrollable TABLE (sticky
+        // header) so the user knows exactly which rows to remove — never
+        // truncate with "+N more".
+        const fmtTime = (iso: string) => {
+          const d = new Date(iso);
+          return isNaN(d.getTime())
+            ? ""
+            : d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+        };
+        const th = (label: string, extra = "") =>
+          `<th style="position:sticky;top:0;background:#fef2f2;text-align:left;padding:5px 8px;font-size:10.5px;color:#991b1b;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #fecaca;${extra}">${label}</th>`;
+        const rows = locked
+          .map(
+            (l, i) =>
+              `<tr style="border-bottom:1px solid #fee2e2">` +
+              `<td style="padding:4px 8px;color:#9ca3af;font-size:11px">${i + 1}</td>` +
+              `<td style="padding:4px 8px;font-family:ui-monospace,monospace;font-size:11.5px;color:#111827">${l.uid}</td>` +
+              `<td style="padding:4px 8px;font-size:11.5px;color:#374151">${
+                userId && l.userId != null && String(l.userId) === userId
+                  ? `You${l.userName ? ` (${l.userName})` : ""}`
+                  : l.userName || "another user"
+              }</td>` +
+              `<td style="padding:4px 8px;font-size:11px;color:#6b7280;white-space:nowrap">${fmtTime(l.startedAt)}</td>` +
+              `</tr>`,
+          )
           .join("");
         lockedHtml =
-          `<div style="margin-top:8px;padding:8px;border:1px solid #f59e0b;border-radius:6px;background:#fffbeb">` +
-          `<p style="color:#92400e"><b>⚠ ${locked.length} UID(s) are being imported by someone else right now:</b></p>` +
-          `<ul style="font-size:12px;color:#92400e">${lines}</ul>` +
-          `<p style="font-size:12px;color:#92400e">Remove these UIDs and reupload, or continue — they will be skipped.</p>` +
+          `<div style="margin-bottom:10px;padding:10px 12px;border:1px solid #fca5a5;border-radius:8px;background:#fef2f2">` +
+          `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">` +
+          `<div style="font-size:12px;font-weight:600;color:#b91c1c">⚠ ${locked.length} UID(s) ${
+            allMine
+              ? "are still locked by a previous upload from YOUR account"
+              : "are being imported by someone else right now"
+          }</div>` +
+          `<button id="copy-locked-uids" type="button" style="flex-shrink:0;font-size:11px;padding:3px 10px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#b91c1c;cursor:pointer">Copy UIDs</button>` +
+          `</div>` +
+          `<div style="height:150px;overflow-y:auto;background:#fff;border:1px solid #fecaca;border-radius:6px">` +
+          `<table style="width:100%;border-collapse:collapse">` +
+          `<thead><tr>${th("#", "width:32px")}${th("UID")}${th("Imported by")}${th("Started", "width:70px")}</tr></thead>` +
+          `<tbody>${rows}</tbody>` +
+          `</table>` +
+          `</div>` +
+          `<div style="font-size:11.5px;color:#b91c1c;margin-top:6px">${
+            allMine
+              ? "Your earlier import is still running (or its locks haven't expired yet — max 10 min). Wait for it to finish, or continue — these UIDs will be skipped."
+              : "Remove these UIDs and reupload, or continue — they will be skipped."
+          }</div>` +
           `</div>`;
       }
+      const tile = (value: number, label: string, color: string, bg: string) =>
+        `<div style="flex:1;min-width:0;background:${bg};border:1px solid #e2e8f0;border-radius:10px;padding:12px 8px;text-align:center">` +
+        `<div style="font-size:24px;font-weight:700;line-height:1.1;color:${color}">${value.toLocaleString()}</div>` +
+        `<div style="font-size:10.5px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-top:4px">${label}</div>` +
+        `</div>`;
       const confirmed = await Swal.fire({
         title: "Confirm student import",
+        width: 560,
         html:
           `<div style="text-align:left">` +
-          `<p><b>${totalUids}</b> UID(s) found in the file.</p>` +
-          `<p>• <b>${existingCount}</b> already exist — they will be <b>re-synced in place</b> (missing admission/promotion/fees completed; no duplicates).</p>` +
-          `<p>• <b>${newCount}</b> are new — they will be imported.</p>` +
+          // At-a-glance stat tiles: total / existing / new
+          `<div style="display:flex;gap:10px;margin:6px 0 14px">` +
+          tile(totalUids, "UIDs in file", "#334155", "#f8fafc") +
+          tile(
+            existingCount,
+            "Already exist",
+            existingCount > 0 ? "#b45309" : "#94a3b8",
+            existingCount > 0 ? "#fffbeb" : "#f8fafc",
+          ) +
+          tile(newCount, "New — will import", "#15803d", "#f0fdf4") +
+          `</div>` +
+          // Existing-UIDs detail (only when relevant)
           (existingCount > 0
-            ? `<p style="font-size:12px;color:#6b7280">Existing: ${sample}${existingCount > 8 ? ` … +${existingCount - 8} more` : ""}</p>`
+            ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px">` +
+              `<div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:4px">Existing UIDs are re-synced in place</div>` +
+              `<div style="font-size:11.5px;color:#92400e">Missing admission / promotion / fees are completed — never duplicated.</div>` +
+              `<div style="font-size:11px;color:#a16207;margin-top:6px;font-family:ui-monospace,monospace;word-break:break-all">${sample}${existingCount > 8 ? ` … +${existingCount - 8} more` : ""}</div>` +
+              `</div>`
             : "") +
           lockedHtml +
+          `<div style="font-size:11.5px;color:#94a3b8;margin-top:4px">The import runs in the background — progress and the final summary arrive live.</div>` +
           `</div>`,
-        icon: existingCount > 0 || locked.length > 0 ? "warning" : "question",
+        icon: locked.length > 0 ? "warning" : "question",
         showCancelButton: true,
-        confirmButtonText: "Continue import",
+        confirmButtonText: `Import ${totalUids.toLocaleString()} UID${totalUids === 1 ? "" : "s"}`,
         cancelButtonText: "Cancel",
+        confirmButtonColor: "#4f46e5",
+        focusCancel: locked.length > 0,
+        didOpen: () => {
+          const btn = document.getElementById("copy-locked-uids");
+          if (btn) {
+            btn.addEventListener("click", () => {
+              void navigator.clipboard.writeText(lockedUidList.join("\n")).then(() => {
+                btn.textContent = "Copied ✓";
+                setTimeout(() => (btn.textContent = "Copy UIDs"), 1500);
+              });
+            });
+          }
+        },
       });
       if (!confirmed.isConfirmed) {
         toast.info("Import cancelled.");

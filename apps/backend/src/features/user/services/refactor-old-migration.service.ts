@@ -369,9 +369,10 @@ export async function precheckStudentsFromExcelBuffer(
   existingCount: number;
   newCount: number;
   existingUids: string[];
-  /** UIDs currently being imported by someone else — warn BEFORE starting. */
+  /** UIDs currently locked by a running import — warn BEFORE starting. */
   inProgressByOthers: Array<{
     uid: string;
+    userId: string | null;
     userName: string | null;
     startedAt: string;
   }>;
@@ -404,6 +405,7 @@ export async function precheckStudentsFromExcelBuffer(
   // pre-check.
   let inProgressByOthers: Array<{
     uid: string;
+    userId: string | null;
     userName: string | null;
     startedAt: string;
   }> = [];
@@ -411,6 +413,7 @@ export async function precheckStudentsFromExcelBuffer(
     const holders = await getImportUidLockHolders(uids);
     inProgressByOthers = [...holders.entries()].map(([uid, h]) => ({
       uid,
+      userId: h.userId,
       userName: h.userName,
       startedAt: h.startedAt,
     }));
@@ -473,15 +476,25 @@ export async function processStudentsFromExcelBuffer(
   const errors: Array<{ uid: string; error: string }> = [];
 
   // Live progress to the uploading user via socket (the main-console upload dialog
-  // listens for `progress_update` scoped by this operation).
+  // listens for `progress_update` scoped by this operation). Each update carries
+  // elapsed/ETA so the dialog can show expected duration and finish time —
+  // computed from the overall average rate, which self-corrects as waves land.
   const total = uids.length;
   const progressOperation = "student_import_legacy_students";
+  const importStartedAtMs = Date.now();
   const emitProgress = (
     doneCount: number,
     status: "started" | "in_progress" | "completed",
   ) => {
     if (!opts?.progressUserId) return;
     const progress = total > 0 ? Math.round((doneCount / total) * 100) : 100;
+    const elapsedMs = Date.now() - importStartedAtMs;
+    const etaMs =
+      doneCount > 0 && doneCount < total
+        ? Math.round((elapsedMs / doneCount) * (total - doneCount))
+        : doneCount >= total
+          ? 0
+          : null;
     socketService.sendProgressUpdate(
       String(opts.progressUserId),
       socketService.createExportProgressUpdate(
@@ -492,7 +505,13 @@ export async function processStudentsFromExcelBuffer(
         undefined,
         undefined,
         undefined,
-        { operation: progressOperation, processed: doneCount, total },
+        {
+          operation: progressOperation,
+          processed: doneCount,
+          total,
+          elapsedMs,
+          etaMs,
+        },
       ),
     );
   };

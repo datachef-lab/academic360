@@ -238,6 +238,29 @@ function buildLegacyFeesQuery(uid?: string | null): string {
     `;
 }
 
+/**
+ * Resolve the new-DB fee-slab name for a legacy slab letter, per batch.
+ * For the 2023-24 and 2024-25 sessions the slab letters were renamed when the
+ * new fee groups were configured: legacy M -> Slab O, legacy S -> Slab M.
+ * Every other letter/session maps 1:1 (X -> "Slab X"); a missing legacy slab
+ * falls back to "Slab F". If the target slab doesn't exist in this DB yet
+ * (e.g. Slab O pre-prod-sync), the existing "Fee Group / Slab - Not Found!"
+ * per-uid error surfaces it — the import is not aborted.
+ */
+function resolveLegacySlabName(
+  rawSlab: string | null | undefined,
+  academicYear: string | null | undefined,
+): string {
+  const slab = String(rawSlab ?? "").trim();
+  if (!slab) return "Slab F";
+  const startYear = Number(String(academicYear ?? "").slice(0, 4));
+  if (startYear === 2023 || startYear === 2024) {
+    if (slab.toUpperCase() === "M") return "Slab O";
+    if (slab.toUpperCase() === "S") return "Slab M";
+  }
+  return `Slab ${slab}`;
+}
+
 // Per-uid masters, computed once per process (the master syncs are idempotent
 // upserts). Reused across every per-uid fees load in an import run.
 // Single-flight: the PROMISE is cached (assigned synchronously), so concurrent
@@ -346,9 +369,10 @@ export async function loadStudentFeesForUid(
       studentRows,
       uid,
       feeStructureResult.id!,
-      studentRows[0]["Fee Slab"]
-        ? `Slab ${studentRows[0]["Fee Slab"]}`
-        : "Slab F",
+      resolveLegacySlabName(
+        studentRows[0]["Fee Slab"],
+        studentRows[0]["Academic Year"],
+      ),
       studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
       studentRows[0]["Fee Receipt Entry Created At"],
       studentRows[0]["Challan Number"] &&
@@ -495,9 +519,10 @@ export async function loadStudentFees() {
                 studentRows,
                 uid,
                 feeStructureResult!.id!,
-                studentRows[0]["Fee Slab"]
-                  ? `Slab ${studentRows[0]["Fee Slab"]}`
-                  : "Slab F",
+                resolveLegacySlabName(
+                  studentRows[0]["Fee Slab"],
+                  studentRows[0]["Academic Year"],
+                ),
                 studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
                 studentRows[0]["Fee Receipt Entry Created At"],
                 studentRows[0]["Challan Number"] &&
