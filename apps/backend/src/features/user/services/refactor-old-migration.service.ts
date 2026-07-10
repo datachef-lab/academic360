@@ -435,11 +435,11 @@ export async function precheckStudentsFromExcelBuffer(
 
 // ONE limiter for the whole process, shared by every upload: N simultaneous
 // uploads must not multiply the concurrency, they queue into the same pool.
-// Default 20 workers per file (measured ~4s/uid vs 41.6s sequential); pool
+// Default 35 workers per file (measured ~2s/uid vs 41.6s sequential); pool
 // sizes in db/index.ts are sized to match. IMPORT_CONCURRENCY=1 restores the
 // old strictly-sequential behavior.
 const importLimit = pLimit(
-  Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 20),
+  Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 35),
 );
 
 export async function processStudentsFromExcelBuffer(
