@@ -8,10 +8,13 @@ import { loadLibrary } from "@/features/library/old-irp-data";
 import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
 
 const log = createLogger("db");
-// Create a connection pool
+// Create a connection pool. `max` is env-tunable because the concurrent
+// legacy-student import runs several workers, each briefly holding up to two
+// connections (an advisory-lock tx + autocommit statements).
 export const pool = new pg.Pool({
   options: "-c timezone=Asia/Kolkata",
   connectionString: process.env.DATABASE_URL,
+  max: Math.max(1, Number(process.env.PG_POOL_MAX) || 10),
 });
 
 // Initialize Drizzle ORM with the pool
@@ -105,7 +108,7 @@ export const mysqlConnection: MySqlPool = createPool({
   password: process.env.OLD_DB_PASSWORD!,
   database: process.env.OLD_DB_NAME!,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: Math.max(1, Number(process.env.OLD_DB_POOL_LIMIT) || 10),
   queueLimit: 0,
   // Remote legacy host can take 8s+ to handshake; default of 10s is too tight.
   connectTimeout: 60_000,

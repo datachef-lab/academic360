@@ -586,8 +586,33 @@ export default function ReportsPage() {
     // place, no duplicates) vs new, and ask for confirmation.
     const precheck = await ExportService.precheckImportStudentsExcel(file);
     if (precheck.success && precheck.data && !precheck.data.error) {
-      const { totalUids, existingCount, newCount, existingUids } = precheck.data;
+      const { totalUids, existingCount, newCount, existingUids, inProgressByOthers } =
+        precheck.data;
       const sample = (existingUids ?? []).slice(0, 8).join(", ");
+      // UIDs someone else is importing RIGHT NOW — grouped by that person's
+      // name so the uploader can remove them and reupload (or continue: the
+      // server skips them and reports each in the final summary).
+      const locked = inProgressByOthers ?? [];
+      let lockedHtml = "";
+      if (locked.length > 0) {
+        const byUser = new Map<string, string[]>();
+        for (const l of locked) {
+          const who = l.userName || "another user";
+          byUser.set(who, [...(byUser.get(who) ?? []), l.uid]);
+        }
+        const lines = [...byUser.entries()]
+          .map(([who, us]) => {
+            const shown = us.slice(0, 8).join(", ");
+            return `<li><b>${who}</b> is importing: ${shown}${us.length > 8 ? ` … +${us.length - 8} more` : ""}</li>`;
+          })
+          .join("");
+        lockedHtml =
+          `<div style="margin-top:8px;padding:8px;border:1px solid #f59e0b;border-radius:6px;background:#fffbeb">` +
+          `<p style="color:#92400e"><b>⚠ ${locked.length} UID(s) are being imported by someone else right now:</b></p>` +
+          `<ul style="font-size:12px;color:#92400e">${lines}</ul>` +
+          `<p style="font-size:12px;color:#92400e">Remove these UIDs and reupload, or continue — they will be skipped.</p>` +
+          `</div>`;
+      }
       const confirmed = await Swal.fire({
         title: "Confirm student import",
         html:
@@ -598,8 +623,9 @@ export default function ReportsPage() {
           (existingCount > 0
             ? `<p style="font-size:12px;color:#6b7280">Existing: ${sample}${existingCount > 8 ? ` … +${existingCount - 8} more` : ""}</p>`
             : "") +
+          lockedHtml +
           `</div>`,
-        icon: existingCount > 0 ? "warning" : "question",
+        icon: existingCount > 0 || locked.length > 0 ? "warning" : "question",
         showCancelButton: true,
         confirmButtonText: "Continue import",
         cancelButtonText: "Cancel",

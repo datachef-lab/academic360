@@ -76,6 +76,10 @@ export async function getLockedSlabIdsForFeeStructure(
 }
 import { db } from "@/db/index.js";
 import {
+  withAdvisoryXactLock,
+  isUniqueViolation,
+} from "@/utils/db-concurrency.js";
+import {
   CreateFeeStructureDto,
   FeeStructureDto,
   FeeStructureComponentDto,
@@ -177,6 +181,28 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
   userId?: number,
   progressUserId?: string,
   /** When set and different from the fee structure's current academic year, copy career-progression form data from this year for affected students. */
+  previousAcademicYearId?: number | null,
+): Promise<void> {
+  // Serialize per fee structure: this fans out over ALL students of the
+  // structure and fee_student_mappings has no covering unique constraint, so
+  // two concurrent runs (parallel import workers, or an import racing a
+  // promotion commit) would duplicate mapping rows. syncFeeStudentMapping in
+  // legacy-fees-data.service.ts locks the SAME key for its per-student
+  // get-or-create. The body takes no other advisory lock (deadlock rule).
+  return withAdvisoryXactLock(`import:fees:fsm:${feeStructure.id}`, () =>
+    ensureDefaultFeeStudentMappingsForFeeStructureUnlocked(
+      feeStructure,
+      userId,
+      progressUserId,
+      previousAcademicYearId,
+    ),
+  );
+}
+
+async function ensureDefaultFeeStudentMappingsForFeeStructureUnlocked(
+  feeStructure: typeof feeStructureModel.$inferSelect,
+  userId?: number,
+  progressUserId?: string,
   previousAcademicYearId?: number | null,
 ): Promise<void> {
   const emitProgress = (
@@ -341,6 +367,31 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
     });
   };
 
+  // fee_group_promotion_mappings has UNIQUE(feeGroupId, promotionId): if a
+  // concurrent writer (e.g. updateFeeGroupPromotionMapping from another
+  // feature) wins the insert race, reuse its row instead of aborting.
+  const insertFgpOrReuse = async (
+    values: typeof feeGroupPromotionMappingModel.$inferInsert,
+  ): Promise<number> => {
+    try {
+      const [created] = await db
+        .insert(feeGroupPromotionMappingModel)
+        .values(values)
+        .returning();
+      return created!.id!;
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      const [winner] = await db
+        .select()
+        .from(feeGroupPromotionMappingModel)
+        .where(
+          eq(feeGroupPromotionMappingModel.promotionId, values.promotionId),
+        );
+      if (winner?.id != null) return winner.id;
+      throw err;
+    }
+  };
+
   let processed = 0;
   for (const promotion of promotions) {
     // 1. Ensure fee-group-promotion-mapping exists for (promotion)
@@ -356,16 +407,11 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
     } else {
       // For semester 1, we create the mapping by default for all students as they will be new and we want to ensure they get mapped to the general fee group and get the fees calculated without any extra steps.
       if (foundClass.name.toUpperCase() === "SEMESTER I") {
-        const [createdMapping] = await db
-          .insert(feeGroupPromotionMappingModel)
-          .values({
-            feeGroupId: generalFeeGroup.id,
-            promotionId: promotion.id,
-            approvalType: "SYSTEM",
-          })
-          .returning();
-
-        feeGroupPromotionMappingId = createdMapping.id!;
+        feeGroupPromotionMappingId = await insertFgpOrReuse({
+          feeGroupId: generalFeeGroup.id,
+          promotionId: promotion.id,
+          approvalType: "SYSTEM",
+        });
       } else {
         // Prefer carrying forward the prior fee-group mapping when validity rules allow;
         // otherwise create a General fee-group mapping (never skip the student).
@@ -488,22 +534,14 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
               const prevFgp = previousFeeGroupPromotionMapping;
               const hasPrevApproval =
                 prevFgp.approvalUserId != null && prevFgp.approvalUserId > 0;
-              const [createdCarried] = await db
-                .insert(feeGroupPromotionMappingModel)
-                .values({
-                  feeGroupId: prevFgp.feeGroupId,
-                  promotionId: promotion.id,
-                  approvalType: hasPrevApproval
-                    ? prevFgp.approvalType
-                    : "SYSTEM",
-                  ...(hasPrevApproval
-                    ? { approvalUserId: prevFgp.approvalUserId }
-                    : {}),
-                })
-                .returning();
-              if (createdCarried?.id != null) {
-                carriedFgpId = createdCarried.id;
-              }
+              carriedFgpId = await insertFgpOrReuse({
+                feeGroupId: prevFgp.feeGroupId,
+                promotionId: promotion.id,
+                approvalType: hasPrevApproval ? prevFgp.approvalType : "SYSTEM",
+                ...(hasPrevApproval
+                  ? { approvalUserId: prevFgp.approvalUserId }
+                  : {}),
+              });
             }
           }
         }
@@ -511,16 +549,11 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
         if (carriedFgpId != null) {
           feeGroupPromotionMappingId = carriedFgpId;
         } else {
-          const [createdMapping] = await db
-            .insert(feeGroupPromotionMappingModel)
-            .values({
-              feeGroupId: generalFeeGroup.id,
-              promotionId: promotion.id,
-              approvalType: "SYSTEM",
-            })
-            .returning();
-
-          feeGroupPromotionMappingId = createdMapping.id!;
+          feeGroupPromotionMappingId = await insertFgpOrReuse({
+            feeGroupId: generalFeeGroup.id,
+            promotionId: promotion.id,
+            approvalType: "SYSTEM",
+          });
         }
       }
     }

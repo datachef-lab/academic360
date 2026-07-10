@@ -1,4 +1,5 @@
 import { db, mysqlConnection } from "@/db";
+import { withAdvisoryXactLock } from "@/utils/db-concurrency.js";
 import {
   LegacyFeeHead,
   LegacyFeeStructureRow,
@@ -239,26 +240,35 @@ function buildLegacyFeesQuery(uid?: string | null): string {
 
 // Per-uid masters, computed once per process (the master syncs are idempotent
 // upserts). Reused across every per-uid fees load in an import run.
-let cachedPerUidFeesMasters: MasterDataType | null = null;
-async function getPerUidFeesMasters(): Promise<MasterDataType> {
-  if (cachedPerUidFeesMasters) return cachedPerUidFeesMasters;
-  const receiptTypes = await syncLegacyReceiptTypes();
-  const feeHeads = await syncLegacyFeeHeads();
-  const academicYears = await db.select().from(academicYearModel);
-  const sessions = await db.select().from(sessionModel);
-  const classes = await db.select().from(classModel);
-  const sections = await db.select().from(sectionModel);
-  const shifts = await db.select().from(shiftModel);
-  cachedPerUidFeesMasters = {
-    feeHeads,
-    receiptTypes,
-    academicYears,
-    sessions,
-    classes,
-    sections,
-    shifts,
-  };
-  return cachedPerUidFeesMasters;
+// Single-flight: the PROMISE is cached (assigned synchronously), so concurrent
+// import workers hitting a cold cache share one build instead of all running
+// the receipt-type/fee-head syncs at once. A failed build clears the cache so
+// it doesn't poison the process.
+let cachedPerUidFeesMastersPromise: Promise<MasterDataType> | null = null;
+function getPerUidFeesMasters(): Promise<MasterDataType> {
+  if (cachedPerUidFeesMastersPromise) return cachedPerUidFeesMastersPromise;
+  cachedPerUidFeesMastersPromise = (async () => {
+    const receiptTypes = await syncLegacyReceiptTypes();
+    const feeHeads = await syncLegacyFeeHeads();
+    const academicYears = await db.select().from(academicYearModel);
+    const sessions = await db.select().from(sessionModel);
+    const classes = await db.select().from(classModel);
+    const sections = await db.select().from(sectionModel);
+    const shifts = await db.select().from(shiftModel);
+    return {
+      feeHeads,
+      receiptTypes,
+      academicYears,
+      sessions,
+      classes,
+      sections,
+      shifts,
+    };
+  })();
+  cachedPerUidFeesMastersPromise.catch(() => {
+    cachedPerUidFeesMastersPromise = null;
+  });
+  return cachedPerUidFeesMastersPromise;
 }
 
 /**
@@ -994,37 +1004,42 @@ async function syncLegacyFeeHeads() {
         SELECT * FROM feesheadtable;
     `)) as [LegacyFeeHead[], unknown];
 
-  const feeHeads: FeeHeadT[] = [];
-  for (const { id, ...row } of legacyFeeHeads) {
-    const [existingFeeHead] = await db
-      .select()
-      .from(feeHeadModel)
-      .where(ilike(feeHeadModel.name, row.name.trim()));
+  // fee_heads has no unique on name — serialize this master sync so
+  // concurrent cold-cache callers (and other backend instances) can't
+  // double-insert. Cross-process safe; the table is tiny so the lock is brief.
+  return withAdvisoryXactLock("import:fees:fee-heads", async () => {
+    const feeHeads: FeeHeadT[] = [];
+    for (const { id, ...row } of legacyFeeHeads) {
+      const [existingFeeHead] = await db
+        .select()
+        .from(feeHeadModel)
+        .where(ilike(feeHeadModel.name, row.name.trim()));
 
-    if (existingFeeHead) {
-      const [updatedFeeHead] = await db
-        .update(feeHeadModel)
-        .set({
-          legacyFeeHeadId: id,
-          name: row.name.trim(),
-        })
-        .where(eq(feeHeadModel.id, existingFeeHead.id))
-        .returning();
-      feeHeads.push(updatedFeeHead);
-    } else {
-      const [createdFeeHead] = await db
-        .insert(feeHeadModel)
-        .values({
-          legacyFeeHeadId: id,
-          ...row,
-          name: row.name.trim(),
-        })
-        .returning();
-      feeHeads.push(createdFeeHead);
+      if (existingFeeHead) {
+        const [updatedFeeHead] = await db
+          .update(feeHeadModel)
+          .set({
+            legacyFeeHeadId: id,
+            name: row.name.trim(),
+          })
+          .where(eq(feeHeadModel.id, existingFeeHead.id))
+          .returning();
+        feeHeads.push(updatedFeeHead);
+      } else {
+        const [createdFeeHead] = await db
+          .insert(feeHeadModel)
+          .values({
+            legacyFeeHeadId: id,
+            ...row,
+            name: row.name.trim(),
+          })
+          .returning();
+        feeHeads.push(createdFeeHead);
+      }
     }
-  }
 
-  return feeHeads;
+    return feeHeads;
+  });
 }
 
 async function syncLegacyReceiptTypes() {
@@ -1032,38 +1047,42 @@ async function syncLegacyReceiptTypes() {
         SELECT * FROM studentfeesreceipttype;
     `)) as [LegacyReceiptType[], unknown];
 
-  const receiptTypes: ReceiptTypeT[] = [];
-  for (const { id, ...row } of legacyReceiptTypes) {
-    if (row.name.trim() == "Regular Enrolment") continue;
-    const [existingReceiptType] = await db
-      .select()
-      .from(receiptTypeModel)
-      .where(ilike(receiptTypeModel.name, row.name.trim()));
-    if (existingReceiptType) {
-      const [updatedReceiptType] = await db
-        .update(receiptTypeModel)
-        .set({
-          legacyReceiptTypeId: id,
-          chk: row.chk,
-          splType: row.spltype,
-        })
-        .where(eq(receiptTypeModel.id, existingReceiptType.id))
-        .returning();
-      receiptTypes.push(updatedReceiptType);
-    } else {
-      const [createdReceiptType] = await db
-        .insert(receiptTypeModel)
-        .values({
-          legacyReceiptTypeId: id,
-          ...row,
-          name: row.name.trim(),
-        })
-        .returning();
-      receiptTypes.push(createdReceiptType);
+  // receipt_types has no unique on name — serialize this master sync (same
+  // rationale as syncLegacyFeeHeads above).
+  return withAdvisoryXactLock("import:fees:receipt-types", async () => {
+    const receiptTypes: ReceiptTypeT[] = [];
+    for (const { id, ...row } of legacyReceiptTypes) {
+      if (row.name.trim() == "Regular Enrolment") continue;
+      const [existingReceiptType] = await db
+        .select()
+        .from(receiptTypeModel)
+        .where(ilike(receiptTypeModel.name, row.name.trim()));
+      if (existingReceiptType) {
+        const [updatedReceiptType] = await db
+          .update(receiptTypeModel)
+          .set({
+            legacyReceiptTypeId: id,
+            chk: row.chk,
+            splType: row.spltype,
+          })
+          .where(eq(receiptTypeModel.id, existingReceiptType.id))
+          .returning();
+        receiptTypes.push(updatedReceiptType);
+      } else {
+        const [createdReceiptType] = await db
+          .insert(receiptTypeModel)
+          .values({
+            legacyReceiptTypeId: id,
+            ...row,
+            name: row.name.trim(),
+          })
+          .returning();
+        receiptTypes.push(createdReceiptType);
+      }
     }
-  }
 
-  return receiptTypes;
+    return receiptTypes;
+  });
 }
 
 /** Only parse with Kolkata + DD/MM/YYYY … when the string actually looks like that (avoids misparsing ISO/other strings and prevents dayjs timezone from throwing RangeError on bad internals). */

@@ -281,6 +281,12 @@ export class ExportService {
       existingCount: number;
       newCount: number;
       existingUids: string[];
+      /** UIDs currently being imported by someone else (locked right now). */
+      inProgressByOthers?: Array<{
+        uid: string;
+        userName: string | null;
+        startedAt: string;
+      }>;
       error?: string;
     };
   }> {

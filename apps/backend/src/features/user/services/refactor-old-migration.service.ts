@@ -32,6 +32,12 @@ import {
 } from "@repo/db/legacy-system-types/academics";
 import { OldAdmissionStats } from "@repo/db/legacy-system-types/admissions";
 import ExcelJS from "exceljs";
+import pLimit from "p-limit";
+import { getOrCreateWithLock } from "@/utils/db-concurrency";
+import {
+  acquireImportUidLock,
+  getImportUidLockHolders,
+} from "@/utils/import-uid-lock";
 
 const BATCH_SIZE = 500;
 
@@ -363,6 +369,12 @@ export async function precheckStudentsFromExcelBuffer(
   existingCount: number;
   newCount: number;
   existingUids: string[];
+  /** UIDs currently being imported by someone else — warn BEFORE starting. */
+  inProgressByOthers: Array<{
+    uid: string;
+    userName: string | null;
+    startedAt: string;
+  }>;
   error?: string;
 }> {
   const parsed = await parseUidsFromExcelBuffer(file);
@@ -373,6 +385,7 @@ export async function precheckStudentsFromExcelBuffer(
       existingCount: 0,
       newCount: 0,
       existingUids: [],
+      inProgressByOthers: [],
       error: parsed.error,
     };
   }
@@ -386,18 +399,51 @@ export async function precheckStudentsFromExcelBuffer(
   const existingSet = new Set(
     existing.map((r) => String(r.uid)).filter(Boolean),
   );
+  // Which of these UIDs are locked by a running import right now (any
+  // process/instance). Best-effort — a lock read failure must not block the
+  // pre-check.
+  let inProgressByOthers: Array<{
+    uid: string;
+    userName: string | null;
+    startedAt: string;
+  }> = [];
+  try {
+    const holders = await getImportUidLockHolders(uids);
+    inProgressByOthers = [...holders.entries()].map(([uid, h]) => ({
+      uid,
+      userName: h.userName,
+      startedAt: h.startedAt,
+    }));
+  } catch (e) {
+    console.error(
+      "[import-precheck] lock-holder lookup failed:",
+      (e as Error)?.message,
+    );
+  }
   return {
     totalRows: parsed.totalRows,
     totalUids: uids.length,
     existingCount: existingSet.size,
     newCount: uids.length - existingSet.size,
     existingUids: [...existingSet],
+    inProgressByOthers,
   };
 }
 
+// ONE limiter for the whole process, shared by every upload: N simultaneous
+// uploads must not multiply the concurrency, they queue into the same pool.
+// IMPORT_CONCURRENCY=1 restores today's strictly-sequential behavior.
+const importLimit = pLimit(
+  Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 4),
+);
+
 export async function processStudentsFromExcelBuffer(
   file: Buffer | ArrayBuffer | Uint8Array,
-  opts?: { progressUserId?: string | null },
+  opts?: {
+    progressUserId?: string | null;
+    /** Shown to OTHER uploaders who hit the same UID ("Being imported by <name>"). */
+    uploaderName?: string | null;
+  },
 ): Promise<{
   totalRows: number;
   totalUids: number;
@@ -416,10 +462,12 @@ export async function processStudentsFromExcelBuffer(
     };
   }
 
-  const uids: string[] = parsed.uids;
+  // Dedupe within the file: a UID listed twice must not race against itself.
+  const uids: string[] = [...new Set(parsed.uids)];
 
   let processed = 0;
   let notFound = 0;
+  let done = 0;
   const errors: Array<{ uid: string; error: string }> = [];
 
   // Live progress to the uploading user via socket (the main-console upload dialog
@@ -427,30 +475,50 @@ export async function processStudentsFromExcelBuffer(
   const total = uids.length;
   const progressOperation = "student_import_legacy_students";
   const emitProgress = (
-    done: number,
+    doneCount: number,
     status: "started" | "in_progress" | "completed",
   ) => {
     if (!opts?.progressUserId) return;
-    const progress = total > 0 ? Math.round((done / total) * 100) : 100;
+    const progress = total > 0 ? Math.round((doneCount / total) * 100) : 100;
     socketService.sendProgressUpdate(
       String(opts.progressUserId),
       socketService.createExportProgressUpdate(
         String(opts.progressUserId),
-        `Imported ${done}/${total} students`,
+        `Imported ${doneCount}/${total} students`,
         progress,
         status,
         undefined,
         undefined,
         undefined,
-        { operation: progressOperation, processed: done, total },
+        { operation: progressOperation, processed: doneCount, total },
       ),
     );
   };
 
   emitProgress(0, "started");
 
-  for (let i = 0; i < uids.length; i++) {
-    const uid = uids[i];
+  const processOneUid = async (uid: string): Promise<void> => {
+    // Cross-upload guard: if another import (this process or another backend
+    // instance) is already working on this UID, skip it and tell the uploader
+    // who holds it — never process the same UID twice at once.
+    const lock = await acquireImportUidLock(uid, {
+      userId: opts?.progressUserId ?? null,
+      userName: opts?.uploaderName ?? null,
+    });
+    if (!lock.acquired) {
+      const who = lock.holder?.userName || "another user";
+      const since = lock.holder?.startedAt
+        ? ` (started ${new Date(lock.holder.startedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })})`
+        : "";
+      errors.push({
+        uid,
+        error: `Being imported by ${who}${since} — remove this UID and reupload`,
+      });
+      done++;
+      emitProgress(done, done >= total ? "completed" : "in_progress");
+      return;
+    }
+
     try {
       const oldStudent = await getOldStudentByUid(uid);
       if (!oldStudent) {
@@ -502,10 +570,19 @@ export async function processStudentsFromExcelBuffer(
     } catch (e: any) {
       console.log("Error processing student:", e);
       errors.push({ uid, error: e?.message || "Unknown error" });
+    } finally {
+      await lock.release();
+      // Always emit after each uid completes, regardless of outcome.
+      done++;
+      emitProgress(done, done >= total ? "completed" : "in_progress");
     }
-    // Always emit after each uid (done = i + 1), regardless of outcome.
-    emitProgress(i + 1, i + 1 >= total ? "completed" : "in_progress");
-  }
+  };
+
+  // Workers share the process-wide limiter; allSettled + the worker's own
+  // try/catch guarantee one UID's failure never aborts its siblings.
+  await Promise.allSettled(
+    uids.map((uid) => importLimit(() => processOneUid(uid))),
+  );
 
   // This import creates promotions (affiliation stats) and loads legacy fees
   // (fee_mis stats), so nudge both Real Time Tracker tabs once at the end.
@@ -678,56 +755,71 @@ export async function getMetadata(oldSession: OldSession) {
   const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
   const codePrefix = Number(oldAcademicYear.accademicYearName) % 100;
 
-  let [foundAcademicYear] = await db
-    .select()
-    .from(academicYearModel)
-    .where(
-      or(
-        eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id!),
-        ilike(academicYearModel.year, academicYearName),
-      ),
-    );
-
+  // academic_years and sessions have NO unique constraint on their natural
+  // keys, so concurrent import workers must serialize the miss path or they
+  // silently create duplicate years/sessions. Lock keys are shared with the
+  // sibling get-or-creates in old-student.service.ts (same key strings).
+  const foundAcademicYear = await getOrCreateWithLock(
+    `import:ay:${academicYearName}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(academicYearModel)
+          .where(
+            or(
+              eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id!),
+              ilike(academicYearModel.year, academicYearName),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(academicYearModel)
+          .values({
+            legacyAcademicYearId: oldAcademicYear.id!,
+            year: academicYearName,
+            isCurrentYear: oldAcademicYear.presentAcademicYear,
+            codePrefix: codePrefix.toString(),
+          })
+          .returning()
+      )[0]!,
+  );
   console.log("foundAcademicYear", foundAcademicYear);
-  if (!foundAcademicYear) {
-    foundAcademicYear = (
-      await db
-        .insert(academicYearModel)
-        .values({
-          legacyAcademicYearId: oldAcademicYear.id!,
-          year: academicYearName,
-          isCurrentYear: oldAcademicYear.presentAcademicYear,
-          codePrefix: codePrefix.toString(),
-        })
-        .returning()
-    )[0];
-  }
 
-  let [foundSession] = await db
-    .select()
-    .from(sessionModel)
-    .where(
-      and(
-        ilike(sessionModel.name, oldSession.sessionName.trim()),
-        eq(sessionModel.academicYearId, foundAcademicYear.id!),
-      ),
-    );
-  if (!foundSession) {
-    foundSession = (
-      await db
-        .insert(sessionModel)
-        .values({
-          legacySessionId: oldSession.id!,
-          name: oldSession.sessionName.trim(),
-          from: new Date(oldSession.fromDate as any).toISOString().slice(0, 10),
-          to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
-          isCurrentSession: oldSession.iscurrentsession,
-          codePrefix: oldSession.codeprefix,
-          academicYearId: foundAcademicYear.id!,
-        })
-        .returning()
-    )[0];
-  }
+  const foundSession = await getOrCreateWithLock(
+    `import:session:${foundAcademicYear.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(sessionModel)
+          .where(
+            and(
+              ilike(sessionModel.name, oldSession.sessionName.trim()),
+              eq(sessionModel.academicYearId, foundAcademicYear.id!),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(sessionModel)
+          .values({
+            legacySessionId: oldSession.id!,
+            name: oldSession.sessionName.trim(),
+            from: new Date(oldSession.fromDate as any)
+              .toISOString()
+              .slice(0, 10),
+            to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
+            isCurrentSession: oldSession.iscurrentsession,
+            codePrefix: oldSession.codeprefix,
+            academicYearId: foundAcademicYear.id!,
+          })
+          .returning()
+      )[0]!,
+  );
 
   return { oldAcademicYear, foundAcademicYear, foundSession };
 }
