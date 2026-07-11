@@ -62,7 +62,7 @@ export type StudentShiftChangeResult = {
   promotionsClosedForExamHistory: number;
   promotionsClonedForExamHistory: number;
   promotionIdsWithExamHistory: number[];
-  feeMappingsDeleted: number;
+  feeMappingsDeprecated: number;
   feeStructuresProcessed: number;
 };
 

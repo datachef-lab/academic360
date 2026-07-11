@@ -36,7 +36,13 @@ export async function getLockedSlabIdsForFeeStructure(
   const rows = await db
     .select({
       feeSlabId: feeGroupModel.feeSlabId,
-      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      // A challan/receipt was generated ⟺ an active receipt row exists in the
+      // new source-of-truth table.
+      hasActiveReceipt: sql<boolean>`EXISTS (
+        SELECT 1 FROM fee_student_receipt_numbers frn
+        WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id}
+          AND COALESCE(frn.is_deprecated, false) = false
+      )`,
       hasAnyPayment: sql<boolean>`EXISTS (
         SELECT 1 FROM ${paymentModel}
         WHERE ${paymentModel.feeStudentMappingId} = ${feeStudentMappingModel.id}
@@ -68,7 +74,7 @@ export async function getLockedSlabIdsForFeeStructure(
   for (const r of rows) {
     const slabId = r.feeSlabId;
     if (typeof slabId !== "number") continue;
-    if (r.challanGeneratedAt) locked.add(slabId);
+    if (r.hasActiveReceipt) locked.add(slabId);
     else if (r.hasAnyPayment) locked.add(slabId);
     else if (r.paymentStatus === "SUCCESS") locked.add(slabId);
   }
@@ -3136,13 +3142,23 @@ export async function downloadFeeStudentMappings(
     )
   )`;
 
+  // Receipt/challan now live in fee_student_receipt_numbers; read the mapping's
+  // ACTIVE (non-deprecated) receipt. The mapping's own columns are frozen and
+  // not read.
+  const exportActiveReceiptNumber = sql<
+    string | null
+  >`(SELECT frn.receipt_number FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
+  const exportActiveChallanGeneratedAt = sql<
+    Date | null
+  >`(SELECT frn.challan_generated_at FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
+
   /** Same resolution order as the "Payment Mode" export column. */
   const feeStudentMappingExportPaymentMode = sql<string | null>`CASE
     WHEN ${linkedPaymentSq.paymentMode} IS NOT NULL THEN ${linkedPaymentSq.paymentMode}::text
     WHEN ${latestOnlinePaymentSq.paymentMode} IS NOT NULL THEN ${latestOnlinePaymentSq.paymentMode}::text
     WHEN ${feeStudentMappingExportIsPaid} THEN 'CASH'
-    WHEN ${feeStudentMappingModel.receiptNumber} IS NOT NULL
-      AND ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL THEN 'CASH'
+    WHEN ${exportActiveReceiptNumber} IS NOT NULL
+      AND ${exportActiveChallanGeneratedAt} IS NOT NULL THEN 'CASH'
     ELSE NULL
   END`;
 
@@ -3197,7 +3213,7 @@ export async function downloadFeeStudentMappings(
           THEN TO_CHAR(
             COALESCE(
               ${linkedPaymentSq.txnDate}::date,
-              ${feeStudentMappingModel.challanGeneratedAt}::date
+              ${exportActiveChallanGeneratedAt}::date
             ),
             'DD/MM/YYYY'
           )
@@ -3205,9 +3221,8 @@ export async function downloadFeeStudentMappings(
       END`,
       "Payment Mode": feeStudentMappingExportPaymentMode,
       "Payment Internal Remarks": linkedPaymentSq.internalRemarks,
-      "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
-      "Receipt / Challan Generated At":
-        feeStudentMappingModel.challanGeneratedAt,
+      "Receipt / Challan Number": exportActiveReceiptNumber,
+      "Receipt / Challan Generated At": exportActiveChallanGeneratedAt,
 
       // Online Payment Details — only when effective payment mode is ONLINE.
       // Cash / manual receipts must not show stale failed gateway attempts.

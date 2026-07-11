@@ -17,9 +17,15 @@ import {
   feeStructureComponentModel,
   receiptTypeModel,
   feeCategoryModel,
+  feeStudentReceiptNumberModel,
+  promotionModel,
 } from "@repo/db/schemas";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import {
+  withAdvisoryXactLock,
+  isUniqueViolation,
+} from "@/utils/db-concurrency.js";
 import { socketService } from "@/services/socketService.js";
 import * as feeStructureService from "./fee-structure.service.js";
 import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";
@@ -96,8 +102,7 @@ export async function issueFeeStudentMappingReceiptIfMissing(
   const [row] = await db
     .select({
       mappingId: feeStudentMappingModel.id,
-      receiptNumber: feeStudentMappingModel.receiptNumber,
-      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      studentId: feeStudentMappingModel.studentId,
       uid: studentModel.uid,
       feeCategoryCode: feeCategoryModel.code,
     })
@@ -128,55 +133,127 @@ export async function issueFeeStudentMappingReceiptIfMissing(
 
   await persistReceiptIssuanceIfNeeded({
     mappingId: row.mappingId,
-    existingReceiptNumber: row.receiptNumber,
-    existingChallanGeneratedAt: row.challanGeneratedAt,
+    studentId: row.studentId,
     studentUid: row.uid,
     feeCategoryCode: row.feeCategoryCode,
   });
 }
 
+/** The active (non-deprecated) receipt row for a fee mapping, if any. */
+async function getActiveReceiptForMapping(mappingId: number): Promise<{
+  receiptNumber: string;
+  challanGeneratedAt: Date | null;
+  uid: string;
+} | null> {
+  const [row] = await db
+    .select({
+      receiptNumber: feeStudentReceiptNumberModel.receiptNumber,
+      challanGeneratedAt: feeStudentReceiptNumberModel.challanGeneratedAt,
+      uid: feeStudentReceiptNumberModel.uid,
+    })
+    .from(feeStudentReceiptNumberModel)
+    .where(
+      and(
+        eq(feeStudentReceiptNumberModel.feeStudentMappingId, mappingId),
+        eq(feeStudentReceiptNumberModel.isDeprecated, false),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Next per-student receipt sequence = MAX(sequence)+1 across ALL the student's
+ * receipts (active or deprecated) in `fee_student_receipt_numbers` — a
+ * continuous per-student counter that survives a uid change.
+ */
+async function getNextSequenceForStudent(studentId: number): Promise<number> {
+  const { rows } = await db.execute<{ next: number }>(sql`
+    SELECT COALESCE(MAX(sequence), 0) + 1 AS next
+    FROM public.fee_student_receipt_numbers
+    WHERE student_id_fk = ${studentId}
+  `);
+  const n = Number((rows?.[0] as { next?: unknown })?.next ?? 1);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+/**
+ * Ensure the mapping has an ACTIVE receipt number in `fee_student_receipt_numbers`.
+ * If one exists, return it (idempotent). Otherwise allocate the next per-student
+ * sequence and insert an active row. The receipt string format is unchanged
+ * (`{uid}/{NN}[-{code}]`). Nothing is written to `fee_student_mappings` — the
+ * new table is the single source of truth.
+ *
+ * Concurrency: a per-student advisory lock serializes allocation across
+ * processes; `unique(receipt_number)` + a bounded retry is the backstop.
+ */
 async function persistReceiptIssuanceIfNeeded(params: {
   mappingId: number;
-  existingReceiptNumber: string | null | undefined;
-  existingChallanGeneratedAt: Date | null | undefined;
+  studentId: number;
   studentUid: string;
   feeCategoryCode: string | null | undefined;
-}): Promise<{ challanNumber: string; challanGeneratedAt: Date }> {
-  const { mappingId, studentUid } = params;
-  const existingRn = params.existingReceiptNumber?.trim() || "";
+}): Promise<{ challanNumber: string; challanGeneratedAt: Date; uid: string }> {
+  const { mappingId, studentId, studentUid } = params;
+  const code = (params.feeCategoryCode ?? "").trim();
+  const codeOrNull = code.length > 0 ? code : null;
 
-  if (existingRn) {
-    let cg = params.existingChallanGeneratedAt ?? null;
-    if (!cg) {
-      const now = new Date();
-      await db
-        .update(feeStudentMappingModel)
-        .set({ challanGeneratedAt: now })
-        .where(eq(feeStudentMappingModel.id, mappingId));
-      cg = now;
-      scheduleFeesDashboardBroadcast("fee_receipt_issued");
-    }
-    return { challanNumber: existingRn, challanGeneratedAt: cg };
+  const existing = await getActiveReceiptForMapping(mappingId);
+  if (existing) {
+    return {
+      challanNumber: existing.receiptNumber,
+      challanGeneratedAt: existing.challanGeneratedAt ?? new Date(),
+      uid: existing.uid,
+    };
   }
 
-  const nextReceiptNum = await getNextReceiptNumberForUid(studentUid);
-  const code = (params.feeCategoryCode ?? "").trim();
-  const challanNumber = buildChallanNumber(
-    studentUid,
-    nextReceiptNum,
-    code.length > 0 ? code : null,
-  );
-  const now = new Date();
-  await db
-    .update(feeStudentMappingModel)
-    .set({
-      receiptNumber: challanNumber,
-      challanGeneratedAt: now,
-    })
-    .where(eq(feeStudentMappingModel.id, mappingId));
+  return withAdvisoryXactLock(`frn:student:${studentId}`, async () => {
+    const recheck = await getActiveReceiptForMapping(mappingId);
+    if (recheck) {
+      return {
+        challanNumber: recheck.receiptNumber,
+        challanGeneratedAt: recheck.challanGeneratedAt ?? new Date(),
+        uid: recheck.uid,
+      };
+    }
 
-  scheduleFeesDashboardBroadcast("fee_receipt_issued");
-  return { challanNumber, challanGeneratedAt: now };
+    const now = new Date();
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const seq = await getNextSequenceForStudent(studentId);
+      const receiptNumber = buildChallanNumber(
+        studentUid,
+        String(seq).padStart(2, "0"),
+        codeOrNull,
+      );
+      try {
+        await db.insert(feeStudentReceiptNumberModel).values({
+          studentId,
+          feeStudentMappingId: mappingId,
+          uid: studentUid,
+          sequence: seq,
+          receiptNumber,
+          challanGeneratedAt: now,
+          isDeprecated: false,
+        });
+        scheduleFeesDashboardBroadcast("fee_receipt_issued");
+        return { challanNumber: receiptNumber, challanGeneratedAt: now, uid: studentUid };
+      } catch (err) {
+        if (!isUniqueViolation(err)) throw err;
+        // Lost a race: either this mapping already got an active receipt, or the
+        // student-level number collided. Re-check the mapping, else recompute.
+        const raced = await getActiveReceiptForMapping(mappingId);
+        if (raced) {
+          return {
+            challanNumber: raced.receiptNumber,
+            challanGeneratedAt: raced.challanGeneratedAt ?? new Date(),
+            uid: raced.uid,
+          };
+        }
+      }
+    }
+    throw new Error(
+      `Failed to allocate a receipt number for mapping ${mappingId}`,
+    );
+  });
 }
 
 async function fetchFeeReceiptJoinRow(
@@ -266,43 +343,6 @@ async function fetchFeeReceiptJoinRow(
 }
 
 /**
- * Gets the next receipt sequence (NN) for a given student UID.
- * Inspects existing numbers of the form `uid/NN` or `uid/NN-{suffix}`.
- */
-export async function getNextReceiptNumberForUid(uid: string): Promise<string> {
-  try {
-    const escapedUid = uid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-    const { rows } = await db.execute(sql`
-      SELECT receipt_number
-      FROM public.fee_student_mappings
-      WHERE receipt_number ~ ${`^${escapedUid}/\\d+([-/].*)?$`}
-    `);
-
-    let maxNum = 0;
-    for (const row of rows ?? []) {
-      const rn = (row as { receipt_number?: unknown })?.receipt_number;
-      if (typeof rn !== "string") continue;
-      const m = rn.match(new RegExp(`^${escapedUid}/(\\d+)`));
-      if (!m) continue;
-      const n = Number.parseInt(m[1], 10);
-      if (Number.isFinite(n) && n > maxNum) {
-        maxNum = n;
-      }
-    }
-
-    return String(maxNum + 1).padStart(2, "0");
-  } catch (error) {
-    console.warn(
-      `[FEE_SERVICE] Error getting next receipt number for UID ${uid}:`,
-      error,
-    );
-    // Fallback to "01" on error
-    return "01";
-  }
-}
-
-/**
  * Converts a FeeStudentMapping model to FeeStudentMappingDto
  */
 async function modelToDto(
@@ -377,8 +417,15 @@ async function modelToDto(
     (payment as { updatedAt?: Date | string | null } | null)?.updatedAt ??
     null;
 
+  // Receipt/challan now live in `fee_student_receipt_numbers`; the mapping's own
+  // `receiptNumber`/`challanGeneratedAt` columns are frozen legacy data and are
+  // not read. Surface the ACTIVE receipt (if any) so all consumers stay correct.
+  const activeReceipt = await getActiveReceiptForMapping(model.id);
+
   return {
     ...model,
+    receiptNumber: activeReceipt?.receiptNumber ?? null,
+    challanGeneratedAt: activeReceipt?.challanGeneratedAt ?? null,
     feeStructure,
     feeGroupPromotionMappings,
     feeStructureInstallment,
@@ -427,10 +474,28 @@ export const createFeeStudentMapping = async (
   return dto!;
 };
 
+/**
+ * Mappings whose fee_group_promotion_mapping → promotion is NOT deprecated.
+ * A shift change deprecates the old promotion (preserving its old-shift
+ * mappings as history), so this filter excludes those superseded mappings from
+ * every by-student listing — matching the export/dashboard convention.
+ */
+const nonDeprecatedPromotionMappingSql = sql`
+  EXISTS (
+    SELECT 1 FROM ${feeGroupPromotionMappingModel} fgpm
+    JOIN ${promotionModel} p ON p.id = fgpm.promotion_id_fk
+    WHERE fgpm.id = ${feeStudentMappingModel.feeGroupPromotionMappingId}
+      AND COALESCE(p.is_deprecated, false) = false
+  )
+`;
+
 export const getAllFeeStudentMappings = async (): Promise<
   FeeStudentMappingDto[]
 > => {
-  const rows = await db.select().from(feeStudentMappingModel);
+  const rows = await db
+    .select()
+    .from(feeStudentMappingModel)
+    .where(nonDeprecatedPromotionMappingSql);
   const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
   return dtos.filter((dto): dto is FeeStudentMappingDto => dto !== null);
 };
@@ -452,7 +517,12 @@ export const getFeeStudentMappingsByStudentId = async (
   const rows = await db
     .select()
     .from(feeStudentMappingModel)
-    .where(eq(feeStudentMappingModel.studentId, studentId))
+    .where(
+      and(
+        eq(feeStudentMappingModel.studentId, studentId),
+        nonDeprecatedPromotionMappingSql,
+      ),
+    )
     .orderBy(asc(feeStudentMappingModel.id));
 
   const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
@@ -560,8 +630,7 @@ export async function ensureFeeReceiptChallanUrl(
 
   const { challanNumber } = await persistReceiptIssuanceIfNeeded({
     mappingId: row.feeStudentMapping.id,
-    existingReceiptNumber: row.feeStudentMapping.receiptNumber,
-    existingChallanGeneratedAt: row.feeStudentMapping.challanGeneratedAt,
+    studentId: row.student.id,
     studentUid: row.student.uid,
     feeCategoryCode: row.feeCategoryCode,
   });
@@ -570,7 +639,12 @@ export async function ensureFeeReceiptChallanUrl(
   return { url, challanNumber };
 }
 
-/** GET /fees/receipts?challanNumber= — generate PDF by challan / receipt number. */
+/**
+ * GET /fees/receipts?challanNumber= — generate PDF by challan / receipt number.
+ * Looks the receipt up in `fee_student_receipt_numbers` (ANY status, so an old
+ * DEPRECATED receipt still regenerates its historical PDF with the uid it was
+ * issued under) and renders that exact receipt.
+ */
 export async function generateFeeReceiptByChallanNumber(
   challanNumberRaw: string,
 ) {
@@ -578,27 +652,51 @@ export async function generateFeeReceiptByChallanNumber(
   if (!key) return null;
 
   const { rows } = await db.execute<{
-    studentId: number;
-    feeStructureId: number;
+    mappingId: number | null;
+    uid: string;
+    receiptNumber: string;
+    challanGeneratedAt: Date | null;
   }>(sql`
-    SELECT student_id_fk AS "studentId", fee_structure_id_fk AS "feeStructureId"
-    FROM public.fee_student_mappings
+    SELECT fee_student_mapping_id_fk AS "mappingId", uid AS "uid",
+           receipt_number AS "receiptNumber", challan_generated_at AS "challanGeneratedAt"
+    FROM public.fee_student_receipt_numbers
     WHERE upper(replace(trim(receipt_number), '-', '/')) = ${key}
     LIMIT 1
   `);
 
-  const r = rows[0];
-  if (!r) return null;
+  const rn = rows[0];
+  if (!rn || rn.mappingId == null) return null;
 
-  return generateFeeReceiptByFeeStructureIdAndStudentId(
-    Number(r.feeStructureId),
-    Number(r.studentId),
-  );
+  const [m] = await db
+    .select({
+      feeStructureId: feeStudentMappingModel.feeStructureId,
+      studentId: feeStudentMappingModel.studentId,
+    })
+    .from(feeStudentMappingModel)
+    .where(eq(feeStudentMappingModel.id, Number(rn.mappingId)))
+    .limit(1);
+  if (!m) return null;
+
+  return generateFeeReceiptInternal({
+    feeStructureId: m.feeStructureId,
+    studentId: m.studentId,
+    overrideReceipt: {
+      receiptNumber: rn.receiptNumber,
+      challanGeneratedAt: rn.challanGeneratedAt ?? new Date(),
+      uid: rn.uid,
+    },
+  });
 }
 
 async function generateFeeReceiptInternal(params: {
   feeStructureId: number;
   studentId: number;
+  /** When set (challan lookup), render this exact receipt with its frozen uid. */
+  overrideReceipt?: {
+    receiptNumber: string;
+    challanGeneratedAt: Date;
+    uid: string;
+  };
 }) {
   const { feeStructureId, studentId } = params;
   if (!feeStructureId || !studentId) {
@@ -626,14 +724,19 @@ async function generateFeeReceiptInternal(params: {
     feeCategoryCode,
   } = joinRow;
 
-  const { challanNumber, challanGeneratedAt } =
-    await persistReceiptIssuanceIfNeeded({
-      mappingId: feeStudentMapping.id,
-      existingReceiptNumber: feeStudentMapping.receiptNumber,
-      existingChallanGeneratedAt: feeStudentMapping.challanGeneratedAt,
-      studentUid: student.uid,
-      feeCategoryCode: feeCategoryCode,
-    });
+  const { challanNumber, challanGeneratedAt, uid: receiptUid } =
+    params.overrideReceipt
+      ? {
+          challanNumber: params.overrideReceipt.receiptNumber,
+          challanGeneratedAt: params.overrideReceipt.challanGeneratedAt,
+          uid: params.overrideReceipt.uid,
+        }
+      : await persistReceiptIssuanceIfNeeded({
+          mappingId: feeStudentMapping.id,
+          studentId: student.id,
+          studentUid: student.uid,
+          feeCategoryCode: feeCategoryCode,
+        });
 
   const semesterName = toSentenceCasePreservingTrailingRoman(classRecord.name);
 
@@ -659,7 +762,9 @@ async function generateFeeReceiptInternal(params: {
       }),
   );
 
-  const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
+  // Use the uid captured on the receipt (issuance uid), NOT the live student uid
+  // — so a receipt issued before a shift change still prints its original uid.
+  const pageTitle = `${receiptUid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
 
   const ePaid = await (async () => {
     const [pay] = await db
@@ -730,7 +835,7 @@ async function generateFeeReceiptInternal(params: {
     programCourse: programCourse.name ?? "",
     semester: semesterName,
     shift: shift.name ?? "",
-    uid: student.uid,
+    uid: receiptUid,
     totalPayableAmount: formatIndianNumber(feeStudentMapping.totalPayable),
     totalPayableAmountInWords: numberToWords(feeStudentMapping.totalPayable),
     challanNumber,
@@ -749,6 +854,6 @@ async function generateFeeReceiptInternal(params: {
     semester: semesterName,
     programCourse: programCourse.name,
     receiptName: receiptType.name,
-    uid: student.uid,
+    uid: receiptUid,
   };
 }

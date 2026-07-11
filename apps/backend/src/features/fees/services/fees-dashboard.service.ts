@@ -8,6 +8,7 @@ import {
   feeSlabModel,
   feeStructureModel,
   feeStudentMappingModel,
+  feeStudentReceiptNumberModel,
   paymentModel,
   programCourseModel,
   promotionModel,
@@ -202,8 +203,15 @@ const ACTIVE_USER_SQL = sql`COALESCE(${userModel.isActive}, true) = true`;
 
 const PAID_MAPPING_SQL = sql`COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) >= COALESCE(${feeStudentMappingModel.totalPayable}, 0)`;
 const UNPAID_MAPPING_SQL = sql`COALESCE(${feeStudentMappingModel.totalPayable}, 0) > 0 AND COALESCE(${feeStudentMappingModel.amountPaid}, 0) < COALESCE(${feeStudentMappingModel.totalPayable}, 0)`;
-const CHALLAN_OR_RECEIPT_SQL = sql`${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL OR NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL`;
-const CHALLAN_ISSUED_SQL = sql`${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL`;
+// Receipt/challan data moved to fee_student_receipt_numbers. These correlated
+// subqueries read the mapping's ACTIVE (non-deprecated) receipt's columns; the
+// mapping's own receiptNumber/challanGeneratedAt columns are frozen legacy data
+// and are no longer read.
+const ACTIVE_RECEIPT_NUMBER_SQL = sql`(SELECT frn.receipt_number FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
+const ACTIVE_CHALLAN_GENERATED_AT_SQL = sql`(SELECT frn.challan_generated_at FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
+
+const CHALLAN_OR_RECEIPT_SQL = sql`${ACTIVE_CHALLAN_GENERATED_AT_SQL} IS NOT NULL OR NULLIF(TRIM(COALESCE(${ACTIVE_RECEIPT_NUMBER_SQL}, '')), '') IS NOT NULL`;
+const CHALLAN_ISSUED_SQL = sql`${ACTIVE_CHALLAN_GENERATED_AT_SQL} IS NOT NULL`;
 
 /** Open, non-deprecated promotion row for the student. */
 const ACTIVE_PROMOTION_ROW_SQL = sql`${promotionModel.endDate} IS NULL AND COALESCE(${promotionModel.isDeprecated}, false) = false`;
@@ -316,9 +324,13 @@ function isTimestampToday(
   column:
     | typeof feeStudentMappingModel.challanGeneratedAt
     | typeof feeStudentMappingModel.updatedAt
-    | typeof paymentModel.createdAt,
+    | typeof paymentModel.createdAt
+    | SQL,
 ): SQL {
-  return and(gte(column, SQL_TODAY_START), sql`${column} < ${SQL_TODAY_END}`)!;
+  return and(
+    sql`${column} >= ${SQL_TODAY_START}`,
+    sql`${column} < ${SQL_TODAY_END}`,
+  )!;
 }
 
 /**
@@ -377,14 +389,18 @@ function isPaymentEventToday(): SQL {
   )!;
 }
 
-/** Staff-side fee activity that genuinely happened today (not rows merely touched today). */
+/**
+ * Staff-side fee activity that genuinely happened today. Both challan and
+ * receipt issuance stamp the active receipt row's challan_generated_at (the
+ * mapping's updatedAt no longer changes on issuance), so both use it.
+ */
 const MAPPING_CHALLAN_TODAY_SQL = isTimestampToday(
-  feeStudentMappingModel.challanGeneratedAt,
+  ACTIVE_CHALLAN_GENERATED_AT_SQL,
 );
 
 const MAPPING_RECEIPT_TODAY_SQL = and(
-  sql`NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL`,
-  isTimestampToday(feeStudentMappingModel.updatedAt),
+  sql`NULLIF(TRIM(COALESCE(${ACTIVE_RECEIPT_NUMBER_SQL}, '')), '') IS NOT NULL`,
+  isTimestampToday(ACTIVE_CHALLAN_GENERATED_AT_SQL),
 )!;
 
 /** Structure filters for fee-student-mapping queries (shift is applied via active promotion). */
@@ -682,7 +698,7 @@ function buildPaymentModeScope(
   const parts: SQL[] = [inArray(feeStudentMappingModel.id, paymentMatches)];
   if (modes.includes("CASH") || modes.includes("CHEQUE")) {
     parts.push(
-      sql`(COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 OR NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)`,
+      sql`(COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 OR NULLIF(TRIM(COALESCE(${ACTIVE_RECEIPT_NUMBER_SQL}, '')), '') IS NOT NULL)`,
     );
   }
   return or(...parts);
@@ -1133,8 +1149,8 @@ async function loadCoreMappingStats(
         fee_receivable: sql<number>`COALESCE(SUM(${feeStudentMappingModel.totalPayable}), 0)::float`,
         fee_collected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)), 0)::float`,
         challans_generated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
-        receipts_issued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
-        challan_only: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
+        receipts_issued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${ACTIVE_RECEIPT_NUMBER_SQL}, '')), '') IS NOT NULL)::int`,
+        challan_only: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${ACTIVE_CHALLAN_GENERATED_AT_SQL} IS NOT NULL AND NULLIF(TRIM(COALESCE(${ACTIVE_RECEIPT_NUMBER_SQL}, '')), '') IS NULL)::int`,
         waived_amount: sql<number>`COALESCE(SUM(CASE WHEN ${feeStudentMappingModel.isWaivedOff} THEN COALESCE(${feeStudentMappingModel.waivedOffAmount}, 0) ELSE 0 END), 0)::float`,
         today_challans: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${MAPPING_CHALLAN_TODAY_SQL})::int`,
         today_receipts: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${MAPPING_RECEIPT_TODAY_SQL})::int`,
@@ -1207,7 +1223,7 @@ async function loadChannelLedgerSplit(
   canonicalMappingIds: number[],
 ): Promise<typeof EMPTY_CHANNEL_SPLIT> {
   if (!canonicalMappingIds.length) return EMPTY_CHANNEL_SPLIT;
-  const hasCollection = sql`(COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 OR NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)`;
+  const hasCollection = sql`(COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0 OR NULLIF(TRIM(COALESCE(${ACTIVE_RECEIPT_NUMBER_SQL}, '')), '') IS NOT NULL)`;
   const payChannel = paymentChannelByMappingSubquery(canonicalMappingIds);
 
   const rows = await db
@@ -1325,8 +1341,8 @@ async function loadSemesterBreakdown(
       fullyPaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${PAID_MAPPING_SQL})::int`,
       unpaidStudents: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${UNPAID_MAPPING_SQL})::int`,
       challansGenerated: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE ${CHALLAN_ISSUED_SQL})::int`,
-      receiptsIssued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NOT NULL)::int`,
-      challanOnly: sql<number>`COUNT(*) FILTER (WHERE ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL AND NULLIF(TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')), '') IS NULL)::int`,
+      receiptsIssued: sql<number>`COUNT(DISTINCT ${feeStudentMappingModel.studentId}) FILTER (WHERE NULLIF(TRIM(COALESCE(${ACTIVE_RECEIPT_NUMBER_SQL}, '')), '') IS NOT NULL)::int`,
+      challanOnly: sql<number>`COUNT(*) FILTER (WHERE ${ACTIVE_CHALLAN_GENERATED_AT_SQL} IS NOT NULL AND NULLIF(TRIM(COALESCE(${ACTIVE_RECEIPT_NUMBER_SQL}, '')), '') IS NULL)::int`,
       paidEntries: sql<number>`COUNT(*) FILTER (WHERE COALESCE(${feeStudentMappingModel.amountPaid}, 0) > 0)::int`,
       structuresCount: sql<number>`COUNT(DISTINCT ${feeStructureModel.id})::int`,
       onlineCollected: sql<number>`COALESCE(SUM(COALESCE(${feeStudentMappingModel.amountPaid}, 0)) FILTER (WHERE ${channelExpr} = 'ONLINE'), 0)::float`,
