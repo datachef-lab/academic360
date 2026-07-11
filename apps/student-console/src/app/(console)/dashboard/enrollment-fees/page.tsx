@@ -558,6 +558,10 @@ export default function EnrollmentFeesPage() {
           id: m.id,
           title: m.feeStructure?.receiptType?.name || "Fees",
           className: m.feeStructure?.class?.name || "—",
+          // Semester ordering key: class ids are seeded in semester order
+          // (Semester I = 1, II = 2, … VI = 6), so ordering by id yields the
+          // fixed Sem I → VIII sequence.
+          classSequence: m.feeStructure?.class?.id ?? Number.MAX_SAFE_INTEGER,
           academicYear: m.feeStructure?.academicYear?.year || "—",
           total: Number(m.totalPayable || 0),
           isPaid: ["COMPLETED", "SUCCESS"].includes(String(m.paymentStatus).toUpperCase()),
@@ -571,7 +575,9 @@ export default function EnrollmentFeesPage() {
             typeof m.feeStructure?.academicYear?.id === "number"
               ? m.feeStructure.academicYear.id
               : undefined,
-        })),
+        }))
+        // Fixed order: Semester I, II, III, IV, V, VI, VII, VIII …
+        .sort((a, b) => a.classSequence - b.classSequence),
     [mappings],
   );
 
