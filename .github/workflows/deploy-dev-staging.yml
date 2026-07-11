@@ -78,6 +78,29 @@ jobs:
             # key tracks it. Branch name → "develop"/"staging" (both non-dev).
             NEXT_PUBLIC_APP_ENV="$BRANCH" pnpm exec turbo build --filter=student-console || echo "::warning::student-console build failed (continuing)"
 
+            # 3.5) Ensure a working Chrome for Puppeteer (PDF/image rendering).
+            # The develop box only ships the non-functional /usr/bin/chromium-browser
+            # snap stub (launch fails with "requires the chromium snap"); install
+            # google-chrome-stable (real binary + its own deps) via apt. Idempotent:
+            # a no-op where a working Chrome already exists (staging/prod). Best-
+            # effort — a failure here only degrades PDF/image rendering, not the
+            # rest of the deploy.
+            if ! /usr/bin/google-chrome --version >/dev/null 2>&1 \
+               && ! /usr/bin/google-chrome-stable --version >/dev/null 2>&1; then
+              if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+                echo "installing google-chrome-stable for puppeteer..."
+                TMPDEB=$(mktemp --suffix=.deb)
+                if curl -fsSL https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o "$TMPDEB"; then
+                  sudo apt-get update -y || true
+                  sudo apt-get install -y "$TMPDEB" || sudo dpkg -i "$TMPDEB" || sudo apt-get -f install -y || true
+                fi
+                rm -f "$TMPDEB"
+                /usr/bin/google-chrome --version || echo "::warning::google-chrome install did not verify"
+              else
+                echo "::warning::no passwordless sudo; cannot install google-chrome for puppeteer"
+              fi
+            fi
+
             # 4) Run migrations (drizzle-kit; idempotent migrations).
             DBURL=$(grep -hE '^DATABASE_URL=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r')
             ( cd apps/backend && DATABASE_URL="$DBURL" npx drizzle-kit migrate )
