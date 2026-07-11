@@ -175,6 +175,22 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
     programCourse = pc ?? null;
   }
 
+  // A shift change rotates students.uid (old value saved to previousUid) and is
+  // the only thing that changes the uid. Since the uid tracks the shift, a
+  // promotion belongs to the previous-uid era iff its shift differs from the
+  // student's CURRENT (active) shift. This keeps old-shift promotions on the
+  // previous uid while later same-shift semesters stay on the current uid.
+  const currentShiftId =
+    (
+      promotions.find((p) => p.endDate == null && p.isDeprecated !== true) ??
+      promotions[promotions.length - 1]
+    )?.shiftId ?? null;
+  const previousUid = student?.previousUid?.trim() || null;
+  const uidForPromotion = (promotionShiftId: number | null) =>
+    previousUid && currentShiftId != null && promotionShiftId !== currentShiftId
+      ? previousUid
+      : (student?.uid ?? null);
+
   const results: unknown[] = [];
 
   for (const promotion of promotions) {
@@ -248,7 +264,7 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
       sessionId: promotion.sessionId,
       classId: promotion.classId,
       shiftId: promotion.shiftId,
-      uid: student?.uid ?? null,
+      uid: uidForPromotion(promotion.shiftId),
       classRollNumber: promotion.classRollNumber ?? null,
       academicYear: academicYear
         ? {

@@ -1145,9 +1145,11 @@ export default function EnrollmentFeesPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <CardTitle className="line-clamp-1 text-[20px] font-bold leading-none text-slate-900">
-                        Fees for {toSentenceCase(fee.className)}
+                        {fee.title || `Fees for ${toSentenceCase(fee.className)}`}
                       </CardTitle>
-                      <p className="text-sm">Academic Year {fee.academicYear}</p>
+                      <p className="text-sm">
+                        {toSentenceCase(fee.className)} · Academic Year {fee.academicYear}
+                      </p>
                     </div>
                     <Badge
                       className={`inline-flex shrink-0 items-center justify-center self-start text-sm font-semibold leading-none ${statusBadgeClass(fee.isPaid)}`}

@@ -69,7 +69,14 @@ jobs:
             pnpm exec turbo build --filter=backend --filter=main-console --filter=notification-system
             # student-console isolated so a Next build failure warns instead of
             # aborting the whole deploy (still cached via turbo).
-            pnpm exec turbo build --filter=student-console || echo "::warning::student-console build failed (continuing)"
+            # NEXT_PUBLIC_APP_ENV MUST be a non-"development" value at BUILD time
+            # so next.config.js bakes in basePath/assetPrefix "/student-console"
+            # (the reverse proxy serves the app under that subpath). Without it,
+            # Next builds for "/" and every page/asset 404s behind the proxy.
+            # Shell-exported vars win over any .env* on the box (@next/env does
+            # not override process.env), and it's in turbo globalEnv so the cache
+            # key tracks it. Branch name → "develop"/"staging" (both non-dev).
+            NEXT_PUBLIC_APP_ENV="$BRANCH" pnpm exec turbo build --filter=student-console || echo "::warning::student-console build failed (continuing)"
 
             # 4) Run migrations (drizzle-kit; idempotent migrations).
             DBURL=$(grep -hE '^DATABASE_URL=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r')
