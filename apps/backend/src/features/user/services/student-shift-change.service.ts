@@ -10,6 +10,7 @@ import {
   feeSlabModel,
   feeStructureModel,
   feeStudentMappingModel,
+  feeStudentReceiptNumberModel,
   paymentModel,
   programCourseModel,
   promotionModel,
@@ -119,7 +120,8 @@ export type StudentShiftChangeResult = {
   promotionsClonedForExamHistory: number;
   /** Promotion ids that still have exam_candidates pointing at them (historical shift preserved) */
   promotionIdsWithExamHistory: number[];
-  feeMappingsDeleted: number;
+  /** Old-shift receipts retired (marked is_deprecated) so they keep their old uid as history */
+  feeMappingsDeprecated: number;
   feeStructuresProcessed: number;
 };
 
@@ -494,8 +496,8 @@ async function enrichFeePreviewWithMappingDetails(
   const [mappingRow] = await db
     .select({
       totalPayable: feeStudentMappingModel.totalPayable,
-      receiptNumber: feeStudentMappingModel.receiptNumber,
-      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      receiptNumber: feeStudentReceiptNumberModel.receiptNumber,
+      challanGeneratedAt: feeStudentReceiptNumberModel.challanGeneratedAt,
       receiptTypeName: receiptTypeModel.name,
     })
     .from(feeStudentMappingModel)
@@ -513,6 +515,17 @@ async function enrichFeePreviewWithMappingDetails(
     .leftJoin(
       receiptTypeModel,
       eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    // Active (non-deprecated) receipt only, from the new source-of-truth table.
+    .leftJoin(
+      feeStudentReceiptNumberModel,
+      and(
+        eq(
+          feeStudentReceiptNumberModel.feeStudentMappingId,
+          feeStudentMappingModel.id,
+        ),
+        eq(feeStudentReceiptNumberModel.isDeprecated, false),
+      ),
     )
     .where(
       and(
@@ -556,8 +569,8 @@ async function loadGeneratedFeeDocumentsForStudent(
       feeStudentMappingId: feeStudentMappingModel.id,
       promotionId: feeGroupPromotionMappingModel.promotionId,
       promotionLabel: classModel.name,
-      receiptNumber: feeStudentMappingModel.receiptNumber,
-      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      receiptNumber: feeStudentReceiptNumberModel.receiptNumber,
+      challanGeneratedAt: feeStudentReceiptNumberModel.challanGeneratedAt,
       receiptTypeName: receiptTypeModel.name,
     })
     .from(feeStudentMappingModel)
@@ -581,15 +594,23 @@ async function loadGeneratedFeeDocumentsForStudent(
       receiptTypeModel,
       eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
     )
+    // Only mappings with an ACTIVE receipt count as "already generated"
+    // documents — a deprecated (old-shift) receipt must NOT block a shift change.
+    .innerJoin(
+      feeStudentReceiptNumberModel,
+      and(
+        eq(
+          feeStudentReceiptNumberModel.feeStudentMappingId,
+          feeStudentMappingModel.id,
+        ),
+        eq(feeStudentReceiptNumberModel.isDeprecated, false),
+      ),
+    )
     .where(
       and(
         eq(feeStudentMappingModel.studentId, studentId),
         inArray(feeGroupPromotionMappingModel.promotionId, activePromotionIds),
         eq(feeStructureModel.shiftId, shiftId),
-        or(
-          sql`TRIM(COALESCE(${feeStudentMappingModel.receiptNumber}, '')) <> ''`,
-          isNotNull(feeStudentMappingModel.challanGeneratedAt),
-        ),
       ),
     )
     .orderBy(
@@ -1211,7 +1232,7 @@ export async function changeStudentShift(
     .from(userModel)
     .where(eq(userModel.id, student.userId));
 
-  let feeMappingsDeleted = 0;
+  let feeMappingsDeprecated = 0;
   let feeStructuresProcessed = 0;
   let promotionsClosed = 0;
   let promotionsCloned = 0;
@@ -1230,16 +1251,26 @@ export async function changeStudentShift(
       );
 
       if (mappingIds.length) {
-        await tx
-          .delete(paymentModel)
-          .where(inArray(paymentModel.feeStudentMappingId, mappingIds));
+        // Preserve the old-shift mappings + payments as history (do NOT delete).
+        // Only retire their ACTIVE receipts: mark them deprecated so they keep
+        // their OLD uid for historical PDF regeneration. The new-shift mapping
+        // gets a fresh receipt under the NEW uid lazily on next download/payment
+        // (the per-student sequence continues, e.g. newUid/07).
+        const deprecated = await tx
+          .update(feeStudentReceiptNumberModel)
+          .set({ isDeprecated: true, updatedAt: closedAt })
+          .where(
+            and(
+              inArray(
+                feeStudentReceiptNumberModel.feeStudentMappingId,
+                mappingIds,
+              ),
+              eq(feeStudentReceiptNumberModel.isDeprecated, false),
+            ),
+          )
+          .returning({ id: feeStudentReceiptNumberModel.id });
 
-        const deleted = await tx
-          .delete(feeStudentMappingModel)
-          .where(inArray(feeStudentMappingModel.id, mappingIds))
-          .returning({ id: feeStudentMappingModel.id });
-
-        feeMappingsDeleted = deleted.length;
+        feeMappingsDeprecated = deprecated.length;
       }
     }
 
@@ -1353,7 +1384,7 @@ export async function changeStudentShift(
     promotionsClosedForExamHistory: promotionsClosed,
     promotionsClonedForExamHistory: promotionsCloned,
     promotionIdsWithExamHistory,
-    feeMappingsDeleted,
+    feeMappingsDeprecated,
     feeStructuresProcessed,
   };
 }
