@@ -504,6 +504,14 @@ export default function ShiftChangePanel({
     setSubmitting(true);
     try {
       let newUid: string | null = null;
+      // Apply the shift change FIRST: it closes the current promotion (kept as
+      // history with its original section/roll) and clones a new active one. The
+      // section/roll edit below then lands on that NEW active promotion — so the
+      // deprecated historical promotion is never touched.
+      if (shiftPicked) {
+        const result = await submitStudentShiftChange(student.id, Number(selectedShiftId));
+        newUid = result.newUid;
+      }
       if (sectionChanged || rollChanged) {
         await updateActivePromotionFields(student.id, {
           sectionId: sectionChanged ? Number(selectedSectionId) : undefined,
@@ -511,9 +519,7 @@ export default function ShiftChangePanel({
         });
       }
       if (shiftPicked) {
-        const result = await submitStudentShiftChange(student.id, Number(selectedShiftId));
-        newUid = result.newUid;
-        toast.success(`Shift updated. New student ID: ${result.newUid}`);
+        toast.success(`Shift updated. New student ID: ${newUid}`);
       } else {
         toast.success("Student details updated.");
       }

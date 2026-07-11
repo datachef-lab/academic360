@@ -25,14 +25,17 @@ async function findChromiumExecutable(): Promise<string | undefined> {
     }
   }
   const possiblePaths = [
-    "/usr/bin/chromium-browser", // Ubuntu/Debian
-    "/usr/bin/chromium", // Alternative Ubuntu/Debian
-    "/usr/bin/google-chrome", // Google Chrome
+    // Prefer real Chrome/Chromium binaries. /usr/bin/chromium-browser is often
+    // a non-functional snap stub on Ubuntu (fs.access succeeds but launch fails
+    // with "requires the chromium snap"), so it must be probed LAST.
+    "/usr/bin/google-chrome", // Google Chrome (Linux, real binary + deps)
     "/usr/bin/google-chrome-stable", // Google Chrome stable
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // macOS Chrome
     "/Applications/Chromium.app/Contents/MacOS/Chromium", // macOS Chromium
     "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Windows Chrome
     "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", // Windows Chrome (x86)
+    "/usr/bin/chromium", // Alternative Ubuntu/Debian
+    "/usr/bin/chromium-browser", // Ubuntu/Debian (may be a snap stub — last resort)
   ];
 
   for (const executablePath of possiblePaths) {
