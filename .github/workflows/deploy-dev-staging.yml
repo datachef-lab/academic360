@@ -78,6 +78,22 @@ jobs:
             # key tracks it. Branch name → "develop"/"staging" (both non-dev).
             NEXT_PUBLIC_APP_ENV="$BRANCH" pnpm exec turbo build --filter=student-console || echo "::warning::student-console build failed (continuing)"
 
+            # Next.js standalone output (this box runs .next/standalone/.../server.js
+            # under PM2) does NOT bundle static assets or public/ — they must be
+            # copied into the standalone tree, otherwise the server 404s every JS/CSS
+            # chunk and the app renders blank. Do it after every student-console build.
+            SC="$REPO/apps/student-console"
+            SC_STANDALONE="$SC/.next/standalone/apps/student-console"
+            if [ -d "$SC_STANDALONE" ] && [ -d "$SC/.next/static" ]; then
+              rm -rf "$SC_STANDALONE/.next/static"
+              cp -r "$SC/.next/static" "$SC_STANDALONE/.next/static"
+              if [ -d "$SC/public" ]; then
+                rm -rf "$SC_STANDALONE/public"
+                cp -r "$SC/public" "$SC_STANDALONE/public"
+              fi
+              echo "copied student-console static (+public) into standalone"
+            fi
+
             # 3.5) Ensure a working Chrome for Puppeteer (PDF/image rendering).
             # The develop box only ships the non-functional /usr/bin/chromium-browser
             # snap stub (launch fails with "requires the chromium snap"); install
