@@ -134,7 +134,7 @@ export default function AcademicYearSetupPage() {
 
         {/* Feature Cards Grid */}
         <div className="mb-6 sm:mb-8">
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featureCards.map((card) => (
               <Card
                 key={card.href}
@@ -163,7 +163,7 @@ export default function AcademicYearSetupPage() {
                   </div>
 
                   {/* Illustration with description revealed on hover */}
-                  <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 sm:h-56">
+                  <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 sm:h-44 lg:h-56">
                     <CardIllustration
                       name={card.illustrationName}
                       image={card.illustration ?? undefined}
