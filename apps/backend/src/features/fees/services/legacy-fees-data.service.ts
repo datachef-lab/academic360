@@ -415,6 +415,13 @@ export async function loadStudentFeesForUid(
       // that paid row — never from an arbitrary row 0.
       const paidRow = studentRows.find((r) => r["Has Fees Paid?"] === "Yes");
       const sourceRow = paidRow ?? studentRows[0];
+      // Preserve the old-DB challan/receipt number whenever it exists ANYWHERE
+      // in this batch (prefer the paid row, then any row); only auto-generate
+      // when the legacy DB has no number for the batch at all.
+      const legacyChallanNumber =
+        [sourceRow, ...studentRows]
+          .map((r) => (r["Challan Number"] ?? "").toString().trim())
+          .find((c) => c.length > 0) || null;
       const result = await syncFeeStudentMapping(
         studentRows,
         uid,
@@ -425,9 +432,7 @@ export async function loadStudentFeesForUid(
         ),
         Boolean(paidRow),
         sourceRow["Fee Receipt Entry Created At"],
-        sourceRow["Challan Number"] && sourceRow["Challan Number"].length > 0
-          ? sourceRow["Challan Number"]
-          : null,
+        legacyChallanNumber,
         sourceRow["Fees Paid Timestamp"]
           ? sourceRow["Fees Paid Timestamp"] instanceof Date
             ? sourceRow["Fees Paid Timestamp"].toISOString()
@@ -579,10 +584,10 @@ export async function loadStudentFees() {
                 ),
                 studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
                 studentRows[0]["Fee Receipt Entry Created At"],
-                studentRows[0]["Challan Number"] &&
-                  studentRows[0]["Challan Number"].length > 0
-                  ? studentRows[0]["Challan Number"]
-                  : null,
+                // Preserve any old-DB challan/receipt number in the batch.
+                studentRows
+                  .map((r) => (r["Challan Number"] ?? "").toString().trim())
+                  .find((c) => c.length > 0) || null,
                 studentRows[0]["Fees Paid Timestamp"]
                   ? studentRows[0]["Fees Paid Timestamp"] instanceof Date
                     ? studentRows[0]["Fees Paid Timestamp"].toISOString()
