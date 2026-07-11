@@ -114,13 +114,15 @@ export async function loadFeePaymentMarkingByReceiptNumber(params: {
   if (!receiptNumber)
     return { success: false, error: "receiptNumber is required" };
 
-  // NOTE: `fee_student_mappings.receipt_number` exists in DB, but the Drizzle column
-  // mapping for `receiptNumber` is not snake-cased. Use a raw SQL lookup to avoid
-  // changing the model definition.
+  // Receipt numbers now live in fee_student_receipt_numbers. Resolve the mapping
+  // from the ACTIVE (non-deprecated) receipt only — a deprecated (old-shift)
+  // challan must not be searchable/payable.
   const { rows } = await db.execute<{ id: number; studentId: number }>(sql`
-    SELECT id, student_id_fk as "studentId"
-    FROM public.fee_student_mappings
+    SELECT fee_student_mapping_id_fk as id, student_id_fk as "studentId"
+    FROM public.fee_student_receipt_numbers
     WHERE upper(replace(trim(receipt_number), '-', '/')) = ${receiptNumber}
+      AND is_deprecated = false
+      AND fee_student_mapping_id_fk IS NOT NULL
     LIMIT 1
   `);
   const row = rows?.[0];
@@ -247,11 +249,13 @@ export async function receiveCashFeePayment(params: {
     totalPayable: number | null;
   }>(sql`
     SELECT
-      id,
-      student_id_fk as "studentId",
-      total_payable as "totalPayable"
-    FROM public.fee_student_mappings
-    WHERE upper(replace(trim(receipt_number), '-', '/')) = ${receiptNumber}
+      m.id as id,
+      m.student_id_fk as "studentId",
+      m.total_payable as "totalPayable"
+    FROM public.fee_student_receipt_numbers r
+    JOIN public.fee_student_mappings m ON m.id = r.fee_student_mapping_id_fk
+    WHERE upper(replace(trim(r.receipt_number), '-', '/')) = ${receiptNumber}
+      AND r.is_deprecated = false
     LIMIT 1
   `);
   const row = rows?.[0];

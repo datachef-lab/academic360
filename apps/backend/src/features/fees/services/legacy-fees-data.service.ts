@@ -25,6 +25,7 @@ import {
   FeeStructureT,
   feeStudentMappingModel,
   FeeStudentMappingT,
+  feeStudentReceiptNumberModel,
   paymentModel,
   programCourseModel,
   ProgramCourseT,
@@ -668,8 +669,23 @@ async function syncFeeStudentMapping(
       .where(eq(paymentModel.feeStudentMappingId, feeStudentMapping.id!))
       .limit(1);
     hasExistingPayment = existingPayment.length > 0;
-    // Fully loaded (receipt number stamped) — never touch again.
-    if (feeStudentMapping.receiptNumber) {
+    // Fully loaded (an active receipt exists in fee_student_receipt_numbers) —
+    // never touch again. (Receipt numbers now live in the new table; the
+    // mapping's own receiptNumber column is legacy/frozen and not read.)
+    const existingReceipt = await db
+      .select({ id: feeStudentReceiptNumberModel.id })
+      .from(feeStudentReceiptNumberModel)
+      .where(
+        and(
+          eq(
+            feeStudentReceiptNumberModel.feeStudentMappingId,
+            feeStudentMapping.id!,
+          ),
+          eq(feeStudentReceiptNumberModel.isDeprecated, false),
+        ),
+      )
+      .limit(1);
+    if (existingReceipt.length > 0) {
       return { status: "skipped" };
     }
     // Payment exists but NO receipt number = a previous run died between the
@@ -817,12 +833,12 @@ async function syncFeeStudentMapping(
   let finalReceiptNumber = challanNumber;
   if (!finalReceiptNumber) {
     const takenRows = await db
-      .select({ receiptNumber: feeStudentMappingModel.receiptNumber })
-      .from(feeStudentMappingModel)
+      .select({ receiptNumber: feeStudentReceiptNumberModel.receiptNumber })
+      .from(feeStudentReceiptNumberModel)
       .where(
-        and(
-          eq(feeStudentMappingModel.studentId, feeStudentMapping.studentId!),
-          isNotNull(feeStudentMappingModel.receiptNumber),
+        eq(
+          feeStudentReceiptNumberModel.studentId,
+          feeStudentMapping.studentId!,
         ),
       );
     const taken = new Set(
@@ -888,17 +904,34 @@ async function syncFeeStudentMapping(
     });
   }
 
-  // Update the fee-student mapping fields
+  // Persist fee amounts on the mapping. Receipt/challan numbers now live in
+  // fee_student_receipt_numbers (the mapping's own receiptNumber/challanGeneratedAt
+  // columns are frozen legacy data and are no longer written or read).
   await db
     .update(feeStudentMappingModel)
     .set({
       totalPayable: effectiveTotalPayable,
       amountPaid: amountPaid ? effectiveTotalPayable : null,
-      challanGeneratedAt: formatDate(txnDate) ?? new Date(),
-      receiptNumber: finalReceiptNumber,
     })
-    .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!))
-    .returning();
+    .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
+
+  // Record the receipt/challan number in the new source-of-truth table.
+  if (finalReceiptNumber) {
+    const nnMatch = finalReceiptNumber.match(/^[^/]+\/(\d+)/);
+    const parsedSeq = nnMatch ? Number.parseInt(nnMatch[1], 10) : 1;
+    await db
+      .insert(feeStudentReceiptNumberModel)
+      .values({
+        studentId: feeStudentMapping.studentId!,
+        feeStudentMappingId: feeStudentMapping.id!,
+        uid: studentUid,
+        sequence: Number.isFinite(parsedSeq) && parsedSeq > 0 ? parsedSeq : 1,
+        receiptNumber: finalReceiptNumber,
+        challanGeneratedAt: formatDate(txnDate) ?? new Date(),
+        isDeprecated: false,
+      })
+      .onConflictDoNothing();
+  }
 
   // console.log("Saved feeStudentMapping!");
   return { status: "loaded" };
