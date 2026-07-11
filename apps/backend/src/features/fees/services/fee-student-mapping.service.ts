@@ -682,7 +682,10 @@ export async function generateFeeReceiptByChallanNumber(
     studentId: m.studentId,
     overrideReceipt: {
       receiptNumber: rn.receiptNumber,
-      challanGeneratedAt: rn.challanGeneratedAt ?? new Date(),
+      // Raw SQL returns challan_generated_at as a string; coerce to Date.
+      challanGeneratedAt: rn.challanGeneratedAt
+        ? new Date(rn.challanGeneratedAt)
+        : new Date(),
       uid: rn.uid,
     },
   });
@@ -839,7 +842,7 @@ async function generateFeeReceiptInternal(params: {
     totalPayableAmount: formatIndianNumber(feeStudentMapping.totalPayable),
     totalPayableAmountInWords: numberToWords(feeStudentMapping.totalPayable),
     challanNumber,
-    challanDate: challanGeneratedAt.toLocaleDateString("en-GB"),
+    challanDate: new Date(challanGeneratedAt).toLocaleDateString("en-GB"),
     ePaid,
     feeComponents: componentDtos,
     pageTitle,
