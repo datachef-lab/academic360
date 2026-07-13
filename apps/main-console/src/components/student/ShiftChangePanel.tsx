@@ -486,10 +486,12 @@ export default function ShiftChangePanel({
     return response?.data?.message ?? null;
   };
 
-  const shiftBlockedByFees =
-    preview?.feesPaid === true ||
-    (preview?.feeComparison?.old?.some((row) => !!row.generatedDocumentType) ?? false) ||
-    (preview?.generatedFeeDocuments?.length ?? 0) > 0;
+  // Block the shift change ONLY when fees are actually paid (a successful
+  // payment). A merely-generated (unpaid) challan/receipt must NOT block it —
+  // the backend already permits it (deletes the old-shift unpaid mappings and
+  // recreates new-shift fees), and the generated-document warning still shows
+  // below for the admin's awareness.
+  const shiftBlockedByFees = preview?.feesPaid === true;
 
   const handleConfirm = async () => {
     if (!student?.id) return;
