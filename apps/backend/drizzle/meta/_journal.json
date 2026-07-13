@@ -1135,6 +1135,13 @@
       "when": 1782600000000,
       "tag": "0162_idcard_qrcode_height",
       "breakpoints": true
+    },
+    {
+      "idx": 163,
+      "version": "7",
+      "when": 1783928828651,
+      "tag": "0163_receipt_appear_type",
+      "breakpoints": true
     }
   ]
 }
