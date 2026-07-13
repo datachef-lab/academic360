@@ -81,7 +81,7 @@ export type FeeMapping = {
   feeStructureInstallment: { name?: string | null; sequence?: number | null } | null;
   feeStructure: {
     id: number;
-    receiptType: { name: string };
+    receiptType: { name: string; appearTypePromotionStatusId?: number | null };
     class: { id: number; name: string };
     academicYear: { id: number; year: string };
     programCourse: {
@@ -606,8 +606,19 @@ export default function EnrollmentFeesPage() {
         null;
       if (!cardClassId || !cardAyId) return false;
 
+      // A receipt type categorized by appear type (e.g. "Casual Fees" -> Casual)
+      // is only shown when a "Semester Fee Payment" activity of the SAME appear
+      // type is live. So enabling the Regular fee window no longer exposes Casual
+      // fees — they need a live Casual activity. Uncategorized (null) receipt
+      // types are not gated by appear type (preserves prior behavior).
+      const cardAppearTypeId =
+        mapping?.feeStructure?.receiptType?.appearTypePromotionStatusId ?? null;
+
       return semesterFeeActivities.some((activity) => {
         if (activity.academicYear.id !== cardAyId) return false;
+        if (cardAppearTypeId != null && activity.appearType?.id !== cardAppearTypeId) {
+          return false;
+        }
         if (
           activity.courseLevelId != null &&
           cardCourseLevelId != null &&

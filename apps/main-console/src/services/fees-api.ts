@@ -377,6 +377,7 @@ export interface NewFeesReceiptType {
   printReceipt?: string | null;
   chkOnline?: string | null;
   chkOnSequence?: string | null;
+  appearTypePromotionStatusId?: number | null;
 }
 
 // Get all fees receipt types

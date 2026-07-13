@@ -19,6 +19,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useFeesReceiptTypes } from "@/hooks/useFees";
 import { FeesReceiptType } from "@/types/fees";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
@@ -26,13 +33,18 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { useSocket } from "@/hooks/useSocket";
 import { useAuth } from "@/features/auth/providers/auth-provider";
+import { getPromotionStatuses } from "@/services/promotion-status.api";
+
+type PromotionStatusOption = { id: number; name: string };
 
 type ReceiptTypeForm = {
   name: string;
+  appearTypePromotionStatusId: number | null;
 };
 
 const EMPTY_FORM: ReceiptTypeForm = {
   name: "",
+  appearTypePromotionStatusId: null,
 };
 
 const FeesReceiptTypePage: React.FC = () => {
@@ -46,6 +58,18 @@ const FeesReceiptTypePage: React.FC = () => {
   const [deletingItem, setDeletingItem] = useState<FeesReceiptType | null>(null);
   const [searchText, setSearchText] = useState("");
   const [form, setForm] = useState<ReceiptTypeForm>(EMPTY_FORM);
+  const [promotionStatuses, setPromotionStatuses] = useState<PromotionStatusOption[]>([]);
+
+  useEffect(() => {
+    getPromotionStatuses({ isActive: true })
+      .then((rows) =>
+        setPromotionStatuses((rows ?? []).map((p: any) => ({ id: p.id, name: p.name }))),
+      )
+      .catch((e) => console.error("Failed to load appear types", e));
+  }, []);
+
+  const appearTypeName = (id?: number | null) =>
+    promotionStatuses.find((p) => p.id === id)?.name ?? "—";
 
   const {
     feesReceiptTypes,
@@ -141,6 +165,7 @@ const FeesReceiptTypePage: React.FC = () => {
     try {
       const receiptTypeData = {
         name,
+        appearTypePromotionStatusId: form.appearTypePromotionStatusId,
       };
 
       if (editingItem) {
@@ -163,6 +188,7 @@ const FeesReceiptTypePage: React.FC = () => {
     setEditingItem(item);
     setForm({
       name: item.name,
+      appearTypePromotionStatusId: item.appearTypePromotionStatusId ?? null,
     });
     setShowModal(true);
   };
@@ -263,6 +289,31 @@ const FeesReceiptTypePage: React.FC = () => {
                     />
                   </div>
 
+                  <div className="flex flex-col gap-2 mt-4">
+                    <Label>Appear Type</Label>
+                    <Select
+                      value={
+                        form.appearTypePromotionStatusId != null
+                          ? String(form.appearTypePromotionStatusId)
+                          : undefined
+                      }
+                      onValueChange={(v) =>
+                        setForm({ ...form, appearTypePromotionStatusId: Number(v) })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select appear type" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[200]">
+                        {promotionStatuses.map((ps) => (
+                          <SelectItem key={ps.id} value={String(ps.id)}>
+                            {ps.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="flex justify-end gap-2 mt-6">
                     <Button variant="secondary" onClick={handleClose}>
                       Cancel
@@ -302,14 +353,15 @@ const FeesReceiptTypePage: React.FC = () => {
                 >
                   <TableRow>
                     <TableHead style={{ width: 60, whiteSpace: "nowrap" }}>Sr. No.</TableHead>
-                    <TableHead style={{ width: 400 }}>Name</TableHead>
+                    <TableHead style={{ width: 320 }}>Name</TableHead>
+                    <TableHead style={{ width: 160 }}>Appear Type</TableHead>
                     <TableHead style={{ width: 140 }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredReceiptTypes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center">
+                      <TableCell colSpan={4} className="text-center">
                         No receipt types found.
                       </TableCell>
                     </TableRow>
@@ -317,7 +369,10 @@ const FeesReceiptTypePage: React.FC = () => {
                     filteredReceiptTypes.map((row, index) => (
                       <TableRow key={row.id} className="group">
                         <TableCell style={{ width: 60 }}>{index + 1}</TableCell>
-                        <TableCell style={{ width: 400 }}>{row.name}</TableCell>
+                        <TableCell style={{ width: 320 }}>{row.name}</TableCell>
+                        <TableCell style={{ width: 160 }}>
+                          {appearTypeName(row.appearTypePromotionStatusId)}
+                        </TableCell>
                         <TableCell style={{ width: 140 }}>
                           <div className="flex space-x-2">
                             <Button
