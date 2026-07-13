@@ -187,7 +187,7 @@ function getGeneratedDocumentDetectionMessage(documents: GeneratedFeeDocument[])
 }
 
 function getGeneratedDocumentInvalidationMessage(_documents: GeneratedFeeDocument[]): string {
-  return "Fees paid is detected — shift change is not allowed.";
+  return "These challans/receipts carry the current UID and will be invalidated by the shift change — the student must regenerate them under the new shift. (This does not block the change unless fees are actually paid.)";
 }
 
 function PreviewSkeleton() {
