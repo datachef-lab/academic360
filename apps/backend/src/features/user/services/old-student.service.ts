@@ -379,13 +379,19 @@ export async function loadOldBoards() {
 //     }
 // }
 
-export async function addAdmissionApplicationForm(
-  oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
+/**
+ * Resolve (find-or-create) the new-DB admission for a legacy session id.
+ * Legacy pre-admission ids (coursedetails, personaldetails) are reissued every
+ * admission cycle — the legacy system wipes that data per year — so any lookup
+ * keyed on a legacy id MUST be scoped to the admission this resolves.
+ */
+export async function resolveAdmissionForLegacySession(
+  legacySessionId: number | null | undefined,
 ) {
   const [[oldSession]] = (await mysqlConnection.query(`
         SELECT *
         FROM currentsessionmaster
-        WHERE id = ${oldAdmStudentPersonalDetails.sessionId};
+        WHERE id = ${legacySessionId};
     `)) as [OldSession[], any];
 
   if (!oldSession) {
@@ -486,6 +492,16 @@ export async function addAdmissionApplicationForm(
         .returning()
     )[0];
   }
+
+  return foundAdmission;
+}
+
+export async function addAdmissionApplicationForm(
+  oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
+) {
+  const foundAdmission = await resolveAdmissionForLegacySession(
+    oldAdmStudentPersonalDetails.sessionId,
+  );
 
   let admApprovedBy: User | null = null;
   if (oldAdmStudentPersonalDetails.admapprovedby) {
@@ -1729,19 +1745,40 @@ export async function processOldStudentApplicationForm(
         WHERE spd.id = ${oldStudent.id};
     `)) as [OldCourseDetails[], any];
 
-  const [existingAdmCourseDetails] = (
-    oldCourseDetails
-      ? await db
-          .select()
-          .from(admissionCourseDetailsModel)
-          .where(
+  // Legacy coursedetails ids are REISSUED every admission cycle (legacy wipes
+  // pre-admission data per year), so the same id can already exist here as
+  // LAST cycle's acd belonging to a different student. An unscoped lookup then
+  // attaches this student to that student's application form (the shared-form
+  // mislink seen on prod 07/2026). Scope the reuse to this student's own
+  // admission cycle.
+  const targetAdmission = await resolveAdmissionForLegacySession(
+    oldAdmStudentPersonalDetails.sessionId,
+  );
+
+  const [existingAdmCourseDetailsRow] = oldCourseDetails
+    ? await db
+        .select({ acd: admissionCourseDetailsModel })
+        .from(admissionCourseDetailsModel)
+        .innerJoin(
+          applicationFormModel,
+          eq(
+            applicationFormModel.id,
+            admissionCourseDetailsModel.applicationFormId,
+          ),
+        )
+        .where(
+          and(
             eq(
               admissionCourseDetailsModel.legacyCourseDetailsId,
               oldCourseDetails.id,
             ),
-          )
-      : []
-  ) as AdmissionCourseDetails[];
+            eq(applicationFormModel.admissionId, targetAdmission.id!),
+          ),
+        )
+    : [];
+  const existingAdmCourseDetails = existingAdmCourseDetailsRow?.acd as
+    | AdmissionCourseDetails
+    | undefined;
 
   // This student's own admission was already imported -> reuse ITS application form.
   if (existingAdmCourseDetails) {
@@ -4053,19 +4090,34 @@ export async function processOldCourseDetails(
     any,
   ];
 
-  // Dedup by the legacy coursedetails id GLOBALLY (one admission_course_details
-  // per legacy coursedetails), not per application form. Legacy "transferred"
-  // coursedetails share a parent personaldetails across students, so a new
-  // student's fresh-form import iterates another student's coursedetails too;
-  // a per-form guard would then create a duplicate acd under the wrong form and
-  // re-introduce cross-student linkage. A legacy coursedetails belongs to exactly
-  // one application, so a single acd per legacy id is the correct invariant.
-  const [existingAdmOldCourseDetails] = await db
-    .select()
+  // Dedup by the legacy coursedetails id ACROSS FORMS — but only WITHIN this
+  // form's admission cycle. Legacy "transferred" coursedetails share a parent
+  // personaldetails across students (same cycle), so a per-form guard would
+  // duplicate acds and re-introduce cross-student linkage; but legacy REISSUES
+  // coursedetails ids every admission cycle, so a fully global lookup matches
+  // LAST cycle's acd of an unrelated student and links this form's student to
+  // that student's application (shared-form mislink seen on prod 07/2026).
+  // One acd per legacy id per admission cycle is the correct invariant.
+  const [existingAcdRow] = await db
+    .select({ acd: admissionCourseDetailsModel })
     .from(admissionCourseDetailsModel)
+    .innerJoin(
+      applicationFormModel,
+      eq(
+        applicationFormModel.id,
+        admissionCourseDetailsModel.applicationFormId,
+      ),
+    )
     .where(
-      eq(admissionCourseDetailsModel.legacyCourseDetailsId, courseDetails.id),
+      and(
+        eq(admissionCourseDetailsModel.legacyCourseDetailsId, courseDetails.id),
+        eq(
+          applicationFormModel.admissionId,
+          applicationForm.admissionId as number,
+        ),
+      ),
     );
+  const existingAdmOldCourseDetails = existingAcdRow?.acd;
 
   if (existingAdmOldCourseDetails) return existingAdmOldCourseDetails;
 
