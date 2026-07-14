@@ -281,15 +281,15 @@ export default function BoardSubjectNamePage() {
             />
           </div>
           <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-max" style={{ tableLayout: "auto" }}>
+            <div className="overflow-y-auto h-full">
+              <Table className="border rounded-md w-full" style={{ tableLayout: "auto" }}>
                 <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
                     <TableHead
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         padding: "12px 8px",
                       }}
                     >
@@ -299,7 +299,7 @@ export default function BoardSubjectNamePage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         padding: "12px 8px",
                       }}
                     >
@@ -309,7 +309,7 @@ export default function BoardSubjectNamePage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         padding: "12px 8px",
                       }}
                     >
@@ -319,7 +319,7 @@ export default function BoardSubjectNamePage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         padding: "12px 8px",
                       }}
                     >
@@ -329,7 +329,7 @@ export default function BoardSubjectNamePage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         padding: "12px 8px",
                       }}
                     >
@@ -339,7 +339,7 @@ export default function BoardSubjectNamePage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         padding: "12px 8px",
                       }}
                     >

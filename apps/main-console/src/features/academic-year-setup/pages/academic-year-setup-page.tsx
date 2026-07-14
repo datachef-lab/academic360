@@ -143,7 +143,7 @@ export default function AcademicYearSetupPage() {
               >
                 <CardContent className="flex h-full flex-col p-0">
                   {/* Card header */}
-                  <div className="flex items-center gap-3 border-b border-gray-100 p-4 transition-colors group-hover:bg-gray-50 sm:p-5">
+                  <div className="flex items-center gap-3 border-b border-gray-200 p-4 transition-colors group-hover:bg-gray-50 sm:p-5">
                     <div className="shrink-0 rounded-lg bg-gray-100 p-2 shadow-sm">
                       <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
                     </div>
@@ -162,8 +162,13 @@ export default function AcademicYearSetupPage() {
                     </div>
                   </div>
 
-                  {/* Illustration with description revealed on hover */}
-                  <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 sm:h-44 lg:h-56">
+                  {/* Illustration with description revealed on hover.
+                      Under-construction modules are greyed (desaturated); colour returns on hover. */}
+                  <div
+                    className={`relative h-36 w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 sm:h-44 lg:h-56 transition-[filter] duration-300 ${
+                      card.badge ? "grayscale group-hover:grayscale-0" : ""
+                    }`}
+                  >
                     <CardIllustration
                       name={card.illustrationName}
                       image={card.illustration ?? undefined}

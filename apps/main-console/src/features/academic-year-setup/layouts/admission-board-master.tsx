@@ -31,7 +31,7 @@ export default function AdmissionBoardMaster() {
     { title: "Section", url: `${base}/sections`, icon: Rows3 },
     { title: "Cancel Source", url: `${base}/cancel-sources`, icon: XCircle },
     { title: "Sports Category", url: `${base}/sports-categories`, icon: Trophy },
-    { title: "Board Subject Mapping", url: `${base}/board-subject-mapping`, icon: GraduationCap },
+    { title: "Boards & their Subjects", url: `${base}/boards-and-subjects`, icon: GraduationCap },
     { title: "Grades", url: `${base}/grades`, icon: Star },
   ];
 

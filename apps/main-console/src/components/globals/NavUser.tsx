@@ -1,4 +1,4 @@
-import { BadgeCheck, Bell, LogOut } from "lucide-react";
+import { BadgeCheck, LogOut } from "lucide-react";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import {
   DropdownMenu,
@@ -80,10 +80,6 @@ export function NavUser() {
               <DropdownMenuItem>
                 <BadgeCheck />
                 Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

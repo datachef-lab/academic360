@@ -474,10 +474,10 @@ export default function BoardSubjectPage() {
           <div className="flex-1">
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <GraduationCap className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400" />
-              Board Subject Mappings
+              Boards &amp; their Subjects
             </CardTitle>
             <div className="text-sm sm:text-base text-muted-foreground mt-1">
-              Manage board subject mappings configuration.
+              Manage boards and their subjects configuration.
             </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
@@ -598,8 +598,8 @@ export default function BoardSubjectPage() {
             </div>
           </div>
           <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md w-full min-w-max" style={{ tableLayout: "auto" }}>
+            <div className="overflow-y-auto h-full">
+              <Table className="border rounded-md w-full" style={{ tableLayout: "auto" }}>
                 <TableHeader
                   className="sticky top-0 z-10"
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
@@ -609,7 +609,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -622,7 +622,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -635,7 +635,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -648,7 +648,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -661,7 +661,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -674,7 +674,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -687,7 +687,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -700,7 +700,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -713,7 +713,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -726,7 +726,7 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",

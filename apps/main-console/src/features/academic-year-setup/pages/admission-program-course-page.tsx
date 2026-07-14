@@ -248,8 +248,8 @@ export default function AdmissionProgramCoursePage() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="overflow-auto" style={{ maxHeight: 560 }}>
-                <Table className="min-w-[800px] border">
+              <div className="overflow-y-auto" style={{ maxHeight: 560 }}>
+                <Table className="w-full border">
                   <TableHeader className="sticky top-0 z-10 bg-gray-100">
                     <TableRow>
                       <TableHead className="bg-gray-100">Program Course</TableHead>

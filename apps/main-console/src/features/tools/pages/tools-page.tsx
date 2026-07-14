@@ -119,7 +119,7 @@ export default function ToolsPage() {
             >
               <CardContent className="flex h-full flex-col p-0">
                 {/* Card header */}
-                <div className="flex items-center gap-3 border-b border-gray-100 p-4 transition-colors group-hover:bg-gray-50 sm:p-5">
+                <div className="flex items-center gap-3 border-b border-gray-200 p-4 transition-colors group-hover:bg-gray-50 sm:p-5">
                   <div className="shrink-0 rounded-lg bg-gray-100 p-2 shadow-sm">
                     <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
                   </div>

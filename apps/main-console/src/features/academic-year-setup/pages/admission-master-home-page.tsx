@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Home, PlusCircle, CalendarClock, Workflow } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Home, PlusCircle, CalendarClock, Workflow, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import {
@@ -27,6 +35,11 @@ const PHASE_CLASS: Record<string, string> = {
   done: "bg-emerald-100 text-emerald-700 border border-emerald-200",
   active: "bg-blue-100 text-blue-700 border border-blue-200",
   upcoming: "bg-gray-100 text-gray-500 border border-gray-200",
+};
+const PHASE_STATUS_LABEL: Record<string, string> = {
+  done: "Completed",
+  active: "In progress",
+  upcoming: "Upcoming",
 };
 
 const startYearOf = (s: string | null | undefined) => String(s ?? "").match(/\d{4}/)?.[0] ?? "";
@@ -145,21 +158,46 @@ export default function AdmissionMasterHomePage() {
             <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
               <Workflow className="h-4 w-4" /> Admission Phases
             </h3>
-            <div className="rounded-lg border p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {PHASES.map((p, i) => (
-                  <React.Fragment key={p.label}>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${PHASE_CLASS[p.status]}`}
-                    >
-                      {p.label}
-                    </span>
-                    {i < PHASES.length - 1 && <span className="text-gray-300">→</span>}
-                  </React.Fragment>
-                ))}
-              </div>
-              <div className="mt-2 text-xs text-muted-foreground">
-                Phases are placeholders for now — they will be configurable here.
+            <div className="overflow-hidden rounded-lg border">
+              <Table className="w-full">
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="w-[52px]">#</TableHead>
+                    <TableHead>Phase</TableHead>
+                    <TableHead className="w-[140px]">Status</TableHead>
+                    <TableHead className="w-[160px]">Schedule</TableHead>
+                    <TableHead className="w-[130px] text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {PHASES.map((p, i) => (
+                    <TableRow key={p.label}>
+                      <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                      <TableCell className="font-medium text-gray-900">{p.label}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${PHASE_CLASS[p.status]}`}
+                        >
+                          {PHASE_STATUS_LABEL[p.status]}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">Not scheduled</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => toast.info(`Configuring "${p.label}" — coming soon`)}
+                        >
+                          <Settings2 className="h-3.5 w-3.5" /> Configure
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="border-t p-3 text-xs text-muted-foreground">
+                Phases are placeholders for now — scheduling &amp; configuration will be wired here.
               </div>
             </div>
           </section>

@@ -187,7 +187,12 @@ const router = createBrowserRouter(
                         <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["sections"]!} />
                       ),
                     },
-                    { path: "board-subject-mapping", element: <BoardSubjectPage /> },
+                    { path: "boards-and-subjects", element: <BoardSubjectPage /> },
+                    // Back-compat: old route renamed to boards-and-subjects
+                    {
+                      path: "board-subject-mapping",
+                      element: <Navigate to="../boards-and-subjects" replace />,
+                    },
                     { path: "boards", element: <BoardPage /> },
                     { path: "subjects", element: <BoardSubjectNamePage /> },
                     {

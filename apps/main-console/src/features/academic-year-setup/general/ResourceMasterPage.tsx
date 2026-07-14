@@ -493,8 +493,8 @@ export default function ResourceMasterPage({ config }: { config: ResourceConfig 
             </Button>
           </div>
           <div className="relative" style={{ height: "560px" }}>
-            <div className="h-full overflow-auto">
-              <Table className="min-w-[640px] border">
+            <div className="h-full overflow-y-auto">
+              <Table className="w-full border">
                 <TableHeader className="sticky top-0 z-10 bg-gray-100">
                   <TableRow>
                     <TableHead className="w-[60px] bg-gray-100">ID</TableHead>
