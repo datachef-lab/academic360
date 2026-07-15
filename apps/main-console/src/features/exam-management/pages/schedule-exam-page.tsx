@@ -362,7 +362,7 @@ export default function ScheduleExamPage() {
               affiliationId: selectedAffiliationId ?? null,
               regulationTypeId: selectedRegulationTypeId ?? null,
               programCourseId: programCourseId,
-              classId: classId ?? null,
+              classIds: classId ? [classId] : [],
               subjectTypeId: null,
             }).catch((error) => {
               console.error(`Error fetching papers for program course ${programCourseId}:`, error);
@@ -380,7 +380,7 @@ export default function ScheduleExamPage() {
                 affiliationId: selectedAffiliationId ?? null,
                 regulationTypeId: selectedRegulationTypeId ?? null,
                 programCourseId: programCourseId,
-                classId: classId ?? null,
+                classIds: classId ? [classId] : [],
                 subjectTypeId: subjectTypeId,
               }).catch((error) => {
                 console.error(
@@ -475,7 +475,7 @@ export default function ScheduleExamPage() {
   //               affiliationId: selectedAffiliationId ?? null,
   //               regulationTypeId: selectedRegulationTypeId ?? null,
   //               programCourseId: programCourseId,
-  //               classId: classId ?? null,
+  //               classIds: classId ? [classId] : [],
   //               subjectTypeId: null,
   //             });
 
@@ -501,7 +501,7 @@ export default function ScheduleExamPage() {
   //                 affiliationId: selectedAffiliationId ?? null,
   //                 regulationTypeId: selectedRegulationTypeId ?? null,
   //                 programCourseId: programCourseId,
-  //                 classId: classId ?? null,
+  //                 classIds: classId ? [classId] : [],
   //                 subjectTypeId: subjectTypeId,
   //               });
 
