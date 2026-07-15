@@ -458,7 +458,7 @@ export default function AllotExamPage() {
             affiliationId: null,
             regulationTypeId: null,
             programCourseId: programCourseId,
-            classId: selectedExam.class.id ?? null,
+            classIds: selectedExam.class.id ? [selectedExam.class.id] : [],
             subjectTypeId: subjectTypeId,
           });
           if (papersData?.content) {
