@@ -2628,7 +2628,7 @@ const FEE_STRUCTURE_INR_AMOUNT_HEADERS = [
 const FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS = ["Total Amount To Pay"] as const;
 
 const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
-  "Total Amount To Pay": "FFE3F2FD",
+  "Total Amount To Pay": "FFE8F5E9",
 };
 
 /** Display timestamps in IST (Asia/Kolkata); UTC instants from DB are converted correctly. */
@@ -3148,9 +3148,7 @@ export async function downloadFeeStudentMappings(
   const exportActiveReceiptNumber = sql<
     string | null
   >`(SELECT frn.receipt_number FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
-  const exportActiveChallanGeneratedAt = sql<
-    Date | null
-  >`(SELECT frn.challan_generated_at FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
+  const exportActiveChallanGeneratedAt = sql<Date | null>`(SELECT frn.challan_generated_at FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
 
   /** Same resolution order as the "Payment Mode" export column. */
   const feeStudentMappingExportPaymentMode = sql<string | null>`CASE
