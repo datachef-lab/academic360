@@ -65,6 +65,20 @@ import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { PaperEditModal } from "./paper-edit-modal";
 
+// Semester ordering (roman numeral → rank) for the papers table sort.
+const SEMESTER_RANK: Record<string, number> = {
+  I: 1,
+  II: 2,
+  III: 3,
+  IV: 4,
+  V: 5,
+  VI: 6,
+  VII: 7,
+  VIII: 8,
+  IX: 9,
+  X: 10,
+};
+
 const SubjectPaperMappingPage = () => {
   const { accessToken, displayFlag } = useAuth();
   const { currentAcademicYear, availableAcademicYears } = useAcademicYear();
@@ -1017,6 +1031,19 @@ const SubjectPaperMappingPage = () => {
   //     }
   //   };
 
+  // Sort the displayed rows: semester ascending (I, II, ...), then Subject & Paper name A→Z.
+  const sortedPapers = React.useMemo(() => {
+    const semesterRank = (sp: PaperDto) => {
+      const roman = classes.find((c) => c.id === sp.classId)?.name?.split(" ")[1] ?? "";
+      return SEMESTER_RANK[roman.toUpperCase()] ?? 999;
+    };
+    return [...papers].sort((a, b) => {
+      const bySemester = semesterRank(a) - semesterRank(b);
+      if (bySemester !== 0) return bySemester;
+      return (a.name ?? "").localeCompare(b.name ?? "", undefined, { sensitivity: "base" });
+    });
+  }, [papers, classes]);
+
   // Show loading while authentication is in progress
   if (!displayFlag || !accessToken) {
     return (
@@ -1516,7 +1543,7 @@ const SubjectPaperMappingPage = () => {
                     variant="outline"
                     className="text-xs border-orange-300 text-orange-700 bg-orange-50 flex items-center gap-1"
                   >
-                    {classes.find((c) => c.id === classId)?.name || "Semester"}
+                    {classes.find((c) => c.id === classId)?.name.split(" ")[1] || "Semester"}
                     <button
                       aria-label="Clear semester filter"
                       className="ml-1 hover:text-orange-900"
@@ -1730,7 +1757,7 @@ const SubjectPaperMappingPage = () => {
                       : "No subject paper mappings found."}
                   </div>
                 ) : (
-                  papers.map((sp: PaperDto, idx: number) => (
+                  sortedPapers.map((sp: PaperDto, idx: number) => (
                     <div
                       key={sp.id}
                       className={`flex border-b group ${sp.isActive === false ? "bg-red-50" : ""}`}
