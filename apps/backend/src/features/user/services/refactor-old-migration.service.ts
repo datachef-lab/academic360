@@ -21,7 +21,7 @@ import {
   userModel,
   userTypeEnum,
 } from "@repo/db/schemas";
-import { and, count, eq, ilike, inArray, isNull, or } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import * as oldStudentPersonalDetailsHelper from "./old-student-helper";
 import * as oldStudentAdmissionServices from "./old-student.service";
 import bcrypt from "bcryptjs";
@@ -289,7 +289,20 @@ export async function processDataFetching(
  */
 async function parseUidsFromExcelBuffer(
   file: Buffer | ArrayBuffer | Uint8Array,
-): Promise<{ totalRows: number; uids: string[]; error?: string }> {
+): Promise<{
+  totalRows: number;
+  uids: string[];
+  /**
+   * UIDs whose cell was stored as a Number (not Text) in the uploaded file.
+   * Excel/Sheets silently drops a leading zero when a value is typed into a
+   * plain numeric cell, so e.g. "0304250034" becomes 304250034 and can no
+   * longer match the real student UID. We can't recover the missing digit,
+   * so these are only ever flagged for a human to double-check — never
+   * auto-matched.
+   */
+  numericTypedUids: string[];
+  error?: string;
+}> {
   const workbook = new ExcelJS.Workbook();
   let dataForExcel: Buffer | Uint8Array | ArrayBuffer;
   if (Buffer.isBuffer(file)) {
@@ -303,7 +316,12 @@ async function parseUidsFromExcelBuffer(
   const sheet = workbook.worksheets[0];
 
   if (!sheet) {
-    return { totalRows: 0, uids: [], error: "No worksheet in Excel" };
+    return {
+      totalRows: 0,
+      uids: [],
+      numericTypedUids: [],
+      error: "No worksheet in Excel",
+    };
   }
 
   const headerRow = sheet.getRow(1);
@@ -336,6 +354,7 @@ async function parseUidsFromExcelBuffer(
     return {
       totalRows: sheet.rowCount,
       uids: [],
+      numericTypedUids: [],
       error:
         "UID column not found. Expected headers: UID / Student UID / CodeNumber",
     };
@@ -348,13 +367,18 @@ async function parseUidsFromExcelBuffer(
   };
 
   const uids: string[] = [];
+  const numericTypedUids: string[] = [];
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
-    const raw = row.getCell(uidColIndex).value;
-    const uid = cleanUid(raw);
-    if (uid) uids.push(uid);
+    const cell = row.getCell(uidColIndex);
+    const uid = cleanUid(cell.value);
+    if (!uid) continue;
+    uids.push(uid);
+    if (cell.type === ExcelJS.ValueType.Number) {
+      numericTypedUids.push(uid);
+    }
   }
-  return { totalRows: sheet.rowCount, uids };
+  return { totalRows: sheet.rowCount, uids, numericTypedUids };
 }
 
 /**
@@ -369,6 +393,19 @@ export async function precheckStudentsFromExcelBuffer(
   existingCount: number;
   newCount: number;
   existingUids: string[];
+  /**
+   * File values from Number-typed cells that were auto-matched to an
+   * existing student after allowing for leading zeros Excel/Sheets silently
+   * dropped (e.g. "304250034" -> matched "0304250034"). Surfaced so the
+   * admin can see what was corrected, not because anything is wrong.
+   */
+  autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }>;
+  /**
+   * Number-typed UIDs that matched MORE THAN ONE existing student once
+   * leading-zero padding is considered — genuinely ambiguous, so we refuse
+   * to guess. The admin must resolve these manually.
+   */
+  ambiguousNumericUids: string[];
   /** UIDs currently locked by a running import — warn BEFORE starting. */
   inProgressByOthers: Array<{
     uid: string;
@@ -386,6 +423,8 @@ export async function precheckStudentsFromExcelBuffer(
       existingCount: 0,
       newCount: 0,
       existingUids: [],
+      autoCorrectedUids: [],
+      ambiguousNumericUids: [],
       inProgressByOthers: [],
       error: parsed.error,
     };
@@ -399,6 +438,39 @@ export async function precheckStudentsFromExcelBuffer(
     : [];
   const existingSet = new Set(
     existing.map((r) => String(r.uid)).filter(Boolean),
+  );
+  const existingUidsDisplay = new Set(existingSet);
+
+  // Number-typed cells that didn't match exactly may have lost a leading
+  // zero (Excel/Sheets silently strips it from plain numeric cells, e.g.
+  // "0304250034" -> 304250034). Check for an existing student under a
+  // zero-padded version of the same digits before giving up on it — but
+  // only ever act when there's exactly one such student; ambiguity is
+  // surfaced, never guessed.
+  const autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }> =
+    [];
+  const ambiguousNumericUids: string[] = [];
+  const numericCandidates = [...new Set(parsed.numericTypedUids)].filter(
+    (uid) => !existingSet.has(uid),
+  );
+  await Promise.all(
+    numericCandidates.map(async (candidate) => {
+      const rows = await db
+        .select({ uid: studentModel.uid })
+        .from(studentModel)
+        .where(sql`${studentModel.uid} ~ ('^0+' || ${candidate} || '$')`)
+        .limit(2);
+      if (rows.length === 1) {
+        autoCorrectedUids.push({
+          fileValue: candidate,
+          matchedUid: rows[0].uid,
+        });
+        existingSet.add(candidate);
+        existingUidsDisplay.add(rows[0].uid);
+      } else if (rows.length > 1) {
+        ambiguousNumericUids.push(candidate);
+      }
+    }),
   );
   // Which of these UIDs are locked by a running import right now (any
   // process/instance). Best-effort — a lock read failure must not block the
@@ -428,7 +500,9 @@ export async function precheckStudentsFromExcelBuffer(
     totalUids: uids.length,
     existingCount: existingSet.size,
     newCount: uids.length - existingSet.size,
-    existingUids: [...existingSet],
+    existingUids: [...existingUidsDisplay],
+    autoCorrectedUids,
+    ambiguousNumericUids,
     inProgressByOthers,
   };
 }
