@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Layers, Loader2, Pencil } from "lucide-react";
+import { Layers, Loader2, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,13 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +42,13 @@ const BADGE = {
   violet: "border-violet-300 bg-violet-50 text-violet-700",
 } as const;
 
-type IdNamed = { id: number; name: string | null; code?: string | null; shortName?: string | null };
+type IdNamed = {
+  id: number;
+  name: string | null;
+  code?: string | null;
+  shortName?: string | null;
+  isActive?: boolean;
+};
 
 function chips(values: string[], color: keyof typeof BADGE) {
   if (!values.length) return <span className="text-gray-400">—</span>;
@@ -85,10 +85,22 @@ export default function SubjectSelectionMetaPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editSubjectTypeId, setEditSubjectTypeId] = useState<string>("");
+  // Falls back to this when the meta's current category was since deactivated
+  // (and so is no longer in the active-only `subjectTypes` combobox options).
+  const [editSubjectTypeLabel, setEditSubjectTypeLabel] = useState<string>("");
   const [editClassIds, setEditClassIds] = useState<number[]>([]);
   const [editStreamIds, setEditStreamIds] = useState<number[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Add dialog state
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [addLabel, setAddLabel] = useState("");
+  const [addSubjectTypeId, setAddSubjectTypeId] = useState<string>("");
+  const [addClassIds, setAddClassIds] = useState<number[]>([]);
+  const [addStreamIds, setAddStreamIds] = useState<number[]>([]);
+  const [addIsActive, setAddIsActive] = useState(true);
+  const [adding, setAdding] = useState(false);
 
   const loadMetas = async () => {
     setLoading(true);
@@ -113,7 +125,10 @@ export default function SubjectSelectionMetaPage() {
     Promise.allSettled([getSubjectTypes(), getAllClasses(), getAllStreams()]).then(
       ([stRes, clRes, strRes]) => {
         if (cancelled) return;
-        if (stRes.status === "fulfilled") setSubjectTypes(stRes.value as unknown as IdNamed[]);
+        if (stRes.status === "fulfilled") {
+          const allSubjectTypes = stRes.value as unknown as IdNamed[];
+          setSubjectTypes(allSubjectTypes.filter((st) => st.isActive !== false));
+        }
         if (clRes.status === "fulfilled") setClasses(clRes.value as unknown as IdNamed[]);
         if (strRes.status === "fulfilled") setStreams(strRes.value as unknown as IdNamed[]);
       },
@@ -132,6 +147,7 @@ export default function SubjectSelectionMetaPage() {
     setEditId(m.id ?? null);
     setEditLabel(m.label ?? "");
     setEditSubjectTypeId(m.subjectType?.id != null ? String(m.subjectType.id) : "");
+    setEditSubjectTypeLabel(m.subjectType?.code || m.subjectType?.name || "");
     setEditClassIds(
       (m.forClasses ?? [])
         .map((c) => c.class?.id)
@@ -153,7 +169,7 @@ export default function SubjectSelectionMetaPage() {
       return;
     }
     if (!editSubjectTypeId) {
-      toast.error("Subject type is required");
+      toast.error("Subject Category is required");
       return;
     }
     setSaving(true);
@@ -173,6 +189,59 @@ export default function SubjectSelectionMetaPage() {
       toast.error(message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openAdd = () => {
+    setAddLabel("");
+    setAddSubjectTypeId("");
+    setAddClassIds([]);
+    setAddStreamIds([]);
+    setAddIsActive(true);
+    setIsAddOpen(true);
+  };
+
+  const saveAdd = async () => {
+    if (!currentAcademicYear?.id) {
+      toast.error("Select an academic year first");
+      return;
+    }
+    if (!addLabel.trim()) {
+      toast.error("Label is required");
+      return;
+    }
+    if (!addSubjectTypeId) {
+      toast.error("Subject Category is required");
+      return;
+    }
+    setAdding(true);
+    try {
+      // Append after the highest existing sequence for this academic year —
+      // sequence only controls row ordering, no need to make the admin pick it.
+      const nextSequence =
+        Math.max(
+          0,
+          ...metas
+            .filter((m) => m.academicYear?.id === currentAcademicYear.id)
+            .map((m) => m.sequence ?? 0),
+        ) + 1;
+      await subjectSelectionApi.createSubjectSelectionMeta({
+        label: addLabel.trim(),
+        sequence: nextSequence,
+        subjectType: { id: Number(addSubjectTypeId) },
+        academicYear: { id: currentAcademicYear.id },
+        isActive: addIsActive,
+        forClasses: addClassIds.map((id) => ({ id })),
+        streams: addStreamIds.map((id) => ({ id })),
+      });
+      toast.success("Subject-selection meta created");
+      setIsAddOpen(false);
+      await loadMetas();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create meta";
+      toast.error(message);
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -209,6 +278,10 @@ export default function SubjectSelectionMetaPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <Button onClick={openAdd} className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Add
+            </Button>
           </div>
         </CardHeader>
 
@@ -218,7 +291,7 @@ export default function SubjectSelectionMetaPage() {
               <TableHeader className="sticky top-0 z-10 bg-gray-50">
                 <TableRow>
                   <TableHead className="w-[35%]">Label</TableHead>
-                  <TableHead>Subject type</TableHead>
+                  <TableHead>Subject Category</TableHead>
                   <TableHead>Classes</TableHead>
                   <TableHead>Streams</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -287,13 +360,120 @@ export default function SubjectSelectionMetaPage() {
         </CardContent>
       </Card>
 
+      {/* Add Dialog */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Add Subject-selection Meta</DialogTitle>
+            <DialogDescription>
+              Create a new subject-selection group for{" "}
+              <span className="font-medium">{currentAcademicYear?.year ?? "—"}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="add-meta-label">Label</Label>
+              <Input
+                id="add-meta-label"
+                className="mt-1"
+                value={addLabel}
+                onChange={(e) => setAddLabel(e.target.value)}
+                placeholder="Label"
+              />
+            </div>
+            <div>
+              <Label>Subject Category</Label>
+              <Combobox
+                className="mt-1"
+                value={addSubjectTypeId}
+                onChange={setAddSubjectTypeId}
+                placeholder="Select subject category"
+                dataArr={subjectTypes.map((st) => ({
+                  value: String(st.id),
+                  label: st.code || st.name || "",
+                }))}
+              />
+            </div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label>Applicable classes</Label>
+              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+                {classes.map((c) => (
+                  <div key={c.id} className="flex items-center space-x-2 py-1">
+                    <Checkbox
+                      id={`add-cls-${c.id}`}
+                      checked={addClassIds.includes(c.id)}
+                      onCheckedChange={() => toggleId(c.id, addClassIds, setAddClassIds)}
+                    />
+                    <Label htmlFor={`add-cls-${c.id}`} className="text-sm">
+                      {c.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Streams</Label>
+              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+                {streams.map((s) => (
+                  <div key={s.id} className="flex items-center space-x-2 py-1">
+                    <Checkbox
+                      id={`add-str-${s.id}`}
+                      checked={addStreamIds.includes(s.id)}
+                      onCheckedChange={() => toggleId(s.id, addStreamIds, setAddStreamIds)}
+                    />
+                    <Label htmlFor={`add-str-${s.id}`} className="text-sm">
+                      {s.shortName || s.name || s.code}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center space-x-2">
+            <Switch
+              id="add-meta-active"
+              checked={addIsActive}
+              onCheckedChange={setAddIsActive}
+              className="data-[state=checked]:bg-green-600"
+            />
+            <Label
+              htmlFor="add-meta-active"
+              className={`text-sm font-medium ${addIsActive ? "text-green-600" : "text-red-600"}`}
+            >
+              {addIsActive ? "Active" : "Inactive"}
+            </Label>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={adding}>
+              Cancel
+            </Button>
+            <Button onClick={saveAdd} disabled={adding}>
+              {adding ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit Subject-selection Meta</DialogTitle>
             <DialogDescription>
-              Update the label, subject type, applicable classes, streams and status.
+              Update the label, subject category, applicable classes, streams and status.
             </DialogDescription>
           </DialogHeader>
 
@@ -309,19 +489,22 @@ export default function SubjectSelectionMetaPage() {
               />
             </div>
             <div>
-              <Label>Subject type</Label>
-              <Select value={editSubjectTypeId} onValueChange={setEditSubjectTypeId}>
-                <SelectTrigger className="mt-1 w-full text-gray-700">
-                  <SelectValue placeholder="Select subject type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjectTypes.map((st) => (
-                    <SelectItem key={st.id} value={String(st.id)}>
-                      {st.code || st.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Subject Category</Label>
+              <Combobox
+                className="mt-1"
+                value={editSubjectTypeId}
+                onChange={(v) => {
+                  setEditSubjectTypeId(v);
+                  const picked = subjectTypes.find((st) => String(st.id) === v);
+                  setEditSubjectTypeLabel(picked?.code || picked?.name || "");
+                }}
+                placeholder="Select subject category"
+                selectedLabel={editSubjectTypeLabel}
+                dataArr={subjectTypes.map((st) => ({
+                  value: String(st.id),
+                  label: st.code || st.name || "",
+                }))}
+              />
             </div>
           </div>
 

@@ -37,6 +37,20 @@ export type UpdateSubjectSelectionMetaInput = {
   streams?: { id: number }[];
 };
 
+// Create input for a subject-selection meta. Mirrors the backend create
+// service input (CreateSubjectSelectionMetaInput in
+// subject-selection-meta.service.ts) — label/sequence/subjectType/academicYear
+// are required there.
+export type CreateSubjectSelectionMetaInput = {
+  label: string;
+  sequence: number;
+  subjectType: { id: number };
+  academicYear: { id: number };
+  isActive?: boolean;
+  forClasses?: { id: number }[];
+  streams?: { id: number }[];
+};
+
 const BASE_MAIN = "/api/subject-selection/related-subject-mains";
 const BASE_SUB = "/api/subject-selection/related-subject-subs";
 const BASE_META = "/api/subject-selection/metas";
@@ -96,6 +110,10 @@ export const subjectSelectionApi = {
   },
 
   // Subject Selection Meta
+  async createSubjectSelectionMeta(payload: CreateSubjectSelectionMetaInput) {
+    const res = await api.post<ApiResponse<SubjectSelectionMetaDto>>(`${BASE_META}`, payload);
+    return res.data.payload;
+  },
   async updateSubjectSelectionMeta(id: number, payload: UpdateSubjectSelectionMetaInput) {
     const res = await api.put<ApiResponse<SubjectSelectionMetaDto>>(`${BASE_META}/${id}`, payload);
     return res.data.payload;
