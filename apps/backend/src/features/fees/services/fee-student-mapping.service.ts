@@ -235,7 +235,11 @@ async function persistReceiptIssuanceIfNeeded(params: {
           isDeprecated: false,
         });
         scheduleFeesDashboardBroadcast("fee_receipt_issued");
-        return { challanNumber: receiptNumber, challanGeneratedAt: now, uid: studentUid };
+        return {
+          challanNumber: receiptNumber,
+          challanGeneratedAt: now,
+          uid: studentUid,
+        };
       } catch (err) {
         if (!isUniqueViolation(err)) throw err;
         // Lost a race: either this mapping already got an active receipt, or the
@@ -727,19 +731,22 @@ async function generateFeeReceiptInternal(params: {
     feeCategoryCode,
   } = joinRow;
 
-  const { challanNumber, challanGeneratedAt, uid: receiptUid } =
-    params.overrideReceipt
-      ? {
-          challanNumber: params.overrideReceipt.receiptNumber,
-          challanGeneratedAt: params.overrideReceipt.challanGeneratedAt,
-          uid: params.overrideReceipt.uid,
-        }
-      : await persistReceiptIssuanceIfNeeded({
-          mappingId: feeStudentMapping.id,
-          studentId: student.id,
-          studentUid: student.uid,
-          feeCategoryCode: feeCategoryCode,
-        });
+  const {
+    challanNumber,
+    challanGeneratedAt,
+    uid: receiptUid,
+  } = params.overrideReceipt
+    ? {
+        challanNumber: params.overrideReceipt.receiptNumber,
+        challanGeneratedAt: params.overrideReceipt.challanGeneratedAt,
+        uid: params.overrideReceipt.uid,
+      }
+    : await persistReceiptIssuanceIfNeeded({
+        mappingId: feeStudentMapping.id,
+        studentId: student.id,
+        studentUid: student.uid,
+        feeCategoryCode: feeCategoryCode,
+      });
 
   const semesterName = toSentenceCasePreservingTrailingRoman(classRecord.name);
 
