@@ -2500,49 +2500,6 @@ function normalizeUidForMatch(uid: string): string {
   return uid.trim().toLowerCase();
 }
 
-function normalizeUidForImportMatch(uid: string): string {
-  // Match legacy importer cleaning: keep only alphanumeric chars and lower-case
-  return normalizeUidForMatch(uid).replace(/[^a-z0-9]/gi, "");
-}
-
-export async function checkExistingStudentUids(
-  uids: string[],
-): Promise<{ existingUids: string[] }> {
-  const normalizedToOriginals = new Map<string, Set<string>>();
-
-  for (const raw of uids || []) {
-    const norm = normalizeUidForImportMatch(String(raw ?? ""));
-    if (!norm) continue;
-    if (!normalizedToOriginals.has(norm))
-      normalizedToOriginals.set(norm, new Set());
-    normalizedToOriginals.get(norm)!.add(String(raw ?? "").trim());
-  }
-
-  const normalizedUids = Array.from(normalizedToOriginals.keys());
-  if (normalizedUids.length === 0) return { existingUids: [] };
-
-  // Postgres: regexp_replace supports global replace when passing 'g'
-  const rows = await db
-    .select({ uid: studentModel.uid })
-    .from(studentModel)
-    .where(
-      inArray(
-        sql`lower(regexp_replace(trim(${studentModel.uid}), '[^a-zA-Z0-9]', '', 'g'))`,
-        normalizedUids,
-      ),
-    );
-
-  const existingSet = new Set<string>();
-  for (const r of rows) {
-    const norm = normalizeUidForImportMatch(r.uid);
-    const originals = normalizedToOriginals.get(norm);
-    if (!originals) continue;
-    originals.forEach((o) => existingSet.add(o));
-  }
-
-  return { existingUids: Array.from(existingSet) };
-}
-
 export async function updateStudentCuRollAndRegistration(
   rows: StudentCuRollRegRow[],
   progressUserId?: string,

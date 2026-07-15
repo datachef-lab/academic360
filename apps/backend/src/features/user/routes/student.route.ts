@@ -17,7 +17,6 @@ import {
   importStudentsFromExcelController,
   precheckImportStudentsController,
   backfillStudentQuotaTypesController,
-  checkExistingStudentUidsController,
   exportStudentDetailedReportController,
   exportStudentAcademicSubjectsReportController,
   downloadStudentImagesController,
@@ -70,10 +69,6 @@ router.patch(
   "/:id/active-promotion-fields",
   updateActivePromotionFieldsController,
 );
-
-// POST /api/students/uids/check-existing
-// Check if any of the given UIDs already exist (prevents importing/updating existing students)
-router.post("/uids/check-existing", checkExistingStudentUidsController);
 
 // POST /api/students/update-apaar-ids
 // Upload Excel file and update APAAR IDs for students

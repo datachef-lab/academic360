@@ -281,6 +281,20 @@ export class ExportService {
       existingCount: number;
       newCount: number;
       existingUids: string[];
+      /**
+       * File values from Number-typed cells that were auto-matched to an
+       * existing student after allowing for a leading zero Excel/Sheets
+       * silently dropped (e.g. "304250034" matched to "0304250034").
+       * Already counted as existing — surfaced for transparency only.
+       */
+      autoCorrectedUids?: Array<{ fileValue: string; matchedUid: string }>;
+      /**
+       * Number-typed UIDs that matched MORE THAN ONE existing student once
+       * leading-zero padding is considered. Genuinely ambiguous — never
+       * guessed, so still counted as "new"; the admin should resolve these
+       * manually.
+       */
+      ambiguousNumericUids?: string[];
       /** UIDs currently locked by a running import (may be the current user's own earlier upload). */
       inProgressByOthers?: Array<{
         uid: string;
@@ -332,35 +346,6 @@ export class ExportService {
       return {
         success: false,
         message: error instanceof Error ? error.message : "Upload failed",
-      };
-    }
-  }
-
-  /**
-   * Check if any of the provided UIDs already exist in the backend
-   * Backend: POST /api/students/uids/check-existing
-   */
-  static async checkExistingStudentUids(
-    uids: string[],
-  ): Promise<ExcelUploadResponse<{ existingUids: string[] }>> {
-    try {
-      const response = await axiosInstance.post(`/api/students/uids/check-existing`, {
-        uids,
-      });
-
-      return {
-        success: true,
-        message: "UID check completed",
-        // Backend ApiResponse uses `payload`; keep fallback to `data` for safety.
-        data: (response.data?.payload ?? response.data?.data) as {
-          existingUids: string[];
-        },
-      };
-    } catch (error: unknown) {
-      console.error("Check existing UIDs error:", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "UID check failed",
       };
     }
   }
