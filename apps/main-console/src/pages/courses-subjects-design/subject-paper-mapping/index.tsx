@@ -22,13 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 // import { PaperEditModal } from "./paper-edit-modal";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
+import MultiSelect from "@/components/ui/MultiSelect";
 import { toast } from "sonner";
 import {
   getSubjects,
@@ -100,7 +95,7 @@ const SubjectPaperMappingPage = () => {
     affiliationId: null as number | null,
     regulationTypeId: null as number | null,
     academicYearId: null as number | null,
-    classId: null as number | null,
+    classIds: [] as number[],
     programCourseId: null as number | null,
     subjectTypeId: null as number | null,
     isOptional: null as boolean | null,
@@ -158,7 +153,7 @@ const SubjectPaperMappingPage = () => {
         academicYearId: filtersObj.academicYearId,
         subjectTypeId: filtersObj.subjectTypeId,
         programCourseId: filtersObj.programCourseId,
-        classId: filtersObj.classId,
+        classIds: filtersObj.classIds,
         isOptional: filtersObj.isOptional,
         autoAssign: filtersObj.autoAssign,
         searchText: searchText || null,
@@ -201,7 +196,7 @@ const SubjectPaperMappingPage = () => {
     filtersObj.affiliationId,
     filtersObj.regulationTypeId,
     filtersObj.academicYearId,
-    filtersObj.classId,
+    filtersObj.classIds,
     filtersObj.programCourseId,
     filtersObj.subjectTypeId,
     filtersObj.isOptional,
@@ -292,7 +287,7 @@ const SubjectPaperMappingPage = () => {
             affiliationId: null,
             regulationTypeId: null,
             academicYearId: currentAcademicYear?.id || null, // Default to current academic year
-            classId: null,
+            classIds: [],
             programCourseId: null,
             subjectTypeId: null,
             isOptional: null,
@@ -437,7 +432,7 @@ const SubjectPaperMappingPage = () => {
         academicYearId: filtersObj.academicYearId,
         subjectTypeId: filtersObj.subjectTypeId,
         programCourseId: filtersObj.programCourseId,
-        classId: filtersObj.classId,
+        classIds: filtersObj.classIds,
         isOptional: filtersObj.isOptional,
         searchText: searchText || undefined,
       });
@@ -481,7 +476,7 @@ const SubjectPaperMappingPage = () => {
               academicYearId: filtersObj.academicYearId,
               subjectTypeId: filtersObj.subjectTypeId,
               programCourseId: filtersObj.programCourseId,
-              classId: filtersObj.classId,
+              classIds: filtersObj.classIds,
               isOptional: filtersObj.isOptional,
               searchText: searchText || undefined,
             }),
@@ -1213,180 +1208,150 @@ const SubjectPaperMappingPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2 overflow-y-auto flex-1 min-h-0">
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Affiliation</div>
-                      <Select
+                      <Combobox
                         value={filtersObj.affiliationId?.toString() ?? "all"}
-                        onValueChange={(value) =>
+                        onChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
                             affiliationId: value === "all" ? null : Number(value),
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Affiliations" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Affiliations</SelectItem>
-                          {affiliations.map((a) => (
-                            <SelectItem key={a.id!} value={a.id!.toString()}>
-                              {a.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="All Affiliations"
+                        dataArr={[
+                          { value: "all", label: "All Affiliations" },
+                          ...affiliations
+                            .filter((a) => a.isActive !== false)
+                            .map((a) => ({ value: a.id!.toString(), label: a.name })),
+                        ]}
+                      />
                     </div>
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Academic Year</div>
-                      <Select
+                      <Combobox
                         value={filtersObj.academicYearId?.toString() ?? "all"}
-                        onValueChange={(value) =>
+                        onChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
                             academicYearId: value === "all" ? null : Number(value),
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Academic Years" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Academic Years</SelectItem>
-                          {availableAcademicYears.map((ay) => (
-                            <SelectItem key={ay.id!} value={ay.id!.toString()}>
-                              {ay.year}
-                              {ay.isCurrentYear === true && (
-                                <span className="ml-2 px-1 py-0.5 text-xs bg-green-100 text-green-700 rounded">
-                                  Current
-                                </span>
-                              )}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="All Academic Years"
+                        dataArr={[
+                          { value: "all", label: "All Academic Years" },
+                          ...availableAcademicYears.map((ay) => ({
+                            value: ay.id!.toString(),
+                            label: ay.isCurrentYear === true ? `${ay.year} (Current)` : ay.year,
+                          })),
+                        ]}
+                      />
                     </div>
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Regulation Type</div>
-                      <Select
+                      <Combobox
                         value={filtersObj.regulationTypeId?.toString() ?? "all"}
-                        onValueChange={(value) =>
+                        onChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
                             regulationTypeId: value === "all" ? null : Number(value),
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Regulation Types" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Regulation Types</SelectItem>
-                          {regulationTypes.map((rt) => (
-                            <SelectItem key={rt.id!} value={rt.id!.toString()}>
-                              {rt.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="All Regulation Types"
+                        dataArr={[
+                          { value: "all", label: "All Regulation Types" },
+                          ...regulationTypes
+                            .filter((rt) => rt.isActive !== false)
+                            .map((rt) => ({
+                              value: rt.id!.toString(),
+                              label: rt.name,
+                            })),
+                        ]}
+                      />
                     </div>
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Subject</div>
-                      <Select
+                      <Combobox
                         value={filtersObj.subjectId?.toString() ?? "all"}
-                        onValueChange={(value) =>
+                        onChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
                             subjectId: value === "all" ? null : Number(value),
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Subjects" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Subjects</SelectItem>
-                          {subjects.map((s) => (
-                            <SelectItem key={s.id!} value={s.id!.toString()}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="All Subjects"
+                        dataArr={[
+                          { value: "all", label: "All Subjects" },
+                          ...subjects
+                            .filter((s) => s.isActive !== false)
+                            .map((s) => ({ value: s.id!.toString(), label: s.name })),
+                        ]}
+                      />
                     </div>
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Semester</div>
-                      <Select
-                        value={filtersObj.classId?.toString() ?? "all"}
-                        onValueChange={(value) =>
+                      <MultiSelect
+                        placeholder="All Semesters"
+                        options={classes
+                          .filter((cls) => cls.isActive !== false)
+                          .map((cls) => ({
+                            value: cls.id!.toString(),
+                            label: cls.name.split(" ")[1] || cls.name,
+                          }))}
+                        selectedOptions={filtersObj.classIds.map(String)}
+                        onChange={(selected) =>
                           setFiltersObj((prev) => ({
                             ...prev,
-                            classId: value === "all" ? null : Number(value),
+                            classIds: selected.map(Number),
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Semesters" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Semesters</SelectItem>
-                          {classes.map((cls) => (
-                            <SelectItem key={cls.id!} value={cls.id!.toString()}>
-                              {cls.name.split(" ")[1] || cls.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     </div>
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Program Course</div>
-                      <Select
+                      <Combobox
                         value={filtersObj.programCourseId?.toString() ?? "all"}
-                        onValueChange={(value) =>
+                        onChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
                             programCourseId: value === "all" ? null : Number(value),
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Program Courses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Program Courses</SelectItem>
-                          {programCourses.map((pc) => (
-                            <SelectItem key={pc.id!} value={pc.id!.toString()}>
-                              {pc.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="All Program Courses"
+                        dataArr={[
+                          { value: "all", label: "All Program Courses" },
+                          ...programCourses
+                            .filter((pc) => pc.isActive !== false)
+                            .map((pc) => ({
+                              value: pc.id!.toString(),
+                              label: pc.name ?? "",
+                            })),
+                        ]}
+                      />
                     </div>
                     <div>
-                      <div className="mb-1 text-sm text-muted-foreground">Subject Type</div>
-                      <Select
+                      <div className="mb-1 text-sm text-muted-foreground">Subject Category</div>
+                      <Combobox
                         value={filtersObj.subjectTypeId?.toString() ?? "all"}
-                        onValueChange={(value) =>
+                        onChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
                             subjectTypeId: value === "all" ? null : Number(value),
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Subject Types" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Subject Types</SelectItem>
-                          {subjectTypes.map((st) => (
-                            <SelectItem key={st.id!} value={st.id!.toString()}>
-                              {st.code ?? ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="All Subject Categories"
+                        dataArr={[
+                          { value: "all", label: "All Subject Categories" },
+                          ...subjectTypes
+                            .filter((st) => st.isActive !== false)
+                            .map((st) => ({
+                              value: st.id!.toString(),
+                              label: st.code ?? "",
+                            })),
+                        ]}
+                      />
                     </div>
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Is Optional</div>
-                      <Select
+                      <Combobox
                         value={
                           filtersObj.isOptional === null
                             ? "all"
@@ -1394,26 +1359,23 @@ const SubjectPaperMappingPage = () => {
                               ? "true"
                               : "false"
                         }
-                        onValueChange={(value) =>
+                        onChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
                             isOptional: value === "all" ? null : value === "true",
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Papers" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Papers</SelectItem>
-                          <SelectItem value="true">Optional Papers</SelectItem>
-                          <SelectItem value="false">Non-Optional Papers</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        placeholder="All Papers"
+                        dataArr={[
+                          { value: "all", label: "All Papers" },
+                          { value: "true", label: "Optional Papers" },
+                          { value: "false", label: "Non-Optional Papers" },
+                        ]}
+                      />
                     </div>
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Auto Assigned</div>
-                      <Select
+                      <Combobox
                         value={
                           filtersObj.autoAssign === null
                             ? "all"
@@ -1421,22 +1383,19 @@ const SubjectPaperMappingPage = () => {
                               ? "true"
                               : "false"
                         }
-                        onValueChange={(value) =>
+                        onChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
                             autoAssign: value === "all" ? null : value === "true",
                           }))
                         }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="true">Auto Assigned</SelectItem>
-                          <SelectItem value="false">Manually Assigned</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        placeholder="All"
+                        dataArr={[
+                          { value: "all", label: "All" },
+                          { value: "true", label: "Auto Assigned" },
+                          { value: "false", label: "Manually Assigned" },
+                        ]}
+                      />
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-2 border-t flex-shrink-0 mt-2">
@@ -1449,7 +1408,7 @@ const SubjectPaperMappingPage = () => {
                           affiliationId: null,
                           regulationTypeId: null,
                           academicYearId: null,
-                          classId: null,
+                          classIds: [],
                           programCourseId: null,
                           subjectTypeId: null,
                           isOptional: null,
@@ -1551,24 +1510,28 @@ const SubjectPaperMappingPage = () => {
                     </button>
                   </Badge>
                 )}
-                {filtersObj.classId && (
+                {filtersObj.classIds.map((classId) => (
                   <Badge
+                    key={classId}
                     variant="outline"
                     className="text-xs border-orange-300 text-orange-700 bg-orange-50 flex items-center gap-1"
                   >
-                    {classes.find((c) => c.id === filtersObj.classId)?.name || "Semester"}
+                    {classes.find((c) => c.id === classId)?.name || "Semester"}
                     <button
                       aria-label="Clear semester filter"
                       className="ml-1 hover:text-orange-900"
                       onClick={() => {
-                        setFiltersObj((prev) => ({ ...prev, classId: null }));
+                        setFiltersObj((prev) => ({
+                          ...prev,
+                          classIds: prev.classIds.filter((id) => id !== classId),
+                        }));
                         setCurrentPage(1);
                       }}
                     >
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>
-                )}
+                ))}
                 {filtersObj.programCourseId && (
                   <Badge
                     variant="outline"
@@ -1594,9 +1557,9 @@ const SubjectPaperMappingPage = () => {
                     className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50 flex items-center gap-1"
                   >
                     {subjectTypes.find((st) => st.id === filtersObj.subjectTypeId)?.code ||
-                      "Subject Type"}
+                      "Subject Category"}
                     <button
-                      aria-label="Clear subject type filter"
+                      aria-label="Clear subject category filter"
                       className="ml-1 hover:text-emerald-900"
                       onClick={() => {
                         setFiltersObj((prev) => ({ ...prev, subjectTypeId: null }));

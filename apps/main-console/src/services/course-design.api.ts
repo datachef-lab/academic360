@@ -76,7 +76,7 @@ export const getPapersPaginated = async (
     academicYearId?: number | null;
     subjectTypeId?: number | null;
     programCourseId?: number | null;
-    classId?: number | null;
+    classIds?: number[] | null;
     isOptional?: boolean | null;
     autoAssign?: boolean | null;
     searchText?: string | null;
@@ -89,7 +89,7 @@ export const getPapersPaginated = async (
   if (filters?.academicYearId) params.academicYearId = filters.academicYearId;
   if (filters?.subjectTypeId) params.subjectTypeId = filters.subjectTypeId;
   if (filters?.programCourseId) params.programCourseId = filters.programCourseId;
-  if (filters?.classId) params.classId = filters.classId;
+  if (filters?.classIds?.length) params.classIds = filters.classIds.join(",");
   if (filters?.isOptional !== null && filters?.isOptional !== undefined)
     params.isOptional = filters.isOptional;
   if (filters?.autoAssign !== null && filters?.autoAssign !== undefined)
