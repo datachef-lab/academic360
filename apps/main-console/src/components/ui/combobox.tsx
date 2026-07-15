@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, CheckIcon, ChevronsUpDownIcon, Loader2 } from "lucide-react";
+import { CheckIcon, ChevronsUpDownIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -160,7 +160,7 @@ export function Combobox({
                       value === item.value ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  {item.imageUrl ? (
+                  {item.imageUrl && (
                     <img
                       src={item.imageUrl}
                       alt={item.label}
@@ -168,10 +168,6 @@ export function Combobox({
                       decoding="async"
                       className="mr-2 h-7 w-6 shrink-0 rounded border object-cover"
                     />
-                  ) : (
-                    <span className="mr-2 inline-flex h-7 w-6 shrink-0 items-center justify-center rounded border bg-muted/40 text-muted-foreground">
-                      <BookOpen className="h-3.5 w-3.5" />
-                    </span>
                   )}
                   <span>{item.label}</span>
                 </CommandItem>
