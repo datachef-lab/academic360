@@ -2,7 +2,6 @@ import { Select } from "@/components/ui/select";
 import { useTheme } from "@/hooks/use-theme";
 import { toSentenceCase } from "@/lib/text";
 import { useAuth } from "@/providers/auth-provider";
-import { fetchStudentClassIds } from "@/services/batches";
 import {
   fetchMandatoryPaperRows,
   fetchStudentSubjectSelections,
@@ -62,9 +61,8 @@ export default function NotesScreen() {
     Promise.all([
       fetchMandatoryPaperRows(sid),
       fetchStudentSubjectSelections(sid).catch(() => null),
-      fetchStudentClassIds(sid),
     ])
-      .then(([mand, sel, classIds]) => {
+      .then(([mand, sel]) => {
         if (cancelled) return;
         // Mandatory papers: /mandatory-papers carries each paper's class
         // (semester) but is NOT scoped to the student's classes server-side.
@@ -92,12 +90,17 @@ export default function NotesScreen() {
           });
         }
 
-        // Scope to the student's actual semesters: keep only papers whose class
-        // the student is enrolled in (from batch-student mappings). If we can't
-        // resolve the student's classes, fall back to showing all.
-        const allowed = new Set(classIds);
+        // Scope to the student's semesters: only up to their CURRENT semester
+        // (from currentPromotion.class). /mandatory-papers returns the whole
+        // program's papers, so without this the dropdown shows future semesters.
+        const curNum = romanToNum(student?.currentPromotion?.class?.name);
         const scoped =
-          allowed.size > 0 ? list.filter((p) => p.classId != null && allowed.has(p.classId)) : list;
+          curNum < 999
+            ? list.filter((p) => {
+                const n = romanToNum(p.className);
+                return n < 999 && n <= curNum;
+              })
+            : list;
 
         // Dedupe by paper id (a paper shouldn't appear twice).
         const seen = new Set<number>();

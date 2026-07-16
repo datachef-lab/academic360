@@ -30,6 +30,7 @@ function getScreenTitle(pathname: string): string {
     ["/console/academics/subject-selection-instructions", "Subject Selection"],
     ["/console/academics/subject-selection", "Subject Selection"],
     ["/console/academics/cu-exam-form-upload", "Exam Form"],
+    ["/console/academics/timetable", "Time Table"],
     ["/console/academics/notes", "Notes"],
     ["/console/academics", "Academics"],
     ["/console/service-requests", "Service Requests"],
@@ -40,7 +41,12 @@ function getScreenTitle(pathname: string): string {
     ["/console/support", "Help & Support"],
     ["/console/contact", "Contact College"],
     ["/console/profile", "Profile"],
+    // Bottom tabs (except Home, which shows the brand)
+    ["/console/study-notes", "Notes"],
+    ["/console/fees", "Fees"],
+    ["/console/library", "Library"],
     ["/console/exams/", "Exam"],
+    ["/console/exams", "Exams"],
   ];
   for (const [prefix, title] of routes) {
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return title;
@@ -74,6 +80,8 @@ export function Header() {
   const iconSize = 20;
   const avatarSize = 36;
   const isTabRoot = TAB_ROOTS.has(pathname);
+  const isHome =
+    pathname === "/console" || pathname === "/console/" || pathname === "/console/(tabs)";
   const title = getScreenTitle(pathname);
 
   return (
@@ -91,7 +99,7 @@ export function Header() {
           <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
           <View style={styles.brandBox}>
             <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>
-              {isTabRoot ? "BESC Console" : title}
+              {isHome ? "BESC Console" : title}
             </Text>
             {uid ? (
               <Text style={[styles.uid, { color: theme.text }]} numberOfLines={1}>
