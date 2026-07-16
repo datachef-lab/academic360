@@ -102,19 +102,19 @@ export function NotesList() {
         // Preferred: the authoritative per-student university subjects — same
         // source as the subjects report (mandatory + optional, per semester).
         const uni = await fetchStudentUniversitySubjects(sid);
-        const list: UiPaper[] =
-          uni.length > 0
-            ? uni
-                .filter((r) => r.paper_id != null)
-                .map((r) => ({
-                  id: r.paper_id as number,
-                  name: r.paper || r.subject || "Paper",
-                  code: r.paper_code || "",
-                  classId: null,
-                  className: (r.semester || "").trim(),
-                  elective: !!r.is_optional,
-                }))
-            : await buildFromMandatoryAndElectives();
+        const mapped: UiPaper[] = uni
+          .filter((r) => r.paper_id != null)
+          .map((r) => ({
+            id: r.paper_id as number,
+            name: r.paper || r.subject || "Paper",
+            code: r.paper_code || "",
+            classId: null,
+            className: (r.semester || "").trim(),
+            elective: !!r.is_optional,
+          }));
+        // Fall back whenever the endpoint yields nothing usable (not deployed,
+        // errored, or empty) so the screen never goes blank.
+        const list = mapped.length > 0 ? mapped : await buildFromMandatoryAndElectives();
         if (cancelled) return;
         const seen = new Set<number>();
         setPapersAll(list.filter((p) => (seen.has(p.id) ? false : seen.add(p.id))));
