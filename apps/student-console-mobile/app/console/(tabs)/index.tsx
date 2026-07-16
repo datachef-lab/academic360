@@ -18,8 +18,9 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import React, { useState } from "react";
-import { Dimensions, Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
+import { Dialog } from "@/components/ui/Dialog";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -226,14 +227,20 @@ export default function ConsoleScreen() {
   const student = user?.payload as StudentDto | undefined;
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [seenActivities, setSeenActivities] = useState<Set<string>>(new Set());
 
   const firstName = user?.name?.split(" ")[0] || "Student";
-  const programName =
-    student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "—";
-  const sectionName = student?.currentPromotion?.section?.name || "—";
-  const sessionName = student?.currentPromotion?.session?.name || "";
-  const semesterLabel = sessionName ? `Semester ${sessionName.replace(/\D/g, "") || "—"}` : "—";
-  const academicSubtitle = [semesterLabel, programName, sectionName].filter(Boolean).join(" • ");
+  const promo = student?.currentPromotion;
+  const semesterName = promo?.class?.name || "";
+  // Prefer a nested academicYear.year if the payload includes it; else the session label.
+  const academicYearName =
+    (promo?.session as { academicYear?: { year?: string } } | undefined)?.academicYear?.year ||
+    promo?.session?.name ||
+    "";
+  const sectionName = promo?.section?.name || "";
+  const academicSubtitle = [semesterName, academicYearName, sectionName]
+    .filter(Boolean)
+    .join(" • ");
 
   const affiliation =
     student?.programCourse?.affiliation ?? student?.currentPromotion?.programCourse?.affiliation;
@@ -273,6 +280,11 @@ export default function ConsoleScreen() {
 
   const handleActivityPress = (item: ActivityItem) => {
     setSelectedActivity(item);
+    setSeenActivities((prev) => {
+      const next = new Set(prev);
+      next.add(item.id);
+      return next;
+    });
   };
 
   const handleActivityView = () => {
@@ -297,6 +309,75 @@ export default function ConsoleScreen() {
           {academicSubtitle}
         </Text>
       </View>
+
+      {/* Instagram Stories-like: Activities / Reminders */}
+      <Text style={{ color: theme.text }} className="text-base font-semibold mb-3">
+        For You
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingRight: 12, marginBottom: 24 }}
+        className="-mx-4 px-4"
+      >
+        {MOCK_ACTIVITIES.map((item) => {
+          const Icon = item.icon;
+          const seen = seenActivities.has(item.id);
+          return (
+            <Pressable
+              key={item.id}
+              onPress={() => handleActivityPress(item)}
+              className="items-center mr-3"
+              style={{ width: STORY_ITEM_WIDTH }}
+            >
+              {/* Story ring: coloured until seen, then muted grey */}
+              <View
+                className="rounded-full mb-1.5 items-center justify-center"
+                style={{
+                  width: STORY_SIZE + 6,
+                  height: STORY_SIZE + 6,
+                  padding: 2.5,
+                  backgroundColor: seen
+                    ? isDark
+                      ? "rgba(255,255,255,0.16)"
+                      : "#d8dee9"
+                    : isDark
+                      ? "#818cf8"
+                      : "#4f46e5",
+                }}
+              >
+                <View
+                  className="rounded-full items-center justify-center overflow-hidden"
+                  style={{
+                    width: STORY_SIZE,
+                    height: STORY_SIZE,
+                    backgroundColor: theme.background,
+                    padding: 2,
+                  }}
+                >
+                  <View
+                    className="rounded-full items-center justify-center"
+                    style={{ width: "100%", height: "100%", backgroundColor: item.iconBg }}
+                  >
+                    <Icon size={22} color="#ffffff" />
+                  </View>
+                </View>
+              </View>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: theme.text,
+                  fontSize: 12,
+                  textAlign: "center",
+                  minWidth: STORY_ITEM_WIDTH,
+                }}
+              >
+                {item.title}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {/* Today's Schedule Card */}
       <Pressable
@@ -335,67 +416,6 @@ export default function ConsoleScreen() {
           <Text className="text-white font-semibold text-sm">VIEW</Text>
         </Pressable>
       </Pressable>
-
-      {/* Instagram Stories-like: Activities / Reminders */}
-      <Text style={{ color: theme.text }} className="text-base font-semibold mb-3">
-        For You
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingRight: 12, marginBottom: 24 }}
-        className="-mx-4 px-4"
-      >
-        {MOCK_ACTIVITIES.map((item) => (
-          <Pressable
-            key={item.id}
-            onPress={() => handleActivityPress(item)}
-            className="items-center mr-3"
-            style={{ width: STORY_ITEM_WIDTH }}
-          >
-            {/* Story circle - subtle ring */}
-            <View
-              className="rounded-full mb-1.5 items-center justify-center"
-              style={{
-                width: STORY_SIZE + 4,
-                height: STORY_SIZE + 4,
-                padding: 2,
-                backgroundColor: isDark ? "rgba(99,102,241,0.25)" : "rgba(79,70,229,0.15)",
-              }}
-            >
-              <View
-                className="rounded-full items-center justify-center overflow-hidden"
-                style={{
-                  width: STORY_SIZE,
-                  height: STORY_SIZE,
-                  backgroundColor: theme.background,
-                }}
-              >
-                <View
-                  className="w-11 h-11 rounded-full items-center justify-center"
-                  style={{ backgroundColor: item.iconBg }}
-                >
-                  {(() => {
-                    const Icon = item.icon;
-                    return <Icon size={22} color="#ffffff" />;
-                  })()}
-                </View>
-              </View>
-            </View>
-            <Text
-              numberOfLines={2}
-              style={{
-                color: theme.text,
-                fontSize: 12,
-                textAlign: "center",
-                minWidth: STORY_ITEM_WIDTH,
-              }}
-            >
-              {item.title}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
 
       {/* Quick Actions - academic shortcuts (all live under /console/academics) */}
       <Text style={{ color: theme.text }} className="text-lg font-bold mb-3">
@@ -485,199 +505,169 @@ export default function ConsoleScreen() {
         })}
       </View>
 
-      {/* Today's Schedule Modal */}
-      <Modal
+      {/* Today's Schedule Dialog */}
+      <Dialog
         visible={showScheduleModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowScheduleModal(false)}
+        onClose={() => setShowScheduleModal(false)}
+        bg={theme.background}
       >
-        <Pressable
-          className="flex-1 justify-end"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-          onPress={() => setShowScheduleModal(false)}
+        <View className="p-4 border-b" style={{ borderColor: cardBorder }}>
+          <View className="flex-row items-center justify-between">
+            <Text style={{ color: theme.text }} className="text-lg font-bold">
+              Today's Schedule
+            </Text>
+            <Pressable onPress={() => setShowScheduleModal(false)} className="p-2 -mr-2">
+              <X size={22} color={theme.text} />
+            </Pressable>
+          </View>
+          <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm mt-1">
+            {getTodayDateFormatted()}
+          </Text>
+        </View>
+        <ScrollView
+          style={{ maxHeight: Dimensions.get("window").height * 0.5 }}
+          contentContainerStyle={{ paddingBottom: 8 }}
+          showsVerticalScrollIndicator
         >
-          <Pressable
-            className="rounded-t-2xl mx-2 overflow-hidden"
-            style={{
-              backgroundColor: theme.background,
-              maxHeight: Dimensions.get("window").height * 0.85,
-              height: Dimensions.get("window").height * 0.85,
-              flexDirection: "column",
-            }}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View className="p-4 border-b" style={{ borderColor: cardBorder }}>
-              <View className="flex-row items-center justify-between">
-                <Text style={{ color: theme.text }} className="text-lg font-bold">
-                  Today's Schedule
-                </Text>
-                <Pressable onPress={() => setShowScheduleModal(false)} className="p-2 -mr-2">
-                  <X size={24} color={theme.text} />
-                </Pressable>
-              </View>
-              <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm mt-1">
-                {getTodayDateFormatted()}
-              </Text>
-            </View>
-            <ScrollView
-              style={{ flex: 1, minHeight: 0 }}
-              contentContainerStyle={{ paddingBottom: 8 }}
-              showsVerticalScrollIndicator={true}
-            >
-              {MOCK_TODAY_SCHEDULE.map((item, index) => {
-                const Icon = item.icon;
-                const isBreak = item.type === "break" || item.type === "lunch";
-                const isWorkshop = item.type === "workshop";
-                return (
+          {MOCK_TODAY_SCHEDULE.map((item, index) => {
+            const Icon = item.icon;
+            const isBreak = item.type === "break" || item.type === "lunch";
+            const isWorkshop = item.type === "workshop";
+            return (
+              <View
+                key={item.id}
+                className="flex-row items-center py-3"
+                style={{
+                  paddingHorizontal: 16,
+                  borderBottomWidth: index < MOCK_TODAY_SCHEDULE.length - 1 ? 1 : 0,
+                  borderBottomColor: cardBorder,
+                  backgroundColor: isBreak
+                    ? isDark
+                      ? "rgba(255,255,255,0.03)"
+                      : "rgba(0,0,0,0.02)"
+                    : "transparent",
+                }}
+              >
+                <View
+                  style={{
+                    width: 88,
+                    paddingRight: 12,
+                    borderRightWidth: 2,
+                    borderRightColor: isDark ? "#6366f1" : "#4f46e5",
+                  }}
+                >
+                  <Text style={{ color: theme.text, fontSize: 12, fontWeight: "600" }}>
+                    {formatTime12h(item.time)}
+                  </Text>
+                  {item.endTime && (
+                    <Text style={{ color: theme.text, fontSize: 11, opacity: 0.8, marginTop: 2 }}>
+                      {formatTime12h(item.endTime)}
+                    </Text>
+                  )}
+                </View>
+                <View
+                  className="flex-1 flex-row items-center"
+                  style={{ marginLeft: 16, minWidth: 0 }}
+                >
                   <View
-                    key={item.id}
-                    className="flex-row items-center py-3"
                     style={{
-                      paddingHorizontal: 16,
-                      borderBottomWidth: index < MOCK_TODAY_SCHEDULE.length - 1 ? 1 : 0,
-                      borderBottomColor: cardBorder,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 12,
                       backgroundColor: isBreak
                         ? isDark
-                          ? "rgba(255,255,255,0.03)"
-                          : "rgba(0,0,0,0.02)"
-                        : "transparent",
+                          ? "rgba(245,158,11,0.3)"
+                          : "rgba(245,158,11,0.2)"
+                        : isWorkshop
+                          ? isDark
+                            ? "rgba(34,197,94,0.3)"
+                            : "rgba(34,197,94,0.2)"
+                          : isDark
+                            ? "rgba(99,102,241,0.25)"
+                            : "rgba(79,70,229,0.15)",
                     }}
                   >
-                    <View
-                      style={{
-                        width: 88,
-                        paddingRight: 12,
-                        borderRightWidth: 2,
-                        borderRightColor: isDark ? "#6366f1" : "#4f46e5",
-                      }}
-                    >
-                      <Text style={{ color: theme.text, fontSize: 12, fontWeight: "600" }}>
-                        {formatTime12h(item.time)}
-                      </Text>
-                      {item.endTime && (
-                        <Text
-                          style={{ color: theme.text, fontSize: 11, opacity: 0.8, marginTop: 2 }}
-                        >
-                          {formatTime12h(item.endTime)}
-                        </Text>
-                      )}
-                    </View>
-                    <View
-                      className="flex-1 flex-row items-center"
-                      style={{ marginLeft: 16, minWidth: 0 }}
-                    >
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginRight: 12,
-                          backgroundColor: isBreak
-                            ? isDark
-                              ? "rgba(245,158,11,0.3)"
-                              : "rgba(245,158,11,0.2)"
-                            : isWorkshop
-                              ? isDark
-                                ? "rgba(34,197,94,0.3)"
-                                : "rgba(34,197,94,0.2)"
-                              : isDark
-                                ? "rgba(99,102,241,0.25)"
-                                : "rgba(79,70,229,0.15)",
-                        }}
-                      >
-                        <Icon
-                          size={18}
-                          color={
-                            isBreak
-                              ? "#f59e0b"
-                              : isWorkshop
-                                ? "#22c55e"
-                                : isDark
-                                  ? "#a5b4fc"
-                                  : "#4f46e5"
-                          }
-                        />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500" }}>
-                          {item.title}
-                        </Text>
-                        {item.subtitle && (
-                          <Text
-                            style={{ color: theme.text, opacity: 0.65, fontSize: 12, marginTop: 1 }}
-                          >
-                            {item.subtitle}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
+                    <Icon
+                      size={18}
+                      color={
+                        isBreak
+                          ? "#f59e0b"
+                          : isWorkshop
+                            ? "#22c55e"
+                            : isDark
+                              ? "#a5b4fc"
+                              : "#4f46e5"
+                      }
+                    />
                   </View>
-                );
-              })}
-            </ScrollView>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500" }}>
+                      {item.title}
+                    </Text>
+                    {item.subtitle && (
+                      <Text
+                        style={{ color: theme.text, opacity: 0.65, fontSize: 12, marginTop: 1 }}
+                      >
+                        {item.subtitle}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+        <Pressable
+          onPress={() => {
+            setShowScheduleModal(false);
+            router.push("/console/academics");
+          }}
+          className="m-4 py-3 rounded-xl items-center"
+          style={{ backgroundColor: isDark ? "#6366f1" : "#4f46e5" }}
+        >
+          <Text className="text-white font-semibold">View Full Timetable</Text>
+        </Pressable>
+      </Dialog>
+
+      {/* Activity Detail Dialog */}
+      <Dialog
+        visible={!!selectedActivity}
+        onClose={() => setSelectedActivity(null)}
+        bg={theme.background}
+      >
+        <View className="p-5">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-1">
+              <Text style={{ color: theme.text }} className="text-lg font-bold">
+                {selectedActivity?.title}
+              </Text>
+              {selectedActivity?.subtitle && (
+                <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm mt-0.5">
+                  {selectedActivity.subtitle}
+                </Text>
+              )}
+            </View>
+            <Pressable onPress={() => setSelectedActivity(null)} className="p-2 -mr-2">
+              <X size={22} color={theme.text} />
+            </Pressable>
+          </View>
+          <Text style={{ color: theme.text, opacity: 0.85 }} className="text-base leading-6 mb-4">
+            {selectedActivity?.detail || "No additional details available."}
+          </Text>
+          {selectedActivity?.path && (
             <Pressable
-              onPress={() => {
-                setShowScheduleModal(false);
-                router.push("/console/academics");
-              }}
-              className="m-4 py-3 rounded-xl items-center"
+              onPress={handleActivityView}
+              className="py-3 rounded-xl items-center"
               style={{ backgroundColor: isDark ? "#6366f1" : "#4f46e5" }}
             >
-              <Text className="text-white font-semibold">View Full Timetable</Text>
+              <Text className="text-white font-semibold">View Details</Text>
             </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Activity Detail Modal */}
-      <Modal
-        visible={!!selectedActivity}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedActivity(null)}
-      >
-        <Pressable
-          className="flex-1 justify-end bg-black/50"
-          onPress={() => setSelectedActivity(null)}
-        >
-          <Pressable
-            className="rounded-t-2xl p-5 pb-8"
-            style={{ backgroundColor: theme.background }}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-1">
-                <Text style={{ color: theme.text }} className="text-lg font-bold">
-                  {selectedActivity?.title}
-                </Text>
-                {selectedActivity?.subtitle && (
-                  <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm mt-0.5">
-                    {selectedActivity.subtitle}
-                  </Text>
-                )}
-              </View>
-              <Pressable onPress={() => setSelectedActivity(null)} className="p-2 -mr-2">
-                <X size={24} color={theme.text} />
-              </Pressable>
-            </View>
-            <Text style={{ color: theme.text, opacity: 0.85 }} className="text-base leading-6 mb-4">
-              {selectedActivity?.detail || "No additional details available."}
-            </Text>
-            {selectedActivity?.path && (
-              <Pressable
-                onPress={handleActivityView}
-                className="py-3 rounded-xl items-center"
-                style={{ backgroundColor: isDark ? "#6366f1" : "#4f46e5" }}
-              >
-                <Text className="text-white font-semibold">View Details</Text>
-              </Pressable>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+          )}
+        </View>
+      </Dialog>
     </ScrollView>
   );
 }

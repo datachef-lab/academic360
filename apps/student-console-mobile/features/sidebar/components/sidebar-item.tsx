@@ -53,7 +53,7 @@ export default function SidebarItem({
         {/* Left section */}
         <View className="flex-row items-center gap-3">
           {isProfile ? (
-            <Avatar uid={uid} name={user?.name} size={40} />
+            <Avatar uid={uid} name={user?.name} size={40} shape="square" />
           ) : (
             <item.icon size={20} color={isActive ? activeColor : theme.text} />
           )}

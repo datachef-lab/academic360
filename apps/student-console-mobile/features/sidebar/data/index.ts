@@ -6,7 +6,6 @@ import {
   CogIcon,
   FileTextIcon,
   GraduationCapIcon,
-  HelpCircleIcon,
   HouseIcon,
   LifeBuoyIcon,
   LucideIcon,
@@ -81,13 +80,7 @@ export const sidebarItems = [
     label: "Help & Support",
     icon: LifeBuoyIcon,
     path: "/console/support",
-    oneLiner: "Get help with portal or services",
-  },
-  {
-    label: "FAQs",
-    icon: HelpCircleIcon,
-    path: "/console/faqs",
-    oneLiner: "Quick answers to common questions",
+    oneLiner: "Get help, FAQs and services",
   },
   {
     label: "Contact College",

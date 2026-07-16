@@ -74,7 +74,7 @@ export function Header() {
             )}
           </TouchableOpacity>
           <TouchableOpacity onPress={openDrawer}>
-            <Avatar uid={uid} name={user?.name} size={avatarSize} />
+            <Avatar uid={uid} name={user?.name} size={avatarSize} shape="square" />
           </TouchableOpacity>
         </View>
       </View>
