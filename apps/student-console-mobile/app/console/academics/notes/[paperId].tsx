@@ -109,7 +109,7 @@ export default function PaperNotesScreen() {
       ) : (
         <View className="gap-3">
           {MOCK_ASSIGNMENTS.map((a) => (
-            <View
+            <Pressable
               key={a.id}
               className="flex-row items-center rounded-2xl p-4"
               style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
@@ -131,7 +131,9 @@ export default function PaperNotesScreen() {
                   {a.due}
                 </Text>
               </View>
-            </View>
+              {/* Assignment is a downloadable PDF (preview/open) */}
+              <Download size={18} color={accent} />
+            </Pressable>
           ))}
         </View>
       )}

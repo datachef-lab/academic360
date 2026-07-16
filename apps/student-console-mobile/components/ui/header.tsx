@@ -80,32 +80,25 @@ export function Header() {
     <View style={styles.shell}>
       <GlassSurface isDark={isDark} />
       <View style={styles.content}>
-        {/* Left: brand on tab roots, back + screen title on nested screens */}
+        {/* Left: (back on nested) + college logo (always) + heading — "BESC Console"
+            on tab roots, the screen title on nested — with the UID kept underneath. */}
         <View style={styles.left}>
-          {isTabRoot ? (
-            <>
-              <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
-              <View style={styles.brandBox}>
-                <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>
-                  BESC Console
-                </Text>
-                {uid ? (
-                  <Text style={[styles.uid, { color: theme.text }]} numberOfLines={1}>
-                    {uid}
-                  </Text>
-                ) : null}
-              </View>
-            </>
-          ) : (
-            <>
-              <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
-                <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
-              </Pressable>
-              <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-                {title}
+          {!isTabRoot ? (
+            <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
+              <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
+            </Pressable>
+          ) : null}
+          <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+          <View style={styles.brandBox}>
+            <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>
+              {isTabRoot ? "BESC Console" : title}
+            </Text>
+            {uid ? (
+              <Text style={[styles.uid, { color: theme.text }]} numberOfLines={1}>
+                {uid}
               </Text>
-            </>
-          )}
+            ) : null}
+          </View>
         </View>
 
         {/* Right: theme toggle + avatar (opens drawer) */}

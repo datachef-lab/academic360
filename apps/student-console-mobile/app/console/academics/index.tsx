@@ -1,4 +1,3 @@
-import attendanceImg from "@/assets/illustrations/academics/attendance.jpg";
 import cuRegistrationImg from "@/assets/illustrations/academics/cu-registration.jpg";
 import examFormImg from "@/assets/illustrations/academics/exam-form.jpg";
 import subjectSelectionImg from "@/assets/illustrations/academics/subject-selection.jpg";
@@ -7,7 +6,13 @@ import { useAuth } from "@/providers/auth-provider";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { ChevronRight, GraduationCap, NotebookPen, type LucideIcon } from "lucide-react-native";
+import {
+  CalendarCheck,
+  ChevronRight,
+  GraduationCap,
+  NotebookPen,
+  type LucideIcon,
+} from "lucide-react-native";
 import React, { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
@@ -31,13 +36,6 @@ export default function AcademicsScreen() {
   const affiliationLabel = affiliation?.shortName || affiliation?.name;
 
   const activityCards: { id: string; label: string; desc: string; img: number; path: string }[] = [
-    {
-      id: "attendance",
-      label: "Attendance",
-      desc: "Your attendance and academic status",
-      img: attendanceImg,
-      path: "/console/academics/current-status",
-    },
     {
       id: "subject-selection",
       label: "Subject Selection",
@@ -63,6 +61,13 @@ export default function AcademicsScreen() {
 
   const recordCards: { id: string; label: string; desc: string; icon: LucideIcon; path: string }[] =
     [
+      {
+        id: "attendance",
+        label: "Attendance",
+        desc: "Your class attendance record",
+        icon: CalendarCheck,
+        path: "/console/academics/current-status",
+      },
       {
         id: "status",
         label: "Current Academic Status",

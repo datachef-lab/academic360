@@ -75,6 +75,22 @@ export async function fetchMandatorySubjects(studentId: number): Promise<unknown
   }
 }
 
+/** One mandatory-paper row from GET /students/:id/mandatory-papers.
+ * `class` is the semester the paper belongs to. */
+export interface MandatoryPaperRow {
+  paper: { id: number; name?: string | null; code?: string | null };
+  subject?: { id: number; name?: string | null; code?: string | null } | null;
+  subjectType?: { id: number; name?: string | null; code?: string | null } | null;
+  class?: { id: number; name?: string | null } | null;
+}
+
+/** Typed variant of fetchMandatorySubjects: the student's promotion papers,
+ * each carrying its semester (`class.name`). */
+export async function fetchMandatoryPaperRows(studentId: number): Promise<MandatoryPaperRow[]> {
+  const rows = await fetchMandatorySubjects(studentId);
+  return (rows as MandatoryPaperRow[]) ?? [];
+}
+
 export async function saveStudentSubjectSelections(
   selections: StudentSubjectSelectionForSave[],
 ): Promise<SaveSelectionsResponse> {
