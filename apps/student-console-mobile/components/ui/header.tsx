@@ -30,6 +30,7 @@ function getScreenTitle(pathname: string): string {
     ["/console/academics/subject-selection-instructions", "Subject Selection"],
     ["/console/academics/subject-selection", "Subject Selection"],
     ["/console/academics/cu-exam-form-upload", "Exam Form"],
+    ["/console/academics/admit-card", "Admit Card"],
     ["/console/academics/timetable", "Time Table"],
     ["/console/academics/notes", "Notes"],
     ["/console/academics", "Academics"],

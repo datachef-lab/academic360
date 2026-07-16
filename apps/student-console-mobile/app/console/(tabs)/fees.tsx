@@ -1,5 +1,6 @@
 import { FeeDetailSheet } from "@/components/fees/fee-detail-sheet";
 import { FeeMappingCard } from "@/components/fees/fee-mapping-card";
+import { Tabs } from "@/components/ui/Tabs";
 import { useTheme } from "@/hooks/use-theme";
 import { isFeeMappingPaid } from "@/lib/fee-utils";
 import { useAuth } from "@/providers/auth-provider";
@@ -119,46 +120,16 @@ export default function FeesScreen() {
       >
         <View style={{ height: 12 }} />
 
-        <View
-          style={{
-            flexDirection: "row",
-            marginHorizontal: 12,
-            marginBottom: 12,
-            padding: 4,
-            borderRadius: 12,
-            backgroundColor: tabBg,
-            borderWidth: 1,
-            borderColor: tabBorder,
-          }}
-        >
-          {(["all", "pending", "paid"] as FeeFilter[]).map((key) => {
-            const active = filter === key;
-            const label = key === "all" ? "All" : key === "pending" ? "Pending" : "Paid";
-            return (
-              <Pressable
-                key={key}
-                onPress={() => setFilter(key)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  backgroundColor: active ? accent : "transparent",
-                  alignItems: "center",
-                }}
-              >
-                <Text
-                  style={{
-                    color: active ? "#fff" : theme.text,
-                    fontWeight: "600",
-                    fontSize: 13,
-                    opacity: active ? 1 : 0.7,
-                  }}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
+          <Tabs
+            tabs={[
+              { id: "all", label: "All" },
+              { id: "pending", label: "Pending" },
+              { id: "paid", label: "Paid" },
+            ]}
+            value={filter}
+            onChange={setFilter}
+          />
         </View>
 
         {error ? (

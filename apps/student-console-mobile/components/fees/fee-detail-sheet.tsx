@@ -24,14 +24,14 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { BottomSheet } from "@/components/ui/BottomSheet";
 
 type FeeDetailSheetProps = {
   visible: boolean;
@@ -44,7 +44,6 @@ export function FeeDetailSheet({ visible, mapping, onClose, onRefresh }: FeeDeta
   const { theme, colorScheme } = useTheme();
   const { user } = useAuth();
   const student = user?.payload as StudentDto | undefined;
-  const insets = useSafeAreaInsets();
   const isDark = colorScheme === "dark";
   const accent = isDark ? "#6366f1" : "#4f46e5";
 
@@ -172,164 +171,151 @@ export function FeeDetailSheet({ visible, mapping, onClose, onRefresh }: FeeDeta
 
   return (
     <>
-      <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onClose} />
+      <BottomSheet visible={visible} onClose={onClose} bg={theme.background}>
         <View
           style={{
-            backgroundColor: theme.background,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            maxHeight: "88%",
-            paddingBottom: insets.bottom + 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 20,
+            paddingTop: 16,
+            paddingBottom: 12,
           }}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingHorizontal: 20,
-              paddingTop: 16,
-              paddingBottom: 12,
-            }}
-          >
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: "700" }}>Fee details</Text>
-            <Pressable onPress={onClose} hitSlop={12}>
-              <Text style={{ color: theme.text, fontSize: 22, lineHeight: 22 }}>×</Text>
-            </Pressable>
+          <Text style={{ color: theme.text, fontSize: 18, fontWeight: "700" }}>Fee details</Text>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <Text style={{ color: theme.text, fontSize: 22, lineHeight: 22 }}>×</Text>
+          </Pressable>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ color: theme.text, fontSize: 14, opacity: 0.65, marginTop: 6 }}>
+              {feeMappingSubtitle(mapping)}
+            </Text>
+
+            <View
+              style={{
+                // marginTop: 16,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: cardBorder,
+                overflow: "hidden",
+              }}
+            >
+              <InfoRow
+                label="Receipt type"
+                value={mapping.feeStructure?.receiptType?.name || "—"}
+                themeText={theme.text}
+                isDark={isDark}
+              />
+              <InfoRow
+                label="Academic year"
+                value={mapping.feeStructure?.academicYear?.year || "—"}
+                themeText={theme.text}
+                isDark={isDark}
+              />
+              <InfoRow
+                label="Semester"
+                value={mapping.feeStructure?.class?.name || "—"}
+                themeText={theme.text}
+                isDark={isDark}
+              />
+              <InfoRow
+                label="Total amount"
+                value={formatInr(payable)}
+                themeText={theme.text}
+                isDark={isDark}
+              />
+              <InfoRow
+                label="Receipt number"
+                value={mapping.receiptNumber || "Not generated"}
+                themeText={theme.text}
+                isDark={isDark}
+              />
+              <InfoRow
+                label="Paid at"
+                value={formatPaidAt(paidAtRaw)}
+                themeText={theme.text}
+                isDark={isDark}
+                isLast
+              />
+            </View>
           </View>
 
-          <ScrollView
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: theme.text, fontSize: 14, opacity: 0.65, marginTop: 6 }}>
-                {feeMappingSubtitle(mapping)}
-              </Text>
+          {message ? (
+            <Text style={{ color: isDark ? "#fca5a5" : "#b91c1c", fontSize: 13, marginBottom: 12 }}>
+              {message}
+            </Text>
+          ) : null}
 
-              <View
-                style={{
-                  // marginTop: 16,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: cardBorder,
-                  overflow: "hidden",
-                }}
-              >
-                <InfoRow
-                  label="Receipt type"
-                  value={mapping.feeStructure?.receiptType?.name || "—"}
-                  themeText={theme.text}
-                  isDark={isDark}
-                />
-                <InfoRow
-                  label="Academic year"
-                  value={mapping.feeStructure?.academicYear?.year || "—"}
-                  themeText={theme.text}
-                  isDark={isDark}
-                />
-                <InfoRow
-                  label="Semester"
-                  value={mapping.feeStructure?.class?.name || "—"}
-                  themeText={theme.text}
-                  isDark={isDark}
-                />
-                <InfoRow
-                  label="Total amount"
-                  value={formatInr(payable)}
-                  themeText={theme.text}
-                  isDark={isDark}
-                />
-                <InfoRow
-                  label="Receipt number"
-                  value={mapping.receiptNumber || "Not generated"}
-                  themeText={theme.text}
-                  isDark={isDark}
-                />
-                <InfoRow
-                  label="Paid at"
-                  value={formatPaidAt(paidAtRaw)}
-                  themeText={theme.text}
-                  isDark={isDark}
-                  isLast
-                />
-              </View>
+          {paid ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                padding: 14,
+                borderRadius: 12,
+                backgroundColor: isDark ? "rgba(34,197,94,0.15)" : "#dcfce7",
+                marginBottom: 12,
+              }}
+            >
+              <Check size={22} color={isDark ? "#86efac" : "#15803d"} />
+              <Text style={{ color: isDark ? "#86efac" : "#15803d", fontWeight: "600", flex: 1 }}>
+                Payment completed for this fee.
+              </Text>
             </View>
+          ) : null}
 
-            {message ? (
-              <Text
-                style={{ color: isDark ? "#fca5a5" : "#b91c1c", fontSize: 13, marginBottom: 12 }}
-              >
-                {message}
-              </Text>
-            ) : null}
+          <ActionButton
+            icon={FileText}
+            label={challanReady ? "View / download challan" : "Generate challan"}
+            subtitle="PDF receipt for bank or cash payment"
+            onPress={handleDownloadChallan}
+            loading={busy === "challan"}
+            themeText={theme.text}
+            isDark={isDark}
+          />
 
-            {paid ? (
+          {!paid ? (
+            <>
+              <ActionButton
+                icon={IndianRupeeIcon}
+                label="Pay online (Paytm)"
+                subtitle="UPI, cards, and wallets"
+                onPress={handlePayOnline}
+                loading={busy === "pay"}
+                themeText={theme.text}
+                isDark={isDark}
+                primary
+                accent={accent}
+              />
               <View
                 style={{
                   flexDirection: "row",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   gap: 10,
-                  padding: 14,
+                  padding: 12,
                   borderRadius: 12,
-                  backgroundColor: isDark ? "rgba(34,197,94,0.15)" : "#dcfce7",
-                  marginBottom: 12,
+                  backgroundColor: cardBg,
+                  borderWidth: 1,
+                  borderColor: cardBorder,
                 }}
               >
-                <Check size={22} color={isDark ? "#86efac" : "#15803d"} />
-                <Text style={{ color: isDark ? "#86efac" : "#15803d", fontWeight: "600", flex: 1 }}>
-                  Payment completed for this fee.
+                <History size={18} color={theme.text} style={{ marginTop: 2, opacity: 0.7 }} />
+                <Text style={{ color: theme.text, fontSize: 12, opacity: 0.75, flex: 1 }}>
+                  For cash payment, generate the challan and pay at the college counter. Online
+                  payment requires challan to be generated first.
                 </Text>
               </View>
-            ) : null}
-
-            <ActionButton
-              icon={FileText}
-              label={challanReady ? "View / download challan" : "Generate challan"}
-              subtitle="PDF receipt for bank or cash payment"
-              onPress={handleDownloadChallan}
-              loading={busy === "challan"}
-              themeText={theme.text}
-              isDark={isDark}
-            />
-
-            {!paid ? (
-              <>
-                <ActionButton
-                  icon={IndianRupeeIcon}
-                  label="Pay online (Paytm)"
-                  subtitle="UPI, cards, and wallets"
-                  onPress={handlePayOnline}
-                  loading={busy === "pay"}
-                  themeText={theme.text}
-                  isDark={isDark}
-                  primary
-                  accent={accent}
-                />
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "flex-start",
-                    gap: 10,
-                    padding: 12,
-                    borderRadius: 12,
-                    backgroundColor: cardBg,
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                  }}
-                >
-                  <History size={18} color={theme.text} style={{ marginTop: 2, opacity: 0.7 }} />
-                  <Text style={{ color: theme.text, fontSize: 12, opacity: 0.75, flex: 1 }}>
-                    For cash payment, generate the challan and pay at the college counter. Online
-                    payment requires challan to be generated first.
-                  </Text>
-                </View>
-              </>
-            ) : null}
-          </ScrollView>
-        </View>
-      </Modal>
+            </>
+          ) : null}
+        </ScrollView>
+      </BottomSheet>
 
       {paytmSession ? (
         <PaytmWebCheckout

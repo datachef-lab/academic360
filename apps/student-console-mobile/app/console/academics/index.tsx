@@ -61,7 +61,7 @@ export default function AcademicsScreen() {
       label: "Collect Admit Card",
       desc: "Download your exam admit card",
       img: admitCardImg,
-      path: "/console/exams",
+      path: "/console/academics/admit-card",
     },
   ];
 
@@ -119,24 +119,29 @@ export default function AcademicsScreen() {
           <Pressable
             key={card.id}
             onPress={() => router.push(card.path as any)}
-            className="flex-row items-center rounded-2xl p-3"
+            className="flex-row items-stretch rounded-2xl overflow-hidden"
             style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
           >
-            <View
-              className="rounded-xl items-center justify-center mr-3 overflow-hidden"
-              style={{ width: 80, height: 80, backgroundColor: "#ffffff" }}
-            >
-              <Image source={card.img} style={{ width: 78, height: 78 }} contentFit="contain" />
+            {/* Left: image, flush, no padding */}
+            <View style={{ width: 96, backgroundColor: "#ffffff" }}>
+              <Image
+                source={card.img}
+                style={{ width: "100%", height: "100%" }}
+                contentFit="cover"
+              />
             </View>
-            <View className="flex-1">
-              <Text style={{ color: theme.text }} className="text-base font-semibold">
-                {card.label}
-              </Text>
-              <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
-                {card.desc}
-              </Text>
+            {/* Right: label + description */}
+            <View className="flex-1 flex-row items-center px-3 py-3">
+              <View className="flex-1">
+                <Text style={{ color: theme.text }} className="text-base font-semibold">
+                  {card.label}
+                </Text>
+                <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
+                  {card.desc}
+                </Text>
+              </View>
+              <ChevronRight size={20} color={theme.text} style={{ opacity: 0.4 }} />
             </View>
-            <ChevronRight size={20} color={theme.text} style={{ opacity: 0.4 }} />
           </Pressable>
         ))}
       </View>
