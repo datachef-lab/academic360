@@ -5,6 +5,7 @@ import { useAuth } from "@/providers/auth-provider";
 import {
   fetchMandatoryPaperRows,
   fetchStudentSubjectSelections,
+  fetchStudentUniversitySubjects,
 } from "@/services/subject-selection";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { router } from "expo-router";
@@ -60,46 +61,67 @@ export function NotesList() {
       return;
     }
     setLoading(true);
-    Promise.all([
-      fetchMandatoryPaperRows(sid),
-      fetchStudentSubjectSelections(sid).catch(() => null),
-    ])
-      .then(([mand, sel]) => {
+
+    // Fallback: mandatory papers + the student's chosen electives, scoped to
+    // their current semester (used when the university-subjects endpoint isn't
+    // available on the backend yet).
+    const buildFromMandatoryAndElectives = async (): Promise<UiPaper[]> => {
+      const [mand, sel] = await Promise.all([
+        fetchMandatoryPaperRows(sid),
+        fetchStudentSubjectSelections(sid).catch(() => null),
+      ]);
+      const list: UiPaper[] = mand.map((row) => ({
+        id: row.paper.id,
+        name: row.paper?.name || row.subject?.name || "Paper",
+        code: row.paper?.code || row.subject?.code || "",
+        classId: row.class?.id ?? null,
+        className: row.class?.name?.trim() || "",
+        elective: false,
+      }));
+      for (const opt of sel?.selectedMinorSubjects ?? []) {
+        list.push({
+          id: opt.id,
+          name: opt.name || opt.subject?.name || "Paper",
+          code: opt.code || "",
+          classId: opt.class?.id ?? null,
+          className: opt.class?.name?.trim() || "",
+          elective: true,
+        });
+      }
+      const curNum = romanToNum(student?.currentPromotion?.class?.name);
+      return curNum < 999
+        ? list.filter((p) => {
+            const n = romanToNum(p.className);
+            return n < 999 && n <= curNum;
+          })
+        : list;
+    };
+
+    (async () => {
+      try {
+        // Preferred: the authoritative per-student university subjects — same
+        // source as the subjects report (mandatory + optional, per semester).
+        const uni = await fetchStudentUniversitySubjects(sid);
+        const list: UiPaper[] =
+          uni.length > 0
+            ? uni
+                .filter((r) => r.paper_id != null)
+                .map((r) => ({
+                  id: r.paper_id as number,
+                  name: r.paper || r.subject || "Paper",
+                  code: r.paper_code || "",
+                  classId: null,
+                  className: (r.semester || "").trim(),
+                  elective: !!r.is_optional,
+                }))
+            : await buildFromMandatoryAndElectives();
         if (cancelled) return;
-        const list: UiPaper[] = mand.map((row) => ({
-          id: row.paper.id,
-          name: row.paper?.name || row.subject?.name || "Paper",
-          code: row.paper?.code || row.subject?.code || "",
-          classId: row.class?.id ?? null,
-          className: row.class?.name?.trim() || "",
-          elective: false,
-        }));
-
-        for (const opt of sel?.selectedMinorSubjects ?? []) {
-          list.push({
-            id: opt.id,
-            name: opt.name || opt.subject?.name || "Paper",
-            code: opt.code || "",
-            classId: opt.class?.id ?? null,
-            className: opt.class?.name?.trim() || "",
-            elective: true,
-          });
-        }
-
-        // Scope to the student's semesters: only up to their CURRENT semester.
-        const curNum = romanToNum(student?.currentPromotion?.class?.name);
-        const scoped =
-          curNum < 999
-            ? list.filter((p) => {
-                const n = romanToNum(p.className);
-                return n < 999 && n <= curNum;
-              })
-            : list;
-
         const seen = new Set<number>();
-        setPapersAll(scoped.filter((p) => (seen.has(p.id) ? false : seen.add(p.id))));
-      })
-      .finally(() => !cancelled && setLoading(false));
+        setPapersAll(list.filter((p) => (seen.has(p.id) ? false : seen.add(p.id))));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => {
       cancelled = true;
     };

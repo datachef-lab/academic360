@@ -91,6 +91,36 @@ export async function fetchMandatoryPaperRows(studentId: number): Promise<Mandat
   return (rows as MandatoryPaperRow[]) ?? [];
 }
 
+/** One row from the authoritative university-subjects endpoint (same source as
+ * the bulk subjects report): a paper for the student in a given semester. */
+export interface UniversitySubjectRow {
+  student_id: number;
+  uid: string | null;
+  semester: string | null;
+  subject: string | null;
+  subject_type: string | null;
+  paper_id: number | null;
+  paper: string | null;
+  paper_code: string | null;
+  is_optional: boolean | null;
+}
+
+/** The student's full per-semester paper list (mandatory + optional), matching
+ * the "Student University Subjects" report. Empty array if unavailable (older
+ * backend) so callers can fall back. */
+export async function fetchStudentUniversitySubjects(
+  studentId: number,
+): Promise<UniversitySubjectRow[]> {
+  try {
+    const res = await axiosInstance.get<ApiResponse<UniversitySubjectRow[]>>(
+      `/api/subject-selection/students/${studentId}/university-subjects`,
+    );
+    return (res.data.payload as UniversitySubjectRow[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function saveStudentSubjectSelections(
   selections: StudentSubjectSelectionForSave[],
 ): Promise<SaveSelectionsResponse> {
