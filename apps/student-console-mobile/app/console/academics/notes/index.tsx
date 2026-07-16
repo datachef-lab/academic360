@@ -64,6 +64,8 @@ export default function NotesScreen() {
     ])
       .then(([mand, sel]) => {
         if (cancelled) return;
+        // Mandatory papers: /mandatory-papers already carries each paper's class
+        // (semester); group by it. (Not scoped to the current class server-side.)
         const list: UiPaper[] = mand.map((row) => ({
           id: row.paper.id,
           name: row.paper?.name || row.subject?.name || "Paper",
@@ -73,32 +75,24 @@ export default function NotesScreen() {
           elective: false,
         }));
 
-        // The student's chosen electives: match the available paper options to
-        // the subjectIds the student actually selected.
-        if (sel) {
-          const chosen = new Set<number>();
-          for (const s of sel.actualStudentSelections ?? []) {
-            const sid2 = s?.subjectId ?? s?.subjectModelId ?? s?.subject?.id;
-            if (typeof sid2 === "number") chosen.add(sid2);
-          }
-          if (chosen.size > 0) {
-            for (const grp of sel.studentSubjectsSelection ?? []) {
-              for (const opt of grp.paperOptions ?? []) {
-                const subjId = opt.subject?.id;
-                if (subjId == null || !chosen.has(subjId)) continue;
-                list.push({
-                  id: opt.id,
-                  name: opt.name || opt.subject?.name || "Paper",
-                  code: opt.code || "",
-                  type: grp.subjectType?.name || "Elective",
-                  className: opt.class?.name?.trim() || "",
-                  elective: true,
-                });
-              }
-            }
-          }
+        // The student's chosen elective papers are paper-level WITH a semester
+        // (admSubjectPaperSelection -> selectedMinorSubjects). We use these
+        // directly; subjectId-based matching of actualStudentSelections is
+        // unreliable because that table has no paperId/classId.
+        for (const opt of sel?.selectedMinorSubjects ?? []) {
+          list.push({
+            id: opt.id,
+            name: opt.name || opt.subject?.name || "Paper",
+            code: opt.code || "",
+            type: "",
+            className: opt.class?.name?.trim() || "",
+            elective: true,
+          });
         }
-        setPapersAll(list);
+
+        // Dedupe by paper id (a paper shouldn't appear twice).
+        const seen = new Set<number>();
+        setPapersAll(list.filter((p) => (seen.has(p.id) ? false : seen.add(p.id))));
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
