@@ -2,6 +2,7 @@ import { Select } from "@/components/ui/select";
 import { useTheme } from "@/hooks/use-theme";
 import { toSentenceCase } from "@/lib/text";
 import { useAuth } from "@/providers/auth-provider";
+import { fetchStudentClassIds } from "@/services/batches";
 import {
   fetchMandatoryPaperRows,
   fetchStudentSubjectSelections,
@@ -16,7 +17,7 @@ type UiPaper = {
   id: number;
   name: string;
   code: string;
-  type: string;
+  classId: number | null;
   className: string;
   elective: boolean;
 };
@@ -61,16 +62,17 @@ export default function NotesScreen() {
     Promise.all([
       fetchMandatoryPaperRows(sid),
       fetchStudentSubjectSelections(sid).catch(() => null),
+      fetchStudentClassIds(sid),
     ])
-      .then(([mand, sel]) => {
+      .then(([mand, sel, classIds]) => {
         if (cancelled) return;
-        // Mandatory papers: /mandatory-papers already carries each paper's class
-        // (semester); group by it. (Not scoped to the current class server-side.)
+        // Mandatory papers: /mandatory-papers carries each paper's class
+        // (semester) but is NOT scoped to the student's classes server-side.
         const list: UiPaper[] = mand.map((row) => ({
           id: row.paper.id,
           name: row.paper?.name || row.subject?.name || "Paper",
           code: row.paper?.code || row.subject?.code || "",
-          type: row.subjectType?.name || "",
+          classId: row.class?.id ?? null,
           className: row.class?.name?.trim() || "",
           elective: false,
         }));
@@ -84,15 +86,22 @@ export default function NotesScreen() {
             id: opt.id,
             name: opt.name || opt.subject?.name || "Paper",
             code: opt.code || "",
-            type: "",
+            classId: opt.class?.id ?? null,
             className: opt.class?.name?.trim() || "",
             elective: true,
           });
         }
 
+        // Scope to the student's actual semesters: keep only papers whose class
+        // the student is enrolled in (from batch-student mappings). If we can't
+        // resolve the student's classes, fall back to showing all.
+        const allowed = new Set(classIds);
+        const scoped =
+          allowed.size > 0 ? list.filter((p) => p.classId != null && allowed.has(p.classId)) : list;
+
         // Dedupe by paper id (a paper shouldn't appear twice).
         const seen = new Set<number>();
-        setPapersAll(list.filter((p) => (seen.has(p.id) ? false : seen.add(p.id))));
+        setPapersAll(scoped.filter((p) => (seen.has(p.id) ? false : seen.add(p.id))));
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -189,26 +198,10 @@ export default function NotesScreen() {
                   <FileText size={20} color={accent} />
                 </View>
                 <View className="flex-1">
-                  <View className="flex-row items-center" style={{ gap: 8 }}>
-                    <Text
-                      style={{ color: theme.text, flexShrink: 1 }}
-                      numberOfLines={1}
-                      className="text-base font-semibold"
-                    >
-                      {p.name}
-                      {!p.elective ? <Text style={{ color: "#ef4444" }}> *</Text> : null}
-                    </Text>
-                    {p.elective ? (
-                      <View
-                        className="rounded-full px-2 py-0.5"
-                        style={{ backgroundColor: isDark ? "rgba(34,197,94,0.2)" : "#dcfce7" }}
-                      >
-                        <Text style={{ color: "#16a34a", fontSize: 10, fontWeight: "700" }}>
-                          Elective
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
+                  <Text style={{ color: theme.text }} className="text-base font-semibold">
+                    {p.name}
+                    {!p.elective ? <Text style={{ color: "#ef4444" }}> *</Text> : null}
+                  </Text>
                   <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
                     {p.code || "Paper"}
                   </Text>
