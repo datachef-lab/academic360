@@ -4,13 +4,14 @@ import type { StudentDto } from "@repo/db/dtos/user";
 import {
   Calendar,
   CalendarCheck,
+  ClipboardList,
   FileEdit,
-  FileText,
-  GraduationCap,
+  ListChecks,
   Megaphone,
   PartyPopper,
   BookOpen,
   ChevronRight,
+  Upload,
   X,
   Coffee,
   Wrench,
@@ -120,20 +121,10 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
   },
 ];
 
-// Quick actions - shortcuts that are NOT already reachable from the bottom tabs
-// or the sidebar. The academic sub-tasks (CU form upload, admission registration,
-// subject selection) live under a single "Academics" hub instead of separate
-// tiles; Requests / Notifications / Events are omitted here as they're in the sidebar.
-const QUICK_ACTIONS = [
-  { id: "academics", label: "Academics", icon: GraduationCap, path: "/console/academics" },
-  {
-    id: "attendance",
-    label: "Attendance",
-    icon: CalendarCheck,
-    path: "/console/academics/current-status",
-  },
-  { id: "documents", label: "Documents", icon: FileText, path: "/console/documents" },
-];
+// Quick actions are the academic shortcuts, each opening a nested screen under
+// /console/academics. They're built per-student in the component because the
+// registration label uses the student's affiliation name. Requests /
+// Notifications / Events are omitted here — they live in the sidebar.
 
 // Recent updates - different from activities (full list view)
 const MOCK_UPDATES = [
@@ -243,6 +234,38 @@ export default function ConsoleScreen() {
   const sessionName = student?.currentPromotion?.session?.name || "";
   const semesterLabel = sessionName ? `Semester ${sessionName.replace(/\D/g, "") || "—"}` : "—";
   const academicSubtitle = [semesterLabel, programName, sectionName].filter(Boolean).join(" • ");
+
+  const affiliation =
+    student?.programCourse?.affiliation ?? student?.currentPromotion?.programCourse?.affiliation;
+  const affiliationLabel = affiliation?.shortName || affiliation?.name;
+  const registrationLabel = affiliationLabel ? `${affiliationLabel} Registration` : "Registration";
+
+  const quickActions = [
+    {
+      id: "attendance",
+      label: "Attendance",
+      icon: CalendarCheck,
+      path: "/console/academics/current-status",
+    },
+    {
+      id: "subject-selection",
+      label: "Subject Selection",
+      icon: ListChecks,
+      path: "/console/academics/subject-selection",
+    },
+    {
+      id: "registration",
+      label: registrationLabel,
+      icon: ClipboardList,
+      path: "/console/academics/adm-registration",
+    },
+    {
+      id: "exam-form",
+      label: "Exam Form Fillup",
+      icon: Upload,
+      path: "/console/academics/cu-exam-form-upload",
+    },
+  ];
 
   const isDark = colorScheme === "dark";
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "#f8fafc";
@@ -374,20 +397,20 @@ export default function ConsoleScreen() {
         ))}
       </ScrollView>
 
-      {/* Quick Actions - no overlap with bottom nav */}
+      {/* Quick Actions - academic shortcuts (all live under /console/academics) */}
       <Text style={{ color: theme.text }} className="text-lg font-bold mb-3">
         Quick Actions
       </Text>
-      <View className="flex-row flex-wrap gap-2 mb-6">
-        {QUICK_ACTIONS.map((item) => {
+      <View className="flex-row flex-wrap gap-2 mb-6" style={{ justifyContent: "space-between" }}>
+        {quickActions.map((item) => {
           const Icon = item.icon;
           return (
             <Pressable
               key={item.id}
               onPress={() => router.push(item.path as any)}
-              className="rounded-lg p-3"
+              className="rounded-xl p-3.5"
               style={{
-                width: "31%",
+                width: "48.5%",
                 backgroundColor: cardBg,
                 borderWidth: 1,
                 borderColor: cardBorder,
@@ -398,16 +421,15 @@ export default function ConsoleScreen() {
                 elevation: 1,
               }}
             >
-              <Icon size={22} color={isDark ? "#a5b4fc" : "#4f46e5"} />
+              <View
+                className="w-9 h-9 rounded-lg items-center justify-center mb-2"
+                style={{ backgroundColor: isDark ? "rgba(99,102,241,0.2)" : "rgba(79,70,229,0.1)" }}
+              >
+                <Icon size={20} color={isDark ? "#a5b4fc" : "#4f46e5"} />
+              </View>
               <Text
                 numberOfLines={2}
-                style={{
-                  color: theme.text,
-                  fontSize: 11,
-                  marginTop: 6,
-                  fontWeight: "500",
-                  textAlign: "center",
-                }}
+                style={{ color: theme.text, fontSize: 12.5, fontWeight: "600" }}
               >
                 {item.label}
               </Text>

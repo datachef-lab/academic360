@@ -12,38 +12,6 @@ import { Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-nativ
 
 export const CONSOLE_HEADER_HEIGHT = 72;
 
-/** Maps a console route to the title shown in the header. The brand + student
- * identity live in the drawer, so inner screens show their own title instead
- * of repeating "BESC Console". */
-function getScreenTitle(pathname: string): string {
-  const routes: [string, string][] = [
-    ["/console/academics/current-status", "Academic Status"],
-    ["/console/academics/adm-registration", "Registration"],
-    ["/console/academics/subject-selection-instructions", "Subject Selection"],
-    ["/console/academics/subject-selection", "Subject Selection"],
-    ["/console/academics/cu-exam-form-upload", "CU Form Upload"],
-    ["/console/academics", "Academics"],
-    ["/console/service-requests", "Service Requests"],
-    ["/console/notifications", "Notifications"],
-    ["/console/documents", "Documents"],
-    ["/console/events", "Events"],
-    ["/console/settings", "Settings"],
-    ["/console/support", "Help & Support"],
-    ["/console/faqs", "FAQs"],
-    ["/console/contact", "Contact College"],
-    ["/console/profile", "Profile"],
-    ["/console/study-notes", "Study Notes"],
-    ["/console/library", "Library"],
-    ["/console/fees", "Fees"],
-    ["/console/exams/", "Exam"],
-    ["/console/exams", "Exams"],
-  ];
-  for (const [prefix, title] of routes) {
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return title;
-  }
-  return "";
-}
-
 export function Header() {
   const navigation: any = useNavigation();
   const router = useRouter();
@@ -71,29 +39,29 @@ export function Header() {
   const avatarSize = 36;
   const isHome =
     pathname === "/console" || pathname === "/console/" || pathname === "/console/(tabs)";
-  const title = getScreenTitle(pathname);
 
   return (
     <View style={styles.shell}>
       <GlassSurface isDark={isDark} />
       <View style={styles.content}>
-        {/* Left: brand on Home, back + title elsewhere */}
+        {/* Left: (back) + logo + brand/uid — shown on every screen */}
         <View style={styles.left}>
-          {isHome ? (
-            <>
-              <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
-              <Text style={[styles.brand, { color: theme.text }]}>BESC Console</Text>
-            </>
-          ) : (
-            <>
-              <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
-                <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
-              </Pressable>
-              <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-                {title}
+          {!isHome ? (
+            <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
+              <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
+            </Pressable>
+          ) : null}
+          <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+          <View style={styles.brandBox}>
+            <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>
+              BESC Console
+            </Text>
+            {uid ? (
+              <Text style={[styles.uid, { color: theme.text }]} numberOfLines={1}>
+                {uid}
               </Text>
-            </>
-          )}
+            ) : null}
+          </View>
         </View>
 
         {/* Right: theme toggle + avatar (opens drawer) */}
@@ -144,17 +112,19 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
   },
-  brand: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
+  brandBox: {
     flexShrink: 1,
   },
+  brand: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  uid: {
+    fontSize: 12,
+    opacity: 0.65,
+  },
   backButton: {
-    width: 28,
+    width: 24,
     height: 32,
     alignItems: "center",
     justifyContent: "center",
