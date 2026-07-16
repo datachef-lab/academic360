@@ -101,9 +101,9 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="study-notes"
           options={{
-            title: "Study Notes",
+            title: "Notes",
             tabBarIcon: ({ focused }) => (
-              <TabBarIcon name="Study Notes" icon={FileTextIcon} focused={focused} />
+              <TabBarIcon name="Notes" icon={FileTextIcon} focused={focused} />
             ),
           }}
         />

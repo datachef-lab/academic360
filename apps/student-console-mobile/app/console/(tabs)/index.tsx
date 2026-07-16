@@ -21,6 +21,8 @@ import React, { useState } from "react";
 import { Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Dialog } from "@/components/ui/Dialog";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { toSentenceCase } from "@/lib/text";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -35,6 +37,9 @@ function formatTime12h(time24: string): string {
   const h = hours % 12 || 12;
   return `${h}:${mins.toString().padStart(2, "0")} ${period}`;
 }
+
+const tableHead = (color: string) =>
+  ({ color, opacity: 0.5, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 }) as const;
 
 function getTodayDateFormatted(): string {
   return new Date().toLocaleDateString("en-US", {
@@ -231,7 +236,7 @@ export default function ConsoleScreen() {
 
   const firstName = user?.name?.split(" ")[0] || "Student";
   const promo = student?.currentPromotion;
-  const semesterName = promo?.class?.name || "";
+  const semesterName = toSentenceCase(promo?.class?.name || "");
   // Prefer a nested academicYear.year if the payload includes it; else the session label.
   const academicYearName =
     (promo?.session as { academicYear?: { year?: string } } | undefined)?.academicYear?.year ||
@@ -505,13 +510,13 @@ export default function ConsoleScreen() {
         })}
       </View>
 
-      {/* Today's Schedule Dialog */}
-      <Dialog
+      {/* Today's Schedule - bottom drawer, tabular */}
+      <BottomSheet
         visible={showScheduleModal}
         onClose={() => setShowScheduleModal(false)}
         bg={theme.background}
       >
-        <View className="p-4 border-b" style={{ borderColor: cardBorder }}>
+        <View className="px-5 pb-3">
           <View className="flex-row items-center justify-between">
             <Text style={{ color: theme.text }} className="text-lg font-bold">
               Today's Schedule
@@ -520,25 +525,40 @@ export default function ConsoleScreen() {
               <X size={22} color={theme.text} />
             </Pressable>
           </View>
-          <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm mt-1">
+          <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm mt-0.5">
             {getTodayDateFormatted()}
           </Text>
         </View>
+
+        {/* Table header */}
+        <View
+          className="flex-row px-5 pb-2"
+          style={{ borderBottomWidth: 1, borderBottomColor: cardBorder }}
+        >
+          <Text style={{ width: 74, ...tableHead(theme.text) }}>TIME</Text>
+          <Text style={{ flex: 1, ...tableHead(theme.text) }}>CLASS</Text>
+          <Text style={{ width: 60, textAlign: "right", ...tableHead(theme.text) }}>ROOM</Text>
+        </View>
+
         <ScrollView
           style={{ maxHeight: Dimensions.get("window").height * 0.5 }}
-          contentContainerStyle={{ paddingBottom: 8 }}
+          contentContainerStyle={{ paddingBottom: 4 }}
           showsVerticalScrollIndicator
         >
           {MOCK_TODAY_SCHEDULE.map((item, index) => {
-            const Icon = item.icon;
             const isBreak = item.type === "break" || item.type === "lunch";
-            const isWorkshop = item.type === "workshop";
+            const accent = isBreak
+              ? "#f59e0b"
+              : item.type === "workshop"
+                ? "#22c55e"
+                : isDark
+                  ? "#818cf8"
+                  : "#4f46e5";
             return (
               <View
                 key={item.id}
-                className="flex-row items-center py-3"
+                className="flex-row items-center px-5 py-3"
                 style={{
-                  paddingHorizontal: 16,
                   borderBottomWidth: index < MOCK_TODAY_SCHEDULE.length - 1 ? 1 : 0,
                   borderBottomColor: cardBorder,
                   backgroundColor: isBreak
@@ -548,89 +568,67 @@ export default function ConsoleScreen() {
                     : "transparent",
                 }}
               >
-                <View
-                  style={{
-                    width: 88,
-                    paddingRight: 12,
-                    borderRightWidth: 2,
-                    borderRightColor: isDark ? "#6366f1" : "#4f46e5",
-                  }}
-                >
-                  <Text style={{ color: theme.text, fontSize: 12, fontWeight: "600" }}>
+                <View style={{ width: 74 }}>
+                  <Text style={{ color: theme.text, fontSize: 12.5, fontWeight: "700" }}>
                     {formatTime12h(item.time)}
                   </Text>
                   {item.endTime && (
-                    <Text style={{ color: theme.text, fontSize: 11, opacity: 0.8, marginTop: 2 }}>
+                    <Text style={{ color: theme.text, fontSize: 11, opacity: 0.55, marginTop: 1 }}>
                       {formatTime12h(item.endTime)}
                     </Text>
                   )}
                 </View>
-                <View
-                  className="flex-1 flex-row items-center"
-                  style={{ marginLeft: 16, minWidth: 0 }}
-                >
+                <View className="flex-row items-center" style={{ flex: 1, paddingRight: 8 }}>
                   <View
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginRight: 12,
-                      backgroundColor: isBreak
-                        ? isDark
-                          ? "rgba(245,158,11,0.3)"
-                          : "rgba(245,158,11,0.2)"
-                        : isWorkshop
-                          ? isDark
-                            ? "rgba(34,197,94,0.3)"
-                            : "rgba(34,197,94,0.2)"
-                          : isDark
-                            ? "rgba(99,102,241,0.25)"
-                            : "rgba(79,70,229,0.15)",
+                      width: 4,
+                      height: 22,
+                      borderRadius: 2,
+                      backgroundColor: accent,
+                      marginRight: 10,
+                    }}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: theme.text,
+                      fontSize: 14,
+                      fontWeight: isBreak ? "500" : "600",
+                      opacity: isBreak ? 0.7 : 1,
+                      flex: 1,
                     }}
                   >
-                    <Icon
-                      size={18}
-                      color={
-                        isBreak
-                          ? "#f59e0b"
-                          : isWorkshop
-                            ? "#22c55e"
-                            : isDark
-                              ? "#a5b4fc"
-                              : "#4f46e5"
-                      }
-                    />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500" }}>
-                      {item.title}
-                    </Text>
-                    {item.subtitle && (
-                      <Text
-                        style={{ color: theme.text, opacity: 0.65, fontSize: 12, marginTop: 1 }}
-                      >
-                        {item.subtitle}
-                      </Text>
-                    )}
-                  </View>
+                    {item.title}
+                  </Text>
                 </View>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    width: 60,
+                    textAlign: "right",
+                    color: theme.text,
+                    opacity: 0.6,
+                    fontSize: 12,
+                  }}
+                >
+                  {item.subtitle || "—"}
+                </Text>
               </View>
             );
           })}
         </ScrollView>
+
         <Pressable
           onPress={() => {
             setShowScheduleModal(false);
             router.push("/console/academics");
           }}
-          className="m-4 py-3 rounded-xl items-center"
+          className="mx-5 mt-3 py-3 rounded-xl items-center"
           style={{ backgroundColor: isDark ? "#6366f1" : "#4f46e5" }}
         >
           <Text className="text-white font-semibold">View Full Timetable</Text>
         </Pressable>
-      </Dialog>
+      </BottomSheet>
 
       {/* Activity Detail Dialog */}
       <Dialog
@@ -638,35 +636,88 @@ export default function ConsoleScreen() {
         onClose={() => setSelectedActivity(null)}
         bg={theme.background}
       >
-        <View className="p-5">
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-1">
-              <Text style={{ color: theme.text }} className="text-lg font-bold">
-                {selectedActivity?.title}
+        {selectedActivity && (
+          <View className="p-5">
+            <Pressable
+              onPress={() => setSelectedActivity(null)}
+              className="absolute p-2"
+              style={{ top: 8, right: 8, zIndex: 2 }}
+            >
+              <X size={20} color={theme.text} />
+            </Pressable>
+
+            {/* Icon + title */}
+            <View className="items-center mb-4" style={{ paddingTop: 4 }}>
+              <View
+                className="items-center justify-center mb-3"
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 18,
+                  backgroundColor: selectedActivity.iconBg,
+                }}
+              >
+                {(() => {
+                  const Icon = selectedActivity.icon;
+                  return <Icon size={26} color="#ffffff" />;
+                })()}
+              </View>
+              <Text style={{ color: theme.text }} className="text-lg font-bold text-center">
+                {selectedActivity.title}
               </Text>
-              {selectedActivity?.subtitle && (
-                <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm mt-0.5">
+              {selectedActivity.subtitle && (
+                <Text
+                  style={{ color: theme.text, opacity: 0.7 }}
+                  className="text-sm mt-0.5 text-center"
+                >
                   {selectedActivity.subtitle}
                 </Text>
               )}
             </View>
-            <Pressable onPress={() => setSelectedActivity(null)} className="p-2 -mr-2">
-              <X size={22} color={theme.text} />
-            </Pressable>
-          </View>
-          <Text style={{ color: theme.text, opacity: 0.85 }} className="text-base leading-6 mb-4">
-            {selectedActivity?.detail || "No additional details available."}
-          </Text>
-          {selectedActivity?.path && (
-            <Pressable
-              onPress={handleActivityView}
-              className="py-3 rounded-xl items-center"
-              style={{ backgroundColor: isDark ? "#6366f1" : "#4f46e5" }}
+
+            {/* Detail card with eyebrow */}
+            <View
+              className="rounded-xl p-4 mb-4"
+              style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
             >
-              <Text className="text-white font-semibold">View Details</Text>
-            </Pressable>
-          )}
-        </View>
+              <View className="flex-row items-center mb-1.5">
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: selectedActivity.iconBg,
+                    marginRight: 7,
+                  }}
+                />
+                <Text
+                  style={{
+                    color: theme.text,
+                    opacity: 0.55,
+                    fontSize: 11,
+                    fontWeight: "700",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {(selectedActivity.timeLabel || "Details").toUpperCase()}
+                </Text>
+              </View>
+              <Text style={{ color: theme.text, opacity: 0.9, fontSize: 15, lineHeight: 22 }}>
+                {selectedActivity.detail || "No additional details available."}
+              </Text>
+            </View>
+
+            {selectedActivity.path && (
+              <Pressable
+                onPress={handleActivityView}
+                className="py-3 rounded-xl items-center"
+                style={{ backgroundColor: isDark ? "#6366f1" : "#4f46e5" }}
+              >
+                <Text className="text-white font-semibold">View Details</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
       </Dialog>
     </ScrollView>
   );
