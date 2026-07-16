@@ -1,33 +1,17 @@
-import { onboardingImages } from "@/constants/Images";
+import attendanceImg from "@/assets/illustrations/academics/attendance.jpg";
+import cuRegistrationImg from "@/assets/illustrations/academics/cu-registration.jpg";
+import examFormImg from "@/assets/illustrations/academics/exam-form.jpg";
+import subjectSelectionImg from "@/assets/illustrations/academics/subject-selection.jpg";
 import { useTheme } from "@/hooks/use-theme";
-import { toSentenceCase } from "@/lib/text";
 import { useAuth } from "@/providers/auth-provider";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight, GraduationCap, NotebookPen, type LucideIcon } from "lucide-react-native";
 import React, { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
-type TabKey = "activities" | "subjects";
-
-type ActivityCard = {
-  id: string;
-  label: string;
-  desc: string;
-  illustration: number;
-  path: string;
-};
-
-// Mock subjects for the current semester — replace with the student's real
-// subject list (from subject-selection / promotion) later.
-const MOCK_SUBJECTS = [
-  { id: "1", name: "Mathematics", code: "MTMA", type: "Major" },
-  { id: "2", name: "Business Economics", code: "ECON", type: "Minor" },
-  { id: "3", name: "Statistics", code: "STAT", type: "Major" },
-  { id: "4", name: "English", code: "ENGL", type: "AEC" },
-  { id: "5", name: "Programming Lab", code: "CMSA", type: "SEC" },
-];
+type TabKey = "activities" | "records";
 
 export default function AcademicsScreen() {
   const { theme, colorScheme } = useTheme();
@@ -39,47 +23,65 @@ export default function AcademicsScreen() {
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "#f8fafc";
   const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
   const accent = isDark ? "#a5b4fc" : "#4f46e5";
+  const accentBg = isDark ? "rgba(99,102,241,0.2)" : "rgba(79,70,229,0.1)";
   const segBg = isDark ? "rgba(255,255,255,0.06)" : "#eef2ff";
 
   const promo = student?.currentPromotion;
-  const semesterName = toSentenceCase(promo?.class?.name || "");
   const affiliation = student?.programCourse?.affiliation ?? promo?.programCourse?.affiliation;
   const affiliationLabel = affiliation?.shortName || affiliation?.name;
 
-  const activityCards: ActivityCard[] = [
+  const activityCards: { id: string; label: string; desc: string; img: number; path: string }[] = [
     {
       id: "attendance",
       label: "Attendance",
       desc: "Your attendance and academic status",
-      illustration: onboardingImages["onboarding-schedule"],
+      img: attendanceImg,
       path: "/console/academics/current-status",
     },
     {
       id: "subject-selection",
       label: "Subject Selection",
       desc: "Choose your electives and optional subjects",
-      illustration: onboardingImages["onboarding-campus"],
+      img: subjectSelectionImg,
       path: "/console/academics/subject-selection",
     },
     {
       id: "registration",
       label: affiliationLabel ? `${affiliationLabel} Registration` : "Registration",
       desc: "Complete your affiliation registration",
-      illustration: onboardingImages["onboarding-login"],
+      img: cuRegistrationImg,
       path: "/console/academics/adm-registration",
     },
     {
       id: "exam-form",
       label: "Exam Form Fillup",
       desc: "Fill and upload your examination form",
-      illustration: onboardingImages["onboarding-exams"],
+      img: examFormImg,
       path: "/console/academics/cu-exam-form-upload",
     },
   ];
 
+  const recordCards: { id: string; label: string; desc: string; icon: LucideIcon; path: string }[] =
+    [
+      {
+        id: "status",
+        label: "Current Academic Status",
+        desc: "Track your semester and enrollment status",
+        icon: GraduationCap,
+        path: "/console/academics/current-status",
+      },
+      {
+        id: "notes",
+        label: "Notes",
+        desc: "Notes and assignments by subject paper",
+        icon: NotebookPen,
+        path: "/console/academics/notes",
+      },
+    ];
+
   const tabs: { key: TabKey; label: string }[] = [
     { key: "activities", label: "Activities" },
-    { key: "subjects", label: "Subjects" },
+    { key: "records", label: "Records" },
   ];
 
   return (
@@ -89,13 +91,6 @@ export default function AcademicsScreen() {
       contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={{ color: theme.text }} className="text-2xl font-bold mb-1">
-        Academics
-      </Text>
-      <Text style={{ color: theme.text, opacity: 0.65 }} className="text-sm mb-4">
-        {semesterName ? `${semesterName} · ` : ""}Activities, subjects and exam forms
-      </Text>
-
       {/* Segmented control */}
       <View className="flex-row rounded-xl p-1 mb-5" style={{ backgroundColor: segBg }}>
         {tabs.map((t) => {
@@ -128,22 +123,14 @@ export default function AcademicsScreen() {
             <Pressable
               key={card.id}
               onPress={() => router.push(card.path as any)}
-              className="flex-row items-center rounded-2xl p-3.5"
+              className="flex-row items-center rounded-2xl p-3"
               style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
             >
               <View
-                className="rounded-xl items-center justify-center mr-3"
-                style={{
-                  width: 56,
-                  height: 56,
-                  backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#ffffff",
-                }}
+                className="rounded-xl items-center justify-center mr-3 overflow-hidden"
+                style={{ width: 68, height: 68, backgroundColor: "#ffffff" }}
               >
-                <Image
-                  source={card.illustration}
-                  style={{ width: 44, height: 44 }}
-                  contentFit="contain"
-                />
+                <Image source={card.img} style={{ width: 66, height: 66 }} contentFit="contain" />
               </View>
               <View className="flex-1">
                 <Text style={{ color: theme.text }} className="text-base font-semibold">
@@ -159,44 +146,33 @@ export default function AcademicsScreen() {
         </View>
       ) : (
         <View className="gap-3">
-          {MOCK_SUBJECTS.map((sub) => (
-            <Pressable
-              key={sub.id}
-              onPress={() =>
-                router.push({
-                  pathname: "/console/academics/subject/[id]",
-                  params: { id: sub.id, name: sub.name, type: sub.type },
-                } as any)
-              }
-              className="flex-row items-center rounded-2xl p-4"
-              style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
-            >
-              <View
-                className="rounded-xl items-center justify-center mr-3"
-                style={{
-                  width: 44,
-                  height: 44,
-                  backgroundColor: isDark ? "rgba(99,102,241,0.2)" : "rgba(79,70,229,0.1)",
-                }}
+          {recordCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Pressable
+                key={card.id}
+                onPress={() => router.push(card.path as any)}
+                className="flex-row items-center rounded-2xl p-4"
+                style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
               >
-                <Text style={{ color: accent, fontWeight: "800", fontSize: 15 }}>
-                  {sub.name.charAt(0)}
-                </Text>
-              </View>
-              <View className="flex-1">
-                <Text style={{ color: theme.text }} className="text-base font-semibold">
-                  {sub.name}
-                </Text>
-                <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
-                  {sub.code} · {sub.type}
-                </Text>
-              </View>
-              <ChevronRight size={20} color={theme.text} style={{ opacity: 0.4 }} />
-            </Pressable>
-          ))}
-          <Text style={{ color: theme.text, opacity: 0.4 }} className="text-xs text-center mt-2">
-            Subjects shown are samples — will list your semester subjects
-          </Text>
+                <View
+                  className="rounded-xl items-center justify-center mr-3"
+                  style={{ width: 44, height: 44, backgroundColor: accentBg }}
+                >
+                  <Icon size={22} color={accent} />
+                </View>
+                <View className="flex-1">
+                  <Text style={{ color: theme.text }} className="text-base font-semibold">
+                    {card.label}
+                  </Text>
+                  <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
+                    {card.desc}
+                  </Text>
+                </View>
+                <ChevronRight size={20} color={theme.text} style={{ opacity: 0.4 }} />
+              </Pressable>
+            );
+          })}
         </View>
       )}
     </ScrollView>

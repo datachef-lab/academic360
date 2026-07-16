@@ -12,6 +12,42 @@ import { Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-nativ
 
 export const CONSOLE_HEADER_HEIGHT = 72;
 
+// Bottom-tab roots show the brand; every deeper (nested) screen shows its own title.
+const TAB_ROOTS = new Set([
+  "/console",
+  "/console/",
+  "/console/(tabs)",
+  "/console/study-notes",
+  "/console/fees",
+  "/console/exams",
+  "/console/library",
+]);
+
+function getScreenTitle(pathname: string): string {
+  const routes: [string, string][] = [
+    ["/console/academics/current-status", "Academic Status"],
+    ["/console/academics/adm-registration", "Registration"],
+    ["/console/academics/subject-selection-instructions", "Subject Selection"],
+    ["/console/academics/subject-selection", "Subject Selection"],
+    ["/console/academics/cu-exam-form-upload", "Exam Form"],
+    ["/console/academics/notes", "Notes"],
+    ["/console/academics", "Academics"],
+    ["/console/service-requests", "Service Requests"],
+    ["/console/notifications", "Notifications"],
+    ["/console/documents", "Documents"],
+    ["/console/events", "Events"],
+    ["/console/settings", "Settings"],
+    ["/console/support", "Help & Support"],
+    ["/console/contact", "Contact College"],
+    ["/console/profile", "Profile"],
+    ["/console/exams/", "Exam"],
+  ];
+  for (const [prefix, title] of routes) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return title;
+  }
+  return "";
+}
+
 export function Header() {
   const navigation: any = useNavigation();
   const router = useRouter();
@@ -37,31 +73,39 @@ export function Header() {
 
   const iconSize = 20;
   const avatarSize = 36;
-  const isHome =
-    pathname === "/console" || pathname === "/console/" || pathname === "/console/(tabs)";
+  const isTabRoot = TAB_ROOTS.has(pathname);
+  const title = getScreenTitle(pathname);
 
   return (
     <View style={styles.shell}>
       <GlassSurface isDark={isDark} />
       <View style={styles.content}>
-        {/* Left: (back) + logo + brand/uid — shown on every screen */}
+        {/* Left: brand on tab roots, back + screen title on nested screens */}
         <View style={styles.left}>
-          {!isHome ? (
-            <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
-              <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
-            </Pressable>
-          ) : null}
-          <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
-          <View style={styles.brandBox}>
-            <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>
-              BESC Console
-            </Text>
-            {uid ? (
-              <Text style={[styles.uid, { color: theme.text }]} numberOfLines={1}>
-                {uid}
+          {isTabRoot ? (
+            <>
+              <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+              <View style={styles.brandBox}>
+                <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>
+                  BESC Console
+                </Text>
+                {uid ? (
+                  <Text style={[styles.uid, { color: theme.text }]} numberOfLines={1}>
+                    {uid}
+                  </Text>
+                ) : null}
+              </View>
+            </>
+          ) : (
+            <>
+              <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
+                <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
+              </Pressable>
+              <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+                {title}
               </Text>
-            ) : null}
-          </View>
+            </>
+          )}
         </View>
 
         {/* Right: theme toggle + avatar (opens drawer) */}
@@ -122,6 +166,11 @@ const styles = StyleSheet.create({
   uid: {
     fontSize: 12,
     opacity: 0.65,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+    flexShrink: 1,
   },
   backButton: {
     width: 24,
