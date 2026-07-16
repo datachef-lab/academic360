@@ -110,7 +110,7 @@ export function NotesList() {
             code: r.paper_code || "",
             classId: null,
             className: (r.semester || "").trim(),
-            elective: !!r.is_optional,
+            elective: r.is_optional === true || String(r.is_optional).toLowerCase() === "yes",
           }));
         // Fall back whenever the endpoint yields nothing usable (not deployed,
         // errored, or empty) so the screen never goes blank.

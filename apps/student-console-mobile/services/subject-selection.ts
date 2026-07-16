@@ -102,7 +102,8 @@ export interface UniversitySubjectRow {
   paper_id: number | null;
   paper: string | null;
   paper_code: string | null;
-  is_optional: boolean | null;
+  /** Backend returns "Yes"/"No" strings (or a boolean); treat "Yes"/true as elective. */
+  is_optional: boolean | string | null;
 }
 
 /** The student's full per-semester paper list (mandatory + optional), matching
