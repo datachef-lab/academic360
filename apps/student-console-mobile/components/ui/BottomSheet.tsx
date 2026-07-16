@@ -1,6 +1,7 @@
 import React from "react";
 import { Modal, Pressable, View } from "react-native";
-import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
+import Animated, { SlideInDown } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type BottomSheetProps = {
   visible: boolean;
@@ -10,18 +11,19 @@ type BottomSheetProps = {
   children: React.ReactNode;
 };
 
-/** Bottom drawer: dimmed backdrop fades in, panel slides up from the bottom with
- * a rounded top and grab handle. Tap outside to dismiss. */
+/** Bottom drawer: dimmed backdrop, panel slides up from the bottom with a
+ * rounded top and grab handle. Tap outside to dismiss. */
 export function BottomSheet({ visible, onClose, bg, grabberColor, children }: BottomSheetProps) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <Animated.View entering={FadeIn.duration(150)} style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
         <Pressable
           onPress={onClose}
           style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" }}
@@ -35,7 +37,7 @@ export function BottomSheet({ visible, onClose, bg, grabberColor, children }: Bo
                 borderTopRightRadius: 24,
                 overflow: "hidden",
                 maxHeight: "88%",
-                paddingBottom: 8,
+                paddingBottom: insets.bottom + 10,
               }}
             >
               <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 2 }}>
@@ -53,7 +55,7 @@ export function BottomSheet({ visible, onClose, bg, grabberColor, children }: Bo
             </Pressable>
           </Animated.View>
         </Pressable>
-      </Animated.View>
+      </View>
     </Modal>
   );
 }

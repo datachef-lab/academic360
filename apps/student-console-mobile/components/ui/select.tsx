@@ -15,6 +15,7 @@ interface SelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  searchable?: boolean;
 }
 
 export function Select({
@@ -23,6 +24,7 @@ export function Select({
   onChange,
   placeholder = "Select...",
   disabled = false,
+  searchable = true,
 }: SelectProps) {
   const { theme, colorScheme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -78,18 +80,20 @@ export function Select({
           <Text style={{ color: theme.text }} className="text-lg font-semibold">
             {placeholder}
           </Text>
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder={`Search ${placeholder.toLowerCase()}`}
-            placeholderTextColor={theme.text}
-            className="mt-3 px-3 py-2.5 rounded-lg border text-base"
-            style={{
-              color: theme.text,
-              borderColor: theme.border,
-              backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
-            }}
-          />
+          {searchable ? (
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={`Search ${placeholder.toLowerCase()}`}
+              placeholderTextColor={theme.text}
+              className="mt-3 px-3 py-2.5 rounded-lg border text-base"
+              style={{
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
+              }}
+            />
+          ) : null}
         </View>
         <FlatList
           data={filtered}

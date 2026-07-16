@@ -1,22 +1,21 @@
+import attendanceImg from "@/assets/illustrations/academics/attendance.jpg";
 import cuRegistrationImg from "@/assets/illustrations/academics/cu-registration.jpg";
 import examFormImg from "@/assets/illustrations/academics/exam-form.jpg";
+import notesImg from "@/assets/illustrations/academics/notes.jpg";
+import statusImg from "@/assets/illustrations/academics/status.jpg";
 import subjectSelectionImg from "@/assets/illustrations/academics/subject-selection.jpg";
+import timetableImg from "@/assets/illustrations/academics/timetable.jpg";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import {
-  CalendarCheck,
-  ChevronRight,
-  GraduationCap,
-  NotebookPen,
-  type LucideIcon,
-} from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import React, { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 type TabKey = "activities" | "records";
+type Card = { id: string; label: string; desc: string; img: number; path: string };
 
 export default function AcademicsScreen() {
   const { theme, colorScheme } = useTheme();
@@ -28,14 +27,13 @@ export default function AcademicsScreen() {
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "#f8fafc";
   const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
   const accent = isDark ? "#a5b4fc" : "#4f46e5";
-  const accentBg = isDark ? "rgba(99,102,241,0.2)" : "rgba(79,70,229,0.1)";
   const segBg = isDark ? "rgba(255,255,255,0.06)" : "#eef2ff";
 
   const promo = student?.currentPromotion;
   const affiliation = student?.programCourse?.affiliation ?? promo?.programCourse?.affiliation;
   const affiliationLabel = affiliation?.shortName || affiliation?.name;
 
-  const activityCards: { id: string; label: string; desc: string; img: number; path: string }[] = [
+  const activityCards: Card[] = [
     {
       id: "subject-selection",
       label: "Subject Selection",
@@ -59,35 +57,43 @@ export default function AcademicsScreen() {
     },
   ];
 
-  const recordCards: { id: string; label: string; desc: string; icon: LucideIcon; path: string }[] =
-    [
-      {
-        id: "attendance",
-        label: "Attendance",
-        desc: "Your class attendance record",
-        icon: CalendarCheck,
-        path: "/console/academics/current-status",
-      },
-      {
-        id: "status",
-        label: "Current Academic Status",
-        desc: "Track your semester and enrollment status",
-        icon: GraduationCap,
-        path: "/console/academics/current-status",
-      },
-      {
-        id: "notes",
-        label: "Notes",
-        desc: "Notes and assignments by subject paper",
-        icon: NotebookPen,
-        path: "/console/academics/notes",
-      },
-    ];
+  const recordCards: Card[] = [
+    {
+      id: "timetable",
+      label: "Time Table",
+      desc: "Your weekly class timetable",
+      img: timetableImg,
+      path: "/console/academics/timetable",
+    },
+    {
+      id: "attendance",
+      label: "Attendance",
+      desc: "Your class attendance record",
+      img: attendanceImg,
+      path: "/console/academics/current-status",
+    },
+    {
+      id: "status",
+      label: "Current Academic Status",
+      desc: "Track your semester and enrollment status",
+      img: statusImg,
+      path: "/console/academics/current-status",
+    },
+    {
+      id: "notes",
+      label: "Notes",
+      desc: "Notes and assignments by subject paper",
+      img: notesImg,
+      path: "/console/academics/notes",
+    },
+  ];
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "activities", label: "Activities" },
     { key: "records", label: "Records" },
   ];
+
+  const cards = tab === "activities" ? activityCards : recordCards;
 
   return (
     <ScrollView
@@ -122,64 +128,32 @@ export default function AcademicsScreen() {
         })}
       </View>
 
-      {tab === "activities" ? (
-        <View className="gap-3">
-          {activityCards.map((card) => (
-            <Pressable
-              key={card.id}
-              onPress={() => router.push(card.path as any)}
-              className="flex-row items-center rounded-2xl p-3"
-              style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
+      <View className="gap-3">
+        {cards.map((card) => (
+          <Pressable
+            key={card.id}
+            onPress={() => router.push(card.path as any)}
+            className="flex-row items-center rounded-2xl p-3"
+            style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
+          >
+            <View
+              className="rounded-xl items-center justify-center mr-3 overflow-hidden"
+              style={{ width: 80, height: 80, backgroundColor: "#ffffff" }}
             >
-              <View
-                className="rounded-xl items-center justify-center mr-3 overflow-hidden"
-                style={{ width: 68, height: 68, backgroundColor: "#ffffff" }}
-              >
-                <Image source={card.img} style={{ width: 66, height: 66 }} contentFit="contain" />
-              </View>
-              <View className="flex-1">
-                <Text style={{ color: theme.text }} className="text-base font-semibold">
-                  {card.label}
-                </Text>
-                <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
-                  {card.desc}
-                </Text>
-              </View>
-              <ChevronRight size={20} color={theme.text} style={{ opacity: 0.4 }} />
-            </Pressable>
-          ))}
-        </View>
-      ) : (
-        <View className="gap-3">
-          {recordCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Pressable
-                key={card.id}
-                onPress={() => router.push(card.path as any)}
-                className="flex-row items-center rounded-2xl p-4"
-                style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
-              >
-                <View
-                  className="rounded-xl items-center justify-center mr-3"
-                  style={{ width: 44, height: 44, backgroundColor: accentBg }}
-                >
-                  <Icon size={22} color={accent} />
-                </View>
-                <View className="flex-1">
-                  <Text style={{ color: theme.text }} className="text-base font-semibold">
-                    {card.label}
-                  </Text>
-                  <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
-                    {card.desc}
-                  </Text>
-                </View>
-                <ChevronRight size={20} color={theme.text} style={{ opacity: 0.4 }} />
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
+              <Image source={card.img} style={{ width: 78, height: 78 }} contentFit="contain" />
+            </View>
+            <View className="flex-1">
+              <Text style={{ color: theme.text }} className="text-base font-semibold">
+                {card.label}
+              </Text>
+              <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
+                {card.desc}
+              </Text>
+            </View>
+            <ChevronRight size={20} color={theme.text} style={{ opacity: 0.4 }} />
+          </Pressable>
+        ))}
+      </View>
     </ScrollView>
   );
 }
