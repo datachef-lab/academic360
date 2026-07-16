@@ -186,15 +186,39 @@ interface PromotionRow {
   studentId: number;
   sessionId: number;
   classId: number;
+  shiftId?: number | null;
+  uid?: string | null;
+  classRollNumber?: string | null;
   dateOfJoining?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   remarks?: string | null;
   academicYear?: { id: number; year?: string; name?: string } | null;
   class?: { id: number; name?: string; type?: string } | null;
+  shift?: { id?: number; name?: string } | null;
+  section?: { id?: number; name?: string } | null;
   appearTypeName?: string | null;
-  /** Board / exam outcome; wired when API exposes it */
-  result?: string | null;
+}
+
+function buildPromotionShiftNameMap(mappings: FeeStudentMappingDto[]): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const mapping of mappings) {
+    for (const fgpm of mapping.feeGroupPromotionMappings ?? []) {
+      const promotionId = fgpm.promotion?.id;
+      const shiftName = fgpm.promotion?.shift?.name?.trim();
+      if (promotionId != null && shiftName) {
+        map.set(promotionId, shiftName);
+      }
+    }
+  }
+  return map;
+}
+
+function getPromotionShiftLabel(
+  promotion: PromotionRow,
+  shiftByPromotionId: Map<number, string>,
+): string {
+  return promotion.shift?.name?.trim() || shiftByPromotionId.get(promotion.id) || "—";
 }
 
 interface OverviewTabProps {
@@ -277,6 +301,7 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
 
   const feeMappings = feeMappingsRes ?? [];
   const feeCardSummary = useMemo(() => computeFeeCardSummary(feeMappings), [feeMappings]);
+  const promotionShiftById = useMemo(() => buildPromotionShiftNameMap(feeMappings), [feeMappings]);
 
   const promotions = promotionsData?.promotions ?? [];
   const isEligibleForAlumni =
@@ -380,60 +405,80 @@ export default function OverviewTab({ studentId, userId, studentUid }: OverviewT
           <p className="text-sm text-muted-foreground py-4">No promotion records found.</p>
         ) : (
           <div className="rounded-md border border-gray-200 overflow-hidden shadow-none">
-            <div className="overflow-x-auto">
-              <Table className="min-w-full">
+            <div className="w-full">
+              <Table className="w-full table-fixed [&_tbody_tr]:bg-white [&_tbody_tr:hover]:bg-white [&_th]:px-2 [&_th]:py-2 [&_td]:px-2 [&_td]:py-2.5 [&_th]:align-middle [&_td]:align-middle">
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
-                    <TableHead className="text-xs font-semibold text-gray-600 w-12">Sr.</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[4%]">
+                      Sr.
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[10%]">
                       Academic year
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[120px]">
-                      Semester
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[14%]">
+                      Semester and UID
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[140px]">
-                      Appear Type
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[10%]">
+                      Appear type
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[100px]">
-                      Result
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[8%]">
+                      Shift
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[130px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[8%]">
+                      Section
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[10%]">
+                      Class roll no.
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[11%]">
                       Start date
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[130px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[11%]">
                       End date
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 min-w-[160px]">
+                    <TableHead className="text-xs font-semibold text-gray-600 w-[14%]">
                       Remarks
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {promotions.map((p, index) => (
-                    <TableRow key={p.id} className="border-b border-gray-200">
+                    <TableRow
+                      key={p.id}
+                      className="border-b border-gray-200 bg-white hover:bg-white data-[state=selected]:bg-white"
+                    >
                       <TableCell className="text-sm text-gray-800">{index + 1}</TableCell>
                       <TableCell className="text-sm">
                         {p.academicYear?.year || p.academicYear?.name || "—"}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {p.class?.name ? (
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-orange-300 text-orange-800 bg-orange-50 font-normal"
-                          >
-                            {formatSemesterBadgeLabel(p.class.name)}
-                          </Badge>
-                        ) : (
-                          "—"
-                        )}
+                        <div className="flex flex-col items-center gap-1 text-center">
+                          {p.class?.name ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-800 bg-orange-50 font-normal w-fit"
+                            >
+                              {formatSemesterBadgeLabel(p.class.name)}
+                            </Badge>
+                          ) : (
+                            <span>—</span>
+                          )}
+                          <span className="text-xs text-muted-foreground font-mono tracking-tight">
+                            {p.uid?.trim() || studentUid?.trim() || "—"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm">{p.appearTypeName?.trim() || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {p.result?.trim() || "Pending"}
+                      <TableCell className="text-sm">
+                        {getPromotionShiftLabel(p, promotionShiftById)}
+                      </TableCell>
+                      <TableCell className="text-sm">{p.section?.name?.trim() || "—"}</TableCell>
+                      <TableCell className="text-sm tabular-nums">
+                        {p.classRollNumber?.trim() || "—"}
                       </TableCell>
                       <TableCell className="text-sm">{formatDateDdMmYyyy(p.startDate)}</TableCell>
                       <TableCell className="text-sm">{formatDateDdMmYyyy(p.endDate)}</TableCell>
-                      <TableCell className="text-sm text-gray-600 max-w-[240px] truncate">
+                      <TableCell className="text-sm text-gray-600 truncate">
                         {p.remarks?.trim() || "—"}
                       </TableCell>
                     </TableRow>

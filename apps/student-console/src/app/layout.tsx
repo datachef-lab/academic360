@@ -2,9 +2,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import type { Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/providers/auth-provider";
+import { QueryProvider } from "@/providers/query-provider";
 // This is imported but not directly used in the component
 // It sets up the database shutdown handlers in the Node.js environment
-import { setupDatabaseShutdownHandlers } from "@/lib/setup-db-handlers";
+// import { setupDatabaseShutdownHandlers } from "@/lib/setup-db-handlers";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { Toaster } from "sonner";
 import { DynamicTitleUpdater } from "@/components/dynamic-title-updater";
@@ -54,10 +55,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased w-screen h-screen no-scrollbar`}
         suppressHydrationWarning
       >
-        <DynamicTitleUpdater />
-        <ToastProvider>
-          <AuthProvider>{children}</AuthProvider>
-        </ToastProvider>
+        <QueryProvider>
+          <DynamicTitleUpdater />
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        </QueryProvider>
         <Toaster />
       </body>
     </html>

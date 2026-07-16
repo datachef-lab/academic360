@@ -246,13 +246,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const isProtectedRoute = !isLoginPage && !isResetPasswordPage;
 
     // If authenticated and on login page, redirect to dashboard
-    // Add a small delay so the loading animation on the login page is visible
     if (accessToken && user && isLoginPage && !isLoggingOutRef.current) {
-      const timer = setTimeout(() => {
-        navigate("/dashboard", { replace: true });
-      }, 800); // 800ms delay for clearer animation visibility
-
-      return () => clearTimeout(timer);
+      navigate("/dashboard", { replace: true });
+      return;
     }
 
     // If not authenticated and on protected route, redirect to login immediately

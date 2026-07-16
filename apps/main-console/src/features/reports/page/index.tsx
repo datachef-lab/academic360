@@ -30,6 +30,7 @@ import {
   Copy,
 } from "lucide-react";
 import { toast } from "sonner";
+import Swal from "sweetalert2";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useSocket } from "@/hooks/useSocket";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
@@ -60,7 +61,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import MultiSelectDropdown from "@/components/ui/MultiSelect";
+import DialogMultiSelect from "@/components/ui/DialogMultiSelect";
 import { ExportService, type ReportExportQueryFilters } from "@/services/exportService";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import * as XLSX from "xlsx";
@@ -149,8 +150,6 @@ export default function ReportsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
   const [currentOperation, setCurrentOperation] = useState<string | null>(null);
-  const [existingUidsDialogOpen, setExistingUidsDialogOpen] = useState(false);
-  const [existingUids, setExistingUids] = useState<string[]>([]);
   const [cuRollRegValidationDialogOpen, setCuRollRegValidationDialogOpen] = useState(false);
   const [cuRollRegValidationMessage, setCuRollRegValidationMessage] = useState("");
   const [cuRollRegMissingHeaders, setCuRollRegMissingHeaders] = useState<string[]>([]);
@@ -195,6 +194,40 @@ export default function ReportsPage() {
         console.log("Export completed via socket update");
         setIsExporting(false);
         // The modal will auto-close due to the completed status in ExportProgressDialog
+
+        // Legacy student import: show the final summary (incl. per-uid errors)
+        const meta = data.meta as
+          | {
+              operation?: string;
+              summary?: {
+                processed: number;
+                notFound: number;
+                errors: Array<{ uid: string; error: string }>;
+              };
+            }
+          | undefined;
+        if (meta?.operation === "student_import_legacy_students" && meta.summary) {
+          const { processed, notFound, errors } = meta.summary;
+          if (errors?.length) {
+            const list = errors
+              .slice(0, 10)
+              .map((e) => `<li><b>${e.uid}</b>: ${e.error}</li>`)
+              .join("");
+            void Swal.fire({
+              title: "Import completed with errors",
+              html:
+                `<div style="text-align:left"><p>${processed} processed, ${notFound} not found, <b>${errors.length} error(s)</b>:</p>` +
+                `<ul style="font-size:12px">${list}</ul>` +
+                (errors.length > 10
+                  ? `<p style="font-size:12px;color:#6b7280">…and ${errors.length - 10} more</p>`
+                  : "") +
+                `</div>`,
+              icon: "warning",
+            });
+          } else {
+            toast.success(`Import completed: ${processed} students processed.`);
+          }
+        }
       } else if (data.status === "error") {
         console.log("Export failed via socket update");
         setIsExporting(false);
@@ -382,11 +415,6 @@ export default function ReportsPage() {
       .toLowerCase()
       .replace(/[_\s]+/g, " ");
 
-  const cleanUidForImport = (uid: unknown): string =>
-    String(uid ?? "")
-      .trim()
-      .replace(/[^A-Za-z0-9]/g, "");
-
   const readExcelAsMatrix = async (file: File): Promise<string[][]> => {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "array" });
@@ -460,64 +488,6 @@ export default function ReportsPage() {
     return { ok: true as const };
   };
 
-  const extractImportUidsFromExcel = async (file: File) => {
-    const matrix = await readExcelAsMatrix(file);
-    if (!matrix || matrix.length < 2) {
-      return { ok: false, message: "Excel file has no data rows.", uids: [] as string[] };
-    }
-
-    const headerRow = matrix[0] || [];
-    const headers = headerRow.map(normalizeHeaderKey);
-
-    const uidHeaderCandidates = [
-      "uid",
-      "student uid",
-      "student_uid",
-      "codenumber",
-      "code",
-      "code number",
-    ];
-    const uidIdx = headers.findIndex((h) => uidHeaderCandidates.includes(h));
-    if (uidIdx === -1) {
-      return {
-        ok: false,
-        message: "UID column not found. Expected headers: UID / Student UID / CodeNumber",
-        uids: [],
-      };
-    }
-
-    const uids: string[] = [];
-    const seen = new Set<string>();
-    for (let r = 1; r < matrix.length; r++) {
-      const row = matrix[r] || [];
-      const rawUid = row[uidIdx];
-      const cleaned = cleanUidForImport(rawUid);
-      const displayUid = String(rawUid ?? "").trim();
-
-      const isRowEmpty = row.every((cell: unknown) => String(cell ?? "").trim() === "");
-      if (isRowEmpty) continue;
-
-      if (!cleaned) return { ok: false, message: `Row ${r + 1}: UID is required.`, uids: [] };
-
-      const norm = cleaned.toLowerCase();
-      if (seen.has(norm)) {
-        return {
-          ok: false,
-          message: `Duplicate UID found: "${displayUid}" (row ${r + 1}). Please remove duplicates.`,
-          uids: [],
-        };
-      }
-      seen.add(norm);
-      uids.push(cleaned);
-    }
-
-    if (uids.length === 0) {
-      return { ok: false, message: "No UID values found in the Excel file.", uids: [] };
-    }
-
-    return { ok: true as const, uids };
-  };
-
   const uploadCuRollRegExcel = async (file: File) => {
     const operation = "student_cu_roll_reg_update";
     startUploadProgress(operation, "Uploading Excel for CU Roll/Registration update…");
@@ -546,6 +516,155 @@ export default function ReportsPage() {
 
   const uploadImportStudentsExcel = async (file: File) => {
     const operation = "student_import_legacy_students";
+
+    // Pre-check: tell the user how many UIDs already exist (re-synced in
+    // place, no duplicates) vs new, and ask for confirmation.
+    const precheck = await ExportService.precheckImportStudentsExcel(file);
+    if (precheck.success && precheck.data && !precheck.data.error) {
+      const {
+        totalUids,
+        existingCount,
+        newCount,
+        existingUids,
+        ambiguousNumericUids,
+        inProgressByOthers,
+      } = precheck.data;
+      const sample = (existingUids ?? []).slice(0, 8).join(", ");
+      // Genuinely ambiguous: more than one existing student shares these
+      // digits once leading zeros are allowed for. Never guessed — still
+      // counted as "new" until the admin resolves it manually.
+      const ambiguousNumeric = ambiguousNumericUids ?? [];
+      const ambiguousNumericHtml =
+        ambiguousNumeric.length > 0
+          ? `<div style="margin-bottom:10px;padding:10px 12px;border:1px solid #fca5a5;border-radius:8px;background:#fef2f2">` +
+            `<div style="font-size:12px;font-weight:600;color:#b91c1c;margin-bottom:4px">⚠ ${ambiguousNumeric.length} UID(s) need manual review</div>` +
+            `<div style="font-size:11.5px;color:#b91c1c">These matched more than one existing student once a leading zero is accounted for, so they were left as "new" rather than guessed. Double-check these against the system before importing.</div>` +
+            `<div style="font-size:11px;color:#a16207;margin-top:6px;font-family:ui-monospace,monospace;word-break:break-all">${ambiguousNumeric.slice(0, 8).join(", ")}${ambiguousNumeric.length > 8 ? ` … +${ambiguousNumeric.length - 8} more` : ""}</div>` +
+            `</div>`
+          : "";
+      // UIDs someone else is importing RIGHT NOW — grouped by that person's
+      // name so the uploader can remove them and reupload (or continue: the
+      // server skips them and reports each in the final summary).
+      const locked = inProgressByOthers ?? [];
+      let lockedHtml = "";
+      const lockedUidList = locked.map((l) => l.uid);
+      if (locked.length > 0) {
+        // If every lock is held by the CURRENT user, this is their own earlier
+        // upload still running (or its locks not yet expired) — say so instead
+        // of "someone else".
+        const allMine =
+          userId && locked.every((l) => l.userId != null && String(l.userId) === userId);
+        // Show EVERY locked UID in a fixed-height scrollable TABLE (sticky
+        // header) so the user knows exactly which rows to remove — never
+        // truncate with "+N more".
+        const fmtTime = (iso: string) => {
+          const d = new Date(iso);
+          return isNaN(d.getTime())
+            ? ""
+            : d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+        };
+        const th = (label: string, extra = "") =>
+          `<th style="position:sticky;top:0;background:#fef2f2;text-align:left;padding:5px 8px;font-size:10.5px;color:#991b1b;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #fecaca;${extra}">${label}</th>`;
+        const rows = locked
+          .map(
+            (l, i) =>
+              `<tr style="border-bottom:1px solid #fee2e2">` +
+              `<td style="padding:4px 8px;color:#9ca3af;font-size:11px">${i + 1}</td>` +
+              `<td style="padding:4px 8px;font-family:ui-monospace,monospace;font-size:11.5px;color:#111827">${l.uid}</td>` +
+              `<td style="padding:4px 8px;font-size:11.5px;color:#374151">${
+                userId && l.userId != null && String(l.userId) === userId
+                  ? `You${l.userName ? ` (${l.userName})` : ""}`
+                  : l.userName || "another user"
+              }</td>` +
+              `<td style="padding:4px 8px;font-size:11px;color:#6b7280;white-space:nowrap">${fmtTime(l.startedAt)}</td>` +
+              `</tr>`,
+          )
+          .join("");
+        lockedHtml =
+          `<div style="margin-bottom:10px;padding:10px 12px;border:1px solid #fca5a5;border-radius:8px;background:#fef2f2">` +
+          `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">` +
+          `<div style="font-size:12px;font-weight:600;color:#b91c1c">⚠ ${locked.length} UID(s) ${
+            allMine
+              ? "are still locked by a previous upload from YOUR account"
+              : "are being imported by someone else right now"
+          }</div>` +
+          `<button id="copy-locked-uids" type="button" style="flex-shrink:0;font-size:11px;padding:3px 10px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#b91c1c;cursor:pointer">Copy UIDs</button>` +
+          `</div>` +
+          `<div style="height:150px;overflow-y:auto;background:#fff;border:1px solid #fecaca;border-radius:6px">` +
+          `<table style="width:100%;border-collapse:collapse">` +
+          `<thead><tr>${th("#", "width:32px")}${th("UID")}${th("Imported by")}${th("Started", "width:70px")}</tr></thead>` +
+          `<tbody>${rows}</tbody>` +
+          `</table>` +
+          `</div>` +
+          `<div style="font-size:11.5px;color:#b91c1c;margin-top:6px">${
+            allMine
+              ? "Your earlier import is still running (or its locks haven't expired yet — max 10 min). Wait for it to finish, or continue — these UIDs will be skipped."
+              : "Remove these UIDs and reupload, or continue — they will be skipped."
+          }</div>` +
+          `</div>`;
+      }
+      const tile = (value: number, label: string, color: string, bg: string) =>
+        `<div style="flex:1;min-width:0;background:${bg};border:1px solid #e2e8f0;border-radius:10px;padding:12px 8px;text-align:center">` +
+        `<div style="font-size:24px;font-weight:700;line-height:1.1;color:${color}">${value.toLocaleString()}</div>` +
+        `<div style="font-size:10.5px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-top:4px">${label}</div>` +
+        `</div>`;
+      const confirmed = await Swal.fire({
+        title: "Confirm student import",
+        width: 560,
+        html:
+          `<div style="text-align:left">` +
+          // At-a-glance stat tiles: total / existing / new
+          `<div style="display:flex;gap:10px;margin:6px 0 14px">` +
+          tile(totalUids, "UIDs in file", "#334155", "#f8fafc") +
+          tile(
+            existingCount,
+            "Already exist",
+            existingCount > 0 ? "#b45309" : "#94a3b8",
+            existingCount > 0 ? "#fffbeb" : "#f8fafc",
+          ) +
+          tile(newCount, "New — will import", "#15803d", "#f0fdf4") +
+          `</div>` +
+          // Existing-UIDs detail (only when relevant)
+          (existingCount > 0
+            ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px">` +
+              `<div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:4px">Existing UIDs are re-synced in place</div>` +
+              `<div style="font-size:11.5px;color:#92400e">Missing admission / promotion / fees are completed — never duplicated.</div>` +
+              `<div style="font-size:11px;color:#a16207;margin-top:6px;font-family:ui-monospace,monospace;word-break:break-all">${sample}${existingCount > 8 ? ` … +${existingCount - 8} more` : ""}</div>` +
+              `</div>`
+            : "") +
+          ambiguousNumericHtml +
+          lockedHtml +
+          `<div style="font-size:11.5px;color:#94a3b8;margin-top:4px">The import runs in the background — progress and the final summary arrive live.</div>` +
+          `</div>`,
+        icon: locked.length > 0 || ambiguousNumeric.length > 0 ? "warning" : "question",
+        showCancelButton: true,
+        confirmButtonText: `Import ${totalUids.toLocaleString()} UID${totalUids === 1 ? "" : "s"}`,
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#4f46e5",
+        focusCancel: locked.length > 0 || ambiguousNumeric.length > 0,
+        didOpen: () => {
+          const btn = document.getElementById("copy-locked-uids");
+          if (btn) {
+            btn.addEventListener("click", () => {
+              void navigator.clipboard.writeText(lockedUidList.join("\n")).then(() => {
+                btn.textContent = "Copied ✓";
+                setTimeout(() => (btn.textContent = "Copy UIDs"), 1500);
+              });
+            });
+          }
+        },
+      });
+      if (!confirmed.isConfirmed) {
+        toast.info("Import cancelled.");
+        return;
+      }
+    } else if (precheck.data?.error) {
+      toast.error(precheck.data.error);
+      return;
+    }
+    // If the pre-check itself failed (network etc.), continue with the import
+    // as before rather than blocking the user.
+
     startUploadProgress(operation, "Uploading Excel to import students…");
 
     const result = await ExportService.importStudentsFromExcel(file);
@@ -555,8 +674,11 @@ export default function ReportsPage() {
       return;
     }
 
-    completeUploadProgress(operation, "Student import completed.", true);
-    toast.success("Student import completed.");
+    // The import now runs asynchronously server-side (the old synchronous
+    // request died on the ALB ~60s idle timeout for big files). The progress
+    // dialog is socket-driven; the final summary arrives with the completion
+    // event handled in handleProgressUpdate.
+    toast.info("Import started — progress will update live.");
   };
 
   const handleExcelFileSelected = async (reportId: string, e: ChangeEvent<HTMLInputElement>) => {
@@ -584,25 +706,6 @@ export default function ReportsPage() {
         }
         await uploadCuRollRegExcel(file);
       } else if (reportId === "import-students-excel") {
-        const extracted = await extractImportUidsFromExcel(file);
-        if (!extracted.ok) {
-          toast.error(extracted.message);
-          return;
-        }
-
-        const check = await ExportService.checkExistingStudentUids(extracted.uids);
-        if (!check.success) {
-          toast.error(check.message || "Failed to pre-check existing students. Please try again.");
-          return;
-        }
-        const found = check.data?.existingUids || [];
-
-        if (found.length > 0) {
-          setExistingUids(found);
-          setExistingUidsDialogOpen(true);
-          return;
-        }
-
         await uploadImportStudentsExcel(file);
       }
     } catch (err) {
@@ -1178,7 +1281,7 @@ export default function ReportsPage() {
   const semesterClasses = useMemo(
     () =>
       [...classesList]
-        .filter((c) => c.type === "SEMESTER" && c.disabled !== true)
+        .filter((c) => c.type === "SEMESTER" && c.isActive !== false)
         .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)),
     [classesList],
   );
@@ -1335,8 +1438,8 @@ export default function ReportsPage() {
                 ) : null}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-lg">
-              <DialogHeader>
+            <DialogContent className="flex max-h-[min(90vh,720px)] max-w-md flex-col overflow-hidden sm:max-w-lg">
+              <DialogHeader className="shrink-0">
                 <DialogTitle>Export filters</DialogTitle>
                 <DialogDescription className="text-left text-slate-600">
                   Optional narrowers for supported downloads (Enrolment exports, CU corrections,
@@ -1345,7 +1448,7 @@ export default function ReportsPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4 py-2">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Academic year</Label>
                   <Select value={exportAcademicYearId} onValueChange={setExportAcademicYearId}>
@@ -1365,7 +1468,7 @@ export default function ReportsPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Regulation</Label>
-                  <MultiSelectDropdown
+                  <DialogMultiSelect
                     placeholder="All regulations"
                     options={regulationFilterOptions}
                     selectedOptions={filterRegulationIds.map(String)}
@@ -1376,7 +1479,7 @@ export default function ReportsPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Affiliation</Label>
-                  <MultiSelectDropdown
+                  <DialogMultiSelect
                     placeholder="All affiliations"
                     options={affiliationFilterOptions}
                     selectedOptions={filterAffiliationIds.map(String)}
@@ -1391,7 +1494,7 @@ export default function ReportsPage() {
                     List follows affiliation and regulation above (leave those empty for all
                     courses).
                   </p>
-                  <MultiSelectDropdown
+                  <DialogMultiSelect
                     placeholder="All program courses"
                     options={programCourseFilterOptions}
                     selectedOptions={filterProgramCourseIds.map(String)}
@@ -1402,7 +1505,7 @@ export default function ReportsPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Semester (class)</Label>
-                  <MultiSelectDropdown
+                  <DialogMultiSelect
                     placeholder="All semesters"
                     options={semesterClassFilterOptions}
                     selectedOptions={filterClassIds.map(String)}
@@ -1412,7 +1515,7 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              <DialogFooter className="gap-2 sm:gap-0 flex-col sm:flex-row">
+              <DialogFooter className="shrink-0 gap-2 sm:gap-0 flex-col sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"
@@ -1611,51 +1714,6 @@ export default function ReportsPage() {
               </div>
             </div>
           ) : null}
-
-          <AlertDialogFooter>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700">OK</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={existingUidsDialogOpen} onOpenChange={setExistingUidsDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-700">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
-                <AlertTriangle className="h-4 w-4 text-red-700" />
-              </span>
-              Some student UIDs already exist
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-700">
-              The uploaded Excel contains UIDs that already exist in the system. Please remove these
-              UIDs from the Excel and re-upload.
-              <span className="block mt-2 font-medium text-red-700">
-                Updating/resetting existing student details from this import is not allowed.
-              </span>
-              <span className="block mt-1 text-slate-600">
-                For further details, contact the administrator of the system.
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className="rounded border border-red-200 bg-red-50/40 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-xs font-semibold text-red-800">Existing UIDs</div>
-              <Badge className="bg-red-100 text-red-800 hover:bg-red-100" variant="secondary">
-                {existingUids.length}
-              </Badge>
-            </div>
-            <div className="max-h-56 overflow-y-auto rounded border border-red-100 bg-white p-2">
-              <ul className="space-y-1 text-xs text-slate-700">
-                {existingUids.map((uid) => (
-                  <li key={uid} className="font-mono">
-                    {uid}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
 
           <AlertDialogFooter>
             <AlertDialogAction className="bg-red-600 hover:bg-red-700">OK</AlertDialogAction>

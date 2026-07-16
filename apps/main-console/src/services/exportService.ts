@@ -44,6 +44,31 @@ export interface ExcelUploadResponse<T = unknown> {
   data?: T;
 }
 
+function academicYearIdFromSubjectSelectionMeta(row: unknown): number | null {
+  if (!row || typeof row !== "object") return null;
+  const r = row as Record<string, unknown>;
+
+  if (r.academicYearId != null && r.academicYearId !== "") {
+    const n = Number(r.academicYearId);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  const ay = r.academicYear;
+  if (Array.isArray(ay)) {
+    const first = ay[0];
+    if (first && typeof first === "object" && "id" in first) {
+      const n = Number((first as { id: unknown }).id);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  }
+  if (ay && typeof ay === "object" && "id" in ay) {
+    const n = Number((ay as { id: unknown }).id);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 export class ExportService {
   /**
    * Any subject-selection meta row for the academic year works as the export route param;
@@ -53,25 +78,20 @@ export class ExportService {
     academicYearId: number,
   ): Promise<number | null> {
     try {
-      const response = await axiosInstance.get<unknown>("/api/subject-selection/metas");
-      const raw = response.data as Record<string, unknown> | unknown[];
-      const rows = Array.isArray(raw)
-        ? raw
-        : Array.isArray((raw as { payload?: unknown }).payload)
-          ? ((raw as { payload: unknown[] }).payload as unknown[])
-          : Array.isArray((raw as { data?: unknown }).data)
-            ? ((raw as { data: unknown[] }).data as unknown[])
-            : null;
+      const response = await axiosInstance.get<{ payload?: unknown }>(
+        "/api/subject-selection/metas",
+      );
+      const payload = response.data?.payload;
+      const rows = Array.isArray(payload) ? payload : null;
       if (!rows?.length) return null;
+
       const match = rows.find(
-        (r) =>
-          r &&
-          typeof r === "object" &&
-          "academicYearId" in r &&
-          Number((r as { academicYearId: number }).academicYearId) === academicYearId,
+        (r) => academicYearIdFromSubjectSelectionMeta(r) === academicYearId,
       ) as { id?: number } | undefined;
-      return match?.id != null ? Number(match.id) : null;
-    } catch {
+
+      return match?.id != null && Number.isFinite(Number(match.id)) ? Number(match.id) : null;
+    } catch (error) {
+      console.error("Failed to resolve subject selection meta for academic year:", error);
       return null;
     }
   }
@@ -250,6 +270,60 @@ export class ExportService {
   }
 
   /**
+   * Pre-check the import Excel: which UIDs already exist (re-synced in place)
+   * vs new. Read-only; used for the confirm dialog before importing.
+   */
+  static async precheckImportStudentsExcel(file: File): Promise<{
+    success: boolean;
+    message?: string;
+    data?: {
+      totalUids: number;
+      existingCount: number;
+      newCount: number;
+      existingUids: string[];
+      /**
+       * File values from Number-typed cells that were auto-matched to an
+       * existing student after allowing for a leading zero Excel/Sheets
+       * silently dropped (e.g. "304250034" matched to "0304250034").
+       * Already counted as existing — surfaced for transparency only.
+       */
+      autoCorrectedUids?: Array<{ fileValue: string; matchedUid: string }>;
+      /**
+       * Number-typed UIDs that matched MORE THAN ONE existing student once
+       * leading-zero padding is considered. Genuinely ambiguous — never
+       * guessed, so still counted as "new"; the admin should resolve these
+       * manually.
+       */
+      ambiguousNumericUids?: string[];
+      /** UIDs currently locked by a running import (may be the current user's own earlier upload). */
+      inProgressByOthers?: Array<{
+        uid: string;
+        userId: string | null;
+        userName: string | null;
+        startedAt: string;
+      }>;
+      error?: string;
+    };
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await axiosInstance.post(
+        `/api/students/import-legacy-students/precheck`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return { success: true, data: response.data?.payload ?? response.data?.data };
+    } catch (error: unknown) {
+      console.error("Student import precheck error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Pre-check failed",
+      };
+    }
+  }
+
+  /**
    * Upload Excel to import/add students (legacy importer)
    * Backend: POST /api/students/import-legacy-students (multipart/form-data, field: file)
    */
@@ -272,35 +346,6 @@ export class ExportService {
       return {
         success: false,
         message: error instanceof Error ? error.message : "Upload failed",
-      };
-    }
-  }
-
-  /**
-   * Check if any of the provided UIDs already exist in the backend
-   * Backend: POST /api/students/uids/check-existing
-   */
-  static async checkExistingStudentUids(
-    uids: string[],
-  ): Promise<ExcelUploadResponse<{ existingUids: string[] }>> {
-    try {
-      const response = await axiosInstance.post(`/api/students/uids/check-existing`, {
-        uids,
-      });
-
-      return {
-        success: true,
-        message: "UID check completed",
-        // Backend ApiResponse uses `payload`; keep fallback to `data` for safety.
-        data: (response.data?.payload ?? response.data?.data) as {
-          existingUids: string[];
-        },
-      };
-    } catch (error: unknown) {
-      console.error("Check existing UIDs error:", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "UID check failed",
       };
     }
   }

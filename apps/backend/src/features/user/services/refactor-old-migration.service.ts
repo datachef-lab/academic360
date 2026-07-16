@@ -1,4 +1,6 @@
 import { db, mysqlConnection } from "@/db";
+import { loadStudentFeesForUid } from "@/features/fees/services/legacy-fees-data.service";
+import { socketService } from "@/services/socketService";
 import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
 import {
   academicYearModel,
@@ -19,7 +21,7 @@ import {
   userModel,
   userTypeEnum,
 } from "@repo/db/schemas";
-import { and, count, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import * as oldStudentPersonalDetailsHelper from "./old-student-helper";
 import * as oldStudentAdmissionServices from "./old-student.service";
 import bcrypt from "bcryptjs";
@@ -30,6 +32,12 @@ import {
 } from "@repo/db/legacy-system-types/academics";
 import { OldAdmissionStats } from "@repo/db/legacy-system-types/admissions";
 import ExcelJS from "exceljs";
+import pLimit from "p-limit";
+import { getOrCreateWithLock } from "@/utils/db-concurrency";
+import {
+  acquireImportUidLock,
+  getImportUidLockHolders,
+} from "@/utils/import-uid-lock";
 
 const BATCH_SIZE = 500;
 
@@ -228,11 +236,42 @@ export async function processDataFetching(
       // Process all students in full sync - always update student data
       const student = await processStudent(oldStudent);
       console.log("Created student:", student?.uid);
+      // Live-update the affiliation tracker as each student lands (throttled).
+      try {
+        const { scheduleRealtimeTrackerThrottledBroadcast } =
+          await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+        scheduleRealtimeTrackerThrottledBroadcast(
+          "affiliation",
+          "legacy_sync",
+          {},
+        );
+      } catch (e) {
+        console.error(
+          "[LegacySync] tracker throttled broadcast failed:",
+          (e as Error)?.message,
+        );
+      }
     }
 
     console.log(
       `${stats.course} (${stats.total}) | Done loading batch ${i + 1}/${totalBatches}: ${rows.length} students`,
     );
+  }
+
+  // This full-sync creates promotions, so nudge the affiliation tab once the
+  // course's batches are in. Debounced, so repeated per-course calls collapse;
+  // never fail the sync over a broadcast.
+  if (totalStudents > 0) {
+    try {
+      const { scheduleRealtimeTrackerBroadcast } =
+        await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+      scheduleRealtimeTrackerBroadcast("affiliation", "legacy_sync", {});
+    } catch (e) {
+      console.error(
+        "[LegacySync] tracker broadcast failed:",
+        (e as Error)?.message,
+      );
+    }
   }
 }
 
@@ -244,14 +283,25 @@ export async function processDataFetching(
  * - Calls processStudent for each found old student
  * Returns a summary with counts and per-UID errors
  */
-export async function processStudentsFromExcelBuffer(
+/**
+ * Parse the uploaded Excel and extract the UID column values (shared by the
+ * import itself and the pre-check endpoint).
+ */
+async function parseUidsFromExcelBuffer(
   file: Buffer | ArrayBuffer | Uint8Array,
 ): Promise<{
   totalRows: number;
-  totalUids: number;
-  processed: number;
-  notFound: number;
-  errors: Array<{ uid: string; error: string }>;
+  uids: string[];
+  /**
+   * UIDs whose cell was stored as a Number (not Text) in the uploaded file.
+   * Excel/Sheets silently drops a leading zero when a value is typed into a
+   * plain numeric cell, so e.g. "0304250034" becomes 304250034 and can no
+   * longer match the real student UID. We can't recover the missing digit,
+   * so these are only ever flagged for a human to double-check — never
+   * auto-matched.
+   */
+  numericTypedUids: string[];
+  error?: string;
 }> {
   const workbook = new ExcelJS.Workbook();
   let dataForExcel: Buffer | Uint8Array | ArrayBuffer;
@@ -268,10 +318,9 @@ export async function processStudentsFromExcelBuffer(
   if (!sheet) {
     return {
       totalRows: 0,
-      totalUids: 0,
-      processed: 0,
-      notFound: 0,
-      errors: [{ uid: "", error: "No worksheet in Excel" }],
+      uids: [],
+      numericTypedUids: [],
+      error: "No worksheet in Excel",
     };
   }
 
@@ -304,16 +353,10 @@ export async function processStudentsFromExcelBuffer(
   if (uidColIndex === -1) {
     return {
       totalRows: sheet.rowCount,
-      totalUids: 0,
-      processed: 0,
-      notFound: 0,
-      errors: [
-        {
-          uid: "",
-          error:
-            "UID column not found. Expected headers: UID / Student UID / CodeNumber",
-        },
-      ],
+      uids: [],
+      numericTypedUids: [],
+      error:
+        "UID column not found. Expected headers: UID / Student UID / CodeNumber",
     };
   }
 
@@ -324,39 +367,400 @@ export async function processStudentsFromExcelBuffer(
   };
 
   const uids: string[] = [];
+  const numericTypedUids: string[] = [];
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
-    const raw = row.getCell(uidColIndex).value;
-    const uid = cleanUid(raw);
-    if (uid) uids.push(uid);
+    const cell = row.getCell(uidColIndex);
+    const uid = cleanUid(cell.value);
+    if (!uid) continue;
+    uids.push(uid);
+    if (cell.type === ExcelJS.ValueType.Number) {
+      numericTypedUids.push(uid);
+    }
   }
+  return { totalRows: sheet.rowCount, uids, numericTypedUids };
+}
+
+/**
+ * Pre-check an import file: which UIDs already exist (will be re-synced in
+ * place) vs new. Read-only — nothing is imported.
+ */
+export async function precheckStudentsFromExcelBuffer(
+  file: Buffer | ArrayBuffer | Uint8Array,
+): Promise<{
+  totalRows: number;
+  totalUids: number;
+  existingCount: number;
+  newCount: number;
+  existingUids: string[];
+  /**
+   * File values from Number-typed cells that were auto-matched to an
+   * existing student after allowing for leading zeros Excel/Sheets silently
+   * dropped (e.g. "304250034" -> matched "0304250034"). Surfaced so the
+   * admin can see what was corrected, not because anything is wrong.
+   */
+  autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }>;
+  /**
+   * Number-typed UIDs that matched MORE THAN ONE existing student once
+   * leading-zero padding is considered — genuinely ambiguous, so we refuse
+   * to guess. The admin must resolve these manually.
+   */
+  ambiguousNumericUids: string[];
+  /** UIDs currently locked by a running import — warn BEFORE starting. */
+  inProgressByOthers: Array<{
+    uid: string;
+    userId: string | null;
+    userName: string | null;
+    startedAt: string;
+  }>;
+  error?: string;
+}> {
+  const parsed = await parseUidsFromExcelBuffer(file);
+  if (parsed.error) {
+    return {
+      totalRows: parsed.totalRows,
+      totalUids: 0,
+      existingCount: 0,
+      newCount: 0,
+      existingUids: [],
+      autoCorrectedUids: [],
+      ambiguousNumericUids: [],
+      inProgressByOthers: [],
+      error: parsed.error,
+    };
+  }
+  const uids = [...new Set(parsed.uids)];
+  const existing = uids.length
+    ? await db
+        .select({ uid: studentModel.uid })
+        .from(studentModel)
+        .where(inArray(studentModel.uid, uids))
+    : [];
+  const existingSet = new Set(
+    existing.map((r) => String(r.uid)).filter(Boolean),
+  );
+  const existingUidsDisplay = new Set(existingSet);
+
+  // Number-typed cells that didn't match exactly may have lost a leading
+  // zero (Excel/Sheets silently strips it from plain numeric cells, e.g.
+  // "0304250034" -> 304250034). Check for an existing student under a
+  // zero-padded version of the same digits before giving up on it — but
+  // only ever act when there's exactly one such student; ambiguity is
+  // surfaced, never guessed.
+  const autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }> =
+    [];
+  const ambiguousNumericUids: string[] = [];
+  const numericCandidates = [...new Set(parsed.numericTypedUids)].filter(
+    (uid) => !existingSet.has(uid),
+  );
+  await Promise.all(
+    numericCandidates.map(async (candidate) => {
+      const rows = await db
+        .select({ uid: studentModel.uid })
+        .from(studentModel)
+        .where(sql`${studentModel.uid} ~ ('^0+' || ${candidate} || '$')`)
+        .limit(2);
+      if (rows.length === 1) {
+        autoCorrectedUids.push({
+          fileValue: candidate,
+          matchedUid: rows[0].uid,
+        });
+        existingSet.add(candidate);
+        existingUidsDisplay.add(rows[0].uid);
+      } else if (rows.length > 1) {
+        ambiguousNumericUids.push(candidate);
+      }
+    }),
+  );
+  // Which of these UIDs are locked by a running import right now (any
+  // process/instance). Best-effort — a lock read failure must not block the
+  // pre-check.
+  let inProgressByOthers: Array<{
+    uid: string;
+    userId: string | null;
+    userName: string | null;
+    startedAt: string;
+  }> = [];
+  try {
+    const holders = await getImportUidLockHolders(uids);
+    inProgressByOthers = [...holders.entries()].map(([uid, h]) => ({
+      uid,
+      userId: h.userId,
+      userName: h.userName,
+      startedAt: h.startedAt,
+    }));
+  } catch (e) {
+    console.error(
+      "[import-precheck] lock-holder lookup failed:",
+      (e as Error)?.message,
+    );
+  }
+  return {
+    totalRows: parsed.totalRows,
+    totalUids: uids.length,
+    existingCount: existingSet.size,
+    newCount: uids.length - existingSet.size,
+    existingUids: [...existingUidsDisplay],
+    autoCorrectedUids,
+    ambiguousNumericUids,
+    inProgressByOthers,
+  };
+}
+
+// ONE limiter for the whole process, shared by every upload: N simultaneous
+// uploads must not multiply the concurrency, they queue into the same pool.
+// Default 35 workers per file (measured ~2s/uid vs 41.6s sequential); pool
+// sizes in db/index.ts are sized to match. IMPORT_CONCURRENCY=1 restores the
+// old strictly-sequential behavior.
+const importLimit = pLimit(
+  Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 35),
+);
+
+export async function processStudentsFromExcelBuffer(
+  file: Buffer | ArrayBuffer | Uint8Array,
+  opts?: {
+    progressUserId?: string | null;
+    /** Shown to OTHER uploaders who hit the same UID ("Being imported by <name>"). */
+    uploaderName?: string | null;
+  },
+): Promise<{
+  totalRows: number;
+  totalUids: number;
+  processed: number;
+  notFound: number;
+  errors: Array<{ uid: string; error: string }>;
+}> {
+  const parsed = await parseUidsFromExcelBuffer(file);
+  if (parsed.error) {
+    return {
+      totalRows: parsed.totalRows,
+      totalUids: 0,
+      processed: 0,
+      notFound: 0,
+      errors: [{ uid: "", error: parsed.error }],
+    };
+  }
+
+  // Dedupe within the file: a UID listed twice must not race against itself.
+  const uids: string[] = [...new Set(parsed.uids)];
 
   let processed = 0;
   let notFound = 0;
+  let done = 0;
   const errors: Array<{ uid: string; error: string }> = [];
 
-  for (const uid of uids) {
+  // Live progress to the uploading user via socket (the main-console upload dialog
+  // listens for `progress_update` scoped by this operation). Each update carries
+  // elapsed/ETA so the dialog can show expected duration and finish time —
+  // computed from the overall average rate, which self-corrects as waves land.
+  const total = uids.length;
+  const progressOperation = "student_import_legacy_students";
+  const importStartedAtMs = Date.now();
+  const emitProgress = (
+    doneCount: number,
+    status: "started" | "in_progress" | "completed",
+  ) => {
+    if (!opts?.progressUserId) return;
+    const progress = total > 0 ? Math.round((doneCount / total) * 100) : 100;
+    const elapsedMs = Date.now() - importStartedAtMs;
+    const etaMs =
+      doneCount > 0 && doneCount < total
+        ? Math.round((elapsedMs / doneCount) * (total - doneCount))
+        : doneCount >= total
+          ? 0
+          : null;
+    socketService.sendProgressUpdate(
+      String(opts.progressUserId),
+      socketService.createExportProgressUpdate(
+        String(opts.progressUserId),
+        `Imported ${doneCount}/${total} students`,
+        progress,
+        status,
+        undefined,
+        undefined,
+        undefined,
+        {
+          operation: progressOperation,
+          processed: doneCount,
+          total,
+          elapsedMs,
+          etaMs,
+        },
+      ),
+    );
+  };
+
+  emitProgress(0, "started");
+
+  const processOneUid = async (uid: string): Promise<void> => {
+    // Cross-upload guard: if another import (this process or another backend
+    // instance) is already working on this UID, skip it and tell the uploader
+    // who holds it — never process the same UID twice at once.
+    const lock = await acquireImportUidLock(uid, {
+      userId: opts?.progressUserId ?? null,
+      userName: opts?.uploaderName ?? null,
+    });
+    if (!lock.acquired) {
+      const who = lock.holder?.userName || "another user";
+      const since = lock.holder?.startedAt
+        ? ` (started ${new Date(lock.holder.startedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })})`
+        : "";
+      errors.push({
+        uid,
+        error: `Being imported by ${who}${since} — remove this UID and reupload`,
+      });
+      done++;
+      emitProgress(done, done >= total ? "completed" : "in_progress");
+      return;
+    }
+
     try {
       const oldStudent = await getOldStudentByUid(uid);
       if (!oldStudent) {
         notFound++;
-        continue;
+      } else {
+        await processStudent(oldStudent);
+        // Load this student's legacy fees right after their data is in. Idempotent
+        // (skips fees already loaded). A fees failure must not abort the import,
+        // but any fee-load problems are surfaced in the errors array.
+        try {
+          const feeResult = await loadStudentFeesForUid(uid);
+          if (feeResult.errors.length > 0) {
+            errors.push({
+              uid,
+              error: `fees: ${feeResult.errors.join("; ")}`,
+            });
+          }
+        } catch (feeErr: any) {
+          errors.push({
+            uid,
+            error: `fees: ${feeErr?.message || "unknown error"}`,
+          });
+        }
+        processed++;
+        // Live-update the Real Time Tracker AS this student lands (throttled so
+        // a big import doesn't hammer the aggregation). Viewers watching the
+        // tracker see the affiliation + fee_mis counts climb during the run,
+        // not just at the end. Never fail the import over a broadcast.
+        try {
+          const { scheduleRealtimeTrackerThrottledBroadcast } =
+            await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+          scheduleRealtimeTrackerThrottledBroadcast(
+            "affiliation",
+            "legacy_import",
+            {},
+          );
+          scheduleRealtimeTrackerThrottledBroadcast(
+            "fee_mis",
+            "legacy_import",
+            {},
+          );
+        } catch (e) {
+          console.error(
+            "[LegacyImport] tracker throttled broadcast failed:",
+            (e as Error)?.message,
+          );
+        }
       }
-      await processStudent(oldStudent);
-      processed++;
     } catch (e: any) {
       console.log("Error processing student:", e);
       errors.push({ uid, error: e?.message || "Unknown error" });
+    } finally {
+      await lock.release();
+      // Always emit after each uid completes, regardless of outcome.
+      done++;
+      emitProgress(done, done >= total ? "completed" : "in_progress");
+    }
+  };
+
+  // Workers share the process-wide limiter; allSettled + the worker's own
+  // try/catch guarantee one UID's failure never aborts its siblings.
+  await Promise.allSettled(
+    uids.map((uid) => importLimit(() => processOneUid(uid))),
+  );
+
+  // This import creates promotions (affiliation stats) and loads legacy fees
+  // (fee_mis stats), so nudge both Real Time Tracker tabs once at the end.
+  // A single debounced emit per tab is right for a bulk batch; never fail the
+  // import over a broadcast.
+  if (processed > 0) {
+    try {
+      const { scheduleRealtimeTrackerBroadcast } =
+        await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+      scheduleRealtimeTrackerBroadcast("affiliation", "legacy_import", {});
+      scheduleRealtimeTrackerBroadcast("fee_mis", "legacy_import", {});
+    } catch (e) {
+      console.error(
+        "[LegacyImport] tracker broadcast failed:",
+        (e as Error)?.message,
+      );
     }
   }
 
   return {
-    totalRows: sheet.rowCount,
+    totalRows: parsed.totalRows,
     totalUids: uids.length,
     processed,
     notFound,
     errors,
   };
+}
+
+/**
+ * Backfill `students.quotaTypeId` for already-imported students whose quota type
+ * is not set. For each such student it reads the legacy `studentpersonaldetails.quotatype`
+ * (matched by UID/codeNumber) and, when present and meaningful (not empty / not "0"),
+ * finds-or-creates the admission quota type and links it. Students without a legacy
+ * quota type are ignored. Idempotent and safe to re-run.
+ */
+export async function backfillStudentQuotaTypes(): Promise<{
+  scanned: number;
+  updated: number;
+  noLegacyQuota: number;
+  skipped: number;
+}> {
+  const students = await db
+    .select({ id: studentModel.id, uid: studentModel.uid })
+    .from(studentModel)
+    .where(isNull(studentModel.quotaTypeId));
+
+  let updated = 0;
+  let noLegacyQuota = 0;
+  let skipped = 0;
+
+  for (const s of students) {
+    const cleaned = (s.uid ?? "").replace(/[^A-Za-z0-9]/g, "");
+    if (!cleaned) {
+      skipped++;
+      continue;
+    }
+    try {
+      const [rows] = (await mysqlConnection.query(
+        `SELECT quotatype FROM studentpersonaldetails WHERE codeNumber = '${cleaned}' LIMIT 1;`,
+      )) as [{ quotatype: string | null }[], any];
+      const quotatype = rows?.[0]?.quotatype?.trim();
+      if (!quotatype || quotatype === "0") {
+        noLegacyQuota++;
+        continue;
+      }
+      const quotaType =
+        await oldStudentPersonalDetailsHelper.addAdmissionQuotaType(quotatype);
+      if (!quotaType?.id) {
+        skipped++;
+        continue;
+      }
+      await db
+        .update(studentModel)
+        .set({ quotaTypeId: quotaType.id })
+        .where(eq(studentModel.id, s.id));
+      updated++;
+    } catch (e) {
+      console.error(`quota backfill failed for uid ${s.uid}:`, e);
+      skipped++;
+    }
+  }
+
+  return { scanned: students.length, updated, noLegacyQuota, skipped };
 }
 
 /**
@@ -446,56 +850,71 @@ export async function getMetadata(oldSession: OldSession) {
   const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
   const codePrefix = Number(oldAcademicYear.accademicYearName) % 100;
 
-  let [foundAcademicYear] = await db
-    .select()
-    .from(academicYearModel)
-    .where(
-      or(
-        eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id!),
-        ilike(academicYearModel.year, academicYearName),
-      ),
-    );
-
+  // academic_years and sessions have NO unique constraint on their natural
+  // keys, so concurrent import workers must serialize the miss path or they
+  // silently create duplicate years/sessions. Lock keys are shared with the
+  // sibling get-or-creates in old-student.service.ts (same key strings).
+  const foundAcademicYear = await getOrCreateWithLock(
+    `import:ay:${academicYearName}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(academicYearModel)
+          .where(
+            or(
+              eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id!),
+              ilike(academicYearModel.year, academicYearName),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(academicYearModel)
+          .values({
+            legacyAcademicYearId: oldAcademicYear.id!,
+            year: academicYearName,
+            isCurrentYear: oldAcademicYear.presentAcademicYear,
+            codePrefix: codePrefix.toString(),
+          })
+          .returning()
+      )[0]!,
+  );
   console.log("foundAcademicYear", foundAcademicYear);
-  if (!foundAcademicYear) {
-    foundAcademicYear = (
-      await db
-        .insert(academicYearModel)
-        .values({
-          legacyAcademicYearId: oldAcademicYear.id!,
-          year: academicYearName,
-          isCurrentYear: oldAcademicYear.presentAcademicYear,
-          codePrefix: codePrefix.toString(),
-        })
-        .returning()
-    )[0];
-  }
 
-  let [foundSession] = await db
-    .select()
-    .from(sessionModel)
-    .where(
-      and(
-        ilike(sessionModel.name, oldSession.sessionName.trim()),
-        eq(sessionModel.academicYearId, foundAcademicYear.id!),
-      ),
-    );
-  if (!foundSession) {
-    foundSession = (
-      await db
-        .insert(sessionModel)
-        .values({
-          legacySessionId: oldSession.id!,
-          name: oldSession.sessionName.trim(),
-          from: new Date(oldSession.fromDate as any).toISOString().slice(0, 10),
-          to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
-          isCurrentSession: oldSession.iscurrentsession,
-          codePrefix: oldSession.codeprefix,
-          academicYearId: foundAcademicYear.id!,
-        })
-        .returning()
-    )[0];
-  }
+  const foundSession = await getOrCreateWithLock(
+    `import:session:${foundAcademicYear.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(sessionModel)
+          .where(
+            and(
+              ilike(sessionModel.name, oldSession.sessionName.trim()),
+              eq(sessionModel.academicYearId, foundAcademicYear.id!),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(sessionModel)
+          .values({
+            legacySessionId: oldSession.id!,
+            name: oldSession.sessionName.trim(),
+            from: new Date(oldSession.fromDate as any)
+              .toISOString()
+              .slice(0, 10),
+            to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
+            isCurrentSession: oldSession.iscurrentsession,
+            codePrefix: oldSession.codeprefix,
+            academicYearId: foundAcademicYear.id!,
+          })
+          .returning()
+      )[0]!,
+  );
 
   return { oldAcademicYear, foundAcademicYear, foundSession };
 }

@@ -286,7 +286,7 @@ export default function AdmissionForm() {
           <div
             className="h-full bg-white p-0 shadow-sm overflow-hidden relative"
             style={{
-              backgroundImage: `url(${applicationForm?.generalInfo?.gender === "FEMALE" ? "/illustrations/admission-female.png" : "/illustrations/admission-form.png"})`,
+              backgroundImage: `url(${applicationForm?.generalInfo?.gender === "FEMALE" ? `${process.env.NEXT_PUBLIC_URL}/illustrations/admission-female.png` : `${process.env.NEXT_PUBLIC_URL}/illustrations/admission-form.png`})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",

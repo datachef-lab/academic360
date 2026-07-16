@@ -4,7 +4,8 @@ import {
   notificationModel,
   notificationContentModel,
 } from "@repo/db/schemas/models/notifications";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { claimNotificationQueueRows } from "@/utils/queue-claim.js";
 import { sendWhatsAppMessage } from "@/providers/interakt.js";
 import type {
   NotificationEventDto,
@@ -48,16 +49,7 @@ function readFromTemplateData(
 
 async function processBatch() {
   try {
-    const rows = await db
-      .select()
-      .from(notificationQueueModel)
-      .where(
-        and(
-          eq(notificationQueueModel.type, "WHATSAPP_QUEUE" as any),
-          eq(notificationQueueModel.isDeadLetter, false),
-        ),
-      )
-      .limit(BATCH_SIZE);
+    const rows = await claimNotificationQueueRows("WHATSAPP_QUEUE", BATCH_SIZE);
     if (rows.length === 0) {
       return;
     }
@@ -307,34 +299,75 @@ async function processBatch() {
         }
 
         if (env === "staging") {
-          // Fan-out to all STAFF who opted-in and are active/not suspended
-          const staffUsers = await db
-            .select()
-            .from(userModel)
-            .where(
-              and(
-                eq(userModel.type, "STAFF"),
-                eq(userModel.sendStagingNotifications, true),
-                eq(userModel.isActive, true),
-                eq(userModel.isSuspended, false),
-              ),
-            )
-            .limit(500);
-          if (staffUsers.length > 0) {
-            for (const staff of staffUsers) {
-              const recipient = asString(
-                staff.whatsappNumber || staff.phone,
-                process.env.DEVELOPER_PHONE!,
+          // An explicit recipient list (e.g. console resend with selected
+          // staff) takes precedence over the blanket staff fan-out.
+          const explicitNumbers = (
+            (notif.otherUsersWhatsAppNumbers as string[] | null) ?? []
+          ).filter(Boolean);
+          if (explicitNumbers.length > 0) {
+            for (const number of explicitNumbers) {
+              console.log("[whatsapp.worker] sending (explicit staging) =>", {
+                notifId: row.notificationId,
+                to: number,
+                templateName,
+              });
+              const resp = await sendWhatsAppMessage(
+                number,
+                bodyValues,
+                templateName,
+                dto.whatsappHeaderMediaUrl,
+                buttonValues,
               );
+              if (!resp.ok) throw new Error(resp.error);
+              await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+            }
+            // Shared completion below marks the notification SENT.
+          } else {
+            // Fan-out to all STAFF who opted-in and are active/not suspended
+            const staffUsers = await db
+              .select()
+              .from(userModel)
+              .where(
+                and(
+                  eq(userModel.type, "STAFF"),
+                  eq(userModel.sendStagingNotifications, true),
+                  eq(userModel.isActive, true),
+                  eq(userModel.isSuspended, false),
+                ),
+              )
+              .limit(500);
+            if (staffUsers.length > 0) {
+              for (const staff of staffUsers) {
+                const recipient = asString(
+                  staff.whatsappNumber || staff.phone,
+                  process.env.DEVELOPER_PHONE!,
+                );
+                console.log("[whatsapp.worker] sending =>", {
+                  notifId: row.notificationId,
+                  to: recipient,
+                  templateName,
+                  bodyValues,
+                  headerMediaUrl: dto.whatsappHeaderMediaUrl,
+                });
+                const resp = await sendWhatsAppMessage(
+                  recipient,
+                  bodyValues,
+                  templateName,
+                  dto.whatsappHeaderMediaUrl,
+                );
+                if (!resp.ok) throw new Error(resp.error);
+                await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+              }
+            } else {
               console.log("[whatsapp.worker] sending =>", {
                 notifId: row.notificationId,
-                to: recipient,
+                to: process.env.DEVELOPER_PHONE!,
                 templateName,
                 bodyValues,
                 headerMediaUrl: dto.whatsappHeaderMediaUrl,
               });
               const resp = await sendWhatsAppMessage(
-                recipient,
+                process.env.DEVELOPER_PHONE!,
                 bodyValues,
                 templateName,
                 dto.whatsappHeaderMediaUrl,
@@ -342,22 +375,6 @@ async function processBatch() {
               if (!resp.ok) throw new Error(resp.error);
               await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
             }
-          } else {
-            console.log("[whatsapp.worker] sending =>", {
-              notifId: row.notificationId,
-              to: process.env.DEVELOPER_PHONE!,
-              templateName,
-              bodyValues,
-              headerMediaUrl: dto.whatsappHeaderMediaUrl,
-            });
-            const resp = await sendWhatsAppMessage(
-              process.env.DEVELOPER_PHONE!,
-              bodyValues,
-              templateName,
-              dto.whatsappHeaderMediaUrl,
-            );
-            if (!resp.ok) throw new Error(resp.error);
-            await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
           }
         } else if (env === "development") {
           // development -> always send to developer
@@ -380,11 +397,16 @@ async function processBatch() {
           if (!resp.ok) throw new Error(resp.error);
           await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
         } else {
-          // production -> send to real user
-          const resolvedPhone = asString(
-            user?.whatsappNumber || user?.phone,
-            process.env.DEVELOPER_PHONE!,
-          );
+          // production -> send to real user, but ONLY when NODE_ENV is
+          // literally "production"; any other value redirects to the
+          // developer (same guard as email.worker).
+          const resolvedPhone =
+            env === "production"
+              ? asString(
+                  user?.whatsappNumber || user?.phone,
+                  process.env.DEVELOPER_PHONE!,
+                )
+              : process.env.DEVELOPER_PHONE!;
           console.log("[whatsapp.worker] sending =>", {
             notifId: row.notificationId,
             to: resolvedPhone,
@@ -451,12 +473,17 @@ async function processBatch() {
               isDeadLetter: true,
               deadLetterAt: new Date(),
               failedReason: errorMessage,
+              isProcessing: false,
             })
             .where(eq(notificationQueueModel.id, row.id));
         } else {
           await db
             .update(notificationQueueModel)
-            .set({ retryAttempts: attempts, failedReason: errorMessage })
+            .set({
+              retryAttempts: attempts,
+              failedReason: errorMessage,
+              isProcessing: false,
+            })
             .where(eq(notificationQueueModel.id, row.id));
         }
       }

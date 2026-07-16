@@ -17,6 +17,12 @@ import * as userService from "@/features/user/services/user.service.js";
 import { randomBytes } from "crypto";
 import { generateTokensForUser } from "../services/otp.service.js";
 import { verifyToken } from "@/utils/verifyToken.js";
+import {
+  cleanupExpiredPasswordResetTokens,
+  deletePasswordResetToken,
+  getPasswordResetToken,
+  savePasswordResetToken,
+} from "@/services/password-reset-token.store.js";
 
 // Detect if a request is originating from the student console
 // IMPORTANT: For auth routes, only trust the explicit header from the student console Axios instance.
@@ -430,12 +436,6 @@ export const logout = async (
 
 // Password Reset Functions
 
-// In-memory store for password reset tokens (in production, use Redis or database)
-const passwordResetTokens = new Map<
-  string,
-  { token: string; email: string; expiresAt: Date }
->();
-
 export const requestPasswordReset = async (
   req: Request,
   res: Response,
@@ -480,12 +480,7 @@ export const requestPasswordReset = async (
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-    // Store token in memory
-    passwordResetTokens.set(token, {
-      token,
-      email,
-      expiresAt,
-    });
+    await savePasswordResetToken(token, { email, expiresAt });
 
     console.log("[PASSWORD RESET] Token generated for:", email);
 
@@ -524,7 +519,7 @@ export const resetPassword = async (
     console.log("[PASSWORD RESET] Attempting to reset password with token");
 
     // Validate token
-    const tokenData = passwordResetTokens.get(token);
+    const tokenData = await getPasswordResetToken(token);
 
     if (!tokenData) {
       console.log("[PASSWORD RESET] Invalid token");
@@ -535,7 +530,7 @@ export const resetPassword = async (
     // Check if token is expired
     if (new Date() > tokenData.expiresAt) {
       console.log("[PASSWORD RESET] Token expired");
-      passwordResetTokens.delete(token);
+      await deletePasswordResetToken(token);
       res
         .status(400)
         .json(
@@ -579,8 +574,7 @@ export const resetPassword = async (
       return;
     }
 
-    // Remove used token
-    passwordResetTokens.delete(token);
+    await deletePasswordResetToken(token);
 
     console.log(
       "[PASSWORD RESET] Password updated successfully for:",
@@ -616,7 +610,7 @@ export const validateResetToken = async (
       return;
     }
 
-    const tokenData = passwordResetTokens.get(token as string);
+    const tokenData = await getPasswordResetToken(token as string);
 
     if (!tokenData) {
       res.status(400).json(new ApiError(400, "Invalid reset token"));
@@ -624,7 +618,7 @@ export const validateResetToken = async (
     }
 
     if (new Date() > tokenData.expiresAt) {
-      passwordResetTokens.delete(token as string);
+      await deletePasswordResetToken(token as string);
       res.status(400).json(new ApiError(400, "Reset token has expired"));
       return;
     }
@@ -648,13 +642,8 @@ export const validateResetToken = async (
 /**
  * Clean up expired tokens (call this periodically)
  */
-export function cleanupExpiredTokens(): void {
-  const now = new Date();
-  for (const [token, data] of passwordResetTokens.entries()) {
-    if (now > data.expiresAt) {
-      passwordResetTokens.delete(token);
-    }
-  }
+export async function cleanupExpiredTokens(): Promise<void> {
+  await cleanupExpiredPasswordResetTokens();
 }
 
 // Simple password reset - accepts email and new password directly

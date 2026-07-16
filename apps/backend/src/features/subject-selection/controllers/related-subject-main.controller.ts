@@ -92,6 +92,7 @@ export const getAllRelatedSubjectMainsHandler = async (
       search = "",
       programCourse = "",
       subjectType = "",
+      academicYearId,
     } = req.query as Record<string, string>;
     const paged = await getRelatedSubjectMainsPaginated({
       page: parseInt(page, 10) || 1,
@@ -99,6 +100,7 @@ export const getAllRelatedSubjectMainsHandler = async (
       search: search || undefined,
       programCourse: programCourse || undefined,
       subjectType: subjectType || undefined,
+      academicYearId: academicYearId ? Number(academicYearId) : undefined,
     });
     res
       .status(200)

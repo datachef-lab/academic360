@@ -40,6 +40,7 @@ import {
 } from "@/services/subject.api";
 import { deleteSubject, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const SubjectsPage = () => {
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
@@ -79,7 +80,7 @@ const SubjectsPage = () => {
     name: string;
     code?: string | null;
     sequence?: number | null;
-    disabled: boolean;
+    isActive: boolean;
   }) => {
     setIsSubmitting(true);
     try {
@@ -87,7 +88,7 @@ const SubjectsPage = () => {
         name: data.name,
         code: data.code || null,
         sequence: data.sequence || null,
-        disabled: data.disabled,
+        isActive: data.isActive,
       };
 
       if (selectedSubject?.id) {
@@ -195,7 +196,7 @@ const SubjectsPage = () => {
         Name: subject.name,
         Code: subject.code || "-",
         Sequence: subject.sequence || "-",
-        Status: subject.disabled ? "Inactive" : "Active",
+        Status: !subject.isActive ? "Inactive" : "Active",
         "Created At": subject.createdAt,
         "Updated At": subject.updatedAt,
       }));
@@ -249,6 +250,11 @@ const SubjectsPage = () => {
       (subject.code ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (subject.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
+
+  useResourceRoom("course-design/subjects", async () => {
+    const fresh = await getAllSubjects();
+    setSubjects(Array.isArray(fresh) ? fresh : []);
+  });
 
   return (
     <div className="p-2 sm:p-4">

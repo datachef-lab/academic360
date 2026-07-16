@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +27,8 @@ const MultiSelect = ({
   onChange,
   contentClassName,
 }: ISelectProps) => {
+  const [open, setOpen] = useState(false);
+
   const handleSelectChange = (value: string) => {
     let updated: string[];
     if (!selectedItems.includes(value)) {
@@ -46,7 +49,7 @@ const MultiSelect = ({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
         <DropdownMenuTrigger asChild className="w-full">
           <Button variant="outline" className="w-full flex items-center justify-between min-w-0">
             <div className="truncate text-left w-full">
@@ -66,12 +69,14 @@ const MultiSelect = ({
               onSelect={(e) => {
                 e.preventDefault();
                 handleSelectChange(value.value);
+                setOpen(true);
               }}
+              onPointerDown={(e) => e.preventDefault()}
             >
               <Checkbox
                 checked={isOptionSelected(value.value)}
                 tabIndex={-1}
-                className="mr-2"
+                className="mr-2 pointer-events-none"
                 aria-readonly
               />
               <span className="truncate max-w-[140px]">{value.label}</span>

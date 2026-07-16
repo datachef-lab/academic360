@@ -26,6 +26,7 @@ import {
 import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
 import { subjectSelectionMetaModel } from "@repo/db/schemas/models/subject-selection/subject-selection-meta.model";
 import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions/admission-academic-info.model.js";
+import { resolveStudentAvatarDataUrl } from "@/features/user/services/student-avatar.service.js";
 import { admissionCourseDetailsModel } from "@repo/db/schemas/models/admissions/adm-course-details.model";
 import { familyModel } from "@repo/db/schemas/models/user/family.model";
 import { personModel } from "@repo/db/schemas/models/user/person.model";
@@ -421,7 +422,7 @@ export class CuRegistrationDataService {
         // College Information
         collegeLogoUrl:
           options.collegeLogoUrl ||
-          "https://besc.academic360.app/api/api/v1/settings/file/4",
+          "https://api.academic360.app/api/v1/settings/file/4",
         collegeName:
           options.collegeName || "The Bhawanipur Education Society College",
         collegeAddress:
@@ -445,10 +446,15 @@ export class CuRegistrationDataService {
           "",
         programCourseName: studentData.programCourseName || "",
         shiftName,
-        studentPhotoUrl: `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${studentData.uid}.jpg`,
-
-        // Debug: Log the photo URL being generated
-        photoUrlDebug: `Photo URL: https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${studentData.uid}.jpg`,
+        // Resolved via the unified backend chain (S3 → besc → hrclIRP); inlined
+        // as a base64 data URL so the renderer doesn't need network access.
+        studentPhotoUrl:
+          (studentData.uid &&
+            (await resolveStudentAvatarDataUrl(studentData.uid).catch(
+              () => null,
+            ))) ||
+          "",
+        photoUrlDebug: `Avatar resolved via /api/students/uid/${studentData.uid}/avatar`,
 
         // Rectification Banner
         showRectificationBanner,
@@ -1335,6 +1341,7 @@ export class CuRegistrationDataService {
           and(
             eq(paperModel.programCourseId, programCourseId),
             eq(paperModel.academicYearId, academicYear.id),
+            eq(paperModel.isActive, true),
             inArray(
               paperModel.subjectTypeId,
               [dsccType?.id, mnType?.id, aecType?.id, idcType?.id].filter(
@@ -1624,6 +1631,7 @@ export class CuRegistrationDataService {
           and(
             eq(paperModel.programCourseId, programCourseId),
             eq(paperModel.academicYearId, academicYear.id),
+            eq(paperModel.isActive, true),
             inArray(paperModel.subjectTypeId, subjectTypeIds),
           ),
         );

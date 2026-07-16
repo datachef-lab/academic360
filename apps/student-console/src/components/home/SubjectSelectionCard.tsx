@@ -16,13 +16,13 @@ export default function SubjectSelectionCard() {
       className="border shadow-lg rounded-2xl overflow-hidden bg-white cursor-pointer hover:shadow-xl transition-shadow duration-200"
       onClick={handleCardClick}
     >
-      <div className="flex h-full ">
+      <div className="flex h-full min-h-[220px]">
         {/* Left: Full Height Image Area */}
         <div
-          className="w-1/2 bg-gradient-to-br flex items-center justify-center relative"
+          className="w-1/2 bg-gradient-to-br flex items-center justify-center relative min-h-[220px]"
           style={{
             backgroundImage: `url(${process.env.NEXT_PUBLIC_URL!}/illustrations/subject-selection-illustration.png)`,
-            backgroundSize: "cover",
+            backgroundSize: "contain",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
           }}

@@ -13,7 +13,7 @@ const courseLevelSchema = z.object({
   name: z.string().min(1, "Name is required"),
   shortName: z.string().nullable().optional(),
   sequence: z.number().min(0, "Sequence must be a positive number").nullable().optional(),
-  disabled: z.boolean().default(false),
+  isActive: z.boolean().default(true),
 });
 
 type CourseLevelFormValues = z.infer<typeof courseLevelSchema>;
@@ -37,7 +37,7 @@ export function CourseLevelForm({
     name: initialData?.name || "",
     shortName: initialData?.shortName || "",
     sequence: initialData?.sequence || 0,
-    disabled: initialData?.disabled || false,
+    isActive: initialData?.isActive ?? true,
   };
 
   const {
@@ -55,7 +55,7 @@ export function CourseLevelForm({
       name: data.name,
       shortName: data.shortName || null,
       sequence: data.sequence || null,
-      disabled: data.disabled,
+      isActive: data.isActive,
     };
     await onSubmit(courseLevelData);
   };
@@ -98,13 +98,13 @@ export function CourseLevelForm({
 
       <div className="flex items-center space-x-2">
         <Controller
-          name="disabled"
+          name="isActive"
           control={control}
           render={({ field }) => (
-            <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />
+            <Checkbox id="isActive" checked={!!field.value} onCheckedChange={field.onChange} />
           )}
         />
-        <Label htmlFor="disabled">Disabled</Label>
+        <Label htmlFor="isActive">Active</Label>
       </div>
 
       <div className="flex justify-end space-x-4">

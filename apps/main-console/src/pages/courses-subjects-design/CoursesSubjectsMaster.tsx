@@ -19,17 +19,17 @@ import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 const nestedHomeLinks = [
   {
     title: "Program Courses",
-    url: "/dashboard/academic-year-setup/course-design",
+    url: "/dashboard/academic-setup/course-design",
     icon: Library,
   },
   {
     title: "Subject Groupings",
-    url: "/dashboard/academic-year-setup/course-design/subject-groupings",
+    url: "/dashboard/academic-setup/course-design/subject-groupings",
     icon: Book,
   },
   {
     title: "Subject Paper Mapping",
-    url: "/dashboard/academic-year-setup/course-design/subject-paper-mapping",
+    url: "/dashboard/academic-setup/course-design/subject-paper-mapping",
     icon: FileText,
   },
 ];
@@ -37,57 +37,57 @@ const nestedHomeLinks = [
 const masterLinks = [
   {
     title: "Academic Years",
-    url: "/dashboard/academic-year-setup/course-design/academic-years",
+    url: "/dashboard/academic-setup/course-design/academic-years",
     icon: UserCheck, // represents student admission
   },
   {
     title: "Classes",
-    url: "/dashboard/academic-year-setup/course-design/classes",
+    url: "/dashboard/academic-setup/course-design/classes",
     icon: Library,
   },
   {
     title: "Paper/Exam Components",
-    url: "/dashboard/academic-year-setup/course-design/paper-components",
+    url: "/dashboard/academic-setup/course-design/paper-components",
     icon: Library,
   },
   {
     title: "Courses",
-    url: "/dashboard/academic-year-setup/course-design/courses",
+    url: "/dashboard/academic-setup/course-design/courses",
     icon: Library,
   },
   {
     title: "Course Types",
-    url: "/dashboard/academic-year-setup/course-design/course-types",
+    url: "/dashboard/academic-setup/course-design/course-types",
     icon: Type,
   },
   {
     title: "Course Levels",
-    url: "/dashboard/academic-year-setup/course-design/course-levels",
+    url: "/dashboard/academic-setup/course-design/course-levels",
     icon: Layers,
   },
   {
     title: "Streams",
-    url: "/dashboard/academic-year-setup/course-design/streams",
+    url: "/dashboard/academic-setup/course-design/streams",
     icon: GitBranch,
   },
   {
     title: "Subjects",
-    url: "/dashboard/academic-year-setup/course-design/subjects",
+    url: "/dashboard/academic-setup/course-design/subjects",
     icon: Book,
   },
   {
     title: "Subject Categories",
-    url: "/dashboard/academic-year-setup/course-design/subject-categories",
+    url: "/dashboard/academic-setup/course-design/subject-categories",
     icon: Bookmark,
   },
   {
     title: "Affiliations",
-    url: "/dashboard/academic-year-setup/course-design/affiliations",
+    url: "/dashboard/academic-setup/course-design/affiliations",
     icon: Shield,
   },
   {
     title: "Regulation Types",
-    url: "/dashboard/academic-year-setup/course-design/regulation-types",
+    url: "/dashboard/academic-setup/course-design/regulation-types",
     icon: GraduationCap,
   },
 ];

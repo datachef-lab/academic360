@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { uppercaseRomanNumerals } from "@/utils/uppercaseRomanNumerals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -122,7 +123,7 @@ export default function ScheduleExamPage() {
     queryKey: ["classes"],
     queryFn: async () => {
       const data = await getAllClasses();
-      return Array.isArray(data) ? data.filter((c) => !c.disabled) : [];
+      return Array.isArray(data) ? data.filter((c) => c.isActive !== false) : [];
     },
     onError: (error) => {
       console.error("Error fetching classes:", error);
@@ -173,7 +174,7 @@ export default function ScheduleExamPage() {
     queryKey: ["subjects"],
     queryFn: async () => {
       const data = await getAllSubjects();
-      return Array.isArray(data) ? data.filter((s) => !s.disabled) : [];
+      return Array.isArray(data) ? data.filter((s) => s.isActive !== false) : [];
     },
     onError: (error) => {
       console.error("Error fetching subjects:", error);
@@ -361,7 +362,7 @@ export default function ScheduleExamPage() {
               affiliationId: selectedAffiliationId ?? null,
               regulationTypeId: selectedRegulationTypeId ?? null,
               programCourseId: programCourseId,
-              classId: classId ?? null,
+              classIds: classId ? [classId] : [],
               subjectTypeId: null,
             }).catch((error) => {
               console.error(`Error fetching papers for program course ${programCourseId}:`, error);
@@ -379,7 +380,7 @@ export default function ScheduleExamPage() {
                 affiliationId: selectedAffiliationId ?? null,
                 regulationTypeId: selectedRegulationTypeId ?? null,
                 programCourseId: programCourseId,
-                classId: classId ?? null,
+                classIds: classId ? [classId] : [],
                 subjectTypeId: subjectTypeId,
               }).catch((error) => {
                 console.error(
@@ -474,7 +475,7 @@ export default function ScheduleExamPage() {
   //               affiliationId: selectedAffiliationId ?? null,
   //               regulationTypeId: selectedRegulationTypeId ?? null,
   //               programCourseId: programCourseId,
-  //               classId: classId ?? null,
+  //               classIds: classId ? [classId] : [],
   //               subjectTypeId: null,
   //             });
 
@@ -500,7 +501,7 @@ export default function ScheduleExamPage() {
   //                 affiliationId: selectedAffiliationId ?? null,
   //                 regulationTypeId: selectedRegulationTypeId ?? null,
   //                 programCourseId: programCourseId,
-  //                 classId: classId ?? null,
+  //                 classIds: classId ? [classId] : [],
   //                 subjectTypeId: subjectTypeId,
   //               });
 
@@ -1855,9 +1856,9 @@ export default function ScheduleExamPage() {
                       </div>
                     </div>
                     {/* Second Row: Semester, Shift(s), Program Course(s), Subject Category */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 [&>*]:min-w-0">
                       {/* Semester */}
-                      <div className="flex flex-col gap-1">
+                      <div className="flex min-w-0 flex-col gap-1">
                         <Label className="font-medium text-gray-700">Semester</Label>
                         <Select
                           value={semester}
@@ -1879,23 +1880,23 @@ export default function ScheduleExamPage() {
                         </Select>
                       </div>
                       {/* Shift(s) */}
-                      <div className="flex flex-col gap-1">
+                      <div className="flex min-w-0 flex-col gap-1">
                         <Label className="font-medium text-gray-700">Shift(s)</Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              className="h-8 w-full min-w-0 justify-between gap-2 overflow-hidden focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                               disabled={loading.shifts}
                             >
-                              <span className="text-gray-600">
+                              <span className="min-w-0 truncate text-gray-600">
                                 {loading.shifts
                                   ? "Loading..."
                                   : selectedShifts.length > 0
                                     ? `Select Shifts (${selectedShifts.length})`
                                     : "Select Shifts"}
                               </span>
-                              <ChevronDown className="w-4 h-4 opacity-50" />
+                              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-64 p-2" align="start">
@@ -1923,13 +1924,13 @@ export default function ScheduleExamPage() {
                       </div>
 
                       {/* Program Course(s) */}
-                      <div className="flex flex-col gap-1">
+                      <div className="flex min-w-0 flex-col gap-1">
                         <Label className="font-medium text-gray-700">Program Course(s)</Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              className="h-8 w-full min-w-0 justify-between gap-2 overflow-hidden focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                               disabled={
                                 loading.programCourses ||
                                 !selectedAffiliationId ||
@@ -1937,7 +1938,7 @@ export default function ScheduleExamPage() {
                                 getFilteredProgramCourses().length === 0
                               }
                             >
-                              <span className="text-gray-600">
+                              <span className="min-w-0 truncate text-gray-600">
                                 {loading.programCourses
                                   ? "Loading..."
                                   : !selectedAffiliationId || !selectedRegulationTypeId
@@ -1948,7 +1949,7 @@ export default function ScheduleExamPage() {
                                         ? `Select Program Courses (${selectedProgramCourses.length})`
                                         : "Select Program Courses"}
                               </span>
-                              <ChevronDown className="w-4 h-4 opacity-50" />
+                              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-64 p-2" align="start">
@@ -1988,23 +1989,23 @@ export default function ScheduleExamPage() {
                       </div>
 
                       {/* Subject Category */}
-                      <div className="flex flex-col gap-1">
+                      <div className="flex min-w-0 flex-col gap-1">
                         <Label className="font-medium text-gray-700">Subject Category</Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              className="h-8 w-full min-w-0 justify-between gap-2 overflow-hidden focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                               disabled={loading.subjectTypes}
                             >
-                              <span className="text-gray-600">
+                              <span className="min-w-0 truncate text-gray-600">
                                 {loading.subjectTypes
                                   ? "Loading..."
                                   : selectedSubjectCategories.length > 0
                                     ? `Select Subject Categories (${selectedSubjectCategories.length})`
                                     : "Select Subject Categories"}
                               </span>
-                              <ChevronDown className="w-4 h-4 opacity-50" />
+                              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-64 p-2" align="start">
@@ -2168,7 +2169,7 @@ export default function ScheduleExamPage() {
                                     />
                                     <div className="flex-1 min-w-0">
                                       <p className="font-medium text-sm text-gray-800">
-                                        {group.name}
+                                        {uppercaseRomanNumerals(group.name)}
                                       </p>
                                       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                                         <p className="text-xs text-gray-600">
@@ -2223,9 +2224,9 @@ export default function ScheduleExamPage() {
                     <div className="space-y-4 border border-gray-300 rounded-lg p-4">
                       {/* Added border to grid layout */}
                       {/* First Row: Subjects, Component, Program Courses, Papers */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 [&>*]:min-w-0">
                         {/* Subjects - Multi-Select */}
-                        <div className="flex flex-col gap-1">
+                        <div className="flex min-w-0 flex-col gap-1">
                           <Label className="font-medium text-gray-700">Subject(s)</Label>
                           {getDistinctSubjects().length === 0 && !loading.papers ? (
                             <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md h-8">
@@ -2238,13 +2239,13 @@ export default function ScheduleExamPage() {
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
-                                  className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                  className="h-8 w-full min-w-0 justify-between gap-2 overflow-hidden focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                   disabled={
                                     getDistinctSubjects().length === 0 ||
                                     getAvailableSubjects().length === 0
                                   }
                                 >
-                                  <span className="text-gray-600 truncate">
+                                  <span className="min-w-0 truncate text-gray-600">
                                     {getAvailableSubjects().length === 0 &&
                                     getDistinctSubjects().length > 0
                                       ? "All papers added"
@@ -2252,7 +2253,7 @@ export default function ScheduleExamPage() {
                                         ? `${currentSubjectIds.length} subject(s)`
                                         : "Select Subjects"}
                                   </span>
-                                  <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0" />
+                                  <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-80 p-2" align="start">
@@ -2348,20 +2349,20 @@ export default function ScheduleExamPage() {
                         </div>
 
                         {/* Program Courses (Multi-select) */}
-                        <div className="flex flex-col gap-1">
+                        <div className="flex min-w-0 flex-col gap-1">
                           <Label className="font-medium text-gray-700">Program Course(s)</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
-                                className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                className="h-8 w-full min-w-0 justify-between gap-2 overflow-hidden focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 disabled={
                                   currentSubjectIds.length === 0 ||
                                   getAvailableProgramCoursesForSubjects(currentSubjectIds)
                                     .length === 0
                                 }
                               >
-                                <span className="text-gray-600 truncate">
+                                <span className="min-w-0 truncate text-gray-600">
                                   {currentSubjectIds.length === 0
                                     ? "Select subjects first"
                                     : getAvailableProgramCoursesForSubjects(currentSubjectIds)
@@ -2421,19 +2422,19 @@ export default function ScheduleExamPage() {
                         </div>
 
                         {/* Papers (Multi-select) */}
-                        <div className="flex flex-col gap-1">
+                        <div className="flex min-w-0 flex-col gap-1">
                           <Label className="font-medium text-gray-700">Paper(s)</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
-                                className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                className="h-8 w-full min-w-0 justify-between gap-2 overflow-hidden focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 disabled={
                                   currentSubjectIds.length === 0 ||
                                   getFilteredPapersForCurrentSelection().length === 0
                                 }
                               >
-                                <span className="text-gray-600 truncate">
+                                <span className="min-w-0 truncate text-gray-600">
                                   {currentSubjectIds.length === 0
                                     ? "Select subjects first"
                                     : currentPaperIds.length > 0
@@ -2442,7 +2443,7 @@ export default function ScheduleExamPage() {
                                         ? "No papers"
                                         : "Select Papers"}
                                 </span>
-                                <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0" />
+                                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-96 p-2" align="start">

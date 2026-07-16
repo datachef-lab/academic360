@@ -4,6 +4,7 @@ import api from "@/utils/api";
 import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
 
 export type CreateRestrictedGroupingMainInput = {
+  academicYear?: { id: number };
   subjectType: { id: number };
   subject: { id: number };
   isActive?: boolean;
@@ -17,10 +18,12 @@ export type UpdateRestrictedGroupingMainInput = Partial<CreateRestrictedGrouping
 const BASE_URL = "/api/subject-selection/restricted-grouping-mains";
 
 export const restrictedGroupingApi = {
-  async listRestrictedGroupingMains() {
+  async listRestrictedGroupingMains(academicYearId?: number) {
     const res = await api.get<
       ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>
-    >(`${BASE_URL}`);
+    >(`${BASE_URL}`, {
+      params: academicYearId ? { academicYearId, pageSize: 1000 } : { pageSize: 1000 },
+    });
     const p = res.data.payload as
       | RestrictedGroupingMainDto[]
       | { content: RestrictedGroupingMainDto[] };
@@ -31,6 +34,7 @@ export const restrictedGroupingApi = {
     pageSize?: number;
     search?: string;
     subjectType?: string;
+    academicYearId?: number;
   }) {
     const res = await api.get<ApiResponse<PaginatedResponse<RestrictedGroupingMainDto>>>(
       `${BASE_URL}`,

@@ -9,6 +9,8 @@ import {
   deleteAcademicYearHandler,
   setCurrentAcademicYearHandler,
   findAcademicYearByYearRangeHandler,
+  getAcademicYearCopyPreviewHandler,
+  createAcademicYearWithCopyHandler,
 } from "../controllers/academic-year.controller.js";
 
 const router = express.Router();
@@ -28,6 +30,7 @@ router.get("/test-auth", (req, res) => {
 // More specific routes first
 router.get("/current", getCurrentAcademicYearHandler);
 router.get("/search", findAcademicYearByYearRangeHandler);
+router.get("/copy-preview", getAcademicYearCopyPreviewHandler);
 router.get("/all", getAllAcademicYearsHandler);
 router.get("/:id", getAcademicYearByIdHandler);
 router.put("/:id", updateAcademicYearHandler);
@@ -36,6 +39,7 @@ router.delete("/:id", deleteAcademicYearHandler);
 // Special operations
 router.patch("/:id/set-current", setCurrentAcademicYearHandler);
 
+router.post("/with-copy", createAcademicYearWithCopyHandler);
 router.post("/", createAcademicYearHandler);
 
 export default router;

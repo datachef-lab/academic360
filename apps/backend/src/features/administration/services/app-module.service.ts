@@ -7,11 +7,14 @@ import {
 } from "@repo/db/schemas/models/administration";
 import { AppModuleDto } from "@repo/db/dtos/administration";
 import { appModuleData } from "@/features/default-administration-data";
-import fs from "fs";
 import path from "path";
-
-const APP_MODULE_IMAGE_BASE_PATH =
-  process.env.APP_MODULE_IMAGE_BASE_PATH || "./public/app-module-images";
+import {
+  createUploadConfig,
+  deleteFromS3,
+  extractS3KeyFromUrl,
+  uploadToS3,
+  UploadConfigs,
+} from "@/services/s3.service.js";
 
 export async function loadDefaultAppModules() {
   for (const primaryAppModule of appModuleData.defaultPrimaryAppModules) {
@@ -162,32 +165,29 @@ async function modelToDto(
   };
 }
 
-/**
- * Saves image to APP_MODULE_IMAGE_BASE_PATH using app module ID.
- * Structure: basePath/{id}/cover.{ext}
- */
+/** Uploads cover image to S3 under app-module-images/{id}/cover.{ext}. */
 export async function saveAppModuleImage(
   appModuleId: number,
   file: Express.Multer.File,
 ): Promise<string> {
-  const basePath = path.resolve(APP_MODULE_IMAGE_BASE_PATH);
-  const folderPath = path.join(basePath, String(appModuleId));
-  if (!fs.existsSync(folderPath)) {
-    fs.mkdirSync(folderPath, { recursive: true });
-  }
-
   const ext = path.extname(file.originalname) || ".png";
   const filename = `cover${ext}`;
-  const filePath = path.join(folderPath, filename);
+  const folder = `${UploadConfigs.APP_MODULE_IMAGES.folder}/${appModuleId}`;
 
-  const buffer =
-    "buffer" in file && Buffer.isBuffer(file.buffer)
-      ? file.buffer
-      : fs.readFileSync((file as Express.Multer.File & { path: string }).path);
-  fs.writeFileSync(filePath, buffer);
+  const uploadResult = await uploadToS3(
+    file,
+    createUploadConfig(folder, {
+      customFileName: filename,
+      maxFileSizeMB: UploadConfigs.APP_MODULE_IMAGES.maxFileSizeMB,
+      allowedMimeTypes: UploadConfigs.APP_MODULE_IMAGES.allowedMimeTypes,
+      makePublic: UploadConfigs.APP_MODULE_IMAGES.makePublic,
+      metadata: {
+        appModuleId: String(appModuleId),
+      },
+    }),
+  );
 
-  // Store canonical URL path: app-module-images/{id}/cover.ext (matches /app-module-images static route)
-  return `app-module-images/${appModuleId}/cover${ext}`;
+  return uploadResult.url;
 }
 
 export type AppModuleCreateInput = Omit<
@@ -383,9 +383,14 @@ export async function updateAppModule(
     .where(eq(appModuleModel.id, id));
   if (!existing) return null;
 
-  // Image is always derived from file upload or existing DB value, never from client payload
   let imagePath = existing.image;
   if (imageFile) {
+    if (existing.image?.startsWith("http")) {
+      const oldKey = extractS3KeyFromUrl(existing.image);
+      if (oldKey) {
+        await deleteFromS3(oldKey).catch(() => undefined);
+      }
+    }
     imagePath = await saveAppModuleImage(id, imageFile);
   }
 

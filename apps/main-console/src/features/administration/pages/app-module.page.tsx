@@ -70,6 +70,7 @@ function getAppModuleImageUrl(imagePath: string | null | undefined): string | nu
   if (!imagePath || typeof imagePath !== "string") return null;
   const p = imagePath.trim();
   if (!p || p === "{}") return null;
+  if (p.startsWith("http://") || p.startsWith("https://")) return p;
   const base = (import.meta.env.VITE_APP_BACKEND_URL || "").replace(/\/$/, "");
   // Canonical format: app-module-images/{id}/cover.ext
   if (p.startsWith("app-module-images/")) {

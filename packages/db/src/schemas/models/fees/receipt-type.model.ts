@@ -4,6 +4,7 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 
 import { addonModel } from "@/schemas/models/fees";
 import { userModel } from "../user";
+import { promotionStatusModel } from "../batches";
 
 export const receiptTypeModel = pgTable("receipt_types", {
     id: serial().primaryKey(),
@@ -14,6 +15,12 @@ export const receiptTypeModel = pgTable("receipt_types", {
     printChln: varchar({ length: 255 }),
     splType: varchar({ length: 255 }),
     addOnId: integer("add_on_id_fk").references(() => addonModel.id),
+    // Appear-type category (Regular/Casual promotion status). Drives student-console
+    // fee-card visibility: a card shows only when a "Semester Fee Payment" activity of
+    // the same appear type is live. Nullable → treated as Regular by consumers.
+    appearTypePromotionStatusId: integer("appear_type_promotion_status_id_fk").references(
+        () => promotionStatusModel.id,
+    ),
     printReceipt: varchar({ length: 255 }),
     chkOnline: varchar({ length: 255 }),
     chkOnSequence: varchar({ length: 255 }),

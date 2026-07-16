@@ -9,10 +9,17 @@ import express, { Request, Response } from "express";
 import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
 import { db } from "./db/index.js";
-import { eq, ilike } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
 import { corsOptions } from "@/config/corsOptions.js";
+import {
+  getRedisPubSubClients,
+  getSessionStore,
+  isRedisEnabled,
+} from "@/config/redis.js";
 import { socketService } from "./services/socketService.js";
 import settingsRouter from "@/features/apps/routes/settings.route.js";
 import { errorHandler, logger } from "@/middlewares/index.js";
@@ -113,6 +120,9 @@ import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
 import feeStudentMappingRouter from "@/features/fees/routes/fee-student-mapping.route.js";
 import feeReceiptRouter from "@/features/fees/routes/fee-receipt.route.js";
+import feesDashboardRouter from "@/features/fees/routes/fees-dashboard.route.js";
+import realtimeTrackerRouter from "@/features/realtime-tracker/routes/realtime-tracker.routes.js";
+import idCardRouter from "@/features/idcard/routes/id-card.routes.js";
 import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
 import {
   promotionBuilderRouter,
@@ -122,6 +132,22 @@ import {
 } from "@/features/batches/routes/index.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
+import {
+  districtRouter,
+  policeStationRouter,
+  postOfficeRouter,
+  pickupPointRouter,
+} from "./features/resources/routes/index.js";
+import disabilityCodeRouter from "./features/user/routes/disabilityCode.route.js";
+import resourceUsageRouter from "./features/resources/routes/resource-usage.routes.js";
+import { resourceRealtime } from "./middlewares/resource-realtime.middleware.js";
+import admissionQuotaTypeRouter from "./features/admissions/routes/admission-quota-type.route.js";
+import cancelSourceRouter from "./features/admissions/routes/cancel-source.route.js";
+import gradeRouter from "./features/admissions/routes/grade.route.js";
+import admissionCycleRouter from "./features/admissions/routes/admission-cycle.route.js";
+import admissionDashboardRouter from "./features/admissions/routes/admission-dashboard.route.js";
+import notificationsConsoleRouter from "./features/notifications-console/routes/notifications-console.route.js";
+import admissionSportsCategoryRouter from "./features/admissions/routes/admission-sports-category.route.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
@@ -205,6 +231,30 @@ import entryModeRouter from "@/features/library/routes/entry-mode.route.js";
 import libraryPeriodRouter from "@/features/library/routes/library-period.route.js";
 import seriesRouter from "@/features/library/routes/series.route.js";
 import publisherRouter from "@/features/library/routes/publisher.route.js";
+import authorTypeRouter from "@/features/library/routes/author-type.route.js";
+import authorRouter from "@/features/library/routes/author.route.js";
+import vendorRouter from "@/features/library/routes/vendor.route.js";
+import holidayRouter from "@/features/library/routes/holiday.route.js";
+import classHolidayRouter from "@/features/library/routes/class-holiday.route.js";
+import authorDetailRouter from "@/features/library/routes/author-detail.route.js";
+import branchRouter from "@/features/library/routes/branch.route.js";
+import patronCategoryRouter from "@/features/library/routes/patron-category.route.js";
+import itemCategoryRouter from "@/features/library/routes/item-category.route.js";
+import circulationPolicyRouter from "@/features/library/routes/circulation-policy.route.js";
+import journalSubscriptionRouter from "@/features/library/routes/journal-subscription.route.js";
+import libraryZoneRouter from "@/features/library/routes/library-zone.route.js";
+import readingListRouter from "@/features/library/routes/reading-list.route.js";
+import libraryDashboardRouter from "@/features/library/routes/library-dashboard.route.js";
+import libraryClearanceRouter from "@/features/library/routes/library-clearance.route.js";
+import libraryFinePaymentRouter from "@/features/library/routes/library-fine-payment.route.js";
+import libraryFloorPlanRouter from "@/features/library/routes/library-floor-plan.route.js";
+import librarySearchRouter from "@/features/library/routes/library-search.route.js";
+import academicArchiveRouter from "@/features/library/routes/academic-archive.route.js";
+import cdlRouter from "@/features/library/routes/cdl.route.js";
+import evidenceDocRouter from "@/features/library/routes/evidence-doc.route.js";
+import studentLibraryAnalyticsRouter from "@/features/library/routes/student-library-analytics.route.js";
+import libraryReportsRouter from "@/features/library/routes/library-reports.route.js";
+import libraryNotificationSeedRouter from "@/features/library/routes/library-notification-seed.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -237,25 +287,98 @@ app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ extended: true, limit: "1gb" }));
 
 app.use(cookieParser());
+app.use(resourceRealtime);
+
+// Liveness probe for the ALB target group (no auth; /api/health is the
+// student health-records feature, not a status endpoint).
+// Which environment this backend runs as (drives the console's env theming).
+app.get("/api/app-env", (_req, res) => {
+  res.json({ env: process.env.NODE_ENV || "development" });
+});
+
+// Environment notification details for the console's env dialog (auth required:
+// exposes contact info). development -> the developer contact from env vars
+// (+ the matching user, if one exists); staging -> the staff who have staging
+// notifications enabled.
+app.get("/api/app-env/details", verifyJWT, async (_req, res) => {
+  try {
+    const env = process.env.NODE_ENV || "development";
+    if (env === "development") {
+      const email = process.env.DEVELOPER_EMAIL || null;
+      const phone = process.env.DEVELOPER_PHONE || null;
+      let developerUser: {
+        name: string;
+        image: string | null;
+        type: string;
+      } | null = null;
+      if (email) {
+        const [u] = await db
+          .select({
+            name: userModel.name,
+            image: userModel.image,
+            type: userModel.type,
+          })
+          .from(userModel)
+          .where(eq(userModel.email, email))
+          .limit(1);
+        developerUser = u ?? null;
+      }
+      res.json({ env, developer: { email, phone, user: developerUser } });
+      return;
+    }
+    if (env === "staging") {
+      const recipients = await db
+        .select({
+          id: userModel.id,
+          name: userModel.name,
+          image: userModel.image,
+          email: userModel.email,
+          phone: userModel.phone,
+          type: userModel.type,
+        })
+        .from(userModel)
+        .where(
+          and(
+            eq(userModel.sendStagingNotifications, true),
+            eq(userModel.isActive, true),
+          ),
+        )
+        .orderBy(userModel.name);
+      res.json({ env, recipients });
+      return;
+    }
+    res.json({ env });
+  } catch (error) {
+    console.error("[app-env/details] failed:", error);
+    res.status(500).json({ error: "Failed to load environment details" });
+  }
+});
+
+app.get("/healthz", (_req, res) => {
+  res.status(200).send("ok");
+});
 
 // Setup Socket.IO with CORS - allow both main console and student console
 const allowedSocketOrigins = [
-  process.env.CORS_ORIGIN || "http://localhost:5173", // Main console
-  "http://localhost:5173",
+  "http://localhost:5173", // Main console
   "http://localhost:3000", // Student console
   "http://localhost:3008", // Student console (production port)
   "https://stage.academic360.app", // Staging main console
   "https://academic360.app", // Production main console
   "https://besc.academic360.app", // Production main console (alternative)
-  // Also allow any origin that starts with the CORS_ORIGIN (for subdomains)
-  ...(process.env.CORS_ORIGIN
-    ? [process.env.CORS_ORIGIN.replace(/\/$/, "")]
-    : []),
+  // CORS_ORIGIN supports a comma-separated list of origins
+  ...(process.env.CORS_ORIGIN ?? "")
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))
+    .filter(Boolean),
 ];
 
 export const io = new Server(httpServer, {
   cors: {
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
 
@@ -271,15 +394,36 @@ export const io = new Server(httpServer, {
   },
 });
 
+const redisPubSub = getRedisPubSubClients();
+if (redisPubSub) {
+  io.adapter(createAdapter(redisPubSub.pubClient, redisPubSub.subClient));
+  console.info("[backend] Socket.IO Redis adapter enabled");
+} else if (isRedisEnabled()) {
+  console.warn(
+    "[backend] REDIS_URL is set but Redis clients are unavailable — Socket.IO running single-node",
+  );
+}
+
 // Initialize the socket service with our io instance
 socketService.initialize(io);
 
+const isProductionLike =
+  process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
+
 app.use(
   expressSession({
-    secret: process.env.ACCESS_TOKEN_SECRET || "secret", // Add a secret key here
+    secret:
+      process.env.SESSION_SECRET?.trim() ||
+      process.env.ACCESS_TOKEN_SECRET ||
+      "secret",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }, // set to true if using HTTPS
+    store: getSessionStore() ?? undefined,
+    cookie: {
+      secure: isProductionLike,
+      sameSite: isProductionLike ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24,
+    },
   }),
 );
 
@@ -559,6 +703,17 @@ app.use("/api/emergency-contact", emergencyContactRouter);
 app.use("/api/occupations", occupationRouter);
 
 app.use("/api/annual-incomes", annualIncomeRouter);
+app.use("/api/districts", districtRouter);
+app.use("/api/police-stations", policeStationRouter);
+app.use("/api/post-offices", postOfficeRouter);
+app.use("/api/pickup-points", pickupPointRouter);
+app.use("/api/disability-codes", disabilityCodeRouter);
+app.use("/api/resource-usage", resourceUsageRouter);
+app.use("/api/admission-quota-types", admissionQuotaTypeRouter);
+app.use("/api/cancel-sources", cancelSourceRouter);
+app.use("/api/grades", gradeRouter);
+app.use("/api/admission-cycles", admissionCycleRouter);
+app.use("/api/sports-categories", admissionSportsCategoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 
@@ -571,6 +726,8 @@ app.use("/api/classes", classRouter);
 app.use("/api/v1/shifts", shiftRouter);
 app.use("/api/v1/academics", academicYearRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
+app.use("/api/v1/fees/dashboard", feesDashboardRouter);
+app.use("/api/v1/realtime-tracker", realtimeTrackerRouter);
 app.use("/api/v1/fees/structure", feesStructureRouter);
 
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
@@ -603,6 +760,8 @@ app.use("/api/exam-groups", examGroupRouter);
 app.use("/api/admit-card", admitCardRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
+app.use("/api/admissions/dashboard", admissionDashboardRouter);
+app.use("/api/notifications-console", notificationsConsoleRouter);
 app.use("/api/admissions/application-forms", applicationFormRouter);
 app.use("/api/admissions/general-info", admissionGeneralInfoRouter);
 app.use("/api/admissions/academic-info", admissionAcademicInfoRouter);
@@ -657,6 +816,30 @@ app.use("/api/library/entry-modes", entryModeRouter);
 app.use("/api/library/periods", libraryPeriodRouter);
 app.use("/api/library/series", seriesRouter);
 app.use("/api/library/publishers", publisherRouter);
+app.use("/api/library/author-types", authorTypeRouter);
+app.use("/api/library/authors", authorRouter);
+app.use("/api/library/vendors", vendorRouter);
+app.use("/api/library/holidays", holidayRouter);
+app.use("/api/library/class-holidays", classHolidayRouter);
+app.use("/api/library/branches", branchRouter);
+app.use("/api/library/patron-categories", patronCategoryRouter);
+app.use("/api/library/item-categories", itemCategoryRouter);
+app.use("/api/library/circulation-policies", circulationPolicyRouter);
+app.use("/api/library/journal-subscriptions", journalSubscriptionRouter);
+app.use("/api/library/zones", libraryZoneRouter);
+app.use("/api/library/reading-lists", readingListRouter);
+app.use("/api/library/dashboard", libraryDashboardRouter);
+app.use("/api/library/clearance", libraryClearanceRouter);
+app.use("/api/library/fines", libraryFinePaymentRouter);
+app.use("/api/library/floor-plans", libraryFloorPlanRouter);
+app.use("/api/library/search", librarySearchRouter);
+app.use("/api/library/academic-archives", academicArchiveRouter);
+app.use("/api/library/cdl", cdlRouter);
+app.use("/api/library/evidence-docs", evidenceDocRouter);
+app.use("/api/library/student-analytics", studentLibraryAnalyticsRouter);
+app.use("/api/library/reports", libraryReportsRouter);
+app.use("/api/library/notifications", libraryNotificationSeedRouter);
+app.use("/api/library", authorDetailRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 
@@ -739,6 +922,8 @@ app.use(
 app.use("/api/subject-selection/dynamic-subjects", dynamicSubjectsRoutes);
 
 app.use("/api/bulk-upload", bulkUploadRouter);
+
+app.use("/api/idcard", idCardRouter);
 
 // Lightweight districts endpoint to support frontend dropdowns
 app.get("/api/districts", async (req: Request, res: Response) => {
@@ -943,6 +1128,17 @@ app.use("/api/emergency-contact", emergencyContactRouter);
 app.use("/api/occupations", occupationRouter);
 
 app.use("/api/annual-incomes", annualIncomeRouter);
+app.use("/api/districts", districtRouter);
+app.use("/api/police-stations", policeStationRouter);
+app.use("/api/post-offices", postOfficeRouter);
+app.use("/api/pickup-points", pickupPointRouter);
+app.use("/api/disability-codes", disabilityCodeRouter);
+app.use("/api/resource-usage", resourceUsageRouter);
+app.use("/api/admission-quota-types", admissionQuotaTypeRouter);
+app.use("/api/cancel-sources", cancelSourceRouter);
+app.use("/api/grades", gradeRouter);
+app.use("/api/admission-cycles", admissionCycleRouter);
+app.use("/api/sports-categories", admissionSportsCategoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 
@@ -984,6 +1180,8 @@ app.use("/api/v1/courses", courseRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 
+app.use("/api/admissions/dashboard", admissionDashboardRouter);
+app.use("/api/notifications-console", notificationsConsoleRouter);
 app.use("/api/admissions/application-forms", applicationFormRouter);
 
 app.use("/api/admissions/general-info", admissionGeneralInfoRouter);

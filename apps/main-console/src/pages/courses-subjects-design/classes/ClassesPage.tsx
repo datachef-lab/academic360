@@ -35,6 +35,7 @@ import { ClassForm } from "./class-form";
 import { Class } from "@/types/academics/class";
 import { getAllClasses } from "@/services/classes.service";
 import { addClass, updateClass } from "@/services/class.service";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const ClassesPage = () => {
   const [Classs, setClasss] = React.useState<Class[]>([]);
@@ -134,7 +135,7 @@ const ClassesPage = () => {
         Type: classItem.type,
         Name: classItem.name,
         "Short Name": classItem.shortName,
-        Status: classItem.disabled ? "Inactive" : "Active",
+        Status: !classItem.isActive ? "Inactive" : "Active",
         "Created At": classItem.createdAt,
         "Updated At": classItem.updatedAt,
       }));
@@ -164,6 +165,11 @@ const ClassesPage = () => {
   //     prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
   //   );
   // };
+
+  useResourceRoom("classes", async () => {
+    const freshClasss = await getAllClasses();
+    setClasss(Array.isArray(freshClasss) ? freshClasss : []);
+  });
 
   return (
     <div className="p-2 sm:p-4">
@@ -304,7 +310,7 @@ const ClassesPage = () => {
                         <TableCell style={{ width: 320 }}>{Class.name}</TableCell>
                         <TableCell style={{ width: 140 }}>{Class.shortName}</TableCell>
                         <TableCell style={{ width: 100 }}>
-                          {Class.disabled === true ? (
+                          {!Class.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">

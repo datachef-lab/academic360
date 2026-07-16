@@ -17,6 +17,17 @@ import { socketService } from "@/services/socketService";
 import { bulkUploadCourses } from "../services/course.service";
 import XLSX from "xlsx";
 
+/** Accepts either `classIds=1,2,3` or the legacy single `classId=1` param. */
+function parseClassIds(query: Request["query"]): number[] | undefined {
+  const raw = query.classIds ?? query.classId;
+  if (raw == null || raw === "") return undefined;
+  const ids = String(raw)
+    .split(",")
+    .map((v) => Number(v.trim()))
+    .filter((n) => Number.isFinite(n));
+  return ids.length ? ids : undefined;
+}
+
 export const createPaperHandler = async (
   req: Request,
   res: Response,
@@ -102,7 +113,7 @@ export const getAllPapersHandler = async (
         programCourseId: req.query.programCourseId
           ? Number(req.query.programCourseId)
           : undefined,
-        classId: req.query.classId ? Number(req.query.classId) : undefined,
+        classIds: parseClassIds(req.query),
         isOptional:
           req.query.isOptional !== undefined
             ? req.query.isOptional === "true"
@@ -233,7 +244,7 @@ export const downloadPapersHandler = async (
       programCourseId: req.query.programCourseId
         ? Number(req.query.programCourseId)
         : undefined,
-      classId: req.query.classId ? Number(req.query.classId) : undefined,
+      classIds: parseClassIds(req.query),
       isOptional:
         req.query.isOptional !== undefined
           ? req.query.isOptional === "true"

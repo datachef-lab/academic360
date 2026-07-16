@@ -67,6 +67,8 @@ import {
 import type { RoomDto, ExamDto } from "@repo/db/index";
 import { getPapersPaginated } from "@/services/course-design.api";
 import type { PaperDto } from "@repo/db/index";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
+import { uppercaseRomanNumerals } from "@/utils/uppercaseRomanNumerals";
 
 interface SelectedRoom extends RoomDto {
   capacity: number;
@@ -456,7 +458,7 @@ export default function AllotExamPage() {
             affiliationId: null,
             regulationTypeId: null,
             programCourseId: programCourseId,
-            classId: selectedExam.class.id ?? null,
+            classIds: selectedExam.class.id ? [selectedExam.class.id] : [],
             subjectTypeId: subjectTypeId,
           });
           if (papersData?.content) {
@@ -607,6 +609,7 @@ export default function AllotExamPage() {
     queryKey: [
       "studentsWithSeats",
       selectedExam?.id,
+      selectedExamCommencementDate,
       selectedRooms,
       assignBy,
       gender,
@@ -970,7 +973,9 @@ export default function AllotExamPage() {
                               className="text-left"
                             >
                               <div className="flex flex-col py-0.5 text-left">
-                                <span className="font-medium">{group.name}</span>
+                                <span className="font-medium">
+                                  {uppercaseRomanNumerals(group.name)}
+                                </span>
                                 <span className="text-xs text-muted-foreground">
                                   {formatExamCommencementDate(group.examCommencementDate)}
                                 </span>
@@ -2360,7 +2365,7 @@ export default function AllotExamPage() {
                               <UserAvatar
                                 user={{
                                   name: student.name,
-                                  image: `${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${student.uid}.jpg`,
+                                  image: studentAvatarUrl(student.uid),
                                 }}
                                 size="sm"
                               />

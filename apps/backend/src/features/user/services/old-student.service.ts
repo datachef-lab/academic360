@@ -4,6 +4,8 @@ import { Pool } from "mysql2/typings/mysql/lib/Pool";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import { db, mysqlConnection } from "@/db";
+import { getOrCreateWithLock, findOrCreate } from "@/utils/db-concurrency.js";
+import { ensureAcademicYearStructure } from "@/features/academics/services/academic-year-structure.service.js";
 import {
   OldCourseDetails,
   OldAdmStudentPersonalDetail,
@@ -378,13 +380,19 @@ export async function loadOldBoards() {
 //     }
 // }
 
-export async function addAdmissionApplicationForm(
-  oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
+/**
+ * Resolve (find-or-create) the new-DB admission for a legacy session id.
+ * Legacy pre-admission ids (coursedetails, personaldetails) are reissued every
+ * admission cycle — the legacy system wipes that data per year — so any lookup
+ * keyed on a legacy id MUST be scoped to the admission this resolves.
+ */
+export async function resolveAdmissionForLegacySession(
+  legacySessionId: number | null | undefined,
 ) {
   const [[oldSession]] = (await mysqlConnection.query(`
         SELECT *
         FROM currentsessionmaster
-        WHERE id = ${oldAdmStudentPersonalDetails.sessionId};
+        WHERE id = ${legacySessionId};
     `)) as [OldSession[], any];
 
   if (!oldSession) {
@@ -397,64 +405,89 @@ export async function addAdmissionApplicationForm(
         WHERE sessionId = ${oldSession.id};
     `)) as [OldAcademicYear[], any];
 
-  if (!oldAcademicYear) {
+  // The legacy DB sometimes has the session (e.g. a newly-created year like
+  // "2026-2027") but not the matching accademicyear row. Fall back to deriving
+  // the academic year from the session name instead of failing the import.
+  const startYear = oldAcademicYear
+    ? Number(oldAcademicYear.accademicYearName)
+    : Number(String(oldSession.sessionName).match(/\d{4}/)?.[0]);
+
+  if (!startYear || Number.isNaN(startYear)) {
     throw new Error("No academic year found");
   }
 
-  const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
-  const codePrefix = Number(oldAcademicYear.accademicYearName) % 100;
+  const academicYearName = `${startYear}-${(startYear + 1) % 100}`;
+  const codePrefix = startYear % 100;
 
-  let [foundAcademicYear] = await db
-    .select()
-    .from(academicYearModel)
-    .where(
-      or(
-        ilike(academicYearModel.year, academicYearName),
-        eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
-      ),
+  const academicYearMatch = [ilike(academicYearModel.year, academicYearName)];
+  if (oldAcademicYear) {
+    academicYearMatch.push(
+      eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
     );
-
-  if (!foundAcademicYear) {
-    foundAcademicYear = (
-      await db
-        .insert(academicYearModel)
-        .values({
-          legacyAcademicYearId: oldAcademicYear.id,
-          year: academicYearName,
-          isCurrentYear: oldAcademicYear.presentAcademicYear,
-          codePrefix: codePrefix.toString(),
-        })
-        .returning()
-    )[0];
   }
+  // academic_years/sessions have NO unique constraint on their natural keys —
+  // concurrent import workers must serialize the miss path or they silently
+  // duplicate the year/session. Lock keys are shared with getMetadata in
+  // refactor-old-migration.service.ts (identical key strings, per year).
+  const foundAcademicYear = await getOrCreateWithLock(
+    `import:ay:${academicYearName}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(academicYearModel)
+          .where(or(...academicYearMatch))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(academicYearModel)
+          .values({
+            legacyAcademicYearId: oldAcademicYear?.id ?? null,
+            year: academicYearName,
+            isCurrentYear:
+              oldAcademicYear?.presentAcademicYear ??
+              oldSession.iscurrentsession ??
+              false,
+            codePrefix: codePrefix.toString(),
+          })
+          .returning()
+      )[0]!,
+  );
 
-  let [foundSession] = await db
-    .select()
-    .from(sessionModel)
-    .where(
-      or(
-        eq(sessionModel.legacySessionId, oldSession.id!),
-        eq(sessionModel.academicYearId, foundAcademicYear.id),
-        eq(sessionModel.name, oldSession.sessionName),
-      ),
-    );
-
-  if (!foundSession) {
-    foundSession = (
-      await db
-        .insert(sessionModel)
-        .values({
-          legacySessionId: oldSession.id!,
-          academicYearId: foundAcademicYear.id,
-          name: oldSession.sessionName,
-          from: new Date(oldSession.fromDate as any).toISOString().slice(0, 10),
-          to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
-          isCurrentSession: oldSession.iscurrentsession,
-          codePrefix: oldSession.codeprefix,
-        } as Session)
-        .returning()
-    )[0];
-  }
+  const foundSession = await getOrCreateWithLock(
+    `import:session:${foundAcademicYear.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(sessionModel)
+          .where(
+            or(
+              eq(sessionModel.legacySessionId, oldSession.id!),
+              eq(sessionModel.academicYearId, foundAcademicYear.id),
+              eq(sessionModel.name, oldSession.sessionName),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(sessionModel)
+          .values({
+            legacySessionId: oldSession.id!,
+            academicYearId: foundAcademicYear.id,
+            name: oldSession.sessionName,
+            from: new Date(oldSession.fromDate as any)
+              .toISOString()
+              .slice(0, 10),
+            to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
+            isCurrentSession: oldSession.iscurrentsession,
+            codePrefix: oldSession.codeprefix,
+          } as Session)
+          .returning()
+      )[0]!,
+  );
 
   let [foundAdmission] = await db
     .select()
@@ -474,6 +507,16 @@ export async function addAdmissionApplicationForm(
         .returning()
     )[0];
   }
+
+  return foundAdmission;
+}
+
+export async function addAdmissionApplicationForm(
+  oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
+) {
+  const foundAdmission = await resolveAdmissionForLegacySession(
+    oldAdmStudentPersonalDetails.sessionId,
+  );
 
   let admApprovedBy: User | null = null;
   if (oldAdmStudentPersonalDetails.admapprovedby) {
@@ -767,9 +810,14 @@ export async function addAdmCourseApps(
       admissionCourseDetails ? admissionCourseDetails.id : "not upserted",
     );
     if (!admissionCourseDetails) {
-      throw new Error(
-        "Admission course details not added for old course detail",
+      // A single unmappable course CHOICE (e.g. the program_course master is missing
+      // for a non-admitted preference like "B.Sc. Electronics (H)") must NOT abort the
+      // whole admission build — otherwise the student is left half-loaded (no form, no
+      // promotion). Skip just this choice; the admitted course is captured below.
+      console.warn(
+        `addAdmCourseApps: skipping unmappable course detail id=${oldCourseDetail.id} courseid=${oldCourseDetail.courseid} (no program_course match)`,
       );
+      continue;
     }
     if (
       admissionCourseDetails?.legacyCourseDetailsId === oldStudent.admissionid
@@ -1168,6 +1216,535 @@ export async function addBoardSubject(
   return newBoardSubject;
 }
 
+/** Resolve or create session for a legacy currentsessionmaster id. */
+export async function getOrCreateSessionForLegacySessionId(
+  oldSessionId: number,
+): Promise<Session> {
+  const [[oldSession]] = (await mysqlConnection.query(`
+        SELECT *
+        FROM currentsessionmaster
+        WHERE id = ${oldSessionId};
+    `)) as [OldSession[], any];
+
+  if (!oldSession) {
+    throw new Error(`No legacy session found for id ${oldSessionId}`);
+  }
+
+  const [[oldAcademicYear]] = (await mysqlConnection.query(`
+        SELECT *
+        FROM accademicyear
+        WHERE sessionId = ${oldSession.id};
+    `)) as [OldAcademicYear[], any];
+
+  // Legacy DB may have the session but not the matching accademicyear row for
+  // newly-created years; derive the academic year from the session name instead
+  // of failing (e.g. "2026-2027" -> 2026 -> "2026-27").
+  const startYear = oldAcademicYear
+    ? Number(oldAcademicYear.accademicYearName)
+    : Number(String(oldSession.sessionName).match(/\d{4}/)?.[0]);
+
+  if (!startYear || Number.isNaN(startYear)) {
+    throw new Error(
+      `No academic year found for legacy session ${oldSession.sessionName}`,
+    );
+  }
+
+  const academicYearName = `${startYear}-${(startYear + 1) % 100}`;
+  const codePrefix = startYear % 100;
+
+  const academicYearMatch = [ilike(academicYearModel.year, academicYearName)];
+  if (oldAcademicYear) {
+    academicYearMatch.push(
+      eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
+    );
+  }
+  // academic_years/sessions have NO unique constraint on their natural keys —
+  // concurrent import workers must serialize the miss path or they silently
+  // duplicate the year/session. Lock keys are shared with getMetadata in
+  // refactor-old-migration.service.ts (identical key strings, per year).
+  const foundAcademicYear = await getOrCreateWithLock(
+    `import:ay:${academicYearName}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(academicYearModel)
+          .where(or(...academicYearMatch))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(academicYearModel)
+          .values({
+            legacyAcademicYearId: oldAcademicYear?.id ?? null,
+            year: academicYearName,
+            isCurrentYear:
+              oldAcademicYear?.presentAcademicYear ??
+              oldSession.iscurrentsession ??
+              false,
+            codePrefix: codePrefix.toString(),
+          })
+          .returning()
+      )[0]!,
+  );
+
+  const foundSession = await getOrCreateWithLock(
+    `import:session:${foundAcademicYear.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(sessionModel)
+          .where(
+            or(
+              eq(sessionModel.legacySessionId, oldSession.id!),
+              eq(sessionModel.academicYearId, foundAcademicYear.id),
+              eq(sessionModel.name, oldSession.sessionName),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(sessionModel)
+          .values({
+            legacySessionId: oldSession.id!,
+            academicYearId: foundAcademicYear.id,
+            name: oldSession.sessionName,
+            from: new Date(oldSession.fromDate as any)
+              .toISOString()
+              .slice(0, 10),
+            to: new Date(oldSession.toDate as any).toISOString().slice(0, 10),
+            isCurrentSession: oldSession.iscurrentsession,
+            codePrefix: oldSession.codeprefix,
+          } as Session)
+          .returning()
+      )[0]!,
+  );
+
+  // Ensure the year's masters/papers/components exist (copied from the nearest
+  // year that has them) — so importing into a year that was never set up via the
+  // wizard still gets a complete, linked structure. Idempotent + fast-path when
+  // the year already has papers; failures must not abort the student import.
+  try {
+    await db.transaction((tx) =>
+      ensureAcademicYearStructure(tx, foundAcademicYear.id, {
+        legacySession: {
+          legacySessionId: oldSession.id ?? null,
+          name: oldSession.sessionName ?? null,
+        },
+      }),
+    );
+  } catch (err) {
+    console.error(
+      `[import] ensureAcademicYearStructure failed for academic year ${foundAcademicYear.id}:`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  return foundSession;
+}
+
+async function getOrCreateAdmissionForSession(
+  foundSession: Session,
+): Promise<typeof admissionModel.$inferSelect> {
+  let [foundAdmission] = await db
+    .select()
+    .from(admissionModel)
+    .where(eq(admissionModel.sessionId, foundSession.id));
+
+  if (!foundAdmission) {
+    foundAdmission = (
+      await db
+        .insert(admissionModel)
+        .values({
+          sessionId: foundSession.id,
+          status: "SUBJECT_PAPER_SELECTION",
+          isClosed: false,
+          isArchived: false,
+        })
+        .returning()
+    )[0];
+  }
+
+  return foundAdmission;
+}
+
+export async function findTransferredAdmissionCourseDetailsForStudent(
+  applicationFormId: number,
+  programCourseId?: number,
+): Promise<AdmissionCourseDetails | undefined> {
+  if (programCourseId) {
+    const [row] = await db
+      .select({ admission_course_details: admissionCourseDetailsModel })
+      .from(admissionCourseDetailsModel)
+      .leftJoin(
+        admissionProgramCourseModel,
+        eq(
+          admissionCourseDetailsModel.admissionProgramCourseId,
+          admissionProgramCourseModel.id,
+        ),
+      )
+      .where(
+        and(
+          eq(admissionCourseDetailsModel.applicationFormId, applicationFormId),
+          eq(admissionCourseDetailsModel.isTransferred, true),
+          eq(admissionProgramCourseModel.programCourseId, programCourseId),
+        ),
+      );
+    return row?.admission_course_details;
+  }
+
+  const [row] = await db
+    .select()
+    .from(admissionCourseDetailsModel)
+    .where(
+      and(
+        eq(admissionCourseDetailsModel.applicationFormId, applicationFormId),
+        eq(admissionCourseDetailsModel.isTransferred, true),
+      ),
+    );
+  return row;
+}
+
+async function createBootstrapAdmissionCourseDetails(
+  applicationForm: ApplicationForm,
+  historicalRecord: OldHistoricalRecord,
+  oldStudent: OldStudent,
+): Promise<AdmissionCourseDetails> {
+  const existing = await findTransferredAdmissionCourseDetailsForStudent(
+    applicationForm.id as number,
+  );
+  if (existing) return existing;
+
+  const [[oldCourse]] = (await mysqlConnection.query(`
+        SELECT * FROM course WHERE id = ${historicalRecord.courseId}
+    `)) as [OldCourse[], any];
+
+  if (!oldCourse?.courseName) {
+    throw new Error(
+      `Course not found for historicalrecord courseId ${historicalRecord.courseId}`,
+    );
+  }
+
+  const [programCourse] = await db
+    .select()
+    .from(programCourseModel)
+    .where(ilike(programCourseModel.name, oldCourse.courseName.trim()));
+
+  if (!programCourse) {
+    throw new Error(
+      `Program course not found for legacy course ${oldCourse.courseName}`,
+    );
+  }
+
+  const classData = await addClass(historicalRecord.classId);
+  const shift = await upsertShift(historicalRecord.shiftId);
+
+  if (!shift?.id || !classData?.id) {
+    throw new Error(
+      `Missing class/shift for bootstrap admission course details (student ${oldStudent.codeNumber})`,
+    );
+  }
+
+  const [admission] = await db
+    .select()
+    .from(admissionModel)
+    .where(eq(admissionModel.id, applicationForm.admissionId as number));
+
+  // admission_program_courses has no unique on (admission, programCourse,
+  // class) — serialize concurrent creators of the same triple.
+  const existingAdmissionProgramCourse = await getOrCreateWithLock(
+    `import:apc:${admission?.id}:${programCourse.id}:${classData.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(admissionProgramCourseModel)
+          .where(
+            and(
+              eq(
+                admissionProgramCourseModel.programCourseId,
+                programCourse.id!,
+              ),
+              eq(
+                admissionProgramCourseModel.admissionId,
+                admission?.id as number,
+              ),
+              eq(admissionProgramCourseModel.classId, classData.id),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(admissionProgramCourseModel)
+          .values({
+            admissionId: admission?.id as number,
+            programCourseId: programCourse.id as number,
+            classId: classData.id,
+          })
+          .returning()
+      )[0]!,
+  );
+
+  let studentCategory: StudentCategory | null = null;
+  if (oldStudent.studentCategoryId) {
+    studentCategory = await addStudentCategory(oldStudent.studentCategoryId);
+  }
+
+  const classRollNumber = historicalRecord.rollNo
+    ? String(historicalRecord.rollNo)
+    : oldStudent.rollNumber
+      ? String(oldStudent.rollNumber)
+      : "0";
+
+  const [created] = await db
+    .insert(admissionCourseDetailsModel)
+    .values({
+      applicationFormId: applicationForm.id as number,
+      legacyCourseDetailsId: null,
+      isTransferred: true,
+      admissionProgramCourseId: existingAdmissionProgramCourse.id!,
+      streamId: programCourse.streamId!,
+      classId: classData.id,
+      shiftId: shift.id,
+      studentCategoryId: studentCategory?.id,
+      rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : "",
+      classRollNumber,
+      appNumber: oldStudent.codeNumber || "",
+      challanNumber: "",
+      amount: 0,
+      applicationTimestamp: oldStudent.admissiondate
+        ? new Date(oldStudent.admissiondate)
+        : new Date(),
+      freeshipPercentage: 0,
+    } as AdmissionCourseDetailsT)
+    .returning();
+
+  return created;
+}
+
+/**
+ * For bootstrap students, oldStudent carries the only signals admission_additional_info
+ * can mirror (handicapped flag). Create the row if missing so the FK chain is whole.
+ */
+export async function upsertBootstrapAdditionalInfo(
+  applicationFormId: number,
+  oldStudent: OldStudent,
+): Promise<void> {
+  const [existing] = await db
+    .select()
+    .from(admissionAdditionalInfoModel)
+    .where(
+      eq(admissionAdditionalInfoModel.applicationFormId, applicationFormId),
+    );
+  if (existing) return;
+  await db.insert(admissionAdditionalInfoModel).values({
+    applicationFormId,
+    isPhysicallyChallenged: oldStudent.handicapped === "YES",
+  });
+}
+
+/**
+ * Build a minimal application form from post-admission legacy data when the
+ * pre-admission personaldetails/coursedetails chain is unavailable.
+ */
+export async function createLegacyBootstrapApplicationForm(
+  oldStudent: OldStudent,
+  student: Student,
+): Promise<{
+  applicationForm: ApplicationForm;
+  transferredAdmCourseDetails: AdmissionCourseDetails;
+}> {
+  if (student.applicationId) {
+    const [applicationForm] = await db
+      .select()
+      .from(applicationFormModel)
+      .where(eq(applicationFormModel.id, student.applicationId));
+
+    if (!applicationForm) {
+      throw new Error(
+        `Application form ${student.applicationId} not found for student ${student.uid}`,
+      );
+    }
+
+    const transferredAdmCourseDetails =
+      (await findTransferredAdmissionCourseDetailsForStudent(
+        applicationForm.id as number,
+        student.programCourseId ?? undefined,
+      )) ??
+      (student.admissionCourseDetailsId
+        ? (
+            await db
+              .select()
+              .from(admissionCourseDetailsModel)
+              .where(
+                eq(
+                  admissionCourseDetailsModel.id,
+                  student.admissionCourseDetailsId,
+                ),
+              )
+          )[0]
+        : undefined);
+
+    if (!transferredAdmCourseDetails) {
+      throw new Error(
+        `Transferred admission course details not found for student ${student.uid}`,
+      );
+    }
+
+    // Refuse to adopt an applicationForm that wasn't bootstrap-built. The bootstrap path
+    // is only legitimate when (a) the linked course_details was created with
+    // legacyCourseDetailsId IS NULL AND isTransferred = true, OR (b) the linked
+    // general_info has legacyPersonalDetailsId IS NULL. Otherwise this would silently
+    // glue post-admission data onto a happy-path applicationForm.
+    const isBootstrapTombstone =
+      transferredAdmCourseDetails.legacyCourseDetailsId == null &&
+      transferredAdmCourseDetails.isTransferred === true;
+    if (!isBootstrapTombstone) {
+      const [gi] = await db
+        .select({
+          legacyPersonalDetailsId:
+            admissionGeneralInfoModel.legacyPersonalDetailsId,
+        })
+        .from(admissionGeneralInfoModel)
+        .where(
+          eq(admissionGeneralInfoModel.applicationFormId, applicationForm.id!),
+        );
+      if (gi && gi.legacyPersonalDetailsId != null) {
+        throw new Error(
+          `Refusing bootstrap on student ${student.uid}: applicationForm ${applicationForm.id} ` +
+            `was created via the happy path (legacyCourseDetailsId=${transferredAdmCourseDetails.legacyCourseDetailsId}, ` +
+            `legacyPersonalDetailsId=${gi.legacyPersonalDetailsId}). ` +
+            `Bootstrap may not adopt a non-bootstrap form.`,
+        );
+      }
+    }
+
+    await upsertBootstrapAdditionalInfo(applicationForm.id!, oldStudent);
+    return { applicationForm, transferredAdmCourseDetails };
+  }
+
+  const [historicalRecords] = (await mysqlConnection.query(`
+        SELECT * FROM historicalrecord
+        WHERE parent_id = ${oldStudent.id}
+        ORDER BY index_col ASC
+    `)) as [OldHistoricalRecord[], any];
+
+  if (!historicalRecords?.length) {
+    throw new Error(
+      `No historicalrecord rows found for student ${oldStudent.codeNumber}`,
+    );
+  }
+
+  const firstHistoricalRecord = historicalRecords[0];
+  const presentHistoricalRecord =
+    [...historicalRecords].reverse().find((hr) => {
+      const present = hr.present as unknown;
+      return (
+        present === true ||
+        present === 1 ||
+        (Buffer.isBuffer(present) && present[0] === 1)
+      );
+    }) ?? historicalRecords[historicalRecords.length - 1];
+
+  const foundSession = await getOrCreateSessionForLegacySessionId(
+    firstHistoricalRecord.sessionid,
+  );
+  const foundAdmission = await getOrCreateAdmissionForSession(foundSession);
+
+  // Resolve UG/PG from the new-DB programCourse already linked to the student
+  // (upsertStudent ran first in processStudent). studentpersonaldetails.coursetype
+  // holds curriculum framework values like "CBCS" — NOT a UG/PG signal.
+  let level: "UNDER_GRADUATE" | "POST_GRADUATE" | null = null;
+  if (student.programCourseId) {
+    const [row] = await db
+      .select({ shortName: courseLevelModel.shortName })
+      .from(programCourseModel)
+      .leftJoin(
+        courseLevelModel,
+        eq(programCourseModel.courseLevelId, courseLevelModel.id),
+      )
+      .where(eq(programCourseModel.id, student.programCourseId));
+    const short = row?.shortName?.trim().toUpperCase();
+    if (short === "PG") level = "POST_GRADUATE";
+    else if (short === "UG") level = "UNDER_GRADUATE";
+  }
+  if (!level) {
+    const ct = oldStudent.coursetype?.trim().toUpperCase();
+    if (ct === "PG") level = "POST_GRADUATE";
+    else if (ct === "UG") level = "UNDER_GRADUATE";
+  }
+  if (!level) {
+    throw new Error(
+      `Cannot determine UG/PG level for student ${oldStudent.codeNumber}: ` +
+        `course_levels.short_name unknown and oldStudent.coursetype='${oldStudent.coursetype ?? ""}' is not UG/PG`,
+    );
+  }
+
+  const [applicationForm] = await db
+    .insert(applicationFormModel)
+    .values({
+      admissionId: foundAdmission.id!,
+      level,
+      applicationNumber: oldStudent.codeNumber || "",
+    })
+    .returning();
+
+  const [existingGeneralInfo] = await db
+    .select()
+    .from(admissionGeneralInfoModel)
+    .where(
+      eq(admissionGeneralInfoModel.applicationFormId, applicationForm.id!),
+    );
+
+  if (!existingGeneralInfo) {
+    let studentCategory: StudentCategory | null = null;
+    if (oldStudent.studentCategoryId) {
+      studentCategory = await addStudentCategory(oldStudent.studentCategoryId);
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      oldStudent.contactNo?.trim() ||
+        oldStudent.codeNumber?.trim() ||
+        "default",
+      10,
+    );
+
+    await db.insert(admissionGeneralInfoModel).values({
+      email:
+        oldStudent.email?.trim() ||
+        `${oldStudent.codeNumber?.trim()?.toUpperCase()}@thebges.edu.in`,
+      password: hashedPassword,
+      applicationFormId: applicationForm.id!,
+      residenceOfKolkata: false,
+      legacyPersonalDetailsId: null,
+      studentCategoryId: studentCategory?.id,
+      isMinority: false,
+    });
+  }
+
+  await upsertBootstrapAdditionalInfo(applicationForm.id!, oldStudent);
+
+  const transferredAdmCourseDetails =
+    await createBootstrapAdmissionCourseDetails(
+      applicationForm,
+      presentHistoricalRecord,
+      oldStudent,
+    );
+
+  console.log("[legacy-bootstrap]", {
+    uid: student.uid,
+    codeNumber: oldStudent.codeNumber,
+    applicationFormId: applicationForm.id,
+    level,
+    source: "historicalrecord",
+  });
+
+  return { applicationForm, transferredAdmCourseDetails };
+}
+
 export async function processOldStudentApplicationForm(
   oldStudent: OldStudent,
   student: Student,
@@ -1184,59 +1761,102 @@ export async function processOldStudentApplicationForm(
         WHERE spd.id = ${oldStudent.id};
     `)) as [OldAdmStudentPersonalDetail[], any];
 
-  // Check if personaldetails exists
-  const [existingAdmGeneralInfo] = await db
-    .select()
-    .from(admissionGeneralInfoModel)
-    .where(
-      eq(
-        admissionGeneralInfoModel.legacyPersonalDetailsId,
-        oldAdmStudentPersonalDetails.id!,
-      ),
-    );
-
-  if (existingAdmGeneralInfo) {
+  if (!oldAdmStudentPersonalDetails) {
     console.log(
-      "in processOldStudentApplicationForm(), existingAdmGeneralInfo:",
-      existingAdmGeneralInfo,
+      "No personaldetails chain for student",
+      oldStudent.codeNumber,
+      "- using legacy bootstrap from historicalrecord",
     );
-    const [existingApplicationForm] = await db
-      .select()
-      .from(applicationFormModel)
-      .where(
-        eq(applicationFormModel.id, existingAdmGeneralInfo.applicationFormId),
-      );
+    return createLegacyBootstrapApplicationForm(oldStudent, student);
+  }
 
-    // Try to fetch the transferred admission course details for this application
-    const [[oldCourseDetails]] = (await mysqlConnection.query(`
+  // Idempotency MUST key on the student's OWN legacy coursedetails (unique per
+  // studentpersonaldetails record), NOT the legacy personaldetails — and NOT
+  // (personaldetails + academic year) either: the prod data shows 40 of 60 shared
+  // application forms are two DIFFERENT students in the SAME academic year, so an
+  // academic-year guard still wouldn't separate them. Legacy "transferred"
+  // coursedetails share a parent personaldetails across students, so keying on
+  // personaldetails (with or without academic year) collapsed distinct students
+  // onto one application form (e.g. 1304260022 onto 2025-26 student 1504250031's
+  // form 7512). The student's own coursedetails id is the only unique key.
+  const [[oldCourseDetails]] = (await mysqlConnection.query(`
         SELECT cd.*
         FROM coursedetails cd
         JOIN studentpersonaldetails spd ON spd.admissionid = cd.id
         WHERE spd.id = ${oldStudent.id};
     `)) as [OldCourseDetails[], any];
 
-    let [transferredAdmCourseDetails] = (await db
+  // Legacy coursedetails ids are REISSUED every admission cycle (legacy wipes
+  // pre-admission data per year), so the same id can already exist here as
+  // LAST cycle's acd belonging to a different student. An unscoped lookup then
+  // attaches this student to that student's application form (the shared-form
+  // mislink seen on prod 07/2026). Scope the reuse to this student's own
+  // admission cycle.
+  const targetAdmission = await resolveAdmissionForLegacySession(
+    oldAdmStudentPersonalDetails.sessionId,
+  );
+
+  const [existingAdmCourseDetailsRow] = oldCourseDetails
+    ? await db
+        .select({ acd: admissionCourseDetailsModel })
+        .from(admissionCourseDetailsModel)
+        .innerJoin(
+          applicationFormModel,
+          eq(
+            applicationFormModel.id,
+            admissionCourseDetailsModel.applicationFormId,
+          ),
+        )
+        .where(
+          and(
+            eq(
+              admissionCourseDetailsModel.legacyCourseDetailsId,
+              oldCourseDetails.id,
+            ),
+            eq(applicationFormModel.admissionId, targetAdmission.id!),
+          ),
+        )
+    : [];
+  const existingAdmCourseDetails = existingAdmCourseDetailsRow?.acd as
+    | AdmissionCourseDetails
+    | undefined;
+
+  // This student's own admission was already imported -> reuse ITS application form.
+  if (existingAdmCourseDetails) {
+    const transferredAdmCourseDetails = existingAdmCourseDetails;
+    const [existingApplicationForm] = await db
       .select()
-      .from(admissionCourseDetailsModel)
+      .from(applicationFormModel)
       .where(
-        eq(
-          admissionCourseDetailsModel.legacyCourseDetailsId,
-          oldCourseDetails.id,
-        ),
-      )) as AdmissionCourseDetails[];
-
-    // If no transferred row not found, add the admission course details
-    if (!transferredAdmCourseDetails) {
-      transferredAdmCourseDetails = await addAdmCourseApps(
-        oldAdmStudentPersonalDetails,
-        existingApplicationForm,
-        oldStudent,
+        eq(applicationFormModel.id, existingAdmCourseDetails.applicationFormId),
       );
-    }
 
-    if (!transferredAdmCourseDetails) {
-      throw new Error(
-        "Admission course details not found for existing application form",
+    // Backfill subject selections (idempotent), mirroring the fresh path below.
+    try {
+      const [academicYearRow] = await db
+        .select()
+        .from(admissionModel)
+        .leftJoin(sessionModel, eq(admissionModel.sessionId, sessionModel.id))
+        .leftJoin(
+          academicYearModel,
+          eq(sessionModel.academicYearId, academicYearModel.id),
+        )
+        .where(
+          eq(admissionModel.id, existingApplicationForm.admissionId as number),
+        );
+      const academicYear = academicYearRow?.academic_years;
+      if (academicYear && oldCourseDetails) {
+        await getSubjectRelatedFields(
+          oldCourseDetails,
+          transferredAdmCourseDetails,
+          academicYear,
+          student.id!,
+        );
+      }
+    } catch (e) {
+      console.error(
+        "subject selection backfill (existing admission) failed:",
+        (e as Error)?.message,
       );
     }
 
@@ -1432,32 +2052,31 @@ export async function addSection(
     return undefined;
   }
 
-  const [existingSection] = await db
-    .select()
-    .from(sectionModel)
-    .where(
-      and(
-        eq(sectionModel.name, oldSection.sectionName.trim()),
-        eq(sectionModel.legacySectionId, oldSection.id!),
-      ),
-    );
-
-  let newSection: Section | undefined;
-  if (existingSection) {
-    return existingSection;
-  } else {
-    newSection = (
-      await db
-        .insert(sectionModel)
-        .values({
-          name: oldSection.sectionName.trim(),
-          legacySectionId: oldSection.id!,
-        })
-        .returning()
-    )[0];
-  }
-
-  return newSection;
+  // sections.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(sectionModel)
+          .where(
+            and(
+              eq(sectionModel.name, oldSection.sectionName.trim()),
+              eq(sectionModel.legacySectionId, oldSection.id!),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(sectionModel)
+          .values({
+            name: oldSection.sectionName.trim(),
+            legacySectionId: oldSection.id!,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addInstitution(
@@ -1575,58 +2194,67 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
     return undefined;
   }
 
-  const [existingBoard] = await db
-    .select()
-    .from(boardModel)
-    .where(
-      and(
-        ilike(boardModel.name, oldBoard.boardName.trim()),
-        eq(boardModel.legacyBoardId, oldBoard.id!),
-      ),
-    );
+  // boards has no unique on its natural key — serialize concurrent creators
+  // of the same legacy board (the nested degree get-or-create rides along
+  // inside the locked miss path).
+  return getOrCreateWithLock(
+    `import:board:${oldBoard.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(boardModel)
+          .where(
+            and(
+              ilike(boardModel.name, oldBoard.boardName.trim()),
+              eq(boardModel.legacyBoardId, oldBoard.id!),
+            ),
+          )
+      )[0],
+    async () => {
+      let degree: Degree | undefined;
+      const [degreeRows] = (await mysqlConnection.query(
+        `SELECT * FROM degree WHERE id = ${oldBoard.degreeid}`,
+      )) as [OldDegree[], any];
+      const [oldDegree] = degreeRows;
 
-  if (existingBoard) {
-    return existingBoard;
-  }
+      if (oldDegree) {
+        const [existingDegree] = await db
+          .select()
+          .from(degreeModel)
+          .where(eq(degreeModel.name, oldDegree.degreeName.trim()));
 
-  let degree: Degree | undefined;
-  const [degreeRows] = (await mysqlConnection.query(
-    `SELECT * FROM degree WHERE id = ${oldBoard.degreeid}`,
-  )) as [OldDegree[], any];
-  const [oldDegree] = degreeRows;
+        if (existingDegree) {
+          degree = existingDegree;
+        } else {
+          const [newDegree] = await db
+            .insert(degreeModel)
+            .values({
+              name: oldDegree.degreeName.trim(),
+              legacyDegreeId: oldDegree.id,
+            })
+            .returning();
+          degree = newDegree;
+        }
+      }
 
-  if (oldDegree) {
-    const [existingDegree] = await db
-      .select()
-      .from(degreeModel)
-      .where(eq(degreeModel.name, oldDegree.degreeName.trim()));
-
-    if (existingDegree) {
-      degree = existingDegree;
-    } else {
-      const [newDegree] = await db
-        .insert(degreeModel)
+      const [newBoard] = await db
+        .insert(boardModel)
         .values({
-          name: oldDegree.degreeName.trim(),
-          legacyDegreeId: oldDegree.id,
+          legacyBoardId: oldBoard.id,
+          name: oldBoard.boardName.trim(),
+          degreeId: degree ? degree.id : undefined,
+          passingMarks: oldBoard.passmrks
+            ? Number(oldBoard.passmrks)
+            : undefined,
+          code:
+            oldBoard.code && oldBoard.code !== "" ? oldBoard.code : undefined,
         })
         .returning();
-      degree = newDegree;
-    }
-  }
 
-  const [newBoard] = await db
-    .insert(boardModel)
-    .values({
-      legacyBoardId: oldBoard.id,
-      name: oldBoard.boardName.trim(),
-      degreeId: degree ? degree.id : undefined,
-      passingMarks: oldBoard.passmrks ? Number(oldBoard.passmrks) : undefined,
-      code: oldBoard.code && oldBoard.code !== "" ? oldBoard.code : undefined,
-    })
-    .returning();
-
-  return newBoard;
+      return newBoard!;
+    },
+  );
 }
 
 // export async function addUser(
@@ -2046,22 +2674,26 @@ export async function addAccommodation(
 }
 
 export async function addOccupation(name: string, legacyOccupationId: number) {
-  const [existingOccupation] = await db
-    .select()
-    .from(occupationModel)
-    .where(ilike(occupationModel.name, name.trim()));
-  if (existingOccupation) {
-    return existingOccupation;
-  }
-  const [newOccupation] = await db
-    .insert(occupationModel)
-    .values({
-      name: name.trim(),
-      legacyOccupationId: legacyOccupationId,
-    })
-    .returning();
-
-  return newOccupation;
+  // occupations.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(occupationModel)
+          .where(ilike(occupationModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(occupationModel)
+          .values({
+            name: name.trim(),
+            legacyOccupationId: legacyOccupationId,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addBloodGroup(type: string, legacyBloodGroupId?: number) {
@@ -2085,23 +2717,29 @@ export async function addNationality(
   code: number | undefined | null,
   legacyNationalityId?: number,
 ) {
-  const [existingNationality] = await db
-    .select()
-    .from(nationalityModel)
-    .where(ilike(nationalityModel.name, name.trim()));
-  if (existingNationality) {
-    return existingNationality;
-  }
-  const [newNationality] = await db
-    .insert(nationalityModel)
-    .values({
-      legacyNationalityId: legacyNationalityId,
-      name: name.trim(),
-      code,
-    })
-    .returning();
-
-  return newNationality;
+  // nationalities has no unique on name — serialize concurrent creators
+  // (same lock key as addNationality in old-student-helper.ts).
+  return getOrCreateWithLock(
+    `import:nationality:${name.trim().toLowerCase()}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(nationalityModel)
+          .where(ilike(nationalityModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(nationalityModel)
+          .values({
+            legacyNationalityId: legacyNationalityId,
+            name: name.trim(),
+            code,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addCategory(
@@ -2110,46 +2748,53 @@ export async function addCategory(
   documentRequired: boolean | undefined,
   legacyCategoryId: number,
 ) {
-  // Check if category exists by name OR code
-  const [existingCategory] = await db
-    .select()
-    .from(categoryModel)
-    .where(
-      or(
-        ilike(categoryModel.name, name.trim()),
-        ilike(categoryModel.code, code),
-      ),
-    );
-  if (existingCategory) {
-    return existingCategory;
-  }
-  const [newCategory] = await db
-    .insert(categoryModel)
-    .values({
-      legacyCategoryId: legacyCategoryId,
-      name: name.trim(),
-      code,
-      documentRequired,
-    })
-    .returning();
-
-  return newCategory;
+  // categories.name and .code are UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(categoryModel)
+          .where(
+            or(
+              ilike(categoryModel.name, name.trim()),
+              ilike(categoryModel.code, code),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(categoryModel)
+          .values({
+            legacyCategoryId: legacyCategoryId,
+            name: name.trim(),
+            code,
+            documentRequired,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addReligion(name: string, legacyReligionId: number) {
-  const [existingReligion] = await db
-    .select()
-    .from(religionModel)
-    .where(ilike(religionModel.name, name.trim()));
-  if (existingReligion) {
-    return existingReligion;
-  }
-  const [newReligion] = await db
-    .insert(religionModel)
-    .values({ legacyReligionId: legacyReligionId, name: name.trim() })
-    .returning();
-
-  return newReligion;
+  // religions.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(religionModel)
+          .where(ilike(religionModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(religionModel)
+          .values({ legacyReligionId: legacyReligionId, name: name.trim() })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addLanguageMedium(
@@ -2218,27 +2863,31 @@ export async function loadAllCountry() {
 
 export async function addCountry(oldCountry: OldCountry) {
   console.log("oldCountry:", oldCountry);
-  const [existingCountry] = await db
-    .select()
-    .from(countryModel)
-    .where(
-      and(
-        ilike(countryModel.name, oldCountry.countryName.trim()),
-        eq(countryModel.legacyCountryId, oldCountry.id),
-      ),
-    );
-  if (existingCountry) {
-    return existingCountry;
-  }
-  const [newCountry] = await db
-    .insert(countryModel)
-    .values({
-      legacyCountryId: oldCountry.id,
-      name: oldCountry.countryName.trim(),
-    })
-    .returning();
-
-  return newCountry;
+  // countries has UNIQUE(legacyCountryId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(countryModel)
+          .where(
+            and(
+              ilike(countryModel.name, oldCountry.countryName.trim()),
+              eq(countryModel.legacyCountryId, oldCountry.id),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(countryModel)
+          .values({
+            legacyCountryId: oldCountry.id,
+            name: oldCountry.countryName.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addStateByCityMaintabOrLegacyStateId(
@@ -2283,31 +2932,33 @@ export async function addStateByCityMaintabOrLegacyStateId(
     return null;
   }
 
-  // Check if state exists
-  const [existingState] = await db
-    .select()
-    .from(stateModel)
-    .where(
-      and(
-        ilike(stateModel.name, oldState.stateName.trim()),
-        eq(stateModel.countryId, country.id),
-        eq(stateModel.legacyStateId, oldState.id),
-      ),
-    );
-  if (existingState) {
-    return existingState;
-  }
-
-  const [newState] = await db
-    .insert(stateModel)
-    .values({
-      countryId: country.id,
-      legacyStateId: oldState.id,
-      name: oldState.stateName.trim(),
-    })
-    .returning();
-
-  return newState;
+  // states has UNIQUE(legacyStateId, countryId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(stateModel)
+          .where(
+            and(
+              ilike(stateModel.name, oldState.stateName.trim()),
+              eq(stateModel.countryId, country.id),
+              eq(stateModel.legacyStateId, oldState.id),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(stateModel)
+          .values({
+            countryId: country.id,
+            legacyStateId: oldState.id,
+            name: oldState.stateName.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function loadAllState() {
@@ -2358,30 +3009,32 @@ export async function addStateByName(name: string) {
     console.log("country not found", oldCountry);
     return null;
   }
-  const [existingState] = await db
-    .select()
-    .from(stateModel)
-    .where(
-      and(
-        ilike(stateModel.name, oldState.stateName.trim()),
-        eq(stateModel.countryId, country.id),
-      ),
-    );
-
-  if (existingState) {
-    return existingState;
-  }
-
-  const [newState] = await db
-    .insert(stateModel)
-    .values({
-      countryId: country.id,
-      name: oldState.stateName.trim(),
-      legacyStateId: oldState.id,
-    })
-    .returning();
-
-  return newState;
+  // states has UNIQUE(legacyStateId, countryId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(stateModel)
+          .where(
+            and(
+              ilike(stateModel.name, oldState.stateName.trim()),
+              eq(stateModel.countryId, country.id),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(stateModel)
+          .values({
+            countryId: country.id,
+            name: oldState.stateName.trim(),
+            legacyStateId: oldState.id,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function loadAllPostOffice() {
@@ -2552,29 +3205,33 @@ export async function addCity(oldCityId: number) {
   }
 
   const normalizedCityName = oldCitySubtab.cityname.trim();
-  const [existingCity] = await db
-    .select({ id: cityModel.id })
-    .from(cityModel)
-    .where(
-      and(
-        eq(cityModel.stateId, state.id),
-        ilike(cityModel.name, normalizedCityName),
-        eq(cityModel.legacyCityId, oldCityId),
-      ),
-    );
-  if (existingCity) {
-    return existingCity;
-  }
-
-  const [newCity] = await db
-    .insert(cityModel)
-    .values({
-      stateId: state.id,
-      legacyCityId: oldCityId,
-      name: normalizedCityName,
-    })
-    .returning();
-  return newCity;
+  // cities has UNIQUE(legacyCityId, stateId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select({ id: cityModel.id })
+          .from(cityModel)
+          .where(
+            and(
+              eq(cityModel.stateId, state.id),
+              ilike(cityModel.name, normalizedCityName),
+              eq(cityModel.legacyCityId, oldCityId),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(cityModel)
+          .values({
+            stateId: state.id,
+            legacyCityId: oldCityId,
+            name: normalizedCityName,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function loadAllDistrict() {
@@ -2619,44 +3276,33 @@ export async function addDistrict(oldDistrictId: number) {
     return null;
   }
 
-  const [existingDistrict] = await db
-    .select()
-    .from(districtModel)
-    .where(
-      and(
-        ilike(districtModel.name, oldDistrict.name.trim()),
-        eq(districtModel.cityId, city.id),
-        eq(districtModel.legacyDistrictId, oldDistrictId),
-      ),
-    );
-  if (existingDistrict) {
-    console.log(
-      "addDistrict(): existingDistrict found",
-      existingDistrict.id,
-      "for oldDistrictId",
-      oldDistrictId,
-    );
-    return existingDistrict;
-  }
-
-  const [newDistrict] = await db
-    .insert(districtModel)
-    .values({
-      cityId: city.id,
-      legacyDistrictId: oldDistrictId,
-      name: oldDistrict.name.trim(),
-    })
-    .returning();
-
-  console.log(
-    "addDistrict(): created new district",
-    newDistrict.id,
-    "for oldDistrictId",
-    oldDistrictId,
-    "cityId",
-    city.id,
+  // districts has UNIQUE(legacyDistrictId, cityId, name) — re-find on race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(districtModel)
+          .where(
+            and(
+              ilike(districtModel.name, oldDistrict.name.trim()),
+              eq(districtModel.cityId, city.id),
+              eq(districtModel.legacyDistrictId, oldDistrictId),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(districtModel)
+          .values({
+            cityId: city.id,
+            legacyDistrictId: oldDistrictId,
+            name: oldDistrict.name.trim(),
+          })
+          .returning()
+      )[0]!,
   );
-  return newDistrict;
 }
 
 export async function categorizeIncome(income: string | null | undefined) {
@@ -3511,18 +4157,34 @@ export async function processOldCourseDetails(
     any,
   ];
 
-  const [existingAdmOldCourseDetails] = await db
-    .select()
+  // Dedup by the legacy coursedetails id ACROSS FORMS — but only WITHIN this
+  // form's admission cycle. Legacy "transferred" coursedetails share a parent
+  // personaldetails across students (same cycle), so a per-form guard would
+  // duplicate acds and re-introduce cross-student linkage; but legacy REISSUES
+  // coursedetails ids every admission cycle, so a fully global lookup matches
+  // LAST cycle's acd of an unrelated student and links this form's student to
+  // that student's application (shared-form mislink seen on prod 07/2026).
+  // One acd per legacy id per admission cycle is the correct invariant.
+  const [existingAcdRow] = await db
+    .select({ acd: admissionCourseDetailsModel })
     .from(admissionCourseDetailsModel)
+    .innerJoin(
+      applicationFormModel,
+      eq(
+        applicationFormModel.id,
+        admissionCourseDetailsModel.applicationFormId,
+      ),
+    )
     .where(
       and(
-        eq(
-          admissionCourseDetailsModel.applicationFormId,
-          applicationForm.id as number,
-        ),
         eq(admissionCourseDetailsModel.legacyCourseDetailsId, courseDetails.id),
+        eq(
+          applicationFormModel.admissionId,
+          applicationForm.admissionId as number,
+        ),
       ),
     );
+  const existingAdmOldCourseDetails = existingAcdRow?.acd;
 
   if (existingAdmOldCourseDetails) return existingAdmOldCourseDetails;
 
@@ -3634,32 +4296,41 @@ export async function processOldCourseDetails(
   // const [session] = await db.select().from(sessionModel).where(eq(sessionModel.id, admission?.sessionId as number));
   // const [academicYear] = await db.select().from(academicYearModel).where(eq(academicYearModel.id, session?.academicYearId as number));
 
-  let [existingAdmissionProgramCourse] = await db
-    .select()
-    .from(admissionProgramCourseModel)
-    .where(
-      and(
-        eq(
-          admissionProgramCourseModel.programCourseId,
-          programCourse.id! as number,
-        ),
-        eq(admissionProgramCourseModel.admissionId, admission?.id as number),
-        eq(admissionProgramCourseModel.classId, classData?.id as number),
-      ),
-    );
-
-  if (!existingAdmissionProgramCourse) {
-    existingAdmissionProgramCourse = (
-      await db
-        .insert(admissionProgramCourseModel)
-        .values({
-          admissionId: admission?.id as number,
-          programCourseId: programCourse.id as number,
-          classId: classData?.id as number,
-        })
-        .returning()
-    )[0];
-  }
+  // admission_program_courses has no unique on (admission, programCourse,
+  // class) — serialize concurrent creators of the same triple.
+  const existingAdmissionProgramCourse = await getOrCreateWithLock(
+    `import:apc:${admission?.id}:${programCourse.id}:${classData?.id}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(admissionProgramCourseModel)
+          .where(
+            and(
+              eq(
+                admissionProgramCourseModel.programCourseId,
+                programCourse.id! as number,
+              ),
+              eq(
+                admissionProgramCourseModel.admissionId,
+                admission?.id as number,
+              ),
+              eq(admissionProgramCourseModel.classId, classData?.id as number),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(admissionProgramCourseModel)
+          .values({
+            admissionId: admission?.id as number,
+            programCourseId: programCourse.id as number,
+            classId: classData?.id as number,
+          })
+          .returning()
+      )[0]!,
+  );
 
   let cancelByUser: User | undefined;
   if (courseDetails.canceluserid) {
@@ -4364,34 +5035,43 @@ export async function upsertShift(oldShiftId: number | null) {
 
   if (!shiftRow) return null;
 
-  const [foundShift] = await db
-    .select()
-    .from(shiftModel)
-    .where(ilike(shiftModel.name, shiftRow.shiftName.trim()));
+  // shifts has no unique on name — serialize concurrent creators of the same
+  // shift (same lock key as addShift in old-student-helper.ts).
+  const shiftName = shiftRow.shiftName.trim();
+  const shift = await getOrCreateWithLock(
+    `import:shift:${shiftName.toLowerCase()}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(shiftModel)
+          .where(ilike(shiftModel.name, shiftName))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(shiftModel)
+          .values({
+            legacyShiftId: oldShiftId,
+            name: shiftName,
+            codePrefix: shiftRow.codeprefix?.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 
-  if (foundShift) {
-    const [updatedShift] = await db
-      .update(shiftModel)
-      .set({
-        name: shiftRow.shiftName.trim(),
-        codePrefix: shiftRow.codeprefix?.trim(),
-      })
-      .where(eq(shiftModel.id, foundShift.id as number))
-      .returning();
+  // Preserve the refresh-on-upsert semantics (values derive from the same
+  // legacy row, so a redundant self-update is harmless).
+  const [updatedShift] = await db
+    .update(shiftModel)
+    .set({
+      name: shiftName,
+      codePrefix: shiftRow.codeprefix?.trim(),
+    })
+    .where(eq(shiftModel.id, shift.id as number))
+    .returning();
 
-    return updatedShift;
-  }
-
-  return (
-    await db
-      .insert(shiftModel)
-      .values({
-        legacyShiftId: oldShiftId,
-        name: shiftRow.shiftName.trim(),
-        codePrefix: shiftRow.codeprefix?.trim(),
-      })
-      .returning()
-  )[0];
+  return updatedShift;
 }
 
 export async function addMeritList(oldMeritListId: number | null) {

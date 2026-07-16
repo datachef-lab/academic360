@@ -78,10 +78,12 @@
 // })();
 
 import "dotenv/config";
-import { httpServer } from "@/app.js";
+import { connectRedis, disconnectRedis } from "@/config/redis.js";
 import { connectToDatabase, connectToMySQL } from "@/db/index.js";
 import { createLogger } from "@/config/logger.js"; // not createLogger
 import { startPaytmDowntimeScheduler } from "@/features/payments/schedulers/paytm-downtime.scheduler.js";
+import { startLibraryReminderScheduler } from "@/features/library/schedulers/library-reminders.scheduler.js";
+import { startJournalIssuePredictorScheduler } from "@/features/library/schedulers/journal-issue-predictor.scheduler.js";
 const log = createLogger("db");
 
 const PORT = process.env.PORT || 8080;
@@ -127,6 +129,9 @@ function checkRequiredEnvs() {
   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
 
   try {
+    await connectRedis();
+    const { httpServer } = await import("@/app.js");
+
     await connectToDatabase();
 
     const shouldConnectMySQL = [
@@ -139,14 +144,47 @@ function checkRequiredEnvs() {
       await connectToMySQL();
     }
 
+    const shutdown = async (signal: string) => {
+      log.info(`Received ${signal}, shutting down...`);
+      await disconnectRedis();
+      process.exit(0);
+    };
+    process.once("SIGINT", () => void shutdown("SIGINT"));
+    process.once("SIGTERM", () => void shutdown("SIGTERM"));
+
     httpServer.listen(PORT, async () => {
-      log.info(`academic360 running on http://localhost:${PORT} 🚀`);
+      log.info(`academic360  running on http://localhost:${PORT} 🚀`);
       log.info(`Profile: ${process.env.NODE_ENV}`);
       log.debug("Press Ctrl+C to stop the application.");
       startPaytmDowntimeScheduler();
+      startLibraryReminderScheduler();
+      startJournalIssuePredictorScheduler();
+      // Legacy ID card backfill — background + idempotent (skips already-migrated
+      // entries and already-uploaded images), so it self-heals on every restart.
+      void import("@/features/idcard/services/legacy-idcard-sync.service.js")
+        .then(({ syncLegacyIdCards }) => syncLegacyIdCards())
+        .catch((e) =>
+          log.error("idcard-sync failed to start", {
+            message: e instanceof Error ? e.message : String(e),
+          }),
+        );
+      // Legacy besc-admission-messaging templates — seeded from a snapshot
+      // JSON in the repo (no connectivity to the legacy box needed) and
+      // deduped, so it is safe to run on every restart.
+      void import("@/features/notifications-console/services/legacy-messaging-seed.service.js")
+        .then(({ seedLegacyMessagingMasters }) => seedLegacyMessagingMasters())
+        .catch((e) =>
+          log.error("legacy-messaging-seed failed to start", {
+            message: e instanceof Error ? e.message : String(e),
+          }),
+        );
     });
   } catch (error) {
-    log.error("Failed to start the application ⚠️", { error });
+    log.error("Failed to start the application ⚠️", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    console.error(error);
     process.exit(1);
   }
 })();

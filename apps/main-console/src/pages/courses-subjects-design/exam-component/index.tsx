@@ -38,6 +38,7 @@ import {
   deleteExamComponent,
   DeleteResult,
 } from "@/services/course-design.api";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const ExamComponentesPage = () => {
   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
@@ -157,6 +158,11 @@ const ExamComponentesPage = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "ExamComponents");
     XLSX.writeFile(workbook, "exam_components.xlsx");
   };
+
+  useResourceRoom("course-design/exam-components", async () => {
+    const data = await getAllExamComponent();
+    setExamComponents(data.payload as ExamComponent[]);
+  });
 
   return (
     <div className="p-2 sm:p-4">

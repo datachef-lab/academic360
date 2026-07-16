@@ -44,6 +44,13 @@ import {
   getLibraryStatuses,
   updateLibraryStatus,
 } from "@/services/library-statuses.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 type LibraryStatusSocketUpdate = {
   id: string;
@@ -336,14 +343,24 @@ export default function StatusesMasterPage() {
                 <div className="hidden min-w-0 pb-2 lg:block">
                   <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
                     <Table containerClassName="min-w-[980px]">
-                      <TableHeader>
+                      <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className="w-10">#</TableHead>
-                          <TableHead className="min-w-[320px]">Name</TableHead>
-                          <TableHead className="min-w-[160px]">Issuable</TableHead>
-                          <TableHead className="min-w-[220px]">Issued to</TableHead>
-                          <TableHead className="min-w-[140px]">Updated</TableHead>
-                          <TableHead className="w-[90px] text-right">Actions</TableHead>
+                          <TableHead className={cn(STICKY_TH_LEFT, "w-10")}>#</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[320px]")}>
+                            Name
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[160px]")}>
+                            Issuable
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[220px]")}>
+                            Issued to
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[140px]")}>
+                            Updated
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "w-[90px] text-right")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

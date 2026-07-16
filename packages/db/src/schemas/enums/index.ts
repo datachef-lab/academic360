@@ -324,6 +324,19 @@ export const notificationVariantEnum = pgEnum("notification_variant", [
     "OTHER",
 ]);
 
+// How a notification event's per-recipient field values are populated.
+export const notificationEventDataSourceEnum = pgEnum("notification_event_data_source", [
+    "UPLOAD",
+    "AUTO_FETCH",
+]);
+
+// Notification event lifecycle: DRAFT → READY (recipients staged) → TRIGGERED.
+export const notificationEventStatusEnum = pgEnum("notification_event_status", [
+    "DRAFT",
+    "READY",
+    "TRIGGERED",
+]);
+
 export const cuRegistrationCorrectionRequestStatusEnum = pgEnum("cu_registration_correction_request_status", [
     "PENDING",
     "REQUEST_CORRECTION",
@@ -366,6 +379,7 @@ export const paymentForTypeEnum = pgEnum("payment_for_type", [
     "ADMISSION_APPLICATION_FEE",
     "FEE",
     "ADMISSION",
+    "LIBRARY_FINE",
     "OTHER",
 ]);
 
@@ -453,4 +467,23 @@ export const academicActivityTypeEnum = pgEnum("academic_activity_type", [
     "EXAMINATION",
     "ADMISSION",
     "ACADEMIC",
+]);
+
+export const idCardFieldKeyEnum = pgEnum("id_card_field_key", [
+    "NAME",
+    "COURSE",
+    "UID",
+    "MOBILE",
+    "BLOOD_GROUP",
+    "SPORTS_QUOTA",
+    "QRCODE",
+    "VALID_TILL_DATE",
+    "PHOTO",
+    "SHIFT",
+]);
+
+export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [
+    "ISSUED",
+    "RENEWED",
+    "REISSUED",
 ]);

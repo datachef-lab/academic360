@@ -16,16 +16,11 @@ import {
   getCuRegDocumentPathFromName,
   getCuRegDocumentPathFromNameDynamic,
 } from "../services/cu-registration-document-path.service.js";
-import {
-  uploadToFileSystem,
-  uploadToFileSystemAtPath,
-} from "@/services/filesystem-storage.service.js";
 import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
 import { db } from "@/db/index.js";
 import { documentModel } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 import multer from "multer";
-import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
 import {
   convertToJpg,
   getDocumentConversionSettings,
@@ -133,18 +128,8 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       determinedStatus: newStatus,
     });
 
-    // Generate application number when all declarations are completed
-    console.info(
-      `[CU-REG BATCH SUBMIT] Generating application number for final submission`,
-    );
-
-    const applicationNumber =
-      await CuRegistrationNumberService.generateNextApplicationNumber();
-    console.info(
-      `[CU-REG BATCH SUBMIT] Generated application number: ${applicationNumber}`,
-    );
-
-    // Check if application number already exists before setting it
+    // Application number is generated inside updateCuRegistrationCorrectionRequest's
+    // transaction with an advisory lock — no need to generate it here.
     const updatePayload: any = {
       genderCorrectionRequest: parsedFlags?.gender || false,
       nationalityCorrectionRequest: parsedFlags?.nationality || false,
@@ -163,12 +148,6 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       payload: parsedPayload,
     };
 
-    // Set application number for final submission
-    updatePayload.cuRegistrationApplicationNumber = applicationNumber;
-    console.info(
-      `[CU-REG BATCH SUBMIT] Setting application number: ${applicationNumber}`,
-    );
-
     // Update the correction request with flags, payload, status, and application number
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(correctionRequestId),
@@ -176,11 +155,20 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       req.user as UserDto,
     );
 
+    // The service generates the application number atomically inside its transaction.
+    const applicationNumber = updatedRequest?.cuRegistrationApplicationNumber;
+    if (!applicationNumber) {
+      throw new ApiError(
+        500,
+        "Application number was not generated — cannot complete batch submission",
+      );
+    }
+
     console.info(
       `[CU-REG BATCH SUBMIT] Updated request status to: ${newStatus} and marked online registration as done`,
     );
     console.info(
-      `[CU-REG BATCH SUBMIT] Set all declaration flags to true for final submission - PDF generation should be triggered`,
+      `[CU-REG BATCH SUBMIT] Set all declaration flags to true for final submission - application number: ${applicationNumber}`,
     );
 
     // Update actual database fields based on correction request data
@@ -305,10 +293,8 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
           originalname: pathConfig.filename,
         };
 
-        // Upload to S3 and mirror to filesystem — both must succeed
         let uploadResult;
         try {
-          // Create upload config using the folder path from path service
           const uploadConfig = createUploadConfig(pathConfig.folder, {
             customFileName: pathConfig.filename,
             maxFileSizeMB: 10,
@@ -332,17 +318,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
             `[CU-REG BATCH SUBMIT] S3 upload successful: ${pathConfig.fullPath}`,
           );
           s3UploadedCount++;
-          // Mirror to filesystem (required)
-          await uploadToFileSystemAtPath(
-            convertedFile,
-            pathConfig.folder,
-            pathConfig.filename,
-          );
-          console.info(
-            `[CU-REG BATCH SUBMIT] Mirrored file to filesystem for application ${cuRegNumber}`,
-          );
-        } catch (s3Error: any) {
-          // No fallback: both S3 and filesystem saves are required for consistency
+        } catch (s3Error: unknown) {
           throw s3Error;
         }
 

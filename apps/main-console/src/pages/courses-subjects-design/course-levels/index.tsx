@@ -40,6 +40,7 @@ import {
 } from "@/services/course-level.api";
 import { deleteCourseLevel, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const CourseLevelsPage = () => {
   const [courseLevels, setCourseLevels] = React.useState<CourseLevel[]>([]);
@@ -184,7 +185,7 @@ const CourseLevelsPage = () => {
         Name: level.name,
         "Short Name": level.shortName || "-",
         Sequence: level.sequence || "-",
-        Status: level.disabled ? "Inactive" : "Active",
+        Status: !level.isActive ? "Inactive" : "Active",
         "Created At": level.createdAt,
         "Updated At": level.updatedAt,
       }));
@@ -238,6 +239,11 @@ const CourseLevelsPage = () => {
       (level.shortName ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (level.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
+
+  useResourceRoom("course-design/course-levels", async () => {
+    const fresh = await getAllCourseLevels();
+    setCourseLevels(Array.isArray(fresh) ? fresh : []);
+  });
 
   return (
     <div className="p-2 sm:p-4">
@@ -446,7 +452,7 @@ const CourseLevelsPage = () => {
                         <TableCell style={{ width: 200 }}>{level.shortName || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>{level.sequence || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {level.disabled ? (
+                          {!level.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">

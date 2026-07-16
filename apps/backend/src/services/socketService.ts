@@ -1,5 +1,10 @@
 import { Server, Socket } from "socket.io";
-import { DefaultEventsMap } from "socket.io/dist/typed-events";
+import { getRealtimeTrackerRoomName } from "@/features/realtime-tracker/realtime-tracker.socket.js";
+import {
+  canonicalRealtimeTrackerFilters,
+  parseRealtimeTrackerFilters,
+} from "@/utils/realtime-tracker-filters.js";
+import type { DefaultEventsMap } from "socket.io";
 import * as userService from "@/features/user/services/user.service";
 
 import { createLogger } from "@/config/logger.js";
@@ -73,7 +78,7 @@ export interface LibraryJournalUpdate {
 export interface LibraryCopyDetailsUpdate {
   id: string;
   type: "library_copy_details_update";
-  action: "CREATED" | "UPDATED";
+  action: "CREATED" | "UPDATED" | "DELETED";
   actorName: string;
   copyDetailsId: number;
   bookTitle: string;
@@ -178,6 +183,13 @@ export interface LibraryJournalTypeUpdate {
   meta?: Record<string, unknown>;
 }
 
+export interface FeesDashboardUpdate {
+  id: string;
+  type: "fees_dashboard_update";
+  updatedAt: string;
+  reason: string;
+}
+
 // Active user info interface
 interface ActiveUserInfo {
   id: number;
@@ -197,6 +209,7 @@ class SocketService {
   > | null = null;
   private activeConnections: Map<string, Set<string>> = new Map(); // userId -> set of socket IDs
   private userInfoCache: Map<string, ActiveUserInfo> = new Map(); // userId -> user info
+  private userConnectedAt: Map<string, Date> = new Map(); // userId -> first socket connect time
   private socketToUserId: Map<string, string> = new Map(); // socketId -> userId
   private socketTabActive: Map<string, boolean> = new Map(); // socketId -> isTabActive (page visible)
 
@@ -227,6 +240,16 @@ class SocketService {
       log.debug(`Client connected: ${socket.id}`);
       // Default: assume tab is active until we hear otherwise
       this.socketTabActive.set(socket.id, true);
+
+      // Generic per-resource collaboration rooms (e.g. "resource:states").
+      socket.on("subscribe_resource", (resource: string) => {
+        if (typeof resource === "string" && resource)
+          socket.join(`resource:${resource}`);
+      });
+      socket.on("unsubscribe_resource", (resource: string) => {
+        if (typeof resource === "string" && resource)
+          socket.leave(`resource:${resource}`);
+      });
 
       // Handle user authentication and mapping
       socket.on("authenticate", async (userId: string) => {
@@ -299,6 +322,117 @@ class SocketService {
         },
       );
 
+      socket.on("subscribe_fees_dashboard", () => {
+        try {
+          socket.join("fees_dashboard");
+          log.debug(`Socket ${socket.id} joined room: fees_dashboard`);
+        } catch (error) {
+          log.error("Error subscribing to fees dashboard room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_fees_dashboard", () => {
+        try {
+          socket.leave("fees_dashboard");
+          log.debug(`Socket ${socket.id} left room: fees_dashboard`);
+        } catch (error) {
+          log.error("Error unsubscribing from fees dashboard room", { error });
+        }
+      });
+
+      socket.on("subscribe_notifications_dashboard", () => {
+        try {
+          socket.join("notifications_dashboard");
+          log.debug(`Socket ${socket.id} joined room: notifications_dashboard`);
+        } catch (error) {
+          log.error("Error subscribing to notifications dashboard room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_notifications_dashboard", () => {
+        try {
+          socket.leave("notifications_dashboard");
+          log.debug(`Socket ${socket.id} left room: notifications_dashboard`);
+        } catch (error) {
+          log.error("Error unsubscribing from notifications dashboard room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_automated_notifications", () => {
+        try {
+          socket.join("automated_notifications");
+          log.debug(`Socket ${socket.id} joined room: automated_notifications`);
+        } catch (error) {
+          log.error("Error subscribing to automated notifications room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("unsubscribe_automated_notifications", () => {
+        try {
+          socket.leave("automated_notifications");
+          log.debug(`Socket ${socket.id} left room: automated_notifications`);
+        } catch (error) {
+          log.error("Error unsubscribing from automated notifications room", {
+            error,
+          });
+        }
+      });
+
+      socket.on(
+        "subscribe_realtime_tracker",
+        async (payload: {
+          tab?: "affiliation" | "fee_mis";
+          filters?: Record<string, unknown>;
+        }) => {
+          try {
+            const tab = payload?.tab === "fee_mis" ? "fee_mis" : "affiliation";
+            const { parseRealtimeTrackerFilters } =
+              await import("@/utils/realtime-tracker-filters.js");
+            const { getRealtimeTrackerRoomName, pushRealtimeTrackerSnapshot } =
+              await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+            const filters = canonicalRealtimeTrackerFilters(
+              parseRealtimeTrackerFilters(payload?.filters ?? {}),
+            );
+            const roomName = getRealtimeTrackerRoomName(tab, filters);
+            socket.join(roomName);
+            log.debug(`Socket ${socket.id} joined ${roomName}`);
+            await pushRealtimeTrackerSnapshot(tab, filters, "subscribe");
+          } catch (error) {
+            log.error("Error subscribing to realtime tracker", { error });
+          }
+        },
+      );
+
+      socket.on(
+        "unsubscribe_realtime_tracker",
+        async (payload: {
+          tab?: "affiliation" | "fee_mis";
+          filters?: Record<string, unknown>;
+        }) => {
+          try {
+            const tab = payload?.tab === "fee_mis" ? "fee_mis" : "affiliation";
+            const { parseRealtimeTrackerFilters } =
+              await import("@/utils/realtime-tracker-filters.js");
+            const { getRealtimeTrackerRoomName } =
+              await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+            const filters = canonicalRealtimeTrackerFilters(
+              parseRealtimeTrackerFilters(payload?.filters ?? {}),
+            );
+            const roomName = getRealtimeTrackerRoomName(tab, filters);
+            socket.leave(roomName);
+            log.debug(`Socket ${socket.id} left ${roomName}`);
+          } catch (error) {
+            log.error("Error unsubscribing from realtime tracker", { error });
+          }
+        },
+      );
+
       socket.on("subscribe_library_entry_exit", () => {
         try {
           socket.join("library_entry_exit_page");
@@ -356,6 +490,26 @@ class SocketService {
           log.debug(`Socket ${socket.id} left room: library_copy_details_page`);
         } catch (error) {
           log.error("Error unsubscribing from library copy details room", {
+            error,
+          });
+        }
+      });
+
+      socket.on("subscribe_library_copy_bulk_upload", (jobId: string) => {
+        if (!jobId || typeof jobId !== "string") return;
+        try {
+          socket.join(`library_copy_bulk_upload_${jobId}`);
+        } catch (error) {
+          log.error("Error subscribing to copy bulk upload room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_library_copy_bulk_upload", (jobId: string) => {
+        if (!jobId || typeof jobId !== "string") return;
+        try {
+          socket.leave(`library_copy_bulk_upload_${jobId}`);
+        } catch (error) {
+          log.error("Error unsubscribing from copy bulk upload room", {
             error,
           });
         }
@@ -553,6 +707,11 @@ class SocketService {
   private async registerUser(userId: string, socketId: string) {
     this.socketToUserId.set(socketId, userId);
 
+    const existingSockets = this.activeConnections.get(userId);
+    if (!existingSockets || existingSockets.size === 0) {
+      this.userConnectedAt.set(userId, new Date());
+    }
+
     if (!this.activeConnections.has(userId)) {
       this.activeConnections.set(userId, new Set());
     }
@@ -619,6 +778,7 @@ class SocketService {
         sockets.delete(socketId);
         if (sockets.size === 0) {
           this.activeConnections.delete(userId);
+          this.userConnectedAt.delete(userId);
           // Remove from cache when user has no active connections
           this.userInfoCache.delete(userId);
         } else {
@@ -678,6 +838,11 @@ class SocketService {
       }
     });
     return ids;
+  }
+
+  public getOnlineStudentLoginTime(userId: number): string | null {
+    const connectedAt = this.userConnectedAt.get(String(userId));
+    return connectedAt ? connectedAt.toISOString() : null;
   }
 
   // Broadcast active users list to all connected clients
@@ -873,6 +1038,70 @@ class SocketService {
     }
   }
 
+  private realtimeTrackerRoom(
+    tab: "affiliation" | "fee_mis",
+    filters: Record<string, unknown>,
+  ): string {
+    const parsed = canonicalRealtimeTrackerFilters(
+      parseRealtimeTrackerFilters(filters),
+    );
+    return getRealtimeTrackerRoomName(tab, parsed);
+  }
+
+  sendAffiliationRegistrationUpdate(
+    filters: Record<string, unknown>,
+    payload: Record<string, unknown>,
+    reason?: string,
+  ) {
+    if (!this.io) return;
+    try {
+      const roomName = this.realtimeTrackerRoom("affiliation", filters);
+      const message = { ...payload, reason, filters };
+      this.io.to(roomName).emit("affiliation_registration_update", message);
+    } catch (error) {
+      log.error("Error sending affiliation registration update", { error });
+    }
+  }
+
+  sendFeeMisUpdate(
+    filters: Record<string, unknown>,
+    payload: Record<string, unknown>,
+    reason?: string,
+  ) {
+    if (!this.io) return;
+    try {
+      const roomName = this.realtimeTrackerRoom("fee_mis", filters);
+      const message = { ...payload, reason, filters };
+      this.io.to(roomName).emit("fee_mis_update", message);
+    } catch (error) {
+      log.error("Error sending fee MIS update", { error });
+    }
+  }
+
+  /** Tell all clients to refetch Fee MIS (fee activity uses many filter rooms). */
+  emitFeeMisRefresh(reason: string) {
+    if (!this.io) return;
+    this.io.emit("fee_mis_refresh", {
+      reason,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Tell all clients to refetch the CU-registration tracker tab. The
+   * filter-hash rooms only reach viewers whose EXACT filter set matches the
+   * broadcast's, which almost never happens with the sidebar's rich default
+   * filters — so, like Fee MIS, deliver a global refresh and let each client
+   * refetch with its own filters.
+   */
+  emitAffiliationRefresh(reason: string) {
+    if (!this.io) return;
+    this.io.emit("affiliation_registration_refresh", {
+      reason,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
   // Send MIS table update to all MIS dashboard rooms
   sendMisTableUpdateToAll(
     data: {
@@ -985,7 +1214,7 @@ class SocketService {
   }
 
   sendLibraryCopyDetailsUpdate(payload: {
-    action: "CREATED" | "UPDATED";
+    action: "CREATED" | "UPDATED" | "DELETED";
     actorName: string;
     copyDetailsId: number;
     bookTitle: string;
@@ -997,7 +1226,12 @@ class SocketService {
     }
 
     try {
-      const verb = payload.action === "CREATED" ? "added" : "updated";
+      const verb =
+        payload.action === "CREATED"
+          ? "added"
+          : payload.action === "DELETED"
+            ? "deleted"
+            : "updated";
       const title = payload.bookTitle.trim() || "Untitled book";
       const actor = payload.actorName.trim() || "Someone";
       const message = `${actor} ${verb} a copy for "${title}"`;
@@ -1022,6 +1256,32 @@ class SocketService {
       );
     } catch (error) {
       log.error("Error sending library copy details update", { error });
+    }
+  }
+
+  sendLibraryCopyBulkUploadProgress(payload: {
+    jobId: string;
+    bookId: number;
+    status: "STARTED" | "ROW" | "COMPLETED";
+    processed: number;
+    succeeded: number;
+    failed: number;
+    total: number;
+    lastError?: { row: number; message: string } | null;
+    errors?: Array<{ row: number; message: string }>;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send copy bulk upload progress: io is null");
+      return;
+    }
+    try {
+      const room = `library_copy_bulk_upload_${payload.jobId}`;
+      this.io.to(room).emit("library_copy_bulk_upload_progress", {
+        ...payload,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      log.error("Error sending copy bulk upload progress", { error });
     }
   }
 
@@ -1389,6 +1649,81 @@ class SocketService {
       );
     } catch (error) {
       log.error("Error sending library journal type update", { error });
+    }
+  }
+
+  sendFeesDashboardUpdate(payload: { updatedAt: string; reason: string }) {
+    if (!this.io) {
+      log.error("Cannot send fees dashboard update: io is null");
+      return;
+    }
+
+    try {
+      const update: FeesDashboardUpdate = {
+        id: `fees_dashboard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "fees_dashboard_update",
+        updatedAt: payload.updatedAt,
+        reason: payload.reason,
+      };
+
+      this.io.to("fees_dashboard").emit("fees_dashboard_updated", update);
+      log.debug(`Fees dashboard update → fees_dashboard (${payload.reason})`);
+    } catch (error) {
+      log.error("Error sending fees dashboard update", { error });
+    }
+  }
+
+  sendNotificationsDashboardUpdate(payload: {
+    updatedAt: string;
+    reason: string;
+  }) {
+    if (!this.io) {
+      log.error("Cannot send notifications dashboard update: io is null");
+      return;
+    }
+
+    try {
+      const update = {
+        id: `notifications_dashboard_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        type: "notifications_dashboard_update",
+        updatedAt: payload.updatedAt,
+        reason: payload.reason,
+      };
+
+      this.io
+        .to("notifications_dashboard")
+        .emit("notifications_dashboard_updated", update);
+      // The Automated Notifications list page watches the same enqueue funnel
+      // through its own room so only its visitors get the refresh signal.
+      this.io
+        .to("automated_notifications")
+        .emit("automated_notifications_updated", update);
+      log.debug(
+        `Notifications dashboard update → notifications_dashboard + automated_notifications (${payload.reason})`,
+      );
+    } catch (error) {
+      log.error("Error sending notifications dashboard update", { error });
+    }
+  }
+
+  /**
+   * Broadcast a generic data-change to everyone viewing `resource` (its room),
+   * so other online users on that page can refresh. Used by `resourceRealtime`.
+   */
+  emitResourceChanged(
+    resource: string,
+    meta: { action: string; path?: string },
+  ) {
+    if (!this.io) return;
+    try {
+      this.io.to(`resource:${resource}`).emit("resource_changed", {
+        resource,
+        action: meta.action,
+        path: meta.path,
+        at: Date.now(),
+      });
+    } catch (error) {
+      log.error("Error emitting resource_changed", { error });
     }
   }
 }

@@ -509,7 +509,10 @@ export const getNextCuRegistrationApplicationNumberController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const nextNumber = await getNextCuRegistrationApplicationNumber();
+    const ayId = req.query.academicYearId
+      ? parseInt(req.query.academicYearId as string, 10)
+      : 0;
+    const nextNumber = await getNextCuRegistrationApplicationNumber(ayId);
 
     res.status(200).json(
       new ApiResponse(

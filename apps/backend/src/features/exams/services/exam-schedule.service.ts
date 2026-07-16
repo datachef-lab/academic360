@@ -3,13 +3,9 @@ import fsO from "fs";
 import ExcelJS from "exceljs";
 import { db, mysqlConnection, pool } from "@/db/index.js";
 import JSZip from "jszip";
-import fs from "fs/promises";
-import * as programCourseServices from "@/features/course-design/services/program-course.service";
 import * as paperServices from "@/features/course-design/services/paper.service";
 import { getPaperComponentById } from "@/features/course-design/services/paper-component.service";
 import { findExamComponentById } from "@/features/course-design/services/exam-component.service";
-import * as shiftService from "@/features/academics/services/shift.service";
-import * as roomServices from "./room.service";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
 import {
@@ -48,15 +44,10 @@ import {
   ExamGroupT,
   examModel,
   examProgramCourseModel,
-  ExamRoom,
   examRoomModel,
   ExamRoomT,
-  ExamShift,
   examShiftModel,
-  ExamShiftT,
-  ExamSubject,
   examSubjectModel,
-  ExamSubjectType,
   examSubjectTypeModel,
   ExamT,
   examTypeModel,
@@ -74,13 +65,12 @@ import {
   subjectModel,
   subjectTypeModel,
 } from "@repo/db/schemas";
-import { CLIENT_RENEG_LIMIT } from "tls";
-import { QRCodeService } from "@/services/qr-code.service";
+
 import path from "path";
 import { pdfGenerationService } from "@/services/pdf-generation.service";
 import { findAcademicYearById } from "@/features/academics/services/academic-year.service";
 import { findClassById } from "@/features/academics/services/class.service";
-import { getShiftById } from "@/features/academics/controllers/shift.controller";
+
 import { PaginatedResponse } from "@/utils/PaginatedResponse";
 import { socketService } from "@/services/socketService";
 import { PaperDto } from "@repo/db/dtos";
@@ -94,8 +84,12 @@ import {
 import {
   OldClass,
   OldCourse,
-  OldPaperList,
 } from "@repo/db/legacy-system-types/course-design";
+import {
+  applyExamDisplayIdentityToRows,
+  examCommencementDateOnly,
+  resolveExamDisplayIdentity,
+} from "@/features/user/services/student-exam-identity.service.js";
 
 export interface CountStudentsByPapersParams {
   classId: number;
@@ -116,353 +110,6 @@ export interface CountStudentsByPapersParams {
  * - Only count active students (user.isActive = true)
  * - Get student IDs from latest promotions
  */
-// async function getEligibleStudentIds(
-//     params: CountStudentsByPapersParams,
-// ): Promise<number[]> {
-//     const {
-//         classId,
-//         programCourseIds,
-//         paperIds,
-//         academicYearIds,
-//         shiftIds,
-//         gender,
-//         excelStudents
-//     } = params;
-
-//     console.log("[EXAM-SCHEDULE] Getting eligible student IDs:", params);
-
-//     if (
-//         paperIds.length === 0 ||
-//         programCourseIds.length === 0 ||
-//         academicYearIds.length === 0
-//     ) {
-//         return [];
-//     }
-
-//     const shiftFilter =
-//         shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : "";
-
-//     //   const eligibleSql = `
-//     //         WITH filtered_papers AS (
-//     //             SELECT
-//     //                 p.id,
-//     //                 p.subject_id_fk,
-//     //                 p.subject_type_id_fk,
-//     //                 p.class_id_fk,
-//     //                 p.programe_course_id_fk,
-//     //                 p.academic_year_id_fk,
-//     //                 p.is_optional
-//     //             FROM papers p
-//     //             WHERE p.id = ANY($1)
-//     //               AND p.class_id_fk = $2
-//     //               AND p.programe_course_id_fk = ANY($3)
-//     //               AND p.academic_year_id_fk = ANY($4)
-//     //               AND p.is_active = TRUE
-//     //         ),
-//     //         latest_promotions AS (
-//     //             SELECT DISTINCT ON (pr.student_id_fk)
-//     //                    pr.student_id_fk,
-//     //                    pr.program_course_id_fk,
-//     //                    pr.session_id_fk,
-//     //                    pr.class_id_fk
-//     //             FROM promotions pr
-//     //             INNER JOIN sessions sess ON sess.id = pr.session_id_fk
-//     //             WHERE pr.class_id_fk = $2
-//     //               AND pr.program_course_id_fk = ANY($3)
-//     //               AND sess.academic_id_fk = ANY($4)
-//     //               ${shiftFilter}
-//     //             ORDER BY pr.student_id_fk,
-//     //                      pr.start_date DESC NULLS LAST,
-//     //                      pr.created_at DESC,
-//     //                      pr.id DESC
-//     //         ),
-//     //         latest_student_selections AS (
-//     //             SELECT id,
-//     //                    student_id_fk,
-//     //                    subject_id_fk,
-//     //                    subject_selection_meta_id_fk
-//     //             FROM (
-//     //                 SELECT sss.*,
-//     //                        ROW_NUMBER() OVER (
-//     //                          PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
-//     //                          ORDER BY sss.version DESC,
-//     //                                   sss.updated_at DESC NULLS LAST,
-//     //                                   sss.created_at DESC,
-//     //                                   sss.id DESC
-//     //                        ) AS rn
-//     //                 FROM student_subject_selections sss
-//     //                 WHERE sss.is_active = TRUE
-//     //             ) ranked
-//     //             WHERE rn = 1
-//     //         ),
-//     //         mandatory AS (
-//     //             SELECT DISTINCT std.id AS student_id
-//     //             FROM filtered_papers fp
-//     //             JOIN latest_promotions pr
-//     //               ON pr.program_course_id_fk = fp.programe_course_id_fk
-//     //              AND pr.class_id_fk = fp.class_id_fk
-//     //             JOIN students std ON std.id = pr.student_id_fk
-//     //             JOIN users u ON u.id = std.user_id_fk
-//     //             WHERE fp.is_optional = FALSE
-//     //               AND u.is_active = TRUE
-//     //         ),
-//     //         optional AS (
-//     //             SELECT DISTINCT std.id AS student_id
-//     //             FROM filtered_papers fp
-//     //             JOIN latest_promotions pr
-//     //               ON pr.program_course_id_fk = fp.programe_course_id_fk
-//     //              AND pr.class_id_fk = fp.class_id_fk
-//     //             JOIN students std ON std.id = pr.student_id_fk
-//     //             JOIN users u ON u.id = std.user_id_fk
-//     //             JOIN latest_student_selections lss
-//     //               ON lss.student_id_fk = std.id
-//     //              AND lss.subject_id_fk = fp.subject_id_fk
-//     //             JOIN subject_selection_meta sm
-//     //               ON sm.id = lss.subject_selection_meta_id_fk
-//     //              AND sm.subject_type_id_fk = fp.subject_type_id_fk
-//     //             JOIN subject_selection_meta_classes smc
-//     //               ON smc.subject_selection_meta_id_fk = sm.id
-//     //              AND smc.class_id_fk = fp.class_id_fk
-//     //             WHERE fp.is_optional = TRUE
-//     //               AND u.is_active = TRUE
-//     //         )
-//     //         SELECT DISTINCT student_id
-//     //         FROM (
-//     //             SELECT * FROM mandatory
-//     //             UNION ALL
-//     //             SELECT * FROM optional
-//     //         ) eligible_students
-//     //     `;
-
-//     //   const eligibleSql = `
-//     //   WITH current_promotions AS (
-//     //     -- Get the latest promotion specifically for the requested class + academic year + program + shift
-//     //     SELECT DISTINCT ON (pr.student_id_fk)
-//     //         pr.student_id_fk AS student_id,
-//     //         pr.program_course_id_fk,
-//     //         pr.class_id_fk,
-//     //         pr.shift_id_fk
-//     //     FROM promotions pr
-//     //     JOIN sessions s ON s.id = pr.session_id_fk
-//     //     JOIN academic_years ay ON ay.id = s.academic_id_fk
-//     //     WHERE pr.is_alumni = FALSE
-//     //       AND pr.class_id_fk = $2                    -- requested class (e.g., Semester I)
-//     //       AND ay.id = ANY($3)                        -- requested academic year(s)
-//     //       AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
-//     //       ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
-//     //     ORDER BY pr.student_id_fk,
-//     //              pr.start_date DESC NULLS LAST,
-//     //              pr.created_at DESC
-//     //   ),
-
-//     //   filtered_papers AS (
-//     //     SELECT
-//     //         p.id AS paper_id,
-//     //         p.subject_id_fk,
-//     //         p.subject_type_id_fk,
-//     //         p.is_optional
-//     //     FROM papers p
-//     //     WHERE p.id = ANY($1)
-//     //       AND p.class_id_fk = $2
-//     //       AND p.program_course_id_fk = ANY($4)
-//     //       AND p.academic_year_id_fk = ANY($3)
-//     //       AND p.is_active = TRUE
-//     //   ),
-
-//     //   latest_student_selections AS (
-//     //     SELECT
-//     //         student_id_fk,
-//     //         subject_id_fk,
-//     //         subject_selection_meta_id_fk
-//     //     FROM (
-//     //         SELECT sss.*,
-//     //                ROW_NUMBER() OVER (
-//     //                  PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
-//     //                  ORDER BY sss.version DESC,
-//     //                           sss.updated_at DESC NULLS LAST,
-//     //                           sss.created_at DESC,
-//     //                           sss.id DESC
-//     //                ) AS rn
-//     //         FROM student_subject_selections sss
-//     //         WHERE sss.is_active = TRUE
-//     //     ) ranked
-//     //     WHERE rn = 1
-//     //   ),
-
-//     //   mandatory_students AS (
-//     //     SELECT DISTINCT cp.student_id
-//     //     FROM current_promotions cp
-//     //     CROSS JOIN filtered_papers fp
-//     //     WHERE fp.is_optional = FALSE
-//     //   ),
-
-//     //   optional_students AS (
-//     //     SELECT DISTINCT cp.student_id
-//     //     FROM current_promotions cp
-//     //     JOIN filtered_papers fp ON fp.is_optional = TRUE
-//     //     JOIN latest_student_selections lss
-//     //       ON lss.student_id_fk = cp.student_id
-//     //      AND lss.subject_id_fk = fp.subject_id_fk
-//     //     JOIN subject_selection_meta sm
-//     //       ON sm.id = lss.subject_selection_meta_id_fk
-//     //      AND sm.subject_type_id_fk = fp.subject_type_id_fk
-//     //     JOIN subject_selection_meta_classes smc
-//     //       ON smc.subject_selection_meta_id_fk = sm.id
-//     //      AND smc.class_id_fk = $2
-//     //   )
-
-//     //   SELECT DISTINCT student_id
-//     //   FROM (
-//     //     SELECT student_id FROM mandatory_students
-//     //     UNION
-//     //     SELECT student_id FROM optional_students
-//     //   ) eligible
-//     //   ORDER BY student_id;
-//     // `;
-
-// //     ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY(COALESCE($5::int[], ARRAY[]::int[]))" : ""}
-// //   ${gender && gender.trim() !== '' && gender.length > 1 ? "AND pd.gender = ANY(COALESCE($6::text[], ARRAY[]::text[]))" : ""}
-// //   ${excelStudents.length > 0 ? "AND std.uid = ANY(COALESCE($7::text[], ARRAY[]::text[]))" : ""}
-
-//     const eligibleSql = `
-// WITH current_promotions AS (
-//   -- Get the latest promotion specifically for the requested class + academic year + program + shift
-//   SELECT DISTINCT ON (pr.student_id_fk)
-//       pr.student_id_fk AS student_id,
-//       pr.program_course_id_fk,
-//       pr.class_id_fk,
-//       pr.shift_id_fk
-//   FROM promotions pr
-//   JOIN sessions s ON s.id = pr.session_id_fk
-//   JOIN academic_years ay ON ay.id = s.academic_id_fk
-//   JOIN students std ON std.id = pr.student_id_fk
-//   JOIN users u ON u.id = std.user_id_fk
-//   JOIN personal_details pd ON pd.user_id_fk = u.id
-//   WHERE pr.is_alumni = FALSE
-//     AND pr.class_id_fk = $2                    -- requested class
-//     AND ay.id = ANY($3)                        -- requested academic year(s)
-//     AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
-
-//    -- OPTIONAL FILTERS (SAFE)
-//   AND pr.shift_id_fk = ANY($5::int[])
-//   AND pd.gender::text = ANY($6::text[])
-//   AND std.uid = ANY($7::text[])
-//   ORDER BY pr.student_id_fk,
-//            pr.start_date DESC NULLS LAST,
-//            pr.created_at DESC
-// ),
-
-// filtered_papers AS (
-//   SELECT
-//       p.id AS paper_id,
-//       p.subject_id_fk,
-//       p.subject_type_id_fk,
-//       p.is_optional
-//   FROM papers p
-//   WHERE p.id = ANY($1)
-//     AND p.class_id_fk = $2
-//     AND p.programe_course_id_fk = ANY($4)        -- Fixed: was "programe"
-//     AND p.academic_year_id_fk = ANY($3)
-//     AND p.is_active = TRUE
-// ),
-
-// latest_student_selections AS (
-//   SELECT
-//       student_id_fk,
-//       subject_id_fk,
-//       subject_selection_meta_id_fk
-//   FROM (
-//       SELECT sss.*,
-//              ROW_NUMBER() OVER (
-//                PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
-//                ORDER BY sss.version DESC,
-//                         sss.updated_at DESC NULLS LAST,
-//                         sss.created_at DESC,
-//                         sss.id DESC
-//              ) AS rn
-//       FROM student_subject_selections sss
-//       WHERE sss.is_active = TRUE
-//   ) ranked
-//   WHERE rn = 1
-// ),
-
-// mandatory_students AS (
-//   SELECT DISTINCT cp.student_id
-//   FROM current_promotions cp
-//   JOIN students std ON std.id = cp.student_id
-//   ${excelStudents.length === 0 ? 'JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE' : ''}
-//   CROSS JOIN filtered_papers fp
-//   WHERE fp.is_optional = FALSE
-// ),
-
-// optional_students AS (
-//   SELECT DISTINCT cp.student_id
-//   FROM current_promotions cp
-//   JOIN students std ON std.id = cp.student_id
-//   ${excelStudents.length === 0 ? 'JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE' : ''}
-//   JOIN filtered_papers fp ON fp.is_optional = TRUE
-//   JOIN latest_student_selections lss
-//     ON lss.student_id_fk = cp.student_id
-//    AND lss.subject_id_fk = fp.subject_id_fk
-//   JOIN subject_selection_meta sm
-//     ON sm.id = lss.subject_selection_meta_id_fk
-//    AND sm.subject_type_id_fk = fp.subject_type_id_fk
-//   JOIN subject_selection_meta_classes smc
-//     ON smc.subject_selection_meta_id_fk = sm.id
-//    AND smc.class_id_fk = $2
-// )
-
-// SELECT DISTINCT student_id
-// FROM (
-//   SELECT student_id FROM mandatory_students
-//   UNION
-//   SELECT student_id FROM optional_students
-// ) eligible
-// ORDER BY student_id;
-// `;
-
-//     const eligibleParams: any[] = [
-//         paperIds, // $1
-//         classId, // $2
-//         academicYearIds, // $3
-//         programCourseIds, // $4
-//     ];
-
-//     if (shiftIds && shiftIds.length > 0) {
-//         eligibleParams.push(shiftIds); // $5
-//     }
-//     if (gender) {
-//         if (gender.trim() !== '') {
-//             eligibleParams.push([gender]); // $6
-//         }
-//     }
-
-//     if (excelStudents.length > 0) {
-//         const uids = excelStudents.map(e => e.uid)
-//         eligibleParams.push(uids); // $7
-//     }
-
-//     const eligibleParamsU = [
-//         paperIds,                                 // $1 int[]
-//         classId,                                  // $2 int
-//         academicYearIds,                          // $3 int[]
-//         programCourseIds,                         // $4 int[]
-//         shiftIds && shiftIds.length ? shiftIds : [], // $5 int[]
-//         gender && gender.trim() ? [gender] : [],     // $6 text[]
-//         excelStudents.length
-//           ? excelStudents.map(e => e.uid)
-//           : []                                     // $7 text[]
-//       ];
-
-//     console.log(eligibleParamsU)
-
-//     const { rows } = await pool.query(eligibleSql, eligibleParamsU);
-
-//     return rows
-//         .map((row: { student_id: number }) => Number(row.student_id))
-//         .filter((id: number) => !Number.isNaN(id));
-// }
-
 async function getEligibleStudentIds(
   params: CountStudentsByPapersParams,
 ): Promise<number[]> {
@@ -476,12 +123,8 @@ async function getEligibleStudentIds(
     excelStudents = [],
     examCommencementDate,
   } = params;
-  const parsedExamCommencementDate = examCommencementDate
-    ? new Date(examCommencementDate)
-    : null;
-  const hasValidCommencementDate =
-    !!parsedExamCommencementDate &&
-    Number.isFinite(parsedExamCommencementDate.getTime());
+  const commencementDateOnly = examCommencementDateOnly(examCommencementDate);
+  const hasValidCommencementDate = !!commencementDateOnly;
 
   console.log("[EXAM-SCHEDULE] Getting eligible student IDs:", params);
 
@@ -524,10 +167,10 @@ async function getEligibleStudentIds(
 
   if (hasValidCommencementDate) {
     conditions.push(
-      `AND (pr.start_date IS NULL OR pr.start_date <= $${paramIndex})`,
-      `AND (pr.end_date IS NULL OR pr.end_date >= $${paramIndex})`,
+      `AND (pr.start_date IS NULL OR pr.start_date::date <= $${paramIndex}::date)`,
+      `AND (pr.end_date IS NULL OR pr.end_date::date >= $${paramIndex}::date)`,
     );
-    values.push(parsedExamCommencementDate);
+    values.push(commencementDateOnly);
     paramIndex++;
   }
 
@@ -546,13 +189,13 @@ WITH current_promotions AS (
   JOIN students std ON std.id = pr.student_id_fk
   JOIN users u ON u.id = std.user_id_fk
   JOIN personal_details pd ON pd.user_id_fk = u.id
-  WHERE pr.is_alumni = FALSE
-    AND pr.class_id_fk = $2
+  WHERE pr.class_id_fk = $2
     AND ay.id = ANY($3)
     ${excelStudents.length === 0 ? "AND u.is_active = TRUE" : ""}
     AND pr.program_course_id_fk = ANY($4)
     ${whereClause}
   ORDER BY pr.student_id_fk,
+           CASE WHEN COALESCE(pr.is_deprecated, false) THEN 1 ELSE 0 END,
            pr.start_date DESC NULLS LAST,
            pr.created_at DESC
 ),
@@ -606,6 +249,7 @@ optional_students AS (
   JOIN subject_selection_meta sm
     ON sm.id = lss.subject_selection_meta_id_fk
    AND sm.subject_type_id_fk = fp.subject_type_id_fk
+   AND (sm.is_active IS TRUE OR sm.is_active IS NULL)
   JOIN subject_selection_meta_classes smc
     ON smc.subject_selection_meta_id_fk = sm.id
    AND smc.class_id_fk = $2
@@ -879,6 +523,7 @@ export async function getStudentsByPapers(
     .select({
       studentId: studentModel.id,
       uid: studentModel.uid,
+      previousUid: studentModel.previousUid,
       userName: userModel.name,
       userEmail: userModel.email,
       userWhatsappPhone: userModel.whatsappNumber,
@@ -895,29 +540,36 @@ export async function getStudentsByPapers(
     )
     .where(inArray(studentModel.id, studentIds));
 
-  // Fetch latest promotions for these students to get programCourseId and shiftId
+  // Promotion active at exam commencement (for program/shift + historical UID display)
   const promotionMap = new Map<
     number,
-    { programCourseId: number | null; shiftId: number | null }
+    {
+      programCourseId: number | null;
+      shiftId: number | null;
+      startDate: Date | string | null;
+      endDate: Date | string | null;
+      isDeprecated: boolean | null;
+    }
   >();
-  const parsedCommencementDate = params.examCommencementDate
-    ? new Date(params.examCommencementDate)
-    : null;
-  const commencementDate =
-    parsedCommencementDate && Number.isFinite(parsedCommencementDate.getTime())
-      ? parsedCommencementDate
-      : null;
+  const commencementDateOnly = examCommencementDateOnly(
+    params.examCommencementDate,
+  );
   if (students.length > 0) {
     const promotionSubquery = db
       .select({
         studentId: promotionModel.studentId,
         programCourseId: promotionModel.programCourseId,
         shiftId: promotionModel.shiftId,
+        startDate: promotionModel.startDate,
+        endDate: promotionModel.endDate,
+        isDeprecated: promotionModel.isDeprecated,
         rn: sql<number>`ROW_NUMBER() OVER (
           PARTITION BY ${promotionModel.studentId}
-          ORDER BY ${promotionModel.startDate} DESC NULLS LAST,
-                   ${promotionModel.createdAt} DESC,
-                   ${promotionModel.id} DESC
+          ORDER BY
+            CASE WHEN COALESCE(${promotionModel.isDeprecated}, false) THEN 1 ELSE 0 END,
+            ${promotionModel.startDate} DESC NULLS LAST,
+            ${promotionModel.createdAt} DESC,
+            ${promotionModel.id} DESC
         )`.as("rn"),
       })
       .from(promotionModel)
@@ -934,11 +586,11 @@ export async function getStudentsByPapers(
           params.shiftIds && params.shiftIds.length > 0
             ? inArray(promotionModel.shiftId, params.shiftIds)
             : sql`TRUE`,
-          commencementDate
-            ? sql`(${promotionModel.startDate} IS NULL OR ${promotionModel.startDate} <= ${commencementDate})`
+          commencementDateOnly
+            ? sql`(${promotionModel.startDate} IS NULL OR (${promotionModel.startDate})::date <= ${commencementDateOnly}::date)`
             : sql`TRUE`,
-          commencementDate
-            ? sql`(${promotionModel.endDate} IS NULL OR ${promotionModel.endDate} >= ${commencementDate})`
+          commencementDateOnly
+            ? sql`(${promotionModel.endDate} IS NULL OR (${promotionModel.endDate})::date >= ${commencementDateOnly}::date)`
             : sql`TRUE`,
         ),
       )
@@ -949,6 +601,9 @@ export async function getStudentsByPapers(
         studentId: promotionSubquery.studentId,
         programCourseId: promotionSubquery.programCourseId,
         shiftId: promotionSubquery.shiftId,
+        startDate: promotionSubquery.startDate,
+        endDate: promotionSubquery.endDate,
+        isDeprecated: promotionSubquery.isDeprecated,
       })
       .from(promotionSubquery)
       .where(eq(promotionSubquery.rn, 1));
@@ -957,11 +612,25 @@ export async function getStudentsByPapers(
       promotionMap.set(p.studentId, {
         programCourseId: p.programCourseId,
         shiftId: p.shiftId,
+        startDate: p.startDate,
+        endDate: p.endDate,
+        isDeprecated: p.isDeprecated,
       });
     });
   }
 
-  //   console.log("[EXAM-SCHEDULE] Students:", students);
+  const examDisplayForStudent = (s: (typeof students)[number]) => {
+    const promotion = promotionMap.get(s.studentId);
+    return resolveExamDisplayIdentity({
+      currentUid: s.uid ?? "",
+      previousUid: s.previousUid,
+      currentEmail: s.userEmail,
+      promotionStartDate: promotion?.startDate,
+      promotionEndDate: promotion?.endDate,
+      promotionIsDeprecated: promotion?.isDeprecated,
+      examCommencementDate: params.examCommencementDate,
+    });
+  };
 
   // Custom sort that pushes null/empty values to the end
   students.sort((a, b) => {
@@ -969,8 +638,8 @@ export async function getStudentsByPapers(
     let bValue: string | null | undefined;
 
     if (params.assignBy === "UID") {
-      aValue = a.uid;
-      bValue = b.uid;
+      aValue = examDisplayForStudent(a).uid;
+      bValue = examDisplayForStudent(b).uid;
     } else if (params.assignBy === "CU_REGISTRATION_NUMBER") {
       aValue = a.cuRegistrationNumber;
       bValue = b.cuRegistrationNumber;
@@ -1049,11 +718,12 @@ export async function getStudentsByPapers(
 
         const s = students[studentIdx++];
         const promotion = promotionMap.get(s.studentId);
+        const display = examDisplayForStudent(s);
         result.push({
           studentId: s.studentId,
-          uid: s.uid || "",
+          uid: display.uid,
           name: s.userName || "",
-          email: s.userEmail || "",
+          email: display.email ?? "",
           whatsappPhone: s.userWhatsappPhone || "",
           cuRegistrationApplicationNumber: s.cuRegistrationApplicationNumber,
           floorName: room.floorName,
@@ -1068,21 +738,24 @@ export async function getStudentsByPapers(
       }
     }
   } else {
-    result = students.map((s) => ({
-      studentId: s.studentId,
-      uid: s.uid || "",
-      name: s.userName || "",
-      email: s.userEmail || "",
-      whatsappPhone: s.userWhatsappPhone || "",
-      cuRegistrationApplicationNumber: s.cuRegistrationApplicationNumber,
-      floorName: null,
-      roomName: null,
-      seatNumber: null,
-      programCourseId: null,
-      shiftId: null,
-      registrationNumber: s.cuRegistrationNumber,
-      rollNumber: s.cuRollNumber,
-    }));
+    result = students.map((s) => {
+      const display = examDisplayForStudent(s);
+      return {
+        studentId: s.studentId,
+        uid: display.uid,
+        name: s.userName || "",
+        email: display.email ?? "",
+        whatsappPhone: s.userWhatsappPhone || "",
+        cuRegistrationApplicationNumber: s.cuRegistrationApplicationNumber,
+        floorName: null,
+        roomName: null,
+        seatNumber: null,
+        programCourseId: null,
+        shiftId: null,
+        registrationNumber: s.cuRegistrationNumber,
+        rollNumber: s.cuRollNumber,
+      };
+    });
   }
 
   console.log("getStudentsbyPapers(), result:", result.length);
@@ -1989,9 +1662,9 @@ export async function createExamAssignment(
     const promotionMap = new Map<number, number>();
     if (studentsWithSeats.length > 0) {
       const studentIds = studentsWithSeats.map((s) => s.studentId);
-      const commencementDate = examGroup.examCommencementDate
-        ? new Date(examGroup.examCommencementDate)
-        : null;
+      const commencementDateOnly = examCommencementDateOnly(
+        examGroup.examCommencementDate,
+      );
 
       const promotionSubquery = tx
         .select({
@@ -1999,9 +1672,11 @@ export async function createExamAssignment(
           promotionId: promotionModel.id,
           rn: sql<number>`ROW_NUMBER() OVER (
                       PARTITION BY ${promotionModel.studentId}
-                      ORDER BY ${promotionModel.startDate} DESC NULLS LAST,
-                               ${promotionModel.createdAt} DESC,
-                               ${promotionModel.id} DESC
+                      ORDER BY
+                        CASE WHEN COALESCE(${promotionModel.isDeprecated}, false) THEN 1 ELSE 0 END,
+                        ${promotionModel.startDate} DESC NULLS LAST,
+                        ${promotionModel.createdAt} DESC,
+                        ${promotionModel.id} DESC
                   )`.as("rn"),
         })
         .from(promotionModel)
@@ -2015,11 +1690,11 @@ export async function createExamAssignment(
             shiftIds.length > 0
               ? inArray(promotionModel.shiftId, shiftIds)
               : sql`TRUE`,
-            commencementDate
-              ? sql`(${promotionModel.startDate} IS NULL OR ${promotionModel.startDate} <= ${commencementDate})`
+            commencementDateOnly
+              ? sql`(${promotionModel.startDate} IS NULL OR (${promotionModel.startDate})::date <= ${commencementDateOnly}::date)`
               : sql`TRUE`,
-            commencementDate
-              ? sql`(${promotionModel.endDate} IS NULL OR ${promotionModel.endDate} >= ${commencementDate})`
+            commencementDateOnly
+              ? sql`(${promotionModel.endDate} IS NULL OR (${promotionModel.endDate})::date >= ${commencementDateOnly}::date)`
               : sql`TRUE`,
           ),
         )
@@ -2543,9 +2218,9 @@ export async function allotExamRoomsAndStudents(
 
     // 7. Batch fetch latest promotion for each student
     const studentIds = studentsWithSeats.map((s) => s.studentId);
-    const commencementDate = foundExamGroup?.examCommencementDate
-      ? new Date(foundExamGroup.examCommencementDate)
-      : null;
+    const commencementDateOnly = examCommencementDateOnly(
+      foundExamGroup?.examCommencementDate,
+    );
 
     const promotionSubquery = tx
       .select({
@@ -2553,9 +2228,11 @@ export async function allotExamRoomsAndStudents(
         promotionId: promotionModel.id,
         rn: sql<number>`ROW_NUMBER() OVER (
                     PARTITION BY ${promotionModel.studentId}
-                    ORDER BY ${promotionModel.startDate} DESC NULLS LAST,
-                             ${promotionModel.createdAt} DESC,
-                             ${promotionModel.id} DESC
+                    ORDER BY
+                      CASE WHEN COALESCE(${promotionModel.isDeprecated}, false) THEN 1 ELSE 0 END,
+                      ${promotionModel.startDate} DESC NULLS LAST,
+                      ${promotionModel.createdAt} DESC,
+                      ${promotionModel.id} DESC
                 )`.as("rn"),
       })
       .from(promotionModel)
@@ -2569,11 +2246,11 @@ export async function allotExamRoomsAndStudents(
           shiftIds.length > 0
             ? inArray(promotionModel.shiftId, shiftIds)
             : sql`TRUE`,
-          commencementDate
-            ? sql`(${promotionModel.startDate} IS NULL OR ${promotionModel.startDate} <= ${commencementDate})`
+          commencementDateOnly
+            ? sql`(${promotionModel.startDate} IS NULL OR (${promotionModel.startDate})::date <= ${commencementDateOnly}::date)`
             : sql`TRUE`,
-          commencementDate
-            ? sql`(${promotionModel.endDate} IS NULL OR ${promotionModel.endDate} >= ${commencementDate})`
+          commencementDateOnly
+            ? sql`(${promotionModel.endDate} IS NULL OR (${promotionModel.endDate})::date >= ${commencementDateOnly}::date)`
             : sql`TRUE`,
         ),
       )
@@ -3474,56 +3151,64 @@ export async function downloadAdmitCardsAsZip(
     throw new Error("Exam group not found for the given examId or examGroupId");
   }
 
-  const result = await db
-    .select({
-      semester: classModel.name,
-      examType: examTypeModel.name,
-      session: sessionModel.name,
-      name: userModel.name,
-      cuRollNumber: studentModel.rollNumber,
-      cuRegistrationNumber: studentModel.registrationNumber,
-      uid: studentModel.uid,
-      phone: userModel.phone,
-      shiftName: shiftModel.name,
-      examStartDate: examSubjectModel.startTime,
-      examEndDate: examSubjectModel.endTime,
-      seatNo: examCandidateModel.seatNumber,
-      roomName: roomModel.name,
-      subjectName: paperModel.name,
-      subjectCode: paperModel.code,
-      programCourse: programCourseModel.name,
-      paperId: examCandidateModel.paperId,
-      paperComponentId: examSubjectModel.paperComponentId,
-    })
-    .from(examCandidateModel)
-    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
-    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
-    .leftJoin(
-      examSubjectModel,
-      eq(examSubjectModel.id, examCandidateModel.examSubjectId),
-    )
-    .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
-    .leftJoin(
-      examRoomModel,
-      eq(examRoomModel.id, examCandidateModel.examRoomId),
-    )
-    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
-    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
-    .leftJoin(
-      promotionModel,
-      eq(promotionModel.id, examCandidateModel.promotionId),
-    )
-    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
-    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
-    .leftJoin(
-      programCourseModel,
-      eq(programCourseModel.id, promotionModel.programCourseId),
-    )
-    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .where(eq(examGroupModel.id, foundExamGroup.id))
-    .orderBy(asc(examSubjectModel.startTime), asc(examSubjectModel.id));
+  const result = applyExamDisplayIdentityToRows(
+    await db
+      .select({
+        semester: classModel.name,
+        examType: examTypeModel.name,
+        session: sessionModel.name,
+        name: userModel.name,
+        cuRollNumber: studentModel.rollNumber,
+        cuRegistrationNumber: studentModel.registrationNumber,
+        uid: studentModel.uid,
+        previousUid: studentModel.previousUid,
+        userEmail: userModel.email,
+        phone: userModel.phone,
+        shiftName: shiftModel.name,
+        promotionStartDate: promotionModel.startDate,
+        promotionEndDate: promotionModel.endDate,
+        promotionIsDeprecated: promotionModel.isDeprecated,
+        examCommencementDate: examGroupModel.examCommencementDate,
+        examStartDate: examSubjectModel.startTime,
+        examEndDate: examSubjectModel.endTime,
+        seatNo: examCandidateModel.seatNumber,
+        roomName: roomModel.name,
+        subjectName: paperModel.name,
+        subjectCode: paperModel.code,
+        programCourse: programCourseModel.name,
+        paperId: examCandidateModel.paperId,
+        paperComponentId: examSubjectModel.paperComponentId,
+      })
+      .from(examCandidateModel)
+      .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+      .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
+      .leftJoin(
+        examSubjectModel,
+        eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+      )
+      .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+      .leftJoin(
+        examRoomModel,
+        eq(examRoomModel.id, examCandidateModel.examRoomId),
+      )
+      .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+      .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+      .leftJoin(
+        promotionModel,
+        eq(promotionModel.id, examCandidateModel.promotionId),
+      )
+      .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+      .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+      .leftJoin(
+        programCourseModel,
+        eq(programCourseModel.id, promotionModel.programCourseId),
+      )
+      .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+      .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+      .where(eq(examGroupModel.id, foundExamGroup.id))
+      .orderBy(asc(examSubjectModel.startTime), asc(examSubjectModel.id)),
+  );
 
   const zip = new JSZip();
 
@@ -4042,62 +3727,69 @@ export async function downloadExamCandidatesbyExamId(
   // FETCH DATA
   // =========================
 
-  const result = await db
-    .select({
-      examType: examTypeModel.name,
-      academicYear: academicYearModel.year,
-      session: sessionModel.name,
-      semester: classModel.name,
-      orderType: examModel.orderType,
-      gender: examModel.gender,
-      name: userModel.name,
-      uid: studentModel.uid,
-      roll_number: studentModel.rollNumber,
-      registration_number: studentModel.registrationNumber,
-      foilNumber: examCandidateModel.foilNumber,
-      floor: floorModel.name,
-      room: roomModel.name,
-      seat: examCandidateModel.seatNumber,
-      email: userModel.email,
-      phone: userModel.phone,
-      whatsapp_number: userModel.whatsappNumber,
-      program_course: programCourseModel.name,
-      section: sectionModel.name,
-      shift: shiftModel.name,
+  const result = applyExamDisplayIdentityToRows(
+    await db
+      .select({
+        examType: examTypeModel.name,
+        academicYear: academicYearModel.year,
+        session: sessionModel.name,
+        semester: classModel.name,
+        orderType: examModel.orderType,
+        gender: examModel.gender,
+        name: userModel.name,
+        uid: studentModel.uid,
+        previousUid: studentModel.previousUid,
+        roll_number: studentModel.rollNumber,
+        registration_number: studentModel.registrationNumber,
+        foilNumber: examCandidateModel.foilNumber,
+        floor: floorModel.name,
+        room: roomModel.name,
+        seat: examCandidateModel.seatNumber,
+        email: userModel.email,
+        promotionStartDate: promotionModel.startDate,
+        promotionEndDate: promotionModel.endDate,
+        promotionIsDeprecated: promotionModel.isDeprecated,
+        examCommencementDate: examGroupModel.examCommencementDate,
+        phone: userModel.phone,
+        whatsapp_number: userModel.whatsappNumber,
+        program_course: programCourseModel.name,
+        section: sectionModel.name,
+        shift: shiftModel.name,
 
-      paper: paperModel.name,
-      paper_code: paperModel.code,
-    })
-    .from(examCandidateModel)
-    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
-    .leftJoin(
-      academicYearModel,
-      eq(academicYearModel.id, examModel.academicYearId),
-    )
-    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
-    .leftJoin(
-      examRoomModel,
-      eq(examRoomModel.id, examCandidateModel.examRoomId),
-    )
-    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
-    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
-    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
-    .leftJoin(
-      promotionModel,
-      eq(promotionModel.id, examCandidateModel.promotionId),
-    )
-    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
-    .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
-    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      programCourseModel,
-      eq(programCourseModel.id, promotionModel.programCourseId),
-    )
-    .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
-    .leftJoin(classModel, eq(examModel.classId, classModel.id))
-    .where(eq(examGroupModel.id, foundExamGroup.id));
+        paper: paperModel.name,
+        paper_code: paperModel.code,
+      })
+      .from(examCandidateModel)
+      .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+      .leftJoin(
+        academicYearModel,
+        eq(academicYearModel.id, examModel.academicYearId),
+      )
+      .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
+      .leftJoin(
+        examRoomModel,
+        eq(examRoomModel.id, examCandidateModel.examRoomId),
+      )
+      .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+      .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+      .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+      .leftJoin(
+        promotionModel,
+        eq(promotionModel.id, examCandidateModel.promotionId),
+      )
+      .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+      .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
+      .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+      .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+      .leftJoin(
+        programCourseModel,
+        eq(programCourseModel.id, promotionModel.programCourseId),
+      )
+      .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
+      .leftJoin(classModel, eq(examModel.classId, classModel.id))
+      .where(eq(examGroupModel.id, foundExamGroup.id)),
+  );
 
   // =========================
   // EMPTY CASE
@@ -4544,73 +4236,80 @@ export async function downloadAdmitCardTrackingByExamId(
 
   // ================= FETCH =================
 
-  const result = await db
-    .select({
-      examType: examTypeModel.name,
-      academicYear: academicYearModel.year,
-      session: sessionModel.name,
-      semester: classModel.name,
-      orderType: examModel.orderType,
+  const result = applyExamDisplayIdentityToRows(
+    await db
+      .select({
+        examType: examTypeModel.name,
+        academicYear: academicYearModel.year,
+        session: sessionModel.name,
+        semester: classModel.name,
+        orderType: examModel.orderType,
 
-      name: userModel.name,
-      uid: studentModel.uid,
-      registrationNumber: studentModel.registrationNumber,
-      rollNumber: studentModel.rollNumber,
-      email: userModel.email,
-      phone: userModel.phone,
-      whatsapp_number: userModel.whatsappNumber,
-      program_course: programCourseModel.name,
-      shift: shiftModel.name,
-      floor: floorModel.name,
-      room: roomModel.name,
-      seat: examCandidateModel.seatNumber,
-      foilNumber: examCandidateModel.foilNumber,
+        name: userModel.name,
+        uid: studentModel.uid,
+        previousUid: studentModel.previousUid,
+        registrationNumber: studentModel.registrationNumber,
+        rollNumber: studentModel.rollNumber,
+        email: userModel.email,
+        promotionStartDate: promotionModel.startDate,
+        promotionEndDate: promotionModel.endDate,
+        promotionIsDeprecated: promotionModel.isDeprecated,
+        examCommencementDate: examGroupModel.examCommencementDate,
+        phone: userModel.phone,
+        whatsapp_number: userModel.whatsappNumber,
+        program_course: programCourseModel.name,
+        shift: shiftModel.name,
+        floor: floorModel.name,
+        room: roomModel.name,
+        seat: examCandidateModel.seatNumber,
+        foilNumber: examCandidateModel.foilNumber,
 
-      paper: paperModel.name,
-      paper_code: paperModel.code,
+        paper: paperModel.name,
+        paper_code: paperModel.code,
 
-      admitCardDownloadCount: examCandidateModel.admitCardDownloadCount,
-      admitCardDownloadedAt: examCandidateModel.admitCardDownloadedAt,
-    })
-    .from(examCandidateModel)
-    .leftJoin(
-      examRoomModel,
-      eq(examRoomModel.id, examCandidateModel.examRoomId),
-    )
-    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
-    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+        admitCardDownloadCount: examCandidateModel.admitCardDownloadCount,
+        admitCardDownloadedAt: examCandidateModel.admitCardDownloadedAt,
+      })
+      .from(examCandidateModel)
+      .leftJoin(
+        examRoomModel,
+        eq(examRoomModel.id, examCandidateModel.examRoomId),
+      )
+      .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+      .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
 
-    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
-    .leftJoin(
-      examSubjectModel,
-      and(
-        eq(examSubjectModel.id, examCandidateModel.examSubjectId),
-        eq(examSubjectModel.examId, examModel.id),
-      ),
-    )
-    .leftJoin(
-      academicYearModel,
-      eq(academicYearModel.id, examModel.academicYearId),
-    )
-    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
-    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
-    .leftJoin(
-      promotionModel,
-      eq(promotionModel.id, examCandidateModel.promotionId),
-    )
+      .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+      .leftJoin(
+        examSubjectModel,
+        and(
+          eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+          eq(examSubjectModel.examId, examModel.id),
+        ),
+      )
+      .leftJoin(
+        academicYearModel,
+        eq(academicYearModel.id, examModel.academicYearId),
+      )
+      .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
+      .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+      .leftJoin(
+        promotionModel,
+        eq(promotionModel.id, examCandidateModel.promotionId),
+      )
 
-    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      programCourseModel,
-      eq(programCourseModel.id, promotionModel.programCourseId),
-    )
-    .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
-    .leftJoin(classModel, eq(examModel.classId, classModel.id))
-    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
-    .where(eq(examGroupModel.id, foundExamGroup.id))
-    .orderBy(asc(examSubjectModel.id));
+      .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+      .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+      .leftJoin(
+        programCourseModel,
+        eq(programCourseModel.id, promotionModel.programCourseId),
+      )
+      .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
+      .leftJoin(classModel, eq(examModel.classId, classModel.id))
+      .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+      .where(eq(examGroupModel.id, foundExamGroup.id))
+      .orderBy(asc(examSubjectModel.id)),
+  );
 
   if (!result.length) {
     throw new Error("No exam candidates found");
@@ -4816,61 +4515,68 @@ export async function downloadSingleAdmitCard(
     throw new Error("Exam group not found");
   }
 
-  const result = await db
-    .select({
-      semester: classModel.name,
-      examType: examTypeModel.name,
-      session: sessionModel.name,
-      name: userModel.name,
-      cuRollNumber: studentModel.rollNumber,
-      cuRegistrationNumber: studentModel.registrationNumber,
-      uid: studentModel.uid,
-      phone: userModel.phone,
-      shiftName: shiftModel.name,
-      examStartDate: examSubjectModel.startTime,
-      examEndDate: examSubjectModel.endTime,
-      seatNo: examCandidateModel.seatNumber,
-      roomName: roomModel.name,
-      subjectName: paperModel.name,
-      subjectCode: paperModel.code,
-      programCourse: programCourseModel.name,
-      paperId: examCandidateModel.paperId,
-      paperComponentId: examSubjectModel.paperComponentId,
-    })
-    .from(examCandidateModel)
-    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
-    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
-    .leftJoin(
-      examSubjectModel,
-      eq(examSubjectModel.id, examCandidateModel.examSubjectId),
-    )
-    .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
-    .leftJoin(
-      examRoomModel,
-      eq(examRoomModel.id, examCandidateModel.examRoomId),
-    )
-    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
-    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
-    .leftJoin(
-      promotionModel,
-      eq(promotionModel.id, examCandidateModel.promotionId),
-    )
-    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
-    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
-    .leftJoin(
-      programCourseModel,
-      eq(programCourseModel.id, promotionModel.programCourseId),
-    )
-    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .where(
-      and(
-        eq(examGroupModel.id, foundExamGroup!.id),
-        eq(studentModel.id, studentId),
-      ),
-    )
-    .orderBy(asc(examSubjectModel.startTime), asc(examSubjectModel.id));
+  const result = applyExamDisplayIdentityToRows(
+    await db
+      .select({
+        semester: classModel.name,
+        examType: examTypeModel.name,
+        session: sessionModel.name,
+        name: userModel.name,
+        cuRollNumber: studentModel.rollNumber,
+        cuRegistrationNumber: studentModel.registrationNumber,
+        uid: studentModel.uid,
+        previousUid: studentModel.previousUid,
+        phone: userModel.phone,
+        shiftName: shiftModel.name,
+        promotionStartDate: promotionModel.startDate,
+        promotionEndDate: promotionModel.endDate,
+        promotionIsDeprecated: promotionModel.isDeprecated,
+        examCommencementDate: examGroupModel.examCommencementDate,
+        examStartDate: examSubjectModel.startTime,
+        examEndDate: examSubjectModel.endTime,
+        seatNo: examCandidateModel.seatNumber,
+        roomName: roomModel.name,
+        subjectName: paperModel.name,
+        subjectCode: paperModel.code,
+        programCourse: programCourseModel.name,
+        paperId: examCandidateModel.paperId,
+        paperComponentId: examSubjectModel.paperComponentId,
+      })
+      .from(examCandidateModel)
+      .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+      .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
+      .leftJoin(
+        examSubjectModel,
+        eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+      )
+      .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+      .leftJoin(
+        examRoomModel,
+        eq(examRoomModel.id, examCandidateModel.examRoomId),
+      )
+      .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+      .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+      .leftJoin(
+        promotionModel,
+        eq(promotionModel.id, examCandidateModel.promotionId),
+      )
+      .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+      .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+      .leftJoin(
+        programCourseModel,
+        eq(programCourseModel.id, promotionModel.programCourseId),
+      )
+      .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+      .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+      .where(
+        and(
+          eq(examGroupModel.id, foundExamGroup!.id),
+          eq(studentModel.id, studentId),
+        ),
+      )
+      .orderBy(asc(examSubjectModel.startTime), asc(examSubjectModel.id)),
+  );
 
   if (!result.length) {
     throw new Error("No admit card found for this student");
@@ -5408,9 +5114,14 @@ export async function fetchExamCandidatesByExamId(examId: number) {
   const result = await db
     .select({
       uid: studentModel.uid,
+      previousUid: studentModel.previousUid,
       userId: studentModel.userId,
       userName: userModel.name,
       userEmail: userModel.email,
+      promotionStartDate: promotionModel.startDate,
+      promotionEndDate: promotionModel.endDate,
+      promotionIsDeprecated: promotionModel.isDeprecated,
+      examCommencementDate: examGroupModel.examCommencementDate,
       semester: classModel.name,
       examType: examTypeModel.name,
       session: sessionModel.name,
@@ -5430,6 +5141,7 @@ export async function fetchExamCandidatesByExamId(examId: number) {
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
     .leftJoin(
       examSubjectModel,
       eq(examSubjectModel.id, examCandidateModel.examSubjectId),
@@ -5457,7 +5169,7 @@ export async function fetchExamCandidatesByExamId(examId: number) {
     .where(eq(examCandidateModel.examId, examId))
     .orderBy(asc(examSubjectModel.startTime), asc(examSubjectModel.id));
 
-  return result;
+  return applyExamDisplayIdentityToRows(result);
 }
 
 /**
@@ -6271,60 +5983,66 @@ export async function downloadAttendanceSheetsByExamId(
     throw new Error("Exam group not found");
   }
 
-  const result = await db
-    .select({
-      examId: examModel.id,
-      examType: examTypeModel.name,
-      groupName: examGroupModel.name,
-      examCommencementDate: examGroupModel.examCommencementDate,
-      class: classModel.name,
-      academicYear: academicYearModel.year,
-      name: userModel.name,
-      uid: studentModel.uid,
-      rollNumber: studentModel.rollNumber,
-      paperName: paperModel.name,
-      paperCode: paperModel.code,
-      floor: floorModel.name,
-      orderType: examModel.orderType,
-      room: roomModel.name,
-      seatNumber: examCandidateModel.seatNumber,
-      examStartTime: examSubjectModel.startTime,
-      examEndTime: examSubjectModel.endTime,
-    })
-    .from(examCandidateModel)
-    .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
-    .leftJoin(examGroupModel, eq(examModel.examGroupId, examGroupModel.id))
-    .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
-    .leftJoin(classModel, eq(classModel.id, examModel.classId))
-    .leftJoin(
-      academicYearModel,
-      eq(academicYearModel.id, examModel.academicYearId),
-    )
-    .leftJoin(
-      examRoomModel,
-      eq(examCandidateModel.examRoomId, examRoomModel.id),
-    )
-    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
-    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
-    .leftJoin(
-      promotionModel,
-      eq(promotionModel.id, examCandidateModel.promotionId),
-    )
-    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
-    .leftJoin(
-      examSubjectModel,
-      eq(examSubjectModel.id, examCandidateModel.examSubjectId),
-    )
-    .where(eq(examGroupModel.id, foundExamGroup!.id))
-    .orderBy(
-      asc(examGroupModel.name),
-      asc(examSubjectModel.startTime),
-      asc(examCandidateModel.seatNumber),
-      asc(floorModel.name),
-      asc(roomModel.name),
-    );
+  const result = applyExamDisplayIdentityToRows(
+    await db
+      .select({
+        examId: examModel.id,
+        examType: examTypeModel.name,
+        groupName: examGroupModel.name,
+        examCommencementDate: examGroupModel.examCommencementDate,
+        class: classModel.name,
+        academicYear: academicYearModel.year,
+        name: userModel.name,
+        uid: studentModel.uid,
+        previousUid: studentModel.previousUid,
+        rollNumber: studentModel.rollNumber,
+        promotionStartDate: promotionModel.startDate,
+        promotionEndDate: promotionModel.endDate,
+        promotionIsDeprecated: promotionModel.isDeprecated,
+        paperName: paperModel.name,
+        paperCode: paperModel.code,
+        floor: floorModel.name,
+        orderType: examModel.orderType,
+        room: roomModel.name,
+        seatNumber: examCandidateModel.seatNumber,
+        examStartTime: examSubjectModel.startTime,
+        examEndTime: examSubjectModel.endTime,
+      })
+      .from(examCandidateModel)
+      .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
+      .leftJoin(examGroupModel, eq(examModel.examGroupId, examGroupModel.id))
+      .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+      .leftJoin(classModel, eq(classModel.id, examModel.classId))
+      .leftJoin(
+        academicYearModel,
+        eq(academicYearModel.id, examModel.academicYearId),
+      )
+      .leftJoin(
+        examRoomModel,
+        eq(examCandidateModel.examRoomId, examRoomModel.id),
+      )
+      .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+      .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+      .leftJoin(
+        promotionModel,
+        eq(promotionModel.id, examCandidateModel.promotionId),
+      )
+      .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+      .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+      .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+      .leftJoin(
+        examSubjectModel,
+        eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+      )
+      .where(eq(examGroupModel.id, foundExamGroup!.id))
+      .orderBy(
+        asc(examGroupModel.name),
+        asc(examSubjectModel.startTime),
+        asc(examCandidateModel.seatNumber),
+        asc(floorModel.name),
+        asc(roomModel.name),
+      ),
+  );
 
   const zip = new JSZip();
 

@@ -2,56 +2,22 @@ import "dotenv/config";
 import pg, { PoolClient } from "pg";
 import { createPool, type Pool as MySqlPool } from "mysql2/promise"; // For MySQL (old DB)
 import { drizzle } from "drizzle-orm/node-postgres";
-import { createDefaultExamComponents } from "@/features/course-design/services/exam-component.service.js";
-import { initializeClasses } from "@/features/academics/services/class.service.js";
-import { loadDefaultSettings } from "@/features/apps/service/settings.service.js";
-// import { loadDegree } from "@/features/resources/services/degree.service.js";
-// import { loadCategory } from "@/features/resources/services/category.service.js";
-// import { loadReligions } from "@/features/resources/services/religion.service.js";
-// import { loadLanguages } from "@/features/resources/services/languageMedium.service.js";
-// import { loadBloodGroups } from "@/features/resources/services/bloodGroup.service.js";
-// import { loadOccupations } from "@/features/resources/services/occupation.service.js";
-// import { loadQualifications } from "@/features/resources/services/qualification.service.js";
-// import { loadNationalities } from "@/features/resources/services/nationality.service.js";
-// import { loadShifts } from "@/features/academics/services/shift.service.js";
-import { loadAffiliation } from "@/features/course-design/services/affiliation.service";
-import { loadCourseLevel } from "@/features/course-design/services/course-level.service";
-import { loadCourseType } from "@/features/course-design/services/course-type.service";
-import { loadRegulationType } from "@/features/course-design/services/regulation-type.service";
-// import { loadOldSubjects } from "@/features/course-design/services/subject.service";
-// import { loadOldCourses } from "@/features/course-design/services/course.service";
-// import { loadOldSubjectTypes } from "@/features/course-design/services/subject-type.service";
-import { loadDefaultSubjectSelectionMetas } from "@/features/subject-selection/services/subject-selection-meta.service";
-import { loadDefaultDocuments } from "@/features/academics/services/document.service";
-// import {
-//   loadAllCity,
-//   loadAllCountry,
-//   loadAllPoliceStation,
-//   loadAllPostOffice,
-//   loadAllState,
-// } from "@/features/user/services/old-student.service";
-import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.service";
-// import { loadDefaultOtpNotificationMaster } from "@/features/auth/services/otp.service";
-// import { CuRegistrationExcelService } from "@/services/cu-registration-excel.service.js";
-// import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/cu-registration-correction-request.service";
-// import { exportStaffDataToExcel } from "@/features/user/services/tmp-service";
-// import { loadAllStaff } from "@/features/user/services/staff.service";
-// import { getIrpNotFoundCourseDesigns } from "@/features/exams/services/exam-schedule.service";
+
 import { createLogger } from "@/config/logger.js";
-import { loadDefaultUserTypes } from "@/features/administration/services/user-type.service";
-import { loadDefaultUserStatusMasters } from "@/features/administration/services/user-status-master.service";
-import { loadDefaultAppModules } from "@/features/administration/services/app-module.service";
-import { loadDefaultCertificateMasters } from "@/features/academics/services/default-certificate-master-loader.service.js";
-import { loadDefaultPromotionData } from "@/features/batches/default-promotion-data-loader.service.js";
-import { loadStudentFees } from "@/features/fees/services/legacy-fees-data.service";
-import { defaultSetDateOfJoining } from "@/features/user/defaut-set-date-of-joining";
+import { loadLibrary } from "@/features/library/old-irp-data";
 import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
-import { loadLibrary, loadLibraryUsers } from "@/features/library/old-irp-data";
+
 const log = createLogger("db");
-// Create a connection pool
+// Create a connection pool. `max` is env-tunable because the concurrent
+// legacy-student import runs several workers, each briefly holding up to two
+// connections (an advisory-lock tx + autocommit statements).
 export const pool = new pg.Pool({
   options: "-c timezone=Asia/Kolkata",
   connectionString: process.env.DATABASE_URL,
+  // Sized for IMPORT_CONCURRENCY=35 import workers (each briefly holds up to
+  // 2 connections during advisory-lock sections) plus normal request traffic.
+  // `max` is a cap, not a pre-allocation; idle connections are reaped.
+  max: Math.max(1, Number(process.env.PG_POOL_MAX) || 70),
 });
 
 // Initialize Drizzle ORM with the pool
@@ -67,12 +33,13 @@ export const connectToDatabase = async () => {
   try {
     const client: PoolClient = await pool.connect(); // Test the connection ✔
     // console.log(process.env.DATABASE_URL);
-    log.info("Connected to the database successfully 🎉");
+    log.info("Connected to the database successfully 🎉 ");
     client.release(); // Release the connection back to the pool
 
-    createDefaultExamComponents();
-    initializeClasses();
-    loadDefaultSettings();
+    // createDefaultExamComponents();
+    // initializeClasses();
+    initializeAcademicActivities();
+    // loadDefaultSettings();
     // loadDegree();
     // loadShifts()
     // loadCategory();
@@ -82,33 +49,33 @@ export const connectToDatabase = async () => {
     // loadOccupations();
     // loadQualifications();
     // loadNationalities();
-    await loadAffiliation();
-    loadCourseLevel();
+    // await loadAffiliation();
+    // loadCourseLevel();
     // loadAllAddress();
     // loadAllPostOffice();
     // loadAllPoliceStation();
-    loadCourseType();
-    loadRegulationType();
-    loadDefaultOtpNotificationMasters();
-    loadDefaultDocuments();
+    // loadCourseType();
+    // loadRegulationType();
+    // loadDefaultOtpNotificationMasters();
+    // loadDefaultDocuments();
     // Clear existing duplicates and load fresh metas (only in development)
 
-    loadDefaultSubjectSelectionMetas();
+    // loadDefaultSubjectSelectionMetas();
 
     // loadDefaultUserTypes();
     // loadDefaultUserStatusMasters();
-    loadDefaultAppModules();
-    loadDefaultCertificateMasters().catch((e) => {
-      log.warn("Default certificate master load failed", { error: e });
-    });
-    loadDefaultPromotionData().catch((e) => {
-      log.warn("Default promotion data load failed", { error: e });
-    });
-    loadStudentFees();
-    loadLibrary();
-    initializeAcademicActivities();
-    defaultSetDateOfJoining();
-    loadLibraryUsers();
+    // loadDefaultAppModules();
+    // loadDefaultCertificateMasters().catch((e) => {
+    //   log.warn("Default certificate master load failed", { error: e });
+    // });
+    // loadDefaultPromotionData().catch((e) => {
+    //   log.warn("Default promotion data load failed", { error: e });
+    // });
+    // loadStudentFees();
+    // loadLibrary();
+    // initializeAcademicActivities();
+    // defaultSetDateOfJoining();
+    // loadLibraryUsers();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
@@ -136,41 +103,6 @@ export const connectToDatabase = async () => {
   }
 };
 
-// export const loadAllAddress = () => {
-//     loadAllCountry()
-//         .then(() => {
-//             console.log("All countries loaded successfully.");
-//             loadAllState()
-//                 .then(() => {
-//                     console.log("All states loaded successfully.");
-//                     loadAllCity()
-//                         .then(() => {
-//                             console.log("All cities loaded successfully.");
-//                             loadAllDistrict()
-//                                 .then(() => {
-//                                     console.log("All districts loaded successfully.");
-//                                     loadAllPostOffice()
-//                                         .then(() => {
-//                                             console.log("All post offices loaded successfully.");
-//                                             loadAllPoliceStation()
-//                                                 .then(() => {
-//                                                     console.log("All police stations loaded successfully.");
-//                                                 });
-//                                         });
-//                                 });
-//                         });
-//                 });
-//         });
-// };
-
-// MySQL (old DB)
-// console.log(
-//     process.env.OLD_DB_HOST!,
-//     parseInt(process.env.OLD_DB_PORT!, 10),
-//     process.env.OLD_DB_USER!,
-//     process.env.OLD_DB_PASSWORD!,
-//     process.env.OLD_DB_NAME!
-// )
 createLogger("mysql");
 export const mysqlConnection: MySqlPool = createPool({
   host: process.env.OLD_DB_HOST!,
@@ -179,8 +111,12 @@ export const mysqlConnection: MySqlPool = createPool({
   password: process.env.OLD_DB_PASSWORD!,
   database: process.env.OLD_DB_NAME!,
   waitForConnections: true,
-  connectionLimit: 10,
+  // Sized so IMPORT_CONCURRENCY=35 workers (~1 query in flight each) never
+  // queue behind each other, with headroom for other legacy readers.
+  connectionLimit: Math.max(1, Number(process.env.OLD_DB_POOL_LIMIT) || 45),
   queueLimit: 0,
+  // Remote legacy host can take 8s+ to handshake; default of 10s is too tight.
+  connectTimeout: 60_000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
 });
@@ -200,10 +136,8 @@ export const connectToMySQL = async () => {
       "SELECT COUNT(*) AS totalRows FROM community",
     ); // Simple query to test the connection
     // console.log(rows);
-    // exportStaffDataToExcel();
 
     log.info("Connected to MySQL successfully 🎉");
-    // getIrpNotFoundCourseDesigns();
   } catch (error) {
     log.error("Connection failed ⚠", { error });
     // process.exit(1); // Exit the application if the database connection fails

@@ -22,8 +22,7 @@ import {
 import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "../ui/skeleton";
-
-const profileImageUrl = import.meta.env.VITE_STUDENT_PROFILE_URL;
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
 export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
@@ -50,7 +49,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
       };
 
       const bgColor = stringToColor(name || "");
-      const avatar = `${profileImageUrl}/Student_Image_${uid}.jpg`;
+      const avatar = studentAvatarUrl(uid) ?? "";
 
       return (
         <div className="flex items-center justify-start">

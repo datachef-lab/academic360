@@ -15,18 +15,29 @@ import {
   updateFamilyMemberTitlesController,
   bulkUpdateFamilyMemberTitlesController,
   importStudentsFromExcelController,
-  checkExistingStudentUidsController,
+  precheckImportStudentsController,
+  backfillStudentQuotaTypesController,
   exportStudentDetailedReportController,
   exportStudentAcademicSubjectsReportController,
   downloadStudentImagesController,
   exportEnrolmentMasterReportController,
+  changeStudentShiftController,
+  changeStudentShiftPreviewController,
+  updateActivePromotionFieldsController,
 } from "../controllers/student.controller.js";
 
 import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
 import { updateApaarIdsFromExcel } from "../controllers/student-apaar-update.controller.js";
 import { updateCuRollAndRegistrationFromExcel } from "../controllers/student-cu-roll-reg-update.controller.js";
+import { getStudentAvatarController } from "../controllers/student-avatar.controller.js";
 
 const router = express.Router();
+
+// Publicly resolvable: the avatar resolver itself only ever returns the same
+// bytes you'd get from the existing public besc.academic360.app image URL.
+// Browsers cannot attach a JWT to <img> tags, so this must sit before the
+// verifyJWT guard.
+router.get("/uid/:uid/avatar", getStudentAvatarController);
 
 router.use(verifyJWT);
 
@@ -52,10 +63,12 @@ router.get("/query", (req: Request, res: Response, next: NextFunction) => {
 
 router.put("/", updateStudent);
 router.put("/:id/status", updateStudentStatus);
-
-// POST /api/students/uids/check-existing
-// Check if any of the given UIDs already exist (prevents importing/updating existing students)
-router.post("/uids/check-existing", checkExistingStudentUidsController);
+router.get("/:id/shift-change/preview", changeStudentShiftPreviewController);
+router.post("/:id/shift-change", changeStudentShiftController);
+router.patch(
+  "/:id/active-promotion-fields",
+  updateActivePromotionFieldsController,
+);
 
 // POST /api/students/update-apaar-ids
 // Upload Excel file and update APAAR IDs for students
@@ -77,6 +90,14 @@ router.post(
   bulkUpdateFamilyMemberTitlesController,
 );
 
+// POST /api/students/import-legacy-students/precheck
+// Read-only: report which UIDs in the Excel already exist vs are new
+router.post(
+  "/import-legacy-students/precheck",
+  uploadMiddleware,
+  precheckImportStudentsController,
+);
+
 // POST /api/students/import-legacy-students
 // Upload Excel file with a UID column and import/process legacy students
 router.post(
@@ -84,6 +105,10 @@ router.post(
   uploadMiddleware,
   importStudentsFromExcelController,
 );
+
+// POST /api/students/backfill-quota-types
+// Backfill quota type for already-imported students whose quotaTypeId is unset
+router.post("/backfill-quota-types", backfillStudentQuotaTypesController);
 
 // PUT /api/students/:uid/family-titles
 // Update family member titles (father, mother, guardian) for a student

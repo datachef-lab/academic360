@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AcademicYearSelector } from "@/components/academic-year/AcademicYearSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +62,7 @@ import type { ProgramCourse, SubjectType } from "@repo/db/index";
 import { toast as sonnerToast } from "sonner";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 // import axiosInstance from "@/utils/api";
 
 // UI shape derived from backend DTOs
@@ -162,6 +164,7 @@ export default function AlternativeSubjectsPage() {
           page: currentPage,
           pageSize: itemsPerPage,
           search: searchTerm || undefined,
+          academicYearId: currentAcademicYear?.id,
           programCourse:
             selectedProgramCourse && selectedProgramCourse !== "all"
               ? selectedProgramCourse
@@ -221,7 +224,15 @@ export default function AlternativeSubjectsPage() {
     return () => {
       isMounted = false;
     };
-  }, [isReady, accessToken, currentPage, itemsPerPage, searchTerm, selectedProgramCourse]);
+  }, [
+    isReady,
+    accessToken,
+    currentPage,
+    itemsPerPage,
+    searchTerm,
+    selectedProgramCourse,
+    currentAcademicYear?.id,
+  ]);
 
   // Server-side pagination state (moved above)
 
@@ -351,6 +362,7 @@ export default function AlternativeSubjectsPage() {
         page: currentPage,
         pageSize: itemsPerPage,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -404,6 +416,7 @@ export default function AlternativeSubjectsPage() {
     setEditCategory(grouping.subjectCategory ?? "");
     setEditTargetSubject(targetToken);
     setEditSelectedAlternatives(altTokens);
+    setEditIsActive(grouping.isActive ?? true);
     setEditOriginal({
       pc: grouping.programCourses[0] ?? "",
       cat: grouping.subjectCategory ?? "",
@@ -446,6 +459,7 @@ export default function AlternativeSubjectsPage() {
         page: 1,
         pageSize: 1000,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -492,6 +506,8 @@ export default function AlternativeSubjectsPage() {
           continue;
         }
         const payload: CreateRelatedSubjectMainInput = {
+          academicYear:
+            currentAcademicYear?.id != null ? { id: currentAcademicYear.id } : undefined,
           programCourse: { id: programCourseId },
           subjectType: { id: subjectTypeId },
           boardSubjectName: { id: Number(row.targetedSubject.split("::")[0]) },
@@ -530,6 +546,7 @@ export default function AlternativeSubjectsPage() {
         page: 1,
         pageSize: itemsPerPage,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -567,6 +584,7 @@ export default function AlternativeSubjectsPage() {
         page: 1,
         pageSize: 1000,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -622,6 +640,7 @@ export default function AlternativeSubjectsPage() {
         programCourse: { id: programCourseId },
         subjectType: { id: subjectTypeId },
         boardSubjectName: { id: targetId },
+        isActive: editIsActive,
         relatedSubjectSubs: desiredSubsDto,
       };
       await subjectSelectionApi.updateRelatedSubjectMain(dto.id || 0, updatePayload);
@@ -630,6 +649,7 @@ export default function AlternativeSubjectsPage() {
         page: currentPage,
         pageSize: itemsPerPage,
         search: searchTerm || undefined,
+        academicYearId: currentAcademicYear?.id,
         programCourse:
           selectedProgramCourse && selectedProgramCourse !== "all"
             ? selectedProgramCourse
@@ -659,6 +679,33 @@ export default function AlternativeSubjectsPage() {
       setSaving(false);
     }
   };
+
+  useResourceRoom("subject-selection/related-subject-mains", async () => {
+    const paged = await subjectSelectionApi.listRelatedSubjectMainsPaginated({
+      page: currentPage,
+      pageSize: itemsPerPage,
+      search: searchTerm || undefined,
+      academicYearId: currentAcademicYear?.id,
+      programCourse:
+        selectedProgramCourse && selectedProgramCourse !== "all"
+          ? selectedProgramCourse
+          : undefined,
+    });
+    const data = paged.content as RelatedSubjectMainDto[];
+    const mapped: UIGrouping[] = data.map((dto) => ({
+      id: dto.id || 0,
+      programCourses: [dto.programCourse?.name || ""],
+      subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+      subjects: [
+        dto.boardSubjectName?.name || "",
+        ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+      ],
+      isActive: dto.isActive ?? true,
+    }));
+    setGroupings(mapped);
+    setTotalItems(paged.totalElements ?? 0);
+    setTotalPages(paged.totalPages ?? 1);
+  });
 
   return (
     <div className="h-full flex flex-col">
@@ -692,6 +739,7 @@ export default function AlternativeSubjectsPage() {
       <div className="flex-shrink-0 px-4 pb-4">
         <div className="bg-background p-4 border border-gray-200 rounded-lg flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
+            <AcademicYearSelector showLabel={false} className="w-56" />
             <Input
               placeholder="Search major or related subjects..."
               className="w-64"

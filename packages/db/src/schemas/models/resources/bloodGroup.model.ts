@@ -4,12 +4,15 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 
 export const bloodGroupModel = pgTable("blood_group", {
     id: serial().primaryKey(),
-    legacyBloodGroupId: integer(),
-    type: varchar({ length: 255 }).notNull().unique(),
-    sequence: integer().unique(),
-    isActive: boolean().default(true),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    legacyBloodGroupId: integer("legacy_blood_group_id"),
+    type: varchar("type", { length: 255 }).notNull().unique(),
+    sequence: integer("sequence").unique(),
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+        .notNull()
+        .defaultNow()
+        .$onUpdate(() => new Date()),
 });
 
 export const createBloodGroupSchema = createInsertSchema(bloodGroupModel);

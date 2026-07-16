@@ -1,0 +1,817 @@
+[
+  {
+    "id": 1,
+    "name": "Merit List",
+    "template": "merit",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Application No.",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Course",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Session",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Last date of payment",
+        "sequence": 5,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Fee Reminder",
+    "template": "enroldue",
+    "fields": [
+      {
+        "name": "Semester",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Student Name",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Exam Date",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Class Commencement",
+    "template": "Class Commencement Alert – Semester I (2025-26)",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Date of commencement",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "UID",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Section",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Class Roll No.",
+        "sequence": 5,
+        "flag": true
+      },
+      {
+        "name": "Room No.",
+        "sequence": 6,
+        "flag": true
+      },
+      {
+        "name": "Floor No",
+        "sequence": 7,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Document Pending",
+    "template": "Completion of Pending Process",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Application No.",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Course",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Session",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Last date to complete the process",
+        "sequence": 5,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "App fee alert",
+    "template": "appfeeremind",
+    "fields": [
+      {
+        "name": "Applicant Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Application No.",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Course",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Gujarati Slot Allotment",
+    "template": "gujslot",
+    "fields": [
+      {
+        "name": "Applicant Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Date",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Time",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Venue",
+        "sequence": 4,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Exam Form Fill-up",
+    "template": "examffpend",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Semester",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Completed Till Date",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Extension Date",
+        "sequence": 4,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Admission Fee Due",
+    "template": "admfeedue",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Date",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Application No.",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Course",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Session",
+        "sequence": 5,
+        "flag": true
+      },
+      {
+        "name": "Last Date to Pay Fees",
+        "sequence": 6,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Admission Document Upload (removed soon)",
+    "template": "admdocnu",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Application No.",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Course",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Session",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Last Date",
+        "sequence": 5,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Sports Admission Committee Meeting",
+    "template": "sqadm",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Date",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Time",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "Admission Document Upload [New]",
+    "template": "admdocnoup",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Application No.",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Course",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Session",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Last date",
+        "sequence": 5,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "Course Add Recommendation",
+    "template": "courseadd",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Applied Course",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Suggested Course",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "Admission Extension Multicourse",
+    "template": "admextmulti",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Extended Date",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Course-1",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Course-2",
+        "sequence": 4,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "Exam Reschedule Final Notice",
+    "template": "exmresch",
+    "fields": [
+      {
+        "name": "UID",
+        "sequence": 1,
+        "flag": false
+      },
+      {
+        "name": "Name",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Exam 1",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Exam 2",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Schd 1",
+        "sequence": 5,
+        "flag": true
+      },
+      {
+        "name": "Schd 2",
+        "sequence": 6,
+        "flag": true
+      },
+      {
+        "name": "Date",
+        "sequence": 7,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "ID Card & Orientation Schedule\n\n",
+    "template": "idcardsch",
+    "fields": [
+      {
+        "name": "Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "ID Date",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "ID Time",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "ID Venue",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Orientation Date",
+        "sequence": 5,
+        "flag": false
+      },
+      {
+        "name": "Orientation Time",
+        "sequence": 6,
+        "flag": false
+      },
+      {
+        "name": "Orientation Venue",
+        "sequence": 7,
+        "flag": false
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "New Student Welcome Message",
+    "template": "studet",
+    "fields": [
+      {
+        "name": "Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Course\t",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Shift",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "UID",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Section",
+        "sequence": 5,
+        "flag": true
+      },
+      {
+        "name": "Roll No.",
+        "sequence": 6,
+        "flag": true
+      },
+      {
+        "name": "Room No.",
+        "sequence": 7,
+        "flag": true
+      },
+      {
+        "name": "Floor",
+        "sequence": 8,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "No Admit Card Message",
+    "template": "noadmit",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "APAAR ID Submission Reminder",
+    "template": "abcid",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Recent Update Date",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Google Form Till Date",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "Institutional Email Access Reminder",
+    "template": "instemail",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Recent Record Updated Date",
+        "sequence": 2,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "name": "Subject Selection Alert",
+    "template": "subselstr_hr",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Last Date to Complete the Process",
+        "sequence": 2,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "name": "Subject Selection Reminder",
+    "template": "subselremind",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Last Date to Complete:",
+        "sequence": 2,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "name": "Part 1 - Calcutta University Registration",
+    "template": "curegstrt",
+    "fields": [
+      {
+        "name": "Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Date",
+        "sequence": 2,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "name": "CU Registration Alert Part 2",
+    "template": "curegp2",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Date",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Time",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "name": "Graduation Felicitation Reminder",
+    "template": "gfcdday",
+    "fields": [
+      {
+        "name": "NAME",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "STATION NUMBER",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "SEAT NUMBER",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "name": "Important Update on Minor Subjects (Sem V & VI)",
+    "template": "babscmn",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Minor 1",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Minor 2",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 26,
+    "name": "Semester Enrollment Fee Reminder",
+    "template": "enrolfeedue",
+    "fields": [
+      {
+        "name": "Semester",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Student Name",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "IA/TU Examination Date",
+        "sequence": 3,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 27,
+    "name": "Change In Away Centre",
+    "template": "changecent",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Program Course",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Previous Examination Centre",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "New Examination Centre",
+        "sequence": 4,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 28,
+    "name": "End Semester Examination Form Fill-up Pending.",
+    "template": "ffdue",
+    "fields": [
+      {
+        "name": "Student Name",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Semester",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Date",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Last Date",
+        "sequence": 4,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 29,
+    "name": "Merit List Selection Notification",
+    "template": "meritu",
+    "fields": [
+      {
+        "name": "Student",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Application No.",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Program Course",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Session",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Fee Payment Deadline",
+        "sequence": 5,
+        "flag": true
+      }
+    ]
+  },
+  {
+    "id": 30,
+    "name": "Merit List Expected Date Announcement",
+    "template": "mlexpdate",
+    "fields": [
+      {
+        "name": "Student",
+        "sequence": 1,
+        "flag": true
+      },
+      {
+        "name": "Merit List Round",
+        "sequence": 2,
+        "flag": true
+      },
+      {
+        "name": "Expected Date",
+        "sequence": 3,
+        "flag": true
+      },
+      {
+        "name": "Expected Time",
+        "sequence": 4,
+        "flag": true
+      },
+      {
+        "name": "Last Date For Fee Payment",
+        "sequence": 5,
+        "flag": true
+      }
+    ]
+  }
+]

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { TabMetricTheme } from "./TabPanel";
 import type { MetricId } from "../data/dashboard-metrics";
 import {
   AlertCircle,
@@ -71,6 +72,26 @@ const CARD_THEME: Record<MetricId, { gradient: string; icon: LucideIcon; ring: s
     icon: Receipt,
     ring: "bg-white/20",
   },
+  today_receipts: {
+    gradient: "from-[#1e3a8a] via-[#2563eb] to-[#60a5fa]",
+    icon: FileText,
+    ring: "bg-white/20",
+  },
+  today_failed_payments: {
+    gradient: "from-[#991b1b] via-[#b91c1c] to-[#dc2626]",
+    icon: XCircle,
+    ring: "bg-white/20",
+  },
+  receipts_issued: {
+    gradient: "from-[#065f46] via-[#0d9488] to-[#14b8a6]",
+    icon: Receipt,
+    ring: "bg-white/20",
+  },
+  challan_only: {
+    gradient: "from-[#92400e] via-[#b45309] to-[#d97706]",
+    icon: FileText,
+    ring: "bg-white/20",
+  },
   fully_paid: {
     gradient: "from-[#15803d] via-[#16a34a] to-[#22c55e]",
     icon: Wallet,
@@ -98,6 +119,11 @@ const CARD_THEME: Record<MetricId, { gradient: string; icon: LucideIcon; ring: s
   },
   cash_collected: {
     gradient: "from-[#b45309] via-[#d97706] to-[#fbbf24]",
+    icon: Banknote,
+    ring: "bg-white/20",
+  },
+  cheque_collected: {
+    gradient: "from-[#854d0e] via-[#a16207] to-[#eab308]",
     icon: Banknote,
     ring: "bg-white/20",
   },
@@ -148,6 +174,40 @@ const CARD_THEME: Record<MetricId, { gradient: string; icon: LucideIcon; ring: s
   },
 };
 
+/** Challans tab — indigo / violet / amber palette (no green KPI cards). */
+const CHALLANS_TAB_THEME: Partial<Record<MetricId, (typeof CARD_THEME)[MetricId]>> = {
+  challans_generated: {
+    gradient: "from-[#3730a3] via-[#4f46e5] to-[#6366f1]",
+    icon: Receipt,
+    ring: "bg-white/20",
+  },
+  challans_pending: {
+    gradient: "from-[#b45309] via-[#d97706] to-[#f59e0b]",
+    icon: FileText,
+    ring: "bg-white/20",
+  },
+  receipts_issued: {
+    gradient: "from-[#5b21b6] via-[#7c3aed] to-[#8b5cf6]",
+    icon: Receipt,
+    ring: "bg-white/20",
+  },
+  fee_collected: {
+    gradient: "from-[#1e3a8a] via-[#2563eb] to-[#3b82f6]",
+    icon: Wallet,
+    ring: "bg-white/20",
+  },
+  today_collected: {
+    gradient: "from-[#312e81] via-[#4338ca] to-[#6366f1]",
+    icon: Calendar,
+    ring: "bg-white/20",
+  },
+  today_challans: {
+    gradient: "from-[#9a3412] via-[#c2410c] to-[#ea580c]",
+    icon: Receipt,
+    ring: "bg-white/20",
+  },
+};
+
 type MetricCardProps = {
   id: MetricId;
   label: string;
@@ -157,6 +217,7 @@ type MetricCardProps = {
   progress?: number;
   className?: string;
   compact?: boolean;
+  theme?: TabMetricTheme;
 };
 
 export function MetricCard({
@@ -168,8 +229,10 @@ export function MetricCard({
   progress,
   className,
   compact,
+  theme: tabTheme,
 }: MetricCardProps) {
-  const theme = CARD_THEME[id];
+  const theme =
+    tabTheme === "challans" && CHALLANS_TAB_THEME[id] ? CHALLANS_TAB_THEME[id]! : CARD_THEME[id];
   const Icon = theme.icon;
   const positive = trend !== undefined && trend >= 0;
 

@@ -11,7 +11,12 @@ const Avatar = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Root
     ref={ref}
-    className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}
+    className={cn(
+      // `no-filter` opts avatar photos out of the global `.text-white img` /
+      // `.text-<color> img` icon-tinting filters (which otherwise invert/grey the photo).
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full no-filter",
+      className,
+    )}
     {...props}
   />
 ));

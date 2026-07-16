@@ -12,7 +12,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "react-router-dom";
 import { getStudentById, fetchStudentByUid } from "@/services/student";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StudentAvatar } from "@/components/student/StudentAvatar";
 import StudentContent from "@/components/student/StudentContent";
 import StudentPanel from "@/components/student/StudentPanel";
 import { Badge } from "@/components/ui/badge";
@@ -223,6 +223,25 @@ export default function StudentPage() {
 
   const [statusOption, setStatusOption] = useState<string>(getInitialStatus());
 
+  // Quota type (admission_quota_types) — editable here, saved with the status form.
+  const { data: quotaTypes } = useQuery({
+    queryKey: ["admission-quota-types"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/api/admission-quota-types");
+      return (res.data?.payload ?? []) as Array<{
+        id: number;
+        name: string;
+        isActive?: boolean;
+      }>;
+    },
+  });
+  const [quotaTypeId, setQuotaTypeId] = useState<string>(
+    data?.quotaTypeId != null ? String(data.quotaTypeId) : "",
+  );
+  useEffect(() => {
+    setQuotaTypeId(data?.quotaTypeId != null ? String(data.quotaTypeId) : "");
+  }, [data?.quotaTypeId]);
+
   // Sync status when userData or data changes
   useEffect(() => {
     console.log("fetched data **", data);
@@ -263,26 +282,18 @@ export default function StudentPage() {
     return (
       <>
         <div className="w-full bg-gradient-to-br from-purple-600 to-violet-500 rounded-t-2xl lg:rounded-t-2xl lg:rounded-tr-none p-3 sm:p-4 flex flex-col items-center">
-          <Avatar className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-white shadow mb-2">
-            <AvatarImage
-              className="object-cover"
-              src={`https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${data?.uid}.jpg`}
-              alt={(() => {
-                const parts = [
-                  data?.personalDetails?.firstName,
-                  data?.personalDetails?.middleName,
-                  data?.personalDetails?.lastName,
-                ].filter(Boolean);
-                return parts.length ? parts.join(" ") : "Student";
-              })()}
-            />
-            <AvatarFallback className="text-lg sm:text-2xl font-bold bg-purple-100 text-purple-600">
-              {(() => {
-                const first = data?.personalDetails?.firstName || "?";
-                return first.charAt(0);
-              })()}
-            </AvatarFallback>
-          </Avatar>
+          <StudentAvatar
+            uid={data?.uid}
+            name={[
+              data?.personalDetails?.firstName,
+              data?.personalDetails?.middleName,
+              data?.personalDetails?.lastName,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            size="xl"
+            className="border-4 border-white shadow mb-2"
+          />
           <div className="text-base sm:text-lg font-bold text-white mb-1 text-center w-full truncate">
             {(() => {
               const parts = [data?.name].filter(Boolean);
@@ -323,7 +334,13 @@ export default function StudentPage() {
             <div className="font-semibold text-gray-500">Section:</div>
             <div>{data?.currentPromotion?.section?.name || "-"}</div>
             <div className="font-semibold text-gray-500">Shift:</div>
-            <div>{data?.currentPromotion?.shift?.name || "-"}</div>
+            <div>
+              {data?.currentPromotion?.shift?.name ? (
+                <span>{data.currentPromotion.shift.name}</span>
+              ) : (
+                "-"
+              )}
+            </div>
             <div className="font-semibold text-gray-500">Email:</div>
             <div>{data?.personalEmail || "-"}</div>
             <div className="font-semibold text-gray-500">DOJ:</div>
@@ -454,6 +471,28 @@ export default function StudentPage() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Quota type */}
+            <div className="space-y-1">
+              <Label htmlFor="quotaType" className="text-xs sm:text-sm">
+                Quota Type
+              </Label>
+              <Select
+                value={quotaTypeId || "none"}
+                onValueChange={(val) => setQuotaTypeId(val === "none" ? "" : val)}
+              >
+                <SelectTrigger id="quotaType">
+                  <SelectValue placeholder="Select quota type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {(quotaTypes ?? []).map((q) => (
+                    <SelectItem key={q.id} value={String(q.id)}>
+                      {q.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {/* Suspended fields (shown when Suspended is selected in dropdown) */}
             <div
               id="suspend-extra"
@@ -558,9 +597,7 @@ export default function StudentPage() {
           </div>
         </div>
         {/* Fixed Save Button at Bottom of Screen */}
-        <div
-          className={`${isMobile ? "sticky" : "sticky lg:fixed"} bottom-0 right-0 w-full lg:w-[20%] bg-white border-t border-gray-200 shadow-lg z-10`}
-        >
+        <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 shadow-lg z-10">
           <div className="p-3 sm:p-4">
             <Button
               className="w-full bg-violet-600 hover:bg-violet-700 text-white"
@@ -737,6 +774,9 @@ export default function StudentPage() {
                     studentPayload.cancelledAdmissionReason = null;
                     studentPayload.cancelledAdmissionAt = null;
                   }
+
+                  // Persist the (optional) quota type along with the status form.
+                  studentPayload.quotaTypeId = quotaTypeId ? Number(quotaTypeId) : null;
 
                   await axiosInstance.put(`/api/students/${studentId}/status`, studentPayload);
 

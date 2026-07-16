@@ -59,9 +59,22 @@ function checkRequiredEnvs() {
       await import("@/workers/email.worker.js");
     const { startWhatsAppWorker, stopWhatsAppWorker } =
       await import("@/workers/whatsapp.worker.js");
-    // Throttle worker start to avoid rapid loops
-    setTimeout(() => startEmailWorker(), 1000);
-    setTimeout(() => startWhatsAppWorker(), 1500);
+    // Worker dispatch is safe to run on every instance (queue-claim.ts uses
+    // FOR UPDATE SKIP LOCKED). Toggle via NOTIFICATION_WORKER_ENABLED; defaults
+    // ON when unset, so only an explicit "false" disables dispatch on a host.
+    const workerEnabled =
+      (process.env.NOTIFICATION_WORKER_ENABLED ?? "true")
+        .toLowerCase()
+        .trim() !== "false";
+    if (workerEnabled) {
+      // Throttle worker start to avoid rapid loops
+      setTimeout(() => startEmailWorker(), 1000);
+      setTimeout(() => startWhatsAppWorker(), 1500);
+    } else {
+      console.log(
+        "[notification-system] NOTIFICATION_WORKER_ENABLED=false — dispatch workers disabled on this instance (HTTP/API still served).",
+      );
+    }
 
     // Graceful shutdown handling
     const gracefulShutdown = () => {

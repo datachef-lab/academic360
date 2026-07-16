@@ -49,6 +49,17 @@ import {
   type JournalListQueryParams,
   type JournalUpsertBody,
 } from "@/services/journal.service";
+import { getPublisherAddress, savePublisherAddress } from "@/services/library-publisher.service";
+import { getAllCountries } from "@/services/country.service";
+import { getStatesByCountry } from "@/services/state.service";
+import { getCitiesByState } from "@/services/city.service";
+import {
+  STICKY_THEAD_CLASS,
+  STICKY_TH_BASE,
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
+import { cn } from "@/lib/utils";
 
 const NONE = "__none__";
 
@@ -74,6 +85,7 @@ type FormState = {
   periodId: string;
   issnNumber: string;
   sizeInCM: string;
+  publishedYear: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -87,6 +99,7 @@ const emptyForm = (): FormState => ({
   periodId: NONE,
   issnNumber: "",
   sizeInCM: "",
+  publishedYear: "",
 });
 
 const detailToForm = (d: JournalDetail): FormState => ({
@@ -100,6 +113,7 @@ const detailToForm = (d: JournalDetail): FormState => ({
   periodId: d.periodId != null ? String(d.periodId) : NONE,
   issnNumber: d.issnNumber ?? "",
   sizeInCM: d.sizeInCM ?? "",
+  publishedYear: d.publishedYear ?? "",
 });
 
 const formToBody = (f: FormState): JournalUpsertBody => ({
@@ -113,6 +127,25 @@ const formToBody = (f: FormState): JournalUpsertBody => ({
   periodId: f.periodId === NONE ? null : Number(f.periodId),
   issnNumber: f.issnNumber.trim() || null,
   sizeInCM: f.sizeInCM.trim() || null,
+  publishedYear: f.publishedYear.trim() || null,
+});
+
+type GeoOption = { id: number; name: string | null };
+type PubAddressForm = {
+  addressLine: string;
+  countryId: string;
+  stateId: string;
+  cityId: string;
+  pincode: string;
+  landmark: string;
+};
+const emptyPubAddress = (): PubAddressForm => ({
+  addressLine: "",
+  countryId: NONE,
+  stateId: NONE,
+  cityId: NONE,
+  pincode: "",
+  landmark: "",
 });
 
 type AppliedJournalFilters = Pick<
@@ -263,6 +296,11 @@ export default function JournalPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [pubAddress, setPubAddress] = useState<PubAddressForm>(emptyPubAddress());
+  const [pubAddressLoading, setPubAddressLoading] = useState(false);
+  const [countries, setCountries] = useState<GeoOption[]>([]);
+  const [states, setStates] = useState<GeoOption[]>([]);
+  const [cities, setCities] = useState<GeoOption[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<AppliedJournalFilters>({});
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDraft, setFilterDraft] = useState<FilterDraft>(emptyFilterDraft());
@@ -468,6 +506,89 @@ export default function JournalPage() {
     void run();
   }, []);
 
+  // Load the selected publisher's address (place) into the editable form.
+  useEffect(() => {
+    if (!dialogOpen) return;
+    if (form.publisherId === NONE) {
+      setPubAddress(emptyPubAddress());
+      return;
+    }
+    const pubId = Number(form.publisherId);
+    let cancelled = false;
+    setPubAddressLoading(true);
+    void getPublisherAddress(pubId)
+      .then((a) => {
+        if (cancelled) return;
+        setPubAddress({
+          addressLine: a.addressLine ?? "",
+          countryId: a.countryId != null ? String(a.countryId) : NONE,
+          stateId: a.stateId != null ? String(a.stateId) : NONE,
+          cityId: a.cityId != null ? String(a.cityId) : NONE,
+          pincode: a.pincode ?? "",
+          landmark: a.landmark ?? "",
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setPubAddress(emptyPubAddress());
+      })
+      .finally(() => {
+        if (!cancelled) setPubAddressLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogOpen, form.publisherId]);
+
+  // Geo dropdown options (cascading: country -> state -> city).
+  useEffect(() => {
+    void getAllCountries()
+      .then((rows) =>
+        setCountries(
+          rows.filter((c) => c.id != null).map((c) => ({ id: c.id as number, name: c.name })),
+        ),
+      )
+      .catch(() => setCountries([]));
+  }, []);
+
+  useEffect(() => {
+    if (pubAddress.countryId === NONE) {
+      setStates([]);
+      return;
+    }
+    let cancelled = false;
+    void getStatesByCountry(Number(pubAddress.countryId))
+      .then((rows) => {
+        if (!cancelled) setStates(rows.map((s) => ({ id: s.id, name: s.name })));
+      })
+      .catch(() => {
+        if (!cancelled) setStates([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pubAddress.countryId]);
+
+  useEffect(() => {
+    if (pubAddress.stateId === NONE) {
+      setCities([]);
+      return;
+    }
+    let cancelled = false;
+    void getCitiesByState(Number(pubAddress.stateId))
+      .then((rows) => {
+        if (!cancelled)
+          setCities(
+            rows.filter((c) => c.id != null).map((c) => ({ id: c.id as number, name: c.name })),
+          );
+      })
+      .catch(() => {
+        if (!cancelled) setCities([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pubAddress.stateId]);
+
   useEffect(() => {
     const id = deleteTarget?.id;
     if (id == null) return;
@@ -532,6 +653,22 @@ export default function JournalPage() {
       } else {
         await updateJournal(editingId, body);
         toast.success("Journal updated");
+      }
+      // Persist the publisher's place/address (shared on the publisher record).
+      if (form.publisherId !== NONE) {
+        try {
+          await savePublisherAddress(Number(form.publisherId), {
+            addressLine: pubAddress.addressLine.trim() || null,
+            countryId: pubAddress.countryId === NONE ? null : Number(pubAddress.countryId),
+            stateId: pubAddress.stateId === NONE ? null : Number(pubAddress.stateId),
+            cityId: pubAddress.cityId === NONE ? null : Number(pubAddress.cityId),
+            pincode: pubAddress.pincode.trim() || null,
+            landmark: pubAddress.landmark.trim() || null,
+          });
+        } catch (e) {
+          console.error(e);
+          toast.error("Journal saved, but publisher address could not be saved");
+        }
       }
       setDialogOpen(false);
       void fetchRows();
@@ -741,25 +878,49 @@ export default function JournalPage() {
                 {/* Large viewports: full table with horizontal scroll + sticky actions */}
                 <div className="hidden max-h-[560px] min-w-0 overflow-x-auto overflow-y-auto rounded-md border lg:block">
                   <Table className="min-w-[960px] w-full text-[13px]">
-                    <TableHeader>
+                    <TableHeader className={STICKY_THEAD_CLASS}>
                       <TableRow>
-                        <TableHead className="w-10 whitespace-nowrap bg-slate-100 px-2">
+                        <TableHead
+                          className={cn(STICKY_TH_LEFT, "w-10 whitespace-nowrap bg-slate-100 px-2")}
+                        >
                           #
                         </TableHead>
-                        <TableHead className="min-w-[200px] max-w-[320px] bg-slate-100 px-2">
+                        <TableHead
+                          className={cn(
+                            STICKY_TH_BASE,
+                            "min-w-[200px] max-w-[320px] bg-slate-100 px-2",
+                          )}
+                        >
                           {"Title, publisher & language"}
                         </TableHead>
-                        <TableHead className="min-w-[96px] bg-slate-100 px-2">Type</TableHead>
-                        <TableHead className="min-w-[112px] bg-slate-100 px-2">
+                        <TableHead className={cn(STICKY_TH_BASE, "min-w-[96px] bg-slate-100 px-2")}>
+                          Type
+                        </TableHead>
+                        <TableHead
+                          className={cn(STICKY_TH_BASE, "min-w-[112px] bg-slate-100 px-2")}
+                        >
                           Subject group
                         </TableHead>
-                        <TableHead className="min-w-[104px] bg-slate-100 px-2">
+                        <TableHead
+                          className={cn(STICKY_TH_BASE, "min-w-[104px] bg-slate-100 px-2")}
+                        >
                           Entry mode
                         </TableHead>
-                        <TableHead className="min-w-[96px] bg-slate-100 px-2">Binding</TableHead>
-                        <TableHead className="min-w-[96px] bg-slate-100 px-2">Period</TableHead>
-                        <TableHead className="min-w-[88px] bg-slate-100 px-2">ISSN</TableHead>
-                        <TableHead className="sticky right-0 z-20 min-w-[100px] whitespace-nowrap bg-slate-100 px-3 text-right shadow-[-6px_0_10px_-4px_rgba(15,23,42,0.12)]">
+                        <TableHead className={cn(STICKY_TH_BASE, "min-w-[96px] bg-slate-100 px-2")}>
+                          Binding
+                        </TableHead>
+                        <TableHead className={cn(STICKY_TH_BASE, "min-w-[96px] bg-slate-100 px-2")}>
+                          Period
+                        </TableHead>
+                        <TableHead className={cn(STICKY_TH_BASE, "min-w-[88px] bg-slate-100 px-2")}>
+                          ISSN
+                        </TableHead>
+                        <TableHead
+                          className={cn(
+                            STICKY_TH_RIGHT,
+                            "sticky right-0 z-20 min-w-[100px] whitespace-nowrap bg-slate-100 px-3 text-right shadow-[-6px_0_10px_-4px_rgba(15,23,42,0.12)]",
+                          )}
+                        >
                           Actions
                         </TableHead>
                       </TableRow>
@@ -934,11 +1095,11 @@ export default function JournalPage() {
       </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-xl">
+        <DialogContent className="max-h-[90vh] w-[min(97vw,1040px)] max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId == null ? "Add Journal" : "Edit Journal"}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3 py-2">
+          <div className="space-y-5 py-2">
             <div className="space-y-1">
               <Label>Title *</Label>
               <Input
@@ -947,94 +1108,225 @@ export default function JournalPage() {
                 placeholder="Journal title"
               />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Journal type</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Journal type"
-                  value={form.type}
-                  dataArr={formComboJournalTypes}
-                  onChange={(v) => setForm((f) => ({ ...f, type: v }))}
-                />
+
+            {/* Classification */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Classification
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Journal type</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Journal type"
+                    value={form.type}
+                    dataArr={formComboJournalTypes}
+                    onChange={(v) => setForm((f) => ({ ...f, type: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Subject group</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Subject group"
+                    value={form.subjectGroupId}
+                    dataArr={formComboSubjectGroups}
+                    onChange={(v) => setForm((f) => ({ ...f, subjectGroupId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Entry mode</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Entry mode"
+                    value={form.entryModeId}
+                    dataArr={formComboEntryModes}
+                    onChange={(v) => setForm((f) => ({ ...f, entryModeId: v }))}
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Subject group</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Subject group"
-                  value={form.subjectGroupId}
-                  dataArr={formComboSubjectGroups}
-                  onChange={(v) => setForm((f) => ({ ...f, subjectGroupId: v }))}
-                />
+            </section>
+
+            {/* Publication */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Publication
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Publisher</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Publisher"
+                    value={form.publisherId}
+                    dataArr={formComboPublishers}
+                    onChange={(v) => setForm((f) => ({ ...f, publisherId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Year of publication</Label>
+                  <Input
+                    className="h-10"
+                    value={form.publishedYear}
+                    onChange={(e) => setForm((f) => ({ ...f, publishedYear: e.target.value }))}
+                    placeholder="e.g. 2024"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Language</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Language"
+                    value={form.languageId}
+                    dataArr={formComboLanguages}
+                    onChange={(v) => setForm((f) => ({ ...f, languageId: v }))}
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Publisher</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Publisher"
-                  value={form.publisherId}
-                  dataArr={formComboPublishers}
-                  onChange={(v) => setForm((f) => ({ ...f, publisherId: v }))}
-                />
+            </section>
+
+            {/* Publisher place / address */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Publisher place / address
+                </h4>
+                {pubAddressLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                ) : null}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Entry mode</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Entry mode"
-                  value={form.entryModeId}
-                  dataArr={formComboEntryModes}
-                  onChange={(v) => setForm((f) => ({ ...f, entryModeId: v }))}
-                />
+              {form.publisherId === NONE ? (
+                <p className="text-xs text-muted-foreground">
+                  Select a publisher to view or edit its address.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1.5 sm:col-span-3">
+                    <Label className="text-xs font-medium">Address line</Label>
+                    <Input
+                      className="h-10"
+                      value={pubAddress.addressLine ?? ""}
+                      onChange={(e) =>
+                        setPubAddress((a) => ({ ...a, addressLine: e.target.value }))
+                      }
+                      placeholder="Street / building / area"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Country</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Country"
+                      value={pubAddress.countryId}
+                      dataArr={[
+                        { value: NONE, label: "— None —" },
+                        ...countries.map((c) => ({
+                          value: String(c.id),
+                          label: c.name ?? `#${c.id}`,
+                        })),
+                      ]}
+                      onChange={(v) =>
+                        setPubAddress((a) => ({ ...a, countryId: v, stateId: NONE, cityId: NONE }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">State</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder={pubAddress.countryId === NONE ? "Select country first" : "State"}
+                      value={pubAddress.stateId}
+                      dataArr={[
+                        { value: NONE, label: "— None —" },
+                        ...states.map((s) => ({
+                          value: String(s.id),
+                          label: s.name ?? `#${s.id}`,
+                        })),
+                      ]}
+                      onChange={(v) => setPubAddress((a) => ({ ...a, stateId: v, cityId: NONE }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">City</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder={pubAddress.stateId === NONE ? "Select state first" : "City"}
+                      value={pubAddress.cityId}
+                      dataArr={[
+                        { value: NONE, label: "— None —" },
+                        ...cities.map((c) => ({
+                          value: String(c.id),
+                          label: c.name ?? `#${c.id}`,
+                        })),
+                      ]}
+                      onChange={(v) => setPubAddress((a) => ({ ...a, cityId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Pincode</Label>
+                    <Input
+                      className="h-10"
+                      value={pubAddress.pincode ?? ""}
+                      onChange={(e) => setPubAddress((a) => ({ ...a, pincode: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Landmark</Label>
+                    <Input
+                      className="h-10"
+                      value={pubAddress.landmark ?? ""}
+                      onChange={(e) => setPubAddress((a) => ({ ...a, landmark: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Physical & identifiers */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Physical &amp; identifiers
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">ISSN</Label>
+                  <Input
+                    className="h-10"
+                    value={form.issnNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, issnNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Binding</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Binding"
+                    value={form.bindingId}
+                    dataArr={formComboBindings}
+                    onChange={(v) => setForm((f) => ({ ...f, bindingId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Period / frequency</Label>
+                  <Combobox
+                    className="h-10"
+                    placeholder="Period / frequency"
+                    value={form.periodId}
+                    dataArr={formComboPeriods}
+                    onChange={(v) => setForm((f) => ({ ...f, periodId: v }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Size (cm)</Label>
+                  <Input
+                    className="h-10"
+                    value={form.sizeInCM}
+                    onChange={(e) => setForm((f) => ({ ...f, sizeInCM: e.target.value }))}
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Language</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Language"
-                  value={form.languageId}
-                  dataArr={formComboLanguages}
-                  onChange={(v) => setForm((f) => ({ ...f, languageId: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Binding</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Binding"
-                  value={form.bindingId}
-                  dataArr={formComboBindings}
-                  onChange={(v) => setForm((f) => ({ ...f, bindingId: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Period / frequency</Label>
-                <Combobox
-                  className="h-10"
-                  placeholder="Period / frequency"
-                  value={form.periodId}
-                  dataArr={formComboPeriods}
-                  onChange={(v) => setForm((f) => ({ ...f, periodId: v }))}
-                />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label>ISSN</Label>
-                <Input
-                  value={form.issnNumber}
-                  onChange={(e) => setForm((f) => ({ ...f, issnNumber: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Size (cm)</Label>
-                <Input
-                  value={form.sizeInCM}
-                  onChange={(e) => setForm((f) => ({ ...f, sizeInCM: e.target.value }))}
-                />
-              </div>
-            </div>
+            </section>
           </div>
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>

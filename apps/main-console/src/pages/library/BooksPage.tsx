@@ -30,7 +30,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Book, Download, Filter, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Book,
+  Download,
+  Filter,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
@@ -48,6 +59,38 @@ import {
   type BookListQueryParams,
   type BookUpsertBody,
 } from "@/services/books.service";
+import {
+  bulkUploadCopyDetails,
+  deleteCopyDetails,
+  downloadCopyBulkUploadTemplate,
+  getCopyDetailsList,
+  getCopyDetailsMeta,
+  type CopyBulkUploadProgress,
+  type CopyDetailsListRow,
+  type CopyDetailsMetaPayload,
+} from "@/services/copy-details.service";
+import { getBookAuthors, saveBookAuthors } from "@/services/library-book-authors.service";
+import { getLibraryAuthors } from "@/services/library-authors.service";
+import { getLibraryAuthorTypes } from "@/services/library-author-types.service";
+import { getPublisherAddress, savePublisherAddress } from "@/services/library-publisher.service";
+import { getAllCountries } from "@/services/country.service";
+import { getStatesByCountry } from "@/services/state.service";
+import { getCitiesByState } from "@/services/city.service";
+import { cn } from "@/lib/utils";
+import CopyDialog, { formatPriceInrDisplay } from "./components/CopyDialog";
+
+const STICKY_THEAD_CLASS =
+  "sticky top-0 z-20 border-b-2 border-slate-500 bg-muted/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-muted/80 dark:border-slate-400";
+const STICKY_TH_BASE =
+  "h-auto whitespace-nowrap border-r border-solid border-slate-300 bg-muted/95 px-3 py-2.5 text-xs font-semibold text-slate-800 backdrop-blur dark:border-slate-400";
+const STICKY_TH_LEFT = cn(
+  STICKY_TH_BASE,
+  "sticky left-0 z-30 shadow-[6px_0_10px_-4px_rgba(15,23,42,0.06)]",
+);
+const STICKY_TH_RIGHT = cn(
+  STICKY_TH_BASE,
+  "sticky right-0 z-30 shadow-[-8px_0_12px_-6px_rgba(15,23,42,0.12)]",
+);
 
 type LibraryBookSocketUpdate = {
   id: string;
@@ -189,6 +232,10 @@ type FormState = {
   backCoverPreview: string;
   frontCoverFile: File | null;
   backCoverFile: File | null;
+  branchId: string;
+  cdlEnabled: boolean;
+  cdlConcurrentLimit: string;
+  cdlLoanHours: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -223,6 +270,10 @@ const emptyForm = (): FormState => ({
   backCoverPreview: "",
   frontCoverFile: null,
   backCoverFile: null,
+  branchId: "",
+  cdlEnabled: false,
+  cdlConcurrentLimit: "1",
+  cdlLoanHours: "24",
 });
 
 const detailToForm = (d: BookDetail): FormState => ({
@@ -257,6 +308,10 @@ const detailToForm = (d: BookDetail): FormState => ({
   backCoverPreview: d.backCover ?? "",
   frontCoverFile: null,
   backCoverFile: null,
+  branchId: d.branchId != null ? String(d.branchId) : "",
+  cdlEnabled: d.cdlEnabled ?? false,
+  cdlConcurrentLimit: d.cdlConcurrentLimit != null ? String(d.cdlConcurrentLimit) : "1",
+  cdlLoanHours: d.cdlLoanHours != null ? String(d.cdlLoanHours) : "24",
 });
 
 const formToBody = (f: FormState): BookUpsertBody => ({
@@ -289,7 +344,31 @@ const formToBody = (f: FormState): BookUpsertBody => ({
   backCover: f.backCover.trim() || null,
   frontCoverFile: f.frontCoverFile,
   backCoverFile: f.backCoverFile,
+  branchId: f.branchId.trim() ? Number(f.branchId) : null,
+  cdlEnabled: f.cdlEnabled,
+  cdlConcurrentLimit: f.cdlConcurrentLimit ? Number(f.cdlConcurrentLimit) : 1,
+  cdlLoanHours: f.cdlLoanHours ? Number(f.cdlLoanHours) : 24,
 });
+
+type GeoOption = { id: number; name: string | null };
+type PubAddressForm = {
+  addressLine: string;
+  countryId: string;
+  stateId: string;
+  cityId: string;
+  pincode: string;
+  landmark: string;
+};
+const emptyPubAddress = (): PubAddressForm => ({
+  addressLine: "",
+  countryId: NONE,
+  stateId: NONE,
+  cityId: NONE,
+  pincode: "",
+  landmark: "",
+});
+
+type AuthorRowState = { authorId: string; authorTypeId: string };
 
 function BookRowActions({
   row,
@@ -297,8 +376,8 @@ function BookRowActions({
   onDelete,
 }: {
   row: BookListRow;
-  onEdit: (id: number) => void;
-  onDelete: (row: BookListRow) => void;
+  onEdit: (_id: number) => void;
+  onDelete: (_row: BookListRow) => void;
 }) {
   return (
     <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
@@ -344,10 +423,32 @@ export default function BooksPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [authorRows, setAuthorRows] = useState<AuthorRowState[]>([]);
+  const [authorMasters, setAuthorMasters] = useState<{ id: number; name: string }[]>([]);
+  const [authorTypeMasters, setAuthorTypeMasters] = useState<{ id: number; name: string }[]>([]);
+  const [pubAddress, setPubAddress] = useState<PubAddressForm>(emptyPubAddress());
+  const [pubAddressLoading, setPubAddressLoading] = useState(false);
+  const [countries, setCountries] = useState<GeoOption[]>([]);
+  const [states, setStates] = useState<GeoOption[]>([]);
+  const [cities, setCities] = useState<GeoOption[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<BookListRow | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const frontCoverInputRef = useRef<HTMLInputElement | null>(null);
   const backCoverInputRef = useRef<HTMLInputElement | null>(null);
+  const [dialogTab, setDialogTab] = useState<"details" | "copies">("details");
+  const [copies, setCopies] = useState<CopyDetailsListRow[]>([]);
+  const [copiesLoading, setCopiesLoading] = useState(false);
+  const [copyMeta, setCopyMeta] = useState<CopyDetailsMetaPayload | null>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [editingCopyId, setEditingCopyId] = useState<number | null>(null);
+  const [deleteCopyTarget, setDeleteCopyTarget] = useState<CopyDetailsListRow | null>(null);
+  const [copyDeleteInProgress, setCopyDeleteInProgress] = useState(false);
+  const copyBulkUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [bulkUploadJobId, setBulkUploadJobId] = useState<string | null>(null);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState<CopyBulkUploadProgress | null>(null);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const activeFilterCount = countActiveFilters(appliedFilters);
@@ -367,6 +468,197 @@ export default function BooksPage() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await getCopyDetailsMeta();
+        setCopyMeta(res.payload);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  // Author + author-type master lists for the contributors section.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await getLibraryAuthors({ page: 1, limit: 1000 });
+        setAuthorMasters(res.payload.rows.map((r) => ({ id: r.id, name: r.name })));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    void (async () => {
+      try {
+        const res = await getLibraryAuthorTypes({ page: 1, limit: 1000 });
+        setAuthorTypeMasters(res.payload.rows.map((r) => ({ id: r.id, name: r.name })));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  // Load the selected publisher's address (place) into the editable form.
+  useEffect(() => {
+    if (!dialogOpen) return;
+    if (form.publisherId === NONE) {
+      setPubAddress(emptyPubAddress());
+      return;
+    }
+    const pubId = Number(form.publisherId);
+    let cancelled = false;
+    setPubAddressLoading(true);
+    void getPublisherAddress(pubId)
+      .then((a) => {
+        if (cancelled) return;
+        setPubAddress({
+          addressLine: a.addressLine ?? "",
+          countryId: a.countryId != null ? String(a.countryId) : NONE,
+          stateId: a.stateId != null ? String(a.stateId) : NONE,
+          cityId: a.cityId != null ? String(a.cityId) : NONE,
+          pincode: a.pincode ?? "",
+          landmark: a.landmark ?? "",
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setPubAddress(emptyPubAddress());
+      })
+      .finally(() => {
+        if (!cancelled) setPubAddressLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogOpen, form.publisherId]);
+
+  // Geo dropdown options (cascading: country -> state -> city).
+  useEffect(() => {
+    void getAllCountries()
+      .then((rows) =>
+        setCountries(
+          rows.filter((c) => c.id != null).map((c) => ({ id: c.id as number, name: c.name })),
+        ),
+      )
+      .catch(() => setCountries([]));
+  }, []);
+
+  useEffect(() => {
+    if (pubAddress.countryId === NONE) {
+      setStates([]);
+      return;
+    }
+    let cancelled = false;
+    void getStatesByCountry(Number(pubAddress.countryId))
+      .then((rows) => {
+        if (!cancelled) setStates(rows.map((s) => ({ id: s.id, name: s.name })));
+      })
+      .catch(() => {
+        if (!cancelled) setStates([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pubAddress.countryId]);
+
+  useEffect(() => {
+    if (pubAddress.stateId === NONE) {
+      setCities([]);
+      return;
+    }
+    let cancelled = false;
+    void getCitiesByState(Number(pubAddress.stateId))
+      .then((rows) => {
+        if (!cancelled)
+          setCities(
+            rows.filter((c) => c.id != null).map((c) => ({ id: c.id as number, name: c.name })),
+          );
+      })
+      .catch(() => {
+        if (!cancelled) setCities([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pubAddress.stateId]);
+
+  const fetchCopiesForBook = useCallback(async (bookId: number) => {
+    try {
+      setCopiesLoading(true);
+      const res = await getCopyDetailsList({ page: 1, limit: 200, bookId });
+      setCopies(res.payload.rows);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to load copies");
+    } finally {
+      setCopiesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!dialogOpen) return;
+    if (dialogTab !== "copies") return;
+    if (editingId == null) return;
+    void fetchCopiesForBook(editingId);
+  }, [dialogOpen, dialogTab, editingId, fetchCopiesForBook]);
+
+  useEffect(() => {
+    if (!socket || !isConnected || !bulkUploadJobId) return;
+    socket.emit("subscribe_library_copy_bulk_upload", bulkUploadJobId);
+    const handler = (data: CopyBulkUploadProgress) => {
+      if (data.jobId !== bulkUploadJobId) return;
+      setBulkUploadProgress(data);
+      if (data.status === "COMPLETED") {
+        setBulkUploading(false);
+        const ok = data.succeeded;
+        const ko = data.failed;
+        if (ko === 0) toast.success(`Uploaded ${ok} copies.`);
+        else toast.warning(`Uploaded ${ok} copies, ${ko} failed.`);
+        if (editingId != null) void fetchCopiesForBook(editingId);
+      }
+    };
+    socket.on("library_copy_bulk_upload_progress", handler);
+    return () => {
+      socket.off("library_copy_bulk_upload_progress", handler);
+      socket.emit("unsubscribe_library_copy_bulk_upload", bulkUploadJobId);
+    };
+  }, [socket, isConnected, bulkUploadJobId, editingId, fetchCopiesForBook]);
+
+  const handleDownloadCopyTemplate = async () => {
+    if (editingId == null) return;
+    try {
+      setDownloadingTemplate(true);
+      const blob = await downloadCopyBulkUploadTemplate(editingId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `copy-details-template-book-${editingId}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to download template");
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
+  const handleSelectCopyBulkFile = async (file: File) => {
+    if (editingId == null) return;
+    try {
+      setBulkUploading(true);
+      setBulkUploadProgress(null);
+      setBulkUploadOpen(true);
+      const res = await bulkUploadCopyDetails(editingId, file);
+      setBulkUploadJobId(res.payload.jobId);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to start bulk upload");
+      setBulkUploading(false);
+      setBulkUploadOpen(false);
+    }
+  };
 
   const filterComboDocTypes = useMemo(
     () => [
@@ -503,6 +795,22 @@ export default function BooksPage() {
       ),
     [meta?.periods],
   );
+  const formComboAuthors = useMemo(
+    () =>
+      comboWithNone(
+        authorMasters.map((a) => ({ value: String(a.id), label: a.name })),
+        "— Select author —",
+      ),
+    [authorMasters],
+  );
+  const formComboAuthorTypes = useMemo(
+    () =>
+      comboWithNone(
+        authorTypeMasters.map((a) => ({ value: String(a.id), label: a.name })),
+        "— Select role —",
+      ),
+    [authorTypeMasters],
+  );
 
   const fetchRows = useCallback(async () => {
     try {
@@ -631,6 +939,9 @@ export default function BooksPage() {
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setAuthorRows([]);
+    setDialogTab("details");
+    setCopies([]);
     setDialogOpen(true);
   };
 
@@ -639,10 +950,53 @@ export default function BooksPage() {
       const res = await getBookById(id);
       setEditingId(id);
       setForm(detailToForm(res.payload));
+      setDialogTab("details");
+      setCopies([]);
+      setAuthorRows([]);
       setDialogOpen(true);
+      try {
+        const authors = await getBookAuthors(id);
+        setAuthorRows(
+          authors.map((a) => ({
+            authorId: String(a.authorId),
+            authorTypeId: String(a.authorTypeId),
+          })),
+        );
+      } catch (e) {
+        console.error(e);
+      }
     } catch (e) {
       console.error(e);
       toast.error("Failed to load book");
+    }
+  };
+
+  const persistBookExtras = async (bookId: number) => {
+    const validAuthors = authorRows
+      .filter((r) => r.authorId !== NONE && r.authorTypeId !== NONE)
+      .map((r) => ({ authorId: Number(r.authorId), authorTypeId: Number(r.authorTypeId) }));
+    if (validAuthors.length > 0) {
+      try {
+        await saveBookAuthors(bookId, validAuthors);
+      } catch (e) {
+        console.error(e);
+        toast.error("Book saved, but authors could not be saved");
+      }
+    }
+    if (form.publisherId !== NONE) {
+      try {
+        await savePublisherAddress(Number(form.publisherId), {
+          addressLine: pubAddress.addressLine.trim() || null,
+          countryId: pubAddress.countryId === NONE ? null : Number(pubAddress.countryId),
+          stateId: pubAddress.stateId === NONE ? null : Number(pubAddress.stateId),
+          cityId: pubAddress.cityId === NONE ? null : Number(pubAddress.cityId),
+          pincode: pubAddress.pincode.trim() || null,
+          landmark: pubAddress.landmark.trim() || null,
+        });
+      } catch (e) {
+        console.error(e);
+        toast.error("Book saved, but publisher address could not be saved");
+      }
     }
   };
 
@@ -655,19 +1009,58 @@ export default function BooksPage() {
       setSaving(true);
       const body = formToBody(form);
       if (editingId == null) {
-        await createBook(body);
-        toast.success("Book created");
+        const res = await createBook(body);
+        setEditingId(res.payload.id);
+        await persistBookExtras(res.payload.id);
+        toast.success("Book created — you can now add copies");
+        void fetchRows();
       } else {
         await updateBook(editingId, body);
+        await persistBookExtras(editingId);
         toast.success("Book updated");
+        setDialogOpen(false);
+        void fetchRows();
       }
-      setDialogOpen(false);
-      void fetchRows();
     } catch (e) {
       console.error(e);
       toast.error("Could not save book");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openAddCopy = () => {
+    setEditingCopyId(null);
+    setCopyDialogOpen(true);
+  };
+
+  const openEditCopy = (id: number) => {
+    setEditingCopyId(id);
+    setCopyDialogOpen(true);
+  };
+
+  const handleCopySaved = () => {
+    if (editingId != null) void fetchCopiesForBook(editingId);
+  };
+
+  const confirmDeleteCopy = async () => {
+    if (!deleteCopyTarget) return;
+    try {
+      setCopyDeleteInProgress(true);
+      await deleteCopyDetails(deleteCopyTarget.id);
+      toast.success("Copy deleted");
+      setDeleteCopyTarget(null);
+      if (editingId != null) void fetchCopiesForBook(editingId);
+    } catch (e: unknown) {
+      console.error(e);
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        toast.error("Cannot delete — this copy has circulation history.");
+      } else {
+        toast.error("Could not delete copy");
+      }
+    } finally {
+      setCopyDeleteInProgress(false);
     }
   };
 
@@ -679,10 +1072,10 @@ export default function BooksPage() {
             <div>
               <CardTitle className="flex items-center text-lg sm:text-xl">
                 <Book className="mr-2 h-8 w-8 rounded-md border p-1" />
-                Books
+                Article Entry
               </CardTitle>
               <p className="mt-1 text-[11px] text-muted-foreground sm:text-sm">
-                Catalogue titles: bibliographic data, classification, and links to journals.
+                Catalogue articles: bibliographic data, classification, and links to journals.
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -826,16 +1219,30 @@ export default function BooksPage() {
                 <div className="hidden min-w-0 pb-2 xl:block">
                   <div className="max-h-[min(70vh,640px)] overflow-y-auto overflow-x-auto rounded-md border bg-background">
                     <Table containerClassName="min-w-[880px]">
-                      <TableHeader>
+                      <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className="w-10 px-2">#</TableHead>
-                          <TableHead className="min-w-[210px]">Title</TableHead>
-                          <TableHead className="min-w-[100px]">ISBN</TableHead>
-                          <TableHead className="min-w-[120px]">Subject group</TableHead>
-                          <TableHead className="min-w-[120px]">Period / frequency</TableHead>
-                          <TableHead className="min-w-[130px]">Doc type</TableHead>
-                          <TableHead className="min-w-[130px]">Journal</TableHead>
-                          <TableHead className="min-w-[72px] text-right">Actions</TableHead>
+                          <TableHead className={cn(STICKY_TH_LEFT, "w-10 px-2")}>#</TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[210px]")}>
+                            Title
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[100px]")}>
+                            ISBN
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Subject group
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[120px]")}>
+                            Period / frequency
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[130px]")}>
+                            Doc type
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_BASE, "min-w-[130px]")}>
+                            Journal
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "min-w-[72px] text-right")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1054,295 +1461,814 @@ export default function BooksPage() {
               <span>{editingId == null ? "Add book" : "Edit book"}</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden px-6 py-4">
-            <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)_220px]">
-              <div className="order-1 flex h-full flex-col space-y-2 lg:order-none">
-                <Label className="text-xs font-medium">Front cover (optional)</Label>
-                <button
-                  type="button"
-                  className="flex min-h-[280px] flex-1 items-center justify-center overflow-hidden rounded-md border bg-muted/20"
-                  onClick={() => frontCoverInputRef.current?.click()}
-                >
-                  {form.frontCoverPreview ? (
-                    <img
-                      src={form.frontCoverPreview}
-                      alt="Front cover preview"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Choose front cover</span>
-                  )}
-                </button>
-                <input
-                  ref={frontCoverInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null;
-                    const preview = file ? URL.createObjectURL(file) : form.frontCover;
-                    setForm((f) => ({
-                      ...f,
-                      frontCoverFile: file,
-                      frontCoverPreview: preview,
-                    }));
-                  }}
-                />
-              </div>
-
-              <div className="order-3 grid min-h-0 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:order-none">
-                <div className="space-y-1 sm:col-span-2">
-                  <Label>Title *</Label>
-                  <Input
-                    value={form.title}
-                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                    placeholder="Book title"
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label>Subtitle</Label>
-                  <Input
-                    value={form.subTitle}
-                    onChange={(e) => setForm((f) => ({ ...f, subTitle: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label>Alternate title / author line</Label>
-                  <Input
-                    value={form.alternateTitle}
-                    onChange={(e) => setForm((f) => ({ ...f, alternateTitle: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Document type</Label>
-                  <Combobox
-                    className="h-10"
-                    placeholder="Document type"
-                    value={form.libraryDocumentTypeId}
-                    dataArr={formComboDocTypes}
-                    onChange={(v) => setForm((f) => ({ ...f, libraryDocumentTypeId: v }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Publisher</Label>
-                  <Combobox
-                    className="h-10"
-                    placeholder="Publisher"
-                    value={form.publisherId}
-                    dataArr={formComboPublishers}
-                    onChange={(v) => setForm((f) => ({ ...f, publisherId: v }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Language</Label>
-                  <Combobox
-                    className="h-10"
-                    placeholder="Language"
-                    value={form.languageId}
-                    dataArr={formComboLanguages}
-                    onChange={(v) => setForm((f) => ({ ...f, languageId: v }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Subject group</Label>
-                  <Combobox
-                    className="h-10"
-                    placeholder="Subject group"
-                    value={form.subjectGroupId}
-                    dataArr={formComboSubjectGroups}
-                    onChange={(v) => setForm((f) => ({ ...f, subjectGroupId: v }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Series</Label>
-                  <Combobox
-                    className="h-10"
-                    placeholder="Series"
-                    value={form.seriesId}
-                    dataArr={formComboSeries}
-                    onChange={(v) => setForm((f) => ({ ...f, seriesId: v }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Journal (periodical link)</Label>
-                  <Combobox
-                    className="h-10"
-                    placeholder="Journal"
-                    value={form.journalId}
-                    dataArr={formComboJournals}
-                    onChange={(v) => setForm((f) => ({ ...f, journalId: v }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Enclosure</Label>
-                  <Combobox
-                    className="h-10"
-                    placeholder="Enclosure"
-                    value={form.enclosureId}
-                    dataArr={formComboEnclosures}
-                    onChange={(v) => setForm((f) => ({ ...f, enclosureId: v }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Frequency / period</Label>
-                  <Combobox
-                    className="h-10"
-                    placeholder="Period"
-                    value={form.frequency}
-                    dataArr={formComboPeriods}
-                    onChange={(v) => setForm((f) => ({ ...f, frequency: v }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>ISBN</Label>
-                  <Input
-                    value={form.isbn}
-                    onChange={(e) => setForm((f) => ({ ...f, isbn: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Issue date</Label>
-                  <Input
-                    type="date"
-                    value={form.issueDate}
-                    onChange={(e) => setForm((f) => ({ ...f, issueDate: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Edition</Label>
-                  <Input
-                    value={form.edition}
-                    onChange={(e) => setForm((f) => ({ ...f, edition: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Edition year</Label>
-                  <Input
-                    value={form.editionYear}
-                    onChange={(e) => setForm((f) => ({ ...f, editionYear: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Volume</Label>
-                  <Input
-                    value={form.bookVolume}
-                    onChange={(e) => setForm((f) => ({ ...f, bookVolume: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Part</Label>
-                  <Input
-                    value={form.bookPart}
-                    onChange={(e) => setForm((f) => ({ ...f, bookPart: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Published year</Label>
-                  <Input
-                    value={form.publishedYear}
-                    onChange={(e) => setForm((f) => ({ ...f, publishedYear: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Issue number</Label>
-                  <Input
-                    value={form.issueNumber}
-                    onChange={(e) => setForm((f) => ({ ...f, issueNumber: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Call number</Label>
-                  <Input
-                    value={form.callNumber}
-                    onChange={(e) => setForm((f) => ({ ...f, callNumber: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Reference number</Label>
-                  <Input
-                    value={form.referenceNumber}
-                    onChange={(e) => setForm((f) => ({ ...f, referenceNumber: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label>Keywords</Label>
-                  <Input
-                    value={form.keywords}
-                    onChange={(e) => setForm((f) => ({ ...f, keywords: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label>Remarks</Label>
-                  <Input
-                    value={form.remarks}
-                    onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label>Notes</Label>
-                  <Input
-                    value={form.notes}
-                    onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  />
-                </div>
-                <div className="flex items-center gap-2 sm:col-span-2">
-                  <Checkbox
-                    id="unique-access"
-                    checked={form.isUniqueAccess}
-                    onCheckedChange={(c) => setForm((f) => ({ ...f, isUniqueAccess: c === true }))}
-                  />
-                  <Label htmlFor="unique-access" className="text-sm font-normal">
-                    Unique access copy
-                  </Label>
-                </div>
-              </div>
-
-              <div className="order-2 flex h-full flex-col space-y-2 lg:order-none">
-                <Label className="text-xs font-medium">Back cover (optional)</Label>
-                <button
-                  type="button"
-                  className="flex min-h-[280px] flex-1 items-center justify-center overflow-hidden rounded-md border bg-muted/20"
-                  onClick={() => backCoverInputRef.current?.click()}
-                >
-                  {form.backCoverPreview ? (
-                    <img
-                      src={form.backCoverPreview}
-                      alt="Back cover preview"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Choose back cover</span>
-                  )}
-                </button>
-                <input
-                  ref={backCoverInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null;
-                    const preview = file ? URL.createObjectURL(file) : form.backCover;
-                    setForm((f) => ({
-                      ...f,
-                      backCoverFile: file,
-                      backCoverPreview: preview,
-                    }));
-                  }}
-                />
-              </div>
+          <Tabs
+            value={dialogTab}
+            onValueChange={(v) => setDialogTab(v as "details" | "copies")}
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          >
+            <div className="shrink-0 border-b px-6 pt-3">
+              <TabsList>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="copies" disabled={editingId == null}>
+                  Copies
+                  {editingId == null ? (
+                    <span className="ml-1.5 text-[10px] text-muted-foreground">(save first)</span>
+                  ) : null}
+                </TabsTrigger>
+              </TabsList>
             </div>
-          </div>
+            <TabsContent value="details" className="min-h-0 flex-1 overflow-hidden px-6 py-4">
+              <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)_220px]">
+                <div className="order-1 flex h-full flex-col space-y-2 lg:order-none">
+                  <Label className="text-xs font-medium">Front cover (optional)</Label>
+                  <button
+                    type="button"
+                    className="flex min-h-[280px] flex-1 items-center justify-center overflow-hidden rounded-md border bg-muted/20"
+                    onClick={() => frontCoverInputRef.current?.click()}
+                  >
+                    {form.frontCoverPreview ? (
+                      <img
+                        src={form.frontCoverPreview}
+                        alt="Front cover preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Choose front cover</span>
+                    )}
+                  </button>
+                  <input
+                    ref={frontCoverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      const preview = file ? URL.createObjectURL(file) : form.frontCover;
+                      setForm((f) => ({
+                        ...f,
+                        frontCoverFile: file,
+                        frontCoverPreview: preview,
+                      }));
+                    }}
+                  />
+                </div>
+
+                <div className="order-3 grid min-h-0 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:order-none">
+                  <div className="sm:col-span-2 -mb-1 mt-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Title
+                    </p>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label>Title *</Label>
+                    <Input
+                      value={form.title}
+                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                      placeholder="Book title"
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label>Subtitle</Label>
+                    <Input
+                      value={form.subTitle}
+                      onChange={(e) => setForm((f) => ({ ...f, subTitle: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label>Alternate title / author line</Label>
+                    <Input
+                      value={form.alternateTitle}
+                      onChange={(e) => setForm((f) => ({ ...f, alternateTitle: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Identifiers
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>ISBN</Label>
+                    <Input
+                      value={form.isbn}
+                      onChange={(e) => setForm((f) => ({ ...f, isbn: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Call number</Label>
+                    <Input
+                      value={form.callNumber}
+                      onChange={(e) => setForm((f) => ({ ...f, callNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Reference number</Label>
+                    <Input
+                      value={form.referenceNumber}
+                      onChange={(e) => setForm((f) => ({ ...f, referenceNumber: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Publication
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Document type</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Document type"
+                      value={form.libraryDocumentTypeId}
+                      dataArr={formComboDocTypes}
+                      onChange={(v) => setForm((f) => ({ ...f, libraryDocumentTypeId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Publisher</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Publisher"
+                      value={form.publisherId}
+                      dataArr={formComboPublishers}
+                      onChange={(v) => setForm((f) => ({ ...f, publisherId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Language</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Language"
+                      value={form.languageId}
+                      dataArr={formComboLanguages}
+                      onChange={(v) => setForm((f) => ({ ...f, languageId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Edition</Label>
+                    <Input
+                      value={form.edition}
+                      onChange={(e) => setForm((f) => ({ ...f, edition: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Edition year</Label>
+                    <Input
+                      value={form.editionYear}
+                      onChange={(e) => setForm((f) => ({ ...f, editionYear: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Published year</Label>
+                    <Input
+                      value={form.publishedYear}
+                      onChange={(e) => setForm((f) => ({ ...f, publishedYear: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Issue date</Label>
+                    <Input
+                      type="date"
+                      value={form.issueDate}
+                      onChange={(e) => setForm((f) => ({ ...f, issueDate: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Periodical / Issue
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Journal (periodical link)</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Journal"
+                      value={form.journalId}
+                      dataArr={formComboJournals}
+                      onChange={(v) => setForm((f) => ({ ...f, journalId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Frequency / period</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Period"
+                      value={form.frequency}
+                      dataArr={formComboPeriods}
+                      onChange={(v) => setForm((f) => ({ ...f, frequency: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Issue number</Label>
+                    <Input
+                      value={form.issueNumber}
+                      onChange={(e) => setForm((f) => ({ ...f, issueNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Volume</Label>
+                    <Input
+                      value={form.bookVolume}
+                      onChange={(e) => setForm((f) => ({ ...f, bookVolume: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Part</Label>
+                    <Input
+                      value={form.bookPart}
+                      onChange={(e) => setForm((f) => ({ ...f, bookPart: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Classification
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Subject group</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Subject group"
+                      value={form.subjectGroupId}
+                      dataArr={formComboSubjectGroups}
+                      onChange={(v) => setForm((f) => ({ ...f, subjectGroupId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Series</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Series"
+                      value={form.seriesId}
+                      dataArr={formComboSeries}
+                      onChange={(v) => setForm((f) => ({ ...f, seriesId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs font-medium">Enclosure</Label>
+                    <Combobox
+                      className="h-10"
+                      placeholder="Enclosure"
+                      value={form.enclosureId}
+                      dataArr={formComboEnclosures}
+                      onChange={(v) => setForm((f) => ({ ...f, enclosureId: v }))}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label>Keywords</Label>
+                    <Input
+                      value={form.keywords}
+                      onChange={(e) => setForm((f) => ({ ...f, keywords: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Authors / contributors
+                    </p>
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    {authorRows.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        No authors added yet. Use “Add author” to attach contributors and roles.
+                      </p>
+                    ) : (
+                      authorRows.map((row, idx) => (
+                        <div key={idx} className="flex items-end gap-2">
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <Label className="text-xs font-medium">Author</Label>
+                            <Combobox
+                              className="h-10"
+                              placeholder="Author"
+                              value={row.authorId}
+                              dataArr={formComboAuthors}
+                              onChange={(v) =>
+                                setAuthorRows((rows) =>
+                                  rows.map((r, i) => (i === idx ? { ...r, authorId: v } : r)),
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <Label className="text-xs font-medium">Role</Label>
+                            <Combobox
+                              className="h-10"
+                              placeholder="Role"
+                              value={row.authorTypeId}
+                              dataArr={formComboAuthorTypes}
+                              onChange={(v) =>
+                                setAuthorRows((rows) =>
+                                  rows.map((r, i) => (i === idx ? { ...r, authorTypeId: v } : r)),
+                                )
+                              }
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 shrink-0 text-red-600 hover:text-red-700"
+                            onClick={() =>
+                              setAuthorRows((rows) => rows.filter((_, i) => i !== idx))
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setAuthorRows((rows) => [...rows, { authorId: NONE, authorTypeId: NONE }])
+                      }
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add author
+                    </Button>
+                  </div>
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Publisher place / address
+                      </p>
+                      {pubAddressLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {form.publisherId === NONE ? (
+                    <p className="text-xs text-muted-foreground sm:col-span-2">
+                      Select a publisher to view or edit its address.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label className="text-xs font-medium">Address line</Label>
+                        <Input
+                          className="h-10"
+                          value={pubAddress.addressLine ?? ""}
+                          onChange={(e) =>
+                            setPubAddress((a) => ({ ...a, addressLine: e.target.value }))
+                          }
+                          placeholder="Street / building / area"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Country</Label>
+                        <Combobox
+                          className="h-10"
+                          placeholder="Country"
+                          value={pubAddress.countryId}
+                          dataArr={[
+                            { value: NONE, label: "— None —" },
+                            ...countries.map((c) => ({
+                              value: String(c.id),
+                              label: c.name ?? `#${c.id}`,
+                            })),
+                          ]}
+                          onChange={(v) =>
+                            setPubAddress((a) => ({
+                              ...a,
+                              countryId: v,
+                              stateId: NONE,
+                              cityId: NONE,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">State</Label>
+                        <Combobox
+                          className="h-10"
+                          placeholder={
+                            pubAddress.countryId === NONE ? "Select country first" : "State"
+                          }
+                          value={pubAddress.stateId}
+                          dataArr={[
+                            { value: NONE, label: "— None —" },
+                            ...states.map((s) => ({
+                              value: String(s.id),
+                              label: s.name ?? `#${s.id}`,
+                            })),
+                          ]}
+                          onChange={(v) =>
+                            setPubAddress((a) => ({ ...a, stateId: v, cityId: NONE }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">City</Label>
+                        <Combobox
+                          className="h-10"
+                          placeholder={pubAddress.stateId === NONE ? "Select state first" : "City"}
+                          value={pubAddress.cityId}
+                          dataArr={[
+                            { value: NONE, label: "— None —" },
+                            ...cities.map((c) => ({
+                              value: String(c.id),
+                              label: c.name ?? `#${c.id}`,
+                            })),
+                          ]}
+                          onChange={(v) => setPubAddress((a) => ({ ...a, cityId: v }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Pincode</Label>
+                        <Input
+                          className="h-10"
+                          value={pubAddress.pincode ?? ""}
+                          onChange={(e) =>
+                            setPubAddress((a) => ({ ...a, pincode: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Landmark</Label>
+                        <Input
+                          className="h-10"
+                          value={pubAddress.landmark ?? ""}
+                          onChange={(e) =>
+                            setPubAddress((a) => ({ ...a, landmark: e.target.value }))
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="sm:col-span-2 -mb-1 mt-2 border-t pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Notes &amp; Access
+                    </p>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label>Remarks</Label>
+                    <Input
+                      value={form.remarks}
+                      onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label>Notes</Label>
+                    <Input
+                      value={form.notes}
+                      onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 sm:col-span-2">
+                    <Checkbox
+                      id="unique-access"
+                      checked={form.isUniqueAccess}
+                      onCheckedChange={(c) =>
+                        setForm((f) => ({ ...f, isUniqueAccess: c === true }))
+                      }
+                    />
+                    <Label htmlFor="unique-access" className="text-sm font-normal">
+                      Unique access copy
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="order-2 flex h-full flex-col space-y-2 lg:order-none">
+                  <Label className="text-xs font-medium">Back cover (optional)</Label>
+                  <button
+                    type="button"
+                    className="flex min-h-[280px] flex-1 items-center justify-center overflow-hidden rounded-md border bg-muted/20"
+                    onClick={() => backCoverInputRef.current?.click()}
+                  >
+                    {form.backCoverPreview ? (
+                      <img
+                        src={form.backCoverPreview}
+                        alt="Back cover preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Choose back cover</span>
+                    )}
+                  </button>
+                  <input
+                    ref={backCoverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      const preview = file ? URL.createObjectURL(file) : form.backCover;
+                      setForm((f) => ({
+                        ...f,
+                        backCoverFile: file,
+                        backCoverPreview: preview,
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="copies" className="min-h-0 flex-1 overflow-hidden px-6 py-4">
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">Physical copies</p>
+                    <p className="text-xs text-muted-foreground">
+                      Each copy has its own accession, location, and status.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={copyBulkUploadInputRef}
+                      type="file"
+                      accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) void handleSelectCopyBulkFile(file);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={editingId == null || downloadingTemplate}
+                      onClick={() => void handleDownloadCopyTemplate()}
+                    >
+                      {downloadingTemplate ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-1 h-4 w-4" />
+                      )}
+                      Download template
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={editingId == null || bulkUploading}
+                      onClick={() => copyBulkUploadInputRef.current?.click()}
+                    >
+                      <Upload className="mr-1 h-4 w-4" />
+                      Bulk upload
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={editingId == null}
+                      onClick={openAddCopy}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add copy
+                    </Button>
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1 overflow-auto">
+                  <div className="rounded-md border bg-background">
+                    {copiesLoading ? (
+                      <div className="flex min-h-[200px] items-center justify-center text-slate-500">
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Loading…
+                      </div>
+                    ) : copies.length === 0 ? (
+                      <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
+                        No copies yet. Click “Add copy” to create one.
+                      </div>
+                    ) : (
+                      <Table containerClassName="min-w-[760px]">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-10 px-2">#</TableHead>
+                            <TableHead className="min-w-[140px]">Accession</TableHead>
+                            <TableHead className="min-w-[100px]">Status</TableHead>
+                            <TableHead className="min-w-[100px]">Rack</TableHead>
+                            <TableHead className="min-w-[100px]">Shelf</TableHead>
+                            <TableHead className="min-w-[100px]">Binding</TableHead>
+                            <TableHead className="min-w-[100px]">Price (₹)</TableHead>
+                            <TableHead className="min-w-[80px] text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {copies.map((c, i) => (
+                            <TableRow key={c.id}>
+                              <TableCell className="px-2 text-muted-foreground">{i + 1}</TableCell>
+                              <TableCell className="align-top">
+                                <p className="font-mono text-xs text-slate-800">
+                                  {c.accessNumber ?? "—"}
+                                </p>
+                                {c.oldAccessNumber ? (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    old: {c.oldAccessNumber}
+                                  </p>
+                                ) : null}
+                              </TableCell>
+                              <TableCell className="align-top text-xs">
+                                {c.statusName ?? "—"}
+                              </TableCell>
+                              <TableCell className="align-top text-xs">
+                                {c.rackName ?? "—"}
+                              </TableCell>
+                              <TableCell className="align-top text-xs">
+                                {c.shelfName ?? "—"}
+                              </TableCell>
+                              <TableCell className="align-top text-xs">
+                                {c.bindingName ?? "—"}
+                              </TableCell>
+                              <TableCell className="align-top text-xs tabular-nums">
+                                {formatPriceInrDisplay(c.priceInINR) ?? "—"}
+                              </TableCell>
+                              <TableCell className="text-right align-top">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openEditCopy(c.id)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-600 hover:text-red-700"
+                                  onClick={() => setDeleteCopyTarget(c)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
           <DialogFooter className="shrink-0 border-t bg-muted/30 px-6 py-4">
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              Close
             </Button>
-            <Button type="button" disabled={saving} onClick={() => void handleSave()}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save
-            </Button>
+            {dialogTab === "details" ? (
+              <Button type="button" disabled={saving} onClick={() => void handleSave()}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save
+              </Button>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {editingId != null ? (
+        <CopyDialog
+          open={copyDialogOpen}
+          onOpenChange={setCopyDialogOpen}
+          bookId={editingId}
+          bookTitle={form.title}
+          copyId={editingCopyId}
+          meta={copyMeta}
+          onSaved={handleCopySaved}
+        />
+      ) : null}
+
+      <Dialog
+        open={bulkUploadOpen}
+        onOpenChange={(open) => {
+          if (!open && bulkUploading) return;
+          setBulkUploadOpen(open);
+          if (!open) {
+            setBulkUploadJobId(null);
+            setBulkUploadProgress(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Bulk upload copies</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const p = bulkUploadProgress;
+            const total = p?.total ?? 0;
+            const processed = p?.processed ?? 0;
+            const succeeded = p?.succeeded ?? 0;
+            const failed = p?.failed ?? 0;
+            const pct = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : 0;
+            const done = p?.status === "COMPLETED";
+            return (
+              <div className="space-y-3 py-2 text-sm">
+                <div className="text-xs text-muted-foreground">
+                  {p == null
+                    ? "Starting…"
+                    : p.status === "STARTED"
+                      ? `Parsed ${total} row${total === 1 ? "" : "s"}. Inserting…`
+                      : done
+                        ? `Completed in ${processed} row${processed === 1 ? "" : "s"}.`
+                        : `Processing row ${processed} of ${total}…`}
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={cn(
+                      "h-2 transition-all",
+                      done && failed === 0
+                        ? "bg-emerald-500"
+                        : done
+                          ? "bg-amber-500"
+                          : "bg-blue-500",
+                    )}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="rounded-md border bg-slate-50 p-2">
+                    <div className="text-slate-500">Total</div>
+                    <div className="text-base font-semibold">{total}</div>
+                  </div>
+                  <div className="rounded-md border bg-emerald-50 p-2">
+                    <div className="text-emerald-700">Succeeded</div>
+                    <div className="text-base font-semibold text-emerald-700">{succeeded}</div>
+                  </div>
+                  <div className="rounded-md border bg-red-50 p-2">
+                    <div className="text-red-700">Failed</div>
+                    <div className="text-base font-semibold text-red-700">{failed}</div>
+                  </div>
+                </div>
+                {p?.errors && p.errors.length > 0 ? (
+                  <div className="max-h-48 overflow-y-auto rounded-md border bg-red-50/40 p-2 text-xs">
+                    <p className="mb-1 font-semibold text-red-700">Errors ({p.errors.length})</p>
+                    <ul className="space-y-1">
+                      {p.errors.map((err, idx) => (
+                        <li key={`${err.row}-${idx}`} className="text-red-700">
+                          Row {err.row}: {err.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : p?.lastError && !done ? (
+                  <div className="rounded-md border bg-amber-50 p-2 text-xs text-amber-800">
+                    Row {p.lastError.row}: {p.lastError.message}
+                  </div>
+                ) : null}
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={done ? "default" : "outline"}
+                    disabled={!done && bulkUploading}
+                    onClick={() => {
+                      setBulkUploadOpen(false);
+                      setBulkUploadJobId(null);
+                      setBulkUploadProgress(null);
+                    }}
+                  >
+                    {done ? "Close" : "Hide"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={deleteCopyTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteCopyTarget(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete copy?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-left text-sm text-muted-foreground">
+                <p>
+                  You are about to delete copy{" "}
+                  <span className="font-mono text-foreground">
+                    {deleteCopyTarget?.accessNumber ?? `#${deleteCopyTarget?.id}`}
+                  </span>
+                  . This cannot be undone.
+                </p>
+                <p>Deletion is blocked if this copy has circulation history.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={copyDeleteInProgress}>Cancel</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={copyDeleteInProgress}
+              onClick={() => void confirmDeleteCopy()}
+            >
+              {copyDeleteInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Delete copy
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={deleteTarget != null}

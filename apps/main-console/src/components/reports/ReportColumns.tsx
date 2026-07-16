@@ -13,8 +13,7 @@ import {
 import { Report } from "./types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "../ui/skeleton";
-
-const profileImageUrl = import.meta.env.VITE_STUDENT_PROFILE_URL;
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 export const ReportColumns: ColumnDef<Report>[] = [
   // {
   //   accessorKey: "id",
@@ -58,7 +57,7 @@ export const ReportColumns: ColumnDef<Report>[] = [
       };
 
       const bgColor = stringToColor(name);
-      const avatar = `${profileImageUrl}/Student_Image_${uid}.jpg`;
+      const avatar = studentAvatarUrl(uid) ?? "";
 
       return (
         <div className="flex items-center">

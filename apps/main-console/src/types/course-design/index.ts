@@ -203,7 +203,7 @@ export interface Subject {
   name: string;
   code: string | null;
   sequence: number | null;
-  disabled: boolean;
+  isActive?: boolean | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

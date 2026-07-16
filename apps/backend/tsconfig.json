@@ -15,15 +15,13 @@
     "noEmit": false, // Allow emitting output
     "allowImportingTsExtensions": false,
     "isolatedModules": true, // Required for using ESM modules
+    "types": ["node"],
     // "baseUrl": ".", // Allow absolute imports relative to project root
 
     "baseUrl": ".", // Set base URL for resolving paths
     "paths": {
-      //   "@/db/*": ["./src/db/*"], // Explicit path for @/db
-      //   "@/*": ["./src/*"] // General path for other imports
       "@repo/db/*": ["../../packages/db/src/*"],
       "@repo/utils/*": ["../../packages/utils/src/*"],
-      //  "@repo/eslint-config/*": ["../../packages/eslint-config/src/*"],
       "@/*": ["./src/*", "../../packages/db/src/*"]
     }
   },

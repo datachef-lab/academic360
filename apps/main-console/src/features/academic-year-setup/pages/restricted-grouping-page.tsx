@@ -47,7 +47,9 @@ import { toast } from "sonner";
 import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
 import type { SubjectDto } from "@repo/db/dtos/course-design";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { AcademicYearSelector } from "@/components/academic-year/AcademicYearSelector";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 // Class DTO is not used directly here
 
 // Use only DTOs from packages/db. Define minimal local types for UI needs.
@@ -148,7 +150,9 @@ export default function RestrictedGroupingPage() {
       });
       toast.success("Restricted grouping updated");
       setIsEditOpen(false);
-      const mains = await restrictedGroupingApi.listRestrictedGroupingMains();
+      const mains = await restrictedGroupingApi.listRestrictedGroupingMains(
+        currentAcademicYear?.id,
+      );
       const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
         id: dto.id || 0,
         subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
@@ -316,6 +320,7 @@ export default function RestrictedGroupingPage() {
       pageSize: itemsPerPage,
       search: searchTerm || "",
       subjectType: selectedCategory || "",
+      academicYearId: currentAcademicYear?.id,
     });
     const mains = paged.content as RestrictedGroupingMainDto[];
     const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
@@ -353,7 +358,7 @@ export default function RestrictedGroupingPage() {
   useEffect(() => {
     loadPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, searchTerm, selectedCategory]);
+  }, [currentPage, itemsPerPage, searchTerm, selectedCategory, currentAcademicYear?.id]);
 
   // Filter the data
   const filteredRelations = relations.filter((item) => {
@@ -468,6 +473,8 @@ export default function RestrictedGroupingPage() {
           .filter((id): id is number => !!id)
           .map((id) => ({ programCourse: { id } }));
         return {
+          academicYear:
+            currentAcademicYear?.id != null ? { id: currentAcademicYear.id } : undefined,
           subjectType: { id: subjectTypeId },
           subject: { id: subjectId },
           isActive: true,
@@ -489,7 +496,9 @@ export default function RestrictedGroupingPage() {
       toast.success(`Saved ${results.length} restricted grouping${results.length > 1 ? "s" : ""}`);
       setIsAddDialogOpen(false);
       resetDialog();
-      const mains = await restrictedGroupingApi.listRestrictedGroupingMains();
+      const mains = await restrictedGroupingApi.listRestrictedGroupingMains(
+        currentAcademicYear?.id,
+      );
       const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
         id: dto.id || 0,
         subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
@@ -535,6 +544,8 @@ export default function RestrictedGroupingPage() {
     updateRule(ruleId, field, newArray);
   };
 
+  useResourceRoom("subject-selection/restricted-grouping-mains", () => loadPage());
+
   return (
     <div className="h-full flex flex-col">
       {/* Fixed Header */}
@@ -567,6 +578,7 @@ export default function RestrictedGroupingPage() {
             />
           </div>
           <div className="flex items-center gap-2">
+            <AcademicYearSelector showLabel={false} className="w-full sm:w-56" />
             <Select value={selectedProgramCourse} onValueChange={setSelectedProgramCourse}>
               <SelectTrigger className="w-48 text-gray-700">
                 <SelectValue placeholder="Filter by Program-Course" />

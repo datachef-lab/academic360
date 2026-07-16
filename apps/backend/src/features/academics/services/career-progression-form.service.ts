@@ -4,6 +4,8 @@ import {
   careerProgressionFormCertificateModel,
   careerProgressionFormFieldModel,
   careerProgressionFormModel,
+  certificateFieldMasterModel,
+  certificateFieldOptionMasterModel,
   certificateMasterModel,
   classModel,
   createCareerProgressionFormSchema,
@@ -15,12 +17,30 @@ import {
   studentModel,
   userModel,
 } from "@repo/db/schemas";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import type {
   CareerProgressionFormCertificateDto,
   CareerProgressionFormDto,
 } from "@repo/db/dtos/academics";
 import { findCareerProgressionFormFieldsByCertificateId } from "./career-progression-form-field.service.js";
+import {
+  activeCertificateFieldMasterIdWhere,
+  activeCertificateMasterIdWhere,
+  activeCertificateOptionForFieldWhere,
+  isCertificateFieldMasterActive,
+  isCertificateMasterActive,
+} from "@/features/academics/utils/certificate-master-active.js";
 
 function computeCareerExportStudentStatus(student: {
   active: boolean | null;
@@ -33,39 +53,99 @@ function computeCareerExportStudentStatus(student: {
   return "Active";
 }
 
+const NON_DEPRECATED_PROMOTION_SQL = sql`COALESCE(${promotionModel.isDeprecated}, false) = false`;
+
+/**
+ * The academic year a student is currently in, derived from their ACTIVE
+ * promotion (end_date IS NULL) -> session -> academic year. This is the correct
+ * per-student "current year" for career progression — the global
+ * `academic_years.is_current_year` flag can be ambiguous (e.g. more than one
+ * year flagged) or ahead of the student's actual session.
+ */
+export async function findAcademicYearForStudentActivePromotion(
+  studentId: number,
+): Promise<typeof academicYearModel.$inferSelect | null> {
+  const [row] = await db
+    .select({ ay: academicYearModel })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .innerJoin(
+      academicYearModel,
+      eq(academicYearModel.id, sessionModel.academicYearId),
+    )
+    .where(
+      and(
+        eq(promotionModel.studentId, studentId),
+        isNull(promotionModel.endDate),
+        NON_DEPRECATED_PROMOTION_SQL,
+      ),
+    )
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
+  return row?.ay ?? null;
+}
+
+async function resolvePromotionForCareerExport(
+  studentId: number,
+  academicYearId: number,
+  asOfDate?: Date | null,
+) {
+  const yearScope = and(
+    eq(promotionModel.studentId, studentId),
+    eq(sessionModel.academicYearId, academicYearId),
+    NON_DEPRECATED_PROMOTION_SQL,
+  )!;
+
+  if (asOfDate) {
+    const [covering] = await db
+      .select({ p: promotionModel })
+      .from(promotionModel)
+      .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+      .where(
+        and(
+          yearScope,
+          or(
+            isNull(promotionModel.startDate),
+            lte(promotionModel.startDate, asOfDate),
+          )!,
+          or(
+            isNull(promotionModel.endDate),
+            gte(promotionModel.endDate, asOfDate),
+          )!,
+        ),
+      )
+      .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+      .limit(1);
+    if (covering?.p) return covering.p;
+  }
+
+  const [latestInYear] = await db
+    .select({ p: promotionModel })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .where(yearScope)
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
+
+  return latestInYear?.p;
+}
+
 async function loadPlacementForCareerExport(
   studentId: number,
   academicYearId: number,
   fallbackProgramCourseId: number | null,
+  asOfDate?: Date | null,
 ): Promise<{
   programCourse: string;
   semester: string;
   shift: string;
   section: string;
 }> {
-  const promotionForYear = await db
-    .select({ p: promotionModel })
-    .from(promotionModel)
-    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
-    .where(
-      and(
-        eq(promotionModel.studentId, studentId),
-        eq(sessionModel.academicYearId, academicYearId),
-      ),
-    )
-    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
-    .limit(1);
-
-  let promo = promotionForYear[0]?.p;
-  if (!promo) {
-    const [latest] = await db
-      .select()
-      .from(promotionModel)
-      .where(eq(promotionModel.studentId, studentId))
-      .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
-      .limit(1);
-    promo = latest;
-  }
+  const promo = await resolvePromotionForCareerExport(
+    studentId,
+    academicYearId,
+    asOfDate,
+  );
 
   if (promo) {
     const [pc, cls, shf] = await Promise.all([
@@ -157,10 +237,14 @@ export async function careerProgressionFormRowToDto(
       .from(certificateMasterModel)
       .where(eq(certificateMasterModel.id, certRow.certificateMasterId));
 
-    if (!certificateMaster) continue;
+    if (!certificateMaster || !isCertificateMasterActive(certificateMaster)) {
+      continue;
+    }
 
-    const fields = await findCareerProgressionFormFieldsByCertificateId(
-      certRow.id,
+    const fields = (
+      await findCareerProgressionFormFieldsByCertificateId(certRow.id)
+    ).filter((field) =>
+      isCertificateFieldMasterActive(field.certificateFieldMaster),
     );
 
     certificates.push({
@@ -259,6 +343,7 @@ export async function findAllCareerProgressionForms(
           f.studentId,
           ayId,
           base?.programCourseId ?? null,
+          f.updatedAt,
         ),
       );
     }),
@@ -568,6 +653,12 @@ export async function submitCareerProgressionFormForCurrentYear(
     );
 
   for (const cert of data.certificates) {
+    const [activeMaster] = await db
+      .select({ id: certificateMasterModel.id })
+      .from(certificateMasterModel)
+      .where(activeCertificateMasterIdWhere(cert.certificateMasterId));
+    if (!activeMaster) continue;
+
     const [createdCert] = await db
       .insert(careerProgressionFormCertificateModel)
       .values({
@@ -579,11 +670,32 @@ export async function submitCareerProgressionFormForCurrentYear(
     if (!createdCert) continue;
 
     for (const field of cert.fields) {
+      const [activeField] = await db
+        .select({ id: certificateFieldMasterModel.id })
+        .from(certificateFieldMasterModel)
+        .where(
+          activeCertificateFieldMasterIdWhere(field.certificateFieldMasterId),
+        );
+      if (!activeField) continue;
+
+      let optionId = field.certificateFieldOptionMasterId ?? null;
+      if (optionId != null) {
+        const [activeOption] = await db
+          .select({ id: certificateFieldOptionMasterModel.id })
+          .from(certificateFieldOptionMasterModel)
+          .where(
+            activeCertificateOptionForFieldWhere(
+              field.certificateFieldMasterId,
+              optionId,
+            ),
+          );
+        if (!activeOption) optionId = null;
+      }
+
       await db.insert(careerProgressionFormFieldModel).values({
         careerProgressionFormCertificateId: createdCert.id,
         certificateFieldMasterId: field.certificateFieldMasterId,
-        certificateFieldOptionMasterId:
-          field.certificateFieldOptionMasterId ?? null,
+        certificateFieldOptionMasterId: optionId,
         value: field.value ?? null,
       });
     }

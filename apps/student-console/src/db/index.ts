@@ -126,9 +126,36 @@ if (!global.mysqlPool) {
 export const pool = global.mysqlPool!;
 export const db = global.mysqlDb!;
 
-export const dbPostgres: PostgresJsDatabase<typeof schema> = drizzlePostgres(
-  process.env.DATABASE_URL!,
-  { schema },
+declare global {
+  var postgresDb: PostgresJsDatabase<typeof schema> | undefined;
+}
+
+// Lazily initialise the Postgres client on first use rather than at module
+// import time. `next build` imports every route module (even force-dynamic
+// ones) during the "collect page data" pass — and DATABASE_URL is a runtime
+// secret that is NOT present at build time. Constructing the client eagerly
+// throws ("Cannot read properties of undefined (reading 'options')") and fails
+// the build. Deferring means the client is only created when a query actually
+// runs, i.e. at request time where DATABASE_URL is set.
+function getDbPostgres(): PostgresJsDatabase<typeof schema> {
+  if (!global.postgresDb) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is not set");
+    }
+    global.postgresDb = drizzlePostgres(process.env.DATABASE_URL, { schema });
+  }
+  return global.postgresDb;
+}
+
+export const dbPostgres: PostgresJsDatabase<typeof schema> = new Proxy(
+  {} as PostgresJsDatabase<typeof schema>,
+  {
+    get(_target, prop, receiver) {
+      const instance = getDbPostgres();
+      const value = Reflect.get(instance as object, prop, receiver);
+      return typeof value === "function" ? value.bind(instance) : value;
+    },
+  },
 );
 
 export async function query<T extends RowDataPacket[]>(

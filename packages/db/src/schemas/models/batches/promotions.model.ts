@@ -1,4 +1,5 @@
-import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { studentModel } from "../user";
 import { programCourseModel } from "../course-design";
 import { classModel, sectionModel, sessionModel, shiftModel } from "../academics";
@@ -48,10 +49,23 @@ export const promotionModel = pgTable("promotions", {
     startDate: timestamp("start_date", {withTimezone: true}),
     endDate: timestamp("end_date", {withTimezone: true}),
     remarks: text("remarks"),
+    isDeprecated: boolean("is_deprecated").default(false),
     examFormSubmissionTimeStamp: timestamp({withTimezone: true}),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // The Real Time Tracker joins/filters this (large, previously index-less)
+    // table heavily by these FKs. FK columns need explicit indexes in Postgres.
+    programCourseIdx: index("promotions_program_course_id_idx").on(t.programCourseId),
+    studentIdx: index("promotions_student_id_idx").on(t.studentId),
+    sessionIdx: index("promotions_session_id_idx").on(t.sessionId),
+    // Partial index matching the tracker's "active promotion" predicate
+    // (ACTIVE_PROMOTION_SQL) so the affiliation aggregation scans only the
+    // current, non-deprecated rows.
+    activeIdx: index("promotions_active_idx")
+        .on(t.programCourseId, t.studentId)
+        .where(sql`${t.endDate} is null and coalesce(${t.isDeprecated}, false) = false`),
+}));
 
 export const promotionInsertSchema = createInsertSchema(promotionModel);
 

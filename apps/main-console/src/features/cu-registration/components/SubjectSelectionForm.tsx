@@ -348,6 +348,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           page: 1,
           pageSize: 200,
           programCourseId: programCourseId || undefined,
+          studentId: studentData?.id,
         });
         const norm = (s: string) =>
           String(s || "")

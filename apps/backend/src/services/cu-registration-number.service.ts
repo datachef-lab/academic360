@@ -7,7 +7,7 @@
 
 import { db } from "@/db/index.js";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
-import { max, sql } from "drizzle-orm";
+import { eq, max, sql } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
 
 export class CuRegistrationNumberService {
@@ -16,18 +16,31 @@ export class CuRegistrationNumberService {
   private static readonly TOTAL_LENGTH = 7; // 017 + 4 digits
 
   /**
-   * Generate the next available CU Registration Application Number
+   * Generate the next available CU Registration Application Number.
+   * Scoped to a specific academic year so numbering restarts at 0170001 each year.
+   * Pass the transaction context (tx) to run inside the caller's transaction snapshot.
    */
-  static async generateNextApplicationNumber(): Promise<string> {
+  static async generateNextApplicationNumber(
+    academicYearId: number,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tx?: any,
+  ): Promise<string> {
     try {
-      // Get the highest existing number
-      const result = await db
+      const executor: typeof db = tx ?? db;
+      // Get the highest existing number for this academic year only
+      const result = await executor
         .select({
           maxNumber: max(
             cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
           ),
         })
-        .from(cuRegistrationCorrectionRequestModel);
+        .from(cuRegistrationCorrectionRequestModel)
+        .where(
+          eq(
+            cuRegistrationCorrectionRequestModel.academicYearId,
+            academicYearId,
+          ),
+        );
 
       const maxExistingNumber = result[0]?.maxNumber;
 
@@ -236,12 +249,9 @@ export class CuRegistrationNumberService {
       const minNumber = rangeResult[0]?.minNumber;
       const maxNumber = rangeResult[0]?.maxNumber;
 
-      // Generate next available number
-      const nextAvailable = await this.generateNextApplicationNumber();
-
       return {
         totalIssued,
-        nextAvailable,
+        nextAvailable: "per-academic-year",
         lastIssued: maxNumber || null,
         range: {
           min: minNumber || this.formatApplicationNumber(1),
@@ -350,7 +360,7 @@ export class CuRegistrationNumberExamples {
     try {
       // Generate next number
       const nextNumber =
-        await CuRegistrationNumberService.generateNextApplicationNumber();
+        await CuRegistrationNumberService.generateNextApplicationNumber(1);
       console.log(`Next available number: ${nextNumber}`);
 
       // Validate format

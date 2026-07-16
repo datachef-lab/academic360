@@ -59,6 +59,17 @@ interface FeeStructureFilters {
   shiftId: number | null;
 }
 
+const formatCurrencyValue = (value?: number | null) => {
+  const numericValue = Number(value ?? 0);
+  if (!Number.isFinite(numericValue)) {
+    return "0";
+  }
+  return numericValue.toLocaleString("en-IN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+};
+
 const DotSpinnerLoader: React.FC = () => (
   <div className="flex items-center justify-center h-64">
     <div className="dot-spinner" role="status" aria-label="Loading fees structures">
@@ -230,6 +241,51 @@ const FeesStructurePage: React.FC = () => {
   const [selectedConcessionSlabModal, setSelectedConcessionSlabModal] =
     useState<FeeStructureDto | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+
+  // Preview modal derives its Fee Components breakdown directly from the DTO's
+  // `components` (each carries its own feeHead/feeSlab/amount) — there's no
+  // top-level `baseAmount`/`feeStructureSlabs` on FeeStructureDto to read.
+  const previewBreakdown = useMemo(() => {
+    const components = selectedConcessionSlabModal?.components || [];
+    if (components.length === 0) return null;
+
+    const feeHeadMap = new Map<number, string>();
+    components.forEach((c) => {
+      if (c.feeHead?.id && !feeHeadMap.has(c.feeHead.id)) {
+        feeHeadMap.set(c.feeHead.id, c.feeHead.name || "-");
+      }
+    });
+    const feeHeads = Array.from(feeHeadMap.entries()).map(([id, name]) => ({ id, name }));
+
+    const slabMap = new Map<
+      number,
+      { name: string; defaultRate: number; feeHeadAmounts: Record<number, number> }
+    >();
+    components.forEach((c) => {
+      const slabId = c.feeSlab?.id;
+      const feeHeadId = c.feeHead?.id;
+      if (!slabId || !feeHeadId) return;
+      if (!slabMap.has(slabId)) {
+        slabMap.set(slabId, {
+          name: c.feeSlab?.name || "-",
+          defaultRate: c.feeSlab?.defaultRate || 0,
+          feeHeadAmounts: {},
+        });
+      }
+      slabMap.get(slabId)!.feeHeadAmounts[feeHeadId] = c.amount || 0;
+    });
+    const slabs = Array.from(slabMap.values());
+    if (slabs.length === 0 || feeHeads.length === 0) return null;
+
+    const totalPayableFor = (slab: (typeof slabs)[number]) =>
+      feeHeads.reduce((sum, fh) => sum + (slab.feeHeadAmounts[fh.id] || 0), 0);
+
+    // Reference ("full fee") slab for Allocation % — the slab with the
+    // highest total, since every concession slab is capped by the full amount.
+    const baseTotal = Math.max(...slabs.map(totalPayableFor), 0);
+
+    return { feeHeads, slabs, totalPayableFor, baseTotal };
+  }, [selectedConcessionSlabModal]);
 
   // Filter state
   const [filters, setFilters] = useState<FeeStructureFilters>({
@@ -723,43 +779,53 @@ const FeesStructurePage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow className="border-b">
+                  <TableHead className="w-[70px] border-r text-center">Sr. No.</TableHead>
+                  <TableHead className="border-r">Fee Receipt</TableHead>
                   <TableHead className="w-[200px] border-r">Program Course</TableHead>
+                  <TableHead className="border-r">Semester</TableHead>
                   <TableHead className="border-r">Shift</TableHead>
-                  <TableHead className="border-r">Components</TableHead>
-                  <TableHead className="border-r">Concession Slab</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableHead className="border-r">Preview</TableHead>
+                  <TableHead className="w-[100px]">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedFeesStructures.map((fs) => {
+                {sortedFeesStructures.map((fs, idx) => {
                   const programCourseName = fs.programCourse?.name || "-";
                   const shiftName = fs.shift?.name || "-";
-                  // Get unique fee heads (since each fee head now has multiple components per slab)
-                  const allFeeHeads = fs.components
-                    .map((c) => c.feeHead)
-                    .filter(
-                      (head): head is NonNullable<typeof head> =>
-                        head !== null && head !== undefined,
-                    );
-                  const uniqueFeeHeadMap = new Map();
-                  allFeeHeads.forEach((head) => {
-                    if (head.id && !uniqueFeeHeadMap.has(head.id)) {
-                      uniqueFeeHeadMap.set(head.id, head);
-                    }
-                  });
-                  const feeHeads = Array.from(uniqueFeeHeadMap.values());
-                  const hasConcessionSlabs =
-                    fs.feeStructureSlabs && fs.feeStructureSlabs.length > 0;
+                  const receiptName = fs.receiptType?.name || "-";
+                  const semesterName = fs.class?.name || "-";
 
                   return (
-                    <TableRow key={fs.id || Math.random()} className="border-b">
+                    <TableRow key={fs.id || idx} className="border-b">
+                      <TableCell className="border-r text-center">{idx + 1}</TableCell>
+                      <TableCell className="border-r">
+                        {receiptName !== "-" ? (
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-300 text-emerald-700 bg-emerald-50"
+                          >
+                            {receiptName}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
                       <TableCell className="border-r">
                         {programCourseName !== "-" ? (
-                          <Badge
-                            variant="secondary"
-                            className="bg-blue-100 text-blue-700 hover:bg-blue-200"
-                          >
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                             {programCourseName}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="border-r">
+                        {semesterName !== "-" ? (
+                          <Badge
+                            variant="outline"
+                            className="border-purple-300 text-purple-700 bg-purple-50"
+                          >
+                            {semesterName}
                           </Badge>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -778,35 +844,14 @@ const FeesStructurePage: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell className="border-r">
-                        {feeHeads.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {feeHeads.map((feeHead) => (
-                              <Badge
-                                key={feeHead.id}
-                                variant="outline"
-                                className="border-blue-300 text-blue-700 bg-blue-50"
-                              >
-                                {feeHead.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-xs">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="border-r">
-                        {hasConcessionSlabs ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedConcessionSlabModal(fs)}
-                            className="text-xs"
-                          >
-                            Summary ({fs.feeStructureSlabs?.length || 0})
-                          </Button>
-                        ) : (
-                          <span className="text-gray-400 text-xs">-</span>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedConcessionSlabModal(fs)}
+                          className="text-xs"
+                        >
+                          Preview
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <Button
@@ -1153,7 +1198,7 @@ const FeesStructurePage: React.FC = () => {
                         <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
                           <div className="flex justify-center">
                             <span className="text-gray-900 font-semibold">
-                              ₹{selectedConcessionSlabModal.baseAmount.toLocaleString()}
+                              ₹{formatCurrencyValue(previewBreakdown?.baseTotal ?? 0)}
                             </span>
                           </div>
                         </TableCell>
@@ -1184,182 +1229,111 @@ const FeesStructurePage: React.FC = () => {
                   </Table>
                 </div>
 
-                {/* Concession Slab x Component Table */}
-                {selectedConcessionSlabModal.components &&
-                  selectedConcessionSlabModal.components.length > 0 &&
-                  selectedConcessionSlabModal.feeStructureSlabs &&
-                  selectedConcessionSlabModal.feeStructureSlabs.length > 0 && (
-                    <div className="border-2 border-gray-400 rounded overflow-hidden">
-                      {/* Fee Components Header */}
-                      <div className="bg-gray-100 border-b-2 border-gray-400 p-3">
-                        <h3 className="text-lg font-semibold text-gray-900">Fee Components</h3>
-                      </div>
-                      <Table className="table-fixed w-full">
+                {/* Fee Components — one row per slab, one column per fee head,
+                    mirroring the edit wizard's preview (FeeStructureMaster.tsx) */}
+                {previewBreakdown && (
+                  <div className="border-2 border-gray-400 rounded overflow-hidden">
+                    <div className="bg-gray-100 border-b-2 border-gray-400 p-3">
+                      <h3 className="text-lg font-semibold text-gray-900">Fee Components</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <Table className="w-full">
                         <TableHeader>
-                          <TableRow className="border-b-2 border-gray-400">
-                            <TableHead className="w-[80px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-blue-50">
+                          <TableRow className="border-b-2 border-gray-400 bg-gray-100">
+                            <TableHead className="w-[80px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-gray-50">
                               Sr. No
                             </TableHead>
-                            <TableHead className="w-[200px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-green-50">
-                              Fee Head
+                            <TableHead className="min-w-[180px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-gray-50">
+                              Slab
                             </TableHead>
-                            <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-yellow-50">
+                            {previewBreakdown.feeHeads.map((fh, i) => (
+                              <TableHead
+                                key={fh.id}
+                                className="min-w-[140px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap"
+                                style={{
+                                  backgroundColor:
+                                    i % 5 === 0
+                                      ? "#fef3c7" // yellow-100
+                                      : i % 5 === 1
+                                        ? "#fce7f3" // pink-100
+                                        : i % 5 === 2
+                                          ? "#dbeafe" // blue-100
+                                          : i % 5 === 3
+                                            ? "#e0e7ff" // indigo-100
+                                            : "#dcfce7", // green-100
+                                }}
+                              >
+                                {fh.name}
+                              </TableHead>
+                            ))}
+                            <TableHead className="min-w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-blue-50">
+                              Total Payable
+                            </TableHead>
+                            <TableHead className="min-w-[120px] p-2 text-center text-base font-semibold whitespace-nowrap bg-yellow-50">
                               Allocation
                             </TableHead>
-                            {selectedConcessionSlabModal.feeStructureSlabs.map(
-                              (slabMapping, slabIndex) => {
-                                const slab = slabMapping.feeConcessionSlab;
-                                const concessionRate = slabMapping.concessionRate || 0;
-                                return (
-                                  <TableHead
-                                    key={slabMapping.id || slabIndex}
-                                    className={`w-[150px] p-2 text-center text-base font-semibold whitespace-nowrap ${
-                                      slabIndex <
-                                      selectedConcessionSlabModal.feeStructureSlabs.length - 1
-                                        ? "border-r-2 border-gray-400"
-                                        : ""
-                                    }`}
-                                    style={{
-                                      backgroundColor:
-                                        slabIndex % 4 === 0
-                                          ? "#fef3c7" // yellow-100
-                                          : slabIndex % 4 === 1
-                                            ? "#fce7f3" // pink-100
-                                            : slabIndex % 4 === 2
-                                              ? "#dbeafe" // blue-100
-                                              : "#e0e7ff", // indigo-100
-                                    }}
-                                  >
-                                    {slab?.name || "-"} ({concessionRate}%)
-                                  </TableHead>
-                                );
-                              },
-                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {selectedConcessionSlabModal.components.map((component, index) => {
-                            const componentAmount = Math.round(
-                              ((selectedConcessionSlabModal.baseAmount || 0) *
-                                (component.feeHeadPercentage || 0)) /
-                                100,
-                            );
+                          {previewBreakdown.slabs.map((slab, slabIndex) => {
+                            const totalPayable = previewBreakdown.totalPayableFor(slab);
+                            const allocation =
+                              previewBreakdown.baseTotal > 0
+                                ? (totalPayable / previewBreakdown.baseTotal) * 100
+                                : 0;
                             return (
                               <TableRow
-                                key={component.id || index}
+                                key={`${slab.name}-${slabIndex}`}
                                 className="border-b-2 border-gray-400"
                                 style={{
-                                  backgroundColor: index % 2 === 0 ? "#f9fafb" : "#ffffff",
+                                  backgroundColor: slabIndex % 2 === 0 ? "#f9fafb" : "#ffffff",
                                 }}
                               >
-                                <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-blue-50">
-                                  {index + 1}
+                                <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-gray-50">
+                                  {slabIndex + 1}
                                 </TableCell>
-                                <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-green-50">
-                                  {component.feeHead?.name || "-"}{" "}
-                                  <span className="text-red-600">
-                                    ({component.feeHeadPercentage || 0}%)
-                                  </span>
+                                <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-gray-50">
+                                  {slab.name}
+                                  {slab.defaultRate > 0 && (
+                                    <span className="text-xs text-gray-600 ml-1">
+                                      ({slab.defaultRate.toFixed(0)}%)
+                                    </span>
+                                  )}
                                 </TableCell>
-                                <TableCell className="text-center border-r-2 border-gray-400 p-2 font-semibold bg-yellow-50">
-                                  ₹{componentAmount.toLocaleString()}
+                                {previewBreakdown.feeHeads.map((fh, i) => (
+                                  <TableCell
+                                    key={fh.id}
+                                    className="text-center border-r-2 border-gray-400 p-2 font-semibold"
+                                    style={{
+                                      backgroundColor:
+                                        i % 5 === 0
+                                          ? "#fef3c7" // yellow-100
+                                          : i % 5 === 1
+                                            ? "#fce7f3" // pink-100
+                                            : i % 5 === 2
+                                              ? "#dbeafe" // blue-100
+                                              : i % 5 === 3
+                                                ? "#e0e7ff" // indigo-100
+                                                : "#dcfce7", // green-100
+                                    }}
+                                  >
+                                    ₹{formatCurrencyValue(slab.feeHeadAmounts[fh.id] || 0)}
+                                  </TableCell>
+                                ))}
+                                <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold bg-blue-50">
+                                  ₹{formatCurrencyValue(totalPayable)}
                                 </TableCell>
-                                {selectedConcessionSlabModal.feeStructureSlabs.map(
-                                  (slabMapping, slabIndex) => {
-                                    const concessionRate = slabMapping.concessionRate || 0;
-                                    // Calculate concession amount for this component with this slab
-                                    const concessionAmount = Math.round(
-                                      (componentAmount * concessionRate) / 100,
-                                    );
-                                    const totalAfterConcession = componentAmount - concessionAmount;
-                                    const isLastColumn =
-                                      slabIndex ===
-                                      selectedConcessionSlabModal.feeStructureSlabs.length - 1;
-                                    return (
-                                      <TableCell
-                                        key={slabMapping.id || slabIndex}
-                                        className={`text-center p-2 font-semibold ${
-                                          !isLastColumn ? "border-r-2 border-gray-400" : ""
-                                        }`}
-                                        style={{
-                                          backgroundColor:
-                                            slabIndex % 4 === 0
-                                              ? "#fef3c7" // yellow-100
-                                              : slabIndex % 4 === 1
-                                                ? "#fce7f3" // pink-100
-                                                : slabIndex % 4 === 2
-                                                  ? "#dbeafe" // blue-100
-                                                  : "#e0e7ff", // indigo-100
-                                        }}
-                                      >
-                                        ₹{totalAfterConcession.toLocaleString()}
-                                      </TableCell>
-                                    );
-                                  },
-                                )}
+                                <TableCell className="text-center p-2 font-semibold bg-yellow-50">
+                                  {allocation.toFixed(2)}%
+                                </TableCell>
                               </TableRow>
                             );
                           })}
-                          {/* Total Row */}
-                          <TableRow className="border-t-4 border-gray-600 bg-gray-100">
-                            <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-blue-50">
-                              Total
-                            </TableCell>
-                            <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-green-50">
-                              -
-                            </TableCell>
-                            <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-yellow-50">
-                              ₹{selectedConcessionSlabModal.baseAmount.toLocaleString()}
-                            </TableCell>
-                            {selectedConcessionSlabModal.feeStructureSlabs.map(
-                              (slabMapping, slabIndex) => {
-                                const concessionRate = slabMapping.concessionRate || 0;
-                                // Calculate total for this slab column (sum of all components after concession)
-                                const columnTotal = selectedConcessionSlabModal.components.reduce(
-                                  (sum, component) => {
-                                    const componentAmount = Math.round(
-                                      ((selectedConcessionSlabModal.baseAmount || 0) *
-                                        (component.feeHeadPercentage || 0)) /
-                                        100,
-                                    );
-                                    const concessionAmount = Math.round(
-                                      (componentAmount * concessionRate) / 100,
-                                    );
-                                    const totalAfterConcession = componentAmount - concessionAmount;
-                                    return sum + totalAfterConcession;
-                                  },
-                                  0,
-                                );
-                                const isLastColumn =
-                                  slabIndex ===
-                                  selectedConcessionSlabModal.feeStructureSlabs.length - 1;
-                                return (
-                                  <TableCell
-                                    key={slabMapping.id || slabIndex}
-                                    className={`text-center p-2 font-bold text-base ${
-                                      !isLastColumn ? "border-r-2 border-gray-400" : ""
-                                    }`}
-                                    style={{
-                                      backgroundColor:
-                                        slabIndex % 4 === 0
-                                          ? "#fef3c7" // yellow-100
-                                          : slabIndex % 4 === 1
-                                            ? "#fce7f3" // pink-100
-                                            : slabIndex % 4 === 2
-                                              ? "#dbeafe" // blue-100
-                                              : "#e0e7ff", // indigo-100
-                                    }}
-                                  >
-                                    ₹{columnTotal.toLocaleString()}
-                                  </TableCell>
-                                );
-                              },
-                            )}
-                          </TableRow>
                         </TableBody>
                       </Table>
                     </div>
-                  )}
+                  </div>
+                )}
 
                 {/* Notes Section */}
                 <div className="bg-gray-50 border-t-2 border-l-2 border-r-2 border-b-2 border-gray-300 px-6 py-4">

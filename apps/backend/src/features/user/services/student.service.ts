@@ -7,10 +7,12 @@ import {
   and,
   sql,
   isNotNull,
+  isNull,
   inArray,
 } from "drizzle-orm";
 import pLimit from "p-limit";
 import JSZip from "jszip";
+import { resolveStudentAvatarBuffer } from "@/features/user/services/student-avatar.service.js";
 import { db, mysqlConnection } from "@/db/index.js";
 import {
   personalDetailsModel,
@@ -34,6 +36,7 @@ import {
   occupationModel,
   qualificationModel,
   annualIncomeModel,
+  bloodGroupModel,
 } from "@repo/db/schemas/models/resources";
 import { countryModel } from "@repo/db/schemas/models/resources/country.model";
 import { stateModel } from "@repo/db/schemas/models/resources/state.model";
@@ -157,6 +160,7 @@ function generateAddressColumns(addressDetails: any) {
 }
 import {
   admissionGeneralInfoModel,
+  admissionQuotaTypeModel,
   applicationFormModel,
 } from "@repo/db/schemas";
 import { promotionModel } from "@repo/db/schemas/models/batches";
@@ -269,15 +273,49 @@ export async function findByUserId(userId: number): Promise<StudentDto | null> {
 }
 
 export async function findByUid(uid: string): Promise<StudentDto | null> {
+  // Match the current uid, rfid, or a PREVIOUS uid (uid changes when a student's
+  // shift changes — the old code is preserved in previousUid). Prefer a current
+  // uid/rfid hit over a previous-uid coincidence so an active code always wins.
   const [foundStudent] = await db
     .select()
     .from(studentModel)
     .where(
-      or(ilike(studentModel.uid, uid), ilike(studentModel.rfidNumber, uid)),
-    );
+      or(
+        ilike(studentModel.uid, uid),
+        ilike(studentModel.rfidNumber, uid),
+        ilike(studentModel.previousUid, uid),
+      ),
+    )
+    .orderBy(
+      sql`CASE WHEN ${studentModel.uid} ILIKE ${uid} THEN 0 WHEN ${studentModel.rfidNumber} ILIKE ${uid} THEN 1 ELSE 2 END`,
+    )
+    .limit(1);
 
   // console.log("Found student by UID:", foundStudent);
   return await modelToDto(foundStudent);
+}
+
+/**
+ * Class/semester name of the student's currently ACTIVE promotion (end_date IS
+ * NULL, non-deprecated, latest). Returns null when there is no active promotion.
+ */
+export async function getActiveClassNameForStudent(
+  studentId: number,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ className: classModel.name })
+    .from(promotionModel)
+    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+    .where(
+      and(
+        eq(promotionModel.studentId, studentId),
+        eq(promotionModel.isDeprecated, false),
+        isNull(promotionModel.endDate),
+      ),
+    )
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
+  return row?.className ?? null;
 }
 
 export async function updateStudentStatusById(
@@ -301,6 +339,7 @@ export async function updateStudentStatusById(
     cancelledAdmissionByUserId?: number | null;
     alumni?: boolean;
     rfidNumber?: string | null;
+    quotaTypeId?: number | null;
   },
 ) {
   const update: any = {};
@@ -476,6 +515,10 @@ export async function updateStudentStatusById(
   // If RFID is provided (including empty string or null), update that column
   if (Object.prototype.hasOwnProperty.call(data, "rfidNumber")) {
     update.rfidNumber = data.rfidNumber ?? null;
+  }
+  // If quota type is provided (including null to clear), update that column
+  if (Object.prototype.hasOwnProperty.call(data, "quotaTypeId")) {
+    update.quotaTypeId = data.quotaTypeId ?? null;
   }
   // Helper to convert timestamp string to Date object representing IST time
   const convertToISTTimestamp = (
@@ -978,7 +1021,12 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
   const [latestPromotion] = await db
     .select()
     .from(promotionModel)
-    .where(eq(promotionModel.studentId, student.id as number))
+    .where(
+      and(
+        eq(promotionModel.studentId, student.id as number),
+        eq(promotionModel.isDeprecated, false),
+      ),
+    )
     .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
     .limit(1);
 
@@ -1087,6 +1135,45 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     .from(userModel)
     .where(eq(userModel.id, student.userId as number));
 
+  // Blood group lives on the health record (keyed by userId), not the student
+  // row — resolve it here so consumers like the ID card get it on the DTO.
+  let bloodGroup: string | null = null;
+  if (student.userId) {
+    const [foundHealth] = await db
+      .select({ type: bloodGroupModel.type })
+      .from(healthModel)
+      .leftJoin(
+        bloodGroupModel,
+        eq(healthModel.bloodGroupId, bloodGroupModel.id),
+      )
+      .where(eq(healthModel.userId, student.userId));
+    bloodGroup = foundHealth?.type ?? null;
+  }
+
+  let quotaType: string | null = null;
+  let quotaTypeLabel: string | null = null;
+  if (student.quotaTypeId) {
+    const [foundQuotaType] = await db
+      .select({
+        name: admissionQuotaTypeModel.name,
+        shortName: admissionQuotaTypeModel.shortName,
+        printOnIdCard: admissionQuotaTypeModel.printOnIdCard,
+      })
+      .from(admissionQuotaTypeModel)
+      .where(eq(admissionQuotaTypeModel.id, student.quotaTypeId));
+    if (foundQuotaType) {
+      // Display label for detail panels: "Name (Short Name)" — always available.
+      quotaTypeLabel = foundQuotaType.shortName
+        ? `${foundQuotaType.name} (${foundQuotaType.shortName})`
+        : foundQuotaType.name;
+      // For the ID card itself, expose the quota ONLY when flagged to print on
+      // the card (short name preferred, else full name).
+      if (foundQuotaType.printOnIdCard) {
+        quotaType = foundQuotaType.shortName || foundQuotaType.name;
+      }
+    }
+  }
+
   return {
     ...props,
     personalEmail: foundAdmGeneralInfo?.email ?? null,
@@ -1097,6 +1184,9 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     currentPromotion,
     name: foundUser?.name!,
     personalDetails,
+    quotaType,
+    quotaTypeLabel,
+    bloodGroup,
   };
 }
 
@@ -1447,6 +1537,24 @@ export async function exportStudentDetailedReport(academicYearId: number) {
           MAX(CASE WHEN rn = 3 THEN other_police_station END) AS address_3_other_police_station
         FROM addr
         GROUP BY personal_details_id_fk
+      ),
+      student_promotion AS (
+        -- One promotion per student for the academic year (latest semester),
+        -- to avoid fanning out the per-student report by each semester's promotion.
+        SELECT DISTINCT ON (pr.student_id_fk)
+          pr.student_id_fk,
+          pr.program_course_id_fk,
+          pr.section_id_fk,
+          pr.shift_id_fk,
+          pr.class_id_fk
+        FROM promotions pr
+        JOIN sessions sess ON sess.id = pr.session_id_fk
+        WHERE sess.academic_id_fk = ${academicYearId}
+        ORDER BY pr.student_id_fk,
+          CASE WHEN COALESCE(pr.is_deprecated, false) THEN 1 ELSE 0 END,
+          pr.class_id_fk DESC,
+          pr.start_date DESC NULLS LAST,
+          pr.created_at DESC
       )
       SELECT
         u.email AS user_institutional_email,
@@ -1531,22 +1639,20 @@ export async function exportStudentDetailedReport(academicYearId: number) {
         ap.address_3_other_police_station
       FROM users u
       JOIN students std ON u.id = std.user_id_fk
-      JOIN promotions pr ON pr.student_id_fk = std.id
+      JOIN student_promotion pr ON pr.student_id_fk = std.id
       JOIN program_courses pc ON pr.program_course_id_fk = pc.id
-      JOIN sessions sess ON pr.session_id_fk = sess.id
       JOIN personal_details pd ON pd.user_id_fk = u.id
       LEFT JOIN nationality nat ON nat.id = pd.nationality_id_fk
       LEFT JOIN religion rel ON rel.id = pd.religion_id_fk
       LEFT JOIN categories cat ON cat.id = pd.category_id_fk
       JOIN application_forms af ON af.id = std.application_form_id_fk
-      JOIN family_details fd ON fd.user_id_fk = u.id
+      LEFT JOIN family_details fd ON fd.user_id_fk = u.id
       LEFT JOIN sections sec ON sec.id = pr.section_id_fk
       LEFT JOIN shifts sh ON sh.id = pr.shift_id_fk
       LEFT JOIN person father ON father.family_id_fk = fd.id AND father.type = 'FATHER'
       LEFT JOIN person mother ON mother.family_id_fk = fd.id AND mother.type = 'MOTHER'
       LEFT JOIN addr_pivot ap ON ap.personal_details_id_fk = pd.id
-      WHERE u.type = 'STUDENT'
-        AND sess.academic_id_fk = ${academicYearId};
+      WHERE u.type = 'STUDENT';
     `,
   );
 
@@ -2394,49 +2500,6 @@ function normalizeUidForMatch(uid: string): string {
   return uid.trim().toLowerCase();
 }
 
-function normalizeUidForImportMatch(uid: string): string {
-  // Match legacy importer cleaning: keep only alphanumeric chars and lower-case
-  return normalizeUidForMatch(uid).replace(/[^a-z0-9]/gi, "");
-}
-
-export async function checkExistingStudentUids(
-  uids: string[],
-): Promise<{ existingUids: string[] }> {
-  const normalizedToOriginals = new Map<string, Set<string>>();
-
-  for (const raw of uids || []) {
-    const norm = normalizeUidForImportMatch(String(raw ?? ""));
-    if (!norm) continue;
-    if (!normalizedToOriginals.has(norm))
-      normalizedToOriginals.set(norm, new Set());
-    normalizedToOriginals.get(norm)!.add(String(raw ?? "").trim());
-  }
-
-  const normalizedUids = Array.from(normalizedToOriginals.keys());
-  if (normalizedUids.length === 0) return { existingUids: [] };
-
-  // Postgres: regexp_replace supports global replace when passing 'g'
-  const rows = await db
-    .select({ uid: studentModel.uid })
-    .from(studentModel)
-    .where(
-      inArray(
-        sql`lower(regexp_replace(trim(${studentModel.uid}), '[^a-zA-Z0-9]', '', 'g'))`,
-        normalizedUids,
-      ),
-    );
-
-  const existingSet = new Set<string>();
-  for (const r of rows) {
-    const norm = normalizeUidForImportMatch(r.uid);
-    const originals = normalizedToOriginals.get(norm);
-    if (!originals) continue;
-    originals.forEach((o) => existingSet.add(o));
-  }
-
-  return { existingUids: Array.from(existingSet) };
-}
-
 export async function updateStudentCuRollAndRegistration(
   rows: StudentCuRollRegRow[],
   progressUserId?: string,
@@ -3218,22 +3281,20 @@ export async function downloadStudentImages(
               return;
             }
 
-            const response = await axios.get(
-              `https://besc.academic360.app/id-card-generate/api/images?uid=${student.uid}&crop=true`,
-              { responseType: "arraybuffer", timeout: 0 },
+            // Pull the photo through the unified resolver chain so it
+            // doesn't matter whether the bytes live in S3 or on the legacy
+            // hosts — the helper picks the first source that delivers.
+            const hit = await resolveStudentAvatarBuffer(student.uid).catch(
+              () => null,
             );
-
-            if (response.status !== 200 || !response.data) {
-              console.error(
-                `Bad response for UID ${student.uid}`,
-                response.status,
-              );
+            if (!hit) {
+              console.error(`No avatar resolved for UID ${student.uid}`);
               return;
             }
 
             // use application number as filename (prefix P as before)
             const fileName = `P${student.cuAppNo}.jpg`;
-            zip.file(fileName, response.data);
+            zip.file(fileName, hit.buffer);
 
             processedCount++;
             socketService.sendProgressUpdate(userId.toString(), {

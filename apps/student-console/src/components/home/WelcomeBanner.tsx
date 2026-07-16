@@ -16,7 +16,7 @@ export default function WelcomeBanner({ student }: { student: StudentDto }) {
   });
 
   return (
-    <div className="relative bg-[#a674fe] text-white rounded-2xl shadow-lg overflow-hidden p-4 sm:p-6 md:p-8 flex items-center justify-between min-h-[140px] sm:min-h-[160px] md:min-h-[180px]">
+    <div className="relative bg-[rgb(var(--brand-banner))] text-white rounded-2xl shadow-lg overflow-hidden p-4 sm:p-6 md:p-8 flex items-center justify-between min-h-[140px] sm:min-h-[160px] md:min-h-[180px]">
       <div className="z-10 relative">
         <div className="flex items-center gap-2 text-sm font-medium opacity-90 mb-2">
           <Calendar className="w-4 h-4" />
@@ -37,8 +37,8 @@ export default function WelcomeBanner({ student }: { student: StudentDto }) {
         <Image
           src={
             (user?.payload as StudentDto)?.personalDetails?.gender === "MALE"
-              ? "https://besc.academic360.app/student-console/illustrations/welcome-illustration-male.png"
-              : "https://besc.academic360.app/student-console/illustrations/welcome-illustration-female.png"
+              ? `${process.env.NEXT_PUBLIC_URL}/illustrations/welcome-illustration-male.png`
+              : `${process.env.NEXT_PUBLIC_URL}/illustrations/welcome-illustration-female.png`
           }
           alt="Welcome Illustration"
           width={320}

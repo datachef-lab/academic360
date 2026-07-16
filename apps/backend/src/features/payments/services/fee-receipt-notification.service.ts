@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import {
   academicYearModel,
   classModel,
   feeStructureModel,
   feeStudentMappingModel,
+  feeStudentReceiptNumberModel,
   notificationMasterModel,
   paymentModel,
   receiptTypeModel,
@@ -14,7 +15,7 @@ import {
 import { enqueueNotification } from "@/services/notificationClient.js";
 
 const DEFAULT_COLLEGE_LOGO_URL =
-  "https://besc.academic360.app/api/api/v1/settings/file/4";
+  "https://api.academic360.app/api/v1/settings/file/4";
 
 /**
  * Base URL for links inside emails (must reach the Express app that serves
@@ -91,13 +92,24 @@ export async function loadFeeReceiptEmailRowByPaymentId(
       className: classModel.name,
       email: userModel.email,
       phone: userModel.phone,
-      receiptNumber: feeStudentMappingModel.receiptNumber,
-      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      receiptNumber: feeStudentReceiptNumberModel.receiptNumber,
+      challanGeneratedAt: feeStudentReceiptNumberModel.challanGeneratedAt,
     })
     .from(paymentModel)
     .innerJoin(
       feeStudentMappingModel,
       eq(feeStudentMappingModel.id, paymentModel.feeStudentMappingId),
+    )
+    // Active (non-deprecated) receipt from the new source-of-truth table.
+    .leftJoin(
+      feeStudentReceiptNumberModel,
+      and(
+        eq(
+          feeStudentReceiptNumberModel.feeStudentMappingId,
+          feeStudentMappingModel.id,
+        ),
+        eq(feeStudentReceiptNumberModel.isDeprecated, false),
+      ),
     )
     .innerJoin(
       studentModel,

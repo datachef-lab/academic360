@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import WelcomeBanner from "./WelcomeBanner";
 import BasicInfo from "./BasicInfo";
@@ -9,6 +9,7 @@ import ErrorCard from "./ErrorCard";
 import StudentMissingCard from "./StudentMissingCard";
 import DailyNotices from "./DailyNotices";
 import SubjectSelectionCard from "./SubjectSelectionCard";
+import CuRegistrationCard from "./CuRegistrationCard";
 import ExamWidget from "./ExamWidget";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,14 +18,34 @@ import { ExamDto, ExamGroupDto } from "@/dtos";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { toast } from "sonner";
 import { fetchExamGroupsByStudentId } from "@/services/exam-group.service";
+import { useFeeSocket } from "@/providers/fee-socket-provider";
+import { axiosInstance } from "@/lib/utils";
+
+type AcademicActivityScopeDto = {
+  stream: { id: number };
+  class: { id: number };
+  startDate: string | null;
+  endDate: string | null;
+  isEnabled: boolean;
+};
+
+type AcademicActivityDto = {
+  master: { isActive: boolean; name: string };
+  academicYear: { id: number };
+  courseLevelId?: number | null;
+  scopes: AcademicActivityScopeDto[];
+};
 
 export default function HomeContent() {
   const { student, loading, batches, error, refetch } = useStudent();
   const { user } = useAuth();
+  const { academicActivityVersion } = useFeeSocket();
   const [exams, setExams] = useState<ExamDto[]>([]);
   const [examsLoading, setExamsLoading] = useState(false);
   const socketRef = useRef<any | null>(null);
   const [examGroups, setExamGroups] = useState<ExamGroupDto[]>([]);
+  const [showSubjectSelection, setShowSubjectSelection] = useState(false);
+  const [showCuRegistration, setShowCuRegistration] = useState(false);
 
   useEffect(() => {
     if (!student || !student?.id) return;
@@ -169,6 +190,51 @@ export default function HomeContent() {
     fetchAndFilterExams();
   }, [fetchAndFilterExams]);
 
+  const refreshActivityCards = useCallback(() => {
+    if (!student?.id) return;
+    const promotion = student?.currentPromotion;
+    const studentClassId = promotion?.class?.id;
+    const studentAyId = promotion?.session?.academicYearId ?? undefined;
+    const studentStreamId = student?.programCourse?.stream?.id ?? null;
+
+    axiosInstance
+      .get<{ payload: AcademicActivityDto[] }>("/api/academics/academic-activities")
+      .then(({ data }) => {
+        const activities = Array.isArray(data?.payload) ? data.payload : [];
+        const now = Date.now();
+
+        const isLive = (activityName: string) => {
+          const matched = activities.filter(
+            (a) =>
+              a.master?.isActive && (a.master?.name ?? "").trim().toLowerCase() === activityName,
+          );
+          if (!matched.length || !studentClassId || !studentAyId) return false;
+          return matched.some((activity) => {
+            if (activity.academicYear.id !== studentAyId) return false;
+            return activity.scopes.some((scope) => {
+              if (!scope.isEnabled) return false;
+              if (scope.class.id !== studentClassId) return false;
+              if (studentStreamId != null && scope.stream.id !== studentStreamId) return false;
+              const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
+              const end = scope.endDate ? new Date(scope.endDate).getTime() : Infinity;
+              return now >= start && now <= end;
+            });
+          });
+        };
+
+        setShowSubjectSelection(isLive("subject selection"));
+        setShowCuRegistration(isLive("cu registration"));
+      })
+      .catch(() => {
+        setShowSubjectSelection(false);
+        setShowCuRegistration(false);
+      });
+  }, [student?.id]);
+
+  useEffect(() => {
+    refreshActivityCards();
+  }, [refreshActivityCards, academicActivityVersion]);
+
   // Setup socket connection to update widget on exam changes
   useEffect(() => {
     if (!student?.id || typeof window === "undefined") return;
@@ -205,7 +271,7 @@ export default function HomeContent() {
         const socket: any = socketModule.io(origin, {
           path: socketPath,
           withCredentials: true,
-          transports: ["polling", "websocket"],
+          transports: ["websocket", "polling"], // websocket first: long-polling needs ALB sticky sessions across instances
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionAttempts: 5,
@@ -296,7 +362,8 @@ export default function HomeContent() {
       <WelcomeBanner student={student} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BasicInfo student={student} />
-        <SubjectSelectionCard />
+        {showSubjectSelection && <SubjectSelectionCard />}
+        {showCuRegistration && <CuRegistrationCard />}
         {exams.length > 0 && <ExamWidget exams={exams} examGroups={examGroups} />}
       </div>
     </div>

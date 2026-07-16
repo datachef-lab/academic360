@@ -5,8 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Student } from "@/types/user/student";
 import { Button } from "@/components/ui/button";
-
-const profileImageUrl = import.meta.env.VITE_STUDENT_PROFILE_URL;
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
 interface TableMeta {
   onViewStudent?: (studentId: number) => void;
@@ -33,7 +32,7 @@ export const StudentSearchColumn: ColumnDef<Student>[] = [
       };
 
       const bgColor = stringToColor(name);
-      const avatar = `${profileImageUrl}/Student_Image_${uid}.jpg`;
+      const avatar = studentAvatarUrl(uid) ?? "";
 
       return (
         <div className="flex items-center ">

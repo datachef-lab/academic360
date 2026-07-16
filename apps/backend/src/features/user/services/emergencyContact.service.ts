@@ -3,6 +3,7 @@ import {
   EmergencyContact,
   emergencyContactModel,
   createEmergencyContactSchema,
+  studentModel,
 } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -47,9 +48,19 @@ export async function findEmergencyContactById(
 export async function findEmergencyContactByStudentId(
   studentId: number,
 ): Promise<EmergencyContact | null> {
-  // Current schema has no studentId on emergency_contacts.
-  // Leave as placeholder until association is defined.
-  return null;
+  // emergency_contacts is keyed by user_id_fk; resolve the student's user first.
+  const [stu] = await db
+    .select({ userId: studentModel.userId })
+    .from(studentModel)
+    .where(eq(studentModel.id, studentId));
+  if (!stu?.userId) return null;
+
+  const [contact] = await db
+    .select()
+    .from(emergencyContactModel)
+    .where(eq(emergencyContactModel.userId, stu.userId))
+    .limit(1);
+  return contact ?? null;
 }
 
 export async function updateEmergencyContact(

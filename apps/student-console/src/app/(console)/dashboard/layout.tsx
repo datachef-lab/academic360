@@ -23,7 +23,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -58,8 +57,9 @@ export default function DashboardLayout({
   }, [user, isLoading, logout]);
 
   const getStudentImageUrl = (uid: string) => {
-    // if (!user?.payload?.academicIdentifier?.uid) return null;
-    return `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${uid}.jpg`;
+    if (!uid) return null;
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "";
+    return `${base}/api/students/uid/${encodeURIComponent(uid)}/avatar`;
   };
 
   const getStudentImage = (uid: string) => {
@@ -75,15 +75,17 @@ export default function DashboardLayout({
 
     return (
       <>
-        <Image
+        {/* Plain <img> — bypasses Next.js image optimization (which would
+            require whitelisting the backend host in next.config.ts) and keeps
+            the existing inline onError fallback to the User icon. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={imageUrl}
           alt={`${user?.name || "Student"} profile image`}
           className="h-full w-full object-cover"
           width={40}
           height={40}
           onError={(e) => {
-            console.log("Image failed to load, showing fallback");
-            // Hide the image and show fallback
             const target = e.target as HTMLImageElement;
             target.style.display = "none";
             const fallback = target.nextElementSibling as HTMLElement;
@@ -177,7 +179,10 @@ export default function DashboardLayout({
                 // className="h-10 w-10 rounded-full border border-gray-200 ring-1 ring-gray-100 bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm hover:ring-indigo-200 transition"
                 >
                   <AvatarImage
-                    src={user?.payload?.uid ? getStudentImageUrl(user.payload.uid) : undefined}
+                    src={
+                      (user?.payload?.uid ? getStudentImageUrl(user.payload.uid) : undefined) ??
+                      undefined
+                    }
                   />
                 </Avatar>
                 {/* {(() => {

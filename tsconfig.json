@@ -5,12 +5,12 @@
     "lib": ["ES2023", "dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./apps/frontend/src/*"],
-      "@repo/db/*": ["../../packages/db/src/*"]
+      "@repo/db/*": ["./packages/db/src/*"]
     },
     "strict": true,
     "skipLibCheck": true,
     "moduleResolution": "node"
   },
-  "include": ["apps/**/*", "packages/**/*"]
+  "include": ["packages/**/*"],
+  "exclude": ["node_modules", "dist", "**/dist/**", "apps/**"]
 }

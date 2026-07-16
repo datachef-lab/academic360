@@ -1,0 +1,82 @@
+# Production compose — runs on each EC2 instance behind the ALB.
+# All services (including notification-worker) start with `docker compose up -d` on
+# EVERY instance. The worker is safe to run everywhere: dispatch claims queue rows
+# atomically via FOR UPDATE SKIP LOCKED (apps/notification-system/src/utils/queue-claim.ts),
+# so no duplicate sends. Disable dispatch on a host with NOTIFICATION_WORKER_ENABLED=false
+# in /opt/academic360/env/notification.env. (Changed 2026-06-15; see docs/aws-operations-runbook.md §1/§5.)
+name: academic360
+
+x-logging: &awslogs
+  driver: awslogs
+  options:
+    awslogs-region: ap-south-1
+    awslogs-create-group: "false"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    image: ${ECR_REGISTRY:-049252392122.dkr.ecr.ap-south-1.amazonaws.com}/a360-backend:${IMAGE_TAG:-prod}
+    env_file: /opt/academic360/env/backend.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - /opt/academic360/data:/data
+    restart: unless-stopped
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-create-group: "false"
+        awslogs-group: /a360/backend
+
+  student-console:
+    build:
+      context: .
+      dockerfile: apps/student-console/Dockerfile
+    image: ${ECR_REGISTRY:-049252392122.dkr.ecr.ap-south-1.amazonaws.com}/a360-student-console:${IMAGE_TAG:-prod}
+    env_file: /opt/academic360/env/student-console.env
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "3008:3000"
+    volumes:
+      - /opt/academic360/data:/data
+    restart: unless-stopped
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-create-group: "false"
+        awslogs-group: /a360/student-console
+
+  main-console:
+    build:
+      context: .
+      dockerfile: apps/main-console/Dockerfile
+    image: ${ECR_REGISTRY:-049252392122.dkr.ecr.ap-south-1.amazonaws.com}/a360-main-console:${IMAGE_TAG:-prod}
+    ports:
+      - "80:5173"
+    restart: unless-stopped
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-create-group: "false"
+        awslogs-group: /a360/main-console
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: apps/notification-system/Dockerfile
+    image: ${ECR_REGISTRY:-049252392122.dkr.ecr.ap-south-1.amazonaws.com}/a360-notification-worker:${IMAGE_TAG:-prod}
+    env_file: /opt/academic360/env/notification.env
+    restart: unless-stopped
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-create-group: "false"
+        awslogs-group: /a360/notification-worker

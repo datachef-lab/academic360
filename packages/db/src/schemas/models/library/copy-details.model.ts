@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { bookModel } from "./book.model";
@@ -9,10 +9,22 @@ import { shelfModel } from "./shelf.model";
 import { enclosureModel } from "./enclosure.model";
 import { bindingModel } from "./binding.model";
 import { personModel, userModel } from "../user";
+import { vendorModel } from "./vendor.model";
+import { branchModel } from "./branch.model";
+import { itemCategoryModel } from "./item-category.model";
+import { authorTypeModel } from "./author-type.model";
 
 export const copyDetailsModel = pgTable("copy_details", {
     id: serial().primaryKey(),
     legacyCopyDetailsId: integer(),
+    branchId: integer("branch_id_fk")
+        .references(() => branchModel.id),
+    itemCategoryId: integer("item_category_id_fk")
+        .references(() => itemCategoryModel.id),
+    authorTypeId: integer("author_type_id_fk")
+        .references(() => authorTypeModel.id),
+    rfidNumber: varchar({ length: 255 }),
+    theftBitArmed: boolean().notNull().default(false),
     bookId: integer("book_id_fk")
         .references(() => bookModel.id)
         .notNull(),
@@ -47,6 +59,8 @@ export const copyDetailsModel = pgTable("copy_details", {
     volumeInfo: varchar({ length: 255 }),
     remarks: varchar({ length: 1000 }),
     legacyVendorId: integer(),
+    vendorId: integer("vendor_id_fk")
+        .references(() => vendorModel.id),
     donorPersonId: integer("donor_person_id_fk")
         .references(() => personModel.id),
     prefix: varchar({ length: 255 }),

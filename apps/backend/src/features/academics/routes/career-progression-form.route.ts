@@ -4,6 +4,7 @@ import {
   createCareerProgressionFormHandler,
   deleteCareerProgressionFormHandler,
   getCareerProgressionTemplateForStudentCurrentYearHandler,
+  exportCareerProgressionFormsHandler,
   getAllCareerProgressionFormsHandler,
   getCareerProgressionFormByIdHandler,
   submitCareerProgressionForStudentCurrentYearHandler,
@@ -23,6 +24,7 @@ function asyncHandler(
 router.use(verifyJWT);
 
 router.get("/", asyncHandler(getAllCareerProgressionFormsHandler));
+router.get("/export", asyncHandler(exportCareerProgressionFormsHandler));
 router.get(
   "/student/:studentId/current",
   asyncHandler(getCareerProgressionTemplateForStudentCurrentYearHandler),

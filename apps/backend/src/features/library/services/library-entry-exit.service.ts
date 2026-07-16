@@ -30,6 +30,7 @@ type LibraryEntryExitFilters = {
   userType?: UserType;
   currentStatus?: CurrentStatus;
   date?: string;
+  branchId?: number;
 };
 
 export type LibraryEntryExitListRow = LibraryEntryExit & {
@@ -111,9 +112,17 @@ export type LibraryEntryExitPreviewCirculationRow = {
   daysLate: number;
 };
 
+export type LibraryEntryExitBookCirculationSummary = {
+  booksIssued: number;
+  booksDueForReturn: number;
+  booksReturned: number;
+  totalDaysLate: number;
+};
+
 export type LibraryEntryExitPreviewResult = {
   user: LibraryEntryExitPreviewHeader;
   circulationRows: LibraryEntryExitPreviewCirculationRow[];
+  bookCirculationSummary: LibraryEntryExitBookCirculationSummary;
 };
 
 const buildFilterConditions = (
@@ -139,6 +148,10 @@ const buildFilterConditions = (
 
   if (filters.userType) {
     conditions.push(eq(userModel.type, filters.userType));
+  }
+
+  if (filters.branchId != null) {
+    conditions.push(eq(libraryEntryExitModel.branchId, filters.branchId));
   }
 
   if (filters.currentStatus) {
@@ -665,6 +678,18 @@ export async function getLibraryEntryExitPreviewByUserId(
       regulationTypeShortName,
     },
     circulationRows,
+    bookCirculationSummary: {
+      booksIssued: circulationRows.length,
+      booksDueForReturn: circulationRows.filter(
+        (row) => row.status !== "RETURNED",
+      ).length,
+      booksReturned: circulationRows.filter((row) => row.status === "RETURNED")
+        .length,
+      totalDaysLate: circulationRows.reduce(
+        (sum, row) => sum + row.daysLate,
+        0,
+      ),
+    },
   };
 }
 
