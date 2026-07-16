@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, PlusCircle, Search, Filter, FileDown, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, PlusCircle, Download, Edit, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,6 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,55 +22,53 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-// import { getAllAcademicYears, createAcademicYear, updateAcademicYearById } from "@/services/academic-identifiers.service";
+import { toast } from "sonner";
 import { AcademicYear } from "@/types/academics/academic-year";
-import {
-  createAcademicYear,
-  getAllAcademicYears,
-  updateAcademicYearById,
-} from "@/services/academic-year-api";
+import { getAllAcademicYears, updateAcademicYearById } from "@/services/academic-year-api";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+import AddAcademicYearDialog from "./AddAcademicYearDialog";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const AcademicYearPage: React.FC = () => {
   const [data, setData] = useState<AcademicYear[]>([]);
-  const [filteredData, setFilteredData] = useState<AcademicYear[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<AcademicYear | null>(null);
-  const [form, setForm] = useState<AcademicYear>({ id: 0, year: "", isCurrentYear: true });
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<AcademicYear | null>(null);
+  const [editForm, setEditForm] = useState<{ year: string; isCurrentYear: boolean }>({
+    year: "",
+    isCurrentYear: false,
+  });
 
-  useEffect(() => {
-    async function fetchAcademicYears() {
-      try {
-        const res = await getAllAcademicYears();
-        const mapped = (res.payload || res).map((item: AcademicYear) => ({
+  const { setAvailableYears, setCurrentYear } = useAcademicYear();
+
+  const fetchAcademicYears = async () => {
+    try {
+      const res = await getAllAcademicYears();
+      const payload = res.payload ?? [];
+      setData(
+        payload.map((item) => ({
           id: item.id,
           year: item.year,
           isCurrentYear: item.isCurrentYear,
-        }));
-        setData(mapped);
-        setFilteredData(mapped);
-      } catch (error) {
-        console.error("Failed to fetch academic years", error);
-      }
+        })),
+      );
+      // Keep the redux academic-year slice (sidebar, selectors used app-wide) in sync.
+      setAvailableYears(payload);
+      const active = payload.find((y) => y.isCurrentYear);
+      if (active) setCurrentYear(active);
+    } catch (error) {
+      console.error("Failed to fetch academic years", error);
+      toast.error("Failed to fetch academic years");
     }
+  };
+
+  useEffect(() => {
     fetchAcademicYears();
   }, []);
 
-  useEffect(() => {
-    let updated = data;
-    if (searchTerm) {
-      updated = updated.filter((y) => y.year.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    if (statusFilter !== "all") {
-      updated = updated.filter((y) =>
-        statusFilter === "active" ? y.isCurrentYear : !y.isCurrentYear,
-      );
-    }
-    setFilteredData(updated);
-  }, [data, searchTerm, statusFilter]);
+  useResourceRoom("v1/academics", () => fetchAcademicYears());
+
+  const filteredData = data.filter((y) => y.year.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const handleExport = () => {
     const csvContent = [
@@ -77,7 +77,6 @@ const AcademicYearPage: React.FC = () => {
     ]
       .map((row) => row.join(","))
       .join("\n");
-
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -86,291 +85,183 @@ const AcademicYearPage: React.FC = () => {
     a.click();
   };
 
-  const handleSubmit = async () => {
-    try {
-      if (editingItem) {
-        const updated = {
-          year: form.year,
-          isCurrentYear: form.isCurrentYear,
-        };
-        await updateAcademicYearById(editingItem.id!, updated);
-      } else {
-        const newAcademicYear = {
-          year: form.year,
-          isCurrentYear: form.isCurrentYear,
-        };
-        await createAcademicYear(newAcademicYear);
-      }
-      // Always re-fetch the list after create/edit
-      const res = await getAllAcademicYears();
-      const mapped = (res.payload || res).map((item: AcademicYear) => ({
-        id: item.id,
-        year: item.year,
-        isCurrentYear: item.isCurrentYear,
-      }));
-      setData(mapped);
-      setFilteredData(mapped);
-      handleClose();
-    } catch (error) {
-      alert("Failed to save academic year");
-      console.error(error);
-    }
-  };
-
-  const handleClose = () => {
-    setShowModal(false);
-    setEditingItem(null);
-    setForm({ id: 0, year: "", isCurrentYear: true });
-  };
-
   const handleEdit = (item: AcademicYear) => {
     setEditingItem(item);
-    setForm(item);
-    setShowModal(true);
+    setEditForm({ year: item.year, isCurrentYear: Boolean(item.isCurrentYear) });
   };
 
   const handleDelete = (id: number) => {
     if (!confirm("Are you sure you want to delete this academic year?")) return;
-    setData(data.filter((y) => y.id !== id));
+    setData((prev) => prev.filter((y) => y.id !== id));
   };
 
-  const totalYears = data.length;
-  const activeYears = data.filter((y) => y.isCurrentYear).length;
-  const inactiveYears = data.filter((y) => !y.isCurrentYear).length;
+  const handleEditSubmit = async () => {
+    if (!editingItem) return;
+    try {
+      await updateAcademicYearById(editingItem.id!, {
+        year: editForm.year,
+        isCurrentYear: editForm.isCurrentYear,
+      });
+      toast.success("Academic year updated");
+      setEditingItem(null);
+      await fetchAcademicYears();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update academic year");
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 lg:p-4">
-      <div className="mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-purple-600 text-white rounded-lg">
-            <Calendar className="h-5 w-5" />
+    <div className="p-2 sm:p-4">
+      <Card className="border-none">
+        <CardHeader className="sticky top-0 z-30 mb-3 flex flex-col items-start justify-between gap-4 rounded-md border bg-background p-4 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="flex items-center text-lg sm:text-xl">
+              <Calendar className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
+              <span className="truncate">Academic Year</span>
+            </CardTitle>
+            <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Manage academic year settings and periods.
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Academic Year</h1>
-            <p className="text-sm text-gray-600">Manage academic year settings and periods</p>
+          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
+            <Button variant="outline" onClick={handleExport} className="flex-shrink-0">
+              <Download className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+            <Button
+              onClick={() => setAddOpen(true)}
+              className="flex-shrink-0 bg-purple-600 text-white hover:bg-purple-700"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardHeader>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <Card className="border border-gray-200 shadow-sm bg-white">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Total Years</p>
-                <p className="text-lg font-bold text-gray-900">{totalYears}</p>
-              </div>
-              <div className="p-2 bg-purple-100 rounded">
-                <Calendar className="h-4 w-4 text-purple-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 shadow-sm bg-white">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Active</p>
-                <p className="text-lg font-bold text-gray-900">{activeYears}</p>
-              </div>
-              <div className="p-2 bg-green-100 rounded">
-                <CheckCircle className="h-4 w-4 text-green-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 shadow-sm bg-white">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Inactive</p>
-                <p className="text-lg font-bold text-gray-900">{inactiveYears}</p>
-              </div>
-              <div className="p-2 bg-gray-100 rounded">
-                <XCircle className="h-4 w-4 text-gray-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm p-3 mb-4 border border-gray-200">
-        <div className="flex flex-col gap-3">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-            <input
-              type="text"
+        <CardContent className="px-0">
+          <div className="sticky top-[72px] z-20 border-b bg-background p-2 sm:p-4">
+            <Input
               placeholder="Search academic years..."
+              className="w-full sm:w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-black"
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border transition-all ${
-                showFilters
-                  ? "bg-purple-50 border-purple-300 text-purple-700"
-                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              <Filter className="h-3.5 w-3.5" />
-              Filters
-              {statusFilter !== "all" && (
-                <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-                  1
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              Add
-            </button>
-
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              <FileDown className="h-3.5 w-3.5" />
-              Export
-            </button>
-          </div>
-
-          {showFilters && (
-            <div className="pt-3 border-t border-gray-200">
-              <div className="flex flex-wrap gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => {
-                      setStatusFilter("all");
-                    }}
-                    className="px-2 py-1 text-xs text-purple-600 hover:text-purple-700 transition-colors"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              </div>
+          <div className="relative" style={{ height: "600px" }}>
+            <div className="h-full overflow-x-auto overflow-y-auto">
+              <Table className="min-w-[640px] border rounded-md" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
+                  <TableRow>
+                    <TableHead style={{ width: 80, background: "#f3f4f6", color: "#374151" }}>
+                      #
+                    </TableHead>
+                    <TableHead style={{ width: 260, background: "#f3f4f6", color: "#374151" }}>
+                      Academic Year
+                    </TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>
+                      Status
+                    </TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredData.length ? (
+                    filteredData.map((item, index) => (
+                      <TableRow key={item.id} className="group">
+                        <TableCell style={{ width: 80 }}>{index + 1}</TableCell>
+                        <TableCell style={{ width: 260 }} className="font-medium">
+                          {item.year}
+                        </TableCell>
+                        <TableCell style={{ width: 140 }}>
+                          {item.isCurrentYear ? (
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell style={{ width: 140 }}>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(item)}
+                              className="h-7 w-7 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(item.id!)}
+                              className="h-7 w-7 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                        No academic years found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-        <Table>
-          <TableHeader className="bg-gray-50 border-b border-gray-200">
-            <TableRow className="hover:bg-gray-50">
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                #
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Academic Year
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Status
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="bg-white divide-y divide-gray-200">
-            {filteredData.length ? (
-              filteredData.map((item, index) => (
-                <TableRow key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span className="text-sm font-medium text-gray-900">{item.year}</span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.isCurrentYear ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                    >
-                      {item.isCurrentYear ? "Active" : "Inactive"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="text-purple-600 hover:text-purple-800"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id!)}
-                      className="text-red-600 hover:text-red-800 ml-4"
-                    >
-                      Delete
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
-                  <span className="text-gray-600 font-medium">No Academic Years Found</span>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      {/* Add (copy-forward) dialog */}
+      <AddAcademicYearDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreated={fetchAcademicYears}
+      />
 
-      <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="sm:max-w-[500px]">
+      {/* Edit dialog (year + active flag) */}
+      <Dialog open={!!editingItem} onOpenChange={(o) => !o && setEditingItem(null)}>
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>
-              {editingItem ? "Edit Academic Year" : "Add New Academic Year"}
-            </DialogTitle>
-            <DialogDescription>Configure academic year period and status.</DialogDescription>
+            <DialogTitle>Edit Academic Year</DialogTitle>
+            <DialogDescription>Update the year label and active status.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="year">Year</Label>
+              <Label htmlFor="edit-year">Year</Label>
               <Input
-                id="year"
-                type="text"
-                value={form.year}
-                onChange={(e) => {
-                  setForm({ ...form, year: e.target.value });
-                }}
-                placeholder="e.g., 2025"
+                id="edit-year"
+                value={editForm.year}
+                onChange={(e) => setEditForm((f) => ({ ...f, year: e.target.value }))}
+                placeholder="e.g. 2025-26"
               />
             </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isCurrentYear">Active Status</Label>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <Label htmlFor="edit-active">Active (current) year</Label>
               <Switch
-                id="isCurrentYear"
-                checked={form.isCurrentYear}
-                onCheckedChange={(checked) => setForm({ ...form, isCurrentYear: checked })}
+                id="edit-active"
+                checked={editForm.isCurrentYear}
+                onCheckedChange={(checked) =>
+                  setEditForm((f) => ({ ...f, isCurrentYear: checked }))
+                }
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleClose}>
+            <Button variant="outline" onClick={() => setEditingItem(null)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">
-              {editingItem ? "Update" : "Create"} Academic Year
+            <Button onClick={handleEditSubmit} className="bg-purple-600 hover:bg-purple-700">
+              Update
             </Button>
           </DialogFooter>
         </DialogContent>

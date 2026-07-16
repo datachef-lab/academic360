@@ -8,6 +8,8 @@ import { FeeGroupPromotionMappingT } from "@/schemas/models/fees/fee-group-promo
 
 export interface FeeStructureComponentDto extends Omit<FeeStructureComponentT, "feeHeadId" | "feeSlabId"> {
     feeHead: FeeHeadT | null;
+    /** Only populated by endpoints that join fee_slabs (e.g. getAllFeeStructures). */
+    feeSlab?: FeeSlabT | null;
 }
 
 export interface FeeStructureDto extends Omit<FeeStructureT,

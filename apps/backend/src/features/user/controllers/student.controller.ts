@@ -1,5 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
 import { NextFunction, Request, Response } from "express";
-import { processStudentsFromExcelBuffer } from "../services/refactor-old-migration.service.js";
+import {
+  processStudentsFromExcelBuffer,
+  precheckStudentsFromExcelBuffer,
+  backfillStudentQuotaTypes,
+} from "../services/refactor-old-migration.service.js";
 // import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
 import { StudentType } from "@/types/user/student.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
@@ -18,6 +26,11 @@ import { eq } from "drizzle-orm";
 import { socketService } from "@/services/socketService.js";
 import { parseReportExportFilters } from "@/utils/report-export-filters.js";
 import { exportEnrolmentMasterReportBuffer } from "../services/enrolment-master-export.service.js";
+import {
+  changeStudentShift,
+  getStudentShiftChangePreview,
+} from "../services/student-shift-change.service.js";
+import { updateActivePromotionFields } from "../services/student-active-promotion-fields.service.js";
 
 export const createStudent = async (
   req: Request,
@@ -181,14 +194,25 @@ export const getOnlineStudents = async (
     // Filter out any nulls just in case
     const filtered = students.filter((s) => s !== null);
 
+    const enriched = await Promise.all(
+      filtered.map(async (student) => ({
+        ...student,
+        loginTime: socketService.getOnlineStudentLoginTime(student.userId),
+        // Class/semester of the student's active promotion (end_date IS NULL).
+        activeClassName: await studentService.getActiveClassNameForStudent(
+          student.id as number,
+        ),
+      })),
+    );
+
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          filtered,
-          `Fetched ${filtered.length} online students`,
+          enriched,
+          `Fetched ${enriched.length} online students`,
         ),
       );
   } catch (error) {
@@ -340,6 +364,7 @@ export const updateStudentStatus = async (
       cancelledAdmissionByUserId,
       alumni,
       rfidNumber,
+      quotaTypeId,
     } = req.body as any;
 
     // If cancelled and no explicit user id provided, take from auth context
@@ -375,6 +400,8 @@ export const updateStudentStatus = async (
       alumni,
       // Pass through RFID so service can persist it
       rfidNumber,
+      // Pass through quota type so service can persist it
+      quotaTypeId,
     });
 
     if (!result) {
@@ -785,6 +812,31 @@ export const bulkUpdateFamilyMemberTitlesController = async (
   }
 };
 
+// Pre-check an import Excel: which UIDs already exist vs new (read-only)
+export const precheckImportStudentsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file || !file.buffer) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "Excel file is required under field name 'file'"),
+        );
+      return;
+    }
+    const summary = await precheckStudentsFromExcelBuffer(file.buffer);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", summary, "Pre-check completed"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
 // Import students from Excel (UID column) and run legacy processStudent
 export const importStudentsFromExcelController = async (
   req: Request,
@@ -802,46 +854,225 @@ export const importStudentsFromExcelController = async (
       return;
     }
 
-    const summary = await processStudentsFromExcelBuffer(file.buffer);
+    const progressUserId = (req as any).user?.id
+      ? String((req as any).user.id)
+      : undefined;
+    // Shown to OTHER uploaders who hit the same UID while this import runs.
+    const uploaderName = (req as any).user?.name
+      ? String((req as any).user.name)
+      : (req as any).user?.email
+        ? String((req as any).user.email)
+        : null;
+    // Run the import in the BACKGROUND and respond immediately: the ALB cuts
+    // idle HTTP connections (~60s) long before a big import finishes, which
+    // used to surface as "Network Error" and swallow the final summary. The
+    // per-student progress is already socket-driven; the final summary (incl.
+    // the per-uid error list) is now delivered the same way.
+    const operation = "student_import_legacy_students";
+    void processStudentsFromExcelBuffer(file.buffer, {
+      progressUserId,
+      uploaderName,
+    })
+      .then((summary) => {
+        if (!progressUserId) return;
+        socketService.sendProgressUpdate(
+          progressUserId,
+          socketService.createExportProgressUpdate(
+            progressUserId,
+            `Import completed: ${summary.processed} processed, ${summary.errors.length} error(s)`,
+            100,
+            "completed",
+            undefined,
+            undefined,
+            undefined,
+            { operation, summary },
+          ),
+        );
+      })
+      .catch((error) => {
+        console.error(
+          "[import-legacy-students] background import failed:",
+          error,
+        );
+        if (!progressUserId) return;
+        socketService.sendProgressUpdate(
+          progressUserId,
+          socketService.createExportProgressUpdate(
+            progressUserId,
+            "Import failed",
+            100,
+            "error",
+            undefined,
+            undefined,
+            (error as Error)?.message,
+            { operation },
+          ),
+        );
+      });
     res
-      .status(200)
-      .json(new ApiResponse(200, "SUCCESS", summary, "Import completed"));
+      .status(202)
+      .json(
+        new ApiResponse(
+          202,
+          "SUCCESS",
+          { status: "started" },
+          "Import started; progress and the final summary arrive via socket",
+        ),
+      );
   } catch (error) {
     handleError(error, res, next);
   }
 };
 
-// Check if students already exist for a given list of UIDs (used to prevent import overwriting)
-export const checkExistingStudentUidsController = async (
+export const backfillStudentQuotaTypesController = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const uids = (req.body as any)?.uids as unknown;
+    const summary = await backfillStudentQuotaTypes();
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          summary,
+          "Quota type backfill completed",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
 
-    if (!Array.isArray(uids) || uids.length === 0) {
-      return res
+export const changeStudentShiftController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = Number(req.params.id);
+    const { newShiftId } = req.body as { newShiftId?: number };
+
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      res
         .status(400)
         .json(
-          new ApiError(400, "uids array is required and must not be empty"),
+          new ApiResponse(400, "ERROR", null, "Valid student id is required"),
         );
+      return;
     }
 
-    const result = await studentService.checkExistingStudentUids(
-      uids.map((u) => String(u ?? "")),
-    );
+    if (!Number.isInteger(newShiftId) || (newShiftId ?? 0) <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Valid newShiftId is required"),
+        );
+      return;
+    }
 
-    return res
+    const result = await changeStudentShift(studentId, newShiftId!);
+
+    res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
           result,
-          "UID existence check completed",
+          result.feesPaid
+            ? "Shift changed; existing fee mappings and payments retained"
+            : "Shift changed; fee mappings recreated for the new shift",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const updateActivePromotionFieldsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = Number(req.params.id);
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Valid student id is required"),
+        );
+      return;
+    }
+    const body = (req.body ?? {}) as {
+      sectionId?: number | null;
+      classRollNumber?: string | null;
+    };
+    const result = await updateActivePromotionFields(studentId, {
+      sectionId:
+        body.sectionId == null || body.sectionId === undefined
+          ? null
+          : Number(body.sectionId),
+      classRollNumber:
+        body.classRollNumber == null || body.classRollNumber === undefined
+          ? null
+          : String(body.classRollNumber),
+    });
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          `Updated ${result.promotionIdsUpdated.length} active promotion(s).`,
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const changeStudentShiftPreviewController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = Number(req.params.id);
+    const newShiftId = Number(req.query.newShiftId);
+
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Valid student id is required"),
+        );
+      return;
+    }
+
+    if (!Number.isInteger(newShiftId) || newShiftId <= 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "ERROR",
+            null,
+            "Valid newShiftId query param is required",
+          ),
+        );
+      return;
+    }
+
+    const preview = await getStudentShiftChangePreview(studentId, newShiftId);
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", preview, "Shift change preview"));
   } catch (error) {
     handleError(error, res, next);
   }

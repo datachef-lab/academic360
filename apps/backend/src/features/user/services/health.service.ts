@@ -3,11 +3,12 @@ import {
   Health,
   healthModel,
   createHealthSchema,
+  studentModel,
 } from "@repo/db/schemas/models/user";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { findBloodGroupById } from "@/features/resources/services/bloodGroup.service.js";
-import { bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
+import { bloodGroupModel } from "@repo/db/schemas/models/resources/bloodGroup.model.js";
 import { BloodGroupType } from "@/types/resources/blood-group.js";
 
 interface DateObject {
@@ -142,6 +143,13 @@ export async function findHealthByStudentId(
   studentId: number,
 ): Promise<HealthType | null> {
   try {
+    // health is keyed by user_id_fk; resolve the student's user first.
+    const [stu] = await db
+      .select({ userId: studentModel.userId })
+      .from(studentModel)
+      .where(eq(studentModel.id, studentId));
+    if (!stu?.userId) return null;
+
     const result = await db
       .select({
         health: healthModel,
@@ -157,7 +165,9 @@ export async function findHealthByStudentId(
       .leftJoin(
         bloodGroupModel,
         eq(healthModel.bloodGroupId, bloodGroupModel.id),
-      );
+      )
+      .where(eq(healthModel.userId, stu.userId))
+      .limit(1);
 
     if (!result || result.length === 0) {
       return null;

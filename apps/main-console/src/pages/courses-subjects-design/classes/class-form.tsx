@@ -21,7 +21,7 @@ const formSchema = z.object({
   shortName: z.string().nullable(),
   type: z.enum(["YEAR", "SEMESTER"]),
   sequence: z.coerce.number().min(0, "Sequence must be a positive number").nullable().optional(),
-  disabled: z.boolean().default(false),
+  isActive: z.boolean().default(true),
 });
 
 type ClassFormValues = z.infer<typeof formSchema>;
@@ -32,7 +32,7 @@ export function ClassForm({ initialData, onSubmit, onCancel, isSubmitting }: Cla
     type: "SEMESTER",
     shortName: initialData?.shortName ?? "",
     sequence: initialData?.sequence || 0,
-    disabled: initialData?.disabled || false,
+    isActive: initialData?.isActive ?? true,
   };
 
   const {
@@ -47,10 +47,11 @@ export function ClassForm({ initialData, onSubmit, onCancel, isSubmitting }: Cla
 
   const handleFormSubmit = (data: ClassFormValues) => {
     onSubmit({
-      disabled: data.disabled,
+      isActive: data.isActive,
       name: data.name,
       type: data.type,
       shortName: data.shortName,
+      sequence: data.sequence ?? undefined,
     });
   };
 
@@ -92,13 +93,13 @@ export function ClassForm({ initialData, onSubmit, onCancel, isSubmitting }: Cla
 
       <div className="flex items-center space-x-2">
         <Controller
-          name="disabled"
+          name="isActive"
           control={control}
           render={({ field }) => (
-            <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />
+            <Checkbox id="isActive" checked={!!field.value} onCheckedChange={field.onChange} />
           )}
         />
-        <Label htmlFor="disabled">Disabled</Label>
+        <Label htmlFor="isActive">Active</Label>
       </div>
 
       <div className="flex justify-end space-x-4 pt-4">

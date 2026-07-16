@@ -22,6 +22,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNull,
   or,
   sql,
   type SQL,
@@ -90,6 +91,8 @@ function baseFilters(params: PromotionRosterParams): SQL | undefined {
     eq(pFrom.sessionId, params.fromSessionId),
     eq(pFrom.classId, params.fromClassId),
     eq(sessionModel.academicYearId, params.academicYearId),
+    isNull(pFrom.endDate),
+    sql`COALESCE(${pFrom.isDeprecated}, false) = false`,
     sql`NOT (${sqlTrulyInactive})`,
   ];
   if (params.affiliationIds?.length) {
@@ -1191,6 +1194,28 @@ export async function bulkPromoteSemesterStudents(
     "completed",
     { created, updated, skippedCount: skipped.length },
   );
+
+  // Nudge the Real Time Tracker so the "Admitted"/affiliation stats update
+  // live for anyone watching. Mirrors the id-card / subject-selection emit;
+  // never fails the promotion. Broadcast the unfiltered room plus the room
+  // scoped to this academic year.
+  if (created > 0 || updated > 0) {
+    try {
+      const { scheduleRealtimeTrackerBroadcast } =
+        await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+      scheduleRealtimeTrackerBroadcast("affiliation", "promotion_change", {});
+      if (params.academicYearId) {
+        scheduleRealtimeTrackerBroadcast("affiliation", "promotion_change", {
+          academicYearIds: [params.academicYearId],
+        });
+      }
+    } catch (e) {
+      console.error(
+        "[SemesterPromotion] tracker broadcast failed:",
+        (e as Error)?.message,
+      );
+    }
+  }
 
   return { created, updated, skipped };
 }

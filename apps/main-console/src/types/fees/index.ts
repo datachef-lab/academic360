@@ -31,6 +31,8 @@ export interface FeesReceiptType {
   printReceipt: string | null;
   chkOnline: string | null;
   chkOnSequence: string | null;
+  /** Appear-type category (Regular/Casual promotion status). Gates student-console fee visibility. */
+  appearTypePromotionStatusId?: number | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

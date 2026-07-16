@@ -63,8 +63,14 @@ export async function getSearchedStudentsByRollNumber(
   return getStudentById(first.id);
 }
 
+export type OnlineStudentDto = StudentDto & {
+  loginTime?: string | null;
+  /** Class/semester of the student's active promotion (end_date IS NULL). */
+  activeClassName?: string | null;
+};
+
 // Online students (via WebSocket tracking on backend)
-export async function getOnlineStudents(): Promise<StudentDto[]> {
+export async function getOnlineStudents(): Promise<OnlineStudentDto[]> {
   const res = await axiosInstance.get(`/api/students/online`);
-  return (res.data?.payload ?? []) as StudentDto[];
+  return (res.data?.payload ?? []) as OnlineStudentDto[];
 }

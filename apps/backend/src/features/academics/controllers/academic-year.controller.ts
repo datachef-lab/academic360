@@ -11,7 +11,62 @@ import {
   setCurrentAcademicYear,
   findAcademicYearByYearRange,
 } from "../services/academic-year.service.js";
+import {
+  getAcademicYearCopyPreview,
+  createAcademicYearWithCopy,
+} from "../services/academic-year-copy.service.js";
 import { AcademicYear } from "@repo/db/schemas/models/academics";
+
+// Preview what a new academic year would clone from the current active year
+export const getAcademicYearCopyPreviewHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const preview = await getAcademicYearCopyPreview();
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          preview,
+          "Academic year copy preview fetched",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Create a new academic year and clone the four year-scoped masters forward
+export const createAcademicYearWithCopyHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { year, makeActive, sessionFrom, sessionTo } = req.body ?? {};
+    const result = await createAcademicYearWithCopy(
+      String(year ?? ""),
+      Boolean(makeActive),
+      { from: sessionFrom ?? null, to: sessionTo ?? null },
+    );
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          "SUCCESS",
+          result,
+          `Academic year ${result.academicYear?.year} created with copied configuration`,
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
 
 // Create new academic year
 export const createAcademicYearHandler = async (

@@ -50,11 +50,14 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSearchedStudents, StudentSearchItem } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 import {
   FEE_PAYMENT_MARKING_PATH,
   isFeeMarkingOnlyUser,
   isLibraryOnlyUser,
   LIBRARY_MODULE_PATH_PREFIX,
+  TEMP_USER_EMAILS,
+  TEMP_USER_HOME_PATH,
   useRestrictTempUsers,
 } from "@/hooks/use-restrict-temp-users";
 
@@ -90,7 +93,7 @@ const searchData = [
   {
     title: "Academic Setup",
     description: "Configure academic year settings",
-    href: "/dashboard/academic-year-setup",
+    href: "/dashboard/academic-setup",
     icon: LayoutList,
     category: "Academic",
   },
@@ -170,12 +173,17 @@ function LayoutHeader({
   const { user } = useAuth();
   const libraryOnly = isLibraryOnlyUser(user?.email);
   const feeMarkingOnly = isFeeMarkingOnlyUser(user?.email);
+  const tempUser = !!user?.email && TEMP_USER_EMAILS.includes(user.email);
   const hideGlobalSearch = libraryOnly || feeMarkingOnly;
+  // Restricted users must not hit `/dashboard` (the route guard would redirect
+  // them → visible flash). Point their "Dashboard" breadcrumb at their landing page.
   const moduleOnlyHomePath = libraryOnly
     ? LIBRARY_MODULE_PATH_PREFIX
     : feeMarkingOnly
       ? FEE_PAYMENT_MARKING_PATH
-      : null;
+      : tempUser
+        ? TEMP_USER_HOME_PATH
+        : null;
 
   return (
     <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -192,20 +200,35 @@ function LayoutHeader({
         {/* <Separator orientation="vertical" className="mr-2 h-4 hidden sm:block" /> */}
         <Breadcrumb className="min-w-0 flex-1">
           <BreadcrumbList className="flex-wrap">
-            <BreadcrumbItem className="hidden lg:inline-flex">
-              <BreadcrumbLink asChild>Academics</BreadcrumbLink>
-              <BreadcrumbSeparator className="hidden lg:inline-flex" />
-            </BreadcrumbItem>
-
             {pathSegments.map((segment, index) => {
+              const prev = pathSegments[index - 1];
+              const next = pathSegments[index + 1];
+              const isYear = /^\d{4}$/.test(segment);
+              // Fold an admissions year (e.g. .../admissions/2025) into the
+              // "Admissions (2025-26)" crumb; don't render the year separately.
+              if (isYear && prev === "admissions") return null;
+
               const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
+              const yearFolded = segment === "admissions" && !!next && /^\d{4}$/.test(next);
               // Library-only staff must not hit `/dashboard` (hook redirects → flash).
+              // The folded admissions crumb links straight to the year-scoped URL
+              // (.../admissions/<year>) so it doesn't bounce through the redirect.
               const linkTo =
                 moduleOnlyHomePath && index === 0 && segment === "dashboard"
                   ? moduleOnlyHomePath
-                  : path;
+                  : yearFolded
+                    ? `${path}/${next}`
+                    : path;
               const Icon = pathIconMap[segment];
-              const isLastSegment = index === pathSegments.length - 1;
+              const label =
+                yearFolded && next
+                  ? `Admissions (${next}-${String(Number(next) + 1).slice(-2)})`
+                  : segment.replace(/-/g, " ");
+              // last only if nothing follows; for a folded year, the year segment
+              // is at index+1, so this crumb is last only when that year is last.
+              const isLastSegment =
+                index === pathSegments.length - 1 ||
+                (yearFolded && index + 2 >= pathSegments.length);
 
               return (
                 <BreadcrumbItem
@@ -220,7 +243,7 @@ function LayoutHeader({
                       {Icon && (
                         <Icon className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500 flex-shrink-0" />
                       )}
-                      <span className="capitalize truncate">{segment.replace(/-/g, " ")}</span>
+                      <span className="capitalize truncate">{label}</span>
                     </Link>
                   </BreadcrumbLink>
                   {!isLastSegment && <BreadcrumbSeparator className="hidden lg:inline-flex" />}
@@ -387,9 +410,7 @@ export default function HomeLayout() {
                       >
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
-                            <AvatarImage
-                              src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`}
-                            />
+                            <AvatarImage src={studentAvatarUrl(s.uid)} />
                             <AvatarFallback className="text-[10px]">
                               {(s.name ?? s.uid ?? "?")?.toString().charAt(0).toUpperCase()}
                             </AvatarFallback>

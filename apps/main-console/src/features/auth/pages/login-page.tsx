@@ -232,162 +232,61 @@
 
 // export default LoginPage;
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { login } from "@/features/auth/services/auth-service";
-import { Badge } from "@/components/ui/badge";
 import { FcGoogle } from "react-icons/fc";
-import { useSettings } from "@/features/settings/hooks/use-settings";
 import { useAuth } from "../hooks/use-auth";
+import { CollegeBrandingHeader } from "@/features/settings/components/college-branding-header";
+import { useBranding } from "@/features/settings/hooks/use-branding";
+import { SETTINGS_QUERY_KEY } from "@/features/settings/constants/query-keys";
+import { findAllSettings } from "@/features/settings/services/settings-service";
+
+const LoginPageSpinner = () => (
+  <div className="h-screen flex items-center justify-center bg-white">
+    <div className="flex flex-col items-center gap-6">
+      <div className="relative w-[60px] h-[60px]">
+        {(
+          [
+            { rotation: 36, delay: 0.1 },
+            { rotation: 72, delay: 0.2 },
+            { rotation: 108, delay: 0.3 },
+            { rotation: 144, delay: 0.4 },
+            { rotation: 180, delay: 0.5 },
+            { rotation: 216, delay: 0.6 },
+            { rotation: 252, delay: 0.7 },
+            { rotation: 288, delay: 0.8 },
+            { rotation: 324, delay: 0.9 },
+            { rotation: 360, delay: 1 },
+          ] as const
+        ).map(({ rotation, delay }) => (
+          <div
+            key={rotation}
+            className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+            style={
+              {
+                "--rotation": rotation,
+                "--translation": 150,
+                "--delay": delay,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 const LoginPage = () => {
   const { accessToken, isReady } = useAuth();
-  const { settings } = useSettings();
+  const { loginScreenUrl } = useBranding();
 
-  const collegeLogoSetting = useMemo(
-    () => settings?.find((ele) => ele.name === "College Logo Image"),
-    [settings],
-  );
-  const collegeLogoSrc = useMemo(() => {
-    if (!collegeLogoSetting?.id) return undefined;
-    const base = `${import.meta.env.VITE_APP_BACKEND_URL}/api/v1/settings/file/${collegeLogoSetting.id}`;
-    return collegeLogoSetting.updatedAt
-      ? `${base}?v=${encodeURIComponent(String(collegeLogoSetting.updatedAt))}`
-      : base;
-  }, [collegeLogoSetting]);
-
-  const loginScreenSetting = useMemo(
-    () => settings?.find((ele) => ele.name === "Login Screen Image"),
-    [settings],
-  );
-  const loginScreenSrc = useMemo(() => {
-    if (!loginScreenSetting?.id) return undefined;
-    const base = `${import.meta.env.VITE_APP_BACKEND_URL}/api/v1/settings/file/${loginScreenSetting.id}`;
-    return loginScreenSetting.updatedAt
-      ? `${base}?v=${encodeURIComponent(String(loginScreenSetting.updatedAt))}`
-      : base;
-  }, [loginScreenSetting]);
-
-  // Show loading animation only if:
-  // 1. Auth check is still in progress (!isReady), OR
-  // 2. User is authenticated (accessToken exists) - will redirect to dashboard
-  // Don't show loading if auth check is done and no token (user logged out)
-  // Simplify: show loading if not ready OR if we have a token
   if (!isReady || accessToken) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative w-[60px] h-[60px]">
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "36",
-                  "--translation": "150",
-                  "--delay": "0.1",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "72",
-                  "--translation": "150",
-                  "--delay": "0.2",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "108",
-                  "--translation": "150",
-                  "--delay": "0.3",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "144",
-                  "--translation": "150",
-                  "--delay": "0.4",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "180",
-                  "--translation": "150",
-                  "--delay": "0.5",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "216",
-                  "--translation": "150",
-                  "--delay": "0.6",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "252",
-                  "--translation": "150",
-                  "--delay": "0.7",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "288",
-                  "--translation": "150",
-                  "--delay": "0.8",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "324",
-                  "--translation": "150",
-                  "--delay": "0.9",
-                } as React.CSSProperties
-              }
-            ></div>
-            <div
-              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={
-                {
-                  "--rotation": "360",
-                  "--translation": "150",
-                  "--delay": "1",
-                } as React.CSSProperties
-              }
-            ></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoginPageSpinner />;
   }
 
   return (
@@ -395,37 +294,8 @@ const LoginPage = () => {
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
           <div className="flex gap-4 w-full">
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
-              className="inline-flex items-center space-x-4 w-full bg-white/10 backdrop-blur-xl p-6 shadow-2xl shadow-blue-500/20 border border-white/10"
-            >
-              <Avatar className="h-16 w-16 shadow-lg">
-                <AvatarImage src={collegeLogoSrc} alt="College logo" />
-                <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                  {settings?.find((ele) => ele.name === "College Abbreviation")?.value}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-left">
-                <Badge
-                  variant="outline"
-                  className="text-sm font-bold text-blue-900 bg-blue-50 border-blue-200 mb-2"
-                >
-                  {settings.find((ele) => ele.name === "College Abbreviation")?.value}
-                </Badge>
-                <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-                  {settings.find((ele) => ele.name === "College Name")?.value}
-                </h1>
-              </div>
-            </motion.div>
+            <CollegeBrandingHeader />
           </div>
-          {/* <a href="#" className="flex items-center gap-2 font-medium">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-white">
-              <GalleryVerticalEnd className="size-4" />
-            </div>
-            Acme Inc.
-          </a> */}
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
@@ -434,9 +304,9 @@ const LoginPage = () => {
         </div>
       </div>
       <div className="relative hidden bg-muted lg:block">
-        {loginScreenSrc ? (
+        {loginScreenUrl ? (
           <img
-            src={loginScreenSrc}
+            src={loginScreenUrl}
             alt=""
             className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
           />
@@ -461,7 +331,11 @@ import {
 export function LoginForm({ className, ...props }: React.ComponentProps<"form">) {
   const navigate = useNavigate();
   const { login: loginProvider } = useAuth();
-  const { settings } = useSettings();
+  const { data: settings = [] } = useQuery({
+    queryKey: SETTINGS_QUERY_KEY,
+    queryFn: async () => (await findAllSettings()).payload,
+    staleTime: 30 * 60 * 1000,
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

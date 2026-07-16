@@ -48,6 +48,7 @@ import {
   BulkUploadResult,
   DeleteResult,
 } from "@/services/course-design.api";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 import * as XLSX from "xlsx";
 
 const CoursesPage = () => {
@@ -80,6 +81,11 @@ const CoursesPage = () => {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useResourceRoom("course-design/courses", async () => {
+    const freshCourses = await getCourses();
+    setCourses(Array.isArray(freshCourses) ? freshCourses : []);
+  });
 
   const filteredCourses = (Array.isArray(courses) ? courses : []).filter(
     (course) =>

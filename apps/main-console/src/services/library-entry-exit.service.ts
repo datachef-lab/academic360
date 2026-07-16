@@ -35,6 +35,7 @@ export type LibraryEntryExitFilters = {
   userType?: LibraryUserType;
   currentStatus?: LibraryCurrentStatus;
   date?: string;
+  branchId?: number | null;
 };
 
 export type LibrarySearchUser = {
@@ -93,9 +94,17 @@ export type LibraryEntryExitPreviewCirculationRow = {
   daysLate: number;
 };
 
+export type LibraryEntryExitBookCirculationSummary = {
+  booksIssued: number;
+  booksDueForReturn: number;
+  booksReturned: number;
+  totalDaysLate: number;
+};
+
 export type LibraryEntryExitPreviewPayload = {
   user: LibraryEntryExitPreviewUser;
   circulationRows: LibraryEntryExitPreviewCirculationRow[];
+  bookCirculationSummary: LibraryEntryExitBookCirculationSummary;
 };
 
 const BASE_URL = "/api/library/entry-exit";

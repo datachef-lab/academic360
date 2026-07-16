@@ -17,6 +17,7 @@ import {
 import { usePathname } from "next/navigation";
 
 import { NavMain } from "@/components/sidebar/nav-main";
+import { useAppEnv } from "@/lib/app-env";
 import { NavUser } from "@/components/sidebar/nav-user";
 import {
   Sidebar,
@@ -34,7 +35,7 @@ import { fetchStudentSubjectSelections } from "@/services/subject-selection";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamDto } from "@/dtos";
 import { useAuth } from "@/hooks/use-auth";
-import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { useBranding } from "@/features/settings/hooks/use-branding";
 import { axiosInstance } from "@/lib/utils";
 import { isFirstSemesterClassName } from "@/lib/semester-class-utils";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
@@ -42,22 +43,44 @@ import { FeeMapping } from "@/app/(console)/dashboard/enrollment-fees/page";
 
 type ApiResponse<T> = { payload: T; message?: string };
 
+type AcademicActivityScopeApiDto = {
+  id: number;
+  stream: { id: number; name: string };
+  class: { id: number; name: string; sequence?: number | null };
+  startDate: string | null;
+  endDate: string | null;
+  isEnabled: boolean;
+};
+
+type AcademicActivityApiDto = {
+  id: number;
+  audience: "STUDENT" | "STAFF" | "ALL";
+  master: { id: number; name: string; type: string; isActive: boolean };
+  academicYear: { id: number; year: string };
+  courseLevelId?: number | null;
+  scopes: AcademicActivityScopeApiDto[];
+};
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // Sets <html data-env> so the env-driven brand palette applies app-wide.
+  useAppEnv();
   const isNestedIframe = window.self !== window.top;
   const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
   const pathname = usePathname();
   const { user } = useAuth();
   const [mappings, setMappings] = React.useState<FeeMapping[]>([]);
   const { accessControl, student } = useStudent();
-  const { invalidateFeeMappings, cpFormVersion } = useFeeSocket();
+  const { invalidateFeeMappings, cpFormVersion, academicActivityVersion } = useFeeSocket();
   const {
     collegeName,
     abbreviation,
     logoUrl: collegeLogoUrl,
     isLoading: isLoadingSettings,
-  } = useCollegeSettings();
+  } = useBranding();
   const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
   const [hasCareerProgressionForm, setHasCareerProgressionForm] = React.useState(false);
+  const [showCuRegistration, setShowCuRegistration] = React.useState(false);
+  const [showSubjectSelection, setShowSubjectSelection] = React.useState(false);
   const socketRef = React.useRef<any | null>(null);
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
   console.log("pathname:", pathname);
@@ -175,6 +198,54 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     refreshCpFormStatus();
   }, [refreshCpFormStatus, cpFormVersion]);
 
+  const refreshActivityGates = React.useCallback(() => {
+    if (!student?.id) return;
+    const promotion = student?.currentPromotion;
+    const studentClassId: number | undefined = promotion?.class?.id;
+    const studentAyId: number | undefined = promotion?.session?.academicYearId ?? undefined;
+    const studentStreamId: number | null = student?.programCourse?.stream?.id ?? null;
+
+    axiosInstance
+      .get<ApiResponse<AcademicActivityApiDto[]>>("/api/academics/academic-activities")
+      .then(({ data }) => {
+        const activities: AcademicActivityApiDto[] = Array.isArray(data?.payload)
+          ? data.payload
+          : [];
+
+        const now = Date.now();
+
+        const isLive = (activityName: string) => {
+          const matched = activities.filter(
+            (a) =>
+              a.master?.isActive && (a.master?.name ?? "").trim().toLowerCase() === activityName,
+          );
+          if (!matched.length || !studentClassId || !studentAyId) return false;
+          return matched.some((activity) => {
+            if (activity.academicYear.id !== studentAyId) return false;
+            return activity.scopes.some((scope) => {
+              if (!scope.isEnabled) return false;
+              if (scope.class.id !== studentClassId) return false;
+              if (studentStreamId != null && scope.stream.id !== studentStreamId) return false;
+              const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
+              const end = scope.endDate ? new Date(scope.endDate).getTime() : Infinity;
+              return now >= start && now <= end;
+            });
+          });
+        };
+
+        setShowCuRegistration(isLive("cu registration"));
+        setShowSubjectSelection(isLive("subject selection"));
+      })
+      .catch(() => {
+        setShowCuRegistration(false);
+        setShowSubjectSelection(false);
+      });
+  }, [student?.id]);
+
+  React.useEffect(() => {
+    refreshActivityGates();
+  }, [refreshActivityGates, academicActivityVersion]);
+
   // Setup socket connection to update badge count on exam changes
   React.useEffect(() => {
     if (!student?.id || typeof window === "undefined") return;
@@ -211,7 +282,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         const socket: any = socketModule.io(origin, {
           path: socketPath,
           withCredentials: true,
-          transports: ["polling", "websocket"],
+          transports: ["websocket", "polling"], // websocket first: long-polling needs ALB sticky sessions across instances
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionAttempts: 5,
@@ -250,20 +321,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     };
   }, [student?.id, user?.id, updateExamCount]);
 
-  // Check if student's program course is MA or MCOM (hide admission registration for these)
-  const isBlockedProgram = React.useMemo(() => {
-    if (!student?.programCourse?.name) return false;
-
-    const rawName = student.programCourse.name;
-    const normalizedName = rawName
-      .normalize("NFKD")
-      .replace(/[^A-Za-z]/g, "")
-      .toUpperCase();
-
-    const blockedPrograms = ["MA", "MCOM", "BBA"];
-    return blockedPrograms.some((program) => normalizedName.startsWith(program));
-  }, [student?.programCourse?.course?.name]);
-
   //   React.useEffect(() => {
   //     (async () => {
   //       try {
@@ -294,14 +351,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     //   icon: ListChecks,
     //   isActive: pathname === "/dashboard/attendance",
     // },
-    {
-      title: "Subject Selection",
-      url: "/dashboard/subject-selection",
-      icon: BookOpen,
-      isActive: pathname === "/dashboard/subject-selection",
-    },
-    // Hide admission registration for MA and MCOM students
-    ...(isBlockedProgram || !isNestedIframe
+    showSubjectSelection
+      ? {
+          title: "Subject Selection",
+          url: "/dashboard/subject-selection",
+          icon: BookOpen,
+          isActive: pathname === "/dashboard/subject-selection",
+        }
+      : null,
+    ...(!isNestedIframe || !showCuRegistration
       ? []
       : [
           {
@@ -406,7 +464,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 )}
               </div>
               <div className="grid flex-1 text-left text-sm">
-                <span className="truncate font-semibold text-wrap text-white">
+                <span className="font-semibold text-white break-words">
                   {isLoadingSettings
                     ? "Loading..."
                     : `${abbreviation || collegeName || "Student"} | Student Console`}

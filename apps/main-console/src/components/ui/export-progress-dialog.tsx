@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -97,8 +97,48 @@ export function ExportProgressDialog({
       if (progressUpdate.currentFile) {
         setCurrentFile(progressUpdate.currentFile);
       }
+
+      // ETA meta (recomputed by the backend on EVERY completed item, so each
+      // update self-corrects the estimate). Stamp arrival time so we can tick
+      // a live countdown between socket events.
+      const meta = progressUpdate.meta as
+        | { etaMs?: number | null; elapsedMs?: number; processed?: number; total?: number }
+        | undefined;
+      if (meta && typeof meta.etaMs === "number") {
+        etaRef.current = {
+          etaMs: meta.etaMs,
+          elapsedMs: meta.elapsedMs ?? 0,
+          receivedAt: Date.now(),
+        };
+      } else if (progressUpdate.status === "started") {
+        etaRef.current = null;
+      }
     }
   }, [progressUpdate]);
+
+  // 1s ticker: keeps "time left" counting down live between socket updates.
+  const etaRef = useRef<{ etaMs: number; elapsedMs: number; receivedAt: number } | null>(null);
+  // Client-side start stamp so the row shows immediately (Duration ticking,
+  // "calculating…") before the first completed item produces a real ETA.
+  const openedAtRef = useRef<number>(Date.now());
+  const [, setEtaTick] = useState(0);
+  useEffect(() => {
+    if (!isOpen) return;
+    openedAtRef.current = Date.now();
+    etaRef.current = null;
+    const t = setInterval(() => setEtaTick((v) => v + 1), 1000);
+    return () => clearInterval(t);
+  }, [isOpen]);
+
+  const fmtDur = (ms: number) => {
+    const s = Math.max(0, Math.round(ms / 1000));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${String(sec).padStart(2, "0")}s`;
+    return `${sec}s`;
+  };
 
   const getStatusIcon = () => {
     switch (status) {
@@ -243,7 +283,7 @@ export function ExportProgressDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getStatusIcon()}
@@ -270,6 +310,67 @@ export function ExportProgressDialog({
             <p className="text-sm text-slate-700">{message}</p>
             {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
           </div>
+
+          {/* Started · Duration · Expected completion — the ETA is recomputed
+              by the backend on every completed item, and the duration/finish
+              time tick locally every second between socket updates. Before the
+              first item completes there is no rate yet, so show the row with
+              "calculating…" instead of leaving a gap. */}
+          {(etaRef.current !== null || operation === "student_import_legacy_students") &&
+            (status === "in_progress" || status === "started") &&
+            (() => {
+              const eta = etaRef.current;
+              const sinceUpdate = eta ? Date.now() - eta.receivedAt : 0;
+              const durationMs = eta
+                ? eta.elapsedMs + sinceUpdate
+                : Date.now() - openedAtRef.current;
+              const remainingMs = eta ? Math.max(0, eta.etaMs - sinceUpdate) : null;
+              const startedAt = new Date(Date.now() - durationMs);
+              const finishAt = remainingMs !== null ? new Date(Date.now() + remainingMs) : null;
+              const clock = (d: Date) =>
+                d
+                  .toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                    timeZone: "Asia/Kolkata",
+                  })
+                  .toUpperCase();
+              // Fixed 4-column grid + tabular digits so ticking values never
+              // shift the layout.
+              return (
+                <div className="grid grid-cols-4 rounded bg-slate-50 px-3 py-2 text-xs text-slate-600 [font-variant-numeric:tabular-nums]">
+                  <span className="flex flex-col">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                      Started
+                    </span>
+                    <b className="whitespace-nowrap text-slate-800">{clock(startedAt)}</b>
+                  </span>
+                  <span className="flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                      Duration
+                    </span>
+                    <b className="whitespace-nowrap text-slate-800">{fmtDur(durationMs)}</b>
+                  </span>
+                  <span className="flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                      Time left
+                    </span>
+                    <b className="whitespace-nowrap text-slate-800">
+                      {remainingMs !== null ? fmtDur(remainingMs) : "calculating…"}
+                    </b>
+                  </span>
+                  <span className="flex flex-col items-end">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                      Finishes
+                    </span>
+                    <b className="whitespace-nowrap text-slate-800">
+                      {finishAt ? clock(finishAt) : "—"}
+                    </b>
+                  </span>
+                </div>
+              );
+            })()}
 
           {/* File Name */}
           {fileName && (

@@ -20,7 +20,17 @@ import {
   studentModel,
   personalDetailsModel,
 } from "@repo/db/schemas/models/user";
-import { and, inArray, or, ilike, desc, eq } from "drizzle-orm";
+import {
+  and,
+  inArray,
+  or,
+  ilike,
+  desc,
+  eq,
+  isNull,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import {
   feeStructureModel,
@@ -242,6 +252,16 @@ async function modelToDto(
  * Services should accept validated DTOs (controller validates via zod) and
  * return raw rows / arrays / null. Do not catch errors here — controller will handle them.
  */
+
+function activePromotionCondition(...extra: SQL[]): SQL {
+  const parts: SQL[] = [
+    isNull(promotionModel.endDate),
+    sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+  ];
+  if (extra.length) parts.push(...extra);
+  return and(...parts)!;
+}
+
 export const createFeeCategoryPromotionMapping = async (
   data: Omit<
     typeof createFeeGroupPromotionMappingSchema._type,
@@ -497,6 +517,8 @@ export const getFilteredFeeCategoryPromotionMappings = async (
     return [];
   }
 
+  conditions.push(activePromotionCondition());
+
   const baseQuery = db
     .select({
       promotionId: promotionModel.id,
@@ -737,6 +759,7 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
             and(
               eq(promotionModel.studentId, student.id),
               eq(promotionModel.classId, foundClass.id),
+              activePromotionCondition(),
             ),
           )
           .orderBy(desc(promotionModel.id))

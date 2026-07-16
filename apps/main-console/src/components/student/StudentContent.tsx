@@ -103,6 +103,7 @@ export default function StudentContent({
         return (
           <HealthDetails
             healthId={profile?.healthDetails?.id ?? undefined}
+            studentId={studentId}
             initialData={profile?.healthDetails ?? null}
           />
         );

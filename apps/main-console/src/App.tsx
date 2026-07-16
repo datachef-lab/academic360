@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/features/dashboard/layouts/home-layout";
 
 // import StudentViewPage from "./pages/StudentViewPage";
@@ -64,13 +64,29 @@ import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
+import AdmissionsPage from "./features/academic-year-setup/pages/admissions-page";
+import NotificationsMaster from "./features/notifications/layouts/notifications-master";
+import NotificationsHomePage from "./features/notifications/pages/notifications-home-page";
+import AutomatedNotificationsPage from "./features/notifications/pages/automated-notifications-page";
+import NotificationEventsPage from "./features/notifications/pages/notification-events-page";
+import NotificationMastersPage from "./features/notifications/pages/notification-masters-page";
+import AdmissionProgramCoursePage from "./features/academic-year-setup/pages/admission-program-course-page";
+import AdmissionsYearRedirect from "./features/academic-year-setup/pages/admissions-year-redirect";
+import ShiftSectionConfigPage from "./features/academic-year-setup/pages/shift-section-config-page";
+import AdmissionMasterHomePage from "./features/academic-year-setup/pages/admission-master-home-page";
+import GeneralMaster from "./features/academic-year-setup/layouts/general-master";
+import ResourceMasterPage from "./features/academic-year-setup/general/ResourceMasterPage";
+import { RESOURCE_CONFIGS } from "./features/academic-year-setup/general/resource-configs";
+import { ADMISSION_MASTER_CONFIGS } from "./features/academic-year-setup/general/admission-master-configs";
+import ToolsPage from "./features/tools/pages/tools-page";
+import ShiftChangePage from "./features/tools/pages/shift-change-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
 // import MandatorySubjectsPage from "./features/academic-year-setup/pages/mandatory-subjects-page";
 
 import WhitelistedCategoriesPage from "./features/academic-year-setup/pages/whitelisted-categories-page";
 import AlternativeSubjectsPage from "./features/academic-year-setup/pages/related-subjects-page";
 // import RestrictedGroupingsPage from "./features/academic-year-setup/pages/restricted-grouping-page";
-import SemesterAvailabilityPage from "./features/academic-year-setup/pages/semester-availability-page";
+import SubjectSelectionMetaPage from "./features/academic-year-setup/pages/subject-selection-meta-page";
 import RestrictedGroupingPage from "./features/academic-year-setup/pages/restricted-grouping-page";
 import UnderConstructionPage from "./pages/under-construction-page";
 import AdmissionBoardMaster from "./features/academic-year-setup/layouts/admission-board-master";
@@ -91,7 +107,9 @@ import PromoteStudentsPage from "./pages/PromoteStudentsPage";
 import AcademicActivityPage from "./features/administration/pages/academic-activity.page";
 import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalCURegMarkingPage";
 import * as administrationModule from "./features/administration";
+import * as idCardModule from "@/features/idcard";
 // import * as resourceModule from "@/pages/resources";
+import { SettingsProvider } from "@/features/settings/providers/settings-provider";
 
 const router = createBrowserRouter(
   [
@@ -121,21 +139,107 @@ const router = createBrowserRouter(
         { path: "promote-students", element: <PromoteStudentsPage /> },
         { path: "academic-activity", element: <AcademicActivityPage /> },
         {
-          path: "academic-year-setup",
+          path: "admissions",
+          element: <Outlet />,
+          children: [
+            { path: "", element: <AdmissionsYearRedirect /> },
+            {
+              path: ":year",
+              element: <Outlet />,
+              children: [
+                { path: "", element: <AdmissionsPage /> },
+                {
+                  path: "master",
+                  element: <AdmissionBoardMaster />,
+                  children: [
+                    { path: "", element: <AdmissionMasterHomePage /> },
+                    { path: "program-courses", element: <AdmissionProgramCoursePage /> },
+                    {
+                      path: "quota-type",
+                      element: (
+                        <ResourceMasterPage
+                          config={ADMISSION_MASTER_CONFIGS["admission-quota-types"]!}
+                        />
+                      ),
+                    },
+                    { path: "shift-section-config", element: <ShiftSectionConfigPage /> },
+                    {
+                      path: "cancel-sources",
+                      element: (
+                        <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["cancel-sources"]!} />
+                      ),
+                    },
+                    {
+                      path: "grades",
+                      element: <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["grades"]!} />,
+                    },
+                    {
+                      path: "sports-categories",
+                      element: (
+                        <ResourceMasterPage
+                          config={ADMISSION_MASTER_CONFIGS["sports-categories"]!}
+                        />
+                      ),
+                    },
+                    {
+                      path: "sections",
+                      element: (
+                        <ResourceMasterPage config={ADMISSION_MASTER_CONFIGS["sections"]!} />
+                      ),
+                    },
+                    { path: "board-subject-mapping", element: <BoardSubjectPage /> },
+                    { path: "boards", element: <BoardPage /> },
+                    { path: "subjects", element: <BoardSubjectNamePage /> },
+                    {
+                      path: "mapping-subjects",
+                      element: <BoardSubjectUnivSubjectMappingPaper />,
+                    },
+                  ],
+                },
+                { path: "home", element: <UnderConstructionPage /> },
+                { path: "start", element: <UnderConstructionPage /> },
+                { path: "counselling", element: <UnderConstructionPage /> },
+                { path: "staff-management", element: <UnderConstructionPage /> },
+                { path: "help-desk", element: <UnderConstructionPage /> },
+                { path: "application-forms", element: <UnderConstructionPage /> },
+                { path: "merit-listing", element: <UnderConstructionPage /> },
+                { path: "merit-listing-rules", element: <UnderConstructionPage /> },
+                { path: "verification", element: <UnderConstructionPage /> },
+                { path: "admit-students", element: <UnderConstructionPage /> },
+                { path: "notifications", element: <UnderConstructionPage /> },
+              ],
+            },
+          ],
+        },
+        {
+          path: "academic-setup",
           element: <Outlet />,
           children: [
             { path: "", element: <AcademicYearSetupPage /> },
-            { path: "admission-stats", element: <UnderConstructionPage /> },
-            { path: "eligibility-criteria", element: <UnderConstructionPage /> },
-            { path: "merit-criteria", element: <UnderConstructionPage /> },
+            // Academic Events — configure admission-process schedules (dates/times).
+            // Scaffold route for now; management UI to follow.
+            { path: "academic-events", element: <UnderConstructionPage /> },
+            // Help & Support Staff — scaffold route; management UI to follow.
+            { path: "help-support-staff", element: <UnderConstructionPage /> },
+            // Back-compat: Admissions moved up to /dashboard/admissions
             {
-              path: "board-subjects",
-              element: <AdmissionBoardMaster />,
+              path: "admissions/*",
+              element: <Navigate to="/dashboard/admissions" replace />,
+            },
+            // Back-compat: old board-subjects path now lives under the Admission master
+            {
+              path: "board-subjects/*",
+              element: <Navigate to="/dashboard/admissions" replace />,
+            },
+            {
+              path: "general",
+              element: <GeneralMaster />,
               children: [
-                { path: "", element: <BoardSubjectPage /> },
-                { path: "boards", element: <BoardPage /> },
-                { path: "subjects", element: <BoardSubjectNamePage /> },
-                { path: "mapping-subjects", element: <BoardSubjectUnivSubjectMappingPaper /> },
+                { path: "", element: <ResourceMasterPage config={RESOURCE_CONFIGS[0]!} /> },
+                ...RESOURCE_CONFIGS.map((c) => ({
+                  path: c.key,
+                  element: <ResourceMasterPage config={c} />,
+                })),
               ],
             },
             {
@@ -183,7 +287,7 @@ const router = createBrowserRouter(
                 { path: "", element: <AlternativeSubjectsPage /> },
                 { path: "restricted-groupings", element: <RestrictedGroupingPage /> },
                 { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
-                { path: "semester-availability", element: <SemesterAvailabilityPage /> },
+                { path: "subject-selection-meta", element: <SubjectSelectionMetaPage /> },
               ],
             },
             {
@@ -194,6 +298,63 @@ const router = createBrowserRouter(
                 { path: "classes", element: <courseSubjectModule.ClassesPage /> },
                 { path: "promotion-clauses", element: <PromotionClausesPage /> },
                 { path: "appear-types", element: <AppearTypePage /> },
+              ],
+            },
+          ],
+        },
+        // Back-compat redirect: old "academic-year-setup" base path -> "academic-setup"
+        {
+          path: "academic-year-setup/*",
+          element: <Navigate to="/dashboard/academic-setup" replace />,
+        },
+        {
+          path: "tools",
+          element: <Outlet />,
+          children: [
+            { path: "", element: <ToolsPage /> },
+            {
+              path: "id-cards",
+              element: <idCardModule.ClassesMaster />,
+              children: [
+                { path: "", element: <idCardModule.IdCardIssuePage /> },
+                { path: "reports", element: <idCardModule.IdCardReportsPage /> },
+                { path: "templates", element: <idCardModule.IdCardTemplatesPage /> },
+                {
+                  path: "templates/:templateId/editor",
+                  element: <idCardModule.IdCardTemplateEditorPage />,
+                },
+                { path: "shifts", element: <idCardModule.ShiftsMasterPage /> },
+                { path: "sections", element: <idCardModule.SectionsMasterPage /> },
+              ],
+            },
+            {
+              path: "simulation",
+              element: <appModule.StudentConsoleSimulation />,
+            },
+            {
+              path: "shift-change",
+              element: <ShiftChangePage />,
+            },
+            {
+              path: "realtime-tracker",
+              element: <RealTimeTrackerPage />,
+            },
+            {
+              path: "promote-students",
+              element: <PromoteStudentsPage />,
+            },
+            {
+              path: "bulk-upload",
+              element: <BulkDataUploadPage />,
+            },
+            {
+              path: "notifications",
+              element: <NotificationsMaster />,
+              children: [
+                { path: "", element: <NotificationsHomePage /> },
+                { path: "automated", element: <AutomatedNotificationsPage /> },
+                { path: "events", element: <NotificationEventsPage /> },
+                { path: "masters", element: <NotificationMastersPage /> },
               ],
             },
           ],
@@ -480,9 +641,14 @@ const router = createBrowserRouter(
             { path: "", element: <libraryModule.LibraryHomePage /> },
             { path: "entry-exit", element: <libraryModule.EntryExitPage /> },
             { path: "book-circulation", element: <libraryModule.BookCirculationPage /> },
-            { path: "books", element: <libraryModule.BooksPage /> },
-            { path: "copy-details", element: <libraryModule.CopyDetailsPage /> },
-            { path: "journal", element: <libraryModule.JournalPage /> },
+            {
+              path: "article-entry",
+              children: [
+                { index: true, element: <libraryModule.ArticleEntryPage /> },
+                { path: "books", element: <libraryModule.BooksPage /> },
+                { path: "journal", element: <libraryModule.JournalPage /> },
+              ],
+            },
             { path: "series", element: <libraryModule.SeriesPage /> },
             { path: "publications", element: <libraryModule.PublicationsPage /> },
             { path: "enclosures", element: <libraryModule.EnclosuresPage /> },
@@ -496,8 +662,25 @@ const router = createBrowserRouter(
             { path: "articles", element: <libraryModule.ArticlesPage /> },
             { path: "library-documents", element: <libraryModule.LibraryDocumentsPage /> },
             { path: "borrowing-types", element: <libraryModule.BorrowingTypesPage /> },
-            //   { path: "fine-management", element: <LibFineManagement /> },
-            //   { path: "lib-report", element: <LibReport /> },
+            { path: "author-types", element: <libraryModule.AuthorTypesPage /> },
+            { path: "authors", element: <libraryModule.AuthorsPage /> },
+            { path: "vendors", element: <libraryModule.VendorsPage /> },
+            { path: "holidays", element: <libraryModule.HolidaysPage /> },
+            { path: "class-holidays", element: <libraryModule.ClassHolidaysPage /> },
+            { path: "branches", element: <libraryModule.BranchesPage /> },
+            { path: "patron-categories", element: <libraryModule.PatronCategoriesPage /> },
+            { path: "item-categories", element: <libraryModule.ItemCategoriesPage /> },
+            { path: "circulation-policies", element: <libraryModule.CirculationPoliciesPage /> },
+            { path: "zones", element: <libraryModule.LibraryZonesMasterPage /> },
+            { path: "search", element: <libraryModule.LibrarySearchPage /> },
+            { path: "reading-lists", element: <libraryModule.ReadingListsPage /> },
+            { path: "academic-archives", element: <libraryModule.AcademicArchivePage /> },
+            { path: "evidence-locker", element: <libraryModule.EvidenceLockerPage /> },
+            { path: "journal-subscriptions", element: <libraryModule.JournalSubscriptionsPage /> },
+            { path: "reports", element: <libraryModule.LibraryReportsPage /> },
+            { path: "student-analytics", element: <libraryModule.StudentAnalyticsPage /> },
+            { path: "cdl/:bookId", element: <libraryModule.CdlReaderPage /> },
+            { path: "digital-twin", element: <libraryModule.DigitalTwinPage /> },
           ],
         },
 
@@ -555,6 +738,7 @@ const router = createBrowserRouter(
             { path: "admission-comm-module", element: <appModule.AdmissionCommModulePage /> },
           ],
         },
+        // Legacy alias for the old direct route — kept so deep links keep working.
         {
           path: "apps/student-console/simulation",
           element: <appModule.StudentConsoleSimulation />,
@@ -599,9 +783,9 @@ const router = createBrowserRouter(
 
 const App = () => {
   return (
-    <>
+    <SettingsProvider>
       <RouterProvider router={router} />
-    </>
+    </SettingsProvider>
   );
 };
 

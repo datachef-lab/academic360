@@ -1463,7 +1463,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                       slab.payableAmount ??
                                       feeStructureRow.amount - slab.concessionAmount
                                     ).toLocaleString("en-IN", {
-                                      minimumFractionDigits: 2,
+                                      minimumFractionDigits: 0,
                                       maximumFractionDigits: 2,
                                     })}
                                   </TableCell>
@@ -2609,7 +2609,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                   {(slab.feeHeadAmounts?.[component.id] || 0).toLocaleString(
                                     "en-IN",
                                     {
-                                      minimumFractionDigits: 2,
+                                      minimumFractionDigits: 0,
                                       maximumFractionDigits: 2,
                                     },
                                   )}
@@ -2618,7 +2618,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                               <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold bg-blue-50">
                                 ₹
                                 {totalPayable.toLocaleString("en-IN", {
-                                  minimumFractionDigits: 2,
+                                  minimumFractionDigits: 0,
                                   maximumFractionDigits: 2,
                                 })}
                               </TableCell>

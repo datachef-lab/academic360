@@ -1,4 +1,5 @@
 import { MetricCard } from "./MetricCard";
+import type { TabMetricTheme } from "./TabPanel";
 import { useFeesDashboard } from "../context/FeesDashboardContext";
 import {
   ALL_METRICS,
@@ -12,16 +13,11 @@ type TabMetricsRowProps = {
   tab?: FeesDashboardTab;
   metricIds?: MetricId[];
   compact?: boolean;
+  metricTheme?: TabMetricTheme;
 };
 
-const TRENDS: Partial<Record<string, number>> = {
-  fee_receivable: 3.2,
-  fee_collected: 8.4,
-  collection_rate: 2.1,
-};
-
-export function TabMetricsRow({ tab, metricIds, compact }: TabMetricsRowProps) {
-  const { metrics } = useFeesDashboard();
+export function TabMetricsRow({ tab, metricIds, compact, metricTheme }: TabMetricsRowProps) {
+  const { metrics, dashboardLoading } = useFeesDashboard();
   const ids = metricIds ?? (tab ? TAB_METRICS[tab] : []);
 
   return (
@@ -39,11 +35,17 @@ export function TabMetricsRow({ tab, metricIds, compact }: TabMetricsRowProps) {
             key={id}
             id={id}
             label={m.label}
-            value={formatMetricValue(id, metrics)}
-            hint={m.hint}
-            trend={TRENDS[id]}
-            progress={id === "collection_rate" ? metrics.collection_rate : undefined}
+            value={dashboardLoading ? "…" : formatMetricValue(id, metrics)}
+            hint={dashboardLoading ? "Loading dashboard data" : m.hint}
+            progress={
+              dashboardLoading
+                ? undefined
+                : id === "collection_rate"
+                  ? metrics.collection_rate
+                  : undefined
+            }
             compact={compact}
+            theme={metricTheme}
           />
         );
       })}

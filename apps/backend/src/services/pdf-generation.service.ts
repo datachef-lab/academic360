@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import { QRCodeService } from "./qr-code.service.js";
+import { resolveStudentAvatarDataUrl } from "@/features/user/services/student-avatar.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,14 +25,17 @@ async function findChromiumExecutable(): Promise<string | undefined> {
     }
   }
   const possiblePaths = [
-    "/usr/bin/chromium-browser", // Ubuntu/Debian
-    "/usr/bin/chromium", // Alternative Ubuntu/Debian
-    "/usr/bin/google-chrome", // Google Chrome
+    // Prefer real Chrome/Chromium binaries. /usr/bin/chromium-browser is often
+    // a non-functional snap stub on Ubuntu (fs.access succeeds but launch fails
+    // with "requires the chromium snap"), so it must be probed LAST.
+    "/usr/bin/google-chrome", // Google Chrome (Linux, real binary + deps)
     "/usr/bin/google-chrome-stable", // Google Chrome stable
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // macOS Chrome
     "/Applications/Chromium.app/Contents/MacOS/Chromium", // macOS Chromium
     "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Windows Chrome
     "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", // Windows Chrome (x86)
+    "/usr/bin/chromium", // Alternative Ubuntu/Debian
+    "/usr/bin/chromium-browser", // Ubuntu/Debian (may be a snap stub — last resort)
   ];
 
   for (const executablePath of possiblePaths) {
@@ -657,13 +661,14 @@ export class PdfGenerationService {
         },
       );
 
-      // Pre-fetch external images as base64 data URLs to avoid network requests during rendering
-      const studentImageUrl = `https://besc.academic360.app/id-card-generate/api/images?uid=${formData.uid}&crop=true`;
-      const collegeLogoUrl = `https://besc.academic360.app/api/api/v1/settings/file/4`;
+      // Resolve the student photo through the unified backend chain (S3 →
+      // besc → hrclIRP → previous-uid) and inline as a base64 data URL so the
+      // PDF renderer never needs network access.
+      const collegeLogoUrl = `https://api.academic360.app/api/v1/settings/file/4`;
 
       const [studentImageDataUrl, collegeLogoDataUrl, qrCodeDataUrl] =
         await Promise.all([
-          this.fetchImageAsDataUrl(studentImageUrl),
+          resolveStudentAvatarDataUrl(formData.uid).catch(() => null),
           this.fetchImageAsDataUrl(collegeLogoUrl),
           QRCodeService.generateApplicationQRCode(formData.uid).catch(
             (error) => {
@@ -676,7 +681,7 @@ export class PdfGenerationService {
           ),
         ]);
 
-      formData.studentImage = studentImageDataUrl || studentImageUrl;
+      formData.studentImage = studentImageDataUrl ?? "";
       (formData as any).collegeLogo = collegeLogoDataUrl || collegeLogoUrl;
       formData.qrCodeDataUrl = qrCodeDataUrl;
 
@@ -764,7 +769,7 @@ export class PdfGenerationService {
       );
 
       // Embed logo as data URL to avoid missing image during puppeteer rendering
-      const collegeLogoUrl = `https://besc.academic360.app/api/api/v1/settings/file/4`;
+      const collegeLogoUrl = `https://api.academic360.app/api/v1/settings/file/4`;
       const collegeLogoDataUrl = await this.fetchImageAsDataUrl(collegeLogoUrl);
       (formData as any).collegeLogo = collegeLogoDataUrl || collegeLogoUrl;
 
@@ -863,7 +868,7 @@ export class PdfGenerationService {
       // Pre-load college logo as base64 to avoid network delays during PDF generation
       // This MUST be done before EJS rendering
       const collegeLogoUrl =
-        "https://besc.academic360.app/api/api/v1/settings/file/4";
+        "https://api.academic360.app/api/v1/settings/file/4";
       const collegeLogoBase64 = await this.loadImageAsBase64(collegeLogoUrl);
 
       // Create a modified template that uses the injected base64 image

@@ -29,6 +29,7 @@ export const journalModel = pgTable("journals", {
         .references(() => libraryPeriodModel.id),
     issnNumber: varchar({ length: 1000 }),
     sizeInCM: varchar({ length: 255 }),
+    publishedYear: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -5,7 +5,7 @@ import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "dri
 import { userModel } from "@/schemas/models/user";
 import { communityTypeEnum } from "@/schemas/enums";
 import { programCourseModel, specializationModel } from "@/schemas/models/course-design";
-import { admissionCourseDetailsModel, applicationFormModel } from "@/schemas/models/admissions";
+import { admissionCourseDetailsModel, admissionQuotaTypeModel, applicationFormModel } from "@/schemas/models/admissions";
 // import { sectionModel, shiftModel } from "../academics";
 import z from "zod";
 
@@ -21,8 +21,10 @@ export const studentModel = pgTable("students", {
         .references(() => programCourseModel.id)
         .notNull(),
     specializationId: integer("specialization_id_fk").references(() => specializationModel.id),
+    quotaTypeId: integer("quota_type_id_fk").references(() => admissionQuotaTypeModel.id),
     uid: varchar({ length: 255 }).notNull().unique(),
     oldUid: varchar({ length: 255 }),
+    previousUid: varchar({ length: 255 }),
     rfidNumber: varchar({ length: 255 }),
     cuFormNumber: varchar({ length: 255 }),
     registrationNumber: varchar({ length: 255 }),
@@ -58,6 +60,10 @@ export const studentRelations = relations(studentModel, ({ one }) => ({
     specialization: one(specializationModel, {
         fields: [studentModel.specializationId],
         references: [specializationModel.id],
+    }),
+    quotaType: one(admissionQuotaTypeModel, {
+        fields: [studentModel.quotaTypeId],
+        references: [admissionQuotaTypeModel.id],
     }),
 }))
 

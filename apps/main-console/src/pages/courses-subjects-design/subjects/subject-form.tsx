@@ -12,7 +12,7 @@ const subjectSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().nullable().optional(),
   sequence: z.number().nullable().optional(),
-  disabled: z.boolean().default(false),
+  isActive: z.boolean().default(true),
 });
 
 type SubjectFormValues = z.infer<typeof subjectSchema>;
@@ -44,7 +44,7 @@ export function SubjectForm({
       name: initialData?.name || "",
       code: initialData?.code || "",
       sequence: initialData?.sequence || null,
-      disabled: initialData?.isActive ?? false,
+      isActive: initialData?.isActive ?? true,
     },
   });
 
@@ -54,14 +54,14 @@ export function SubjectForm({
         name: initialData.name || "",
         code: initialData.code || "",
         sequence: initialData.sequence || null,
-        disabled: initialData.isActive ?? false,
+        isActive: initialData.isActive ?? true,
       });
     } else {
       reset({
         name: "",
         code: "",
         sequence: null,
-        disabled: false,
+        isActive: true,
       });
     }
   }, [initialData, reset]);
@@ -111,18 +111,18 @@ export function SubjectForm({
 
         <div className="flex items-center space-x-2">
           <Controller
-            name="disabled"
+            name="isActive"
             control={control}
             render={({ field: { value, onChange } }) => (
               <Checkbox
-                id="disabled"
-                checked={value}
+                id="isActive"
+                checked={!!value}
                 onCheckedChange={onChange}
                 disabled={isLoading}
               />
             )}
           />
-          <Label htmlFor="disabled">Disabled</Label>
+          <Label htmlFor="isActive">Active</Label>
         </div>
       </div>
 

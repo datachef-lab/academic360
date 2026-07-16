@@ -10,6 +10,7 @@ import {
   deleteRestrictedGroupingMain,
   bulkUploadRestrictedGroupingMains,
 } from "@/features/subject-selection/services/restricted-grouping-main.service.js";
+import { getStudentAcademicYearId } from "@/features/subject-selection/services/student-subjects.service.js";
 import { socketService } from "@/services/socketService.js";
 
 export const createRestrictedGroupingMainHandler = async (
@@ -102,13 +103,33 @@ export const getAllRestrictedGroupingMainsHandler = async (
       search = "",
       subjectType = "",
       programCourseId,
+      academicYearId,
+      studentId,
     } = req.query as Record<string, string>;
+
+    // Student-facing flow: scope restricted groupings to the student's academic
+    // year (latest promotion -> session -> academicYear, same as the student's
+    // papers/metas) and only active groupings. When the student has no resolvable
+    // academic year, use a non-matching id so nothing is returned (rather than
+    // leaking all years). The admin list (no studentId) keeps its prior behavior.
+    let resolvedAcademicYearId = academicYearId
+      ? Number(academicYearId)
+      : undefined;
+    let activeOnly = false;
+    if (studentId) {
+      const ayId = await getStudentAcademicYearId(Number(studentId));
+      resolvedAcademicYearId = ayId ?? -1;
+      activeOnly = true;
+    }
+
     const paged = await getRestrictedGroupingMainsPaginated({
       page: parseInt(page, 10) || 1,
       pageSize: parseInt(pageSize, 10) || 10,
       search: search || undefined,
       subjectType: subjectType || undefined,
       programCourseId: programCourseId ? Number(programCourseId) : undefined,
+      academicYearId: resolvedAcademicYearId,
+      activeOnly,
     });
     res
       .status(200)

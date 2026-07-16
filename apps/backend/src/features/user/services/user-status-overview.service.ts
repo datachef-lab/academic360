@@ -2,6 +2,8 @@ import { db } from "@/db/index.js";
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
 import { academicYearModel } from "@repo/db/schemas/models/academics/academic-year.model.js";
 import { sessionModel } from "@repo/db/schemas/models/academics/session.model.js";
+import { shiftModel } from "@repo/db/schemas/models/academics/shift.model.js";
+import { sectionModel } from "@repo/db/schemas/models/academics/section.model.js";
 import { userStatusMasterModel } from "@repo/db/schemas/models/administration/user-status-master.model.js";
 import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model.js";
 import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model.js";
@@ -173,6 +175,22 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
     programCourse = pc ?? null;
   }
 
+  // A shift change rotates students.uid (old value saved to previousUid) and is
+  // the only thing that changes the uid. Since the uid tracks the shift, a
+  // promotion belongs to the previous-uid era iff its shift differs from the
+  // student's CURRENT (active) shift. This keeps old-shift promotions on the
+  // previous uid while later same-shift semesters stay on the current uid.
+  const currentShiftId =
+    (
+      promotions.find((p) => p.endDate == null && p.isDeprecated !== true) ??
+      promotions[promotions.length - 1]
+    )?.shiftId ?? null;
+  const previousUid = student?.previousUid?.trim() || null;
+  const uidForPromotion = (promotionShiftId: number | null) =>
+    previousUid && currentShiftId != null && promotionShiftId !== currentShiftId
+      ? previousUid
+      : (student?.uid ?? null);
+
   const results: unknown[] = [];
 
   for (const promotion of promotions) {
@@ -194,6 +212,18 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
       .select()
       .from(classModel)
       .where(eq(classModel.id, promotion.classId));
+
+    const [shf] = await db
+      .select()
+      .from(shiftModel)
+      .where(eq(shiftModel.id, promotion.shiftId));
+
+    const [sec] = promotion.sectionId
+      ? await db
+          .select()
+          .from(sectionModel)
+          .where(eq(sectionModel.id, promotion.sectionId))
+      : [undefined];
 
     let appearTypeName: string | null = null;
     let fillupRow: typeof examFormFillupModel.$inferSelect | undefined;
@@ -233,6 +263,9 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
       studentId: promotion.studentId,
       sessionId: promotion.sessionId,
       classId: promotion.classId,
+      shiftId: promotion.shiftId,
+      uid: uidForPromotion(promotion.shiftId),
+      classRollNumber: promotion.classRollNumber ?? null,
       academicYear: academicYear
         ? {
             id: academicYear.id,
@@ -243,6 +276,8 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
       class: cls
         ? { id: cls.id, name: cls.name, type: cls.type ?? undefined }
         : null,
+      shift: shf ? { id: shf.id, name: shf.name ?? undefined } : null,
+      section: sec ? { id: sec.id, name: sec.name ?? undefined } : null,
       appearTypeName,
       dateOfJoining: promotion.dateOfJoining,
       startDate: promotion.startDate,

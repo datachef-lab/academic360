@@ -1,0 +1,1 @@
+ALTER TABLE "journals" ADD COLUMN IF NOT EXISTS "published_year" varchar(255);

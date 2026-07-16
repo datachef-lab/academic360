@@ -6,6 +6,12 @@ export const handleError = (
   res: Response,
   next?: NextFunction,
 ) => {
+  // ApiError instances carry their own statusCode — respect it instead of
+  // string-matching the message and falling through to 500.
+  if (error instanceof ApiError) {
+    res.status(error.statusCode).json(error);
+    return;
+  }
   if (typeof error === "object" && error !== null && "code" in error) {
     const dbError = error as { code: string; message: string };
 

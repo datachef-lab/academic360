@@ -36,6 +36,10 @@ export type CopyDetailsMetaPayload = {
   shelves: Array<{ id: number; name: string }>;
   enclosures: Array<{ id: number; name: string }>;
   bindings: Array<{ id: number; name: string | null }>;
+  itemCategories: Array<{ id: number; name: string }>;
+  vendors: Array<{ id: number; name: string }>;
+  branches: Array<{ id: number; name: string }>;
+  authorTypes: Array<{ id: number; name: string | null }>;
 };
 
 export type CopyDetailsDetail = {
@@ -58,6 +62,25 @@ export type CopyDetailsDetail = {
   bindingTypeId: number | null;
   isbn: string | null;
   remarks: string | null;
+  branchId: number | null;
+  itemCategoryId: number | null;
+  vendorId: number | null;
+  rfidNumber: string | null;
+  theftBitArmed: boolean | null;
+  priceForeignCurrency: string | null;
+  purchasePrice: string | null;
+  setPrice: string | null;
+  discount: string | null;
+  shippingCharges: string | null;
+  bookVolume: string | null;
+  bookPart: string | null;
+  bookPartInfo: string | null;
+  volumeInfo: string | null;
+  prefix: string | null;
+  suffix: string | null;
+  bookSize: string | null;
+  billDate: string | null;
+  authorTypeId: number | null;
 };
 
 export type CopyDetailsUpsertBody = {
@@ -79,6 +102,25 @@ export type CopyDetailsUpsertBody = {
   bindingTypeId?: number | null;
   isbn?: string | null;
   remarks?: string | null;
+  branchId?: number | null;
+  itemCategoryId?: number | null;
+  vendorId?: number | null;
+  rfidNumber?: string | null;
+  theftBitArmed?: boolean | null;
+  priceForeignCurrency?: string | null;
+  purchasePrice?: string | null;
+  setPrice?: string | null;
+  discount?: string | null;
+  shippingCharges?: string | null;
+  bookVolume?: string | null;
+  bookPart?: string | null;
+  bookPartInfo?: string | null;
+  volumeInfo?: string | null;
+  prefix?: string | null;
+  suffix?: string | null;
+  bookSize?: string | null;
+  billDate?: string | null;
+  authorTypeId?: number | null;
 };
 
 const BASE = "/api/library/copy-details";
@@ -139,3 +181,76 @@ export async function updateCopyDetails(
   const res = await axiosInstance.put<ApiResponse<null>>(`${BASE}/${id}`, body);
   return res.data;
 }
+
+export async function deleteCopyDetails(id: number): Promise<ApiResponse<null>> {
+  const res = await axiosInstance.delete<ApiResponse<null>>(`${BASE}/${id}`);
+  return res.data;
+}
+
+export async function downloadCopyBulkUploadTemplate(bookId?: number): Promise<Blob> {
+  const res = await axiosInstance.get(`${BASE}/template`, {
+    params: bookId ? { bookId } : undefined,
+    responseType: "blob",
+  });
+  return res.data as Blob;
+}
+
+export type CopyBulkUploadJob = {
+  jobId: string;
+  bookId: number;
+};
+
+export async function bulkUploadCopyDetails(
+  bookId: number,
+  file: File,
+): Promise<ApiResponse<CopyBulkUploadJob>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await axiosInstance.post<ApiResponse<CopyBulkUploadJob>>(
+    `${BASE}/bulk-upload`,
+    formData,
+    {
+      params: { bookId },
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
+  return res.data;
+}
+
+export type CopyAddress = {
+  id: number | null;
+  addressLine: string | null;
+  countryId: number | null;
+  stateId: number | null;
+  cityId: number | null;
+  pincode: string | null;
+  landmark: string | null;
+};
+
+export type CopyAddressInput = Omit<CopyAddress, "id">;
+
+export async function getCopyAddress(copyId: number): Promise<CopyAddress> {
+  const res = await axiosInstance.get<ApiResponse<CopyAddress>>(`${BASE}/${copyId}/address`);
+  return res.data.payload;
+}
+
+export async function saveCopyAddress(
+  copyId: number,
+  input: CopyAddressInput,
+): Promise<CopyAddress> {
+  const res = await axiosInstance.put<ApiResponse<CopyAddress>>(`${BASE}/${copyId}/address`, input);
+  return res.data.payload;
+}
+
+export type CopyBulkUploadProgress = {
+  jobId: string;
+  bookId: number;
+  status: "STARTED" | "ROW" | "COMPLETED";
+  processed: number;
+  succeeded: number;
+  failed: number;
+  total: number;
+  lastError?: { row: number; message: string } | null;
+  errors?: Array<{ row: number; message: string }>;
+  updatedAt: string;
+};

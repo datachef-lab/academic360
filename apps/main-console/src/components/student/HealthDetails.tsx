@@ -4,6 +4,7 @@ import type { HealthDto } from "@repo/db/dtos/user";
 import type { BloodGroupDto } from "@repo/db/dtos/resources";
 import {
   getHealthDetailById,
+  getHealthDetailByStudentId,
   createHealthDetail,
   updateHealthDetail,
 } from "@/services/health-details.service";
@@ -13,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import {
   Select,
   SelectContent,
@@ -25,6 +27,7 @@ import { Save, CheckCircle } from "lucide-react";
 
 export interface HealthDetailsProps {
   healthId?: number;
+  studentId?: number;
   initialData?: HealthDto | null;
 }
 
@@ -60,7 +63,7 @@ function stripDates<T>(obj: T): T {
   return obj;
 }
 
-const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null }) => {
+const HealthDetails: FC<HealthDetailsProps> = ({ healthId, studentId, initialData = null }) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Partial<HealthDto>>({
     ...defaultHealth,
@@ -70,13 +73,21 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
 
   // Fetch health details
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["healthDetails", healthId],
+    queryKey: ["healthDetails", studentId, healthId],
     queryFn: async () => {
-      if (!healthId) return null;
-      const res = await getHealthDetailById(healthId);
-      return res.payload;
+      // Prefer the student endpoint — it returns 200 with a null payload when
+      // there's no health record (the /:id endpoint 404s, raising a noisy toast).
+      if (studentId) {
+        const res = await getHealthDetailByStudentId(studentId);
+        return res.payload;
+      }
+      if (healthId) {
+        const res = await getHealthDetailById(healthId);
+        return res.payload;
+      }
+      return null;
     },
-    enabled: !!healthId,
+    enabled: !!studentId || !!healthId,
   });
 
   // Load Blood Group options
@@ -116,12 +127,22 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
       return await createHealthDetail(request);
     },
     onSuccess: () => {
-      toast.success("Health details updated!");
       refetch();
       queryClient.invalidateQueries({ queryKey: ["user-profile"], exact: false });
+      Swal.fire({
+        icon: "success",
+        title: "Saved successfully",
+        text: "Health details have been saved.",
+        confirmButtonColor: "#2563eb",
+      });
     },
     onError: () => {
-      toast.error("Failed to update health details.");
+      Swal.fire({
+        icon: "error",
+        title: "Save failed",
+        text: "Failed to save health details. Please try again.",
+        confirmButtonColor: "#2563eb",
+      });
     },
   });
 
@@ -134,8 +155,19 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
     setFormData((prev) => ({ ...prev, [field]: stringValue }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const result = await Swal.fire({
+      title: "Save health details?",
+      text: "Do you want to save the changes to this student's health details?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Save",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!result.isConfirmed) return;
     setShowSuccess(false);
     mutation.mutate(formData, {
       onSuccess: () => {

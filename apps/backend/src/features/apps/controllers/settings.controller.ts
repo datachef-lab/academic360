@@ -1,19 +1,33 @@
 import { NextFunction, Request, Response } from "express";
 import {
   findAll,
+  findBranding,
   findById,
   findByIdOrName,
   getSettingFileService,
+  resolvePublicApiBase,
   save,
 } from "../service/settings.service.js";
 import { settingsVariantEnum } from "@repo/db/schemas/enums";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/index.js";
 import { Settings } from "@repo/db/schemas/models/app";
-import path from "path";
-import fs from "fs";
 
-const SETTINGS_PATH = process.env.SETTINGS_PATH!;
+export const getBrandingHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const publicApiBase = resolvePublicApiBase(req);
+    const branding = await findBranding(publicApiBase);
+
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.status(200).json(new ApiResponse(200, "OK", branding));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
 
 export const getAllSettingsHandler = async (
   req: Request,
@@ -150,15 +164,16 @@ export const downloadSettingFileHandler = async (
         );
     }
 
-    const filePath = path.join(SETTINGS_PATH, setting.value);
-
-    if (!fs.existsSync(filePath)) {
+    const fileStreamData = await getSettingFileService(String(setting.id));
+    if (!fileStreamData) {
       return res
         .status(404)
         .json(new ApiResponse(404, "NOT_FOUND", "File not found on server"));
     }
 
-    return res.sendFile(filePath);
+    const { stream, contentType } = fileStreamData;
+    res.setHeader("Content-Type", contentType);
+    return stream.pipe(res);
   } catch (error) {
     handleError(error, res, next);
   }
@@ -167,7 +182,6 @@ export const downloadSettingFileHandler = async (
 export async function getSettingFileController(req: Request, res: Response) {
   try {
     const { idOrName } = req.params;
-    console.log("idOrName", idOrName);
     const fileStreamData = await getSettingFileService(idOrName as string);
 
     if (!fileStreamData) {
@@ -178,6 +192,11 @@ export async function getSettingFileController(req: Request, res: Response) {
     const { stream, contentType } = fileStreamData;
 
     res.setHeader("Content-Type", contentType);
+    if (req.query.v) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    } else {
+      res.setHeader("Cache-Control", "public, max-age=3600");
+    }
     stream.pipe(res);
   } catch (error) {
     console.error("Error sending file:", error);

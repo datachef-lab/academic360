@@ -1,6 +1,6 @@
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { annualIncomeModel } from "@/features/resources/models/annualIncome.model.js";
-import { bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
+import { bloodGroupModel } from "@repo/db/schemas/models/resources/bloodGroup.model.js";
 import { categoryModel } from "@/features/resources/models/category.model.js";
 import { religionModel } from "@/features/resources/models/religion.model.js";
 import { departmentModel } from "@repo/db/schemas/models/administration";

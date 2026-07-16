@@ -13,6 +13,7 @@ import {
 } from "@repo/db/schemas/models/fees";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { issueFeeStudentMappingReceiptIfMissing } from "@/features/fees/services/fee-student-mapping.service.js";
+import { scheduleFeesDashboardBroadcast } from "@/features/fees/fees-dashboard.socket.js";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { and, eq, sql } from "drizzle-orm";
 import type {
@@ -95,10 +96,25 @@ function omitUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 
+export function parsePaytmTxnDateInput(
+  value: Date | string | undefined | null,
+): Date | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? value : undefined;
+  }
+  const trimmed = String(value).trim();
+  if (!trimmed) return undefined;
+  const parsed = new Date(trimmed);
+  return Number.isFinite(parsed.getTime()) ? parsed : undefined;
+}
+
 function formatTxnDate(value: Date | string | undefined): string | undefined {
   if (value === undefined) return undefined;
-  if (value instanceof Date) return value.toISOString();
-  return String(value);
+  const parsed = parsePaytmTxnDateInput(value);
+  if (parsed) return parsed.toISOString();
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return undefined;
 }
 
 function previewJson(value: unknown, maxLen = 2000): string {
@@ -804,6 +820,7 @@ export async function updatePaymentByOrderId(
   });
 
   await ensureFeeReceiptAfterSuccessfulFeePayment(updatedPayment);
+  scheduleFeesDashboardBroadcast("payment_updated");
 
   return updatedPayment;
 }

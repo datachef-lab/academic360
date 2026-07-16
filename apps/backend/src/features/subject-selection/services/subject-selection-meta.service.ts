@@ -29,6 +29,7 @@ export interface CreateSubjectSelectionMetaInput {
   subjectType: { id: number };
   academicYear: { id: number };
   forClasses?: { id: number }[];
+  isActive?: boolean;
 }
 
 type SubjectSelectionMetaRow = typeof subjectSelectionMetaModel.$inferSelect;
@@ -461,13 +462,15 @@ export async function toDto(
   const dto: SubjectSelectionMetaDto = {
     id: meta.id,
     label: meta.label,
+    sequence: meta.sequence,
+    isActive: meta.isActive,
     createdAt: meta.createdAt,
     updatedAt: meta.updatedAt,
     streams,
-    subjectType:
-      subjectType as unknown as SubjectSelectionMetaDto["subjectType"],
-    academicYear:
-      academicYear as unknown as SubjectSelectionMetaDto["academicYear"],
+    subjectType: (subjectType[0] ??
+      null) as unknown as SubjectSelectionMetaDto["subjectType"],
+    academicYear: (academicYear[0] ??
+      null) as unknown as SubjectSelectionMetaDto["academicYear"],
     forClasses,
   };
   return dto;
@@ -527,8 +530,10 @@ export async function createOrUpdateMetaWithRelations(
       .insert(subjectSelectionMetaModel)
       .values({
         label: input.label,
+        sequence: input.sequence,
         subjectTypeId: input.subjectType.id,
         academicYearId: input.academicYear.id,
+        isActive: input.isActive ?? true,
       })
       .returning();
     metaId = created.id;
@@ -625,8 +630,10 @@ export async function createFromDto(
     .insert(subjectSelectionMetaModel)
     .values({
       label: input.label,
+      sequence: input.sequence ?? undefined,
       subjectTypeId: input.subjectType.id,
       academicYearId: input.academicYear.id,
+      isActive: input.isActive ?? true,
     })
     .returning();
   const createdRow = created as SubjectSelectionMetaRow;
@@ -681,10 +688,12 @@ export async function createFromDto(
 
 export interface UpdateSubjectSelectionMetaInput {
   label?: string;
+  sequence?: number;
   streams?: { id: number }[];
   subjectType?: { id: number };
   academicYear?: { id: number };
   forClasses?: { id: number }[];
+  isActive?: boolean;
 }
 
 export async function updateFromDto(
@@ -695,6 +704,8 @@ export async function updateFromDto(
     typeof subjectSelectionMetaModel.$inferInsert;
   const partial: Partial<SubjectSelectionMetaInsert> = {};
   if (typeof input.label === "string") partial.label = input.label;
+  if (typeof input.sequence === "number") partial.sequence = input.sequence;
+  if (typeof input.isActive === "boolean") partial.isActive = input.isActive;
   if (input.subjectType?.id)
     partial.subjectTypeId = input.subjectType.id as number;
   if (input.academicYear?.id)
@@ -828,6 +839,8 @@ export async function remove(
   return {
     id: deletedRow.id,
     label: deletedRow.label,
+    sequence: deletedRow.sequence,
+    isActive: deletedRow.isActive,
     createdAt: deletedRow.createdAt,
     updatedAt: deletedRow.updatedAt,
     streams: [],

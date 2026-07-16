@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, serial, text, timestamp, varchar, unique } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, text, timestamp, varchar, unique } from "drizzle-orm/pg-core";
 import { studentModel, userModel } from "../user";
 import { cuRegistrationCorrectionRequestStatusEnum } from "@/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
@@ -40,6 +40,10 @@ export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_cor
     academicYearApplicationNumberUnique: unique("academic_year_application_number_unique").on(
         table.academicYearId,
         table.cuRegistrationApplicationNumber
+    ),
+    // The tracker's CU-registration EXISTS/joins correlate on student_id_fk.
+    studentIdx: index("cu_registration_correction_requests_student_id_idx").on(
+        table.studentId,
     ),
 }));
 

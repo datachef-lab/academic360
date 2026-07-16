@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { and, desc, eq, sql, max, inArray } from "drizzle-orm";
+import { and, desc, eq, sql, max, inArray, or, isNull } from "drizzle-orm";
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as sessionService from "@/features/academics/services/session.service";
 import {
@@ -105,6 +105,19 @@ async function findPromotionByStudentId(studentId: number) {
     foundShift,
     // foundPromotionStatus,
   };
+}
+
+/**
+ * The academic year a student belongs to, resolved as latest promotion → session
+ * → academicYear (the SAME resolution the subject-selection options use). Exposed
+ * so dependent student-scoped configs (e.g. restricted groupings) stay on exactly
+ * the same year as the student's papers/metas. Returns null if not resolvable.
+ */
+export async function getStudentAcademicYearId(
+  studentId: number,
+): Promise<number | null> {
+  const { foundSession } = await findPromotionByStudentId(studentId);
+  return foundSession?.academicYearId ?? null;
 }
 
 export async function findSubjectsSelections(studentId: number) {
@@ -573,7 +586,16 @@ async function fetchSubjectSelectionMetaData(
       updatedAt: subjectSelectionMetaModel.updatedAt,
     })
     .from(subjectSelectionMetaModel)
-    .where(eq(subjectSelectionMetaModel.academicYearId, academicYearId));
+    .where(
+      and(
+        eq(subjectSelectionMetaModel.academicYearId, academicYearId),
+        // Active = isActive true OR null (default). Hide inactive metas from students.
+        or(
+          isNull(subjectSelectionMetaModel.isActive),
+          eq(subjectSelectionMetaModel.isActive, true),
+        ),
+      ),
+    );
   //   console.log("subjectSelectionMetas:", subjectSelectionMetas);
 
   // Convert to full DTOs with related data

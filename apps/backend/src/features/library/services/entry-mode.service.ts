@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { EntryMode, entryModeModel } from "@repo/db/schemas";
 import { and, count, desc, eq, ilike, ne } from "drizzle-orm";
+import { assertUniqueLibraryName } from "@/features/library/services/_assert-unique.js";
 
 type EntryModeListFilters = {
   page: number;
@@ -74,6 +75,13 @@ export async function findEntryModesPaginated(
 export async function createEntryMode(
   data: Omit<EntryMode, "id">,
 ): Promise<EntryMode> {
+  await assertUniqueLibraryName({
+    table: entryModeModel,
+    nameColumn: entryModeModel.name,
+    idColumn: entryModeModel.id,
+    value: data.name,
+    label: "Entry mode",
+  });
   const [created] = await db.insert(entryModeModel).values(data).returning();
   return created;
 }
@@ -82,6 +90,16 @@ export async function updateEntryMode(
   id: number,
   data: Partial<Omit<EntryMode, "id">>,
 ): Promise<EntryMode | null> {
+  if (data.name != null) {
+    await assertUniqueLibraryName({
+      table: entryModeModel,
+      nameColumn: entryModeModel.name,
+      idColumn: entryModeModel.id,
+      value: data.name,
+      label: "Entry mode",
+      excludeId: id,
+    });
+  }
   const [updated] = await db
     .update(entryModeModel)
     .set(data)

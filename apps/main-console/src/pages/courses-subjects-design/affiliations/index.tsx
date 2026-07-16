@@ -40,6 +40,7 @@ import {
 import { AffiliationForm } from "./affiliation-form";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
 
 const AffiliationsPage = () => {
   const [searchText, setSearchText] = React.useState("");
@@ -233,6 +234,8 @@ const AffiliationsPage = () => {
       (aff.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
       (aff.remarks?.toLowerCase().includes(searchText.toLowerCase()) ?? false),
   );
+
+  useResourceRoom("course-design/affiliations", () => fetchAffiliations());
 
   if (loading) {
     return (

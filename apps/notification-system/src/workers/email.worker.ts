@@ -16,7 +16,9 @@ import {
 import { db } from "@/db";
 import { readFileSync, existsSync } from "fs";
 import { join, resolve } from "path";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { createS3Client } from "@/utils/s3-client.js";
+import { claimNotificationQueueRows } from "@/utils/queue-claim.js";
 
 const POLL_MS = Number(process.env.EMAIL_POLL_MS ?? 3000);
 const BATCH_SIZE = Number(process.env.EMAIL_BATCH_SIZE ?? 50);
@@ -68,14 +70,7 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
 
         console.log("📎 [email.worker] Extracted S3 key:", key);
 
-        // Initialize S3 client
-        const s3Client = new S3Client({
-          region: process.env.AWS_REGION || "ap-south-1",
-          credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-          },
-        });
+        const s3Client = createS3Client();
 
         // Download PDF from S3 using S3 client
         const command = new GetObjectCommand({
@@ -123,37 +118,7 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
 }
 
 async function processBatch() {
-  const rows = await db.transaction(async (tx) => {
-    // 1️⃣ Select IDs to claim
-    const ids = await tx
-      .select({ id: notificationQueueModel.id })
-      .from(notificationQueueModel)
-      .where(
-        and(
-          eq(notificationQueueModel.type, "EMAIL_QUEUE" as never),
-          eq(notificationQueueModel.isDeadLetter, false),
-          eq(notificationQueueModel.isProcessing, false),
-        ),
-      )
-      .orderBy(notificationQueueModel.createdAt)
-      .limit(BATCH_SIZE);
-
-    if (ids.length === 0) return [];
-
-    // 2️⃣ Mark them as processing
-    const claimed = await tx
-      .update(notificationQueueModel)
-      .set({ isProcessing: true })
-      .where(
-        inArray(
-          notificationQueueModel.id,
-          ids.map((r) => r.id),
-        ),
-      )
-      .returning();
-
-    return claimed;
-  });
+  const rows = await claimNotificationQueueRows("EMAIL_QUEUE", BATCH_SIZE);
 
   for (const row of rows) {
     try {
@@ -557,74 +522,102 @@ async function processBatch() {
       }
 
       if (env === "staging") {
-        console.log("[email.worker] sending to staging staff users");
-        // Fan-out to all STAFF who opted-in and are active/not suspended
-        const staffUsers = await db
-          .select()
-          .from(userModel)
-          .where(
-            and(
-              eq(userModel.type, "STAFF" as never),
-              eq(userModel.sendStagingNotifications, true),
-              eq(userModel.isActive, true),
-              eq(userModel.isSuspended, false),
-            ),
-          )
-          .limit(20);
-        if (staffUsers.length > 0) {
-          for (const staff of staffUsers) {
-            const recipient = asString(
-              staff.email,
-              process.env.DEVELOPER_EMAIL!,
+        // An explicit recipient list (e.g. console resend with selected
+        // staff) takes precedence over the blanket staff fan-out.
+        const explicitEmails = (
+          (notif.otherUsersEmails as string[] | null) ?? []
+        ).filter(Boolean);
+        if (explicitEmails.length > 0) {
+          for (const email of explicitEmails) {
+            console.log(
+              `[email.worker] sending (explicit staging) to: ${email}`,
             );
-            console.log(`[email.worker] sending to staff: ${recipient}`);
-            subject =
-              extractedTemplateData.subject ??
-              ((dto.templateData?.subject || "Notification") as string);
             const res = await sendZeptoMail(
-              recipient,
+              email,
               subject,
               html,
-              asString(staff.name, "User"),
+              undefined,
               dto.emailAttachments,
               asString(
                 dto.emailFromName,
-                "BESC | The Bhawanipur Education Society College - Important Notification",
+                "The Bhawanipur Education Society College - Important Notification",
+              ),
+            );
+            if (!res.ok) {
+              throw new Error(`ZeptoMail API Error: ${res.error}`);
+            }
+            await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+          }
+        } else {
+          console.log("[email.worker] sending to staging staff users");
+          // Fan-out to all STAFF who opted-in and are active/not suspended
+          const staffUsers = await db
+            .select()
+            .from(userModel)
+            .where(
+              and(
+                eq(userModel.type, "STAFF" as never),
+                eq(userModel.sendStagingNotifications, true),
+                eq(userModel.isActive, true),
+                eq(userModel.isSuspended, false),
+              ),
+            )
+            .limit(20);
+          if (staffUsers.length > 0) {
+            for (const staff of staffUsers) {
+              const recipient = asString(
+                staff.email,
+                process.env.DEVELOPER_EMAIL!,
+              );
+              console.log(`[email.worker] sending to staff: ${recipient}`);
+              subject =
+                extractedTemplateData.subject ??
+                ((dto.templateData?.subject || "Notification") as string);
+              const res = await sendZeptoMail(
+                recipient,
+                subject,
+                html,
+                asString(staff.name, "User"),
+                dto.emailAttachments,
+                asString(
+                  dto.emailFromName,
+                  "BESC | The Bhawanipur Education Society College - Important Notification",
+                ),
+              );
+              if (!res.ok) {
+                console.log(
+                  `[email.worker] ZeptoMail failed for staff ${recipient}:`,
+                  res.error,
+                );
+                throw new Error(`ZeptoMail API Error: ${res.error}`);
+              }
+              await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+            }
+          } else {
+            // Fallback to developer contact if no staff opted-in
+            console.log(
+              `[email.worker] no staff opted-in, sending to developer: ${process.env.DEVELOPER_EMAIL}`,
+            );
+            const res = await sendZeptoMail(
+              process.env.DEVELOPER_EMAIL!,
+              subject,
+              html,
+              "Developer",
+              dto.emailAttachments,
+              asString(
+                dto.emailFromName,
+                "The Bhawanipur Education Society College - Important Notification",
               ),
             );
             if (!res.ok) {
               console.log(
-                `[email.worker] ZeptoMail failed for staff ${recipient}:`,
+                `[email.worker] ZeptoMail failed for developer fallback:`,
                 res.error,
               );
               throw new Error(`ZeptoMail API Error: ${res.error}`);
             }
             await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
           }
-        } else {
-          // Fallback to developer contact if no staff opted-in
-          console.log(
-            `[email.worker] no staff opted-in, sending to developer: ${process.env.DEVELOPER_EMAIL}`,
-          );
-          const res = await sendZeptoMail(
-            process.env.DEVELOPER_EMAIL!,
-            subject,
-            html,
-            "Developer",
-            dto.emailAttachments,
-            asString(
-              dto.emailFromName,
-              "The Bhawanipur Education Society College - Important Notification",
-            ),
-          );
-          if (!res.ok) {
-            console.log(
-              `[email.worker] ZeptoMail failed for developer fallback:`,
-              res.error,
-            );
-            throw new Error(`ZeptoMail API Error: ${res.error}`);
-          }
-          await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
         }
       } else if (env === "development") {
         // development -> always send to developer

@@ -36,7 +36,13 @@ export async function getLockedSlabIdsForFeeStructure(
   const rows = await db
     .select({
       feeSlabId: feeGroupModel.feeSlabId,
-      challanGeneratedAt: feeStudentMappingModel.challanGeneratedAt,
+      // A challan/receipt was generated ⟺ an active receipt row exists in the
+      // new source-of-truth table.
+      hasActiveReceipt: sql<boolean>`EXISTS (
+        SELECT 1 FROM fee_student_receipt_numbers frn
+        WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id}
+          AND COALESCE(frn.is_deprecated, false) = false
+      )`,
       hasAnyPayment: sql<boolean>`EXISTS (
         SELECT 1 FROM ${paymentModel}
         WHERE ${paymentModel.feeStudentMappingId} = ${feeStudentMappingModel.id}
@@ -68,13 +74,17 @@ export async function getLockedSlabIdsForFeeStructure(
   for (const r of rows) {
     const slabId = r.feeSlabId;
     if (typeof slabId !== "number") continue;
-    if (r.challanGeneratedAt) locked.add(slabId);
+    if (r.hasActiveReceipt) locked.add(slabId);
     else if (r.hasAnyPayment) locked.add(slabId);
     else if (r.paymentStatus === "SUCCESS") locked.add(slabId);
   }
   return Array.from(locked);
 }
 import { db } from "@/db/index.js";
+import {
+  withAdvisoryXactLock,
+  isUniqueViolation,
+} from "@/utils/db-concurrency.js";
 import {
   CreateFeeStructureDto,
   FeeStructureDto,
@@ -116,11 +126,13 @@ import {
   desc,
   inArray,
   isNotNull,
+  isNull,
   or,
   asc,
   aliasedTable,
   min,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
@@ -132,11 +144,21 @@ import * as receiptTypeService from "./receipt-type.service.js";
 import * as feeHeadService from "./fee-head.service.js";
 import * as feeSlabService from "./fee-slab.service.js";
 import { studentModel, userModel } from "@repo/db/index.js";
+import { scheduleFeesDashboardBroadcast } from "../fees-dashboard.socket.js";
 import { socketService } from "@/services/socketService.js";
 import * as userService from "@/features/user/services/user.service.js";
 import { copyCareerProgressionFormsForAcademicYearMigration } from "@/features/academics/services/career-progression-form.service.js";
 
 type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
+
+/** Open, non-deprecated promotion — aligned with fees dashboard and shift change. */
+function activePromotionCondition(...extra: SQL[]): SQL {
+  const parts: SQL[] = [
+    sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+  ];
+  if (extra.length) parts.push(...extra);
+  return and(...parts)!;
+}
 
 /**
  * Ensures default fee-group-promotion-mapping and fee-student-mapping
@@ -144,7 +166,7 @@ type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
  * (regardless of active/inactive/suspended/cancelled status).
  *
  * Business rules:
- * - Find all promotions for:
+ * - Find active promotions (open, not deprecated) for:
  *   - same academic year (via session -> academicYear)
  *   - same class, program course, shift as the fee structure
  * - For each promotion:
@@ -165,6 +187,28 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
   userId?: number,
   progressUserId?: string,
   /** When set and different from the fee structure's current academic year, copy career-progression form data from this year for affected students. */
+  previousAcademicYearId?: number | null,
+): Promise<void> {
+  // Serialize per fee structure: this fans out over ALL students of the
+  // structure and fee_student_mappings has no covering unique constraint, so
+  // two concurrent runs (parallel import workers, or an import racing a
+  // promotion commit) would duplicate mapping rows. syncFeeStudentMapping in
+  // legacy-fees-data.service.ts locks the SAME key for its per-student
+  // get-or-create. The body takes no other advisory lock (deadlock rule).
+  return withAdvisoryXactLock(`import:fees:fsm:${feeStructure.id}`, () =>
+    ensureDefaultFeeStudentMappingsForFeeStructureUnlocked(
+      feeStructure,
+      userId,
+      progressUserId,
+      previousAcademicYearId,
+    ),
+  );
+}
+
+async function ensureDefaultFeeStudentMappingsForFeeStructureUnlocked(
+  feeStructure: typeof feeStructureModel.$inferSelect,
+  userId?: number,
+  progressUserId?: string,
   previousAcademicYearId?: number | null,
 ): Promise<void> {
   const emitProgress = (
@@ -258,7 +302,7 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
 
   emitProgress("Finding matching students...", 20, "in_progress");
 
-  // Find all promotions matching this fee structure context (all students regardless of status)
+  // Active promotions matching this fee structure context (student account status ignored).
   const promotions = await db
     .select({
       id: promotionModel.id,
@@ -272,6 +316,7 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
         eq(promotionModel.classId, feeStructure.classId),
         eq(promotionModel.programCourseId, feeStructure.programCourseId),
         eq(promotionModel.shiftId, feeStructure.shiftId),
+        activePromotionCondition(),
       ),
     );
 
@@ -328,6 +373,31 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
     });
   };
 
+  // fee_group_promotion_mappings has UNIQUE(feeGroupId, promotionId): if a
+  // concurrent writer (e.g. updateFeeGroupPromotionMapping from another
+  // feature) wins the insert race, reuse its row instead of aborting.
+  const insertFgpOrReuse = async (
+    values: typeof feeGroupPromotionMappingModel.$inferInsert,
+  ): Promise<number> => {
+    try {
+      const [created] = await db
+        .insert(feeGroupPromotionMappingModel)
+        .values(values)
+        .returning();
+      return created!.id!;
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      const [winner] = await db
+        .select()
+        .from(feeGroupPromotionMappingModel)
+        .where(
+          eq(feeGroupPromotionMappingModel.promotionId, values.promotionId),
+        );
+      if (winner?.id != null) return winner.id;
+      throw err;
+    }
+  };
+
   let processed = 0;
   for (const promotion of promotions) {
     // 1. Ensure fee-group-promotion-mapping exists for (promotion)
@@ -343,16 +413,11 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
     } else {
       // For semester 1, we create the mapping by default for all students as they will be new and we want to ensure they get mapped to the general fee group and get the fees calculated without any extra steps.
       if (foundClass.name.toUpperCase() === "SEMESTER I") {
-        const [createdMapping] = await db
-          .insert(feeGroupPromotionMappingModel)
-          .values({
-            feeGroupId: generalFeeGroup.id,
-            promotionId: promotion.id,
-            approvalType: "SYSTEM",
-          })
-          .returning();
-
-        feeGroupPromotionMappingId = createdMapping.id!;
+        feeGroupPromotionMappingId = await insertFgpOrReuse({
+          feeGroupId: generalFeeGroup.id,
+          promotionId: promotion.id,
+          approvalType: "SYSTEM",
+        });
       } else {
         // Prefer carrying forward the prior fee-group mapping when validity rules allow;
         // otherwise create a General fee-group mapping (never skip the student).
@@ -475,22 +540,14 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
               const prevFgp = previousFeeGroupPromotionMapping;
               const hasPrevApproval =
                 prevFgp.approvalUserId != null && prevFgp.approvalUserId > 0;
-              const [createdCarried] = await db
-                .insert(feeGroupPromotionMappingModel)
-                .values({
-                  feeGroupId: prevFgp.feeGroupId,
-                  promotionId: promotion.id,
-                  approvalType: hasPrevApproval
-                    ? prevFgp.approvalType
-                    : "SYSTEM",
-                  ...(hasPrevApproval
-                    ? { approvalUserId: prevFgp.approvalUserId }
-                    : {}),
-                })
-                .returning();
-              if (createdCarried?.id != null) {
-                carriedFgpId = createdCarried.id;
-              }
+              carriedFgpId = await insertFgpOrReuse({
+                feeGroupId: prevFgp.feeGroupId,
+                promotionId: promotion.id,
+                approvalType: hasPrevApproval ? prevFgp.approvalType : "SYSTEM",
+                ...(hasPrevApproval
+                  ? { approvalUserId: prevFgp.approvalUserId }
+                  : {}),
+              });
             }
           }
         }
@@ -498,16 +555,11 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
         if (carriedFgpId != null) {
           feeGroupPromotionMappingId = carriedFgpId;
         } else {
-          const [createdMapping] = await db
-            .insert(feeGroupPromotionMappingModel)
-            .values({
-              feeGroupId: generalFeeGroup.id,
-              promotionId: promotion.id,
-              approvalType: "SYSTEM",
-            })
-            .returning();
-
-          feeGroupPromotionMappingId = createdMapping.id!;
+          feeGroupPromotionMappingId = await insertFgpOrReuse({
+            feeGroupId: generalFeeGroup.id,
+            promotionId: promotion.id,
+            approvalType: "SYSTEM",
+          });
         }
       }
     }
@@ -631,6 +683,10 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
       total: promotions.length,
     },
   );
+
+  if (processed > 0) {
+    scheduleFeesDashboardBroadcast("fee_structure_provisioned");
+  }
 }
 
 /**
@@ -2572,7 +2628,7 @@ const FEE_STRUCTURE_INR_AMOUNT_HEADERS = [
 const FEE_STUDENT_MAPPING_INR_AMOUNT_HEADERS = ["Total Amount To Pay"] as const;
 
 const FEE_STUDENT_MAPPING_AMOUNT_COLUMN_FILLS: Record<string, string> = {
-  "Total Amount To Pay": "FFE3F2FD",
+  "Total Amount To Pay": "FFE8F5E9",
 };
 
 /** Display timestamps in IST (Asia/Kolkata); UTC instants from DB are converted correctly. */
@@ -3086,13 +3142,21 @@ export async function downloadFeeStudentMappings(
     )
   )`;
 
+  // Receipt/challan now live in fee_student_receipt_numbers; read the mapping's
+  // ACTIVE (non-deprecated) receipt. The mapping's own columns are frozen and
+  // not read.
+  const exportActiveReceiptNumber = sql<
+    string | null
+  >`(SELECT frn.receipt_number FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
+  const exportActiveChallanGeneratedAt = sql<Date | null>`(SELECT frn.challan_generated_at FROM fee_student_receipt_numbers frn WHERE frn.fee_student_mapping_id_fk = ${feeStudentMappingModel.id} AND COALESCE(frn.is_deprecated, false) = false LIMIT 1)`;
+
   /** Same resolution order as the "Payment Mode" export column. */
   const feeStudentMappingExportPaymentMode = sql<string | null>`CASE
     WHEN ${linkedPaymentSq.paymentMode} IS NOT NULL THEN ${linkedPaymentSq.paymentMode}::text
     WHEN ${latestOnlinePaymentSq.paymentMode} IS NOT NULL THEN ${latestOnlinePaymentSq.paymentMode}::text
     WHEN ${feeStudentMappingExportIsPaid} THEN 'CASH'
-    WHEN ${feeStudentMappingModel.receiptNumber} IS NOT NULL
-      AND ${feeStudentMappingModel.challanGeneratedAt} IS NOT NULL THEN 'CASH'
+    WHEN ${exportActiveReceiptNumber} IS NOT NULL
+      AND ${exportActiveChallanGeneratedAt} IS NOT NULL THEN 'CASH'
     ELSE NULL
   END`;
 
@@ -3147,7 +3211,7 @@ export async function downloadFeeStudentMappings(
           THEN TO_CHAR(
             COALESCE(
               ${linkedPaymentSq.txnDate}::date,
-              ${feeStudentMappingModel.challanGeneratedAt}::date
+              ${exportActiveChallanGeneratedAt}::date
             ),
             'DD/MM/YYYY'
           )
@@ -3155,9 +3219,8 @@ export async function downloadFeeStudentMappings(
       END`,
       "Payment Mode": feeStudentMappingExportPaymentMode,
       "Payment Internal Remarks": linkedPaymentSq.internalRemarks,
-      "Receipt / Challan Number": feeStudentMappingModel.receiptNumber,
-      "Receipt / Challan Generated At":
-        feeStudentMappingModel.challanGeneratedAt,
+      "Receipt / Challan Number": exportActiveReceiptNumber,
+      "Receipt / Challan Generated At": exportActiveChallanGeneratedAt,
 
       // Online Payment Details — only when effective payment mode is ONLINE.
       // Cash / manual receipts must not show stale failed gateway attempts.
@@ -3269,6 +3332,7 @@ export async function downloadFeeStudentMappings(
       latestOnlinePaymentSq,
       eq(latestOnlinePaymentSq.feeStudentMappingId, feeStudentMappingModel.id),
     )
+    .where(activePromotionCondition())
     .orderBy(asc(feeStudentMappingModel.id));
 
   const [rows, academicYear] = await Promise.all([

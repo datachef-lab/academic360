@@ -1,8 +1,6 @@
 import { useCallback, useState } from "react";
 import { Download, FileSpreadsheet } from "lucide-react";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
-import type { CareerProgressionFormDto } from "@repo/db/dtos/academics";
 import axiosInstance from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,91 +13,37 @@ import {
 } from "@/components/ui/select";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 
-async function fetchFormsForExport(
-  academicYearFilter: string,
-): Promise<CareerProgressionFormDto[]> {
+function parseExportFileName(contentDisposition: string | undefined): string | null {
+  if (!contentDisposition) return null;
+  const match = contentDisposition.match(/filename="([^"]+)"/);
+  return match?.[1] ?? null;
+}
+
+async function downloadCareerProgressionExport(academicYearFilter: string): Promise<void> {
   const params = new URLSearchParams();
   if (academicYearFilter !== "all") {
     params.set("academicYearId", academicYearFilter);
   }
   const qs = params.toString();
-  const { data } = await axiosInstance.get<{ payload: CareerProgressionFormDto[] }>(
-    `/api/academics/career-progression-forms${qs ? `?${qs}` : ""}`,
+
+  const response = await axiosInstance.get(
+    `/api/academics/career-progression-forms/export${qs ? `?${qs}` : ""}`,
+    { responseType: "blob" },
   );
-  return Array.isArray(data.payload) ? data.payload : [];
-}
 
-function displayFieldValue(
-  field: CareerProgressionFormDto["certificates"][number]["fields"][number],
-): string {
-  const opt = field.certificateFieldOptionMaster?.name?.trim();
-  if (opt) return opt;
-  return (field.value ?? "").trim();
-}
-
-type ExportRow = {
-  "#": number;
-  "Student name": string;
-  UID: string;
-  Reg: string;
-  Roll: string;
-  "Program-course": string;
-  Semester: string;
-  Shift: string;
-  Section: string;
-  "Student status": string;
-  "Certificate name": string;
-  Field: string;
-  Value: string;
-};
-
-function buildExportRows(forms: CareerProgressionFormDto[]): ExportRow[] {
-  const rows: ExportRow[] = [];
-  let n = 0;
-
-  for (const form of forms) {
-    const st = form.student;
-    const base = {
-      "Student name": st?.name ?? "",
-      UID: st?.uid ?? "",
-      Reg: st?.registrationNumber ?? "",
-      Roll: st?.rollNumber ?? "",
-      "Program-course": st?.programCourse ?? "",
-      Semester: st?.semester ?? "",
-      Shift: st?.shift ?? "",
-      Section: st?.section ?? "",
-      "Student status": st?.studentStatus ?? "",
-    };
-
-    let anyField = false;
-    for (const cert of form.certificates ?? []) {
-      const certName = cert.certificateMaster?.name ?? "";
-      for (const field of cert.fields ?? []) {
-        anyField = true;
-        n += 1;
-        rows.push({
-          "#": n,
-          ...base,
-          "Certificate name": certName,
-          Field: field.certificateFieldMaster?.name ?? "",
-          Value: displayFieldValue(field),
-        });
-      }
-    }
-
-    if (!anyField) {
-      n += 1;
-      rows.push({
-        "#": n,
-        ...base,
-        "Certificate name": "",
-        Field: "",
-        Value: "",
-      });
-    }
-  }
-
-  return rows;
+  const blob = new Blob([response.data], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download =
+    parseExportFileName(response.headers["content-disposition"]) ??
+    `career-progression-forms_${new Date().toISOString().split("T")[0]}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export default function CareerProgressionHomePage() {
@@ -110,48 +54,14 @@ export default function CareerProgressionHomePage() {
   const handleDownloadExcel = useCallback(async () => {
     setExporting(true);
     try {
-      const forms = await fetchFormsForExport(academicYearFilter);
-      if (forms.length === 0) {
-        toast.error("No career progression forms to export for this filter.");
-        return;
-      }
-
-      const rows = buildExportRows(forms);
-      if (rows.length === 0) {
-        toast.error("No rows to export.");
-        return;
-      }
-
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-
-      const headers = Object.keys(rows[0] ?? {});
-      worksheet["!cols"] = headers.map((key) => {
-        const maxLength = Math.max(
-          key.length,
-          ...rows.map((r) => String((r as Record<string, unknown>)[key] ?? "").length),
-        );
-        return { wch: Math.max(12, Math.min(60, maxLength + 2)) };
-      });
-
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Career progression");
-
-      const datePart = new Date().toISOString().split("T")[0];
-      const yearSuffix =
-        academicYearFilter === "all"
-          ? "all-years"
-          : (availableAcademicYears.find((y) => String(y.id) === academicYearFilter)?.year ??
-            academicYearFilter);
-      const safeFileYear = String(yearSuffix).replace(/[/\\?%*:|"<>]/g, "-");
-      XLSX.writeFile(workbook, `career-progression-forms_${safeFileYear}_${datePart}.xlsx`);
-
-      toast.success(`Exported ${rows.length} row${rows.length === 1 ? "" : "s"} to Excel.`);
+      await downloadCareerProgressionExport(academicYearFilter);
+      toast.success("Career progression Excel export downloaded.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Export failed");
     } finally {
       setExporting(false);
     }
-  }, [academicYearFilter, availableAcademicYears]);
+  }, [academicYearFilter]);
 
   return (
     <div className="min-h-screen bg-white p-6 md:p-10">
@@ -159,8 +69,8 @@ export default function CareerProgressionHomePage() {
         <div>
           <h1 className="text-2xl font-bold text-violet-800">Career progression forms</h1>
           <p className="text-muted-foreground mt-1">
-            Download submitted career progression data as Excel (one row per certificate field).
-            Filter by academic year to limit the export.
+            Download submitted career progression data as a formatted Excel report (one row per
+            student; active field masters as columns in certificate/field sequence order).
           </p>
         </div>
 
@@ -173,8 +83,8 @@ export default function CareerProgressionHomePage() {
               <div className="space-y-1">
                 <CardTitle className="text-lg text-violet-900">Export to Excel</CardTitle>
                 <CardDescription>
-                  Includes student profile, program / class placement, certificate type, field name,
-                  and value (or selected option label).
+                  Uses the same styled Excel format as other admin reports: grey header row, grid
+                  borders, frozen header, and auto-sized columns.
                 </CardDescription>
               </div>
             </div>

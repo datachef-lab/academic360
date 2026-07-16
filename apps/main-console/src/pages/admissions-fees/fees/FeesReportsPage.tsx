@@ -263,7 +263,7 @@ export default function FeesReportsPage() {
             <SelectContent>
               <SelectItem value="__all__">All semesters</SelectItem>
               {classes
-                .filter((c) => !c.disabled)
+                .filter((c) => c.isActive !== false)
                 .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
                 .map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>

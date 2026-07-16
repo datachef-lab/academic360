@@ -4,8 +4,7 @@ import { UserAvatar } from "@/hooks/UserAvatar";
 import { useActiveUsers } from "@/hooks/useActiveUsers";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { StudentDto } from "@repo/db/dtos/user";
-import { getOnlineStudents } from "@/services/student";
+import { getOnlineStudents, type OnlineStudentDto } from "@/services/student";
 import { OnlineStudentsModal } from "./onlineStudentModal";
 import { Users } from "lucide-react";
 
@@ -22,7 +21,7 @@ export function ActiveUsersAvatars() {
     data: onlineStudents = [],
     isLoading,
     isError,
-  } = useQuery<StudentDto[]>({
+  } = useQuery<OnlineStudentDto[]>({
     queryKey: ["online-students"],
     queryFn: () => getOnlineStudents(),
     enabled: isStudentsModalOpen,

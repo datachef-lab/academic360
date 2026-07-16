@@ -4,6 +4,7 @@ import { NextFunction, Request, Response } from "express";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import { db, mysqlConnection } from "@/db/index.js";
+import { getOrCreateWithLock, findOrCreate } from "@/utils/db-concurrency.js";
 
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
@@ -80,6 +81,7 @@ import {
   BoardSubject,
   BoardSubjectName,
   cuRegistrationCorrectionRequestModel,
+  admissionQuotaTypeModel,
 } from "@repo/db/schemas/models";
 import { personTitleType } from "@repo/db/schemas/enums";
 import {
@@ -93,6 +95,7 @@ import {
 } from "@repo/db/legacy-system-types/admissions";
 
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
+import { migrateSubjectSelectionForStudent } from "./subject-selection-migration.service.js";
 import { and, eq, ilike, or } from "drizzle-orm";
 
 import { OldBoard } from "@/types/old-board";
@@ -166,7 +169,6 @@ import {
 import { OldCountry } from "@repo/db/legacy-system-types/resources";
 import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
 import { bitToBool } from "./refactor-old-migration.service";
-import { CuRegistrationNumberService } from "@/services/cu-registration-number.service";
 import { CLIENT_RENEG_LIMIT } from "tls";
 
 const BATCH_SIZE = 500; // Number of rows per batch
@@ -187,22 +189,27 @@ export async function addOccupation(
   db: DbType,
   legacyOccupationId: number,
 ) {
-  const [existingOccupation] = await db
-    .select()
-    .from(occupationModel)
-    .where(ilike(occupationModel.name, name.trim()));
-  if (existingOccupation) {
-    return existingOccupation;
-  }
-  const [newOccupation] = await db
-    .insert(occupationModel)
-    .values({
-      name: name.trim(),
-      legacyOccupationId: legacyOccupationId,
-    })
-    .returning();
-
-  return newOccupation;
+  // occupations.name is UNIQUE — on a concurrent-create race, re-find the
+  // winner's row instead of failing this student.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(occupationModel)
+          .where(ilike(occupationModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(occupationModel)
+          .values({
+            name: name.trim(),
+            legacyOccupationId: legacyOccupationId,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addBloodGroup(
@@ -228,29 +235,56 @@ export async function addBloodGroup(
   return newBloodGroup;
 }
 
+export async function addAdmissionQuotaType(name: string) {
+  // admission_quota_types.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(admissionQuotaTypeModel)
+          .where(ilike(admissionQuotaTypeModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(admissionQuotaTypeModel)
+          .values({
+            name: name.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
+}
+
 export async function addNationality(
   name: string,
   code: number | undefined | null,
   db: DbType,
   legacyNationalityId?: number,
 ) {
-  const [existingNationality] = await db
-    .select()
-    .from(nationalityModel)
-    .where(ilike(nationalityModel.name, name.trim()));
-  if (existingNationality) {
-    return existingNationality;
-  }
-  const [newNationality] = await db
-    .insert(nationalityModel)
-    .values({
-      legacyNationalityId: legacyNationalityId,
-      name: name.trim(),
-      code,
-    })
-    .returning();
-
-  return newNationality;
+  // nationalities has no unique on name — serialize concurrent creators.
+  return getOrCreateWithLock(
+    `import:nationality:${name.trim().toLowerCase()}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(nationalityModel)
+          .where(ilike(nationalityModel.name, name.trim()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(nationalityModel)
+          .values({
+            legacyNationalityId: legacyNationalityId,
+            name: name.trim(),
+            code,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addCategory(
@@ -260,30 +294,33 @@ export async function addCategory(
   db: DbType,
   legacyCategoryId: number,
 ) {
-  // Check if category exists by name OR code
-  const [existingCategory] = await db
-    .select()
-    .from(categoryModel)
-    .where(
-      or(
-        ilike(categoryModel.name, name.trim().toUpperCase()),
-        ilike(categoryModel.code, code),
-      ),
-    );
-  if (existingCategory) {
-    return existingCategory;
-  }
-  const [newCategory] = await db
-    .insert(categoryModel)
-    .values({
-      legacyCategoryId: legacyCategoryId,
-      name: name.trim().toUpperCase(),
-      code,
-      documentRequired,
-    })
-    .returning();
-
-  return newCategory;
+  // categories.name and .code are UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(categoryModel)
+          .where(
+            or(
+              ilike(categoryModel.name, name.trim().toUpperCase()),
+              ilike(categoryModel.code, code),
+            ),
+          )
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(categoryModel)
+          .values({
+            legacyCategoryId: legacyCategoryId,
+            name: name.trim().toUpperCase(),
+            code,
+            documentRequired,
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addReligion(
@@ -291,19 +328,23 @@ export async function addReligion(
   db: DbType,
   legacyReligionId: number,
 ) {
-  const [existingReligion] = await db
-    .select()
-    .from(religionModel)
-    .where(ilike(religionModel.name, name.trim().toUpperCase()));
-  if (existingReligion) {
-    return existingReligion;
-  }
-  const [newReligion] = await db
-    .insert(religionModel)
-    .values({ legacyReligionId: legacyReligionId, name: name.trim() })
-    .returning();
-
-  return newReligion;
+  // religions.name is UNIQUE — re-find on concurrent-create race.
+  return findOrCreate(
+    async () =>
+      (
+        await db
+          .select()
+          .from(religionModel)
+          .where(ilike(religionModel.name, name.trim().toUpperCase()))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(religionModel)
+          .values({ legacyReligionId: legacyReligionId, name: name.trim() })
+          .returning()
+      )[0]!,
+  );
 }
 
 export async function addLanguageMedium(
@@ -552,15 +593,40 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
       ),
     );
 
-  const [[oldCourse]] = (await mysqlConnection.query(`
+  let oldCourse: OldCourse | undefined;
+
+  if (oldStudent.admissionid) {
+    const [[courseFromAdmission]] = (await mysqlConnection.query(`
         SELECT crs.*
         FROM course crs
         JOIN coursedetails cd ON cd.courseid = crs.id
         WHERE cd.id = ${oldStudent.admissionid} AND cd.transferred = true
     `)) as [OldCourse[], any];
+    oldCourse = courseFromAdmission;
+  }
 
   if (!oldCourse) {
-    throw new Error(`Course not found for student ${oldStudent.codeNumber}`);
+    const [[courseFromHistoricalRecord]] = (await mysqlConnection.query(`
+        SELECT c.*
+        FROM historicalrecord hr
+        JOIN course c ON c.id = hr.courseId
+        WHERE hr.parent_id = ${oldStudent.id}
+        ORDER BY hr.present DESC, hr.index_col DESC
+        LIMIT 1
+    `)) as [OldCourse[], any];
+    oldCourse = courseFromHistoricalRecord;
+
+    if (oldCourse) {
+      console.log(
+        `Resolved program course for ${oldStudent.codeNumber} via historicalrecord (admissionid is null)`,
+      );
+    }
+  }
+
+  if (!oldCourse) {
+    throw new Error(
+      `Course not found for student ${oldStudent.codeNumber} (no coursedetails or historicalrecord)`,
+    );
   }
 
   let [foundProgramCourse] = await db
@@ -583,6 +649,12 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
     .where(eq(programCourseModel.id, foundProgramCourse.id))
     .returning();
 
+  let quotaTypeId: number | undefined;
+  const qt = oldStudent.quotatype?.trim();
+  if (qt && qt !== "0") {
+    quotaTypeId = (await addAdmissionQuotaType(qt))?.id;
+  }
+
   if (existingStudent) {
     const [updatedStudent] = await db
       .update(studentModel)
@@ -590,6 +662,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
         programCourseId: foundProgramCourse.id,
+        quotaTypeId,
         community:
           oldStudent.communityid === 0 || oldStudent.communityid === null
             ? null
@@ -625,6 +698,9 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         notes: oldStudent.notes ?? undefined,
         active: bitToBool(oldStudent.active),
         alumni: bitToBool(oldStudent.alumni),
+        dateOfJoining: oldStudent.admissiondate
+          ? new Date(oldStudent.admissiondate)
+          : undefined,
         leavingDate: oldStudent.leavingdate
           ? new Date(oldStudent.leavingdate)
           : undefined,
@@ -645,6 +721,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
         handicapped: oldStudent.handicapped === "YES" ? true : false,
         programCourseId: foundProgramCourse.id,
+        quotaTypeId,
         community:
           oldStudent.communityid === 0 || oldStudent.communityid === null
             ? null
@@ -669,6 +746,9 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         notes: oldStudent.notes ?? undefined,
         active: bitToBool(oldStudent.active),
         alumni: bitToBool(oldStudent.alumni),
+        dateOfJoining: oldStudent.admissiondate
+          ? new Date(oldStudent.admissiondate)
+          : undefined,
         leavingDate: oldStudent.leavingdate
           ? new Date(oldStudent.leavingdate)
           : undefined,
@@ -1873,12 +1953,14 @@ export async function processStudent(
   studentId: number | undefined,
   lastSyncTime?: Date,
 ) {
-  await db
-    .update(userModel)
-    .set({
-      whatsappNumber: oldStudent.whatsappno || undefined,
-    })
-    .where(eq(userModel.id, user.id!));
+  if (oldStudent.whatsappno) {
+    await db
+      .update(userModel)
+      .set({
+        whatsappNumber: oldStudent.whatsappno,
+      })
+      .where(eq(userModel.id, user.id!));
+  }
   let student: Student | undefined;
 
   // Check if we need to update student data (Steps 1-8)
@@ -1900,15 +1982,22 @@ export async function processStudent(
   //   if (shouldUpdateStudentData && user.isActive && !user.isSuspended) {
   // Step 1: Upsert the student first
   student = await upsertStudent(oldStudent, user);
-  if (user.isActive && !user.isSuspended) {
-    // Check the student cu registration request
-    const cuRegistrationRequest =
-      await addStudentCuRegistrationRequest(student);
-    console.log(
-      "cu registration request created for student:",
-      student?.uid,
-      cuRegistrationRequest,
-    );
+  {
+    // CU registration requests are a live workflow — create them for ACTIVE
+    // students only (the intent of the original isActive gate, added 2025-10-10).
+    // The historical data import below runs for INACTIVE (cancelled/dropped)
+    // students too: their admission/profile data must still be loaded.
+    let cuRegistrationRequest: Awaited<
+      ReturnType<typeof addStudentCuRegistrationRequest>
+    > | null = null;
+    if (user.isActive && !user.isSuspended) {
+      cuRegistrationRequest = await addStudentCuRegistrationRequest(student);
+      console.log(
+        "cu registration request created for student:",
+        student?.uid,
+        cuRegistrationRequest,
+      );
+    }
     if (!cuRegistrationRequest?.cuRegistrationApplicationNumber) {
       // Step 2: Check for the accomodation
       await upsertAccommodation(oldStudent, user.id!);
@@ -1968,26 +2057,20 @@ export async function processStudent(
 
         student = updatedStudent;
       }
-    }
-  } else {
-    // Student exists and data hasn't changed - just fetch existing student
-    student = (
-      await db
-        .select()
-        .from(studentModel)
-        .where(eq(studentModel.userId, user.id as number))
-    )[0];
-    if (user.isActive && !user.isSuspended) {
-      const cuRegistrationRequest =
-        await addStudentCuRegistrationRequest(student);
-      console.log(
-        "cu registration request created for student:",
-        student?.uid,
-        cuRegistrationRequest,
-      );
-      return student;
+
+      // Backfill bootstrap additional_info even for already-imported students.
+      if (student.applicationId) {
+        await oldAdmPersonalDetailsHelper.upsertBootstrapAdditionalInfo(
+          student.applicationId,
+          oldStudent,
+        );
+      }
     }
   }
+  // NOTE: the former `else` branch here was the INACTIVE-user path (its
+  // "data hasn't changed" comment was stale): fetch-only, no admission build.
+  // The unified block above now imports data for active AND inactive students
+  // (with CU-reg requests still active-only), so the branch is gone.
 
   // Guard: only attempt late update when student exists
   if (student) {
@@ -2087,12 +2170,20 @@ export async function processStudent(
                 WHERE spd.id = ${oldStudent.id};
             `)) as [OldAdmStudentPersonalDetail[], any];
 
-      transferredAdmCourseDetails =
-        await oldAdmPersonalDetailsHelper.addAdmCourseApps(
-          oldAdmStudentPersonalDetails,
-          applicationForm,
-          oldStudent,
-        );
+      if (oldAdmStudentPersonalDetails) {
+        transferredAdmCourseDetails =
+          await oldAdmPersonalDetailsHelper.addAdmCourseApps(
+            oldAdmStudentPersonalDetails,
+            applicationForm,
+            oldStudent,
+          );
+      } else {
+        transferredAdmCourseDetails =
+          await oldAdmPersonalDetailsHelper.findTransferredAdmissionCourseDetailsForStudent(
+            student.applicationId as number,
+            student.programCourseId ?? undefined,
+          );
+      }
     } else {
       transferredAdmCourseDetails = acd[0].admission_course_details;
     }
@@ -2111,6 +2202,22 @@ export async function processStudent(
 
   // Step 10: Load the student academic info and subjects
   await loadStudentAcademicInfoAndSubjects(oldStudent, student);
+
+  // Step 11: Migrate legacy subject-selection (per-semester elective choices) into
+  // student_subject_selections. Idempotent + safe to re-run.
+  if (student) {
+    try {
+      const r = await migrateSubjectSelectionForStudent(student);
+      if (r.legacyRows > 0) {
+        console.log("[subject-selection-migration]", {
+          uid: student.uid,
+          ...r,
+        });
+      }
+    } catch (e) {
+      console.warn("[subject-selection-migration] failed for", student.uid, e);
+    }
+  }
 
   return student;
 }
@@ -2182,9 +2289,6 @@ async function addStudentCuRegistrationRequest(student: Student) {
     )[0];
   }
 
-  const cuRegAppNo =
-    await CuRegistrationNumberService.generateNextApplicationNumber();
-
   const [newCuRegistrationRequest] = await db
     .insert(cuRegistrationCorrectionRequestModel)
     .values({
@@ -2202,12 +2306,7 @@ async function addStudentCuRegistrationRequest(student: Student) {
     })
     .returning();
 
-  console.log(
-    "new cu registration request created for student:",
-    student.id,
-    "with application number:",
-    cuRegAppNo,
-  );
+  console.log("new cu registration request created for student:", student.id);
   return newCuRegistrationRequest;
 }
 
@@ -2358,7 +2457,9 @@ async function loadStudentAcademicInfoAndSubjects(
           ? parseInt(oldStudentAcademicDetails.rank)
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
-        registrationNumber: null,
+        registrationNumber: oldStudentAcademicDetails.regno,
+        // Legacy academic "roll number" is stored in `regno` (the `rollno`
+        // column is unused/empty), so map the roll number from `regno`.
         rollNumber: oldStudentAcademicDetails.regno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
@@ -2431,7 +2532,9 @@ async function loadStudentAcademicInfoAndSubjects(
           ? parseInt(oldStudentAcademicDetails.rank)
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
-        registrationNumber: null,
+        registrationNumber: oldStudentAcademicDetails.regno,
+        // Legacy academic "roll number" is stored in `regno` (the `rollno`
+        // column is unused/empty), so map the roll number from `regno`.
         rollNumber: oldStudentAcademicDetails.regno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
@@ -2444,6 +2547,7 @@ async function loadStudentAcademicInfoAndSubjects(
   }
 
   // Step 3: Process subjects from old student data only
+  const subjectTotals: number[] = [];
   for (let i = 0; i < studentSubjects.length; i++) {
     const oldStudentSubject = studentSubjects[i];
 
@@ -2517,6 +2621,9 @@ async function loadStudentAcademicInfoAndSubjects(
       boardSubject = newBoardSubject;
     }
 
+    // Collect this subject's total for the best-of-N aggregate.
+    subjectTotals.push(Number(oldStudentSubject.marksObtained) || 0);
+
     // Find existing student academic subject by legacyStudentSubjectDetailsId and admissionAcademicInfoId
     const [existingSubject] = await db
       .select()
@@ -2575,6 +2682,20 @@ async function loadStudentAcademicInfoAndSubjects(
     }
   }
 
+  // Best of Four / Five = average of the top 4 / top 5 subject totals.
+  const avgOfTopN = (totals: number[], n: number): number | undefined => {
+    const top = [...totals].sort((a, b) => b - a).slice(0, n);
+    if (top.length === 0) return undefined;
+    return top.reduce((a, b) => a + b, 0) / top.length;
+  };
+  await db
+    .update(admissionAcademicInfoModel)
+    .set({
+      bestOfFour: avgOfTopN(subjectTotals, 4),
+      bestOfFive: avgOfTopN(subjectTotals, 5),
+    })
+    .where(eq(admissionAcademicInfoModel.id, academicInfo.id!));
+
   console.log(
     `Processed ${studentSubjects.length} subjects for student ${student.id}, old-student-id: ${oldStudent.id}`,
   );
@@ -2584,168 +2705,206 @@ export async function addPromotion(
   student: Student,
   applicationForm: ApplicationForm,
   oldStudentId: number,
-  admissionCourseDetails: AdmissionCourseDetails,
+  _admissionCourseDetails: AdmissionCourseDetails,
 ) {
-  const [foundAdmission] = await db
-    .select()
-    .from(admissionModel)
-    .where(eq(admissionModel.id, applicationForm.admissionId!));
-
-  const [[oldHistoricalRecord]] = (await mysqlConnection.query(`
-        SELECT * FROM historicalrecord WHERE parent_id = ${oldStudentId}
+  const [oldHistoricalRecords] = (await mysqlConnection.query(`
+        SELECT * FROM historicalrecord
+        WHERE parent_id = ${oldStudentId}
+        ORDER BY index_col ASC
     `)) as [OldHistoricalRecord[], any];
 
-  const [foundSession] = await db
-    .select()
-    .from(sessionModel)
-    .where(eq(sessionModel.id, foundAdmission?.sessionId!));
+  if (!oldHistoricalRecords?.length) {
+    console.warn(
+      `No historicalrecord rows found for student legacy id ${oldStudentId}`,
+    );
+    return;
+  }
+
+  for (const oldHistoricalRecord of oldHistoricalRecords) {
+    await upsertPromotionFromHistoricalRecord(student, oldHistoricalRecord);
+  }
+}
+
+async function upsertPromotionFromHistoricalRecord(
+  student: Student,
+  oldHistoricalRecord: OldHistoricalRecord,
+) {
+  const foundSession =
+    await oldAdmPersonalDetailsHelper.getOrCreateSessionForLegacySessionId(
+      oldHistoricalRecord.sessionid,
+    );
 
   const foundClass = await oldAdmPersonalDetailsHelper.addClass(
-    oldHistoricalRecord?.classId!,
+    oldHistoricalRecord.classId,
   );
 
-  const [foundAdmissionProgramCourse] = await db
-    .select()
-    .from(admissionProgramCourseModel)
-    .where(
-      eq(
-        admissionProgramCourseModel.id,
-        admissionCourseDetails.admissionProgramCourseId,
-      ),
+  const [[oldCourse]] = (await mysqlConnection.query(`
+        SELECT * FROM course WHERE id = ${oldHistoricalRecord.courseId}
+    `)) as [OldCourse[], any];
+
+  if (!oldCourse?.courseName) {
+    console.warn(
+      `Skipping promotion ${oldHistoricalRecord.id}: course ${oldHistoricalRecord.courseId} not found`,
     );
+    return;
+  }
 
   const [foundProgramCourse] = await db
     .select()
     .from(programCourseModel)
-    .where(
-      eq(programCourseModel.id, foundAdmissionProgramCourse?.programCourseId!),
+    .where(ilike(programCourseModel.name, oldCourse.courseName.trim()));
+
+  if (!foundProgramCourse) {
+    console.warn(
+      `Skipping promotion ${oldHistoricalRecord.id}: program course not found for ${oldCourse.courseName}`,
     );
-
-  const [[oldPromotionStatus]] = (await mysqlConnection.query(`
-        SELECT * FROM promotionstatus WHERE id = ${oldHistoricalRecord?.promotionstatus}
-    `)) as [OldPromotionStatus[], any];
-
-  let [foundPromotionStatus] = await db
-    .select()
-    .from(promotionStatusModel)
-    .where(
-      eq(promotionStatusModel.legacyPromotionStatusId, oldPromotionStatus?.id!),
-    );
-
-  if (!foundPromotionStatus) {
-    foundPromotionStatus = (
-      await db
-        .insert(promotionStatusModel)
-        .values({
-          legacyPromotionStatusId: oldPromotionStatus?.id!,
-          name: oldPromotionStatus?.name!,
-          type: oldPromotionStatus?.spltype.toUpperCase().trim() as
-            | "REGULAR"
-            | "READMISSION"
-            | "CASUAL",
-        })
-        .returning()
-    )[0];
+    return;
   }
 
-  let foundBoardResultStatus: BoardResultStatus | undefined;
-  if (oldHistoricalRecord?.boardresultid) {
-    foundBoardResultStatus = (
-      await db
-        .select()
-        .from(boardResultStatusModel)
-        .where(
-          eq(
-            boardResultStatusModel.legacyBoardResultStatusId,
-            oldHistoricalRecord?.boardresultid!,
-          ),
-        )
-    )[0];
+  const [[oldPromotionStatus]] = (await mysqlConnection.query(`
+        SELECT * FROM promotionstatus WHERE id = ${oldHistoricalRecord.promotionstatus}
+    `)) as [OldPromotionStatus[], any];
 
+  // promotion_status / board_result_status have no unique on their legacy
+  // ids — serialize concurrent creators of the same status row.
+  const foundPromotionStatus = oldPromotionStatus
+    ? await getOrCreateWithLock(
+        `import:promotion-status:${oldPromotionStatus.id}`,
+        async () =>
+          (
+            await db
+              .select()
+              .from(promotionStatusModel)
+              .where(
+                eq(
+                  promotionStatusModel.legacyPromotionStatusId,
+                  oldPromotionStatus.id!,
+                ),
+              )
+          )[0],
+        async () =>
+          (
+            await db
+              .insert(promotionStatusModel)
+              .values({
+                legacyPromotionStatusId: oldPromotionStatus.id!,
+                name: oldPromotionStatus.name!,
+                type: oldPromotionStatus.spltype.toUpperCase().trim() as
+                  | "REGULAR"
+                  | "READMISSION"
+                  | "CASUAL",
+              })
+              .returning()
+          )[0]!,
+      )
+    : undefined;
+
+  let foundBoardResultStatus: BoardResultStatus | undefined;
+  if (oldHistoricalRecord.boardresultid) {
+    const boardResultId = oldHistoricalRecord.boardresultid;
+    const findBoardResultStatus = async () =>
+      (
+        await db
+          .select()
+          .from(boardResultStatusModel)
+          .where(
+            eq(boardResultStatusModel.legacyBoardResultStatusId, boardResultId),
+          )
+      )[0];
+
+    foundBoardResultStatus = await findBoardResultStatus();
     if (!foundBoardResultStatus) {
       const [[oldBoardResultStatus]] = (await mysqlConnection.query(`
-                SELECT * FROM boardresultstatus WHERE id = ${oldHistoricalRecord?.boardresultid}
+                SELECT * FROM boardresultstatus WHERE id = ${boardResultId}
             `)) as [OldBoardResultStatus[], any];
-      foundBoardResultStatus = (
-        await db
-          .insert(boardResultStatusModel)
-          .values({
-            legacyBoardResultStatusId: oldBoardResultStatus?.id!,
-            name: oldBoardResultStatus?.name!,
-            spclType: oldBoardResultStatus?.spcltype,
-          })
-          .returning()
-      )[0];
+      if (oldBoardResultStatus) {
+        foundBoardResultStatus = await getOrCreateWithLock(
+          `import:board-result-status:${boardResultId}`,
+          findBoardResultStatus,
+          async () =>
+            (
+              await db
+                .insert(boardResultStatusModel)
+                .values({
+                  legacyBoardResultStatusId: oldBoardResultStatus.id!,
+                  name: oldBoardResultStatus.name!,
+                  spclType: oldBoardResultStatus.spcltype,
+                })
+                .returning()
+            )[0]!,
+        );
+      }
     }
   }
 
   const foundSection = await oldAdmPersonalDetailsHelper.addSection(
-    oldHistoricalRecord?.sectionId!,
+    oldHistoricalRecord.sectionId,
   );
 
   const shift = await oldAdmPersonalDetailsHelper.upsertShift(
-    oldHistoricalRecord?.shiftId!,
+    oldHistoricalRecord.shiftId,
   );
 
-  // First try to find existing promotion by studentId and legacyHistoricalRecordId
-  let [existingPromotion] = await db
+  const [existingPromotion] = await db
     .select()
     .from(promotionModel)
     .where(
       and(
         eq(promotionModel.studentId, student.id!),
-        eq(promotionModel.legacyHistoricalRecordId, oldHistoricalRecord?.id!),
+        eq(promotionModel.legacyHistoricalRecordId, oldHistoricalRecord.id),
       ),
     );
 
+  const promotionValues = {
+    studentId: student.id!,
+    sectionId: foundSection?.id,
+    legacyHistoricalRecordId: oldHistoricalRecord.id,
+    programCourseId: foundProgramCourse.id!,
+    sessionId: foundSession.id!,
+    shiftId: shift?.id!,
+    classId: foundClass?.id!,
+    classRollNumber: oldHistoricalRecord.rollNo
+      ? String(oldHistoricalRecord.rollNo)
+      : student.classRollNumber || "",
+    dateOfJoining: toDate(oldHistoricalRecord.dateofJoining),
+    promotionStatusId: foundPromotionStatus?.id,
+    boardResultStatusId: foundBoardResultStatus?.id,
+    // Legacy historicalrecord.startDate is consistently NULL; the actual semester
+    // start lives on dateofJoining for that row. Mirror it into start_date so the UI
+    // shows the semester window.
+    startDate:
+      toDate(oldHistoricalRecord.startDate) ??
+      toDate(oldHistoricalRecord.dateofJoining) ??
+      null,
+    endDate: toDate(oldHistoricalRecord.endDate) ?? null,
+    remarks: oldHistoricalRecord.specialisation,
+    rollNumber: oldHistoricalRecord.univrollno,
+    rollNumberSI: oldHistoricalRecord.univrollnosi,
+    examNumber: oldHistoricalRecord.exmno,
+    examSerialNumber: oldHistoricalRecord.exmsrl,
+  };
+
   if (existingPromotion) {
-    console.log("Updating promotion data for student:", student.id);
+    console.log(
+      "Updating promotion data for student:",
+      student.id,
+      "historicalRecordId:",
+      oldHistoricalRecord.id,
+    );
     await db
       .update(promotionModel)
-      .set({
-        studentId: student.id!,
-        sectionId: foundSection?.id,
-        legacyHistoricalRecordId: oldHistoricalRecord?.id!,
-        programCourseId: foundProgramCourse?.id!,
-        sessionId: foundSession?.id!,
-        shiftId: shift?.id!,
-        classId: foundClass?.id!,
-        classRollNumber:
-          String(oldHistoricalRecord?.rollNo!) || student.classRollNumber!,
-        dateOfJoining: toDate(oldHistoricalRecord?.dateofJoining),
-        // promotionStatusId: foundPromotionStatus?.id!,
-        boardResultStatusId: foundBoardResultStatus?.id!,
-        startDate: toDate(oldHistoricalRecord?.startDate) ?? null,
-        endDate: toDate(oldHistoricalRecord?.endDate) ?? null,
-        remarks: oldHistoricalRecord?.specialisation,
-        rollNumber: oldHistoricalRecord?.univrollno,
-        rollNumberSI: oldHistoricalRecord?.univrollnosi,
-        examNumber: oldHistoricalRecord?.exmno,
-        examSerialNumber: oldHistoricalRecord?.exmsrl,
-      })
+      .set(promotionValues)
       .where(eq(promotionModel.id, existingPromotion.id));
   } else {
-    console.log("Creating promotion data for student:", student.id);
-    await db.insert(promotionModel).values({
-      studentId: student.id!,
-      sectionId: foundSection?.id,
-      legacyHistoricalRecordId: oldHistoricalRecord?.id!,
-      programCourseId: foundProgramCourse?.id!,
-      sessionId: foundSession?.id!,
-      shiftId: shift?.id!,
-      classId: foundClass?.id!,
-      classRollNumber: String(oldHistoricalRecord?.rollNo!),
-      dateOfJoining: toDate(oldHistoricalRecord?.dateofJoining),
-      promotionStatusId: foundPromotionStatus?.id!,
-      boardResultStatusId: foundBoardResultStatus?.id!,
-      startDate: toDate(oldHistoricalRecord?.startDate) ?? null,
-      endDate: toDate(oldHistoricalRecord?.endDate) ?? null,
-      remarks: oldHistoricalRecord?.specialisation,
-      rollNumber: oldHistoricalRecord?.univrollno,
-      rollNumberSI: oldHistoricalRecord?.univrollnosi,
-      examNumber: oldHistoricalRecord?.exmno,
-      examSerialNumber: oldHistoricalRecord?.exmsrl,
-    } as PromotionInsertSchema);
+    console.log(
+      "Creating promotion data for student:",
+      student.id,
+      "historicalRecordId:",
+      oldHistoricalRecord.id,
+    );
+    await db
+      .insert(promotionModel)
+      .values(promotionValues as PromotionInsertSchema);
   }
 }
 
@@ -3330,23 +3489,30 @@ async function addShift(oldShiftId: number | null) {
 
   if (!shiftRow) return null;
 
-  const [foundShift] = await db
-    .select()
-    .from(shiftModel)
-    .where(ilike(shiftModel.name, shiftRow.shiftName.trim()));
-
-  if (foundShift) return foundShift;
-
-  return (
-    await db
-      .insert(shiftModel)
-      .values({
-        legacyShiftId: oldShiftId,
-        name: shiftRow.shiftName.trim(),
-        codePrefix: shiftRow.codeprefix?.trim(),
-      })
-      .returning()
-  )[0];
+  // shifts has no unique on name — serialize concurrent creators of the same
+  // shift (same lock key as upsertShift in old-student.service.ts).
+  const shiftName = shiftRow.shiftName.trim();
+  return getOrCreateWithLock(
+    `import:shift:${shiftName.toLowerCase()}`,
+    async () =>
+      (
+        await db
+          .select()
+          .from(shiftModel)
+          .where(ilike(shiftModel.name, shiftName))
+      )[0],
+    async () =>
+      (
+        await db
+          .insert(shiftModel)
+          .values({
+            legacyShiftId: oldShiftId,
+            name: shiftName,
+            codePrefix: shiftRow.codeprefix?.trim(),
+          })
+          .returning()
+      )[0]!,
+  );
 }
 
 async function addMeritList(oldMeritListId: number | null) {

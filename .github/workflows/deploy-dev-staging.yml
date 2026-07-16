@@ -1,0 +1,146 @@
+name: Deploy develop / staging
+
+# Auto-redeploy the develop and staging EC2 boxes on every push to their branch.
+# These boxes run a git checkout + local Postgres + PM2 (NOT the ECR/docker prod
+# path), so the deploy is: pull -> build -> drizzle-kit migrate -> pm2 restart.
+on:
+  push:
+    branches: [develop, staging]
+  workflow_dispatch:
+
+# Never let two deploys of the same branch overlap on the same box.
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve target host
+        id: t
+        run: |
+          if [ "${{ github.ref_name }}" = "develop" ]; then
+            echo "host=${{ secrets.DEVELOP_HOST }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "host=${{ secrets.STAGING_HOST }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy over SSH (pull, build, migrate, restart)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.t.outputs.host }}
+          username: ubuntu
+          key: ${{ github.ref_name == 'develop' && secrets.DEVELOP_SSH_PRIVATE_KEY || secrets.STAGING_SSH_PRIVATE_KEY }}
+          request_pty: false
+          command_timeout: 40m
+          script: |
+            set -e
+            # 1) Locate the repo checkout (develop and staging use different paths).
+            REPO=""
+            for d in /home/ubuntu/workspace/academic360 /home/ubuntu/workspace/academic360-app/academic360; do
+              [ -f "$d/turbo.json" ] && REPO="$d" && break
+            done
+            [ -z "$REPO" ] && { echo "::error::repo checkout not found"; exit 1; }
+            cd "$REPO"
+            BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            echo "repo=$REPO branch=$BRANCH before=$(git rev-parse --short HEAD)"
+
+            # pnpm must be a real binary on PATH (nested package scripts call bare pnpm).
+            if ! command -v pnpm >/dev/null 2>&1; then
+              mkdir -p "$HOME/.local/bin"
+              printf '#!/bin/sh\nexec corepack pnpm "$@"\n' > "$HOME/.local/bin/pnpm"
+              chmod +x "$HOME/.local/bin/pnpm"
+              export PATH="$HOME/.local/bin:$PATH"
+            fi
+
+            # 2) Fast-forward to the pushed commit.
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+            echo "after=$(git rev-parse --short HEAD)"
+
+            # 3) Install + build the apps.
+            # Build through turbo (NOT per-package `pnpm --filter build`) so
+            # unchanged packages restore dist/.next from the persistent .turbo
+            # cache (>>> FULL TURBO) instead of rebuilding from scratch every
+            # deploy. .turbo is gitignored, so `git reset --hard` above keeps it.
+            # @repo/db builds automatically as a dependency via turbo's ^build.
+            pnpm install --frozen-lockfile
+            pnpm exec turbo build --filter=backend --filter=main-console --filter=notification-system
+            # student-console isolated so a Next build failure warns instead of
+            # aborting the whole deploy (still cached via turbo).
+            # NEXT_PUBLIC_APP_ENV MUST be a non-"development" value at BUILD time
+            # so next.config.js bakes in basePath/assetPrefix "/student-console"
+            # (the reverse proxy serves the app under that subpath). Without it,
+            # Next builds for "/" and every page/asset 404s behind the proxy.
+            # Shell-exported vars win over any .env* on the box (@next/env does
+            # not override process.env), and it's in turbo globalEnv so the cache
+            # key tracks it. Branch name → "develop"/"staging" (both non-dev).
+            NEXT_PUBLIC_APP_ENV="$BRANCH" pnpm exec turbo build --filter=student-console || echo "::warning::student-console build failed (continuing)"
+
+            # Next.js standalone output (this box runs .next/standalone/.../server.js
+            # under PM2) does NOT bundle static assets or public/ — they must be
+            # copied into the standalone tree, otherwise the server 404s every JS/CSS
+            # chunk and the app renders blank. Do it after every student-console build.
+            SC="$REPO/apps/student-console"
+            SC_STANDALONE="$SC/.next/standalone/apps/student-console"
+            if [ -d "$SC_STANDALONE" ] && [ -d "$SC/.next/static" ]; then
+              rm -rf "$SC_STANDALONE/.next/static"
+              cp -r "$SC/.next/static" "$SC_STANDALONE/.next/static"
+              if [ -d "$SC/public" ]; then
+                rm -rf "$SC_STANDALONE/public"
+                cp -r "$SC/public" "$SC_STANDALONE/public"
+              fi
+              echo "copied student-console static (+public) into standalone"
+            fi
+
+            # 3.5) Ensure a working Chrome for Puppeteer (PDF/image rendering).
+            # The develop box only ships the non-functional /usr/bin/chromium-browser
+            # snap stub (launch fails with "requires the chromium snap"); install
+            # google-chrome-stable (real binary + its own deps) via apt. Idempotent:
+            # a no-op where a working Chrome already exists (staging/prod). Best-
+            # effort — a failure here only degrades PDF/image rendering, not the
+            # rest of the deploy.
+            if ! /usr/bin/google-chrome --version >/dev/null 2>&1 \
+               && ! /usr/bin/google-chrome-stable --version >/dev/null 2>&1; then
+              if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+                echo "installing google-chrome-stable for puppeteer..."
+                TMPDEB=$(mktemp --suffix=.deb)
+                if curl -fsSL https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o "$TMPDEB"; then
+                  sudo apt-get update -y || true
+                  sudo apt-get install -y "$TMPDEB" || sudo dpkg -i "$TMPDEB" || sudo apt-get -f install -y || true
+                fi
+                rm -f "$TMPDEB"
+                /usr/bin/google-chrome --version || echo "::warning::google-chrome install did not verify"
+              else
+                echo "::warning::no passwordless sudo; cannot install google-chrome for puppeteer"
+              fi
+            fi
+
+            # 4) Run migrations (drizzle-kit; idempotent migrations).
+            DBURL=$(grep -hE '^DATABASE_URL=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r')
+            ( cd apps/backend && DATABASE_URL="$DBURL" npx drizzle-kit migrate )
+
+            # 5) Restart via PM2 (NODE_ENV sourced from .env so staging stays 'staging').
+            NENV=$(grep -hE '^NODE_ENV=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r'); [ -z "$NENV" ] && NENV=development
+            PM2="pm2"; command -v pm2 >/dev/null 2>&1 || PM2="npx pm2"
+            NODE_ENV="$NENV" $PM2 restart a360-backend --update-env
+            $PM2 restart a360-main-console --update-env
+            $PM2 restart a360-notifications --update-env || true
+            $PM2 restart a360-student-console --update-env || $PM2 restart student-console --update-env || true
+            $PM2 save || true
+
+            # 6) Health check. Retry — the backend needs a few seconds to boot
+            # after a pm2 restart, so a single immediate probe can race it.
+            ok=0
+            for attempt in $(seq 1 15); do
+              for p in 8080 5000; do
+                code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:$p/healthz" 2>/dev/null || true)
+                if [ "$code" = "200" ]; then
+                  echo "backend healthz OK on :$p (attempt $attempt)"; ok=1; break
+                fi
+              done
+              [ "$ok" = 1 ] && break
+              sleep 3
+            done
+            [ "$ok" = 1 ] || echo "::warning::backend health check did not return 200 on :8080 or :5000 after retries"

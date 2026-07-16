@@ -1,0 +1,196 @@
+name: Deploy (prod)
+
+# Push to main builds the four service images once, pushes them to ECR, then
+# rolls them onto the a360-prod ASG instances via SSM Run Command (no SSH, no
+# on-box build). Runtime secrets are NOT here — instances render them from SSM
+# Parameter Store at deploy time. Only non-secret build-time vars (NEXT_PUBLIC_*,
+# VITE_*) are pulled from SSM here to bake into the frontend images.
+#
+# Required repo config:
+#   secrets.AWS_DEPLOY_ROLE_ARN  — IAM role 'a360-github-deploy' (OIDC trust)
+#   vars.ASG_NAME                — Auto Scaling Group (optional; default a360-asg)
+#   vars.DEPLOY_BUCKET           — S3 bucket for compose+scripts, deploy/ prefix
+#                                  (optional; default a360-deploy-artifacts)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "turbo.json"
+      - "docker-compose.yml"
+      - "scripts/**"
+      - ".github/workflows/deploy-prod.yml"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag to deploy (default: this commit SHA). Set a previous SHA to roll back."
+        required: false
+        default: ""
+      run_migrate:
+        description: "Run DB migrations on the first instance"
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 049252392122.dkr.ecr.ap-south-1.amazonaws.com
+  # Fixed prod infra names. Overridable via repo vars; fall back to the known
+  # defaults so an unset/empty var can't silently produce an invalid "s3:///".
+  DEPLOY_BUCKET: ${{ vars.DEPLOY_BUCKET || 'a360-deploy-artifacts' }}
+  ASG_NAME: ${{ vars.ASG_NAME || 'a360-asg' }}
+
+jobs:
+  build-and-deploy:
+    # arm64 runner: the a360-prod ASG runs t4g (Graviton/arm64) instances, so
+    # images must be arm64. Building on an x86 runner produced linux/amd64 images
+    # that died on the hosts with "exec format error". ubuntu-24.04-arm builds
+    # them natively (no QEMU).
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: tag
+        env:
+          IMAGE_TAG_INPUT: ${{ github.event.inputs.image_tag }}
+        run: |
+          TAG="$IMAGE_TAG_INPUT"
+          [ -z "$TAG" ] && TAG="${GITHUB_SHA::12}"
+          # tags become image refs and shell vars — restrict to a safe charset
+          case "$TAG" in
+            *[!A-Za-z0-9._-]*) echo "::error::invalid image tag: $TAG"; exit 1 ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "🏷️  Deploying tag: $TAG"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Write build-time env files from SSM (public, non-secret)
+        run: |
+          set -euo pipefail
+          fetch() {
+            aws ssm get-parameters-by-path --region "$AWS_REGION" --path "$1" --recursive \
+              --query 'Parameters[].[Name,Value]' --output text
+          }
+          # main-console (Vite) → .env.local ; student-console (Next.js) → .env.production
+          fetch /a360/prod/build/main-console \
+            | while IFS=$'\t' read -r n v; do [ -n "$n" ] && echo "${n##*/}=$v"; done \
+            > apps/main-console/.env.local
+          fetch /a360/prod/build/student-console \
+            | while IFS=$'\t' read -r n v; do [ -n "$n" ] && echo "${n##*/}=$v"; done \
+            > apps/student-console/.env.production
+          echo "🎨 main-console/.env.local:";       sed 's/=.*/=***/' apps/main-console/.env.local
+          echo "🎨 student-console/.env.production:"; sed 's/=.*/=***/' apps/student-console/.env.production
+
+      - name: Build and push images
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          declare -A DF=(
+            [backend]=apps/backend/Dockerfile
+            [student-console]=apps/student-console/Dockerfile
+            [main-console]=apps/main-console/Dockerfile
+            [notification-worker]=apps/notification-system/Dockerfile
+          )
+          for svc in backend student-console main-console notification-worker; do
+            repo="$ECR_REGISTRY/a360-$svc"
+            echo "::group::build & push $svc"
+            docker build -f "${DF[$svc]}" -t "$repo:$TAG" -t "$repo:prod" .
+            docker push "$repo:$TAG"
+            docker push "$repo:prod"
+            echo "::endgroup::"
+          done
+
+      - name: Sync compose + scripts to deploy bucket
+        run: |
+          set -euo pipefail
+          aws s3 cp docker-compose.yml "s3://$DEPLOY_BUCKET/deploy/docker-compose.yml"
+          aws s3 sync --delete scripts/ "s3://$DEPLOY_BUCKET/deploy/scripts/"
+
+      - name: Roll out to instances via SSM (sequential, health-gated)
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          RUN_MIGRATE_INPUT: ${{ github.event.inputs.run_migrate }}
+        run: |
+          set -euo pipefail
+
+          INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "$ASG_NAME" \
+            --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
+            --output text)
+          if [ -z "$INSTANCE_IDS" ]; then
+            echo "::error::No InService instances found in ASG '$ASG_NAME'"; exit 1
+          fi
+          echo "🎯 Target instances: $INSTANCE_IDS"
+
+          # Migrate on the FIRST instance only (default true unless dispatch sets false).
+          MIGRATE_FIRST=true
+          [ "$RUN_MIGRATE_INPUT" = "false" ] && MIGRATE_FIRST=false
+
+          deploy_instance() {
+            local iid="$1" migrate="$2"
+            echo "::group::deploy $iid (migrate=$migrate)"
+            cat > ssm-params.json <<JSON
+          {
+            "commands": [
+              "set -e",
+              "mkdir -p /opt/academic360/app/scripts",
+              "aws s3 cp s3://$DEPLOY_BUCKET/deploy/docker-compose.yml /opt/academic360/app/docker-compose.yml",
+              "aws s3 sync --delete s3://$DEPLOY_BUCKET/deploy/scripts/ /opt/academic360/app/scripts/",
+              "chmod +x /opt/academic360/app/scripts/*.sh",
+              "ECR_REGISTRY=$ECR_REGISTRY IMAGE_TAG=$TAG RUN_MIGRATE=$migrate AWS_REGION=$AWS_REGION /opt/academic360/app/scripts/deploy-on-instance.sh"
+            ],
+            "executionTimeout": ["1800"]
+          }
+          JSON
+            cmd_id=$(aws ssm send-command \
+              --instance-ids "$iid" \
+              --document-name AWS-RunShellScript \
+              --comment "a360 deploy $TAG" \
+              --timeout-seconds 600 \
+              --parameters file://ssm-params.json \
+              --query 'Command.CommandId' --output text)
+
+            aws ssm wait command-executed --command-id "$cmd_id" --instance-id "$iid" || true
+            status=$(aws ssm get-command-invocation --command-id "$cmd_id" --instance-id "$iid" --query Status --output text)
+            echo "---- stdout ----"
+            aws ssm get-command-invocation --command-id "$cmd_id" --instance-id "$iid" --query StandardOutputContent --output text || true
+            if [ "$status" != "Success" ]; then
+              echo "::error::deploy failed on $iid (status=$status)"
+              echo "---- stderr ----"
+              aws ssm get-command-invocation --command-id "$cmd_id" --instance-id "$iid" --query StandardErrorContent --output text || true
+              exit 1
+            fi
+            echo "✅ $iid: $status"
+            echo "::endgroup::"
+          }
+
+          first=true
+          for iid in $INSTANCE_IDS; do
+            if [ "$first" = true ]; then
+              deploy_instance "$iid" "$MIGRATE_FIRST"
+              first=false
+            else
+              deploy_instance "$iid" "false"
+            fi
+          done
+          echo "🚀 Rollout complete for tag $TAG"

@@ -43,6 +43,8 @@ export interface NotificationDto {
     content?: Partial<NotificationContentT>[];
     otherUsersEmails?: string[];
     otherUsersWhatsAppNumbers?: string[];
+    /** Housekeeping sends (e.g. resend-verification OTPs) hidden from the console. */
+    isInternal?: boolean;
     // emailAttachments?: Array<{
     //     pdfS3Url: string;
     // }>;

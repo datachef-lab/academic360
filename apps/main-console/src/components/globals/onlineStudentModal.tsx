@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Table,
@@ -8,31 +7,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { StudentDto } from "@repo/db/dtos/user";
+import type { OnlineStudentDto } from "@/services/student";
+import { StudentAvatar } from "@/components/student/StudentAvatar";
 import { Circle, User } from "lucide-react";
 
-/**
- * Batch-related info for a student.
- * Marked optional because backend may not always return all relations.
- */
-//   interface BatchInfo {
-//     session?: { name?: string };
-//     shift?: { name?: string };
-//     section?: { name?: string };
-//     semester?: { name?: string };
-//   }
-
-/**
- * ✅ UPDATED PROPS
- * - `loading` → matches the prop passed from parent
- * - `isError` → added because parent was passing it
- */
 interface OnlineStudentsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  students: StudentDto[];
+  students: OnlineStudentDto[];
   loading: boolean;
   isError: boolean;
+}
+
+function formatLoginTime(value: string | null | undefined): string {
+  if (!value) return "-";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+
+  return parsed.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export function OnlineStudentsModal({
@@ -42,19 +42,12 @@ export function OnlineStudentsModal({
   loading,
   isError,
 }: OnlineStudentsModalProps) {
-  useEffect(() => {
-    if (students.length > 0) {
-      console.log("📘 Online Students Data:", JSON.stringify(students, null, 2));
-    }
-  }, [students]);
+  const columnCount = 8;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl p-0 max-h-[70vh] border-none overflow-hidden">
-        {/* ---------------- Header ---------------- */}
-
+      <DialogContent className="max-w-6xl p-0 max-h-[70vh] min-h-[340px] border-none overflow-hidden">
         <DialogHeader className="relative px-6 py-5 bg-blue-600 overflow-hidden">
-          {/* Decorative elements */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
@@ -75,48 +68,46 @@ export function OnlineStudentsModal({
           </DialogTitle>
         </DialogHeader>
 
-        {/* ---------------- Body ---------------- */}
-        <div className="p-4 max-h-[60vh] overflow-auto">
-          <div className="border rounded-xl overflow-hidden">
+        <div className="p-4 max-h-[60vh] min-h-[220px] overflow-auto">
+          <div className="border rounded-xl overflow-hidden [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
             <Table>
               <TableHeader className="bg-muted/40">
                 <TableRow>
                   <TableHead className="w-14 text-center">#</TableHead>
-                  <TableHead>Program</TableHead>
-                  <TableHead>Session</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead>Section</TableHead>
-                  <TableHead>Semester</TableHead>
+                  <TableHead className="w-16 text-center">Photo</TableHead>
                   <TableHead>UID</TableHead>
-                  <TableHead>Roll No.</TableHead>
-                  <TableHead>Reg. No.</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Program Course</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Shift</TableHead>
+                  <TableHead>Login Time</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
-                {/* 🔄 Loading state */}
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-10 text-sm">
+                    <TableCell colSpan={columnCount} className="text-center py-10 text-sm">
                       Loading online students…
                     </TableCell>
                   </TableRow>
                 )}
 
-                {/* ❌ Error state */}
                 {isError && !loading && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-10 text-sm text-red-500">
+                    <TableCell
+                      colSpan={columnCount}
+                      className="text-center py-10 text-sm text-red-500"
+                    >
                       Failed to load online students
                     </TableCell>
                   </TableRow>
                 )}
 
-                {/* 🚫 Empty state */}
                 {!loading && !isError && students.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={columnCount}
                       className="text-center py-10 text-sm text-muted-foreground"
                     >
                       No students online
@@ -124,26 +115,26 @@ export function OnlineStudentsModal({
                   </TableRow>
                 )}
 
-                {/* ✅ Data rows */}
                 {!loading &&
                   !isError &&
-                  students.map((student, index) => {
-                    //   const batch = student.currentBatch as BatchInfo | null;
-
-                    return (
-                      <TableRow key={student.id ?? index} className="hover:bg-muted/50 transition">
-                        <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                        <TableCell>{student.programCourse?.name ?? "-"}</TableCell>
-                        <TableCell>{student.currentPromotion?.session?.name ?? "-"}</TableCell>
-                        <TableCell>{student.currentPromotion?.shift?.name ?? "-"}</TableCell>
-                        <TableCell>{student.currentPromotion?.section?.name ?? "-"}</TableCell>
-                        <TableCell>{student.currentPromotion?.class?.name ?? "-"}</TableCell>
-                        <TableCell>{student.uid ?? "-"}</TableCell>
-                        <TableCell>{student.rollNumber ?? "-"}</TableCell>
-                        <TableCell>{student.registrationNumber ?? "-"}</TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  students.map((student, index) => (
+                    <TableRow key={student.id ?? index} className="hover:bg-muted/50 transition">
+                      <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center">
+                          <StudentAvatar uid={student.uid} name={student.name} size="sm" />
+                        </div>
+                      </TableCell>
+                      <TableCell>{student.uid ?? "-"}</TableCell>
+                      <TableCell>{student.name ?? "-"}</TableCell>
+                      <TableCell>{student.programCourse?.name ?? "-"}</TableCell>
+                      <TableCell>
+                        {student.activeClassName ?? student.currentPromotion?.class?.name ?? "-"}
+                      </TableCell>
+                      <TableCell>{student.currentPromotion?.shift?.name ?? "-"}</TableCell>
+                      <TableCell>{formatLoginTime(student.loginTime)}</TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </div>

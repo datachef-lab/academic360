@@ -1,5 +1,14 @@
 import { db } from "@/db/index.js";
-import { eq, and, or, ilike, countDistinct, desc, SQL } from "drizzle-orm";
+import {
+  eq,
+  and,
+  or,
+  ilike,
+  inArray,
+  countDistinct,
+  desc,
+  SQL,
+} from "drizzle-orm";
 import {
   Affiliation,
   Paper,
@@ -403,7 +412,7 @@ interface PaperFilters {
   academicYearId?: number;
   subjectTypeId?: number;
   programCourseId?: number;
-  classId?: number;
+  classIds?: number[];
   isOptional?: boolean;
   autoAssign?: boolean;
   searchText?: string;
@@ -428,7 +437,8 @@ export async function getPapersFilteredPaginated(
     conditions.push(eq(paperModel.subjectTypeId, filters.subjectTypeId));
   if (filters.programCourseId)
     conditions.push(eq(paperModel.programCourseId, filters.programCourseId));
-  if (filters.classId) conditions.push(eq(paperModel.classId, filters.classId));
+  if (filters.classIds?.length)
+    conditions.push(inArray(paperModel.classId, filters.classIds));
   if (filters.isOptional !== undefined)
     conditions.push(eq(paperModel.isOptional, filters.isOptional));
   if (filters.autoAssign !== undefined)

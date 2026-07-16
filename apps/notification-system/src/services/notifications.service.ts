@@ -173,6 +173,7 @@ export class NotificationsService {
       status: "PENDING",
       otherUsersEmails: dto.otherUsersEmails ?? null,
       otherUsersWhatsAppNumbers: dto.otherUsersWhatsAppNumbers ?? null,
+      isInternal: dto.isInternal ?? false,
       // emailAttachments: dto.emailAttachments ?? null,
       emailAttachments: normalizedAttachments,
     };
