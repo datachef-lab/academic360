@@ -1,6 +1,7 @@
+import { Tabs } from "@/components/ui/Tabs";
 import { useTheme } from "@/hooks/use-theme";
 import React, { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -53,8 +54,6 @@ export default function TimetableScreen() {
   const isDark = colorScheme === "dark";
   const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
   const accent = isDark ? "#818cf8" : "#4f46e5";
-  const chipActive = isDark ? "#4338ca" : "#4f46e5";
-  const chipBg = isDark ? "rgba(255,255,255,0.06)" : "#eef2ff";
 
   const [day, setDay] = useState<string>("Mon");
   const rows = WEEK[day] ?? [];
@@ -67,35 +66,14 @@ export default function TimetableScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Day selector */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8 }}
-        className="mb-5"
-      >
-        {DAYS.map((d) => {
-          const active = d === day;
-          return (
-            <Pressable
-              key={d}
-              onPress={() => setDay(d)}
-              className="px-4 py-2 rounded-full"
-              style={{ backgroundColor: active ? chipActive : chipBg }}
-            >
-              <Text
-                style={{
-                  color: active ? "#ffffff" : theme.text,
-                  opacity: active ? 1 : 0.7,
-                  fontWeight: active ? "700" : "500",
-                  fontSize: 13,
-                }}
-              >
-                {d}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <View className="mb-5">
+        <Tabs
+          tabs={DAYS.map((d) => ({ id: d, label: d }))}
+          value={day}
+          onChange={setDay}
+          scrollable
+        />
+      </View>
 
       {/* Table header */}
       <View

@@ -1,3 +1,4 @@
+import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { useTheme } from "@/hooks/use-theme";
 import { useLocalSearchParams } from "expo-router";
 import { Download, FileText, NotebookPen } from "lucide-react-native";
@@ -29,12 +30,11 @@ export default function PaperNotesScreen() {
   const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
   const accent = isDark ? "#a5b4fc" : "#4f46e5";
   const accentBg = isDark ? "rgba(99,102,241,0.2)" : "rgba(79,70,229,0.1)";
-  const segBg = isDark ? "rgba(255,255,255,0.06)" : "#eef2ff";
 
   const name = params.name || "Paper";
-  const sections: { key: SectionKey; label: string }[] = [
-    { key: "notes", label: "Notes" },
-    { key: "assignment", label: "Assignment" },
+  const sections: TabItem<SectionKey>[] = [
+    { id: "notes", label: "Notes", icon: FileText },
+    { id: "assignment", label: "Assignment", icon: NotebookPen },
   ];
 
   return (
@@ -55,29 +55,8 @@ export default function PaperNotesScreen() {
         <View className="mb-4" />
       )}
 
-      <View className="flex-row rounded-xl p-1 mb-5" style={{ backgroundColor: segBg }}>
-        {sections.map((s) => {
-          const active = section === s.key;
-          return (
-            <Pressable
-              key={s.key}
-              onPress={() => setSection(s.key)}
-              className="flex-1 py-2 rounded-lg items-center"
-              style={{ backgroundColor: active ? (isDark ? "#4338ca" : "#ffffff") : "transparent" }}
-            >
-              <Text
-                style={{
-                  color: active ? (isDark ? "#ffffff" : accent) : theme.text,
-                  opacity: active ? 1 : 0.6,
-                  fontWeight: active ? "700" : "500",
-                  fontSize: 14,
-                }}
-              >
-                {s.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+      <View className="mb-5">
+        <Tabs tabs={sections} value={section} onChange={setSection} />
       </View>
 
       {section === "notes" ? (

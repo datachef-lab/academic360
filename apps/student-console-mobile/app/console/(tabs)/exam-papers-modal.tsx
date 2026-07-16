@@ -8,7 +8,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -16,6 +15,7 @@ import {
   View,
 } from "react-native";
 
+import { Dialog } from "@/components/ui/Dialog";
 import { formatDate, formatTime } from "@/lib/date";
 
 interface PaperDetails {
@@ -169,143 +169,118 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
     })();
 
   return (
-    <Modal
-      visible={open}
-      transparent
-      animationType="slide"
-      onRequestClose={() => onOpenChange(false)}
-    >
-      <Pressable
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}
-        onPress={() => onOpenChange(false)}
+    <Dialog visible={open} onClose={() => onOpenChange(false)} bg={theme.background}>
+      {/* Header */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 20,
+          paddingVertical: 16,
+          backgroundColor: accent,
+        }}
       >
-        <Pressable
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            maxHeight: "90%",
-            backgroundColor: theme.background,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            overflow: "hidden",
-          }}
-          onPress={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingHorizontal: 20,
-              paddingVertical: 16,
-              backgroundColor: accent,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "600" }}>Exam Schedule</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              {showDownload && (
-                <Pressable
-                  onPress={handleDownloadAdmitCard}
-                  disabled={downloading || loading}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {downloading ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Download size={20} color="#fff" />
-                  )}
-                </Pressable>
-              )}
-              <Pressable onPress={() => onOpenChange(false)} style={{ padding: 8 }}>
-                <Text style={{ color: "#fff", fontSize: 15, fontWeight: "500" }}>Close</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {loading ? (
-            <View style={{ padding: 48, alignItems: "center" }}>
-              <ActivityIndicator size="large" color={accent} />
-              <Text style={{ color: theme.text, marginTop: 12 }}>Loading exam papers...</Text>
-            </View>
-          ) : paperDetails.length === 0 ? (
-            <View style={{ padding: 48, alignItems: "center" }}>
-              <Text style={{ color: theme.text, opacity: 0.8 }}>No exam papers found.</Text>
-            </View>
-          ) : (
-            <ScrollView
-              style={{ maxHeight: 400 }}
-              contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
-              showsVerticalScrollIndicator={false}
+        <Text style={{ color: "#fff", fontSize: 18, fontWeight: "600" }}>Exam Schedule</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          {showDownload && (
+            <Pressable
+              onPress={handleDownloadAdmitCard}
+              disabled={downloading || loading}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "rgba(255,255,255,0.2)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              {paperDetails.map((detail, idx) => (
-                <View
-                  key={idx}
-                  style={{
-                    padding: 14,
-                    marginBottom: 10,
-                    backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f9fafb",
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                  }}
-                >
-                  <View
+              {downloading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Download size={20} color="#fff" />
+              )}
+            </Pressable>
+          )}
+          <Pressable onPress={() => onOpenChange(false)} style={{ padding: 8 }}>
+            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "500" }}>Close</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={{ padding: 48, alignItems: "center" }}>
+          <ActivityIndicator size="large" color={accent} />
+          <Text style={{ color: theme.text, marginTop: 12 }}>Loading exam papers...</Text>
+        </View>
+      ) : paperDetails.length === 0 ? (
+        <View style={{ padding: 48, alignItems: "center" }}>
+          <Text style={{ color: theme.text, opacity: 0.8 }}>No exam papers found.</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={{ maxHeight: 400 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {paperDetails.map((detail, idx) => (
+            <View
+              key={idx}
+              style={{
+                padding: 14,
+                marginBottom: 10,
+                backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f9fafb",
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: cardBorder,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600" }}>
+                  {formatDate(detail.startTime)}
+                </Text>
+                <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>
+                  {detail.paperCode}
+                </Text>
+              </View>
+              <Text style={{ color: theme.text, opacity: 0.8, fontSize: 13 }}>
+                {formatTime(detail.startTime)} – {formatTime(detail.endTime)}
+              </Text>
+              <View style={{ marginTop: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <Text style={{ color: theme.text, fontSize: 13 }}>Room: {detail.room}</Text>
+                {detail.floor && (
+                  <Text style={{ color: theme.text, opacity: 0.7, fontSize: 13 }}>
+                    • {detail.floor}
+                  </Text>
+                )}
+                {detail.seatNumber && (
+                  <Text
                     style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      marginBottom: 8,
+                      color: accent,
+                      fontSize: 12,
+                      fontWeight: "600",
+                      backgroundColor: isDark ? "rgba(99,102,241,0.2)" : "#eef2ff",
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
                     }}
                   >
-                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600" }}>
-                      {formatDate(detail.startTime)}
-                    </Text>
-                    <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>
-                      {detail.paperCode}
-                    </Text>
-                  </View>
-                  <Text style={{ color: theme.text, opacity: 0.8, fontSize: 13 }}>
-                    {formatTime(detail.startTime)} – {formatTime(detail.endTime)}
+                    Seat: {detail.seatNumber}
                   </Text>
-                  <View style={{ marginTop: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    <Text style={{ color: theme.text, fontSize: 13 }}>Room: {detail.room}</Text>
-                    {detail.floor && (
-                      <Text style={{ color: theme.text, opacity: 0.7, fontSize: 13 }}>
-                        • {detail.floor}
-                      </Text>
-                    )}
-                    {detail.seatNumber && (
-                      <Text
-                        style={{
-                          color: accent,
-                          fontSize: 12,
-                          fontWeight: "600",
-                          backgroundColor: isDark ? "rgba(99,102,241,0.2)" : "#eef2ff",
-                          paddingHorizontal: 8,
-                          paddingVertical: 2,
-                          borderRadius: 6,
-                        }}
-                      >
-                        Seat: {detail.seatNumber}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
+                )}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </Dialog>
   );
 }
 

@@ -5,12 +5,13 @@ import notesImg from "@/assets/illustrations/academics/notes.jpg";
 import statusImg from "@/assets/illustrations/academics/status.jpg";
 import subjectSelectionImg from "@/assets/illustrations/academics/subject-selection.jpg";
 import timetableImg from "@/assets/illustrations/academics/timetable.jpg";
+import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight, FolderClosed, LayoutGrid } from "lucide-react-native";
 import React, { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
@@ -27,7 +28,6 @@ export default function AcademicsScreen() {
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "#f8fafc";
   const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
   const accent = isDark ? "#a5b4fc" : "#4f46e5";
-  const segBg = isDark ? "rgba(255,255,255,0.06)" : "#eef2ff";
 
   const promo = student?.currentPromotion;
   const affiliation = student?.programCourse?.affiliation ?? promo?.programCourse?.affiliation;
@@ -88,9 +88,9 @@ export default function AcademicsScreen() {
     },
   ];
 
-  const tabs: { key: TabKey; label: string }[] = [
-    { key: "activities", label: "Activities" },
-    { key: "records", label: "Records" },
+  const tabItems: TabItem<TabKey>[] = [
+    { id: "activities", label: "Activities", icon: LayoutGrid },
+    { id: "records", label: "Records", icon: FolderClosed },
   ];
 
   const cards = tab === "activities" ? activityCards : recordCards;
@@ -102,30 +102,8 @@ export default function AcademicsScreen() {
       contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Segmented control */}
-      <View className="flex-row rounded-xl p-1 mb-5" style={{ backgroundColor: segBg }}>
-        {tabs.map((t) => {
-          const active = tab === t.key;
-          return (
-            <Pressable
-              key={t.key}
-              onPress={() => setTab(t.key)}
-              className="flex-1 py-2 rounded-lg items-center"
-              style={{ backgroundColor: active ? (isDark ? "#4338ca" : "#ffffff") : "transparent" }}
-            >
-              <Text
-                style={{
-                  color: active ? (isDark ? "#ffffff" : accent) : theme.text,
-                  opacity: active ? 1 : 0.6,
-                  fontWeight: active ? "700" : "500",
-                  fontSize: 14,
-                }}
-              >
-                {t.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+      <View className="mb-5">
+        <Tabs tabs={tabItems} value={tab} onChange={setTab} />
       </View>
 
       <View className="gap-3">
