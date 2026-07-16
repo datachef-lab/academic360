@@ -123,10 +123,14 @@ export default function NotesScreen() {
   const semesterOptions = semesterNames.map((n) => ({ value: n, label: toSentenceCase(n) }));
   const currentClassName = student?.currentPromotion?.class?.name?.trim();
 
+  // Default to the student's current semester (from the DTO), matched by its
+  // roman numeral so minor label differences still resolve.
   useEffect(() => {
     if (sem || semesterNames.length === 0) return;
-    setSem(currentClassName && bySem.has(currentClassName) ? currentClassName : semesterNames[0]);
-  }, [sem, semesterNames, currentClassName, bySem]);
+    const curNum = romanToNum(currentClassName);
+    const match = semesterNames.find((n) => romanToNum(n) === curNum);
+    setSem(match ?? semesterNames[0]);
+  }, [sem, semesterNames, currentClassName]);
 
   const papers = sem ? (bySem.get(sem) ?? []) : [];
 
@@ -198,6 +202,7 @@ export default function NotesScreen() {
                       className="text-base font-semibold"
                     >
                       {p.name}
+                      {!p.elective ? <Text style={{ color: "#ef4444" }}> *</Text> : null}
                     </Text>
                     {p.elective ? (
                       <View
@@ -211,7 +216,7 @@ export default function NotesScreen() {
                     ) : null}
                   </View>
                   <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
-                    {[p.code, p.type].filter(Boolean).join(" · ") || "Paper"}
+                    {p.code || "Paper"}
                   </Text>
                 </View>
                 <ChevronRight size={20} color={theme.text} style={{ opacity: 0.4 }} />
