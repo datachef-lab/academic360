@@ -3,6 +3,7 @@ import {
   findSubjectsSelections,
   findMandatoryPapers,
 } from "../services/student-subjects.service.js";
+import { getStudentUniversitySubjects } from "../services/student-subject-selection.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 
 export async function getStudentSubjectSelections(req: Request, res: Response) {
@@ -58,6 +59,39 @@ export async function getStudentMandatoryPapers(req: Request, res: Response) {
           "INTERNAL_SERVER_ERROR",
           null,
           error?.message || "Failed to fetch mandatory papers",
+        ),
+      );
+  }
+}
+
+// GET /api/subject-selection/students/:studentId/university-subjects
+// Per-student, per-semester subjects (mandatory + optional) from the same
+// authoritative source as the bulk subjects report.
+export async function getStudentUniversitySubjectsController(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const studentId = Number(req.params.studentId);
+    if (!studentId || Number.isNaN(studentId)) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid studentId"));
+    }
+
+    const rows = await getStudentUniversitySubjects(studentId);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "OK", rows, "Fetched university subjects"));
+  } catch (error: any) {
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(
+          500,
+          "INTERNAL_SERVER_ERROR",
+          null,
+          error?.message || "Failed to fetch university subjects",
         ),
       );
   }

@@ -2665,6 +2665,59 @@ export async function exportStudentSubjectsReport(
   }
 }
 
+export type StudentUniversitySubjectRow = {
+  student_id: number;
+  uid: string | null;
+  semester: string | null;
+  subject: string | null;
+  subject_type: string | null;
+  paper_id: number | null;
+  paper: string | null;
+  paper_code: string | null;
+  is_optional: boolean | null;
+  promotion_academic_year: string | null;
+};
+
+/** Resolve a student's current academic year from their latest promotion. */
+async function getStudentCurrentAcademicYearId(
+  studentId: number,
+): Promise<number | null> {
+  const { rows } = await pool.query(
+    `SELECT sess.academic_id_fk AS academic_year_id
+     FROM promotions pr
+     JOIN sessions sess ON sess.id = pr.session_id_fk
+     WHERE pr.student_id_fk = $1 AND COALESCE(pr.is_deprecated, false) = false
+     ORDER BY pr.id DESC
+     LIMIT 1`,
+    [studentId],
+  );
+  return rows[0]?.academic_year_id ?? null;
+}
+
+/**
+ * Per-student university subjects (mandatory + optional papers) for the current
+ * academic year, per semester. Reuses the exact same authoritative SQL as the
+ * bulk "Student University Subjects" report, filtered to a single student.
+ */
+export async function getStudentUniversitySubjects(
+  studentId: number,
+): Promise<StudentUniversitySubjectRow[]> {
+  const academicYearId = await getStudentCurrentAcademicYearId(studentId);
+  if (!academicYearId) return [];
+
+  const { text, values } = buildStudentSubjectsExportSql(
+    academicYearId,
+    {},
+    "full",
+  );
+  const inner = text.replace(/;\s*$/, "");
+  const wrapped = `SELECT * FROM (${inner}) sub WHERE sub.student_id = $${
+    values.length + 1
+  }`;
+  const { rows } = await pool.query(wrapped, [...values, studentId]);
+  return rows as StudentUniversitySubjectRow[];
+}
+
 // -- Version History and Audit Trail Functions --
 
 // Get version history for a student's subject selections
