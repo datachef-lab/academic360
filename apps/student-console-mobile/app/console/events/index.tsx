@@ -1,10 +1,11 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function EventsScreen() {
   return (
-    <View>
-      <Text>EventsScreen</Text>
-    </View>
+    <ComingSoon
+      title="Events & Participations"
+      message="Events you join and certificates you earn will appear here soon."
+    />
   );
 }

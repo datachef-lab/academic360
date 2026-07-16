@@ -1,10 +1,6 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function SettingsScreen() {
-  return (
-    <View>
-      <Text>SettingsScreen</Text>
-    </View>
-  );
+  return <ComingSoon title="Settings" message="Manage your preferences and security here soon." />;
 }

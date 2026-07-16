@@ -1,3 +1,4 @@
+import admitCardImg from "@/assets/illustrations/academics/admit-card.jpg";
 import attendanceImg from "@/assets/illustrations/academics/attendance.jpg";
 import cuRegistrationImg from "@/assets/illustrations/academics/cu-registration.jpg";
 import examFormImg from "@/assets/illustrations/academics/exam-form.jpg";
@@ -54,6 +55,13 @@ export default function AcademicsScreen() {
       desc: "Fill and upload your examination form",
       img: examFormImg,
       path: "/console/academics/cu-exam-form-upload",
+    },
+    {
+      id: "admit-card",
+      label: "Collect Admit Card",
+      desc: "Download your exam admit card",
+      img: admitCardImg,
+      path: "/console/exams",
     },
   ];
 

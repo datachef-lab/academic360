@@ -1,10 +1,11 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function ServiceRequestsScreen() {
   return (
-    <View>
-      <Text>ServiceRequestsScreen</Text>
-    </View>
+    <ComingSoon
+      title="Service Requests"
+      message="Raise and track your student requests here soon."
+    />
   );
 }

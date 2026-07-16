@@ -1,10 +1,8 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function LibraryScreen() {
   return (
-    <View>
-      <Text>LibraryScreen</Text>
-    </View>
+    <ComingSoon title="Library" message="Browse books and manage your library account here soon." />
   );
 }

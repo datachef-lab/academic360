@@ -1,10 +1,11 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function HelpAndSupportScreen() {
   return (
-    <View>
-      <Text>HelpAndSupportScreen</Text>
-    </View>
+    <ComingSoon
+      title="Help & Support"
+      message="Get help, FAQs and support for the portal here soon."
+    />
   );
 }

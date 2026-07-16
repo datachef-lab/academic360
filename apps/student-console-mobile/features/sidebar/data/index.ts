@@ -5,7 +5,6 @@ import {
   ClipboardListIcon,
   CogIcon,
   FileTextIcon,
-  GraduationCapIcon,
   HouseIcon,
   LifeBuoyIcon,
   LucideIcon,
@@ -33,12 +32,6 @@ export const sidebarItems = [
     icon: HouseIcon,
     path: "/console",
     oneLiner: "Your dashboard at a glance",
-  },
-  {
-    label: "Current Academic Status",
-    icon: GraduationCapIcon,
-    path: "/console/academics/current-status",
-    oneLiner: "Track your semester and enrollment status",
   },
   {
     label: "Academics",

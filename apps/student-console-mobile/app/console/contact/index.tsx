@@ -1,10 +1,8 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function CollegeContactScreen() {
   return (
-    <View>
-      <Text>CollegeContactScreen</Text>
-    </View>
+    <ComingSoon title="Contact College" message="Reach your college administration here soon." />
   );
 }

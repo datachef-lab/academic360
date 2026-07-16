@@ -1,10 +1,11 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function DocumentScreen() {
   return (
-    <View>
-      <Text>DocumentScreen</Text>
-    </View>
+    <ComingSoon
+      title="Documents"
+      message="Your certificates and records will be downloadable here soon."
+    />
   );
 }

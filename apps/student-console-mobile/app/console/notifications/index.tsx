@@ -1,10 +1,11 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function NotificationsScreen() {
   return (
-    <View>
-      <Text>NotificationsScreen</Text>
-    </View>
+    <ComingSoon
+      title="Notifications"
+      message="Your important updates and alerts will appear here soon."
+    />
   );
 }

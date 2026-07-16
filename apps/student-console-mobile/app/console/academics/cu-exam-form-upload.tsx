@@ -1,10 +1,11 @@
-import { View, Text } from "react-native";
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
 
 export default function CuExamFormUploadScreen() {
   return (
-    <View>
-      <Text>CuExamFormUploadScreen</Text>
-    </View>
+    <ComingSoon
+      title="Exam Form Fillup"
+      message="Fill and upload your examination form here soon."
+    />
   );
 }

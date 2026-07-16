@@ -6,9 +6,8 @@ import { useAuth } from "@/providers/auth-provider";
 import { useFeeSocketRefresh } from "@/providers/exam-socket-provider";
 import { fetchStudentFeeMappings, type StudentFeeMapping } from "@/services/fees-api";
 import type { StudentDto } from "@repo/db/dtos/user";
-import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
-import { History, IndianRupeeIcon } from "lucide-react-native";
+import { IndianRupeeIcon } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
@@ -118,45 +117,7 @@ export default function FeesScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={isDark ? ["#312e81", "#4f46e5", "#6366f1"] : ["#1e40af", "#4f46e5", "#7c3aed"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ margin: 12, borderRadius: 16, padding: 18 }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 14,
-                backgroundColor: "rgba(255,255,255,0.2)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <IndianRupeeIcon size={26} color="#fff" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>Fees</Text>
-              <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 4 }}>
-                {pendingCount > 0
-                  ? `${pendingCount} pending fee${pendingCount === 1 ? "" : "s"}`
-                  : "All fees are up to date"}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => loadMappings(true)}
-              style={{
-                padding: 8,
-                borderRadius: 10,
-                backgroundColor: "rgba(255,255,255,0.15)",
-              }}
-            >
-              <History size={20} color="#fff" />
-            </Pressable>
-          </View>
-        </LinearGradient>
+        <View style={{ height: 12 }} />
 
         <View
           style={{

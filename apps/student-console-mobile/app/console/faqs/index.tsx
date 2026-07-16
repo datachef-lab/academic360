@@ -1,10 +1,8 @@
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import React from "react";
-import { Text, View } from "react-native";
 
 export default function FaqsScreen() {
   return (
-    <View>
-      <Text>FaqsScreen</Text>
-    </View>
+    <ComingSoon title="FAQs" message="Quick answers to common questions will appear here soon." />
   );
 }
