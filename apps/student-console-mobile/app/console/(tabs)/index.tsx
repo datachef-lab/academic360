@@ -5,17 +5,13 @@ import {
   Calendar,
   CalendarCheck,
   FileEdit,
+  FileText,
+  GraduationCap,
   Megaphone,
   PartyPopper,
   BookOpen,
-  FileSearch,
   ChevronRight,
   X,
-  IndianRupee,
-  Library,
-  Upload,
-  ClipboardList,
-  ListChecks,
   Coffee,
   Wrench,
   type LucideIcon,
@@ -73,18 +69,20 @@ const STORY_ICON_BGS = {
   rose: "#f43f5e",
 };
 
+// "For You" surfaces time-sensitive items that AREN'T bottom-tab destinations
+// (Exams/Fees/Library live in the tab bar, so they're intentionally omitted here
+// to avoid duplicate entry points). Replace with API data later.
 const MOCK_ACTIVITIES: ActivityItem[] = [
   {
     id: "1",
-    type: "exam",
-    title: "Exam",
-    subtitle: "Maths - Tomorrow",
-    timeLabel: "Due",
-    iconBg: STORY_ICON_BGS.indigo,
-    icon: CalendarCheck,
-    path: "/console/exams",
-    detail:
-      "Internal examination for Mathematics is scheduled for tomorrow. Please ensure you have your admit card.",
+    type: "class",
+    title: "10 AM",
+    subtitle: "Room 201",
+    timeLabel: "Today",
+    iconBg: STORY_ICON_BGS.purple,
+    icon: Calendar,
+    path: "/console/academics",
+    detail: "Your next class is at 10:00 AM in Room 201. Subject: Business Economics.",
   },
   {
     id: "2",
@@ -111,28 +109,6 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
   },
   {
     id: "4",
-    type: "fee",
-    title: "Fee Due",
-    subtitle: "Semester 4",
-    timeLabel: "Action",
-    iconBg: STORY_ICON_BGS.teal,
-    icon: IndianRupee,
-    path: "/console/fees",
-    detail: "Your semester 4 fee payment is pending. Please complete the payment at the earliest.",
-  },
-  {
-    id: "5",
-    type: "library",
-    title: "Books",
-    subtitle: "2 due",
-    timeLabel: "Reminder",
-    iconBg: STORY_ICON_BGS.rose,
-    icon: Library,
-    path: "/console/library",
-    detail: "You have 2 library books due for return. Kindly return them to avoid late fees.",
-  },
-  {
-    id: "6",
     type: "event",
     title: "Tech Fest",
     subtitle: "Reg. open",
@@ -142,50 +118,21 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     path: "/console/events",
     detail: "Annual Tech Fest registration is now open. Last date to register: 20th Feb.",
   },
-  {
-    id: "7",
-    type: "class",
-    title: "10 AM",
-    subtitle: "Room 201",
-    timeLabel: "Today",
-    iconBg: STORY_ICON_BGS.purple,
-    icon: Calendar,
-    path: "/console/academics",
-    detail: "Your next class is at 10:00 AM in Room 201. Subject: Business Economics.",
-  },
 ];
 
-// Quick actions - ONLY items NOT in bottom nav (Study Notes, Fees, Exams, Library are in tabs)
+// Quick actions - shortcuts that are NOT already reachable from the bottom tabs
+// or the sidebar. The academic sub-tasks (CU form upload, admission registration,
+// subject selection) live under a single "Academics" hub instead of separate
+// tiles; Requests / Notifications / Events are omitted here as they're in the sidebar.
 const QUICK_ACTIONS = [
+  { id: "academics", label: "Academics", icon: GraduationCap, path: "/console/academics" },
   {
     id: "attendance",
     label: "Attendance",
     icon: CalendarCheck,
     path: "/console/academics/current-status",
   },
-  { id: "timetable", label: "Timetable", icon: Calendar, path: "/console/academics" },
-  {
-    id: "cu-exam-form",
-    label: "CU Exam Form Upload",
-    icon: Upload,
-    path: "/console/academics/cu-exam-form-upload",
-  },
-  {
-    id: "cu-registration",
-    label: "Adm. Reg",
-    icon: ClipboardList,
-    path: "/console/academics/adm-registration",
-  },
-  {
-    id: "subject-selection",
-    label: "Subject Selection",
-    icon: ListChecks,
-    path: "/console/academics/subject-selection",
-  },
-  { id: "requests", label: "Requests", icon: FileSearch, path: "/console/service-requests" },
-  { id: "notifications", label: "Notifications", icon: Megaphone, path: "/console/notifications" },
-  { id: "events", label: "Events", icon: PartyPopper, path: "/console/events" },
-  { id: "documents", label: "Documents", icon: FileEdit, path: "/console/documents" },
+  { id: "documents", label: "Documents", icon: FileText, path: "/console/documents" },
 ];
 
 // Recent updates - different from activities (full list view)
@@ -196,6 +143,7 @@ const MOCK_UPDATES = [
     iconBg: "#6366f1",
     title: "Internal Exam Schedule Announced",
     time: "Just Now",
+    path: "/console/exams",
   },
   {
     id: "2",
@@ -203,6 +151,7 @@ const MOCK_UPDATES = [
     iconBg: "#3b82f6",
     title: "Assignment Due Tomorrow: Marketing",
     time: "30 mins ago",
+    path: "/console/documents",
   },
   {
     id: "3",
@@ -210,6 +159,7 @@ const MOCK_UPDATES = [
     iconBg: "#f43f5e",
     title: "Library Book Return Reminder",
     time: "1 hour ago",
+    path: "/console/library",
   },
 ];
 
@@ -483,7 +433,7 @@ export default function ConsoleScreen() {
           return (
             <Pressable
               key={item.id}
-              onPress={() => router.push("/console/notifications")}
+              onPress={() => router.push(item.path as any)}
               className="flex-row items-center p-3"
               style={{
                 borderBottomWidth: index < MOCK_UPDATES.length - 1 ? 1 : 0,

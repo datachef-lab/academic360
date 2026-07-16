@@ -30,17 +30,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const theme = colorScheme === "dark" ? Colors.dark : Colors.light;
 
-  if (__DEV__) {
-    console.log("[ThemeProvider] theme:", {
-      colorScheme,
-      "theme.background": theme.background,
-      "theme.background === 'white'": theme.background === "white",
-    });
-  }
+  // Cast sidesteps the monorepo dual @types/react (18 web / 19 mobile) JSX mismatch.
+  const Provider = ThemeContext.Provider as unknown as React.FC<{
+    value: ThemeContextType;
+    children?: React.ReactNode;
+  }>;
 
   return (
-    <ThemeContext.Provider value={{ theme, colorScheme, setColorScheme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <Provider value={{ theme, colorScheme, setColorScheme, toggleTheme }}>{children}</Provider>
   );
 };

@@ -39,10 +39,8 @@ export function feeMappingTitle(mapping: StudentFeeMapping): string {
 }
 
 export function feeMappingSubtitle(mapping: StudentFeeMapping): string {
-  const installment = mapping.feeStructureInstallment?.name
-    ? toSentenceCase(mapping.feeStructureInstallment.name)
-    : undefined;
-  return installment ?? "";
+  const num = mapping.feeStructureInstallment?.installmentNumber;
+  return num ? `Installment ${num}` : "";
 }
 
 export function hasChallan(mapping: StudentFeeMapping): boolean {

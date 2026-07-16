@@ -26,7 +26,8 @@ export async function uploadCuRegistrationDocument(args: {
   remarks?: string;
 }): Promise<DocumentUploadResult> {
   const formData = new FormData();
-  formData.append("file", args.file as unknown);
+  // RN FormData accepts a { uri, name, type } file object; the web lib.dom types don't model it.
+  formData.append("file", args.file as unknown as Blob);
   formData.append(
     "cuRegistrationCorrectionRequestId",
     String(args.cuRegistrationCorrectionRequestId),

@@ -9,21 +9,7 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function formatTime(d: Date): string {
-  return d.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
+import { formatDate, formatTime } from "@/lib/date";
 
 function hasUpcomingPapers(exam: ExamDto, today: Date): boolean {
   if (!exam.examSubjects?.length) return false;

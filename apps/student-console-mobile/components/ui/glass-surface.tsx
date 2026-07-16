@@ -30,7 +30,6 @@ export function GlassSurface({ isDark, style, borderRadius = 0 }: GlassSurfacePr
           style,
           {
             backgroundColor: isDark ? "rgba(32,32,32,0.35)" : "rgba(255,255,255,0.35)",
-            // @ts-expect-error web-only
             backdropFilter: "blur(24px) saturate(160%)",
             // @ts-expect-error web-only
             WebkitBackdropFilter: "blur(24px) saturate(160%)",

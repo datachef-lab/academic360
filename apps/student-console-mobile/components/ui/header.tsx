@@ -1,57 +1,47 @@
+import { Avatar } from "@/components/ui/Avatar";
 import { GlassSurface } from "@/components/ui/glass-surface";
+import { useBranding } from "@/hooks/use-branding";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
-import { getStudentImageUrl } from "@/lib/student-image";
-import { usePathname, useRouter } from "expo-router";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { Image } from "expo-image";
+import { usePathname, useRouter } from "expo-router";
 import { Moon, Sun } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React from "react";
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export const CONSOLE_HEADER_HEIGHT = 72;
 
-const AVATAR_COLORS_LIGHT = [
-  "#4F46E5",
-  "#6366F1",
-  "#7C3AED",
-  "#8B5CF6",
-  "#A78BFA",
-  "#6366F1",
-  "#0EA5E9",
-  "#06B6D4",
-  "#14B8A6",
-  "#10B981",
-  "#059669",
-  "#4F46E5",
-  "#5B21B6",
-  "#6D28D9",
-  "#7C3AED",
-  "#8B5CF6",
-];
-
-const AVATAR_COLORS_DARK = [
-  "#6366F1",
-  "#818CF8",
-  "#A78BFA",
-  "#C4B5FD",
-  "#DDD6FE",
-  "#818CF8",
-  "#38BDF8",
-  "#22D3EE",
-  "#2DD4BF",
-  "#34D399",
-  "#10B981",
-  "#6366F1",
-  "#7C3AED",
-  "#8B5CF6",
-  "#A78BFA",
-  "#C4B5FD",
-];
-
-function getAvatarColorForChar(char: string, isDark: boolean): string {
-  const palette = isDark ? AVATAR_COLORS_DARK : AVATAR_COLORS_LIGHT;
-  const code = char.toUpperCase().charCodeAt(0);
-  return palette[code % palette.length];
+/** Maps a console route to the title shown in the header. The brand + student
+ * identity live in the drawer, so inner screens show their own title instead
+ * of repeating "BESC Console". */
+function getScreenTitle(pathname: string): string {
+  const routes: [string, string][] = [
+    ["/console/academics/current-status", "Academic Status"],
+    ["/console/academics/adm-registration", "Registration"],
+    ["/console/academics/subject-selection-instructions", "Subject Selection"],
+    ["/console/academics/subject-selection", "Subject Selection"],
+    ["/console/academics/cu-exam-form-upload", "CU Form Upload"],
+    ["/console/academics", "Academics"],
+    ["/console/service-requests", "Service Requests"],
+    ["/console/notifications", "Notifications"],
+    ["/console/documents", "Documents"],
+    ["/console/events", "Events"],
+    ["/console/settings", "Settings"],
+    ["/console/support", "Help & Support"],
+    ["/console/faqs", "FAQs"],
+    ["/console/contact", "Contact College"],
+    ["/console/profile", "Profile"],
+    ["/console/study-notes", "Study Notes"],
+    ["/console/library", "Library"],
+    ["/console/fees", "Fees"],
+    ["/console/exams/", "Exam"],
+    ["/console/exams", "Exams"],
+  ];
+  for (const [prefix, title] of routes) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return title;
+  }
+  return "";
 }
 
 export function Header() {
@@ -60,14 +50,9 @@ export function Header() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { theme, colorScheme, toggleTheme } = useTheme();
-  const [imageError, setImageError] = useState(false);
+  const { logoUrl } = useBranding();
   const uid = (user?.payload as { uid?: string })?.uid;
-  const studentImageUrl = getStudentImageUrl(uid);
   const isDark = colorScheme === "dark";
-
-  useEffect(() => {
-    setImageError(false);
-  }, [uid]);
 
   const openDrawer = () => {
     let parent: any = navigation;
@@ -86,68 +71,42 @@ export function Header() {
   const avatarSize = 36;
   const isHome =
     pathname === "/console" || pathname === "/console/" || pathname === "/console/(tabs)";
+  const title = getScreenTitle(pathname);
 
   return (
     <View style={styles.shell}>
       <GlassSurface isDark={isDark} />
       <View style={styles.content}>
-        <View style={styles.sideSlot}>
-          {!isHome ? (
-            <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
-              <Text style={{ color: theme.text, fontSize: 24, lineHeight: 24 }}>‹</Text>
-            </Pressable>
-          ) : null}
+        {/* Left: brand on Home, back + title elsewhere */}
+        <View style={styles.left}>
+          {isHome ? (
+            <>
+              <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+              <Text style={[styles.brand, { color: theme.text }]}>BESC Console</Text>
+            </>
+          ) : (
+            <>
+              <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
+                <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
+              </Pressable>
+              <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+                {title}
+              </Text>
+            </>
+          )}
         </View>
 
-        <View style={[styles.centerBrand, isHome && styles.centerBrandHome]} pointerEvents="none">
-          <Image
-            source={{
-              uri: "https://besc.academic360.app/api/api/v1/settings/file/4",
-            }}
-            style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
-          />
-          <View>
-            <Text style={{ color: theme.text, fontSize: 15, fontWeight: "700" }}>BESC Console</Text>
-            {uid ? (
-              <Text style={{ color: theme.text, fontSize: 12, opacity: 0.65 }}>{uid}</Text>
-            ) : null}
-          </View>
-        </View>
-
-        <View className="flex-row items-center gap-3">
+        {/* Right: theme toggle + avatar (opens drawer) */}
+        <View style={styles.right}>
           <TouchableOpacity onPress={() => toggleTheme()} hitSlop={8}>
-            {colorScheme == "dark" ? (
+            {isDark ? (
               <Sun color={theme.text} size={iconSize} />
             ) : (
               <Moon color={theme.text} size={iconSize} />
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={openDrawer} style={{ width: avatarSize, height: avatarSize }}>
-            {studentImageUrl && !imageError ? (
-              <Image
-                source={{ uri: studentImageUrl }}
-                style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <View
-                style={{
-                  width: avatarSize,
-                  height: avatarSize,
-                  borderRadius: avatarSize / 2,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: getAvatarColorForChar(
-                    user?.name?.charAt(0) || "?",
-                    colorScheme === "dark",
-                  ),
-                }}
-              >
-                <Text style={{ color: "#ffffff", fontSize: 13, fontWeight: "600" }}>
-                  {(user?.name?.charAt(0) || "?").toUpperCase()}
-                </Text>
-              </View>
-            )}
+          <TouchableOpacity onPress={openDrawer}>
+            <Avatar uid={uid} name={user?.name} size={avatarSize} />
           </TouchableOpacity>
         </View>
       </View>
@@ -169,29 +128,36 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     zIndex: 1,
   },
-  sideSlot: {
-    width: 40,
-    alignItems: "flex-start",
-    justifyContent: "center",
+  left: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  right: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  logo: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+  },
+  brand: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+    flexShrink: 1,
   },
   backButton: {
-    width: 32,
+    width: 28,
     height: 32,
     alignItems: "center",
     justifyContent: "center",
-  },
-  centerBrand: {
-    position: "absolute",
-    left: 56,
-    right: 56,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  centerBrandHome: {
-    left: 12,
-    right: 88,
-    justifyContent: "flex-start",
+    marginLeft: -4,
   },
 });

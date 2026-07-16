@@ -22,21 +22,7 @@ import {
 
 const BANNER_ASPECT = 16 / 9;
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function formatTime(d: Date): string {
-  return d.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
+import { formatDate, formatTime } from "@/lib/date";
 
 interface PaperDetail {
   paperCode: string;

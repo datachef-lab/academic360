@@ -1,11 +1,11 @@
 import type { StudentDto } from "@repo/db/dtos/user";
 import { useTheme } from "@/hooks/use-theme";
 import { useProfile } from "@/hooks/use-profile";
-import { getStudentImageUrl } from "@/lib/student-image";
+import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/providers/auth-provider";
 import { User } from "lucide-react-native";
-import React, { useState } from "react";
-import { ActivityIndicator, Image, ScrollView, Text, TextInput, View } from "react-native";
+import React from "react";
+import { ActivityIndicator, ScrollView, Text, TextInput, View } from "react-native";
 
 function formatDate(date: Date | string | null | undefined) {
   if (date == null || date === "") return "Not Available";
@@ -48,7 +48,6 @@ export default function ProfileScreen() {
   const { theme, colorScheme } = useTheme();
   const { user } = useAuth();
   const { profileInfo, loading, error } = useProfile();
-  const [imageError, setImageError] = useState(false);
 
   const student = user?.payload as StudentDto | undefined;
   const uid = student?.uid;
@@ -95,9 +94,6 @@ export default function ProfileScreen() {
     );
   }
 
-  const imageUrl = getStudentImageUrl(uid);
-  const showImage = imageUrl && !imageError;
-
   return (
     <ScrollView
       className="flex-1"
@@ -127,29 +123,9 @@ export default function ProfileScreen() {
           <View className="relative mb-4">
             <View
               className="w-24 h-24 rounded-full overflow-hidden items-center justify-center"
-              style={{
-                borderWidth: 3,
-                borderColor: theme.border,
-              }}
+              style={{ borderWidth: 3, borderColor: theme.border }}
             >
-              {showImage ? (
-                <Image
-                  source={{ uri: imageUrl }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                <Text
-                  style={{
-                    color: theme.text,
-                    fontSize: 32,
-                    fontWeight: "700",
-                  }}
-                >
-                  {(user?.name?.charAt(0) || "S").toUpperCase()}
-                </Text>
-              )}
+              <Avatar uid={uid} name={user?.name} size={90} />
             </View>
             <View
               className="absolute -top-1 -right-1 px-2 py-0.5 rounded-full"
