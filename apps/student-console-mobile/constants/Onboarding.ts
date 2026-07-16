@@ -3,45 +3,53 @@ export type OnboardingSlide = {
   title: string;
   subtitle: string;
   description: string;
-  illustration: string; // image / lottie / svg
+  illustration: string; // key mapped to an illustration image in the screen
+  accent?: string; // per-slide accent (non-purple)
+  accentTo?: string; // gradient end for the CTA
   cta?: string;
 };
 
+// Four slides; the last one starts the sign-in. Colours vary; no purple.
 export const onboardingSlides: OnboardingSlide[] = [
   {
     id: 1,
-    title: "Welcome to \n BESC Console.",
+    title: "Welcome to BESC",
     subtitle: "Your academic companion",
-    description:
-      "Your college essentials — classes, exams, fees, library, and services — all in one convenient app.",
+    description: "Classes, exams, fees, library and more, all in one simple app.",
     illustration: "onboarding-campus",
+    accent: "#f43f5e",
+    accentTo: "#fb7185",
     cta: "Next",
   },
   {
     id: 2,
-    title: "Stay on Track Every Day",
-    subtitle: "Classes • Attendance • Timetable",
+    title: "Classes & Exams",
+    subtitle: "Stay on track",
     description:
-      "View today’s classes, mark attendance, track your timetable, and never miss an academic activity.",
-    illustration: "onboarding-schedule",
+      "Attend classes, track your attendance, fill exam forms and view your results and marksheets.",
+    illustration: "onboarding-exams",
+    accent: "#2563eb",
+    accentTo: "#3b82f6",
     cta: "Next",
   },
   {
     id: 3,
-    title: "Exams, Results & Documents",
-    subtitle: "Everything exam-related",
-    description:
-      "Fill exam forms, download admit cards, check results, and access your marksheets securely.",
-    illustration: "onboarding-exams",
+    title: "Fees & Payments",
+    subtitle: "Pay in seconds",
+    description: "Pay your fees, check dues and download receipts, right from your phone.",
+    illustration: "onboarding-fees",
+    accent: "#16a34a",
+    accentTo: "#22c55e",
     cta: "Next",
   },
   {
     id: 4,
-    title: "Ready to Get Started?",
-    subtitle: "Login to access your dashboard",
-    description:
-      "Sign in with your credentials to access your personalized dashboard, track your progress, and manage your academic journey.",
+    title: "Ready to begin",
+    subtitle: "Let’s get started",
+    description: "Sign in with your college credentials to open your personal dashboard.",
     illustration: "onboarding-login",
+    accent: "#7c3aed",
+    accentTo: "#8b5cf6",
     cta: "Get Started",
   },
 ];

@@ -1,448 +1,322 @@
-import { onboardingSlides } from "@/constants/Onboarding";
-import { useTheme } from "@/hooks/use-theme";
-import { getOnboardingCompleted, setOnboardingCompleted } from "@/lib/onboarding-storage";
-import { useAuth } from "@/providers/auth-provider";
-import { router } from "expo-router";
-import { Calendar, FileText, GraduationCap, Library, LogIn, Sparkles } from "lucide-react-native";
-import React, { useCallback, useEffect, useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
-import { Directions, Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useCallback, useEffect, useState } from "react";
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  FadeIn,
-  FadeOut,
-  SlideInLeft,
-  SlideInRight,
-  SlideOutLeft,
-  SlideOutRight,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { LinearGradient } from "expo-linear-gradient";
-import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
+import { StatusBar } from "expo-status-bar";
+import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
+import { ArrowRight } from "lucide-react-native";
 
-// Dark black-like background for onboarding
-const ONBOARDING_BG_TOP = "#0a0a0a";
-const ONBOARDING_BG_BOTTOM = "#15141A";
+import { OnboardingIllustration } from "@/components/onboarding/OnboardingIllustration";
+import { Button } from "@/components/ui/Button";
+import { brandLogoUrl, onboardingImages } from "@/constants/Images";
+import { onboardingSlides } from "@/constants/Onboarding";
+import { getOnboardingCompleted, setOnboardingCompleted } from "@/lib/onboarding-storage";
+import { useAuth } from "@/providers/auth-provider";
 
-// Animation constants - synchronized timing
-const ANIMATION_DURATION = 400;
-const ANIMATION_DELAY = 100;
-const SPRING_CONFIG = {
-  damping: 15,
-  stiffness: 150,
-  mass: 0.8,
-};
+// Neutral light theme (no purple). Colour comes from each slide's accent.
+const BG = "#ffffff";
+const TEXT_DARK = "#1e293b";
+const TEXT_MUTED = "#64748b";
+const DOT_INACTIVE = "#dbe1ea";
 
-// Icon mapping for illustrations
-const iconMap: Record<string, React.ComponentType<any>> = {
-  "onboarding-campus": GraduationCap,
-  "onboarding-schedule": Calendar,
-  "onboarding-exams": FileText,
-  "onboarding-services": Library,
-  "onboarding-login": LogIn,
-};
+// `any` cast: dual @types/react (18 web / 19 mobile) trips lucide's JSX type.
+const ArrowIcon: any = ArrowRight;
 
-// Animated Pagination Dot Component
-function AnimatedDot({
-  isActive,
-  accentColor,
-  isDark,
-}: {
-  isActive: boolean;
-  accentColor: string;
-  isDark: boolean;
-}) {
-  const width = useSharedValue(isActive ? 24 : 8);
-  const opacity = useSharedValue(isActive ? 1 : 0.4);
-  const scale = useSharedValue(isActive ? 1.2 : 1);
+const SPRING = { damping: 22, stiffness: 210, mass: 0.6 };
+const DOT_SPRING = { damping: 15, stiffness: 150, mass: 0.8 };
+const N = onboardingSlides.length;
+
+/** Subtle decorative background (soft blobs + dot clusters) tinted to the
+ * current slide's accent, filling the otherwise-empty space. */
+function OnboardingBackground({ accent, w, h }: { accent: string; w: number; h: number }) {
+  const dots: { top: number; left: number }[] = [];
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      dots.push({ top: h * 0.1 + r * 22, left: w * 0.07 + c * 22 }); // top-left cluster
+      dots.push({ top: h * 0.72 + r * 22, left: w * 0.66 + c * 22 }); // bottom-right cluster
+    }
+  }
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View
+        style={{
+          position: "absolute",
+          top: -70,
+          right: -80,
+          width: 250,
+          height: 250,
+          borderRadius: 125,
+          backgroundColor: `${accent}0d`,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          bottom: 30,
+          left: -90,
+          width: 230,
+          height: 230,
+          borderRadius: 115,
+          backgroundColor: `${accent}0d`,
+        }}
+      />
+      {dots.map((d, i) => (
+        <View
+          key={i}
+          style={{
+            position: "absolute",
+            top: d.top,
+            left: d.left,
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: `${accent}24`,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+function haptic(type: "light" | "success") {
+  if (Platform.OS === "web") return;
+  if (type === "success") {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  } else {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+}
+
+function Dot({ isActive, accent }: { isActive: boolean; accent: string }) {
+  const width = useSharedValue(isActive ? 22 : 7);
+  const opacity = useSharedValue(isActive ? 1 : 0.7);
 
   useEffect(() => {
-    width.value = withSpring(isActive ? 24 : 8, SPRING_CONFIG);
-    opacity.value = withTiming(isActive ? 1 : 0.4, { duration: ANIMATION_DURATION });
-    scale.value = withSpring(isActive ? 1.2 : 1, SPRING_CONFIG);
-  }, [isActive, width, opacity, scale]);
+    width.value = withSpring(isActive ? 22 : 7, DOT_SPRING);
+    opacity.value = withTiming(isActive ? 1 : 0.7, { duration: 260 });
+  }, [isActive, width, opacity]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    width: width.value,
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
-  }));
-
+  const style = useAnimatedStyle(() => ({ width: width.value, opacity: opacity.value }));
   return (
     <Animated.View
       style={[
-        {
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: isActive
-            ? accentColor
-            : isDark
-              ? "rgba(255,255,255,0.3)"
-              : "rgba(0,0,0,0.2)",
-        },
-        animatedStyle,
+        { height: 7, borderRadius: 4, backgroundColor: isActive ? accent : DOT_INACTIVE },
+        style,
       ]}
     />
   );
 }
 
+/** One page: framed illustration panel (fills) + text beneath. */
+function Slide({
+  slideWidth,
+  slideHeight,
+  item,
+}: {
+  slideWidth: number;
+  slideHeight: number;
+  item: (typeof onboardingSlides)[number];
+}) {
+  const image = onboardingImages[item.illustration] ?? onboardingImages["onboarding-campus"];
+  // Bound the image so it doesn't balloon; the group is centered for even spacing.
+  const imgH = Math.round(Math.min(slideHeight * 0.4, slideWidth * 0.92));
+
+  return (
+    <View style={{ width: slideWidth, flex: 1, paddingHorizontal: 18, justifyContent: "center" }}>
+      <View style={{ width: "100%", height: imgH }}>
+        <OnboardingIllustration image={image} />
+      </View>
+
+      <View style={{ marginTop: 26, alignItems: "center" }}>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={{
+            color: TEXT_DARK,
+            fontSize: 28,
+            fontWeight: "800",
+            lineHeight: 34,
+            textAlign: "center",
+            marginBottom: 12,
+          }}
+        >
+          {item.title}
+        </Text>
+        <Text style={{ color: TEXT_MUTED, fontSize: 15, lineHeight: 22, textAlign: "center" }}>
+          {item.description}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export default function OnboardingScreen() {
-  const { theme, colorScheme } = useTheme();
   const { accessToken, user, isReady } = useAuth();
+  const { width, height } = useWindowDimensions();
   const [slideIndex, setSlideIndex] = useState(0);
-  const [direction, setDirection] = useState<"left" | "right">("right");
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+  const [isChecking, setIsChecking] = useState(true);
+  const translateX = useSharedValue(0);
 
-  // Redirect: if authenticated -> /console; if onboarding done -> login
   useEffect(() => {
-    if (!isReady) {
-      console.log("[Onboarding] Waiting for auth to be ready...");
-      return;
-    }
-
-    const checkAndRedirect = async () => {
+    if (!isReady) return;
+    const run = async () => {
       try {
-        console.log("[Onboarding] Checking onboarding status...");
         const completed = await getOnboardingCompleted();
-        setIsCheckingOnboarding(false);
-
-        // If user is already logged in, go to console
+        setIsChecking(false);
         if (accessToken && user?.type === "STUDENT") {
-          console.log("[Onboarding] User authenticated, navigating to /console");
-          try {
-            router.replace("/console");
-          } catch (error) {
-            console.error("[Onboarding] Navigation error to /console:", error);
-          }
+          router.replace("/console");
           return;
         }
-
-        // If onboarding completed, go to login
-        if (completed) {
-          console.log("[Onboarding] Onboarding completed, navigating to login");
-          try {
-            router.replace("/(auth)/login");
-          } catch (error) {
-            console.error("[Onboarding] Navigation error to login:", error);
-          }
-        }
+        if (completed) router.replace("/(auth)/login");
       } catch (error) {
-        console.error("[Onboarding] Error in checkAndRedirect:", error);
-        setIsCheckingOnboarding(false);
+        console.error("[Onboarding] checkAndRedirect:", error);
+        setIsChecking(false);
       }
     };
-
-    void checkAndRedirect();
+    void run();
   }, [isReady, accessToken, user]);
-  const iconScale = useSharedValue(1);
-  const contentOpacity = useSharedValue(1);
+
+  // Keep the strip aligned to the active page (also handles rotation).
+  useEffect(() => {
+    translateX.value = withSpring(-slideIndex * width, SPRING);
+  }, [slideIndex, width, translateX]);
 
   const data = onboardingSlides[slideIndex];
-  const IconComponent = iconMap[data.illustration] || Sparkles;
-  const isDark = true; // Onboarding always uses dark branded background
+  const accent = data.accent ?? "#2563eb";
+  const accentTo = data.accentTo ?? accent;
+  const isLastSlide = slideIndex === N - 1;
 
-  // Theme-based colors (onboarding uses dark branded bg for consistency on mobile)
-  const accentColor = isDark ? "#CEF202" : "#007AFF";
-  const textColor = "#FFFFFF";
-  const textSecondaryColor = "rgba(255,255,255,0.6)";
-
-  // Icon scale animation on slide change
-  useEffect(() => {
-    iconScale.value = withSpring(1.1, SPRING_CONFIG, () => {
-      iconScale.value = withSpring(1, SPRING_CONFIG);
-    });
-  }, [slideIndex, iconScale]);
-
-  // Content fade animation - smoother to prevent layout shifts
-  useEffect(() => {
-    contentOpacity.value = withTiming(0.3, { duration: 100 }, () => {
-      contentOpacity.value = withTiming(1, { duration: ANIMATION_DURATION });
-    });
-  }, [slideIndex, contentOpacity]);
-
-  // ✅ END - Save completion state and navigate to login
-  const handleEndOnboarding = useCallback(async () => {
+  const finish = useCallback(async () => {
+    haptic("success");
     await setOnboardingCompleted();
     setSlideIndex(0);
     router.replace("/(auth)/login");
   }, []);
 
-  // ✅ NEXT
-  const handleOnContinue = useCallback(() => {
-    if (slideIndex === onboardingSlides.length - 1) {
-      void handleEndOnboarding();
-    } else {
-      setDirection("right");
-      setSlideIndex((prev) => prev + 1);
-    }
-  }, [slideIndex, handleEndOnboarding]);
+  const commitIndex = useCallback((i: number) => {
+    setSlideIndex(i);
+    haptic("light");
+  }, []);
 
-  const handleOnBack = useCallback(() => {
-    const isFirstScreen = slideIndex === 0;
-    if (isFirstScreen) {
-      void handleEndOnboarding();
+  const next = useCallback(() => {
+    if (slideIndex >= N - 1) {
+      void finish();
     } else {
-      setDirection("left");
-      setSlideIndex((prev) => prev - 1);
+      setSlideIndex((p) => p + 1);
+      haptic("light");
     }
-  }, [slideIndex, handleEndOnboarding]);
+  }, [slideIndex, finish]);
 
-  // Swipe gestures
-  const swipeForward = Gesture.Fling()
-    .direction(Directions.LEFT)
-    .onEnd(() => {
-      handleOnContinue();
+  // Finger-following horizontal pager: forward = drag right→left, back = left→right.
+  const pan = Gesture.Pan()
+    .activeOffsetX([-14, 14])
+    .onUpdate((e) => {
+      translateX.value = -slideIndex * width + e.translationX;
+    })
+    .onEnd((e) => {
+      const threshold = width * 0.2;
+      let target = slideIndex;
+      if ((e.translationX < -threshold || e.velocityX < -600) && slideIndex < N - 1) {
+        target = slideIndex + 1;
+      } else if ((e.translationX > threshold || e.velocityX > 600) && slideIndex > 0) {
+        target = slideIndex - 1;
+      }
+      translateX.value = withSpring(-target * width, { ...SPRING, velocity: e.velocityX });
+      if (target !== slideIndex) runOnJS(commitIndex)(target);
     });
 
-  const swipeBackward = Gesture.Fling()
-    .direction(Directions.RIGHT)
-    .onEnd(() => {
-      handleOnBack();
-    });
+  const stripStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
 
-  const swipes = Gesture.Simultaneous(swipeBackward, swipeForward);
-
-  // Icon scale animation style
-  const iconScaleStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: iconScale.value }],
-    };
-  });
-
-  // Content opacity animation style
-  const contentOpacityStyle = useAnimatedStyle(() => {
-    return {
-      opacity: contentOpacity.value,
-    };
-  });
-
-  const isLastSlide = slideIndex === onboardingSlides.length - 1;
-
-  // Don't render onboarding content while checking storage (avoids flash)
-  if (isCheckingOnboarding) {
-    return (
-      <LinearGradient colors={[ONBOARDING_BG_TOP, ONBOARDING_BG_BOTTOM]} className="flex-1">
-        <SafeAreaView edges={["top", "bottom"]} className="flex-1">
-          <View className="flex-1" />
-        </SafeAreaView>
-      </LinearGradient>
-    );
+  if (isChecking) {
+    return <View style={{ flex: 1, backgroundColor: BG }} />;
   }
 
   return (
-    <LinearGradient colors={[ONBOARDING_BG_TOP, ONBOARDING_BG_BOTTOM]} className="flex-1">
-      <StatusBar style="light" />
-      <SafeAreaView edges={["top", "bottom"]} className="flex-1">
-        <View className="flex-1">
-          {/* Pagination Dots - Single progress indicator */}
-          <View className="flex-row gap-2 justify-center mt-4 mb-6">
-            {onboardingSlides.map((_slide, idx) => (
-              <AnimatedDot
-                key={idx}
-                isActive={slideIndex === idx}
-                accentColor={accentColor}
-                isDark={isDark}
-              />
+    <View style={{ flex: 1, backgroundColor: BG }}>
+      <OnboardingBackground accent={accent} w={width} h={height} />
+      <StatusBar style="dark" />
+      <SafeAreaView edges={["top", "bottom"]} style={{ flex: 1 }}>
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 8,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Image
+              source={{ uri: brandLogoUrl }}
+              style={{ width: 30, height: 30, borderRadius: 8 }}
+              contentFit="contain"
+            />
+            <Text style={{ marginLeft: 8, color: TEXT_DARK, fontSize: 16, fontWeight: "700" }}>
+              BESC <Text style={{ color: accent, fontWeight: "600" }}>Console</Text>
+            </Text>
+          </View>
+          {!isLastSlide ? (
+            <Pressable onPress={finish} hitSlop={12}>
+              <Text style={{ color: TEXT_MUTED, fontSize: 14, fontWeight: "600" }}>Skip</Text>
+            </Pressable>
+          ) : (
+            <View style={{ width: 34 }} />
+          )}
+        </View>
+
+        {/* Swipeable pager */}
+        <GestureDetector gesture={pan}>
+          <View style={{ flex: 1, overflow: "hidden" }}>
+            <Animated.View
+              style={[{ flex: 1, flexDirection: "row", width: width * N }, stripStyle]}
+            >
+              {onboardingSlides.map((item) => (
+                <Slide key={item.id} slideWidth={width} slideHeight={height} item={item} />
+              ))}
+            </Animated.View>
+          </View>
+        </GestureDetector>
+
+        {/* Footer: dots + single CTA (never shifts) */}
+        <View style={{ paddingHorizontal: 24, paddingBottom: 12, paddingTop: 6 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 7,
+              marginBottom: 20,
+            }}
+          >
+            {onboardingSlides.map((_s, idx) => (
+              <Dot key={idx} isActive={slideIndex === idx} accent={accent} />
             ))}
           </View>
 
-          {/* Gesture Detector for Swipe */}
-          <GestureDetector gesture={swipes}>
-            <View className="flex-1">
-              {/* Icon/Illustration Section - Fixed height to prevent shifting */}
-              <View
-                className="items-center justify-center px-8"
-                style={{ minHeight: 240, maxHeight: 280 }}
-              >
-                <Animated.View
-                  key={`icon-wrapper-${slideIndex}`}
-                  entering={
-                    direction === "right"
-                      ? SlideInRight.duration(ANIMATION_DURATION).delay(ANIMATION_DELAY).springify()
-                      : SlideInLeft.duration(ANIMATION_DURATION).delay(ANIMATION_DELAY).springify()
-                  }
-                  exiting={
-                    direction === "right"
-                      ? SlideOutLeft.duration(ANIMATION_DURATION * 0.75)
-                      : SlideOutRight.duration(ANIMATION_DURATION * 0.75)
-                  }
-                  className="items-center justify-center"
-                  style={{ width: 192, height: 192 }}
-                >
-                  <Animated.View
-                    style={[
-                      iconScaleStyle,
-                      {
-                        width: 192,
-                        height: 192,
-                        borderRadius: 96,
-                        backgroundColor: isDark ? `${accentColor}25` : `${accentColor}15`,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        // Shadow for native platforms
-                        ...(Platform.OS !== "web" && {
-                          shadowColor: accentColor,
-                          shadowOffset: { width: 0, height: 0 },
-                          shadowOpacity: isDark ? 0.5 : 0.3,
-                          shadowRadius: isDark ? 30 : 20,
-                          elevation: 10,
-                        }),
-                      },
-                    ]}
-                  >
-                    <IconComponent size={120} color={accentColor} strokeWidth={isDark ? 1.5 : 2} />
-                  </Animated.View>
-                </Animated.View>
-              </View>
-
-              {/* Content Section - Consistent spacing with fixed layout */}
-              <View className="flex-1 px-2 justify-between pb-6">
-                {/* Text Content - Fixed wrapper to prevent shifting */}
-                <View
-                  style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    minHeight: 200,
-                  }}
-                >
-                  <Animated.View
-                    key={`content-${slideIndex}`}
-                    entering={
-                      direction === "right"
-                        ? SlideInRight.duration(ANIMATION_DURATION)
-                            .delay(ANIMATION_DELAY * 1.5)
-                            .springify()
-                        : SlideInLeft.duration(ANIMATION_DURATION)
-                            .delay(ANIMATION_DELAY * 1.5)
-                            .springify()
-                    }
-                    exiting={
-                      direction === "right"
-                        ? SlideOutLeft.duration(ANIMATION_DURATION * 0.75)
-                        : SlideOutRight.duration(ANIMATION_DURATION * 0.75)
-                    }
-                  >
-                    <Animated.View style={contentOpacityStyle}>
-                      {/* Title - Large and Prominent */}
-                      <Animated.Text
-                        key={`title-${slideIndex}`}
-                        entering={FadeIn.delay(ANIMATION_DELAY * 2).duration(ANIMATION_DURATION)}
-                        style={{
-                          color: textColor,
-                          fontSize: 36,
-                          fontWeight: "800",
-                          // lineHeight: 56,
-                          marginBottom: 24,
-                          textAlign: "center",
-                          // paddingHorizontal: 16,
-                        }}
-                      >
-                        {data.title}
-                      </Animated.Text>
-
-                      {/* Description */}
-                      <Animated.Text
-                        key={`description-${slideIndex}`}
-                        entering={FadeIn.delay(ANIMATION_DELAY * 2.5).duration(ANIMATION_DURATION)}
-                        style={{
-                          color: textSecondaryColor,
-                          fontSize: 16,
-                          lineHeight: 24,
-                          textAlign: "center",
-                          paddingHorizontal: 8,
-                        }}
-                      >
-                        {data.description}
-                      </Animated.Text>
-                    </Animated.View>
-                  </Animated.View>
-                </View>
-
-                {/* Button Section - Fixed at bottom with consistent spacing */}
-                <Animated.View
-                  key={`buttons-wrapper-${slideIndex}`}
-                  entering={FadeIn.delay(ANIMATION_DELAY * 3).duration(ANIMATION_DURATION)}
-                >
-                  <Animated.View
-                    style={[
-                      {
-                        marginTop: 40,
-                        paddingTop: 0,
-                      },
-                      contentOpacityStyle,
-                    ]}
-                  >
-                    {/* Skip and Next/Continue Buttons in same row */}
-                    <View className="flex-row gap-3 items-center">
-                      {/* Skip Button */}
-                      <Pressable
-                        onPress={handleEndOnboarding}
-                        className="flex-1 py-4 rounded-2xl active:opacity-70"
-                        style={{
-                          backgroundColor: "transparent",
-                          borderWidth: 1,
-                          borderColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)",
-                        }}
-                      >
-                        <Text
-                          style={{ color: textSecondaryColor }}
-                          className="text-center text-lg font-semibold"
-                        >
-                          Skip
-                        </Text>
-                      </Pressable>
-
-                      {/* CTA Button */}
-                      <Pressable
-                        onPress={handleOnContinue}
-                        className="flex-1 py-4 rounded-2xl active:opacity-90"
-                        style={{
-                          backgroundColor: isLastSlide
-                            ? accentColor
-                            : isDark
-                              ? "rgba(255,255,255,0.1)"
-                              : "rgba(0,0,0,0.05)",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: isLastSlide ? (isDark ? "#15141A" : "#FFFFFF") : textColor,
-                          }}
-                          className="text-center text-lg font-bold"
-                        >
-                          {data.cta || (isLastSlide ? "Get Started" : "Continue")}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </Animated.View>
-                </Animated.View>
-              </View>
-            </View>
-          </GestureDetector>
+          <Button
+            label={data.cta ?? (isLastSlide ? "Get Started" : "Next")}
+            onPress={next}
+            variant="gradient"
+            size="lg"
+            accent={accent}
+            accentTo={accentTo}
+            haptic={false}
+            fullWidth
+            rightIcon={<ArrowIcon size={19} color="#ffffff" strokeWidth={2.4} />}
+          />
         </View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
-
-// import { useTheme } from "@/hooks/use-theme";
-// import { Link } from "expo-router";
-// import { View } from "react-native";
-
-// export default function Index() {
-//   const { theme } = useTheme();
-
-//   return (
-//     <View style={{ backgroundColor: theme.background }} className="flex-1 items-center justify-center">
-//       <Link href="/console/(tabs)" className="text-2xl" style={{ color: theme.text }}>
-//         Go to Console Screen!
-//       </Link>
-//       <Link href="/onboarding" className="text-2xl" style={{ color: theme.text }}>
-//         Go to onboarding!
-//       </Link>
-//     </View>
-//   );
-// }

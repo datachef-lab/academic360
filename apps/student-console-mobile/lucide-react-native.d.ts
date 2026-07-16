@@ -39,5 +39,9 @@ declare module "lucide-react-native" {
   export const LibraryIcon: ComponentType<LucideProps>;
   export const Library: ComponentType<LucideProps>;
   export const Sparkles: ComponentType<LucideProps>;
+  export const ArrowRight: ComponentType<LucideProps>;
+  export const Award: ComponentType<LucideProps>;
+  export const CalendarCheck: ComponentType<LucideProps>;
+  export const ChevronLeft: ComponentType<LucideProps>;
   export type LucideIcon = ComponentType<LucideProps>;
 }

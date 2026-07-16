@@ -1,15 +1,17 @@
-import { heroImage } from "@/constants/Images";
+import { brandLogoUrl } from "@/constants/Images";
 import { useTheme } from "@/hooks/use-theme";
 import { checkOtpStatus, lookupUser, sendOtpRequest, verifyOtpAndLogin } from "@/lib/auth-service";
 import { getOnboardingCompleted } from "@/lib/onboarding-storage";
 import { useAuth } from "@/providers/auth-provider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { LogIn, User } from "lucide-react-native";
+import { User } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
+import googleLogo from "@/assets/images/google.png";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,12 +21,13 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { getApiBaseUrl } from "@/lib/api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Button } from "@/components/ui/Button";
 
 // Web student console theme colors (indigo gradient, purple accent)
 const WEB_BG_TOP = "#1e1b4b"; // indigo-950
-const WEB_BG_BOTTOM = "#312e81"; // indigo-900
+const WEB_BG_MID = "#312e81"; // indigo-900
 const WEB_ACCENT = "#4f46e5"; // indigo-600
 
 const OTP_EXPIRY_KEY = "otp_expiry_timestamp";
@@ -39,6 +42,10 @@ const formatTime = (seconds: number) => {
   const secs = seconds % 60;
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
+
+function GoogleMark() {
+  return <Image source={googleLogo} style={{ width: 20, height: 20 }} contentFit="contain" />;
+}
 
 export default function LoginScreen() {
   useTheme(); // Keep for provider context; theme uses web colors below
@@ -70,13 +77,14 @@ export default function LoginScreen() {
   const errorYPosition = useRef<number>(0);
 
   // Match web student console theme (indigo/purple)
-  const accentColor = WEB_ACCENT;
-  const bgColor = WEB_BG_BOTTOM;
+  const accentColor = WEB_ACCENT; // brand indigo
+  const bgColor = "#ffffff";
   const cardBg = "#FFFFFF";
-  const textColor = "#111827"; // gray-900
-  const textSecondaryColor = "#6b7280"; // gray-500
-  const inputBg = "rgba(0,0,0,0.05)";
-  const borderColor = "rgba(0,0,0,0.15)";
+  const textColor = "#1e293b";
+  const textSecondaryColor = "#64748b";
+  const inputBg = "#f1f5f9";
+  const borderColor = "#e2e8f0";
+  const insets = useSafeAreaInsets();
 
   const clearOtpStorage = useCallback(async () => {
     await AsyncStorage.multiRemove([OTP_EXPIRY_KEY, OTP_UID_KEY]);
@@ -392,6 +400,13 @@ export default function LoginScreen() {
     });
   };
 
+  const handleGoogleSignIn = () => {
+    Alert.alert(
+      "Google sign-in",
+      "Google sign-in isn't set up yet. Please continue with your UID for now.",
+    );
+  };
+
   const digits = uid.replace(/\D/g, "");
   const canSendOtp = digits.length === 10 && userPreview && !otpSent;
   const otpString = otp.join("");
@@ -399,25 +414,17 @@ export default function LoginScreen() {
 
   if (isCheckingAuth) {
     return (
-      <SafeAreaView
-        edges={["top", "bottom"]}
-        className="flex-1 items-center justify-center"
-        style={{ backgroundColor: bgColor }}
-      >
-        <StatusBar style="light" />
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: bgColor }}>
+        <StatusBar style="dark" />
         <ActivityIndicator size="large" color={accentColor} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
     <>
       <StatusBar style="light" />
-      <SafeAreaView
-        edges={["top", "bottom"]}
-        className="flex-1"
-        style={{ backgroundColor: bgColor }}
-      >
+      <View className="flex-1" style={{ backgroundColor: bgColor }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           className="flex-1"
@@ -434,52 +441,103 @@ export default function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Cover section - hero illustration (preserves aspect ratio, no distortion) */}
-            <View
+            {/* Branded gradient header */}
+            <LinearGradient
+              colors={[WEB_BG_TOP, WEB_BG_MID, accentColor]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
-                width: "100%",
-                height: 220,
-                backgroundColor: WEB_BG_TOP,
-                overflow: "hidden",
+                paddingTop: insets.top + 30,
+                paddingBottom: 56,
+                paddingHorizontal: 24,
                 alignItems: "center",
-                justifyContent: "center",
               }}
             >
-              <Image
-                source={heroImage}
-                style={{ width: "100%", height: "100%" }}
-                contentFit="contain"
-                accessibilityLabel="College campus illustration"
-              />
-            </View>
+              <View
+                style={{
+                  width: 78,
+                  height: 78,
+                  borderRadius: 22,
+                  backgroundColor: "#ffffff",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: "#000",
+                  shadowOpacity: 0.18,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 6 },
+                  elevation: 6,
+                }}
+              >
+                <Image
+                  source={{ uri: brandLogoUrl }}
+                  style={{ width: 54, height: 54 }}
+                  contentFit="contain"
+                  accessibilityLabel="The Bhawanipur Education Society College"
+                />
+              </View>
+              <Text
+                style={{
+                  color: "#ffffff",
+                  fontSize: 17,
+                  fontWeight: "800",
+                  textAlign: "center",
+                  marginTop: 16,
+                  lineHeight: 23,
+                }}
+              >
+                The Bhawanipur Education{"\n"}Society College
+              </Text>
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.72)",
+                  fontSize: 11.5,
+                  fontWeight: "700",
+                  letterSpacing: 2,
+                  marginTop: 8,
+                }}
+              >
+                STUDENT PORTAL
+              </Text>
+            </LinearGradient>
 
             {/* Form card */}
-            <View className="px-6 pt-6 pb-8 rounded-t-3xl" style={{ backgroundColor: cardBg }}>
+            <View
+              className="px-6 pt-4 rounded-t-3xl"
+              style={{
+                backgroundColor: cardBg,
+                marginTop: -26,
+                flex: 1,
+                paddingBottom: insets.bottom + 24,
+              }}
+            >
+              {/* grabber */}
+              <View
+                style={{
+                  alignSelf: "center",
+                  width: 44,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: "#e2e8f0",
+                  marginBottom: 18,
+                }}
+              />
               {/* Header */}
-              <View className="items-center mb-8">
-                <View
-                  className="items-center justify-center rounded-lg mb-4"
-                  style={{
-                    width: 48,
-                    height: 48,
-                    backgroundColor: `${accentColor}20`,
-                  }}
-                >
-                  <LogIn size={28} color={accentColor} strokeWidth={2} />
-                </View>
-                <Text style={{ color: textColor }} className="text-2xl font-bold text-center">
-                  {otpSent ? "Enter OTP" : "Sign in with UID"}
+              <View className="items-center mb-6">
+                <Text style={{ color: textColor }} className="text-2xl font-extrabold text-center">
+                  {otpSent ? "Verify OTP" : "Welcome back"}
                 </Text>
-                <Text style={{ color: textSecondaryColor }} className="text-base text-center mt-2">
+                <Text
+                  style={{ color: textSecondaryColor }}
+                  className="text-base text-center mt-2 px-2"
+                >
                   {otpSent
-                    ? `OTP sent to ${digits}@thebges.edu.in`
-                    : "Enter your 10-digit UID to receive OTP"}
+                    ? `Enter the 6-digit code sent to ${userPreview?.email ?? `${digits}@thebges.edu.in`}`
+                    : "Sign in to your BESC student account."}
                 </Text>
               </View>
 
               {/* Form */}
               <View className="gap-4">
-                <Text>{getApiBaseUrl()}</Text>
                 {otpSent ? (
                   <>
                     {/* OTP Input - 6 separate digit boxes */}
@@ -556,28 +614,17 @@ export default function LoginScreen() {
                       )}
                     </View>
 
-                    <Pressable
+                    <Button
+                      label="Verify OTP"
                       onPress={handleVerifyOtp}
-                      disabled={isLoading || !canVerifyOtp}
-                      className="rounded-xl py-4 items-center justify-center active:opacity-90"
-                      style={{
-                        backgroundColor: canVerifyOtp ? accentColor : inputBg,
-                        opacity: canVerifyOtp ? 1 : 0.6,
-                      }}
-                    >
-                      {isLoading ? (
-                        <ActivityIndicator color="#FFFFFF" size="small" />
-                      ) : (
-                        <Text
-                          style={{
-                            color: canVerifyOtp ? "#FFFFFF" : textSecondaryColor,
-                          }}
-                          className="text-lg font-bold"
-                        >
-                          Verify OTP
-                        </Text>
-                      )}
-                    </Pressable>
+                      variant="gradient"
+                      size="lg"
+                      accent={accentColor}
+                      accentTo="#6366f1"
+                      disabled={!canVerifyOtp}
+                      loading={isLoading}
+                      fullWidth
+                    />
 
                     <View className="flex-row justify-between items-center">
                       <Pressable onPress={handleChangeUid} className="py-2">
@@ -605,6 +652,35 @@ export default function LoginScreen() {
                   </>
                 ) : (
                   <>
+                    {/* Continue with Google */}
+                    <Pressable
+                      onPress={handleGoogleSignIn}
+                      className="flex-row items-center justify-center rounded-xl active:opacity-80"
+                      style={{
+                        height: 52,
+                        backgroundColor: "#ffffff",
+                        borderWidth: 1,
+                        borderColor: "#e2e8f0",
+                        gap: 10,
+                      }}
+                    >
+                      <GoogleMark />
+                      <Text style={{ color: textColor, fontSize: 15.5, fontWeight: "600" }}>
+                        Continue with Google
+                      </Text>
+                    </Pressable>
+
+                    {/* Divider */}
+                    <View className="flex-row items-center" style={{ gap: 12, marginVertical: 2 }}>
+                      <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
+                      <Text
+                        style={{ color: textSecondaryColor, fontSize: 12.5, fontWeight: "600" }}
+                      >
+                        or sign in with UID
+                      </Text>
+                      <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
+                    </View>
+
                     {/* UID Input */}
                     <View>
                       <Text style={{ color: textSecondaryColor }} className="text-sm mb-2">
@@ -688,28 +764,17 @@ export default function LoginScreen() {
                       )}
                     </View>
 
-                    <Pressable
+                    <Button
+                      label="Send OTP"
                       onPress={handleSendOtp}
-                      disabled={isLoading || !canSendOtp}
-                      className="rounded-xl py-4 items-center justify-center active:opacity-90"
-                      style={{
-                        backgroundColor: canSendOtp ? accentColor : inputBg,
-                        opacity: canSendOtp ? 1 : 0.6,
-                      }}
-                    >
-                      {isLoading ? (
-                        <ActivityIndicator color="#FFFFFF" size="small" />
-                      ) : (
-                        <Text
-                          style={{
-                            color: canSendOtp ? "#FFFFFF" : textSecondaryColor,
-                          }}
-                          className="text-lg font-bold"
-                        >
-                          Send OTP
-                        </Text>
-                      )}
-                    </Pressable>
+                      variant="gradient"
+                      size="lg"
+                      accent={accentColor}
+                      accentTo="#6366f1"
+                      disabled={!canSendOtp}
+                      loading={isLoading}
+                      fullWidth
+                    />
                   </>
                 )}
 
@@ -743,7 +808,7 @@ export default function LoginScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </>
   );
 }
