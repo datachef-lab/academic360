@@ -2491,6 +2491,37 @@ const STUDENT_SUBJECTS_PAPER_ROWS_SQL_TEMPLATE =
     STUDENT_SUBJECTS_FINAL_SELECT_PAPER,
   ).replace(/\/\*__SUBJECTS_EXPORT_ORDER__\*\/\s*ORDER BY[\s\S]*$/m, "");
 
+/**
+ * Runs the student-subjects export SQL with nested-loop joins disabled, scoped
+ * to a transaction.
+ *
+ * That SQL is a stack of CTEs; Postgres materializes them and then can't
+ * estimate their row counts, so it estimates `rows=1` on the joins that stitch
+ * them together and picks nested loops. On real data those loops iterate
+ * millions of times and the export runs 150s+ — while the exact same query with
+ * hash/merge joins returns in ~700ms (measured). `SET LOCAL enable_nestloop =
+ * off` forces hash joins and is scoped to this transaction, so the pooled
+ * connection is unaffected afterwards.
+ */
+export async function runStudentSubjectsExportQuery(
+  text: string,
+  values: unknown[],
+): Promise<{ rows: Record<string, unknown>[] }> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET LOCAL enable_nestloop = off");
+    const res = await client.query(text, values);
+    await client.query("COMMIT");
+    return { rows: res.rows as Record<string, unknown>[] };
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 export function buildStudentSubjectsExportSql(
   academicYearId: number,
   filters: ReportExportFilters = {},
@@ -2610,7 +2641,10 @@ export async function exportStudentSubjectsReport(
   );
 
   try {
-    const { rows } = await pool.query(trimmedQuery, queryValues);
+    const { rows } = await runStudentSubjectsExportQuery(
+      trimmedQuery,
+      queryValues,
+    );
     console.log(
       `[SUBJECTS-EXPORT] Retrieved ${rows.length} rows for academic year ${academicYearId}`,
     );
