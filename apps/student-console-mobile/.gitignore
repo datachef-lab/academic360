@@ -38,6 +38,9 @@ yarn-error.*
 
 app-example
 
-# generated native folders
-/ios
-/android
+# The native folders are committed, so this is a bare project: EAS Build uses
+# them as-is and never runs prebuild. They must NOT be ignored — EAS classifies
+# the workflow from the local filesystem but uploads by these rules, so ignoring
+# them ships a build with no android/gradlew. Each folder has its own .gitignore
+# for real build output (build/, .gradle, Pods, local.properties).
+# Changing app.json icons/config requires `npx expo prebuild` to take effect.
