@@ -1,7 +1,10 @@
 import React from "react";
-import { Modal, Pressable, View } from "react-native";
+import { Modal, Platform, Pressable, View } from "react-native";
 import Animated, { SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/** Bottom tab bar height + gap (see app/console/(tabs)/_layout.tsx). */
+const TAB_BAR_SPACE = 62;
 
 type BottomSheetProps = {
   visible: boolean;
@@ -15,6 +18,10 @@ type BottomSheetProps = {
  * rounded top and grab handle. Tap outside to dismiss. */
 export function BottomSheet({ visible, onClose, bg, grabberColor, children }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
+  // On web the Modal renders inside the tab scene, which ends above the tab bar,
+  // leaving a gap under the sheet. Bleed past it so the panel reaches the screen
+  // bottom (native Modals are their own window, so no bleed needed there).
+  const bleed = Platform.OS === "web" ? TAB_BAR_SPACE : 0;
   return (
     <Modal
       visible={visible}
@@ -37,7 +44,9 @@ export function BottomSheet({ visible, onClose, bg, grabberColor, children }: Bo
                 borderTopRightRadius: 24,
                 overflow: "hidden",
                 maxHeight: "88%",
-                paddingBottom: insets.bottom + 10,
+                // Extend to the true screen bottom; keep content clear of the tab bar.
+                marginBottom: -bleed,
+                paddingBottom: insets.bottom + 10 + bleed,
               }}
             >
               <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 2 }}>
