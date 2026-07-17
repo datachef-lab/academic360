@@ -28,9 +28,7 @@
   },
   "pnpm": {
     "overrides": {
-      "drizzle-orm": "0.44.5",
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "drizzle-orm": "0.44.5"
     },
     "patchedDependencies": {
       "expo-status-bar@3.0.9": "patches/expo-status-bar@3.0.9.patch"
@@ -65,7 +63,7 @@
     "vite": "^6.0.6"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=18"
   },
   "packageManager": "pnpm@10.33.2",
   "workspaces": [
