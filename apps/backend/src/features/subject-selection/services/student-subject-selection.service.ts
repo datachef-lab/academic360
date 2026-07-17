@@ -3992,6 +3992,26 @@ export async function exportStudentSubjectSelections(
         inArray(studentModel.id, filteredStudentIds),
         eq(sessionModel.academicYearId, academicYearId),
         sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+        // Report filters pushed into SQL (previously filtered in JS after
+        // fetching every student). Filtering on the LEFT-joined program course
+        // excludes null matches, exactly like the old `!= null && has(...)`.
+        ...(filters.programCourseIds?.length
+          ? [inArray(programCourseModel.id, filters.programCourseIds)]
+          : []),
+        ...(filters.affiliationIds?.length
+          ? [inArray(programCourseModel.affiliationId, filters.affiliationIds)]
+          : []),
+        ...(filters.regulationTypeIds?.length
+          ? [
+              inArray(
+                programCourseModel.regulationTypeId,
+                filters.regulationTypeIds,
+              ),
+            ]
+          : []),
+        ...(filters.classIds?.length
+          ? [inArray(promotionModel.classId, filters.classIds)]
+          : []),
       ),
     );
 
@@ -4007,53 +4027,13 @@ export async function exportStudentSubjectSelections(
   }
   studentsWithDetails = [...promotionRowByStudent.values()];
 
-  if (filters.programCourseIds?.length) {
-    const allow = new Set(filters.programCourseIds);
-    studentsWithDetails = studentsWithDetails.filter(
-      (s) => s.programCourseId != null && allow.has(s.programCourseId),
-    );
-  }
-  if (filters.affiliationIds?.length) {
-    const allow = new Set(filters.affiliationIds);
-    studentsWithDetails = studentsWithDetails.filter(
-      (s) =>
-        s.programAffiliationId != null && allow.has(s.programAffiliationId),
-    );
-  }
-  if (filters.regulationTypeIds?.length) {
-    const allow = new Set(filters.regulationTypeIds);
-    studentsWithDetails = studentsWithDetails.filter(
-      (s) =>
-        s.programRegulationTypeId != null &&
-        allow.has(s.programRegulationTypeId),
-    );
-  }
-  if (filters.classIds?.length) {
-    const allow = new Set(filters.classIds);
-    studentsWithDetails = studentsWithDetails.filter(
-      (s) => s.promotionClassId != null && allow.has(s.promotionClassId),
-    );
-  }
-
   // We'll compute subjectIds after loading allSelectionsForYear
   // we'll declare 'subjects' after we have subjectIds computed
   let subjects: { id: number; name: string; code: string | null }[] = [];
 
-  // Get user details for createdBy (collect from raw rows per student in meta later); initialize empty map for now
-  const createdByUsers = await db
-    .select({
-      id: userModel.id,
-      name: userModel.name,
-      type: userModel.type,
-    })
-    .from(userModel)
-    .where(sql`1=0`); // placeholder empty selection; we'll look up createdBy users dynamically below
-
-  // Create lookup maps (subjectMap will be created later after subjects are loaded)
-  const studentMap = new Map(studentsWithDetails.map((s) => [s.studentId, s]));
-  const userMap = new Map<number, { id: number; name: string; type: string }>(
-    createdByUsers.map((u) => [u.id, u]),
-  );
+  // userMap is filled once, in bulk, after the audit query below (createdBy
+  // users were previously fetched one-by-one inside the row loop).
+  const userMap = new Map<number, { id: number; name: string; type: string }>();
 
   // Get all student subject selections for all metas in the academic year
   const allSelectionsForYear = await db
@@ -4137,6 +4117,66 @@ export async function exportStudentSubjectSelections(
   });
   console.log("Selections by meta:", Object.fromEntries(selectionsByMeta));
 
+  // Audit info (who last changed each student's selections, remarks) for ALL
+  // students in ONE query, grouped by student — replaces the per-student query
+  // that used to run inside the row loop (the export's dominant cost). The
+  // composite index (subject_selection_meta_id_fk, student_id_fk) serves this.
+  const auditByStudent = new Map<
+    number,
+    {
+      studentId: number;
+      updatedAt: Date | null;
+      createdBy: number;
+      changeReason: string | null;
+    }[]
+  >();
+  const exportStudentIds = studentsWithDetails.map((s) => s.studentId);
+  if (exportStudentIds.length > 0) {
+    const auditRows = await db
+      .select({
+        studentId: studentSubjectSelectionModel.studentId,
+        updatedAt: studentSubjectSelectionModel.updatedAt,
+        createdBy: studentSubjectSelectionModel.createdBy,
+        changeReason: studentSubjectSelectionModel.changeReason,
+      })
+      .from(studentSubjectSelectionModel)
+      .where(
+        and(
+          inArray(
+            studentSubjectSelectionModel.subjectSelectionMetaId,
+            allMetasForYear.map((m) => m.id),
+          ),
+          inArray(studentSubjectSelectionModel.studentId, exportStudentIds),
+        ),
+      )
+      .orderBy(
+        desc(studentSubjectSelectionModel.updatedAt),
+        desc(studentSubjectSelectionModel.id),
+      );
+    for (const r of auditRows) {
+      const list = auditByStudent.get(r.studentId);
+      if (list) list.push(r);
+      else auditByStudent.set(r.studentId, [r]);
+    }
+
+    // Prefetch every distinct "created by" user in one query (was a per-student
+    // lookup inside the loop).
+    const createdByIds = [...new Set(auditRows.map((r) => r.createdBy))].filter(
+      (id): id is number => typeof id === "number",
+    );
+    if (createdByIds.length > 0) {
+      const createdByUserRows = await db
+        .select({
+          id: userModel.id,
+          name: userModel.name,
+          type: userModel.type,
+        })
+        .from(userModel)
+        .where(inArray(userModel.id, createdByIds));
+      for (const u of createdByUserRows) userMap.set(u.id, u);
+    }
+  }
+
   // Prepare Excel data
   const excelData = [];
 
@@ -4190,45 +4230,12 @@ export async function exportStudentSubjectSelections(
       }
     }
 
-    // Find the latest audit info for this student across all metas of this academic year
-    // This fulfills the requirement: last updated should be the latest among ALL student-subject-selection rows
-    const studentRowsForMeta = await db
-      .select({
-        id: studentSubjectSelectionModel.id,
-        studentId: studentSubjectSelectionModel.studentId,
-        updatedAt: studentSubjectSelectionModel.updatedAt,
-        createdBy: studentSubjectSelectionModel.createdBy,
-        changeReason: studentSubjectSelectionModel.changeReason,
-      })
-      .from(studentSubjectSelectionModel)
-      .where(
-        and(
-          inArray(
-            studentSubjectSelectionModel.subjectSelectionMetaId,
-            allMetasForYear.map((m) => m.id),
-          ),
-          eq(studentSubjectSelectionModel.studentId, studentDetail.studentId),
-        ),
-      )
-      .orderBy(
-        desc(studentSubjectSelectionModel.updatedAt),
-        desc(studentSubjectSelectionModel.id),
-      );
-
-    // Pick the very latest row (sorted desc by updatedAt, id)
+    // Latest audit info for this student, from the batched map (already sorted
+    // desc by updatedAt, id — so index 0 is the latest across all metas).
+    const studentRowsForMeta =
+      auditByStudent.get(studentDetail.studentId) || [];
     const latestAudit = studentRowsForMeta[0];
     if (latestAudit) {
-      if (!userMap.has(latestAudit.createdBy)) {
-        const [u] = await db
-          .select({
-            id: userModel.id,
-            name: userModel.name,
-            type: userModel.type,
-          })
-          .from(userModel)
-          .where(eq(userModel.id, latestAudit.createdBy));
-        if (u) userMap.set(u.id, u);
-      }
       const createdByUser = userMap.get(latestAudit.createdBy);
       row["Last updated by user type"] =
         createdByUser?.type?.toString().toUpperCase() || "";
