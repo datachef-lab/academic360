@@ -87,6 +87,30 @@ export default function SubjectSelectionScreen() {
   const accent = isDark ? "#6366f1" : "#4f46e5";
   const tableBorder = isDark ? "rgba(255,255,255,0.25)" : theme.border;
 
+  // The saved selections, as table rows. Minor 2 and Minor 3 are alternatives:
+  // which one applies depends on whether minors were already chosen at admission.
+  const hasAdmissionMinor = hasActualOptions(admissionMinor1Subjects);
+  const savedRows = (
+    [
+      { label: getDynamicLabel("MN", "I"), value: savedSelections.minor1, show: true },
+      {
+        label: getDynamicLabel("MN", "III"),
+        value: savedSelections.minor2,
+        show: hasAdmissionMinor,
+      },
+      {
+        label: "Minor (Semester III to VI)",
+        value: savedSelections.minor3,
+        show: !hasAdmissionMinor,
+      },
+      { label: getDynamicLabel("IDC", "I"), value: savedSelections.idc1, show: true },
+      { label: getDynamicLabel("IDC", "II"), value: savedSelections.idc2, show: true },
+      { label: getDynamicLabel("IDC", "III"), value: savedSelections.idc3, show: true },
+      { label: getDynamicLabel("AEC"), value: savedSelections.aec3, show: true },
+      { label: getDynamicLabel("CVAC"), value: savedSelections.cvac4, show: true },
+    ] as { label: string; value?: string; show: boolean }[]
+  ).filter((r): r is { label: string; value: string; show: boolean } => Boolean(r.show && r.value));
+
   if (loading && !hasExistingSelections) {
     return (
       <View
@@ -479,207 +503,48 @@ export default function SubjectSelectionScreen() {
                 Your selections have been saved successfully.
               </Text>
             </View>
-            <View className="p-0">
-              {savedSelections.minor1 && (
+            <View>
+              {savedRows.map((row, i) => (
                 <View
-                  className="flex-row items-start py-2 px-3 border-b"
-                  style={{ borderColor: tableBorder }}
+                  key={row.label}
+                  className="flex-row items-stretch"
+                  style={{
+                    borderBottomWidth: i < savedRows.length - 1 ? 1 : 0,
+                    borderBottomColor: tableBorder,
+                  }}
                 >
                   <View
                     style={{
                       flex: 1,
                       minWidth: 0,
+                      paddingVertical: 10,
+                      paddingLeft: 12,
                       paddingRight: 12,
+                      justifyContent: "center",
                       borderRightWidth: 1,
                       borderRightColor: tableBorder,
+                      backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>
-                      {getDynamicLabel("MN", "I")}
+                    <Text style={{ color: theme.text, opacity: 0.8, fontSize: 13 }}>
+                      {row.label}
                     </Text>
                   </View>
-                  <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>
-                      {savedSelections.minor1}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {savedSelections.minor2 && hasActualOptions(admissionMinor1Subjects) && (
-                <View
-                  className="flex-row items-start py-2 px-3 border-b"
-                  style={{ borderColor: tableBorder }}
-                >
                   <View
                     style={{
                       flex: 1,
                       minWidth: 0,
-                      paddingRight: 12,
-                      borderRightWidth: 1,
-                      borderRightColor: tableBorder,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      justifyContent: "center",
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>
-                      {getDynamicLabel("MN", "III")}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>
-                      {savedSelections.minor2}
+                    <Text style={{ color: theme.text, fontWeight: "600", fontSize: 13 }}>
+                      {row.value}
                     </Text>
                   </View>
                 </View>
-              )}
-              {savedSelections.minor3 && !hasActualOptions(admissionMinor1Subjects) && (
-                <View
-                  className="flex-row items-start py-2 px-3 border-b"
-                  style={{ borderColor: tableBorder }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      paddingRight: 12,
-                      borderRightWidth: 1,
-                      borderRightColor: tableBorder,
-                    }}
-                  >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>
-                      Minor (Semester III to VI)
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>
-                      {savedSelections.minor3}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {savedSelections.idc1 && (
-                <View
-                  className="flex-row items-start py-2 px-3 border-b"
-                  style={{ borderColor: tableBorder }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      paddingRight: 12,
-                      borderRightWidth: 1,
-                      borderRightColor: tableBorder,
-                    }}
-                  >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>
-                      {getDynamicLabel("IDC", "I")}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>
-                      {savedSelections.idc1}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {savedSelections.idc2 && (
-                <View
-                  className="flex-row items-start py-2 px-3 border-b"
-                  style={{ borderColor: tableBorder }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      paddingRight: 12,
-                      borderRightWidth: 1,
-                      borderRightColor: tableBorder,
-                    }}
-                  >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>
-                      {getDynamicLabel("IDC", "II")}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>
-                      {savedSelections.idc2}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {savedSelections.idc3 && (
-                <View
-                  className="flex-row items-start py-2 px-3 border-b"
-                  style={{ borderColor: tableBorder }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      paddingRight: 12,
-                      borderRightWidth: 1,
-                      borderRightColor: tableBorder,
-                    }}
-                  >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>
-                      {getDynamicLabel("IDC", "III")}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>
-                      {savedSelections.idc3}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {savedSelections.aec3 && (
-                <View
-                  className="flex-row items-start py-2 px-3 border-b"
-                  style={{ borderColor: theme.border }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      paddingRight: 12,
-                      borderRightWidth: 1,
-                      borderRightColor: theme.border,
-                    }}
-                  >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>
-                      {getDynamicLabel("AEC")}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>
-                      {savedSelections.aec3}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {savedSelections.cvac4 && (
-                <View
-                  className="flex-row items-start py-2 px-3"
-                  style={{ borderColor: tableBorder }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      paddingRight: 12,
-                      borderRightWidth: 1,
-                      borderRightColor: tableBorder,
-                    }}
-                  >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>
-                      {getDynamicLabel("CVAC")}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>
-                      {savedSelections.cvac4}
-                    </Text>
-                  </View>
-                </View>
-              )}
+              ))}
             </View>
           </View>
         )}

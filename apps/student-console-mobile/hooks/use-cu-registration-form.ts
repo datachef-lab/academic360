@@ -198,8 +198,9 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
       try {
         setLoading(true);
         setError(null);
-        await ensureCorrectionRequest();
-        const [pd] = await Promise.all([
+        // None of these depend on each other, so don't make them queue up.
+        const [, pd] = await Promise.all([
+          ensureCorrectionRequest(),
           fetchPersonalDetailsByStudentId(student.id!).catch(() => null),
           fetchCities().then((c) => {
             if (!cancelled) setCities(c);
@@ -217,22 +218,6 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
             ews: pd.ewsStatus === "Yes" || pd.isEWS ? "Yes" : "No",
           }));
         }
-        const profile = profileInfo as {
-          name?: string;
-          studentFamily?: { members?: { type: string; name?: string }[] };
-        } | null;
-        if (profile?.name)
-          setPersonalInfo((p) => ({ ...p, fullName: p.fullName || profile.name! }));
-        const family = profile?.studentFamily?.members;
-        const father = family?.find((m) => m.type === "FATHER");
-        const mother = family?.find((m) => m.type === "MOTHER");
-        if (father?.name)
-          setPersonalInfo((p) => ({ ...p, parentName: p.parentName || father.name! }));
-        else if (mother?.name)
-          setPersonalInfo((p) => ({ ...p, parentName: p.parentName || mother.name! }));
-        const studentWithApaar = student as { apaarId?: string };
-        if (studentWithApaar?.apaarId)
-          setPersonalInfo((p) => ({ ...p, apaarId: studentWithApaar.apaarId! }));
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed");
       } finally {
@@ -242,7 +227,29 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     return () => {
       cancelled = true;
     };
-  }, [student?.id, ensureCorrectionRequest, profileInfo]);
+    // profileInfo is deliberately NOT a dependency: it starts null and lands
+    // asynchronously, so including it re-ran every fetch above a second time.
+    // The prefill it drives lives in its own effect below.
+  }, [student?.id, ensureCorrectionRequest]);
+
+  // Prefill from the profile once it arrives. Each field only fills a blank, so
+  // this can settle before or after the personal-details fetch above.
+  useEffect(() => {
+    const profile = profileInfo as {
+      name?: string;
+      studentFamily?: { members?: { type: string; name?: string }[] };
+    } | null;
+    if (profile?.name) setPersonalInfo((p) => ({ ...p, fullName: p.fullName || profile.name! }));
+    const family = profile?.studentFamily?.members;
+    const father = family?.find((m) => m.type === "FATHER");
+    const mother = family?.find((m) => m.type === "MOTHER");
+    if (father?.name) setPersonalInfo((p) => ({ ...p, parentName: p.parentName || father.name! }));
+    else if (mother?.name)
+      setPersonalInfo((p) => ({ ...p, parentName: p.parentName || mother.name! }));
+    const studentWithApaar = student as { apaarId?: string } | undefined;
+    if (studentWithApaar?.apaarId)
+      setPersonalInfo((p) => ({ ...p, apaarId: studentWithApaar.apaarId! }));
+  }, [profileInfo, student]);
 
   useEffect(() => {
     if (!residentialAddress.city) return;

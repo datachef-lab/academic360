@@ -457,41 +457,6 @@ export async function findSubjectsSelections(studentId: number) {
 
     const hasFormSubmissions = actualStudentSelections.length > 0;
 
-    // Debug: Log the actual student selections to see what subjects are being fetched
-    console.log(
-      `[SUBJECT-SELECTION] Student ${studentId} - actualStudentSelections (latest versions only):`,
-      actualStudentSelections.map((selection) => ({
-        id: selection.id,
-        subjectName: selection.subjectName || "N/A",
-        subjectCode: selection.subjectCode || "N/A",
-        label: selection.metaLabel || "N/A",
-        subjectTypeName: selection.subjectTypeName || "N/A",
-        subjectTypeCode: selection.subjectTypeCode || "N/A",
-        version: selection.version,
-        createdAt: selection.createdAt,
-      })),
-    );
-
-    // Debug: Check if this is a BCOM student
-    const studentProgramCourse = await db
-      .select({
-        programCourseName: programCourseModel.name,
-      })
-      .from(promotionModel)
-      .innerJoin(
-        programCourseModel,
-        eq(promotionModel.programCourseId, programCourseModel.id),
-      )
-      .where(eq(promotionModel.studentId, studentId))
-      .orderBy(desc(promotionModel.createdAt))
-      .limit(1);
-
-    console.log(
-      `[SUBJECT-SELECTION] Student ${studentId} - programCourse:`,
-      studentProgramCourse[0]?.programCourseName,
-    );
-
-    // console.log("studentSubjectsSelection:", studentSubjectsSelection);
     return {
       studentSubjectsSelection,
       selectedMinorSubjects: formatedSelectedMinorSubjects, // Keep original logic for form display

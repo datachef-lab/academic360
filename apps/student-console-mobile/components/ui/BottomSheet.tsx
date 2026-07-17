@@ -1,11 +1,8 @@
 import { useRegisterOverlay } from "@/lib/overlay-store";
 import React from "react";
-import { Modal, Platform, Pressable, View } from "react-native";
+import { Modal, Pressable, View } from "react-native";
 import Animated, { SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-/** Bottom tab bar height + gap (see app/console/(tabs)/_layout.tsx). */
-const TAB_BAR_SPACE = 62;
 
 type BottomSheetProps = {
   visible: boolean;
@@ -21,53 +18,52 @@ export function BottomSheet({ visible, onClose, bg, grabberColor, children }: Bo
   const insets = useSafeAreaInsets();
   // Hides the bottom tab bar while the sheet is open.
   useRegisterOverlay(visible);
-  // On web the Modal renders inside the tab scene, which ends above the tab bar,
-  // leaving a gap under the sheet. Bleed past it so the panel reaches the screen
-  // bottom (native Modals are their own window, so no bleed needed there).
-  const bleed = Platform.OS === "web" ? TAB_BAR_SPACE : 0;
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
+      // Both are needed for the sheet to reach the true screen edges on Android:
+      // without navigationBarTranslucent the modal window stops above the nav bar.
       statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={{ flex: 1 }}>
-        <Pressable
-          onPress={onClose}
-          style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" }}
-        >
-          <Animated.View entering={SlideInDown.duration(240)}>
-            <Pressable
-              onPress={(e) => e.stopPropagation()}
-              style={{
-                backgroundColor: bg,
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
-                overflow: "hidden",
-                maxHeight: "88%",
-                // Extend to the true screen bottom (the tab bar hides while open).
-                marginBottom: -bleed,
-                paddingBottom: insets.bottom + 12,
-              }}
-            >
-              <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 2 }}>
-                <View
-                  style={{
-                    width: 40,
-                    height: 5,
-                    borderRadius: 3,
-                    backgroundColor: grabberColor ?? "rgba(148,163,184,0.5)",
-                  }}
-                />
-              </View>
-              {/* cast: monorepo dual @types/react (18 web / 19 mobile) ReactNode mismatch */}
-              <View>{children as never}</View>
-            </Pressable>
-          </Animated.View>
-        </Pressable>
-      </View>
+      <Pressable
+        onPress={onClose}
+        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" }}
+      >
+        {/* Cap the height here rather than on the panel, so the panel has a bounded
+            parent and any ScrollView inside it can actually scroll instead of
+            being clipped by the panel's overflow: hidden. */}
+        <Animated.View entering={SlideInDown.duration(240)} style={{ maxHeight: "88%" }}>
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: bg,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              overflow: "hidden",
+              paddingBottom: insets.bottom + 12,
+            }}
+          >
+            <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 2 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: grabberColor ?? "rgba(148,163,184,0.5)",
+                }}
+              />
+            </View>
+            {/* flexShrink lets tall content shrink to the capped height (and scroll)
+                instead of overflowing past the panel and getting clipped. */}
+            {/* cast: monorepo dual @types/react (18 web / 19 mobile) ReactNode mismatch */}
+            <View style={{ flexShrink: 1 }}>{children as never}</View>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
     </Modal>
   );
 }

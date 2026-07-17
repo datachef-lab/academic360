@@ -108,7 +108,14 @@ export function Header() {
               </Pressable>
             </Animated.View>
           ) : null}
-          <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+          <Pressable
+            onPress={() => router.replace("/console")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Go to dashboard"
+          >
+            <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+          </Pressable>
           <View style={styles.brandBox}>
             <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>
               {isHome ? "BESC Console" : title}

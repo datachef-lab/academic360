@@ -3,8 +3,10 @@ import { FeeMappingCard } from "@/components/fees/fee-mapping-card";
 import { Tabs } from "@/components/ui/Tabs";
 import { useTheme } from "@/hooks/use-theme";
 import { isFeeMappingPaid } from "@/lib/fee-utils";
+import { feeClassSequence, filterVisibleFeeMappings, hasFeeValue } from "@/lib/fee-visibility";
 import { useAuth } from "@/providers/auth-provider";
 import { useFeeSocketRefresh } from "@/providers/exam-socket-provider";
+import { fetchSemesterFeeActivities, type AcademicActivity } from "@/services/academic-activities";
 import { fetchStudentFeeMappings, type StudentFeeMapping } from "@/services/fees-api";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { useLocalSearchParams } from "expo-router";
@@ -21,6 +23,7 @@ export default function FeesScreen() {
   const params = useLocalSearchParams<{ payment?: string; mappingId?: string }>();
 
   const [mappings, setMappings] = useState<StudentFeeMapping[]>([]);
+  const [activities, setActivities] = useState<AcademicActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +43,19 @@ export default function FeesScreen() {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         setError(null);
-        const res = await fetchStudentFeeMappings(student.id);
+        // The fee windows gate which mappings are shown, so fetch both together
+        // rather than making the cards wait on a second round trip.
+        const [res, feeActivities] = await Promise.all([
+          fetchStudentFeeMappings(student.id),
+          fetchSemesterFeeActivities().catch((e) => {
+            // Never hide fees because the window metadata failed to load.
+            console.error(e);
+            return [] as AcademicActivity[];
+          }),
+        ]);
         const list = Array.isArray(res.payload) ? res.payload : [];
         setMappings(list);
+        setActivities(feeActivities);
       } catch (e) {
         console.error(e);
         setError("Failed to load fees. Pull to refresh.");
@@ -77,13 +90,21 @@ export default function FeesScreen() {
     }
   }, [params.payment, params.mappingId, mappings, loadMappings]);
 
-  const filtered = useMemo(() => {
-    if (filter === "pending") return mappings.filter((m) => !isFeeMappingPaid(m));
-    if (filter === "paid") return mappings.filter((m) => isFeeMappingPaid(m));
-    return mappings;
-  }, [mappings, filter]);
+  // Only the fees the college has actually opened for this student, in semester
+  // order — same rules the student-console website applies.
+  const visible = useMemo(
+    () =>
+      filterVisibleFeeMappings(mappings.filter(hasFeeValue), activities, student).sort(
+        (a, b) => feeClassSequence(a) - feeClassSequence(b),
+      ),
+    [mappings, activities, student],
+  );
 
-  const pendingCount = mappings.filter((m) => !isFeeMappingPaid(m)).length;
+  const filtered = useMemo(() => {
+    if (filter === "pending") return visible.filter((m) => !isFeeMappingPaid(m));
+    if (filter === "paid") return visible.filter((m) => isFeeMappingPaid(m));
+    return visible;
+  }, [visible, filter]);
 
   const openDetail = (mapping: StudentFeeMapping) => {
     setSelected(mapping);
@@ -169,7 +190,9 @@ export default function FeesScreen() {
                   ? "You have no pending fee payments."
                   : filter === "paid"
                     ? "No completed payments yet."
-                    : "Fee mappings will appear here when assigned by the college."}
+                    : mappings.length > 0
+                      ? "No fee payments are currently active for your semester or program."
+                      : "Fee mappings will appear here when assigned by the college."}
               </Text>
             </View>
           ) : (

@@ -144,6 +144,20 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
       setLoading(true);
       setLoadError(null);
       try {
+        // Restricted groupings only need the program course off the student, not
+        // anything from the selections response — so start both together instead
+        // of paying for two round trips back to back.
+        const programCourseId = student?.currentPromotion?.programCourse?.id as number | undefined;
+        const restrictedGroupingsPromise = fetchRestrictedGroupings({
+          page: 1,
+          pageSize: 200,
+          programCourseId,
+          studentId: student.id,
+        });
+        // Keeps this from being an unhandled rejection if the fetch below throws
+        // before we get to await it; the await still surfaces the error.
+        restrictedGroupingsPromise.catch(() => {});
+
         const resp = await fetchStudentSubjectSelections(student.id);
         setSubjectSelectionMetas(resp.subjectSelectionMetas || []);
         setCurrentSession(resp.session || null);
@@ -265,8 +279,7 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
           ),
         );
 
-        const programCourseId = student?.currentPromotion?.programCourse?.id as number | undefined;
-        const rgs = await fetchRestrictedGroupings({ page: 1, pageSize: 200, programCourseId });
+        const rgs = await restrictedGroupingsPromise;
         const norm = (s: string) =>
           String(s || "")
             .trim()

@@ -10,6 +10,9 @@ export async function fetchRestrictedGroupings(params?: {
   search?: string;
   subjectType?: string;
   programCourseId?: number;
+  /** Scopes the result to the student's academic year and active groupings only.
+   * Without it the API returns every grouping across all years. */
+  studentId?: number;
 }): Promise<RestrictedGroupingMainDto[]> {
   const res = await axiosInstance.get<
     ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>
