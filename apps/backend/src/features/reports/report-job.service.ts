@@ -136,14 +136,37 @@ export async function runReportJob(
   job.message = `Preparing ${job.reportLabel}…`;
   emit(job);
 
+  // Most generators are opaque (one big query → a Buffer) and report no
+  // intermediate progress, which left the bar frozen at 5% for the whole run.
+  // A heartbeat creeps the bar forward while generation is in flight so it reads
+  // as "working", capped at 85% so real completion still jumps to 100%. If a
+  // generator DOES report real progress via onProgress, it cancels the heartbeat
+  // and drives the bar itself. (During a synchronous ExcelJS build the event
+  // loop is blocked and the timer pauses — that's fine; the long part is the
+  // awaited DB query, where it ticks.)
+  let heartbeat = 5;
+  let usingRealProgress = false;
+  const timer: ReturnType<typeof setInterval> = setInterval(() => {
+    if (usingRealProgress) return;
+    if (heartbeat < 85) {
+      heartbeat = Math.min(85, heartbeat + 4);
+      job.progress = heartbeat;
+      job.message = `Generating ${job.reportLabel}…`;
+      emit(job);
+    }
+  }, 1200);
+  timer.unref?.();
+
   try {
     const onProgress: ReportProgress = (pct, message) => {
+      usingRealProgress = true;
       job.progress = Math.max(5, Math.min(90, Math.round(pct)));
       job.message = message;
       emit(job);
     };
 
     const { buffer, fileName, contentType } = await generate(onProgress);
+    clearInterval(timer);
 
     job.progress = 92;
     job.message = "Finalizing file…";
@@ -164,9 +187,15 @@ export async function runReportJob(
     job.completedAt = Date.now();
     job.message = `${job.reportLabel} is ready`;
     emit(job, reportDownloadPath(job.jobId));
+    console.log(
+      `[report-job] ${job.report} (${job.jobId}) completed in ${
+        job.completedAt - job.createdAt
+      }ms → ${fileName} (${buffer.length}b)`,
+    );
 
     scheduleCleanup(job.jobId);
   } catch (err) {
+    clearInterval(timer);
     console.error(`[report-job] ${job.report} (${job.jobId}) failed`, err);
     job.status = "error";
     job.progress = 100;
