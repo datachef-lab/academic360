@@ -16,8 +16,11 @@ node_modules/
 .pnp.js
 /.claude
 .pnpm-store
-ios/
-android/
+# NOTE: do not add bare "ios/" or "android/" here. Without a leading slash those
+# match at any depth and swallow apps/student-console-mobile/{android,ios},
+# whose native projects are committed. Git keeps serving the tracked files, so
+# the breakage only surfaces on EAS Build, which filters uploads by these rules
+# and then fails with "ENOENT: .../android/gradlew".
 # TypeScript build cache
 **/*.tsbuildinfo
 # Package manager files
