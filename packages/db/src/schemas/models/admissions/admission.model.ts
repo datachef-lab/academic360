@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import {
     boolean,
     date,
+    index,
     integer,
     pgTable,
     serial,
@@ -30,7 +31,10 @@ export const admissionModel = pgTable("admissions", {
     .defaultNow()
     .$onUpdate(() => new Date()),
   remarks: text("remarks"),
-});
+}, (t) => ({
+  // Reports join admissions → sessions to scope by academic year.
+  sessionIdx: index("admissions_session_id_idx").on(t.sessionId),
+}));
 export const createAdmissionSchema = createInsertSchema(admissionModel);
 
 export type Admission = z.infer<typeof createAdmissionSchema>;
