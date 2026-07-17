@@ -1,3 +1,4 @@
+import { useRegisterOverlay } from "@/lib/overlay-store";
 import React from "react";
 import { Modal, Pressable, View } from "react-native";
 import Animated, { Keyframe } from "react-native-reanimated";
@@ -18,6 +19,8 @@ type DialogProps = {
 /** Centered modal dialog (like shadcn/ui): dimmed backdrop that fades in, with
  * the content card fading + zooming in. Tap outside to dismiss. */
 export function Dialog({ visible, onClose, bg, children }: DialogProps) {
+  // Hides the bottom tab bar while the dialog is open.
+  useRegisterOverlay(visible);
   return (
     <Modal
       visible={visible}

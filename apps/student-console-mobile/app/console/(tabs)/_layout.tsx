@@ -1,6 +1,7 @@
 import { GlassDock } from "@/components/ui/glass-dock";
 import { Colors } from "@/constants/Colors";
 import { useTheme } from "@/hooks/use-theme";
+import { useOverlayCount } from "@/lib/overlay-store";
 import { Tabs } from "expo-router";
 import {
   ClipboardCheck,
@@ -21,6 +22,8 @@ const TAB_BAR_BOTTOM_GAP = 0;
 export default function TabsLayout() {
   const { colorScheme } = useTheme();
   const insets = useSafeAreaInsets();
+  // Hide the tab bar while a sheet/dialog is open so it doesn't sit over it.
+  const overlayCount = useOverlayCount();
   const bottomOffset = insets.bottom + TAB_BAR_BOTTOM_GAP;
   const palette = colorScheme === "dark" ? Colors.dark : Colors.light;
   const pageBg = palette.background;
@@ -51,6 +54,7 @@ export default function TabsLayout() {
             paddingBottom: bottomOffset + 4,
           },
           tabBarStyle: {
+            display: overlayCount > 0 ? "none" : "flex",
             position: "absolute",
             left: TAB_BAR_HORIZONTAL_INSET,
             right: TAB_BAR_HORIZONTAL_INSET,

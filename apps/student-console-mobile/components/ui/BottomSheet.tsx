@@ -1,3 +1,4 @@
+import { useRegisterOverlay } from "@/lib/overlay-store";
 import React from "react";
 import { Modal, Platform, Pressable, View } from "react-native";
 import Animated, { SlideInDown } from "react-native-reanimated";
@@ -18,6 +19,8 @@ type BottomSheetProps = {
  * rounded top and grab handle. Tap outside to dismiss. */
 export function BottomSheet({ visible, onClose, bg, grabberColor, children }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
+  // Hides the bottom tab bar while the sheet is open.
+  useRegisterOverlay(visible);
   // On web the Modal renders inside the tab scene, which ends above the tab bar,
   // leaving a gap under the sheet. Bleed past it so the panel reaches the screen
   // bottom (native Modals are their own window, so no bleed needed there).
@@ -44,9 +47,9 @@ export function BottomSheet({ visible, onClose, bg, grabberColor, children }: Bo
                 borderTopRightRadius: 24,
                 overflow: "hidden",
                 maxHeight: "88%",
-                // Extend to the true screen bottom; keep content clear of the tab bar.
+                // Extend to the true screen bottom (the tab bar hides while open).
                 marginBottom: -bleed,
-                paddingBottom: insets.bottom + 10 + bleed,
+                paddingBottom: insets.bottom + 12,
               }}
             >
               <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 2 }}>

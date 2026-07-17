@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "expo-router";
 import { Moon, Sun } from "lucide-react-native";
 import React from "react";
 import { Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 export const CONSOLE_HEADER_HEIGHT = 72;
 
@@ -89,6 +90,9 @@ export function Header() {
   const isHome =
     pathname === "/console" || pathname === "/console/" || pathname === "/console/(tabs)";
   const title = getScreenTitle(pathname);
+  // Back on every nested screen, and on a tab screen we navigated into.
+  const canBack = router.canGoBack?.() ?? false;
+  const showBack = !isHome && (!isTabRoot || canBack);
 
   return (
     <View style={styles.shell}>
@@ -97,10 +101,12 @@ export function Header() {
         {/* Left: (back on nested) + college logo (always) + heading — "BESC Console"
             on tab roots, the screen title on nested — with the UID kept underneath. */}
         <View style={styles.left}>
-          {!isTabRoot ? (
-            <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
-              <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
-            </Pressable>
+          {showBack ? (
+            <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)}>
+              <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
+                <Text style={{ color: theme.text, fontSize: 26, lineHeight: 26 }}>‹</Text>
+              </Pressable>
+            </Animated.View>
           ) : null}
           <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
           <View style={styles.brandBox}>
