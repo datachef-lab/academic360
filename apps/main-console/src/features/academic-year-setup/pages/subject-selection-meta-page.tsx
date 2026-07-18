@@ -73,7 +73,7 @@ function roman(name: string): string {
 type OptionSource = "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
 
 const OPTION_SOURCE_LABEL: Record<OptionSource, string> = {
-  ELECTIVE_SUBJECTS: "Elective subjects (this academic year)",
+  ELECTIVE_SUBJECTS: "Elective subjects",
   PRIOR_SELECTION: "Student's earlier selections",
 };
 
@@ -81,7 +81,7 @@ const OPTION_SOURCE_HELP: Record<OptionSource, string> = {
   ELECTIVE_SUBJECTS:
     "Students choose from the elective subjects offered for their course in the selected semesters.",
   PRIOR_SELECTION:
-    "Students choose only from what they already selected in the metas you pick below (e.g. offer Minor 5 from their Minor 1 / Minor 2 choices).",
+    "Students choose only from what they already selected in the settings ticked alongside (e.g. offer Minor 5 from their Minor 1 / Minor 2 choices).",
 };
 
 export default function SubjectSelectionMetaPage() {
@@ -412,7 +412,7 @@ export default function SubjectSelectionMetaPage() {
 
       {/* Add Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Add Subject-selection Meta</DialogTitle>
             <DialogDescription>
@@ -421,7 +421,7 @@ export default function SubjectSelectionMetaPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <Label htmlFor="add-meta-label">Label</Label>
               <Input
@@ -445,11 +445,28 @@ export default function SubjectSelectionMetaPage() {
                 }))}
               />
             </div>
+            <div>
+              <Label>Subject options come from</Label>
+              <Combobox
+                className="mt-1"
+                value={addOptionSource}
+                onChange={(v) => setAddOptionSource((v || "ELECTIVE_SUBJECTS") as OptionSource)}
+                placeholder="Select where options come from"
+                dataArr={(Object.keys(OPTION_SOURCE_LABEL) as OptionSource[]).map((k) => ({
+                  value: k,
+                  label: OPTION_SOURCE_LABEL[k],
+                }))}
+              />
+            </div>
           </div>
 
-          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <p className="mt-2 text-xs text-muted-foreground">
+            {OPTION_SOURCE_HELP[addOptionSource]}
+          </p>
+
+          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <Label>Applicable classes</Label>
+              <Label>Applicable semesters</Label>
               <div className="mt-2 h-56 overflow-auto rounded border p-3">
                 {classes.map((c) => (
                   <div key={c.id} className="flex items-center space-x-2 py-1">
@@ -482,44 +499,38 @@ export default function SubjectSelectionMetaPage() {
                 ))}
               </div>
             </div>
-          </div>
-
-          <div className="mt-4">
-            <Label>Subject options come from</Label>
-            <Combobox
-              className="mt-1"
-              value={addOptionSource}
-              onChange={(v) => setAddOptionSource((v || "ELECTIVE_SUBJECTS") as OptionSource)}
-              placeholder="Select where options come from"
-              dataArr={(Object.keys(OPTION_SOURCE_LABEL) as OptionSource[]).map((k) => ({
-                value: k,
-                label: OPTION_SOURCE_LABEL[k],
-              }))}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              {OPTION_SOURCE_HELP[addOptionSource]}
-            </p>
-          </div>
-
-          {addOptionSource === "PRIOR_SELECTION" && (
-            <div className="mt-3">
-              <Label>Take options from these selections</Label>
-              <div className="mt-2 max-h-48 overflow-auto rounded border p-3">
+            <div>
+              <Label
+                className={addOptionSource === "ELECTIVE_SUBJECTS" ? "text-muted-foreground" : ""}
+              >
+                Take options from
+              </Label>
+              <div
+                className={`mt-2 h-56 overflow-auto rounded border p-3 ${
+                  addOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
+                }`}
+              >
                 {sourceMetaChoices.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No other subject-selection settings exist for this academic year yet.
+                    No other settings exist for this academic year yet.
                   </p>
                 ) : (
                   sourceMetaChoices.map((m) => (
                     <div key={m.id} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         id={`add-src-${m.id}`}
+                        disabled={addOptionSource === "ELECTIVE_SUBJECTS"}
                         checked={addSourceMetaIds.includes(m.id)}
                         onCheckedChange={() =>
                           toggleId(m.id, addSourceMetaIds, setAddSourceMetaIds)
                         }
                       />
-                      <Label htmlFor={`add-src-${m.id}`} className="text-sm">
+                      <Label
+                        htmlFor={`add-src-${m.id}`}
+                        className={`text-sm ${
+                          addOptionSource === "ELECTIVE_SUBJECTS" ? "text-muted-foreground" : ""
+                        }`}
+                      >
                         {m.label}
                       </Label>
                     </div>
@@ -527,7 +538,7 @@ export default function SubjectSelectionMetaPage() {
                 )}
               </div>
             </div>
-          )}
+          </div>
 
           <div className="mt-4 flex items-center space-x-2">
             <Switch
@@ -564,7 +575,7 @@ export default function SubjectSelectionMetaPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Edit Subject-selection Meta</DialogTitle>
             <DialogDescription>
@@ -572,7 +583,7 @@ export default function SubjectSelectionMetaPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <Label htmlFor="meta-label">Label</Label>
               <Input
@@ -601,11 +612,28 @@ export default function SubjectSelectionMetaPage() {
                 }))}
               />
             </div>
+            <div>
+              <Label>Subject options come from</Label>
+              <Combobox
+                className="mt-1"
+                value={editOptionSource}
+                onChange={(v) => setEditOptionSource((v || "ELECTIVE_SUBJECTS") as OptionSource)}
+                placeholder="Select where options come from"
+                dataArr={(Object.keys(OPTION_SOURCE_LABEL) as OptionSource[]).map((k) => ({
+                  value: k,
+                  label: OPTION_SOURCE_LABEL[k],
+                }))}
+              />
+            </div>
           </div>
 
-          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <p className="mt-2 text-xs text-muted-foreground">
+            {OPTION_SOURCE_HELP[editOptionSource]}
+          </p>
+
+          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <Label>Applicable classes</Label>
+              <Label>Applicable semesters</Label>
               <div className="mt-2 h-56 overflow-auto rounded border p-3">
                 {classes.map((c) => (
                   <div key={c.id} className="flex items-center space-x-2 py-1">
@@ -638,44 +666,38 @@ export default function SubjectSelectionMetaPage() {
                 ))}
               </div>
             </div>
-          </div>
-
-          <div className="mt-4">
-            <Label>Subject options come from</Label>
-            <Combobox
-              className="mt-1"
-              value={editOptionSource}
-              onChange={(v) => setEditOptionSource((v || "ELECTIVE_SUBJECTS") as OptionSource)}
-              placeholder="Select where options come from"
-              dataArr={(Object.keys(OPTION_SOURCE_LABEL) as OptionSource[]).map((k) => ({
-                value: k,
-                label: OPTION_SOURCE_LABEL[k],
-              }))}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              {OPTION_SOURCE_HELP[editOptionSource]}
-            </p>
-          </div>
-
-          {editOptionSource === "PRIOR_SELECTION" && (
-            <div className="mt-3">
-              <Label>Take options from these selections</Label>
-              <div className="mt-2 max-h-48 overflow-auto rounded border p-3">
+            <div>
+              <Label
+                className={editOptionSource === "ELECTIVE_SUBJECTS" ? "text-muted-foreground" : ""}
+              >
+                Take options from
+              </Label>
+              <div
+                className={`mt-2 h-56 overflow-auto rounded border p-3 ${
+                  editOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
+                }`}
+              >
                 {sourceMetaChoices.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No other subject-selection settings exist for this academic year yet.
+                    No other settings exist for this academic year yet.
                   </p>
                 ) : (
                   sourceMetaChoices.map((m) => (
                     <div key={m.id} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         id={`edit-src-${m.id}`}
+                        disabled={editOptionSource === "ELECTIVE_SUBJECTS"}
                         checked={editSourceMetaIds.includes(m.id)}
                         onCheckedChange={() =>
                           toggleId(m.id, editSourceMetaIds, setEditSourceMetaIds)
                         }
                       />
-                      <Label htmlFor={`edit-src-${m.id}`} className="text-sm">
+                      <Label
+                        htmlFor={`edit-src-${m.id}`}
+                        className={`text-sm ${
+                          editOptionSource === "ELECTIVE_SUBJECTS" ? "text-muted-foreground" : ""
+                        }`}
+                      >
                         {m.label}
                       </Label>
                     </div>
@@ -683,7 +705,7 @@ export default function SubjectSelectionMetaPage() {
                 )}
               </div>
             </div>
-          )}
+          </div>
 
           <div className="mt-4 flex items-center space-x-2">
             <Switch
