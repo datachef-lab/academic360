@@ -69,6 +69,20 @@ function roman(name: string): string {
   return (s || name).toUpperCase();
 }
 
+/**
+ * "SEMESTER II" -> "Semester II". Sentence-cases each word but keeps roman
+ * numerals fully uppercase, since class names end in one (I, II, … VIII).
+ */
+function sentenceCaseClass(name: string): string {
+  return name
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) =>
+      /^[ivxlcdm]+$/.test(word) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join(" ");
+}
+
 /** Where a meta's student options come from (mirrors the backend enum). */
 type OptionSource = "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
 
@@ -340,25 +354,44 @@ export default function SubjectSelectionMetaPage() {
             <Table containerClassName="h-[70vh] overflow-auto rounded-md">
               <TableHeader className="sticky top-0 z-10 bg-gray-50">
                 <TableRow>
-                  <TableHead className="w-[35%]">Label</TableHead>
+                  <TableHead className="w-[22%]">Label</TableHead>
                   <TableHead>Subject Category</TableHead>
-                  <TableHead>Classes</TableHead>
+                  <TableHead>Semesters</TableHead>
                   <TableHead>Streams</TableHead>
+                  <TableHead>Subject options from</TableHead>
+                  <TableHead>Taken from</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                       <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : rows.length ? (
                   rows.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">{m.label}</TableCell>
+                    <TableRow
+                      key={m.id}
+                      // Inactive metas are hidden from students entirely, so flag
+                      // the whole row rather than tucking the status in a column.
+                      className={m.isActive === false ? "bg-red-50 hover:bg-red-100" : undefined}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {m.label}
+                          {m.isActive === false && (
+                            <Badge
+                              variant="outline"
+                              className="border-red-300 bg-red-100 text-xs text-red-700"
+                            >
+                              Inactive
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {m.subjectType?.code || m.subjectType?.name ? (
                           <Badge variant="outline" className={`text-xs ${BADGE.emerald}`}>
@@ -385,6 +418,32 @@ export default function SubjectSelectionMetaPage() {
                           "violet",
                         )}
                       </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const src = ((m as { optionSource?: OptionSource }).optionSource ??
+                            "ELECTIVE_SUBJECTS") as OptionSource;
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${
+                                src === "PRIOR_SELECTION"
+                                  ? "border-sky-300 bg-sky-50 text-sky-700"
+                                  : "border-gray-300 bg-gray-50 text-gray-700"
+                              }`}
+                            >
+                              {OPTION_SOURCE_LABEL[src]}
+                            </Badge>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
+                        {chips(
+                          ((m as { sources?: { sourceMeta?: { label?: string } }[] }).sources ?? [])
+                            .map((s) => s.sourceMeta?.label)
+                            .filter((l): l is string => !!l),
+                          "violet",
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
@@ -399,7 +458,7 @@ export default function SubjectSelectionMetaPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                       No subject-selection metas for {currentAcademicYear?.year ?? "this year"}.
                     </TableCell>
                   </TableRow>
@@ -412,9 +471,14 @@ export default function SubjectSelectionMetaPage() {
 
       {/* Add Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-6xl">
           <DialogHeader>
-            <DialogTitle>Add Subject-selection Meta</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+                <Plus className="h-4 w-4" />
+              </span>
+              Add Subject-selection Meta
+            </DialogTitle>
             <DialogDescription>
               Create a new subject-selection group for{" "}
               <span className="font-medium">{currentAcademicYear?.year ?? "—"}</span>.
@@ -467,7 +531,7 @@ export default function SubjectSelectionMetaPage() {
           <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <Label>Applicable semesters</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+              <div className="mt-2 h-72 overflow-auto rounded border p-3">
                 {classes.map((c) => (
                   <div key={c.id} className="flex items-center space-x-2 py-1">
                     <Checkbox
@@ -476,7 +540,7 @@ export default function SubjectSelectionMetaPage() {
                       onCheckedChange={() => toggleId(c.id, addClassIds, setAddClassIds)}
                     />
                     <Label htmlFor={`add-cls-${c.id}`} className="text-sm">
-                      {c.name}
+                      {sentenceCaseClass(c.name ?? "")}
                     </Label>
                   </div>
                 ))}
@@ -484,7 +548,7 @@ export default function SubjectSelectionMetaPage() {
             </div>
             <div>
               <Label>Streams</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+              <div className="mt-2 h-72 overflow-auto rounded border p-3">
                 {streams.map((s) => (
                   <div key={s.id} className="flex items-center space-x-2 py-1">
                     <Checkbox
@@ -506,7 +570,7 @@ export default function SubjectSelectionMetaPage() {
                 Take options from
               </Label>
               <div
-                className={`mt-2 h-56 overflow-auto rounded border p-3 ${
+                className={`mt-2 h-72 overflow-auto rounded border p-3 ${
                   addOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
                 }`}
               >
@@ -540,44 +604,53 @@ export default function SubjectSelectionMetaPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center space-x-2">
-            <Switch
-              id="add-meta-active"
-              checked={addIsActive}
-              onCheckedChange={setAddIsActive}
-              className="data-[state=checked]:bg-green-600"
-            />
-            <Label
-              htmlFor="add-meta-active"
-              className={`text-sm font-medium ${addIsActive ? "text-green-600" : "text-red-600"}`}
-            >
-              {addIsActive ? "Active" : "Inactive"}
-            </Label>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={adding}>
-              Cancel
-            </Button>
-            <Button onClick={saveAdd} disabled={adding}>
-              {adding ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating…
-                </>
-              ) : (
-                "Create"
-              )}
-            </Button>
+          <DialogFooter className="mt-4 sm:justify-between">
+            {/* Inactive metas are hidden from students — the backend meta query
+                filters on isActive, so this switch controls whether the dropdown
+                appears in CU-reg and the student console at all. */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="add-meta-active"
+                checked={addIsActive}
+                onCheckedChange={setAddIsActive}
+                className="data-[state=checked]:bg-green-600"
+              />
+              <Label
+                htmlFor="add-meta-active"
+                className={`text-sm font-medium ${addIsActive ? "text-green-600" : "text-red-600"}`}
+              >
+                {addIsActive ? "Active" : "Inactive"}
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={adding}>
+                Cancel
+              </Button>
+              <Button onClick={saveAdd} disabled={adding}>
+                {adding ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating…
+                  </>
+                ) : (
+                  "Create"
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-6xl">
           <DialogHeader>
-            <DialogTitle>Edit Subject-selection Meta</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+                <Pencil className="h-4 w-4" />
+              </span>
+              Edit Subject-selection Meta
+            </DialogTitle>
             <DialogDescription>
               Update the label, subject category, applicable classes, streams and status.
             </DialogDescription>
@@ -634,7 +707,7 @@ export default function SubjectSelectionMetaPage() {
           <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <Label>Applicable semesters</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+              <div className="mt-2 h-72 overflow-auto rounded border p-3">
                 {classes.map((c) => (
                   <div key={c.id} className="flex items-center space-x-2 py-1">
                     <Checkbox
@@ -643,7 +716,7 @@ export default function SubjectSelectionMetaPage() {
                       onCheckedChange={() => toggleId(c.id, editClassIds, setEditClassIds)}
                     />
                     <Label htmlFor={`cls-${c.id}`} className="text-sm">
-                      {c.name}
+                      {sentenceCaseClass(c.name ?? "")}
                     </Label>
                   </div>
                 ))}
@@ -651,7 +724,7 @@ export default function SubjectSelectionMetaPage() {
             </div>
             <div>
               <Label>Streams</Label>
-              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+              <div className="mt-2 h-72 overflow-auto rounded border p-3">
                 {streams.map((s) => (
                   <div key={s.id} className="flex items-center space-x-2 py-1">
                     <Checkbox
@@ -673,7 +746,7 @@ export default function SubjectSelectionMetaPage() {
                 Take options from
               </Label>
               <div
-                className={`mt-2 h-56 overflow-auto rounded border p-3 ${
+                className={`mt-2 h-72 overflow-auto rounded border p-3 ${
                   editOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
                 }`}
               >
@@ -707,35 +780,39 @@ export default function SubjectSelectionMetaPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center space-x-2">
-            <Switch
-              id="meta-active"
-              checked={editIsActive}
-              onCheckedChange={setEditIsActive}
-              className="data-[state=checked]:bg-green-600"
-            />
-            <Label
-              htmlFor="meta-active"
-              className={`text-sm font-medium ${editIsActive ? "text-green-600" : "text-red-600"}`}
-            >
-              {editIsActive ? "Active" : "Inactive"}
-            </Label>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button onClick={saveEdit} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
+          <DialogFooter className="mt-4 sm:justify-between">
+            {/* Inactive metas are hidden from students — the backend meta query
+                filters on isActive, so this switch controls whether the dropdown
+                appears in CU-reg and the student console at all. */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="meta-active"
+                checked={editIsActive}
+                onCheckedChange={setEditIsActive}
+                className="data-[state=checked]:bg-green-600"
+              />
+              <Label
+                htmlFor="meta-active"
+                className={`text-sm font-medium ${editIsActive ? "text-green-600" : "text-red-600"}`}
+              >
+                {editIsActive ? "Active" : "Inactive"}
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={saveEdit} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
