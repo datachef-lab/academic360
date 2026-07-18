@@ -585,8 +585,22 @@ export interface PerMetaOptions {
   metaId: number;
   metaLabel: string;
   optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+  /**
+   * The meta's subject-type code (MN / IDC / AEC / CVAC). The forms key their
+   * restricted-grouping rules off this, so it has to travel with the options.
+   */
+  subjectTypeCode: string | null;
+  subjectTypeName: string | null;
+  /** Drives dropdown ordering, replacing the hardcoded JSX order. */
+  sequence: number | null;
   /** Class ids this meta applies to (its semesters). */
   classIds: number[];
+  /**
+   * Class names for those ids. The restricted-grouping semester context is
+   * still expressed in roman numerals parsed from these names, so the forms
+   * can derive it exactly as they do today.
+   */
+  classNames: string[];
   options: {
     subjectId: number;
     subjectName: string;
@@ -596,6 +610,11 @@ export interface PerMetaOptions {
     className: string | null;
     /** Present for ELECTIVE_SUBJECTS so callers can still reach the paper. */
     paperId: number | null;
+    /**
+     * Mirrors `paper.auto_assign`. The forms pre-select auto-assigned papers,
+     * so dropping it here would silently disable that behaviour.
+     */
+    autoAssign: boolean;
   }[];
 }
 
@@ -659,6 +678,20 @@ async function buildPerMetaOptions(
             isNull(studentSubjectSelectionModel.isDeprecated),
             eq(studentSubjectSelectionModel.isDeprecated, false),
           ),
+          // A student can hold more than one active row per meta (revisions),
+          // so take only the latest version — otherwise a superseded subject
+          // would be offered alongside the current one. Mirrors the
+          // latest-version filter used for actualStudentSelections above.
+          sql`${studentSubjectSelectionModel.id} IN (
+            SELECT DISTINCT ON (${studentSubjectSelectionModel.subjectSelectionMetaId})
+              ${studentSubjectSelectionModel.id}
+            FROM ${studentSubjectSelectionModel}
+            WHERE ${studentSubjectSelectionModel.studentId} = ${studentId}
+              AND ${studentSubjectSelectionModel.isActive} = true
+            ORDER BY ${studentSubjectSelectionModel.subjectSelectionMetaId},
+                     ${studentSubjectSelectionModel.version} DESC,
+                     ${studentSubjectSelectionModel.createdAt} DESC
+          )`,
         ),
       );
     for (const r of rows) {
@@ -679,6 +712,19 @@ async function buildPerMetaOptions(
     const classIds = (meta.forClasses ?? [])
       .map((c) => c?.class?.id)
       .filter((v): v is number => typeof v === "number");
+    const classNames = (meta.forClasses ?? [])
+      .map((c) => c?.class?.name)
+      .filter((v): v is string => typeof v === "string");
+    const metaCommon = {
+      metaId: meta.id!,
+      metaLabel: meta.label,
+      optionSource,
+      subjectTypeCode: (meta.subjectType as any)?.code ?? null,
+      subjectTypeName: (meta.subjectType as any)?.name ?? null,
+      sequence: meta.sequence ?? null,
+      classIds,
+      classNames,
+    };
 
     if (optionSource === "PRIOR_SELECTION") {
       const sourceIds = (((meta as any).sourceMetaIds ?? []) as number[]) || [];
@@ -695,16 +741,12 @@ async function buildPerMetaOptions(
             classId: null,
             className: null,
             paperId: null,
+            // Prior selections are explicit student picks, never auto-assigned.
+            autoAssign: false,
           });
         }
       }
-      return {
-        metaId: meta.id!,
-        metaLabel: meta.label,
-        optionSource,
-        classIds,
-        options,
-      };
+      return { ...metaCommon, options };
     }
 
     // ELECTIVE_SUBJECTS — reuse the already-filtered options for this subject
@@ -732,15 +774,10 @@ async function buildPerMetaOptions(
         classId,
         className: p?.class?.name ?? null,
         paperId: p?.id ?? null,
+        autoAssign: (p as any)?.autoAssign === true,
       });
     }
-    return {
-      metaId: meta.id!,
-      metaLabel: meta.label,
-      optionSource,
-      classIds,
-      options,
-    };
+    return { ...metaCommon, options };
   });
 }
 
@@ -756,6 +793,9 @@ async function fetchSubjectSelectionMetaData(
     .select({
       id: subjectSelectionMetaModel.id,
       label: subjectSelectionMetaModel.label,
+      // Drives dropdown ordering in the forms. Without it every meta reports
+      // sequence 0 and the dropdowns fall back to meta-id order.
+      sequence: subjectSelectionMetaModel.sequence,
       subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
       academicYearId: subjectSelectionMetaModel.academicYearId,
       optionSource: subjectSelectionMetaModel.optionSource,
@@ -861,6 +901,7 @@ async function fetchSubjectSelectionMetaData(
 
       return {
         id: meta.id!,
+        sequence: meta.sequence,
         academicYear: academicYear[0]!,
         subjectType: subjectType[0]!,
         optionSource: meta.optionSource,
