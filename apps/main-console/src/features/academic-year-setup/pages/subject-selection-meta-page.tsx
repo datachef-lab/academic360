@@ -69,6 +69,21 @@ function roman(name: string): string {
   return (s || name).toUpperCase();
 }
 
+/** Where a meta's student options come from (mirrors the backend enum). */
+type OptionSource = "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+
+const OPTION_SOURCE_LABEL: Record<OptionSource, string> = {
+  ELECTIVE_SUBJECTS: "Elective subjects (this academic year)",
+  PRIOR_SELECTION: "Student's earlier selections",
+};
+
+const OPTION_SOURCE_HELP: Record<OptionSource, string> = {
+  ELECTIVE_SUBJECTS:
+    "Students choose from the elective subjects offered for their course in the selected semesters.",
+  PRIOR_SELECTION:
+    "Students choose only from what they already selected in the metas you pick below (e.g. offer Minor 5 from their Minor 1 / Minor 2 choices).",
+};
+
 export default function SubjectSelectionMetaPage() {
   const { currentAcademicYear } = useAcademicYear();
   const [metas, setMetas] = useState<SubjectSelectionMetaDto[]>([]);
@@ -91,6 +106,8 @@ export default function SubjectSelectionMetaPage() {
   const [editClassIds, setEditClassIds] = useState<number[]>([]);
   const [editStreamIds, setEditStreamIds] = useState<number[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editOptionSource, setEditOptionSource] = useState<OptionSource>("ELECTIVE_SUBJECTS");
+  const [editSourceMetaIds, setEditSourceMetaIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Add dialog state
@@ -100,6 +117,8 @@ export default function SubjectSelectionMetaPage() {
   const [addClassIds, setAddClassIds] = useState<number[]>([]);
   const [addStreamIds, setAddStreamIds] = useState<number[]>([]);
   const [addIsActive, setAddIsActive] = useState(true);
+  const [addOptionSource, setAddOptionSource] = useState<OptionSource>("ELECTIVE_SUBJECTS");
+  const [addSourceMetaIds, setAddSourceMetaIds] = useState<number[]>([]);
   const [adding, setAdding] = useState(false);
 
   const loadMetas = async () => {
@@ -158,6 +177,14 @@ export default function SubjectSelectionMetaPage() {
         .map((s) => s.stream?.id)
         .filter((id): id is number => typeof id === "number"),
     );
+    setEditOptionSource(
+      ((m as { optionSource?: OptionSource }).optionSource ?? "ELECTIVE_SUBJECTS") as OptionSource,
+    );
+    setEditSourceMetaIds(
+      ((m as { sources?: { sourceMeta?: { id?: number } }[] }).sources ?? [])
+        .map((s) => s.sourceMeta?.id)
+        .filter((id): id is number => typeof id === "number"),
+    );
     setEditIsActive(m.isActive !== false);
     setIsEditOpen(true);
   };
@@ -180,6 +207,11 @@ export default function SubjectSelectionMetaPage() {
         isActive: editIsActive,
         forClasses: editClassIds.map((id) => ({ id })),
         streams: editStreamIds.map((id) => ({ id })),
+        optionSource: editOptionSource,
+        // Sources only apply to PRIOR_SELECTION; the backend clears them
+        // otherwise so a stale list can't drive options later.
+        sourceMetas:
+          editOptionSource === "PRIOR_SELECTION" ? editSourceMetaIds.map((id) => ({ id })) : [],
       });
       toast.success("Subject-selection meta updated");
       setIsEditOpen(false);
@@ -198,6 +230,8 @@ export default function SubjectSelectionMetaPage() {
     setAddClassIds([]);
     setAddStreamIds([]);
     setAddIsActive(true);
+    setAddOptionSource("ELECTIVE_SUBJECTS");
+    setAddSourceMetaIds([]);
     setIsAddOpen(true);
   };
 
@@ -233,6 +267,9 @@ export default function SubjectSelectionMetaPage() {
         isActive: addIsActive,
         forClasses: addClassIds.map((id) => ({ id })),
         streams: addStreamIds.map((id) => ({ id })),
+        optionSource: addOptionSource,
+        sourceMetas:
+          addOptionSource === "PRIOR_SELECTION" ? addSourceMetaIds.map((id) => ({ id })) : [],
       });
       toast.success("Subject-selection meta created");
       setIsAddOpen(false);
@@ -244,6 +281,19 @@ export default function SubjectSelectionMetaPage() {
       setAdding(false);
     }
   };
+
+  /**
+   * Metas that can act as a source: others in the same academic year. A meta
+   * can't source from itself, so the one being edited is excluded.
+   */
+  const sourceMetaChoices = useMemo(() => {
+    const yearId = currentAcademicYear?.id;
+    return metas
+      .filter((m) => (yearId ? m.academicYear?.id === yearId : true))
+      .filter((m) => m.id != null && m.id !== editId)
+      .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
+      .map((m) => ({ id: m.id as number, label: m.label ?? `Meta ${m.id}` }));
+  }, [metas, currentAcademicYear?.id, editId]);
 
   const rows = useMemo(() => {
     const yearId = currentAcademicYear?.id;
@@ -434,6 +484,51 @@ export default function SubjectSelectionMetaPage() {
             </div>
           </div>
 
+          <div className="mt-4">
+            <Label>Subject options come from</Label>
+            <Combobox
+              className="mt-1"
+              value={addOptionSource}
+              onChange={(v) => setAddOptionSource((v || "ELECTIVE_SUBJECTS") as OptionSource)}
+              placeholder="Select where options come from"
+              dataArr={(Object.keys(OPTION_SOURCE_LABEL) as OptionSource[]).map((k) => ({
+                value: k,
+                label: OPTION_SOURCE_LABEL[k],
+              }))}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {OPTION_SOURCE_HELP[addOptionSource]}
+            </p>
+          </div>
+
+          {addOptionSource === "PRIOR_SELECTION" && (
+            <div className="mt-3">
+              <Label>Take options from these selections</Label>
+              <div className="mt-2 max-h-48 overflow-auto rounded border p-3">
+                {sourceMetaChoices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No other subject-selection settings exist for this academic year yet.
+                  </p>
+                ) : (
+                  sourceMetaChoices.map((m) => (
+                    <div key={m.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`add-src-${m.id}`}
+                        checked={addSourceMetaIds.includes(m.id)}
+                        onCheckedChange={() =>
+                          toggleId(m.id, addSourceMetaIds, setAddSourceMetaIds)
+                        }
+                      />
+                      <Label htmlFor={`add-src-${m.id}`} className="text-sm">
+                        {m.label}
+                      </Label>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="mt-4 flex items-center space-x-2">
             <Switch
               id="add-meta-active"
@@ -544,6 +639,51 @@ export default function SubjectSelectionMetaPage() {
               </div>
             </div>
           </div>
+
+          <div className="mt-4">
+            <Label>Subject options come from</Label>
+            <Combobox
+              className="mt-1"
+              value={editOptionSource}
+              onChange={(v) => setEditOptionSource((v || "ELECTIVE_SUBJECTS") as OptionSource)}
+              placeholder="Select where options come from"
+              dataArr={(Object.keys(OPTION_SOURCE_LABEL) as OptionSource[]).map((k) => ({
+                value: k,
+                label: OPTION_SOURCE_LABEL[k],
+              }))}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {OPTION_SOURCE_HELP[editOptionSource]}
+            </p>
+          </div>
+
+          {editOptionSource === "PRIOR_SELECTION" && (
+            <div className="mt-3">
+              <Label>Take options from these selections</Label>
+              <div className="mt-2 max-h-48 overflow-auto rounded border p-3">
+                {sourceMetaChoices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No other subject-selection settings exist for this academic year yet.
+                  </p>
+                ) : (
+                  sourceMetaChoices.map((m) => (
+                    <div key={m.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`edit-src-${m.id}`}
+                        checked={editSourceMetaIds.includes(m.id)}
+                        onCheckedChange={() =>
+                          toggleId(m.id, editSourceMetaIds, setEditSourceMetaIds)
+                        }
+                      />
+                      <Label htmlFor={`edit-src-${m.id}`} className="text-sm">
+                        {m.label}
+                      </Label>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mt-4 flex items-center space-x-2">
             <Switch

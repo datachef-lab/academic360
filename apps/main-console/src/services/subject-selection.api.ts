@@ -29,12 +29,18 @@ export type CreateRelatedSubjectSubInput = {
 // Update input for a subject-selection meta. Mirrors the backend update
 // service input (flat { id } arrays). academicYear/sequence are intentionally
 // omitted so they cannot be changed on update.
+/** Where a meta's student options come from (mirrors the backend enum). */
+export type SubjectSelectionOptionSource = "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+
 export type UpdateSubjectSelectionMetaInput = {
   label?: string;
   subjectType?: { id: number };
   isActive?: boolean;
   forClasses?: { id: number }[];
   streams?: { id: number }[];
+  optionSource?: SubjectSelectionOptionSource;
+  /** Metas to draw options from; only applied for PRIOR_SELECTION. */
+  sourceMetas?: { id: number }[];
 };
 
 // Create input for a subject-selection meta. Mirrors the backend create
@@ -49,6 +55,9 @@ export type CreateSubjectSelectionMetaInput = {
   isActive?: boolean;
   forClasses?: { id: number }[];
   streams?: { id: number }[];
+  optionSource?: SubjectSelectionOptionSource;
+  /** Metas to draw options from; only applied for PRIOR_SELECTION. */
+  sourceMetas?: { id: number }[];
 };
 
 const BASE_MAIN = "/api/subject-selection/related-subject-mains";

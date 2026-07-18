@@ -146,6 +146,7 @@ export async function findSubjectsSelections(studentId: number) {
         studentSubjectsSelection: [],
         selectedMinorSubjects: [],
         subjectSelectionMetas: [],
+        perMetaOptions: [] as PerMetaOptions[],
         hasFormSubmissions: false,
         actualStudentSelections: [],
         session: foundSession,
