@@ -65,6 +65,10 @@ export const promotionModel = pgTable("promotions", {
     activeIdx: index("promotions_active_idx")
         .on(t.programCourseId, t.studentId)
         .where(sql`${t.endDate} is null and coalesce(${t.isDeprecated}, false) = false`),
+    // Roster reports join promotions → classes/sections/shifts per row.
+    classIdx: index("promotions_class_id_idx").on(t.classId),
+    sectionIdx: index("promotions_section_id_idx").on(t.sectionId),
+    shiftIdx: index("promotions_shift_id_idx").on(t.shiftId),
 }));
 
 export const promotionInsertSchema = createInsertSchema(promotionModel);

@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { userModel } from "@/schemas/models/user";
 import { communityTypeEnum } from "@/schemas/enums";
@@ -50,7 +50,13 @@ export const studentModel = pgTable("students", {
         .references(() => userModel.id),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // FK columns are joined heavily by the report exports (student → user →
+    // personal_details, roster joins). Postgres does not auto-index FKs.
+    userIdx: index("students_user_id_idx").on(t.userId),
+    programCourseIdx: index("students_program_course_id_idx").on(t.programCourseId),
+    applicationFormIdx: index("students_application_form_id_idx").on(t.applicationId),
+}));
 
 export const studentRelations = relations(studentModel, ({ one }) => ({
     user: one(userModel, {

@@ -581,8 +581,13 @@ export const exportStudentDetailedReportController = async (
     }
 
     console.log("[STUDENT-EXPORT] Starting detailed student export...");
-    const result =
-      await studentService.exportStudentDetailedReport(academicYearIdNumber);
+    const filters = parseReportExportFilters(
+      req.query as Record<string, unknown>,
+    );
+    const result = await studentService.exportStudentDetailedReport(
+      academicYearIdNumber,
+      filters,
+    );
 
     res.setHeader(
       "Content-Type",
@@ -672,10 +677,13 @@ export const exportStudentAcademicSubjectsReportController = async (
     console.log(
       "[STUDENT-EXPORT] Starting student academic subjects report export...",
     );
-    const result =
-      await studentService.exportStudentAcademicSubjectsReport(
-        academicYearIdNumber,
-      );
+    const filters = parseReportExportFilters(
+      req.query as Record<string, unknown>,
+    );
+    const result = await studentService.exportStudentAcademicSubjectsReport(
+      academicYearIdNumber,
+      filters,
+    );
 
     res.setHeader(
       "Content-Type",

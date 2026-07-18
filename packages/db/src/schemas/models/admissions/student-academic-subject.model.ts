@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { doublePrecision, index, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { subjectResultStatusType } from "@/schemas/enums";
 import { admissionAcademicInfoModel, boardSubjectModel, gradeModel } from "@/schemas/models/admissions";
@@ -22,7 +22,11 @@ export const studentAcademicSubjectModel = pgTable("student_academic_subjects", 
     resultStatus: subjectResultStatusType("result_status"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // 12th Subjects report pivots subjects per admission_academic_info row.
+    admissionAcademicInfoIdx: index("student_academic_subjects_adm_academic_info_id_idx").on(t.admissionAcademicInfoId),
+    boardSubjectIdx: index("student_academic_subjects_board_subject_id_idx").on(t.boardSubjectId),
+}));
 
 export const createStudentAcademicSubjectsSchema = createInsertSchema(studentAcademicSubjectModel);
 
