@@ -300,22 +300,37 @@ export default function SubjectSelectionMetaPage() {
    * Metas that can act as a source: others in the same academic year. A meta
    * can't source from itself, so the one being edited is excluded.
    */
-  const sourceMetaChoices = useMemo(() => {
+  /**
+   * Every meta in the current academic year, ordered by sequence. Callers pass
+   * the id of the meta being edited so it cannot be its own source; the Add
+   * dialog passes null (a new meta has no id yet) — using `editId` directly here
+   * leaked the last-edited meta out of the Add dialog's list.
+   */
+  const yearMetas = useMemo(() => {
     const yearId = currentAcademicYear?.id;
     return metas
       .filter((m) => (yearId ? m.academicYear?.id === yearId : true))
-      .filter((m) => m.id != null && m.id !== editId)
+      .filter((m) => m.id != null)
       .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
-      .map((m) => ({ id: m.id as number, label: m.label ?? `Meta ${m.id}` }));
-  }, [metas, currentAcademicYear?.id, editId]);
+      .map((m) => ({
+        id: m.id as number,
+        label: m.label ?? `Meta ${m.id}`,
+        isActive: m.isActive !== false,
+      }));
+  }, [metas, currentAcademicYear?.id]);
+
+  const sourceMetaChoicesFor = (selfId: number | null) => yearMetas.filter((m) => m.id !== selfId);
 
   const rows = useMemo(() => {
     const yearId = currentAcademicYear?.id;
-    return metas
-      .filter((m) => (yearId ? m.academicYear?.id === yearId : true))
-      .filter((m) => m.isActive !== false)
-      .filter((m) => (m.label ?? "").toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+    return (
+      metas
+        .filter((m) => (yearId ? m.academicYear?.id === yearId : true))
+        // Inactive metas stay listed (flagged as a red row) so admins can find and
+        // re-activate them — hiding them made them unreachable from this page.
+        .filter((m) => (m.label ?? "").toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
+    );
   }, [metas, currentAcademicYear?.id, search]);
 
   useResourceRoom("subject-selection/metas", () => loadMetas());
@@ -574,12 +589,12 @@ export default function SubjectSelectionMetaPage() {
                   addOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
                 }`}
               >
-                {sourceMetaChoices.length === 0 ? (
+                {sourceMetaChoicesFor(null).length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No other settings exist for this academic year yet.
                   </p>
                 ) : (
-                  sourceMetaChoices.map((m) => (
+                  sourceMetaChoicesFor(null).map((m) => (
                     <div key={m.id} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         id={`add-src-${m.id}`}
@@ -596,6 +611,9 @@ export default function SubjectSelectionMetaPage() {
                         }`}
                       >
                         {m.label}
+                        {!m.isActive && (
+                          <span className="ml-1 text-xs text-red-600">(inactive)</span>
+                        )}
                       </Label>
                     </div>
                   ))
@@ -750,12 +768,12 @@ export default function SubjectSelectionMetaPage() {
                   editOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
                 }`}
               >
-                {sourceMetaChoices.length === 0 ? (
+                {sourceMetaChoicesFor(editId).length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No other settings exist for this academic year yet.
                   </p>
                 ) : (
-                  sourceMetaChoices.map((m) => (
+                  sourceMetaChoicesFor(editId).map((m) => (
                     <div key={m.id} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         id={`edit-src-${m.id}`}
@@ -772,6 +790,9 @@ export default function SubjectSelectionMetaPage() {
                         }`}
                       >
                         {m.label}
+                        {!m.isActive && (
+                          <span className="ml-1 text-xs text-red-600">(inactive)</span>
+                        )}
                       </Label>
                     </div>
                   ))
