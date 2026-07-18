@@ -319,7 +319,17 @@ export default function SubjectSelectionMetaPage() {
       }));
   }, [metas, currentAcademicYear?.id]);
 
-  const sourceMetaChoicesFor = (selfId: number | null) => yearMetas.filter((m) => m.id !== selfId);
+  /**
+   * Inactive metas are excluded — an inactive meta shows no dropdown to
+   * students, so sourcing from one yields options that can never grow. A meta
+   * also cannot be its own source.
+   *
+   * One exception: an inactive meta that is ALREADY saved as a source stays
+   * listed (flagged), so a source configured before it was deactivated is
+   * visible and can be unticked, rather than sitting in hidden state.
+   */
+  const sourceMetaChoicesFor = (selfId: number | null, selected: number[]) =>
+    yearMetas.filter((m) => m.id !== selfId && (m.isActive || selected.includes(m.id)));
 
   const rows = useMemo(() => {
     const yearId = currentAcademicYear?.id;
@@ -394,19 +404,7 @@ export default function SubjectSelectionMetaPage() {
                       // the whole row rather than tucking the status in a column.
                       className={m.isActive === false ? "bg-red-50 hover:bg-red-100" : undefined}
                     >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {m.label}
-                          {m.isActive === false && (
-                            <Badge
-                              variant="outline"
-                              className="border-red-300 bg-red-100 text-xs text-red-700"
-                            >
-                              Inactive
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                      <TableCell className="font-medium">{m.label}</TableCell>
                       <TableCell>
                         {m.subjectType?.code || m.subjectType?.name ? (
                           <Badge variant="outline" className={`text-xs ${BADGE.emerald}`}>
@@ -443,7 +441,7 @@ export default function SubjectSelectionMetaPage() {
                               className={`text-xs ${
                                 src === "PRIOR_SELECTION"
                                   ? "border-sky-300 bg-sky-50 text-sky-700"
-                                  : "border-gray-300 bg-gray-50 text-gray-700"
+                                  : "border-amber-300 bg-amber-50 text-amber-700"
                               }`}
                             >
                               {OPTION_SOURCE_LABEL[src]}
@@ -589,12 +587,12 @@ export default function SubjectSelectionMetaPage() {
                   addOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
                 }`}
               >
-                {sourceMetaChoicesFor(null).length === 0 ? (
+                {sourceMetaChoicesFor(null, addSourceMetaIds).length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No other settings exist for this academic year yet.
                   </p>
                 ) : (
-                  sourceMetaChoicesFor(null).map((m) => (
+                  sourceMetaChoicesFor(null, addSourceMetaIds).map((m) => (
                     <div key={m.id} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         id={`add-src-${m.id}`}
@@ -768,12 +766,12 @@ export default function SubjectSelectionMetaPage() {
                   editOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
                 }`}
               >
-                {sourceMetaChoicesFor(editId).length === 0 ? (
+                {sourceMetaChoicesFor(editId, editSourceMetaIds).length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No other settings exist for this academic year yet.
                   </p>
                 ) : (
-                  sourceMetaChoicesFor(editId).map((m) => (
+                  sourceMetaChoicesFor(editId, editSourceMetaIds).map((m) => (
                     <div key={m.id} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         id={`edit-src-${m.id}`}
