@@ -3,6 +3,7 @@ import { subjectTypeModel } from "../course-design";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { academicYearModel } from "../academics";
+import { subjectSelectionOptionSourceEnum } from "@/schemas/enums";
 
 export const subjectSelectionMetaModel = pgTable("subject_selection_meta", {
     id: serial().primaryKey(),
@@ -15,6 +16,16 @@ export const subjectSelectionMetaModel = pgTable("subject_selection_meta", {
     label: varchar("label", { length: 255 })
         .notNull(),
     sequence: integer("sequence"),
+    /**
+     * Where this meta's selectable subject options come from. Defaults to the
+     * existing behaviour (the academic year's elective subjects), so every
+     * existing meta keeps behaving exactly as before. When set to
+     * PRIOR_SELECTION the options come from the student's own selections in the
+     * metas listed in `subject_selection_meta_sources`.
+     */
+    optionSource: subjectSelectionOptionSourceEnum("option_source")
+        .notNull()
+        .default("ELECTIVE_SUBJECTS"),
     isActive: boolean().default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),

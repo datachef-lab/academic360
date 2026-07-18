@@ -14,6 +14,7 @@ import { SubjectSelectionMetaT } from "@/schemas/models/subject-selection/subjec
 import { SubjectSelectionMetaClassT } from "@/schemas/models/subject-selection/subject-selection-meta-class.model";
 import { StudentSubjectSelectionT } from "@/schemas/models/subject-selection/student-subject-selection.model";
 import { SubjectSelectionMetaStreamT } from "@/schemas/models/subject-selection/subject-selection-meta-stream.model";
+import { SubjectSelectionMetaSourceT } from "@/schemas/models/subject-selection/subject-selection-meta-source.model";
 
 export interface RelatedSubjectSubDto extends Omit<RelatedSubjectSubT, "boardSubjectNameId"> {
     boardSubjectName: BoardSubjectNameT;
@@ -55,11 +56,34 @@ export interface SubjectSelectionMetaStreamDto extends Omit<SubjectSelectionMeta
     stream: StreamT;
 }
 
+/**
+ * Lightweight reference to another meta. Used by `sources` so a meta can point
+ * at the metas it draws options from without recursively expanding them.
+ */
+export interface SubjectSelectionMetaRefDto {
+    id: number;
+    label: string;
+    sequence: number | null;
+    subjectType: SubjectTypeT;
+}
+
+export interface SubjectSelectionMetaSourceDto
+    extends Omit<SubjectSelectionMetaSourceT, "subjectSelectionMetaId" | "sourceSubjectSelectionMetaId"> {
+    /** The meta whose prior student selections feed this meta's options. */
+    sourceMeta: SubjectSelectionMetaRefDto;
+}
+
 export interface SubjectSelectionMetaDto extends Omit<SubjectSelectionMetaT, "subjectTypeId" | "academicYearId"> {
     streams: SubjectSelectionMetaStreamDto[];
     subjectType: SubjectTypeT;
     academicYear: AcademicYearT;
     forClasses: SubjectSelectionMetaClassDto[];
+    /**
+     * Only meaningful when `optionSource` is PRIOR_SELECTION — the metas this
+     * one takes its student options from. Empty for ELECTIVE_SUBJECTS metas.
+     * (`optionSource` itself rides along from SubjectSelectionMetaT.)
+     */
+    sources: SubjectSelectionMetaSourceDto[];
 }
 
 export interface StudentSubjectSelectionDto extends Omit<StudentSubjectSelectionT, "sessionId" | "subjectSelectionMetaId" | "subjectId"> {
