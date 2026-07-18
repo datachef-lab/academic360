@@ -1177,6 +1177,13 @@
       "when": 1784307964311,
       "tag": "0168_elite_caretaker",
       "breakpoints": true
+    },
+    {
+      "idx": 169,
+      "version": "7",
+      "when": 1784355222238,
+      "tag": "0169_furry_ultron",
+      "breakpoints": true
     }
   ]
 }

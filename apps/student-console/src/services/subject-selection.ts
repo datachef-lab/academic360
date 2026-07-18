@@ -28,10 +28,40 @@ export interface StudentSubjectSelectionGroupDto {
   paperOptions: PaperDto[];
 }
 
+/** One selectable option inside a meta's dropdown. */
+export interface PerMetaOptionDto {
+  subjectId: number;
+  subjectName: string;
+  subjectCode: string | null;
+  classId: number | null;
+  className: string | null;
+  paperId: number | null;
+  /** Mirrors paper.auto_assign — such a subject must end up selected. */
+  autoAssign: boolean;
+}
+
+/**
+ * Server-resolved options per subject-selection meta. This is what drives the
+ * dropdowns: one entry = one dropdown, already scoped to the student's stream,
+ * program course and the meta's own semesters.
+ */
+export interface PerMetaOptionsDto {
+  metaId: number;
+  metaLabel: string;
+  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+  subjectTypeCode: string | null;
+  subjectTypeName: string | null;
+  sequence: number | null;
+  classIds: number[];
+  classNames: string[];
+  options: PerMetaOptionDto[];
+}
+
 export interface StudentSubjectSelectionApiResponse {
   studentSubjectsSelection: StudentSubjectSelectionGroupDto[];
   selectedMinorSubjects: PaperDto[]; // earlier selected Minor papers (admission data)
   subjectSelectionMetas: SubjectSelectionMetaDto[]; // meta data for dynamic labels
+  perMetaOptions: PerMetaOptionsDto[]; // one entry per dropdown to render
   hasFormSubmissions: boolean; // indicates if student has submitted through the form
   actualStudentSelections: any[]; // actual form submissions from student-subject-selection table
   session: { id: number; name?: string; [key: string]: any }; // session information for form submission
@@ -86,6 +116,7 @@ export async function fetchStudentSubjectSelections(
       studentSubjectsSelection: payload,
       selectedMinorSubjects: [],
       subjectSelectionMetas: [], // Added for backward compatibility
+      perMetaOptions: [], // old payload predates meta-driven dropdowns
       hasFormSubmissions: false, // No form submissions in old format
       actualStudentSelections: [], // No actual selections in old format
       session: { id: 1 }, // Default session for backward compatibility
