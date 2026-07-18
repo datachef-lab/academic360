@@ -8,6 +8,7 @@ import { subjectSpecificPassingModel } from "./subject-specific-passing.model";
 import { studentSubjectSelectionModel } from "./student-subject-selection.model";
 import { subjectSelectionMetaModel } from "./subject-selection-meta.model";
 import { subjectSelectionMetaClassModel } from "./subject-selection-meta-class.model";
+import { subjectSelectionMetaSourceModel } from "./subject-selection-meta-source.model";
 import { subjectSelectionMetaStreamModel } from "./subject-selection-meta-stream.model";
 
 export {
@@ -20,6 +21,7 @@ export {
     studentSubjectSelectionModel,
     subjectSelectionMetaClassModel,
     subjectSelectionMetaModel,
+    subjectSelectionMetaSourceModel,
     subjectSelectionMetaStreamModel,
     subjectSpecificPassingModel,
 };

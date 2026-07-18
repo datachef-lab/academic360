@@ -487,3 +487,22 @@ export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [
     "RENEWED",
     "REISSUED",
 ]);
+
+/**
+ * Where a subject-selection meta draws its selectable subject options from.
+ *
+ * ELECTIVE_SUBJECTS - the academic year's elective subjects for the student:
+ *   the optional papers of the student's program course + academic year, scoped
+ *   to this meta's subject type and semesters. This is the existing behaviour
+ *   and the default.
+ * PRIOR_SELECTION  - the subjects the student already chose in other configured
+ *   metas (subject_selection_meta_sources). e.g. a Semester 5 "Minor 5" meta can
+ *   offer only what the student picked in Minor 1 / Minor 2.
+ */
+export const subjectSelectionOptionSourceEnum = pgEnum(
+    "subject_selection_option_source",
+    [
+        "ELECTIVE_SUBJECTS",
+        "PRIOR_SELECTION",
+    ],
+);
