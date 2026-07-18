@@ -36,6 +36,7 @@ import {
   subjectSelectionMetaModel,
   subjectSelectionMetaStreamModel,
   subjectSelectionMetaClassModel,
+  subjectSelectionMetaSourceModel,
 } from "@repo/db/schemas/models/subject-selection";
 import { streamModel } from "@repo/db/schemas/models/course-design";
 import { SubjectSelectionMetaDto } from "@repo/db/dtos/subject-selection";
@@ -379,6 +380,14 @@ export async function findSubjectsSelections(studentId: number) {
       subjectTypeIds,
       streamIds,
     );
+
+    // Options resolved PER META, so the form can render one dropdown per meta
+    // instead of hardcoding which category+semester feeds which slot.
+    const perMetaOptions = await buildPerMetaOptions(
+      studentId,
+      subjectSelectionMetas,
+      studentSubjectsSelection,
+    );
     // console.log("[subject-selection] metas resolved ->", {
     //   academicYearId: foundAcademicYear?.id,
     //   subjectTypeIds,
@@ -496,6 +505,7 @@ export async function findSubjectsSelections(studentId: number) {
       studentSubjectsSelection,
       selectedMinorSubjects: formatedSelectedMinorSubjects, // Keep original logic for form display
       subjectSelectionMetas, // Include meta data for dynamic labels
+      perMetaOptions, // Options resolved per meta (meta-driven dropdowns)
       hasFormSubmissions, // New field to indicate if student has submitted through the form
       actualStudentSelections: hasFormSubmissions
         ? actualStudentSelections
@@ -511,6 +521,7 @@ export async function findSubjectsSelections(studentId: number) {
       studentSubjectsSelection: [],
       selectedMinorSubjects: [],
       subjectSelectionMetas: [],
+      perMetaOptions: [] as PerMetaOptions[],
       hasFormSubmissions: false,
       actualStudentSelections: [],
       session: null,
@@ -568,6 +579,170 @@ async function findHierarchy(studentId: number) {
 }
 
 // Helper function to fetch subject selection meta data
+/** One meta's resolved option list, ready for a single dropdown. */
+export interface PerMetaOptions {
+  metaId: number;
+  metaLabel: string;
+  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+  /** Class ids this meta applies to (its semesters). */
+  classIds: number[];
+  options: {
+    subjectId: number;
+    subjectName: string;
+    subjectCode: string | null;
+    /** Present for ELECTIVE_SUBJECTS (the paper's semester); null otherwise. */
+    classId: number | null;
+    className: string | null;
+    /** Present for ELECTIVE_SUBJECTS so callers can still reach the paper. */
+    paperId: number | null;
+  }[];
+}
+
+/**
+ * Resolves each meta's selectable options.
+ *
+ * ELECTIVE_SUBJECTS (default, unchanged behaviour): the meta's options are the
+ * already-eligibility-filtered `paperOptions` of its subject type, narrowed to
+ * the meta's own semesters. We deliberately read from `studentSubjectsSelection`
+ * rather than re-querying, so the 12th-board / related-subject filtering that
+ * produced it is reused verbatim — the option SET for a meta is exactly what the
+ * form shows today for that category+semester, just resolved server-side.
+ *
+ * PRIOR_SELECTION: the meta's options are the subjects this student already
+ * selected under the configured source metas (e.g. Minor 5 offers only what the
+ * student picked in Minor 1 / Minor 2). No eligibility re-filtering — those
+ * subjects were already validated when they were chosen.
+ */
+async function buildPerMetaOptions(
+  studentId: number,
+  metas: SubjectSelectionMetaDto[],
+  studentSubjectsSelection: { subjectType: any; paperOptions: any[] }[],
+): Promise<PerMetaOptions[]> {
+  // Prior selections are only needed if some meta actually asks for them.
+  const priorMetas = metas.filter(
+    (m) => (m as any).optionSource === "PRIOR_SELECTION",
+  );
+  const allSourceIds = [
+    ...new Set(
+      priorMetas.flatMap((m) => ((m as any).sourceMetaIds ?? []) as number[]),
+    ),
+  ];
+
+  // studentId -> the subjects they actively hold under each source meta.
+  const subjectsBySourceMeta = new Map<
+    number,
+    { subjectId: number; subjectName: string; subjectCode: string | null }[]
+  >();
+  if (allSourceIds.length > 0) {
+    const rows = await db
+      .select({
+        metaId: studentSubjectSelectionModel.subjectSelectionMetaId,
+        subjectId: subjectModel.id,
+        subjectName: subjectModel.name,
+        subjectCode: subjectModel.code,
+      })
+      .from(studentSubjectSelectionModel)
+      .innerJoin(
+        subjectModel,
+        eq(studentSubjectSelectionModel.subjectId, subjectModel.id),
+      )
+      .where(
+        and(
+          eq(studentSubjectSelectionModel.studentId, studentId),
+          inArray(
+            studentSubjectSelectionModel.subjectSelectionMetaId,
+            allSourceIds,
+          ),
+          eq(studentSubjectSelectionModel.isActive, true),
+          or(
+            isNull(studentSubjectSelectionModel.isDeprecated),
+            eq(studentSubjectSelectionModel.isDeprecated, false),
+          ),
+        ),
+      );
+    for (const r of rows) {
+      const list = subjectsBySourceMeta.get(r.metaId) ?? [];
+      list.push({
+        subjectId: r.subjectId,
+        subjectName: r.subjectName,
+        subjectCode: r.subjectCode,
+      });
+      subjectsBySourceMeta.set(r.metaId, list);
+    }
+  }
+
+  return metas.map((meta): PerMetaOptions => {
+    const optionSource =
+      ((meta as any).optionSource as PerMetaOptions["optionSource"]) ??
+      "ELECTIVE_SUBJECTS";
+    const classIds = (meta.forClasses ?? [])
+      .map((c) => c?.class?.id)
+      .filter((v): v is number => typeof v === "number");
+
+    if (optionSource === "PRIOR_SELECTION") {
+      const sourceIds = (((meta as any).sourceMetaIds ?? []) as number[]) || [];
+      const seen = new Set<number>();
+      const options: PerMetaOptions["options"] = [];
+      for (const sourceId of sourceIds) {
+        for (const s of subjectsBySourceMeta.get(sourceId) ?? []) {
+          if (seen.has(s.subjectId)) continue; // same subject via two sources
+          seen.add(s.subjectId);
+          options.push({
+            subjectId: s.subjectId,
+            subjectName: s.subjectName,
+            subjectCode: s.subjectCode,
+            classId: null,
+            className: null,
+            paperId: null,
+          });
+        }
+      }
+      return {
+        metaId: meta.id!,
+        metaLabel: meta.label,
+        optionSource,
+        classIds,
+        options,
+      };
+    }
+
+    // ELECTIVE_SUBJECTS — reuse the already-filtered options for this subject
+    // type, narrowed to the meta's semesters.
+    const group = studentSubjectsSelection.find(
+      (g) => g.subjectType?.id === (meta.subjectType as any)?.id,
+    );
+    const seen = new Set<string>();
+    const options: PerMetaOptions["options"] = [];
+    for (const p of group?.paperOptions ?? []) {
+      const classId = p?.class?.id ?? null;
+      // No classes configured on the meta => it applies to all semesters.
+      if (
+        classIds.length > 0 &&
+        (classId == null || !classIds.includes(classId))
+      )
+        continue;
+      const key = `${p?.subject?.id}|${classId}`;
+      if (seen.has(key)) continue; // the same subject can have >1 paper
+      seen.add(key);
+      options.push({
+        subjectId: p?.subject?.id,
+        subjectName: p?.subject?.name,
+        subjectCode: p?.subject?.code ?? null,
+        classId,
+        className: p?.class?.name ?? null,
+        paperId: p?.id ?? null,
+      });
+    }
+    return {
+      metaId: meta.id!,
+      metaLabel: meta.label,
+      optionSource,
+      classIds,
+      options,
+    };
+  });
+}
+
 async function fetchSubjectSelectionMetaData(
   academicYearId: number,
   subjectTypeIds: number[],
@@ -582,6 +757,7 @@ async function fetchSubjectSelectionMetaData(
       label: subjectSelectionMetaModel.label,
       subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
       academicYearId: subjectSelectionMetaModel.academicYearId,
+      optionSource: subjectSelectionMetaModel.optionSource,
       createdAt: subjectSelectionMetaModel.createdAt,
       updatedAt: subjectSelectionMetaModel.updatedAt,
     })
@@ -602,7 +778,7 @@ async function fetchSubjectSelectionMetaData(
   const fullDtos = await Promise.all(
     subjectSelectionMetas.map(async (meta) => {
       // Fetch related data for each meta
-      const [academicYear, subjectType, streams, forClasses] =
+      const [academicYear, subjectType, streams, forClasses, sourceRows] =
         await Promise.all([
           db
             .select()
@@ -667,12 +843,27 @@ async function fetchSubjectSelectionMetaData(
                 meta.id,
               ),
             ),
+          // The metas this one draws its options from (PRIOR_SELECTION only).
+          db
+            .select({
+              sourceMetaId:
+                subjectSelectionMetaSourceModel.sourceSubjectSelectionMetaId,
+            })
+            .from(subjectSelectionMetaSourceModel)
+            .where(
+              eq(
+                subjectSelectionMetaSourceModel.subjectSelectionMetaId,
+                meta.id,
+              ),
+            ),
         ]);
 
       return {
         id: meta.id!,
         academicYear: academicYear[0]!,
         subjectType: subjectType[0]!,
+        optionSource: meta.optionSource,
+        sourceMetaIds: sourceRows.map((r) => r.sourceMetaId),
         streams: streams.map((s) => ({
           id: s.id!,
           createdAt: s.createdAt || new Date(),
