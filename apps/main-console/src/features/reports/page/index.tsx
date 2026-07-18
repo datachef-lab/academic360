@@ -150,6 +150,9 @@ export default function ReportsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
   const [currentOperation, setCurrentOperation] = useState<string | null>(null);
+  // Correlates socket progress to the in-flight background report job. A ref so
+  // the socket handler always sees the latest id without re-subscribing.
+  const activeJobIdRef = useRef<string | null>(null);
   const [cuRollRegValidationDialogOpen, setCuRollRegValidationDialogOpen] = useState(false);
   const [cuRollRegValidationMessage, setCuRollRegValidationMessage] = useState("");
   const [cuRollRegMissingHeaders, setCuRollRegMissingHeaders] = useState<string[]>([]);
@@ -184,7 +187,16 @@ export default function ReportsPage() {
   const handleProgressUpdate = useCallback(
     (data: ProgressUpdate) => {
       console.log("Progress update received:", data);
-      if (currentOperation && data?.meta?.operation && data.meta.operation !== currentOperation) {
+      const jobId = (data?.meta as { jobId?: string } | undefined)?.jobId;
+      // Correlate a report download by its jobId; correlate an upload by its
+      // operation. Drop events that belong to a different in-flight job/op.
+      if (activeJobIdRef.current) {
+        if (jobId && jobId !== activeJobIdRef.current) return;
+      } else if (
+        currentOperation &&
+        data?.meta?.operation &&
+        data.meta.operation !== currentOperation
+      ) {
         return;
       }
       setCurrentProgressUpdate(data);
@@ -192,6 +204,13 @@ export default function ReportsPage() {
       // Handle completion status from socket updates
       if (data.status === "completed") {
         console.log("Export completed via socket update");
+        // Report job finished → fetch the generated file, then clear the job.
+        if (jobId && jobId === activeJobIdRef.current) {
+          void ExportService.downloadReportJobFile(jobId, data.fileName || "report").catch((e) =>
+            toast.error(e instanceof Error ? e.message : "Failed to download report"),
+          );
+          activeJobIdRef.current = null;
+        }
         setIsExporting(false);
         // The modal will auto-close due to the completed status in ExportProgressDialog
 
@@ -230,6 +249,7 @@ export default function ReportsPage() {
         }
       } else if (data.status === "error") {
         console.log("Export failed via socket update");
+        if (jobId && jobId === activeJobIdRef.current) activeJobIdRef.current = null;
         setIsExporting(false);
       }
     },
@@ -328,33 +348,23 @@ export default function ReportsPage() {
     }
   }, [currentAcademicYear?.id, selectedAcademicYearId, exportAcademicYearId]);
 
+  // Thin error boundary around a report download. Progress + the dialog are now
+  // owned by runReportJob (background job + socket); this only catches a throw
+  // before the job starts (e.g. resolving the subject-selection meta id).
   const handleDownload = async (
     reportId: string,
     downloadFunction: () => Promise<void>,
-    socketOperation?: string | null,
+    _socketOperation?: string | null,
   ) => {
     try {
-      setIsExporting(true);
-      setExportProgressOpen(true);
-      setCurrentOperation(socketOperation ?? null);
-
-      // Set initial progress
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId: userId,
-        type: "export_progress",
-        message: "Starting export process...",
-        progress: 0,
-        status: "started",
-        createdAt: new Date(),
-      });
-
       await downloadFunction();
     } catch (error) {
       console.error(`Download failed for ${reportId}:`, error);
+      activeJobIdRef.current = null;
+      setIsExporting(false);
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
-        userId: userId,
+        userId,
         type: "export_progress",
         message: "Export failed due to an error",
         progress: 0,
@@ -362,12 +372,71 @@ export default function ReportsPage() {
         error: error instanceof Error ? error.message : "Unknown error",
         createdAt: new Date(),
       });
-      setIsExporting(false);
       toast.error(
         error instanceof Error && error.message ? error.message : `Failed to download ${reportId}`,
       );
     }
   };
+
+  // Report filters flattened to comma-separated query params for a job start.
+  const filterParams = useCallback(() => {
+    const f = buildReportFilters();
+    return {
+      programCourseIds: f.programCourseIds?.length ? f.programCourseIds.join(",") : undefined,
+      affiliationIds: f.affiliationIds?.length ? f.affiliationIds.join(",") : undefined,
+      regulationTypeIds: f.regulationTypeIds?.length ? f.regulationTypeIds.join(",") : undefined,
+      classIds: f.classIds?.length ? f.classIds.join(",") : undefined,
+    };
+  }, [buildReportFilters]);
+
+  /**
+   * Start a background report job: opens the progress dialog, POSTs to start the
+   * job, and stores the jobId. Real progress + the finished-file download are
+   * driven by the socket handler (correlated on meta.jobId). Replaces the old
+   * blocking blob download + fake 25%/100% progress.
+   */
+  const runReportJob = useCallback(
+    async (
+      reportKey: string,
+      label: string,
+      params: Record<string, string | number | undefined | null>,
+    ) => {
+      setIsExporting(true);
+      setExportProgressOpen(true);
+      setCurrentOperation(null);
+      activeJobIdRef.current = null;
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId,
+        type: "export_progress",
+        message: `Starting ${label}…`,
+        progress: 0,
+        status: "started",
+        createdAt: new Date(),
+      });
+      try {
+        const { jobId } = await ExportService.startReportJob(reportKey, params);
+        activeJobIdRef.current = jobId;
+      } catch (error) {
+        activeJobIdRef.current = null;
+        setIsExporting(false);
+        setCurrentProgressUpdate({
+          id: `export_${Date.now()}`,
+          userId,
+          type: "export_progress",
+          message: `Failed to start ${label}`,
+          progress: 0,
+          status: "error",
+          error: error instanceof Error ? error.message : "Unknown error",
+          createdAt: new Date(),
+        });
+        toast.error(
+          error instanceof Error && error.message ? error.message : `Failed to start ${label}`,
+        );
+      }
+    },
+    [userId],
+  );
 
   const startUploadProgress = (operation: string, message: string) => {
     setIsExporting(true);
@@ -720,35 +789,10 @@ export default function ReportsPage() {
       toast.error("Please select an academic year");
       return;
     }
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId,
-      type: "export_progress",
-      message: "Exporting Student Detailed Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
+    await runReportJob("student-detailed-report", "Student Detailed Report", {
+      academicYearId: Number(effectiveAcademicYearId),
+      ...filterParams(),
     });
-
-    const result = await ExportService.exportStudentDetailedReport(Number(effectiveAcademicYearId));
-
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId,
-        type: "export_progress",
-        message: "Student Detailed Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success("Student Detailed Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
   };
 
   const downloadStudentAcademicSubjectsReport = async () => {
@@ -756,37 +800,10 @@ export default function ReportsPage() {
       toast.error("Please select an academic year");
       return;
     }
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId,
-      type: "export_progress",
-      message: "Exporting Student Academic Subjects Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
+    await runReportJob("student-academic-subjects-report", "Student's 12th Subjects Report", {
+      academicYearId: Number(effectiveAcademicYearId),
+      ...filterParams(),
     });
-
-    const result = await ExportService.exportStudentAcademicSubjectsReport(
-      Number(effectiveAcademicYearId),
-    );
-
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId,
-        type: "export_progress",
-        message: "Student Academic Subjects Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success("Student Academic Subjects Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
   };
 
   const downloadStudentImagesReport = async () => {
@@ -794,40 +811,12 @@ export default function ReportsPage() {
       toast.error("Please select an academic year");
       return;
     }
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId,
-      type: "export_progress",
-      message: "Exporting Student Images Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
+    await runReportJob("student-images", "Student Avatar Images", {
+      academicYearId: Number(effectiveAcademicYearId),
     });
-
-    const result = await ExportService.downloadStudentImages(Number(effectiveAcademicYearId));
-
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId,
-        type: "export_progress",
-        message: "Student Images Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success("Student Images Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
   };
 
-  const downloadCuRegistrationDocuments = async (
-    downloadType: "combined" | "pdfs" | "documents",
-  ) => {
+  const downloadCuRegistrationDocuments = async (downloadType: "pdfs" | "documents") => {
     if (!effectiveAcademicYearId) {
       toast.error("Please select an academic year in Export filters");
       return;
@@ -842,42 +831,11 @@ export default function ReportsPage() {
     const yearMatch = academicYearForToolbarExport?.year?.match(/^(\d{4})/);
     const year = yearMatch?.[1] ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
 
-    const sessionId = `download-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    setCurrentProgressUpdate({
-      id: sessionId,
-      userId,
-      type: "download_progress",
-      message: `Starting CU Registration ${downloadType} documents download...`,
-      progress: 0,
-      status: "started",
-      createdAt: new Date(),
-    });
-
-    const result = await ExportService.downloadCuRegistrationDocuments(
-      year,
-      cuZipRegulationShortName,
-      downloadType,
-      sessionId,
+    await runReportJob(
+      downloadType === "pdfs" ? "cu-registration-pdfs" : "cu-registration-documents",
+      `CU Registration ${downloadType === "pdfs" ? "PDFs" : "Documents"}`,
+      { year, regulationType: cuZipRegulationShortName },
     );
-
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: sessionId,
-        userId,
-        type: "download_progress",
-        message: `CU Registration ${downloadType} documents downloaded successfully!`,
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success(`CU Registration ${downloadType} documents downloaded successfully!`);
-    } else {
-      throw new Error(result.message || "Download failed");
-    }
   };
 
   const downloadSubjectSelectionReport = async () => {
@@ -885,48 +843,18 @@ export default function ReportsPage() {
       toast.error("Please select an academic year");
       return;
     }
-
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId: userId,
-      type: "export_progress",
-      message: "Exporting Subject Selection Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
-    });
-
     const ayNum = Number(effectiveAcademicYearId);
     const metaId = await ExportService.getFirstSubjectSelectionMetaIdForAcademicYear(ayNum);
     if (metaId == null) {
-      throw new Error(
+      toast.error(
         "No subject selection configuration found for this academic year. Cannot export.",
       );
+      return;
     }
-
-    const result = await ExportService.exportStudentSubjectSelections(metaId, buildReportFilters());
-
-    if (result.success && result.data) {
-      // Trigger download
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-
-      // Update progress to completed state
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId: userId,
-        type: "export_progress",
-        message: "Subject Selection Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-
-      toast.success("Subject Selection Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
+    await runReportJob("subject-selection", "Subject Selection Report", {
+      metaId,
+      ...filterParams(),
+    });
   };
 
   const downloadCuRegistrationReport = async () => {
@@ -934,48 +862,10 @@ export default function ReportsPage() {
       toast.error("Please select an academic year");
       return;
     }
-
-    // Update progress for CU registration report
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId: userId,
-      type: "export_progress",
-      message: "Exporting CU Registration Corrections Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
+    await runReportJob("cu-registration", "CU Registration Corrections Report", {
+      academicYearId: Number(effectiveAcademicYearId),
+      ...filterParams(),
     });
-
-    const academicYearIdNumber = Number(effectiveAcademicYearId);
-    const f = buildReportFilters();
-    const result = await ExportService.exportCuRegistrationCorrections(academicYearIdNumber, {
-      programCourseIds: f.programCourseIds,
-      affiliationIds: f.affiliationIds,
-      regulationTypeIds: f.regulationTypeIds,
-      classIds: f.classIds,
-    });
-
-    if (result.success && result.data) {
-      // Trigger download
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-
-      // Update progress to completed state
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId: userId,
-        type: "export_progress",
-        message: "CU Registration Corrections Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-
-      toast.success("CU Registration Corrections Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
   };
 
   const downloadEnrolmentMasterReport = async () => {
@@ -983,81 +873,18 @@ export default function ReportsPage() {
       toast.error("Please select an academic year");
       return;
     }
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId,
-      type: "export_progress",
-      message: "Exporting Enrolment Master Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
+    await runReportJob("enrolment-master-report", "Enrolment Master Report", {
+      academicYearId: Number(effectiveAcademicYearId),
+      ...filterParams(),
     });
-    const f = buildReportFilters();
-    const result = await ExportService.exportEnrolmentMasterReport(
-      Number(effectiveAcademicYearId),
-      {
-        programCourseIds: f.programCourseIds,
-        affiliationIds: f.affiliationIds,
-        regulationTypeIds: f.regulationTypeIds,
-        classIds: f.classIds,
-      },
-    );
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId,
-        type: "export_progress",
-        message: "Enrolment Master Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success("Enrolment Master Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
   };
 
   const downloadPromotionStudentsReport = async () => {
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId: userId,
-      type: "export_progress",
-      message: "Exporting Promotion Students Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
-    });
-
     const f = buildReportFilters();
-    const result = await ExportService.exportPromotionStudentsReport({
+    await runReportJob("exam-form-submission-report", "Exam Form Submitted Report", {
       academicYearId: f.academicYearId,
-      programCourseIds: f.programCourseIds,
-      affiliationIds: f.affiliationIds,
-      regulationTypeIds: f.regulationTypeIds,
-      classIds: f.classIds,
+      ...filterParams(),
     });
-
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId: userId,
-        type: "export_progress",
-        message: "Promotion Students Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success("Promotion Students Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
   };
 
   const downloadStudentUniversitySubjectsReport = async () => {
@@ -1065,45 +892,10 @@ export default function ReportsPage() {
       toast.error("Please select an academic year");
       return;
     }
-
-    setCurrentProgressUpdate({
-      id: `export_${Date.now()}`,
-      userId,
-      type: "export_progress",
-      message: "Exporting Student University Subjects Report...",
-      progress: 25,
-      status: "in_progress",
-      createdAt: new Date(),
+    await runReportJob("student-university-subjects-report", "Student University Subjects Report", {
+      academicYearId: Number(effectiveAcademicYearId),
+      ...filterParams(),
     });
-
-    const f = buildReportFilters();
-    const result = await ExportService.exportStudentSubjectsInventory(
-      Number(effectiveAcademicYearId),
-      {
-        programCourseIds: f.programCourseIds,
-        affiliationIds: f.affiliationIds,
-        regulationTypeIds: f.regulationTypeIds,
-        classIds: f.classIds,
-      },
-    );
-
-    if (result.success && result.data) {
-      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-      setCurrentProgressUpdate({
-        id: `export_${Date.now()}`,
-        userId,
-        type: "export_progress",
-        message: "Student University Subjects Report downloaded successfully!",
-        progress: 100,
-        status: "completed",
-        fileName: result.data?.fileName,
-        downloadUrl: result.data?.downloadUrl,
-        createdAt: new Date(),
-      });
-      toast.success("Student University Subjects Report downloaded successfully!");
-    } else {
-      throw new Error(result.message || "Export failed");
-    }
   };
 
   const reports: ReportItem[] = [

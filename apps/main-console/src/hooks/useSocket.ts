@@ -22,6 +22,12 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // Latest userId, so the (once-created) connect handler always authenticates
+  // with the current id. userId starts "" before auth resolves; without this
+  // the connect-time emit would capture the empty string and the client would
+  // never join its user:<id> room, so progress events never arrive.
+  const userIdRef = useRef<string | undefined>(userId);
+  userIdRef.current = userId;
 
   const handleProgressUpdate = useCallback(
     (data: ProgressUpdate) => {
@@ -64,8 +70,9 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
     nextSocket.on("connect", () => {
       setIsConnected(true);
       setError(null);
-      if (userId) {
-        nextSocket.emit("authenticate", userId);
+      const currentUserId = userIdRef.current;
+      if (currentUserId) {
+        nextSocket.emit("authenticate", String(currentUserId));
       }
     });
 
@@ -109,7 +116,7 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
 
   useEffect(() => {
     if (socketRef.current && userId && isConnected) {
-      socketRef.current.emit("authenticate", userId);
+      socketRef.current.emit("authenticate", String(userId));
     }
   }, [userId, isConnected]);
 

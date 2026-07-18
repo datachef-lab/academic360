@@ -964,4 +964,44 @@ export class ExportService {
       URL.revokeObjectURL(downloadUrl);
     }, 1000);
   }
+
+  /* ----------------------------- Report jobs ------------------------------ */
+
+  /**
+   * Start a background report job. Returns a jobId immediately; real progress
+   * arrives over the socket (meta.jobId), and the finished file is fetched with
+   * downloadReportJobFile once a "completed" event carries the download URL.
+   */
+  static async startReportJob(
+    report: string,
+    params: Record<string, string | number | undefined | null>,
+  ): Promise<{ jobId: string }> {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value != null && value !== "") search.set(key, String(value));
+    }
+    const qs = search.toString();
+    const response = await axiosInstance.post(`/api/reports/${report}/start${qs ? `?${qs}` : ""}`);
+    const jobId = response.data?.payload?.jobId as string | undefined;
+    if (!jobId) {
+      throw new Error(response.data?.message || "Failed to start report");
+    }
+    return { jobId };
+  }
+
+  /** Fetch a finished job's file and trigger the browser download. */
+  static async downloadReportJobFile(jobId: string, fallbackName = "report"): Promise<void> {
+    const response = await axiosInstance.get(`/api/reports/jobs/${jobId}/download`, {
+      responseType: "blob",
+    });
+    const contentDisposition = response.headers["content-disposition"];
+    let fileName = fallbackName;
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (match) fileName = match[1];
+    }
+    const blob = new Blob([response.data]);
+    const url = URL.createObjectURL(blob);
+    ExportService.downloadFile(url, fileName);
+  }
 }
