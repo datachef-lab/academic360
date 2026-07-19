@@ -7,6 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "node": "20.19.4",
+      "pnpm": "10.33.2",
       "android": {
         "buildType": "apk"
       },
@@ -21,6 +22,7 @@
       "distribution": "internal",
       "channel": "stage",
       "node": "20.19.4",
+      "pnpm": "10.33.2",
       "android": {
         "buildType": "apk"
       },
