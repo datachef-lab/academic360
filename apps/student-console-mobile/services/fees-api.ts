@@ -72,8 +72,17 @@ export async function initiateFeePayment(body: {
   return response.data;
 }
 
-export function resolveBackendAssetUrl(path: string): string {
-  const base = API_BASE_URL.replace(/\/$/, "");
-  const normalized = path.startsWith("/") ? path : `/${path}`;
+export function resolveBackendAssetUrl(pathOrUrl: string): string {
+  const base = API_BASE_URL.replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    // Absolute URLs from the backend carry the server's own host config —
+    // "http://localhost:8080/…" in dev — which on a phone points at the
+    // phone itself. Naively prefixing produced garbage like
+    // "http://<api>/http://localhost:8080/…" and downloadAsync's native
+    // rejection ("Call to function 'ExponentFileSystem.downloadAsync'…").
+    // Keep the path+query, swap the origin for the API we're talking to.
+    return pathOrUrl.replace(/^https?:\/\/[^/]+/, base);
+  }
+  const normalized = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
   return `${base}${normalized}`;
 }

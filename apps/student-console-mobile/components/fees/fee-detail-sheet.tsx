@@ -19,6 +19,7 @@ import type { StudentDto } from "@repo/db/dtos/user";
 import * as Linking from "expo-linking";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import { BouncingDots } from "@/components/ui/BouncingDots";
 import { Check, Download, FileText, History, IndianRupeeIcon } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -86,16 +87,25 @@ export function FeeDetailSheet({ visible, mapping, onClose, onRefresh }: FeeDeta
       if (Platform.OS === "web") {
         await Linking.openURL(remoteUrl);
       } else {
-        const fileName = `fee-challan-${mapping.receiptNumber || mappingId || Date.now()}.pdf`;
+        // Receipt numbers contain slashes ("0804250001/02-FA") — raw use made
+        // downloadAsync treat the name as a nonexistent subdirectory.
+        const safeName = String(mapping.receiptNumber || mappingId || Date.now()).replace(
+          /[^\w.-]+/g,
+          "-",
+        );
+        const fileName = `fee-challan-${safeName}.pdf`;
         const localUri = `${FileSystem.cacheDirectory}${fileName}`;
         await FileSystem.downloadAsync(remoteUrl, localUri);
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(localUri, {
-            mimeType: "application/pdf",
-            dialogTitle: "Save or share challan",
-          });
-        } else {
-          await Linking.openURL(localUri);
+        const openedDirectly = await openPdfInViewer(localUri);
+        if (!openedDirectly) {
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(localUri, {
+              mimeType: "application/pdf",
+              dialogTitle: "Save or share challan",
+            });
+          } else {
+            await Linking.openURL(localUri);
+          }
         }
       }
       onRefresh();
@@ -172,6 +182,30 @@ export function FeeDetailSheet({ visible, mapping, onClose, onRefresh }: FeeDeta
   return (
     <>
       <BottomSheet visible={visible} onClose={onClose} bg={theme.background}>
+        {busy === "challan" ? (
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: isDark ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.85)",
+            }}
+          >
+            <BouncingDots
+              color={isDark ? "#a5b4fc" : "#4f46e5"}
+              shadowColor={isDark ? "rgba(165,180,252,0.3)" : "rgba(79,70,229,0.35)"}
+              size={12}
+            />
+            <Text style={{ color: theme.text, marginTop: 22, fontSize: 14, fontWeight: "600" }}>
+              Preparing challan…
+            </Text>
+          </View>
+        ) : null}
         <View
           style={{
             flexDirection: "row",
@@ -460,6 +494,26 @@ function InfoRow({
       </View>
     </View>
   );
+}
+
+/** Open the downloaded PDF straight in the system viewer (Android). Returns
+ * false when it can't — expo-intent-launcher missing from the installed dev
+ * client, no PDF viewer app, or non-Android — so the caller can fall back to
+ * the share sheet. */
+async function openPdfInViewer(localUri: string): Promise<boolean> {
+  if (Platform.OS !== "android") return false;
+  try {
+    const contentUri = await FileSystem.getContentUriAsync(localUri);
+    const IntentLauncher = await import("expo-intent-launcher");
+    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+      data: contentUri,
+      flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+      type: "application/pdf",
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function ActionButton({
