@@ -1147,11 +1147,11 @@ importers:
         specifier: ^7.1.8
         version: 7.1.28(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       '@repo/db':
-        specifier: workspace:*
+        specifier: file:../../packages/db
         version: link:../../packages/db
       '@repo/utils':
-        specifier: workspace:*
-        version: link:../../packages/utils
+        specifier: file:../../packages/utils
+        version: file:packages/utils
       axios:
         specifier: ^1.7.9
         version: 1.13.4
@@ -4592,6 +4592,9 @@ packages:
         optional: true
       react-redux:
         optional: true
+
+  '@repo/utils@file:packages/utils':
+    resolution: {directory: packages/utils, type: directory}
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -16695,6 +16698,10 @@ snapshots:
     optionalDependencies:
       react: 18.3.1
       react-redux: 9.2.0(@types/react@18.3.28)(react@18.3.1)(redux@5.0.1)
+
+  '@repo/utils@file:packages/utils':
+    dependencies:
+      '@repo/db': link:packages/db
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
