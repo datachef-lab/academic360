@@ -1983,21 +1983,19 @@ export async function processStudent(
   // Step 1: Upsert the student first
   student = await upsertStudent(oldStudent, user);
   {
-    // CU registration requests are a live workflow — create them for ACTIVE
-    // students only (the intent of the original isActive gate, added 2025-10-10).
-    // The historical data import below runs for INACTIVE (cancelled/dropped)
-    // students too: their admission/profile data must still be loaded.
-    let cuRegistrationRequest: Awaited<
-      ReturnType<typeof addStudentCuRegistrationRequest>
-    > | null = null;
-    if (user.isActive && !user.isSuspended) {
-      cuRegistrationRequest = await addStudentCuRegistrationRequest(student);
-      console.log(
-        "cu registration request created for student:",
-        student?.uid,
-        cuRegistrationRequest,
-      );
-    }
+    // CU-reg requests are created for EVERY student — inactive/suspended
+    // included. They used to be active-only, which left inactive students
+    // without the request row and everything the UI reads through it, so they
+    // looked "partially imported" (on staging only 166 of 808 inactive
+    // students had one). Live-workflow screens must gate on the student's
+    // status themselves, not on this row's absence.
+    const cuRegistrationRequest =
+      await addStudentCuRegistrationRequest(student);
+    console.log(
+      "cu registration request created for student:",
+      student?.uid,
+      cuRegistrationRequest,
+    );
     if (!cuRegistrationRequest?.cuRegistrationApplicationNumber) {
       // Step 2: Check for the accomodation
       await upsertAccommodation(oldStudent, user.id!);

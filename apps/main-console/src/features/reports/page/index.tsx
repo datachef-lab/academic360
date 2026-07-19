@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
+import axiosInstance from "@/utils/api";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useSocket } from "@/hooks/useSocket";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
@@ -221,27 +222,54 @@ export default function ReportsPage() {
               summary?: {
                 processed: number;
                 notFound: number;
+                notFoundUids?: string[];
                 errors: Array<{ uid: string; error: string }>;
               };
+              /** Server-written Excel of every failed / not-found UID. */
+              errorReportFileName?: string | null;
             }
           | undefined;
         if (meta?.operation === "student_import_legacy_students" && meta.summary) {
           const { processed, notFound, errors } = meta.summary;
-          if (errors?.length) {
-            const list = errors
+          const reportFile = meta.errorReportFileName;
+          if (errors?.length || notFound > 0) {
+            const list = (errors ?? [])
               .slice(0, 10)
               .map((e) => `<li><b>${e.uid}</b>: ${e.error}</li>`)
               .join("");
             void Swal.fire({
-              title: "Import completed with errors",
+              title: errors?.length ? "Import completed with errors" : "Import completed",
               html:
-                `<div style="text-align:left"><p>${processed} processed, ${notFound} not found, <b>${errors.length} error(s)</b>:</p>` +
-                `<ul style="font-size:12px">${list}</ul>` +
+                `<div style="text-align:left"><p>${processed} processed, ${notFound} not found, <b>${errors.length} error(s)</b></p>` +
+                (list ? `<ul style="font-size:12px">${list}</ul>` : "") +
                 (errors.length > 10
                   ? `<p style="font-size:12px;color:#6b7280">…and ${errors.length - 10} more</p>`
                   : "") +
+                (reportFile
+                  ? `<p style="font-size:12px;color:#4f46e5">The full list (every failed and not-found UID) is in the error report.</p>`
+                  : "") +
                 `</div>`,
               icon: "warning",
+              showCancelButton: Boolean(reportFile),
+              confirmButtonText: reportFile ? "Download error report" : "OK",
+              cancelButtonText: "Close",
+              confirmButtonColor: "#4f46e5",
+            }).then(async (r) => {
+              if (!r.isConfirmed || !reportFile) return;
+              try {
+                const resp = await axiosInstance.get(
+                  `/api/students/import-legacy-students/error-report/${reportFile}`,
+                  { responseType: "blob" },
+                );
+                const url = URL.createObjectURL(resp.data as Blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = reportFile;
+                a.click();
+                URL.revokeObjectURL(url);
+              } catch {
+                toast.error("Failed to download the error report");
+              }
             });
           } else {
             toast.success(`Import completed: ${processed} students processed.`);

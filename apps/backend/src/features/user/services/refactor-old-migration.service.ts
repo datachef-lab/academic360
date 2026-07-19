@@ -21,6 +21,38 @@ import {
   userModel,
   userTypeEnum,
 } from "@repo/db/schemas";
+
+/**
+ * Durable per-UID import outcomes, appended as JSON lines to
+ * logs/legacy-import.log. The upload's HTTP response is the only other place
+ * these surface, and a dismissed response leaves no trace — the Jul 15-16
+ * staging import lost 79 PG students' fees to legacy-DB timeouts that nobody
+ * could see afterwards. A logging failure must never break the import itself.
+ */
+async function recordImportLog(
+  uid: string,
+  kind: "student" | "fees",
+  status: "ok" | "error" | "skipped",
+  message: string | null,
+) {
+  try {
+    const fs = await import("fs").then((m) => m.promises);
+    await fs.mkdir("./logs", { recursive: true });
+    const line = JSON.stringify({
+      at: new Date().toISOString(),
+      uid,
+      kind,
+      status,
+      ...(message ? { message } : {}),
+    });
+    await fs.appendFile("./logs/legacy-import.log", line + "\n");
+  } catch (e) {
+    console.error(
+      "[LegacyImport] failed to write import log:",
+      (e as Error)?.message,
+    );
+  }
+}
 import { and, count, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import * as oldStudentPersonalDetailsHelper from "./old-student-helper";
 import * as oldStudentAdmissionServices from "./old-student.service";
@@ -528,6 +560,8 @@ export async function processStudentsFromExcelBuffer(
   totalUids: number;
   processed: number;
   notFound: number;
+  /** UIDs with no legacy row — listed so the UI can hand them back for review. */
+  notFoundUids: string[];
   errors: Array<{ uid: string; error: string }>;
 }> {
   const parsed = await parseUidsFromExcelBuffer(file);
@@ -537,6 +571,7 @@ export async function processStudentsFromExcelBuffer(
       totalUids: 0,
       processed: 0,
       notFound: 0,
+      notFoundUids: [],
       errors: [{ uid: "", error: parsed.error }],
     };
   }
@@ -547,6 +582,7 @@ export async function processStudentsFromExcelBuffer(
   let processed = 0;
   let notFound = 0;
   let done = 0;
+  const notFoundUids: string[] = [];
   const errors: Array<{ uid: string; error: string }> = [];
 
   // Live progress to the uploading user via socket (the main-console upload dialog
@@ -618,11 +654,20 @@ export async function processStudentsFromExcelBuffer(
       const oldStudent = await getOldStudentByUid(uid);
       if (!oldStudent) {
         notFound++;
+        notFoundUids.push(uid);
+        await recordImportLog(
+          uid,
+          "student",
+          "skipped",
+          "uid not found in legacy DB",
+        );
       } else {
         await processStudent(oldStudent);
+        await recordImportLog(uid, "student", "ok", null);
         // Load this student's legacy fees right after their data is in. Idempotent
         // (skips fees already loaded). A fees failure must not abort the import,
-        // but any fee-load problems are surfaced in the errors array.
+        // but every fee-load outcome is recorded durably — the HTTP response
+        // alone is not enough (a dismissed response hid the Jul 16 gap).
         try {
           const feeResult = await loadStudentFeesForUid(uid);
           if (feeResult.errors.length > 0) {
@@ -630,12 +675,33 @@ export async function processStudentsFromExcelBuffer(
               uid,
               error: `fees: ${feeResult.errors.join("; ")}`,
             });
+            await recordImportLog(
+              uid,
+              "fees",
+              "error",
+              feeResult.errors.join("; "),
+            );
+          } else if (feeResult.noLegacyRows) {
+            await recordImportLog(uid, "fees", "skipped", "no legacy fee rows");
+          } else {
+            await recordImportLog(
+              uid,
+              "fees",
+              "ok",
+              `loaded ${feeResult.loaded}, skipped ${feeResult.skipped}`,
+            );
           }
         } catch (feeErr: any) {
           errors.push({
             uid,
             error: `fees: ${feeErr?.message || "unknown error"}`,
           });
+          await recordImportLog(
+            uid,
+            "fees",
+            "error",
+            feeErr?.message || "unknown error",
+          );
         }
         processed++;
         // Live-update the Real Time Tracker AS this student lands (throttled so
@@ -665,6 +731,12 @@ export async function processStudentsFromExcelBuffer(
     } catch (e: any) {
       console.log("Error processing student:", e);
       errors.push({ uid, error: e?.message || "Unknown error" });
+      await recordImportLog(
+        uid,
+        "student",
+        "error",
+        e?.message || "Unknown error",
+      );
     } finally {
       await lock.release();
       // Always emit after each uid completes, regardless of outcome.
@@ -702,6 +774,7 @@ export async function processStudentsFromExcelBuffer(
     totalUids: uids.length,
     processed,
     notFound,
+    notFoundUids,
     errors,
   };
 }
