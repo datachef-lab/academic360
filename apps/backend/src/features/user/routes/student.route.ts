@@ -15,6 +15,7 @@ import {
   updateFamilyMemberTitlesController,
   bulkUpdateFamilyMemberTitlesController,
   importStudentsFromExcelController,
+  downloadImportErrorReportController,
   precheckImportStudentsController,
   backfillStudentQuotaTypesController,
   exportStudentDetailedReportController,
@@ -104,6 +105,13 @@ router.post(
   "/import-legacy-students",
   uploadMiddleware,
   importStudentsFromExcelController,
+);
+
+// GET /api/students/import-legacy-students/error-report/:fileName
+// Download the Excel of failed / not-found UIDs written at import completion
+router.get(
+  "/import-legacy-students/error-report/:fileName",
+  downloadImportErrorReportController,
 );
 
 // POST /api/students/backfill-quota-types
