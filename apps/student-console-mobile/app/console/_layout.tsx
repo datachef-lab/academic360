@@ -4,11 +4,17 @@ import { ExamSocketProvider } from "@/providers/exam-socket-provider";
 import { Stack } from "expo-router";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ConsoleLayout() {
   const { theme } = useTheme();
-  const topOverlayHeight = CONSOLE_HEADER_HEIGHT;
+  const insets = useSafeAreaInsets();
+  // Header is absolutely positioned inside SafeAreaView(top), so the overlay
+  // occupies insets.top + CONSOLE_HEADER_HEIGHT of vertical space. The Stack
+  // content must reserve the SAME amount, otherwise screens draw under the
+  // status bar area and the header's translucent glass surface makes the
+  // content ghost through (Home's "Good Evening" was leaking into the header).
+  const topOverlayHeight = insets.top + CONSOLE_HEADER_HEIGHT;
 
   return (
     <ExamSocketProvider>

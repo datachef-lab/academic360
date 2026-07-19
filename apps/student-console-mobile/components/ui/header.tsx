@@ -96,7 +96,7 @@ export function Header() {
 
   return (
     <View style={styles.shell}>
-      <GlassSurface isDark={isDark} />
+      <GlassSurface isDark={isDark} borderEdge="both" />
       <View style={styles.content}>
         {/* Left: (back on nested) + college logo (always) + heading — "BESC Console"
             on tab roots, the screen title on nested — with the UID kept underneath. */}
@@ -114,7 +114,13 @@ export function Header() {
             accessibilityRole="button"
             accessibilityLabel="Go to dashboard"
           >
-            <Image source={{ uri: logoUrl }} style={styles.logo} contentFit="contain" />
+            <Image
+              source={logoUrl ? { uri: logoUrl } : require("@/assets/images/icon.png")}
+              placeholder={require("@/assets/images/icon.png")}
+              style={styles.logo}
+              contentFit="contain"
+              transition={120}
+            />
           </Pressable>
           <View style={styles.brandBox}>
             <Text style={[styles.brand, { color: theme.text }]} numberOfLines={1}>

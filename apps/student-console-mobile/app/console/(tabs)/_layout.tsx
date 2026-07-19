@@ -25,6 +25,10 @@ export default function TabsLayout() {
   // Hide the tab bar while a sheet/dialog is open so it doesn't sit over it.
   const overlayCount = useOverlayCount();
   const bottomOffset = insets.bottom + TAB_BAR_BOTTOM_GAP;
+  // Dock reaches the physical screen bottom: its glass also covers the
+  // gesture-nav inset. Previously the bar floated insets.bottom above the
+  // edge, and scrolled content showed raw through that gap under the dock.
+  const dockHeight = TAB_BAR_HEIGHT + insets.bottom;
   const palette = colorScheme === "dark" ? Colors.dark : Colors.light;
   const pageBg = palette.background;
   const isDark = colorScheme === "dark";
@@ -58,12 +62,14 @@ export default function TabsLayout() {
             position: "absolute",
             left: TAB_BAR_HORIZONTAL_INSET,
             right: TAB_BAR_HORIZONTAL_INSET,
-            bottom: bottomOffset,
-            height: TAB_BAR_HEIGHT,
+            bottom: 0,
+            height: dockHeight,
             borderRadius: dockRadius,
             flexDirection: "row",
             paddingTop: 8,
-            paddingBottom: 8,
+            // Icons stay in the top TAB_BAR_HEIGHT zone; the extra bottom
+            // padding keeps them above the gesture-nav inset.
+            paddingBottom: 8 + insets.bottom,
             paddingHorizontal: 6,
             borderTopWidth: 0,
             backgroundColor: "transparent",
@@ -77,12 +83,11 @@ export default function TabsLayout() {
                   flex: 1,
                   justifyContent: "flex-end",
                   paddingHorizontal: TAB_BAR_HORIZONTAL_INSET,
-                  paddingBottom: bottomOffset,
                 }}
               >
                 <GlassDock
                   isDark={isDark}
-                  height={TAB_BAR_HEIGHT}
+                  height={dockHeight}
                   borderRadius={dockRadius}
                   style={dockShadow}
                 />
@@ -163,9 +168,12 @@ function TabBarIcon({
   const activeBg = colorScheme === "dark" ? "rgba(99,102,241,0.24)" : "rgba(79,70,229,0.14)";
   const activeColor = colorScheme === "dark" ? "#c4b5fd" : "#4f46e5";
 
+  // Icon and font sizes stay CONSTANT between states — the old focused
+  // size-jump (20→22 icon, 10→11 text) reflowed the pill mid-press and
+  // squeezed longer labels ("Library") into truncation.
   return (
     <View style={[styles.tabIcon, focused && { backgroundColor: activeBg, borderRadius: 10 }]}>
-      <Icon color={focused ? activeColor : theme.text} size={focused ? 22 : 20} strokeWidth={2} />
+      <Icon color={focused ? activeColor : theme.text} size={20} strokeWidth={focused ? 2.4 : 2} />
       <Text
         numberOfLines={1}
         style={[
@@ -173,7 +181,6 @@ function TabBarIcon({
           {
             color: focused ? activeColor : muted,
             fontWeight: focused ? "700" : "500",
-            fontSize: focused ? 11 : 10,
           },
         ]}
       >
@@ -198,11 +205,11 @@ const styles = StyleSheet.create({
   tabIcon: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
-    minWidth: 48,
-    maxWidth: 76,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: 4,
+    minWidth: 56,
+    maxWidth: 96,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   tabLabel: {
     fontSize: 10,

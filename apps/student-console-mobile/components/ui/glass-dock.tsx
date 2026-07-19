@@ -22,14 +22,18 @@ export function GlassDock({ isDark, height, borderRadius, style }: GlassDockProp
         style,
       ]}
     >
-      <GlassSurface isDark={isDark} borderRadius={borderRadius} />
+      <GlassSurface isDark={isDark} borderRadius={borderRadius} borderEdge="top" />
       <View
         pointerEvents="none"
         style={[
           StyleSheet.absoluteFill,
           {
             borderRadius,
-            borderWidth: StyleSheet.hairlineWidth + 0.5,
+            // Full outline only when the dock floats as a rounded pill; when
+            // it's flush full-width (radius 0), GlassSurface's top hairline
+            // is the separator and side/bottom borders would show as stray
+            // lines against the screen edges.
+            borderWidth: borderRadius > 0 ? StyleSheet.hairlineWidth + 0.5 : 0,
             borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
           },
         ]}

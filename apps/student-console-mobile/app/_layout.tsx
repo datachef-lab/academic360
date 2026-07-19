@@ -109,6 +109,11 @@ function CustomDrawerNavigation() {
             drawerStatusBarAnimation: "fade",
             drawerStyle: {
               backgroundColor: theme.background,
+              // Clear separation from the dimmed content behind, especially
+              // in dark mode where black-on-black had no visible edge.
+              borderRightWidth: 1,
+              borderRightColor:
+                colorScheme === "dark" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.14)",
             },
             overlayColor: colorScheme === "dark" ? "rgba(2,6,23,0.35)" : "rgba(15,23,42,0.14)",
             sceneStyle: {
