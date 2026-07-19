@@ -13,9 +13,12 @@ import { Image } from "expo-image";
 import { StatusBar } from "expo-status-bar";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { ArrowRight } from "lucide-react-native";
 
+import { BouncingDots } from "@/components/ui/BouncingDots";
 import { OnboardingIllustration } from "@/components/onboarding/OnboardingIllustration";
+import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/Button";
 import { brandLogoUrl, onboardingImages } from "@/constants/Images";
 import { onboardingSlides } from "@/constants/Onboarding";
@@ -161,27 +164,35 @@ function Slide({
 
 export default function OnboardingScreen() {
   const { accessToken, user, isReady } = useAuth();
+  const { theme, colorScheme } = useTheme();
   const { width, height } = useWindowDimensions();
   const [slideIndex, setSlideIndex] = useState(0);
   const [isChecking, setIsChecking] = useState(true);
   const translateX = useSharedValue(0);
+  // This screen stays mounted in the drawer after navigating away, and
+  // expo-status-bar lets the last-mounted <StatusBar> win — so an
+  // unconditional style="dark" here would pin dark icons app-wide (invisible
+  // on the dark theme). Only assert it while this screen is focused.
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     if (!isReady) return;
     const run = async () => {
       try {
         const completed = await getOnboardingCompleted();
-        setIsChecking(false);
         if (accessToken && user?.type === "STUDENT") {
           console.log("[Onboarding] User authenticated, navigating to /console");
-          try {
-            router.replace("/console/(tabs)");
-          } catch (error) {
-            console.error("[Onboarding] Navigation error to /console:", error);
-          }
+          router.replace("/console/(tabs)");
           return;
         }
-        if (completed) router.replace("/(auth)/login");
+        if (completed) {
+          router.replace("/(auth)/login");
+          return;
+        }
+        // Only reveal the slides when we KNOW we're staying here. Flipping
+        // isChecking before router.replace flashed the onboarding UI for a
+        // frame on every warm start of an already-logged-in user.
+        setIsChecking(false);
       } catch (error) {
         console.error("[Onboarding] checkAndRedirect:", error);
         setIsChecking(false);
@@ -242,13 +253,36 @@ export default function OnboardingScreen() {
   const stripStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
 
   if (isChecking) {
-    return <View style={{ flex: 1, backgroundColor: BG }} />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.background,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {isFocused ? <StatusBar style={colorScheme === "dark" ? "light" : "dark"} /> : null}
+        <Image
+          source={require("@/assets/images/icon.png")}
+          style={{ width: 84, height: 84, borderRadius: 22, marginBottom: 18 }}
+          contentFit="cover"
+        />
+        <Text style={{ color: theme.text, fontSize: 21, fontWeight: "800", marginBottom: 34 }}>
+          Student Console
+        </Text>
+        <BouncingDots
+          color={colorScheme === "dark" ? "#a5b4fc" : "#4f46e5"}
+          shadowColor={colorScheme === "dark" ? "rgba(165,180,252,0.3)" : "rgba(79,70,229,0.35)"}
+        />
+      </View>
+    );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
       <OnboardingBackground accent={accent} w={width} h={height} />
-      <StatusBar style="dark" />
+      {isFocused ? <StatusBar style="dark" /> : null}
       <SafeAreaView edges={["top", "bottom"]} style={{ flex: 1 }}>
         {/* Header */}
         <View

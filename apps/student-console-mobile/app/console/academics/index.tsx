@@ -14,7 +14,7 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { ChevronRight, FolderClosed, LayoutGrid } from "lucide-react-native";
 import React, { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type TabKey = "activities" | "records";
 type Card = { id: string; label: string; desc: string; img: number; path: string };
@@ -114,29 +114,47 @@ export default function AcademicsScreen() {
         <Tabs tabs={tabItems} value={tab} onChange={setTab} />
       </View>
 
-      <View className="gap-3">
+      <View style={{ gap: 12 }}>
         {cards.map((card) => (
           <Pressable
             key={card.id}
             onPress={() => router.push(card.path as any)}
-            className="flex-row items-stretch rounded-2xl overflow-hidden"
-            style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}
+            style={{
+              flexDirection: "row",
+              alignItems: "stretch",
+              borderRadius: 16,
+              overflow: "hidden",
+              backgroundColor: cardBg,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
           >
-            {/* Left: image, flush, no padding */}
+            {/* Left: image, flush, no padding. The image MUST be absolutely
+                positioned: with height "100%" it feeds its intrinsic size
+                (740x692 jpg) into the row-height calculation — stretch sizes
+                the column FROM the row while the image sizes the row FROM the
+                column, and Yoga resolves that cycle by using the image's
+                natural height, blowing the card up to ~700px tall. absoluteFill
+                contributes zero intrinsic size, so row height comes purely
+                from the text column. */}
             <View style={{ width: 96, backgroundColor: "#ffffff" }}>
-              <Image
-                source={card.img}
-                style={{ width: "100%", height: "100%" }}
-                contentFit="cover"
-              />
+              <Image source={card.img} style={StyleSheet.absoluteFill} contentFit="cover" />
             </View>
             {/* Right: label + description */}
-            <View className="flex-1 flex-row items-center px-3 py-3">
-              <View className="flex-1">
-                <Text style={{ color: theme.text }} className="text-base font-semibold">
+            <View
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600" }}>
                   {card.label}
                 </Text>
-                <Text style={{ color: theme.text, opacity: 0.6 }} className="text-xs mt-0.5">
+                <Text style={{ color: theme.text, opacity: 0.6, fontSize: 12, marginTop: 2 }}>
                   {card.desc}
                 </Text>
               </View>

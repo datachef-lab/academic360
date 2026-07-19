@@ -243,7 +243,8 @@ export default function ConsoleScreen() {
     promo?.session?.name ||
     "";
   const sectionName = promo?.section?.name || "";
-  const academicSubtitle = [semesterName, academicYearName, sectionName]
+  const shiftName = promo?.shift?.name ? toSentenceCase(promo.shift.name) : "";
+  const academicSubtitle = [semesterName, academicYearName, sectionName, shiftName]
     .filter(Boolean)
     .join(" • ");
 

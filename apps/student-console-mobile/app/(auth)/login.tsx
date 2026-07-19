@@ -4,6 +4,7 @@ import { checkOtpStatus, lookupUser, sendOtpRequest, verifyOtpAndLogin } from "@
 import { getOnboardingCompleted } from "@/lib/onboarding-storage";
 import { useAuth } from "@/providers/auth-provider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import { router } from "expo-router";
 import { User } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -50,6 +51,10 @@ function GoogleMark() {
 export default function LoginScreen() {
   useTheme(); // Keep for provider context; theme uses web colors below
   const { login, user, accessToken, tryRefresh } = useAuth();
+  // Login stays mounted in the drawer after navigating to the console, and
+  // expo-status-bar lets the last-mounted <StatusBar> win — assert our style
+  // only while this screen is focused so console screens track the theme.
+  const isFocused = useIsFocused();
   const [uid, setUid] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -384,20 +389,23 @@ export default function LoginScreen() {
     }
   };
 
-  const handleOtpFocus = (index: number) => {
+  // All six OTP boxes sit in the same row at the same y, so re-scrolling on
+  // every focus/blur made the screen bounce as auto-advance rippled focus
+  // through the inputs. Scroll once when the OTP row first receives focus,
+  // then leave the layout alone — KeyboardAvoidingView keeps the row above
+  // the keyboard for the rest of the entry.
+  const hasScrolledOtpIntoView = useRef(false);
+  const handleOtpFocus = () => {
+    if (hasScrolledOtpIntoView.current) return;
+    hasScrolledOtpIntoView.current = true;
     setTimeout(() => {
-      scrollViewRef.current?.scrollTo({
-        y: 240,
-        animated: true,
-      });
+      scrollViewRef.current?.scrollTo({ y: 240, animated: true });
     }, 100);
   };
-
   const handleOtpBlur = () => {
-    scrollViewRef.current?.scrollTo({
-      y: 0,
-      animated: true,
-    });
+    // Intentionally no scroll — auto-advance briefly blurs the current input
+    // before focusing the next one, so this would fight handleOtpFocus and
+    // produce the up/down bounce during typing.
   };
 
   const handleGoogleSignIn = () => {
@@ -415,7 +423,7 @@ export default function LoginScreen() {
   if (isCheckingAuth) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: bgColor }}>
-        <StatusBar style="dark" />
+        {isFocused ? <StatusBar style="dark" /> : null}
         <ActivityIndicator size="large" color={accentColor} />
       </View>
     );
@@ -423,7 +431,7 @@ export default function LoginScreen() {
 
   return (
     <>
-      <StatusBar style="light" />
+      {isFocused ? <StatusBar style="light" /> : null}
       <View className="flex-1" style={{ backgroundColor: bgColor }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -599,7 +607,7 @@ export default function LoginScreen() {
                               borderWidth: 1,
                               borderColor: digit ? accentColor : borderColor,
                             }}
-                            onFocus={() => handleOtpFocus(index)}
+                            onFocus={handleOtpFocus}
                             onBlur={handleOtpBlur}
                           />
                         ))}
