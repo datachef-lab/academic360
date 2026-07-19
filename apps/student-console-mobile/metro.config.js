@@ -25,21 +25,35 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
-// 👇 Force single-instance packages (react + react-dom) to always resolve to
-// the mobile app's local copy, even when a transitively-required module tries
-// to load them from the workspace root. Root has react@18.3.1 (main-console);
-// mobile pins react@19.1.0. Without this, a transitive require("react") could
-// pull in React 18 and produce "Invalid hook call / two React copies" +
-// "Cannot read property 'useMemoCache' of null" (a React 19 Compiler API).
-const SINGLETONS = ["react", "react-dom"];
+// 👇 Force react + react-dom (INCLUDING subpaths like react/jsx-runtime,
+// react/jsx-dev-runtime, react/compiler-runtime) to always resolve to the
+// mobile app's local copy. Root has react@18.3.1 (main-console); mobile pins
+// react@19.1.0.
+//
+// Why subpaths matter: NativeWind's jsxImportSource routes ALL app JSX
+// through react-native-css-interop's jsx runtime, which lives hoisted at the
+// workspace root and does require("react/jsx-dev-runtime"). Bare-name-only
+// interception let that subpath resolve hierarchically from the ROOT copy →
+// React 18's jsx runtime creating elements for a React 19 renderer. The
+// mismatched element contract made css-interop's className→style wrapping
+// silently drop layout classes on some components (cards unstyled, tab dock
+// distorted) while inline styles kept working.
+const SINGLETON_PACKAGES = ["react", "react-dom"];
 const localNodeModules = path.resolve(projectRoot, "node_modules");
-const singletonEntries = Object.fromEntries(
-  SINGLETONS.map((name) => [name, require.resolve(name, { paths: [localNodeModules] })]),
+const singletonRoots = Object.fromEntries(
+  SINGLETON_PACKAGES.map((name) => [
+    name,
+    path.dirname(require.resolve(`${name}/package.json`, { paths: [localNodeModules] })),
+  ]),
 );
+const matchSingleton = (moduleName) =>
+  SINGLETON_PACKAGES.find((name) => moduleName === name || moduleName.startsWith(`${name}/`));
 const baseResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (singletonEntries[moduleName]) {
-    return { filePath: singletonEntries[moduleName], type: "sourceFile" };
+  const pkg = matchSingleton(moduleName);
+  if (pkg) {
+    const filePath = require.resolve(moduleName, { paths: [path.dirname(singletonRoots[pkg])] });
+    return { filePath, type: "sourceFile" };
   }
   return baseResolveRequest
     ? baseResolveRequest(context, moduleName, platform)

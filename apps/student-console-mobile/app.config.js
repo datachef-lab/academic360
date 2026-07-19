@@ -64,7 +64,13 @@ module.exports = () => ({
   ],
   experiments: {
     typedRoutes: true,
-    reactCompiler: true,
+    // React Compiler was interfering with NativeWind's className transform —
+    // some layouts had flex-row / items-stretch silently dropped, so cards
+    // and tab dock rendered with default column layout / no clipping. Turn
+    // off until Expo SDK 54's babel-preset-expo ships the reactCompiler +
+    // nativewind interop patch. Cost: slightly less auto-memoization; the
+    // app was fine without it before.
+    reactCompiler: false,
   },
   extra: {
     router: {},
