@@ -320,6 +320,44 @@ function getPerUidFeesMasters(): Promise<MasterDataType> {
 }
 
 /**
+ * Transient legacy-DB failures (the remote replica times out or drops
+ * connections under load — it demonstrably did during the Jul 15–16 import
+ * night, which silently cost 79 PG students their fees). Retry a few times
+ * with backoff before giving up; anything else throws immediately.
+ */
+const RETRYABLE_MYSQL_CODES = new Set([
+  "ETIMEDOUT",
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "EPIPE",
+  "PROTOCOL_CONNECTION_LOST",
+  "ER_LOCK_DEADLOCK",
+]);
+
+async function queryLegacyWithRetry<T>(
+  sqlText: string,
+  label: string,
+  attempts = 3,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return (await mysqlConnection.query(sqlText)) as T;
+    } catch (err) {
+      lastErr = err;
+      const code = String((err as { code?: string })?.code ?? "");
+      if (!RETRYABLE_MYSQL_CODES.has(code) || attempt === attempts) throw err;
+      const delayMs = attempt * 2000;
+      console.warn(
+        `[legacy-fees] ${label}: attempt ${attempt}/${attempts} failed (${code}); retrying in ${delayMs}ms`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * Load a single student's legacy fees by uid — intended to be called from the
  * per-uid student import loop, right after the student's data is loaded.
  *
@@ -329,20 +367,33 @@ function getPerUidFeesMasters(): Promise<MasterDataType> {
  *
  * Returns a per-student summary { loaded, skipped, errors } so the caller can
  * surface fee-load failures (e.g. fee structure / mapping not found) to the
- * user. "No legacy fees for this student" is not an error (empty summary).
+ * user. "No legacy fees for this student" is reported via `noLegacyRows` so
+ * callers can record the skip — it is NOT an error, but it must be visible:
+ * treating it as plain success is what hid the Jul 16 import gap.
  */
-export async function loadStudentFeesForUid(
-  uid: string,
-): Promise<{ loaded: number; skipped: number; errors: string[] }> {
-  const summary = { loaded: 0, skipped: 0, errors: [] as string[] };
+export async function loadStudentFeesForUid(uid: string): Promise<{
+  loaded: number;
+  skipped: number;
+  errors: string[];
+  noLegacyRows?: boolean;
+}> {
+  const summary = {
+    loaded: 0,
+    skipped: 0,
+    errors: [] as string[],
+    noLegacyRows: false,
+  };
   const masters = await getPerUidFeesMasters();
 
-  const [rows] = (await mysqlConnection.query(buildLegacyFeesQuery(uid))) as [
-    LegacyStudentFeeMappingRow[],
-    unknown,
-  ];
-  // No legacy fee installments for this student — nothing to load (not an error).
-  if (!rows || rows.length === 0) return summary;
+  const [rows] = await queryLegacyWithRetry<
+    [LegacyStudentFeeMappingRow[], unknown]
+  >(buildLegacyFeesQuery(uid), `fees query for uid ${uid}`);
+  // No legacy fee installments for this student — nothing to load (not an
+  // error, but recorded so the import log can show it).
+  if (!rows || rows.length === 0) {
+    summary.noLegacyRows = true;
+    return summary;
+  }
 
   const [foundStudent] = await db
     .select()
@@ -949,7 +1000,10 @@ async function syncLegacyFeeStructure(
 ) {
   //   console.log("in syncLegacyFeeStructure(), studentRows", studentRows);
 
-  const [result] = (await mysqlConnection.query(`
+  const [result] = await queryLegacyWithRetry<
+    [LegacyFeeStructureRow[], unknown]
+  >(
+    `
         SELECT
             -- Fee Structure Meta
             fsm.id AS fee_structure_id,
@@ -1017,7 +1071,9 @@ async function syncLegacyFeeStructure(
         LEFT JOIN accademicyear ay ON ay.sessionId = sess.id
         WHERE fsm.id = ${legacyFeeStructureId}
         ORDER BY sess.sessionName DESC, fsm.id, fsb.index_col;
-    `)) as [LegacyFeeStructureRow[], unknown];
+    `,
+    `structure detail for legacy fee structure ${legacyFeeStructureId}`,
+  );
 
   // No legacy fee-structure detail rows for this batch (e.g. the structure is
   // for an older session). Skip this batch gracefully — do NOT dereference
