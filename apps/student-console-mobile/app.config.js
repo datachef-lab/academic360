@@ -40,7 +40,12 @@ module.exports = () => ({
     ],
   },
   web: {
-    output: "static",
+    // SPA mode. "static" enables Expo Router's SSG/SSR, which trips over
+    // the React 19 (mobile) vs React 18 (root) split in a pnpm workspace —
+    // `react-dom/server` sneaks past our metro.config.js singleton hook
+    // and pairs with the wrong React instance. Mobile-first project: web
+    // is a smoke-test target only, no SSR needed.
+    output: "single",
     favicon: "./assets/images/favicon.png",
     bundler: "metro",
   },
