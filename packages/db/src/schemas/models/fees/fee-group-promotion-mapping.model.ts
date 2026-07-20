@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
 import { promotionModel } from "../batches";
 
 import { createInsertSchema } from "drizzle-zod";
@@ -24,6 +24,11 @@ export const feeGroupPromotionMappingModel = pgTable("fee_group_promotion_mappin
 }, (table) => ({
     uniqueFeeGroupPromotionConstraint: unique()
         .on(table.feeGroupId, table.promotionId),
+    // The list query joins through promotion_id_fk on its own; the unique constraint
+    // above only serves fee_group_id_fk and the composite. See
+    // packages/db/sql/fee-mapping-search-indexes.sql for the production-safe build.
+    promotionIdx: index("fee_group_promotion_mappings_promotion_id_idx")
+        .on(table.promotionId),
 }));
 
 export const createFeeGroupPromotionMappingSchema = createInsertSchema(feeGroupPromotionMappingModel);

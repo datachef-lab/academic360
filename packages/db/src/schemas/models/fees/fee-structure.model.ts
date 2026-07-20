@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { receiptTypeModel } from "@/schemas/models/fees";
 import {  programCourseModel } from "@/schemas/models/course-design";
@@ -42,7 +42,11 @@ export const feeStructureModel = pgTable("fee_structures", {
     updatedByUserId: integer("updated_by_user_id_fk")
         .references(() => userModel.id)
         .notNull(),
-});
+}, (table) => ({
+    // getFeeGroupTotalsForPromotions() looks structures up by this exact tuple.
+    contextIdx: index("fee_structures_context_idx")
+        .on(table.academicYearId, table.classId, table.programCourseId, table.shiftId),
+}));
 
 export const createFeeStructureSchema = createInsertSchema(feeStructureModel);
 

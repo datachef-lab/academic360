@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import {
   createFeeGroupPromotionMapping,
-  getAllFeeGroupPromotionMappings,
+  getFeeGroupPromotionMappingsPaginated,
   getFeeGroupPromotionMappingById,
   getFeeGroupPromotionMappingsByFeeGroupId,
   getFeeGroupPromotionMappingsByPromotionId,
@@ -69,24 +69,48 @@ export async function createFeeGroupPromotionMappingHandler(
   }
 }
 
+/** Reads a query param as a trimmed string, or undefined when absent/blank. */
+function optionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export async function getAllFeeGroupPromotionMappingsHandler(
   req: Request,
   res: Response,
 ) {
   try {
-    const limitParam = req.query?.limit ?? req.query?.page;
-    const limit =
-      limitParam && !Number.isNaN(Number(limitParam))
-        ? Number(limitParam)
-        : 10000;
-    const rows = await getAllFeeGroupPromotionMappings(limit);
+    const page = Number(req.query?.page ?? 1);
+    const limit = Number(req.query?.limit ?? 25);
+    const safePage = Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1;
+    const safeLimit =
+      Number.isFinite(limit) && limit >= 1
+        ? Math.min(Math.floor(limit), 100)
+        : 25;
+
+    const result = await getFeeGroupPromotionMappingsPaginated({
+      page: safePage,
+      limit: safeLimit,
+      search: optionalString(req.query?.search),
+      academicYear: optionalString(req.query?.academicYear),
+      semesterOrClass: optionalString(req.query?.semesterOrClass),
+      programCourse: optionalString(req.query?.programCourse),
+      shift: optionalString(req.query?.shift),
+      religion: optionalString(req.query?.religion),
+      community: optionalString(req.query?.community),
+      category: optionalString(req.query?.category),
+      feeCategory: optionalString(req.query?.feeCategory),
+      feeSlab: optionalString(req.query?.feeSlab),
+    });
+
     return res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          rows,
+          result,
           "Fee group promotion mappings retrieved successfully",
         ),
       );

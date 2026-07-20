@@ -8,11 +8,14 @@ import {
   deleteFeeGroupPromotionMapping,
   bulkUploadFeeGroupPromotionMappings,
   NewFeeGroupPromotionMapping,
+  FeeGroupPromotionMappingListParams,
+  FeeGroupPromotionMappingListResult,
 } from "@/services/fees-api";
 
-// Query key factory - v2 busts cache after limit fix (was returning 10 instead of limit)
+// Query key factory - v3 busts cache after the list payload changed from a bare
+// array to a paginated { rows, total, page, limit } envelope.
 export const feeGroupPromotionMappingKeys = {
-  all: ["fee-group-promotion-mappings", "v2"] as const,
+  all: ["fee-group-promotion-mappings", "v3"] as const,
   lists: () => [...feeGroupPromotionMappingKeys.all, "list"] as const,
   list: (filters?: Record<string, unknown>) =>
     [...feeGroupPromotionMappingKeys.lists(), filters] as const,
@@ -20,20 +23,32 @@ export const feeGroupPromotionMappingKeys = {
   detail: (id: number) => [...feeGroupPromotionMappingKeys.details(), id] as const,
 };
 
+const EMPTY_LIST: FeeGroupPromotionMappingListResult = {
+  rows: [],
+  total: 0,
+  page: 1,
+  limit: 25,
+};
+
 /**
- * Hook to fetch all fee group promotion mappings
- * @param limit - Max number of rows to fetch (default 10000)
- * @param enabled - If false, query won't run (e.g. until filters are applied)
+ * Hook to fetch one page of fee group promotion mappings.
+ *
+ * Search, filtering, sorting and paging are all done server-side, so the caller
+ * gets exactly the rows it renders plus the unpaginated `total` for the counter.
  */
-export const useFeeGroupPromotionMappings = (limit: number = 10000, enabled: boolean = true) => {
+export const useFeeGroupPromotionMappings = (
+  params: FeeGroupPromotionMappingListParams,
+  enabled: boolean = true,
+) => {
   return useQuery({
-    queryKey: [...feeGroupPromotionMappingKeys.lists(), { limit, enabled }],
+    queryKey: [...feeGroupPromotionMappingKeys.lists(), params],
     queryFn: async () => {
-      const response = await getAllFeeGroupPromotionMappings(limit);
-      return response.payload || [];
+      const response = await getAllFeeGroupPromotionMappings(params);
+      return response.payload || EMPTY_LIST;
     },
     enabled,
-    /** List endpoint is heavy; batching on backend + short stale window keeps UI snappy. */
+    /** Keep the previous page visible while the next one loads instead of flashing empty. */
+    keepPreviousData: true,
     staleTime: 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -88,21 +103,24 @@ export const useUpdateFeeGroupPromotionMapping = () => {
       // until refetch finishes, which feels like a "late" table update.
       if (data && typeof (data as FeeGroupPromotionMappingDto).id === "number") {
         const dto = data as FeeGroupPromotionMappingDto;
-        queryClient.setQueriesData<FeeGroupPromotionMappingDto[]>(
+        queryClient.setQueriesData<FeeGroupPromotionMappingListResult>(
           { queryKey: feeGroupPromotionMappingKeys.lists() },
           (old) => {
-            if (!old?.length) return old;
-            return old.map((m) => {
-              if (m.id !== dto.id) return m;
-              return {
-                ...m,
-                ...dto,
-                paymentStatus: m.paymentStatus,
-                amountToPay: m.amountToPay,
-                totalPayableAmount: m.totalPayableAmount,
-                saveBlockedForEdit: m.saveBlockedForEdit,
-              };
-            });
+            if (!old?.rows?.length) return old;
+            return {
+              ...old,
+              rows: old.rows.map((m) => {
+                if (m.id !== dto.id) return m;
+                return {
+                  ...m,
+                  ...dto,
+                  paymentStatus: m.paymentStatus,
+                  amountToPay: m.amountToPay,
+                  totalPayableAmount: m.totalPayableAmount,
+                  saveBlockedForEdit: m.saveBlockedForEdit,
+                };
+              }),
+            };
           },
         );
       }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { doublePrecision, index, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { feeHeadModel, feeSlabModel, feeStructureModel } from "@/schemas/models/fees";
 
@@ -20,7 +20,11 @@ export const feeStructureComponentModel = pgTable("fee_structure_components", {
     remarks: varchar({ length: 500 }),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+    // Slab totals are summed per (structure, slab) when computing fee-group totals.
+    structureSlabIdx: index("fee_structure_components_structure_slab_idx")
+        .on(table.feeStructureId, table.feeSlabId),
+}));
 
 export const createFeeStructureComponentSchema = createInsertSchema(feeStructureComponentModel);
 

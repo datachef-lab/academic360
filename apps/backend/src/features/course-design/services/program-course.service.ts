@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db/index.js";
 import {
   programCourseModel,
@@ -156,6 +158,7 @@ export async function recomposeProgramCourseNamesFor(filter: {
         .update(programCourseModel)
         .set({ name: composed })
         .where(eq(programCourseModel.id, pc.id));
+      invalidateProgramCourseCache(pc.id);
     }
   }
 }
@@ -190,12 +193,44 @@ export async function createProgramCourse(
   return created;
 }
 
+/**
+ * Program-course DTOs are near-static reference data, but building one costs a row
+ * fetch plus six joined-entity lookups. List endpoints call findById once per distinct
+ * program course, so an uncached list of ~100 courses paid ~700 queries per request.
+ *
+ * Entries are invalidated explicitly on program-course writes and additionally expire
+ * on a TTL, because a DTO also embeds course/courseType/courseLevel/affiliation/
+ * regulationType/stream — those are edited through their own services, which cannot
+ * reach in here to invalidate.
+ */
+const PROGRAM_COURSE_DTO_TTL_MS = 5 * 60 * 1000;
+const programCourseDtoCache = new Map<
+  number,
+  { dto: ProgramCourseDto | null; expiresAt: number }
+>();
+
+export function invalidateProgramCourseCache(id?: number): void {
+  if (typeof id === "number") programCourseDtoCache.delete(id);
+  else programCourseDtoCache.clear();
+}
+
 export async function findById(id: number) {
+  const cached = programCourseDtoCache.get(id);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.dto;
+  }
+
   const [programCourse] = await db
     .select()
     .from(programCourseModel)
     .where(eq(programCourseModel.id, id));
-  return programCourse ? await modelToDto(programCourse) : null;
+  const dto = programCourse ? await modelToDto(programCourse) : null;
+
+  programCourseDtoCache.set(id, {
+    dto,
+    expiresAt: Date.now() + PROGRAM_COURSE_DTO_TTL_MS,
+  });
+  return dto;
 }
 
 export async function findAllDtos() {
@@ -268,6 +303,7 @@ export async function updateProgramCourse(
     .set(props)
     .where(eq(programCourseModel.id, id))
     .returning();
+  invalidateProgramCourseCache(id);
   return updated;
 }
 
@@ -276,6 +312,7 @@ export async function deleteProgramCourse(id: number) {
     .delete(programCourseModel)
     .where(eq(programCourseModel.id, id))
     .returning();
+  invalidateProgramCourseCache(id);
   return deleted;
 }
 
@@ -305,6 +342,7 @@ export async function deleteProgramCourseSafe(id: number) {
     .delete(programCourseModel)
     .where(eq(programCourseModel.id, id))
     .returning();
+  invalidateProgramCourseCache(id);
   if (deleted)
     return {
       success: true,
@@ -618,21 +656,33 @@ export async function modelToDto(
     ...rest
   } = programCourse;
 
+  // These six lookups are independent — awaiting them in sequence cost 6 serial
+  // round trips per program course, which list endpoints pay once per distinct course.
+  const [course, courseType, courseLevel, affiliation, regulationType, stream] =
+    await Promise.all([
+      courseId ? courseService.findById(courseId) : Promise.resolve(null),
+      courseTypeId
+        ? courseTypeService.findById(courseTypeId)
+        : Promise.resolve(null),
+      courseLevelId
+        ? courseLevelService.findById(courseLevelId)
+        : Promise.resolve(null),
+      affiliationId
+        ? affiliationService.findById(affiliationId)
+        : Promise.resolve(null),
+      regulationTypeId
+        ? regulationTypeService.findById(regulationTypeId)
+        : Promise.resolve(null),
+      streamId ? streamService.findById(streamId) : Promise.resolve(null),
+    ]);
+
   return {
     ...rest,
-    course: courseId ? await courseService.findById(courseId) : null,
-    courseType: courseTypeId
-      ? await courseTypeService.findById(courseTypeId)
-      : null,
-    courseLevel: courseLevelId
-      ? await courseLevelService.findById(courseLevelId)
-      : null,
-    affiliation: affiliationId
-      ? await affiliationService.findById(affiliationId)
-      : null,
-    regulationType: regulationTypeId
-      ? await regulationTypeService.findById(regulationTypeId)
-      : null,
-    stream: streamId ? await streamService.findById(streamId) : null,
+    course,
+    courseType,
+    courseLevel,
+    affiliation,
+    regulationType,
+    stream,
   };
 }

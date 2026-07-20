@@ -60,6 +60,8 @@ export interface FeeGroupPromotionMappingDto extends Omit<FeeGroupPromotionMappi
     totalPayableAmount?: number;
     /** True when any related fee_student_mapping has a linked payment with status SUCCESS — read-only edit dialog */
     saveBlockedForEdit?: boolean;
+    /** Total mappings on this promotion across the whole table (not just the current page); delete is offered only when > 1 */
+    promotionMappingCount?: number;
     /** For approval details in edit dialog */
     updatedByUser?: { name: string; avatarUrl?: string | null } | null;
 }

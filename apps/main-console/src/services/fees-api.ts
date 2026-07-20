@@ -924,10 +924,39 @@ export interface FilteredFeeGroupPromotionMapping {
   exists: boolean;
 }
 
+export interface FeeGroupPromotionMappingListParams {
+  page: number;
+  limit: number;
+  search?: string;
+  academicYear?: string;
+  semesterOrClass?: string;
+  programCourse?: string;
+  shift?: string;
+  religion?: string;
+  community?: string;
+  category?: string;
+  feeCategory?: string;
+  feeSlab?: string;
+}
+
+export interface FeeGroupPromotionMappingListResult {
+  rows: FeeGroupPromotionMappingDto[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export async function getAllFeeGroupPromotionMappings(
-  limit: number = 10000,
-): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings?limit=${limit}`);
+  params: FeeGroupPromotionMappingListParams,
+): Promise<ApiResponse<FeeGroupPromotionMappingListResult>> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    query.set(key, String(value));
+  }
+  const response = await axiosInstance.get(
+    `${BASE_PATH}/group-promotion-mappings?${query.toString()}`,
+  );
   return response.data;
 }
 

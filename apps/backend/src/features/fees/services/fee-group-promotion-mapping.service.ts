@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 import {
   feeGroupPromotionMappingModel,
@@ -9,7 +11,7 @@ import {
   boardResultStatusModel,
   paymentModel,
 } from "@repo/db/schemas";
-import { promotionStatusModel } from "@repo/db/schemas/models/batches";
+// import { promotionStatusModel } from "@repo/db/schemas/models/batches";
 import {
   sessionModel,
   classModel,
@@ -21,7 +23,19 @@ import {
   studentModel,
   personalDetailsModel,
 } from "@repo/db/schemas/models/user";
-import { and, inArray, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  or,
+  asc,
+  count,
+  ilike,
+  inArray,
+  desc,
+  eq,
+  isNull,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import {
   feeStructureModel,
@@ -41,7 +55,10 @@ import {
 } from "@repo/db/schemas/models/resources";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 import * as userService from "@/features/user/services/user.service.js";
-import { getFeeGroupTotalsForPromotion } from "./fee-group.service.js";
+import {
+  getFeeGroupTotalsForPromotion,
+  getFeeGroupTotalsForPromotions,
+} from "./fee-group.service.js";
 
 type FsmPaymentRow = {
   totalPayable: number | null;
@@ -548,15 +565,18 @@ export const createFeeGroupPromotionMapping = async (
   return dto!;
 };
 
-export const getAllFeeGroupPromotionMappings = async (
-  limit: number = 10000,
-): Promise<FeeGroupPromotionMappingDto[]> => {
-  // Order by id DESC to maintain consistent ordering (updated items stay in place)
-  const rows = await db
-    .select()
-    .from(feeGroupPromotionMappingModel)
-    .orderBy(desc(feeGroupPromotionMappingModel.id))
-    .limit(limit);
+type FeeGroupPromotionMappingRow =
+  typeof feeGroupPromotionMappingModel.$inferSelect;
+
+/**
+ * Expands raw mapping rows into full DTOs (fee group + promotion + payment status
+ * + payable amounts) using batched lookups. Output preserves the order of `rows`,
+ * so callers control sorting.
+ */
+async function hydrateMappingRows(
+  rows: FeeGroupPromotionMappingRow[],
+): Promise<FeeGroupPromotionMappingDto[]> {
+  if (rows.length === 0) return [];
 
   // Batch fetch fee groups and promotions to reduce queries
   const feeGroupIds = [...new Set(rows.map((r) => r.feeGroupId))];
@@ -635,16 +655,39 @@ export const getAllFeeGroupPromotionMappings = async (
       : [];
 
   const uniquePromotionIds = [...new Set(rows.map((r) => r.promotionId))];
-  const structureTotalByPromotion = new Map<number, Map<number, number>>();
-  await Promise.all(
-    uniquePromotionIds.map(async (promotionId) => {
-      const totals = await getFeeGroupTotalsForPromotion(promotionId);
-      structureTotalByPromotion.set(
-        promotionId,
-        new Map(totals.map((t) => [t.feeGroupId, t.totalPayable])),
-      );
-    }),
+
+  // How many mappings each promotion has in total — the UI only offers delete when a
+  // promotion has more than one. This must be counted across the whole table, not just
+  // the rows in hand, because a promotion's mappings can fall on different pages.
+  const mappingCountRows =
+    uniquePromotionIds.length > 0
+      ? await db
+          .select({
+            promotionId: feeGroupPromotionMappingModel.promotionId,
+            total: count(),
+          })
+          .from(feeGroupPromotionMappingModel)
+          .where(
+            inArray(
+              feeGroupPromotionMappingModel.promotionId,
+              uniquePromotionIds,
+            ),
+          )
+          .groupBy(feeGroupPromotionMappingModel.promotionId)
+      : [];
+  const mappingCountByPromotionId = new Map(
+    mappingCountRows.map((r) => [r.promotionId, Number(r.total ?? 0)]),
   );
+
+  const totalsByPromotion =
+    await getFeeGroupTotalsForPromotions(uniquePromotionIds);
+  const structureTotalByPromotion = new Map<number, Map<number, number>>();
+  for (const [promotionId, totals] of totalsByPromotion) {
+    structureTotalByPromotion.set(
+      promotionId,
+      new Map(totals.map((t) => [t.feeGroupId, t.totalPayable])),
+    );
+  }
 
   const paymentByMappingId = new Map<
     number,
@@ -725,10 +768,275 @@ export const getAllFeeGroupPromotionMappings = async (
       amountToPay: payment?.amountToPay ?? 0,
       totalPayableAmount: payment?.totalPayableAmount ?? 0,
       saveBlockedForEdit: payment?.saveBlockedForEdit ?? false,
+      promotionMappingCount:
+        mappingCountByPromotionId.get(row.promotionId) ?? 1,
     });
   }
 
   return dtos;
+}
+
+export const getAllFeeGroupPromotionMappings = async (
+  limit: number = 10000,
+): Promise<FeeGroupPromotionMappingDto[]> => {
+  // Order by id DESC to maintain consistent ordering (updated items stay in place)
+  const rows = await db
+    .select()
+    .from(feeGroupPromotionMappingModel)
+    .orderBy(desc(feeGroupPromotionMappingModel.id))
+    .limit(limit);
+
+  return hydrateMappingRows(rows);
+};
+
+export type FeeGroupPromotionMappingListFilters = {
+  page: number;
+  limit: number;
+  search?: string;
+  academicYear?: string;
+  semesterOrClass?: string;
+  programCourse?: string;
+  shift?: string;
+  religion?: string;
+  community?: string;
+  category?: string;
+  feeCategory?: string;
+  feeSlab?: string;
+};
+
+export type FeeGroupPromotionMappingListResult = {
+  rows: FeeGroupPromotionMappingDto[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+/** Student's display name, matching the `firstName middleName lastName` join used in the DTOs. */
+const STUDENT_FULL_NAME_SQL = sql<string>`TRIM(BOTH ' ' FROM CONCAT_WS(' ', ${personalDetailsModel.firstName}, ${personalDetailsModel.middleName}, ${personalDetailsModel.lastName}))`;
+
+function buildListWhere(
+  filters: Omit<FeeGroupPromotionMappingListFilters, "page" | "limit">,
+): SQL | undefined {
+  const parts: SQL[] = [];
+
+  const search = filters.search?.trim();
+  if (search) {
+    const term = `%${search}%`;
+    const searchParts: SQL[] = [
+      // Anchored so this branch can use the existing UNIQUE btree on students.uid.
+      // NOTE: it only pays off when the surrounding OR is removed — see the comment
+      // on buildListWhere about why the 12-branch OR cannot use any index.
+      ilike(studentModel.uid, `${search}%`),
+      ilike(STUDENT_FULL_NAME_SQL, term),
+      ilike(promotionModel.classRollNumber, term),
+      ilike(promotionModel.rollNumber, term),
+      ilike(programCourseModel.name, term),
+      ilike(classModel.name, term),
+      ilike(shiftModel.name, term),
+      ilike(categoryModel.name, term),
+      ilike(religionModel.name, term),
+      ilike(feeCategoryModel.name, term),
+      ilike(feeSlabModel.name, term),
+      // Mapping id is numeric; cast so a typed id still matches as it did client-side.
+      ilike(
+        sql<string>`CAST(${feeGroupPromotionMappingModel.id} AS TEXT)`,
+        term,
+      ),
+    ];
+    const searchOr = or(...searchParts);
+    if (searchOr) parts.push(searchOr);
+  }
+
+  // Filters arrive as display-name strings from the UI dropdowns, and the previous
+  // client-side implementation compared them with exact, case-sensitive equality.
+  // Matching on names here keeps that behaviour and avoids reworking the dropdowns.
+  if (filters.academicYear) {
+    parts.push(eq(academicYearModel.year, filters.academicYear));
+  }
+  if (filters.semesterOrClass) {
+    parts.push(eq(classModel.name, filters.semesterOrClass));
+  }
+  if (filters.programCourse) {
+    parts.push(eq(programCourseModel.name, filters.programCourse));
+  }
+  if (filters.shift) {
+    parts.push(eq(shiftModel.name, filters.shift));
+  }
+  if (filters.religion) {
+    parts.push(eq(religionModel.name, filters.religion));
+  }
+  if (filters.category) {
+    parts.push(eq(categoryModel.name, filters.category));
+  }
+  if (filters.community) {
+    parts.push(
+      eq(
+        studentModel.community,
+        filters.community as (typeof studentModel.community.enumValues)[number],
+      ),
+    );
+  }
+  if (filters.feeCategory) {
+    parts.push(eq(feeCategoryModel.name, filters.feeCategory));
+  }
+  if (filters.feeSlab) {
+    parts.push(eq(feeSlabModel.name, filters.feeSlab));
+  }
+
+  if (parts.length === 0) return undefined;
+  return parts.length === 1 ? parts[0] : and(...parts);
+}
+
+/**
+ * Paginated + searchable list for the Student Fee Group Mapping table.
+ *
+ * Search, filtering, ordering and paging all happen in SQL so only one page of rows
+ * is ever hydrated — previously the endpoint built and shipped every matching row
+ * (up to 10,000) and the browser did the filtering.
+ */
+export const getFeeGroupPromotionMappingsPaginated = async (
+  filters: FeeGroupPromotionMappingListFilters,
+): Promise<FeeGroupPromotionMappingListResult> => {
+  const { page, limit, ...rest } = filters;
+  const offset = (page - 1) * limit;
+  const whereClause = buildListWhere(rest);
+
+  // The join chain is spelled out twice rather than shared through a helper:
+  // Drizzle's fluent builder types do not survive a generic wrapper, and the casts
+  // needed to force it would suppress genuine type errors in these queries.
+  const runCountQuery = () =>
+    db
+      .select({ total: count() })
+      .from(feeGroupPromotionMappingModel)
+      .innerJoin(
+        promotionModel,
+        eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
+      )
+      .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+      .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .innerJoin(classModel, eq(classModel.id, promotionModel.classId))
+      .innerJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+      .innerJoin(
+        programCourseModel,
+        eq(programCourseModel.id, promotionModel.programCourseId),
+      )
+      .innerJoin(
+        feeGroupModel,
+        eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+      )
+      .innerJoin(
+        feeCategoryModel,
+        eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+      )
+      .innerJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
+      .leftJoin(
+        academicYearModel,
+        eq(academicYearModel.id, sessionModel.academicYearId),
+      )
+      .leftJoin(
+        personalDetailsModel,
+        eq(personalDetailsModel.userId, studentModel.userId),
+      )
+      .leftJoin(
+        religionModel,
+        eq(religionModel.id, personalDetailsModel.religionId),
+      )
+      .leftJoin(
+        categoryModel,
+        eq(categoryModel.id, personalDetailsModel.categoryId),
+      )
+      .where(whereClause);
+
+  const idRows = await db
+    .select({ id: feeGroupPromotionMappingModel.id })
+    .from(feeGroupPromotionMappingModel)
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
+    )
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .innerJoin(classModel, eq(classModel.id, promotionModel.classId))
+    .innerJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+    .innerJoin(
+      programCourseModel,
+      eq(programCourseModel.id, promotionModel.programCourseId),
+    )
+    .innerJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .innerJoin(
+      feeCategoryModel,
+      eq(feeCategoryModel.id, feeGroupModel.feeCategoryId),
+    )
+    .innerJoin(feeSlabModel, eq(feeSlabModel.id, feeGroupModel.feeSlabId))
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, sessionModel.academicYearId),
+    )
+    .leftJoin(
+      personalDetailsModel,
+      eq(personalDetailsModel.userId, studentModel.userId),
+    )
+    .leftJoin(
+      religionModel,
+      eq(religionModel.id, personalDetailsModel.religionId),
+    )
+    .leftJoin(
+      categoryModel,
+      eq(categoryModel.id, personalDetailsModel.categoryId),
+    )
+    .where(whereClause)
+    // Mirrors the previous client-side sort: semester, then student name, then id.
+    // `class.sequence` is nullable; the old client code fell back to parsing an
+    // ordinal out of the class name. Ordering unsequenced classes last and then by
+    // name keeps them grouped, but is not identical to that parse — classes with a
+    // NULL sequence will appear in a different position than they used to.
+    .orderBy(
+      sql`${classModel.sequence} ASC NULLS LAST`,
+      asc(classModel.name),
+      asc(STUDENT_FULL_NAME_SQL),
+      asc(feeGroupPromotionMappingModel.id),
+    )
+    .limit(limit)
+    .offset(offset);
+
+  // The count repeats the same joins and the same WHERE as the row query, so it costs
+  // roughly as much again. When this page came back short, the page itself proves the
+  // total (offset + what we got) and the second pass is pure waste — which is exactly
+  // the narrow-search case, where one student is found and there is nothing to count.
+  const isLastPage = idRows.length < limit;
+  const countRows = isLastPage ? null : await runCountQuery();
+  const total = isLastPage
+    ? offset + idRows.length
+    : Number(countRows?.[0]?.total ?? 0);
+
+  const orderedIds = idRows
+    .map((r) => r.id)
+    .filter((id): id is number => id != null);
+
+  if (orderedIds.length === 0) {
+    return { rows: [], total, page, limit };
+  }
+
+  const unorderedRows = await db
+    .select()
+    .from(feeGroupPromotionMappingModel)
+    .where(inArray(feeGroupPromotionMappingModel.id, orderedIds));
+
+  // `inArray` does not preserve order — restore the sort the id query established.
+  const rowById = new Map(unorderedRows.map((r) => [r.id, r]));
+  const rows = orderedIds
+    .map((id) => rowById.get(id))
+    .filter((r): r is FeeGroupPromotionMappingRow => r != null);
+
+  return {
+    rows: await hydrateMappingRows(rows),
+    total,
+    page,
+    limit,
+  };
 };
 
 export const getFeeGroupPromotionMappingById = async (

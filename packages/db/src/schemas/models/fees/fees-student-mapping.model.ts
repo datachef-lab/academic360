@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { studentModel, userModel } from "@/schemas/models/user";
 import { feeStructureInstallmentModel, feeStructureModel } from "@/schemas/models/fees";
@@ -43,7 +43,11 @@ export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     //     .references(() => paymentModel.id),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+    // Batch-loaded per page to derive payment status and payable amounts.
+    feeGroupPromotionMappingIdx: index("fee_student_mappings_fgpm_id_idx")
+        .on(table.feeGroupPromotionMappingId),
+}));
 
 export const createFeeStudentMappingSchema = createInsertSchema(feeStudentMappingModel);
 

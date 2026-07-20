@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -48,7 +49,13 @@ import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { FeeGroupPromotionMappingDto, type FeeGroupDto } from "@repo/db/dtos/fees";
 import { toast } from "sonner";
-import { NewFeeGroupPromotionMapping, BulkUploadResult, BulkUploadRow } from "@/services/fees-api";
+import {
+  NewFeeGroupPromotionMapping,
+  BulkUploadResult,
+  BulkUploadRow,
+  type FeeGroupPromotionMappingListResult,
+} from "@/services/fees-api";
+import useDebounce from "@/components/Hooks/useDebounce";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   feeGroupPromotionMappingKeys,
@@ -73,19 +80,60 @@ import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import type { ProgressUpdate } from "@/types/progress";
 import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 
-const DotSpinnerLoader: React.FC = () => (
-  <div className="flex items-center justify-center py-8">
-    <div className="dot-spinner" role="status" aria-label="Loading mappings">
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-      <div className="dot-spinner__dot"></div>
-    </div>
-  </div>
+/**
+ * Placeholder rows shown while a page is being fetched. Column widths and the
+ * avatar + two-line student cell mirror the real row, so the table keeps its
+ * shape and nothing shifts when results land.
+ */
+const TableSkeletonRows: React.FC<{ rows?: number }> = ({ rows = 10 }) => (
+  <>
+    {Array.from({ length: rows }).map((_, i) => (
+      <TableRow key={`skeleton-${i}`} aria-hidden="true">
+        <TableCell className="min-w-0 p-1 align-middle">
+          <Skeleton className="h-4 w-4 rounded-sm" />
+        </TableCell>
+        <TableCell className="min-w-0 text-center">
+          <Skeleton className="h-3 w-4 mx-auto" />
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-3 w-[70%]" />
+              <Skeleton className="h-2.5 w-[45%]" />
+            </div>
+          </div>
+        </TableCell>
+        <TableCell>
+          <Skeleton className="h-4 w-[80%] rounded-full" />
+        </TableCell>
+        <TableCell className="text-center">
+          <Skeleton className="h-4 w-6 mx-auto rounded-full" />
+        </TableCell>
+        <TableCell>
+          <Skeleton className="h-4 w-[75%] rounded-full" />
+        </TableCell>
+        <TableCell>
+          <Skeleton className="h-4 w-14 rounded-full" />
+        </TableCell>
+        <TableCell>
+          <Skeleton className="h-3 w-12" />
+        </TableCell>
+        <TableCell>
+          <div className="flex flex-wrap gap-1">
+            <Skeleton className="h-4 w-16 rounded-full" />
+            <Skeleton className="h-4 w-12 rounded-full" />
+          </div>
+        </TableCell>
+        <TableCell className="text-right pr-1">
+          <div className="flex justify-end gap-1">
+            <Skeleton className="h-6 w-6 rounded" />
+            <Skeleton className="h-6 w-6 rounded" />
+          </div>
+        </TableCell>
+      </TableRow>
+    ))}
+  </>
 );
 
 function isPaymentStatusPaid(status: string | undefined): boolean {
@@ -95,41 +143,6 @@ function isPaymentStatusPaid(status: string | undefined): boolean {
 
 function paymentStatusLabel(status: string | undefined): "Paid" | "Pending" {
   return isPaymentStatusPaid(status) ? "Paid" : "Pending";
-}
-
-/** Roman numerals I–X only (semester labels); longer tokens checked first. */
-const ROMAN_SEM_VALUE: Record<string, number> = {
-  I: 1,
-  II: 2,
-  III: 3,
-  IV: 4,
-  V: 5,
-  VI: 6,
-  VII: 7,
-  VIII: 8,
-  IX: 9,
-  X: 10,
-};
-const ROMAN_SEM_SCAN_ORDER = ["VIII", "VII", "III", "VI", "IV", "IX", "II", "V", "I", "X"] as const;
-
-function parseSemesterOrdinalFromClassName(name: string | undefined | null): number {
-  if (!name || !String(name).trim()) return 10_000;
-  const upper = String(name).toUpperCase();
-  for (const tok of ROMAN_SEM_SCAN_ORDER) {
-    if (new RegExp(`\\b${tok}\\b`).test(upper)) {
-      return ROMAN_SEM_VALUE[tok] ?? 10_000;
-    }
-  }
-  const digit = String(name).match(/(\d+)/);
-  if (digit) return parseInt(digit[1], 10);
-  return 10_000 + upper.localeCompare("");
-}
-
-function semesterClassSortKey(mapping: FeeGroupPromotionMappingDto): number {
-  const promo: any = mapping.promotion || {};
-  const seq = promo.class?.sequence;
-  if (typeof seq === "number" && Number.isFinite(seq)) return seq;
-  return parseSemesterOrdinalFromClassName(promo.class?.name);
 }
 
 const FeeGroupPromotionMappingPage: React.FC = () => {
@@ -226,15 +239,49 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.category ||
     !!filters.feeCategory ||
     !!filters.feeSlab;
-  const hasSearch = !!searchText.trim();
+  // Search now hits the server on every change, so debounce it rather than
+  // firing a request per keystroke.
+  const debouncedSearchText = useDebounce(searchText, 300);
+  const hasSearch = !!debouncedSearchText.trim();
   const shouldFetchMappings = hasFilters || hasSearch;
   const queryClient = useQueryClient();
 
+  const listParams = useMemo(
+    () => ({
+      page,
+      limit: pageSize,
+      search: debouncedSearchText.trim() || undefined,
+      academicYear: filters.academicYear || undefined,
+      semesterOrClass: filters.semesterOrClass || undefined,
+      programCourse: filters.programCourse || undefined,
+      shift: filters.shift || undefined,
+      religion: filters.religion || undefined,
+      community: filters.community || undefined,
+      category: filters.category || undefined,
+      feeCategory: filters.feeCategory || undefined,
+      feeSlab: filters.feeSlab || undefined,
+    }),
+    [page, pageSize, debouncedSearchText, filters],
+  );
+
   const {
-    data: mappings = [],
+    data: mappingsResult,
     isLoading: loading,
+    // `keepPreviousData` keeps isLoading false on a re-search, so isFetching is what
+    // tells us a new page/search is in flight.
+    isFetching,
     refetch: refetchMappings,
-  } = useFeeGroupPromotionMappings(10000, shouldFetchMappings);
+  } = useFeeGroupPromotionMappings(listParams, shouldFetchMappings);
+
+  const isFetchingMappings = shouldFetchMappings && isFetching;
+
+  const mappings = useMemo(() => mappingsResult?.rows ?? [], [mappingsResult]);
+  const totalMappings = mappingsResult?.total ?? 0;
+
+  // Any change to the search term or filters invalidates the current page number.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchText, filters]);
   const createMutation = useCreateFeeGroupPromotionMapping();
   const updateMutation = useUpdateFeeGroupPromotionMapping();
   const deleteMutation = useDeleteFeeGroupPromotionMapping();
@@ -291,21 +338,24 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     }) => {
       console.log("[Fee Group Promotion Mapping Page] Mapping updated:", data);
       if (data?.type === "recalculation_completed" && typeof data.mappingId === "number") {
-        queryClient.setQueriesData<FeeGroupPromotionMappingDto[]>(
+        queryClient.setQueriesData<FeeGroupPromotionMappingListResult>(
           { queryKey: feeGroupPromotionMappingKeys.lists() },
           (old) => {
-            if (!old?.length) return old;
-            return old.map((m) =>
-              m.id === data.mappingId
-                ? {
-                    ...m,
-                    paymentStatus: data.paymentStatus ?? m.paymentStatus,
-                    amountToPay: data.amountToPay ?? m.amountToPay,
-                    totalPayableAmount: data.totalPayableAmount ?? m.totalPayableAmount,
-                    saveBlockedForEdit: data.saveBlockedForEdit ?? m.saveBlockedForEdit,
-                  }
-                : m,
-            );
+            if (!old?.rows?.length) return old;
+            return {
+              ...old,
+              rows: old.rows.map((m) =>
+                m.id === data.mappingId
+                  ? {
+                      ...m,
+                      paymentStatus: data.paymentStatus ?? m.paymentStatus,
+                      amountToPay: data.amountToPay ?? m.amountToPay,
+                      totalPayableAmount: data.totalPayableAmount ?? m.totalPayableAmount,
+                      saveBlockedForEdit: data.saveBlockedForEdit ?? m.saveBlockedForEdit,
+                    }
+                  : m,
+              ),
+            };
           },
         );
         return;
@@ -500,10 +550,17 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       communities: communityOptions.length > 0 ? communityOptions : Array.from(communities),
       categories: categoryOptions.length > 0 ? categoryOptions : Array.from(categories),
       shifts: shiftOptions,
-      feeSlabs: Array.from(feeSlabs),
+      // Prefer the authoritative slab list: `mappings` is now a single server-side
+      // page, so deriving options from it would only ever offer the slabs visible
+      // on the current page.
+      feeSlabs:
+        feesSlabs && feesSlabs.length > 0
+          ? feesSlabs.map((slab) => slab.name).filter((name): name is string => !!name)
+          : Array.from(feeSlabs),
     };
   }, [
     mappings,
+    feesSlabs,
     academicYearOptions,
     semesterOrClassOptions,
     programCourseOptions,
@@ -513,121 +570,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     shiftOptions,
   ]);
 
-  // Pre-compute counts of mappings per promotion for delete-visibility logic
-  const promotionMappingCounts = useMemo(() => {
-    const counts = new Map<number, number>();
-    mappings.forEach((m) => {
-      const pid = m.promotion?.id;
-      if (!pid) return;
-      counts.set(pid, (counts.get(pid) ?? 0) + 1);
-    });
-    return counts;
-  }, [mappings]);
-
-  const matchesFilters = useCallback(
-    (mapping: FeeGroupPromotionMappingDto) => {
-      const promo: any = mapping.promotion || {};
-      const academicYearName = promo.academicYearName || promo.session?.name || "";
-      const semesterName = promo.class?.name || "";
-      const programCourseName = promo.programCourse?.name || "";
-      const shiftName = promo.shift?.name || promo.shiftName || "";
-      const religionName = promo.religionName || "";
-      const categoryName = promo.categoryName || "";
-      const communityName = promo.communityName || promo.community || "";
-      const feeSlabName = mapping.feeGroup?.feeSlab?.name || "";
-
-      if (filters.academicYear && academicYearName !== filters.academicYear) return false;
-      if (filters.semesterOrClass && semesterName !== filters.semesterOrClass) return false;
-      if (filters.programCourse && programCourseName !== filters.programCourse) return false;
-      if (filters.shift && shiftName !== filters.shift) return false;
-      if (filters.religion && religionName !== filters.religion) return false;
-      if (filters.category && categoryName !== filters.category) return false;
-      if (filters.community && communityName !== filters.community) return false;
-      if (
-        filters.feeCategory &&
-        mapping.feeGroup?.feeCategory?.name !== filters.feeCategory &&
-        mapping.feeCategory?.name !== filters.feeCategory
-      )
-        return false;
-      if (filters.feeSlab && mapping.feeGroup?.feeSlab?.name !== filters.feeSlab) return false;
-
-      return true;
-    },
-    [filters],
-  );
-
-  // Filter mappings, then sort ascending by semester/class (sequence or parsed ordinal)
-  const filteredMappings = useMemo(() => {
-    const list =
-      mappings?.filter((mapping) => {
-        if (!searchText.trim()) {
-          return matchesFilters(mapping);
-        }
-
-        const searchLower = searchText.toLowerCase();
-        const promo: any = mapping.promotion || {};
-        const studentName = (promo.studentName || promo.name || "").toLowerCase();
-        const uid = (promo.uid || promo.studentUid || "").toLowerCase();
-        const classRollNumber = (promo.classRollNumber || "").toLowerCase();
-        const rollNumber = (promo.rollNumber || "").toLowerCase();
-        const programCourseName = (promo.programCourse?.name || "").toLowerCase();
-        const semesterName = (promo.class?.name || "").toLowerCase();
-        const shiftName = (promo.shift?.name || "").toLowerCase();
-        const categoryName = (promo.categoryName || "").toLowerCase();
-        const religionName = (promo.religionName || "").toLowerCase();
-        const feeCategoryName = (
-          mapping.feeGroup?.feeCategory?.name ||
-          mapping.feeCategory?.name ||
-          ""
-        ).toLowerCase();
-        const feeSlabName = (mapping.feeGroup?.feeSlab?.name || "").toLowerCase();
-        const paymentStatus = (mapping.paymentStatus || "").toLowerCase();
-        const mappingId = mapping.id?.toString() || "";
-
-        const matchesSearch =
-          studentName.includes(searchLower) ||
-          uid.includes(searchLower) ||
-          classRollNumber.includes(searchLower) ||
-          rollNumber.includes(searchLower) ||
-          programCourseName.includes(searchLower) ||
-          semesterName.includes(searchLower) ||
-          shiftName.includes(searchLower) ||
-          categoryName.includes(searchLower) ||
-          religionName.includes(searchLower) ||
-          feeCategoryName.includes(searchLower) ||
-          feeSlabName.includes(searchLower) ||
-          paymentStatus.includes(searchLower) ||
-          mappingId.includes(searchText);
-
-        return matchesSearch && matchesFilters(mapping);
-      }) ?? [];
-
-    return [...list].sort((a, b) => {
-      const da = semesterClassSortKey(a);
-      const db = semesterClassSortKey(b);
-      if (da !== db) return da - db;
-      const na = String(
-        (a.promotion as { studentName?: string; name?: string } | undefined)?.studentName ||
-          (a.promotion as { name?: string } | undefined)?.name ||
-          "",
-      ).toLowerCase();
-      const nb = String(
-        (b.promotion as { studentName?: string; name?: string } | undefined)?.studentName ||
-          (b.promotion as { name?: string } | undefined)?.name ||
-          "",
-      ).toLowerCase();
-      const c = na.localeCompare(nb);
-      if (c !== 0) return c;
-      return (a.id ?? 0) - (b.id ?? 0);
-    });
-  }, [mappings, searchText, matchesFilters]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredMappings.length / pageSize));
+  // Searching, filtering, sorting and paging are all done server-side — the rows
+  // that arrive are exactly the rows this page renders, already ordered by
+  // semester, then student name, then id.
+  const totalPages = Math.max(1, Math.ceil(totalMappings / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const paginatedMappings = filteredMappings.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  const paginatedMappings = mappings;
 
   const allSelectedOnPage =
     paginatedMappings.length > 0 &&
@@ -1507,9 +1455,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </div>
           )}
 
-          {loading && shouldFetchMappings ? (
-            <DotSpinnerLoader />
-          ) : (
+          {/* The table is always mounted — loading is shown as skeleton rows inside
+              the body so the header, column widths and scroll position stay stable. */}
+          {
             <div className="min-w-0 rounded-md border overflow-x-auto">
               <Table
                 containerClassName="max-w-full overflow-x-auto"
@@ -1555,6 +1503,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         </p>
                       </TableCell>
                     </TableRow>
+                  ) : isFetchingMappings ? (
+                    // Placeholder rows rather than swapping the table out, so the
+                    // header and column widths stay put while results load.
+                    <TableSkeletonRows rows={Math.min(pageSize, 10)} />
                   ) : paginatedMappings.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-8 text-gray-500">
@@ -1578,11 +1530,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
                       const globalIndex = (currentPage - 1) * pageSize + index + 1;
 
-                      const promotionId = promo.id as number | undefined;
-                      const mappingCountForPromotion = promotionId
-                        ? (promotionMappingCounts.get(promotionId) ?? 0)
-                        : 0;
-                      const canDelete = mappingCountForPromotion > 1;
+                      // Counted server-side across the whole table: a promotion's
+                      // mappings can span pages, so the current page cannot tell.
+                      const canDelete = (mapping.promotionMappingCount ?? 0) > 1;
 
                       return (
                         <TableRow key={mapping.id}>
@@ -1718,17 +1668,17 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                 </TableBody>
               </Table>
             </div>
-          )}
+          }
 
           {/* Simple pagination controls */}
-          {!loading && filteredMappings.length > 0 && (
+          {!loading && totalMappings > 0 && (
             <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
               <div>
                 Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{" "}
                 <span className="font-medium">
-                  {Math.min(currentPage * pageSize, filteredMappings.length)}
+                  {Math.min(currentPage * pageSize, totalMappings)}
                 </span>{" "}
-                of <span className="font-medium">{filteredMappings.length}</span> students
+                of <span className="font-medium">{totalMappings}</span> students
               </div>
               <div className="flex items-center gap-2">
                 <Button
