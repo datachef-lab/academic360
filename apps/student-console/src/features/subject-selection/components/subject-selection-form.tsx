@@ -637,10 +637,23 @@ export default function SubjectSelectionForm({
           .trim()
           .toUpperCase();
       const applyRules = Boolean(restrictedCategories[norm(categoryCode)]);
-      const selected = selectedInCategory(categoryCode, metaId).filter((s) => s !== currentValue);
+      // Normalize the currentValue filter so casing/whitespace differences
+      // between the hydrated meta value and a peer meta value don't leak the
+      // current pick into `selected` (that removed it from its own dropdown
+      // and made the Combobox fall back to the placeholder).
+      const normCurrent = norm(currentValue);
+      const selected = selectedInCategory(categoryCode, metaId).filter(
+        (s) => norm(s) !== normCurrent,
+      );
 
       return sourceList.filter((subject) => {
         // Uniqueness within the same category: hide an already-picked peer.
+        // The currentValue itself is always allowed to appear so the widget
+        // can display it, even if a peer slot holds the same subject (which
+        // is the intended pattern for Minor continuation across semesters:
+        // Minor 1 & Minor 3 share the same subject, Minor 2 & Minor 4 share
+        // the same subject).
+        if (norm(subject) === normCurrent) return true;
         if (selected.map(norm).includes(norm(subject))) return false;
         if (!applyRules) return true;
 
