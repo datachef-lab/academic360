@@ -11,7 +11,9 @@
 // transactional guarantees).
 //
 // Env kill-switch: set BACKEND_BOOT_MIGRATIONS=off to skip everything.
+import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { createLogger } from "@/config/logger.js";
 import { runRegistrationYearDriftMigration } from "@/features/subject-selection/services/registration-year-drift-migration.service.js";
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
@@ -23,25 +25,26 @@ type Migration = {
   run: () => Promise<Record<string, unknown>>;
 };
 
-// Anchor imports relative to the compiled backend directory; in dev tsx runs
-// from source but the relative shape is the same.
-const REPO_BACKEND = path.resolve(
-  new URL(".", import.meta.url).pathname,
-  "..",
-  "..",
-);
-const CU_ADMITCARD_XLSX = path.join(
-  REPO_BACKEND,
-  "data",
-  "imports",
-  "cu_admitcard_2023.xlsx",
-);
-const CU_ADMITCARD_REPORT_DIR = path.join(
-  REPO_BACKEND,
-  "data",
-  "imports",
-  "reports",
-);
+/**
+ * Walk upward from this file's directory looking for a shipped-data file
+ * (e.g. apps/backend/data/imports/foo.xlsx). Necessary because in dev
+ * `import.meta.url` points into `apps/backend/src/db/…` (parent-of-parent
+ * === `apps/backend`, data/ resolves), but in production the file lives at
+ * `apps/backend/dist/apps/backend/src/db/…` — parent-of-parent points into
+ * dist, which doesn't ship non-JS assets. The upward walk lands on the
+ * source-tree `apps/backend/` in both layouts.
+ */
+function findRepoDataFile(relative: string): string | null {
+  let dir = path.dirname(fileURLToPath(import.meta.url));
+  for (let depth = 0; depth < 12; depth++) {
+    const candidate = path.join(dir, relative);
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
 
 const MIGRATIONS: Migration[] = [
   {
@@ -54,12 +57,24 @@ const MIGRATIONS: Migration[] = [
     // Idempotent Sem V/VI Minor 3/4 backfill from the CU admit-card Excel.
     // Skips any (student, meta) pair that already has a row in ANY state.
     name: "cu-admitcard-2023-sem-v-vi",
-    run: async () =>
-      runCuAdmitCardSemVSemVILoader({
-        filePath: CU_ADMITCARD_XLSX,
+    run: async () => {
+      const excelPath = findRepoDataFile(
+        path.join("data", "imports", "cu_admitcard_2023.xlsx"),
+      );
+      if (!excelPath) {
+        return {
+          skipped: true,
+          reason:
+            "Excel not found on disk — walk from import.meta.url did not locate apps/backend/data/imports/cu_admitcard_2023.xlsx. Confirm the file is committed and the deploy tree includes it.",
+        };
+      }
+      const reportDir = path.join(path.dirname(excelPath), "reports");
+      return runCuAdmitCardSemVSemVILoader({
+        filePath: excelPath,
         commit: true,
-        reportDir: CU_ADMITCARD_REPORT_DIR,
-      }),
+        reportDir,
+      });
+    },
   },
 ];
 
@@ -76,9 +91,15 @@ export async function runBootMigrations(): Promise<void> {
       log.info(`[${m.name}] done in ${ms}ms`, result);
     } catch (err) {
       const ms = Date.now() - started;
-      log.warn(`[${m.name}] failed after ${ms}ms — continuing boot`, {
-        error: err,
-      });
+      // Serialize the actual error so the pm2 log carries the message +
+      // stack. The old { error: err } shape stringified to "[object Object]"
+      // which made the ENOENT this fix addresses invisible.
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const errStack = err instanceof Error ? err.stack : undefined;
+      log.warn(
+        `[${m.name}] failed after ${ms}ms — continuing boot: ${errMsg}`,
+        { stack: errStack },
+      );
     }
   }
 }
