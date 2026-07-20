@@ -1377,6 +1377,7 @@ function toSentenceCase(str: string): string {
     "Registration Number",
   );
   result = result.replace(/^Student Roll Number$/, "Roll Number");
+  result = result.replace(/^Id Card Provided$/, "ID Card Provided (Yes/No)");
 
   return result;
 }
@@ -1580,6 +1581,9 @@ export async function exportStudentDetailedReport(
         pd.email AS personal_email,
         u.phone AS user_phone,
         u.whatsapp_number AS user_whatsappnumber,
+        EXISTS (
+          SELECT 1 FROM id_card_issues ici WHERE ici.student_id_fk = std.id
+        ) AS id_card_provided,
         u.is_active AS user_is_active,
         std.uid AS student_uid,
         std.old_uid AS student_old_uid,
