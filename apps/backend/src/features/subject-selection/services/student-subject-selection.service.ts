@@ -68,6 +68,115 @@ export interface SubjectSelectionValidationError {
   message: string;
 }
 
+/**
+ * Force every incoming selection's subjectSelectionMeta.id to belong to the
+ * student's REGISTRATION academic year. See getRegistrationAcademicYearId for
+ * the rationale — one student, one set of metas, always the year they were
+ * admitted under.
+ *
+ * If a client sends a meta id that belongs to some other AY (usually the
+ * current-semester AY, which is what the old read path served), we rewrite
+ * it to the equivalent meta (same label + subjectType) in the registration
+ * AY and log a WARN. If no equivalent exists, we emit a validation error
+ * instead of writing to the wrong AY — silently corrupting is worse than
+ * a visible failure.
+ *
+ * Returns { selections: normalized array, errors: [] }. `errors` is
+ * non-empty ONLY when the caller must return `{ success: false }`.
+ */
+export async function normalizeSelectionsToRegistrationYearMetas<
+  T extends {
+    subjectSelectionMeta?: { id?: number | null } | null | undefined;
+  },
+>(
+  studentId: number,
+  selections: T[],
+): Promise<{
+  selections: T[];
+  errors: SubjectSelectionValidationError[];
+}> {
+  const registrationAyId =
+    await studentSubjectsService.getRegistrationAcademicYearId(studentId);
+  if (!registrationAyId) {
+    // No promotions yet → nothing to anchor to; let downstream logic run
+    // unchanged (it likely errors out anyway with a clearer message).
+    return { selections, errors: [] };
+  }
+
+  const incomingMetaIds = Array.from(
+    new Set(
+      selections
+        .map((s) => s.subjectSelectionMeta?.id)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  );
+  if (incomingMetaIds.length === 0) return { selections, errors: [] };
+
+  const incomingMetas = await db
+    .select({
+      id: subjectSelectionMetaModel.id,
+      label: subjectSelectionMetaModel.label,
+      subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
+      academicYearId: subjectSelectionMetaModel.academicYearId,
+    })
+    .from(subjectSelectionMetaModel)
+    .where(inArray(subjectSelectionMetaModel.id, incomingMetaIds));
+  const incomingById = new Map(incomingMetas.map((m) => [m.id, m]));
+
+  // Only build the equivalence map if we actually have wrong-AY metas coming
+  // in — most requests will already be correct once the read path lands.
+  const wrong = incomingMetas.filter(
+    (m) => m.academicYearId !== registrationAyId,
+  );
+  const equivalentByKey = new Map<string, number>();
+  if (wrong.length > 0) {
+    const regMetas = await db
+      .select({
+        id: subjectSelectionMetaModel.id,
+        label: subjectSelectionMetaModel.label,
+        subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
+      })
+      .from(subjectSelectionMetaModel)
+      .where(eq(subjectSelectionMetaModel.academicYearId, registrationAyId));
+    for (const rm of regMetas) {
+      equivalentByKey.set(
+        `${rm.subjectTypeId}|${(rm.label ?? "").trim().toLowerCase()}`,
+        rm.id,
+      );
+    }
+  }
+
+  const errors: SubjectSelectionValidationError[] = [];
+  const normalized = selections.map((s) => {
+    const incomingId = s.subjectSelectionMeta?.id;
+    if (!incomingId) return s;
+    const incoming = incomingById.get(incomingId);
+    if (!incoming || incoming.academicYearId === registrationAyId) return s;
+
+    const key = `${incoming.subjectTypeId}|${(incoming.label ?? "").trim().toLowerCase()}`;
+    const targetId = equivalentByKey.get(key);
+    if (!targetId) {
+      errors.push({
+        field: "subjectSelectionMeta.id",
+        message: `Meta #${incomingId} ("${incoming.label}") belongs to AY #${incoming.academicYearId}, but student's registration AY is #${registrationAyId} and no equivalent meta (same label + subject type) exists there. Create the meta for the registration AY or send a valid id.`,
+      });
+      return s;
+    }
+    console.warn(
+      `[subject-selection] rewriting meta #${incomingId} (AY ${incoming.academicYearId}) -> #${targetId} (AY ${registrationAyId}) for student ${studentId}: "${incoming.label}". Client sent a non-registration-year meta; heal in-flight and log so the caller can be fixed.`,
+    );
+    return {
+      ...s,
+      subjectSelectionMeta: {
+        ...(s.subjectSelectionMeta as Record<string, unknown>),
+        id: targetId,
+      },
+    } as T;
+  });
+
+  return { selections: normalized, errors };
+}
+
 export interface SubjectSelectionData {
   minor1?: string;
   minor2?: string;
@@ -1261,6 +1370,21 @@ export async function createStudentSubjectSelectionsWithValidation(
   const studentId = selections[0].studentId;
   const sessionId = selections[0].session.id;
 
+  // Enforce the registration-year meta rule up front. Every selection's
+  // subjectSelectionMeta must belong to the AY the student was admitted
+  // under (see normalizeSelectionsToRegistrationYearMetas). Client sent the
+  // current-semester AY before the read-path fix, so we heal in-flight.
+  {
+    const normalized = await normalizeSelectionsToRegistrationYearMetas(
+      studentId,
+      selections,
+    );
+    if (normalized.errors.length > 0) {
+      return { success: false, errors: normalized.errors };
+    }
+    selections = normalized.selections;
+  }
+
   // Validate user exists if createdBy is provided
   if (createdBy) {
     const [user] = await db
@@ -1981,6 +2105,18 @@ export async function updateStudentSubjectSelectionsWithValidation(
         ],
       };
     }
+  }
+
+  // Registration-year meta guard, matching the create path.
+  {
+    const normalized = await normalizeSelectionsToRegistrationYearMetas(
+      studentId,
+      selections,
+    );
+    if (normalized.errors.length > 0) {
+      return { success: false, errors: normalized.errors };
+    }
+    selections = normalized.selections;
   }
 
   // Validate the selections first
@@ -2889,6 +3025,18 @@ export async function updateStudentSubjectSelectionsEfficiently(
   // Extract studentId and sessionId from first selection
   const studentId = selections[0].studentId;
   const sessionId = selections[0].session.id;
+
+  // Same registration-year meta guard as the create path.
+  {
+    const normalized = await normalizeSelectionsToRegistrationYearMetas(
+      studentId,
+      selections,
+    );
+    if (normalized.errors.length > 0) {
+      return { success: false, errors: normalized.errors };
+    }
+    selections = normalized.selections;
+  }
 
   console.log(
     `🔍 Efficient Update - Processing ${selections.length} selections for student ${studentId}`,

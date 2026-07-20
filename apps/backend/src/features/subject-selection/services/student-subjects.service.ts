@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { and, desc, eq, sql, max, inArray, or, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, sql, max, inArray, or, isNull } from "drizzle-orm";
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as sessionService from "@/features/academics/services/session.service";
 import {
@@ -119,6 +119,29 @@ export async function getStudentAcademicYearId(
 ): Promise<number | null> {
   const { foundSession } = await findPromotionByStudentId(studentId);
   return foundSession?.academicYearId ?? null;
+}
+
+/**
+ * The AY the student was FIRST admitted under — first promotion's session's
+ * academic year. Every subject_selection_meta binds to the student via THIS
+ * AY, not the current semester's AY: a student registered in 2023-24 who is
+ * now in Sem VI (session 2025-26) still fills Sem VI selections against the
+ * 2023-24 meta ("Minor 4 (Semester VI)" for AY 2023-24). Otherwise the same
+ * student would collect selections spread across 2023-24, 2024-25 and 2025-26
+ * metas, breaking PRIOR_SELECTION source lookups and reports. Returns null
+ * if the student has no promotions yet.
+ */
+export async function getRegistrationAcademicYearId(
+  studentId: number,
+): Promise<number | null> {
+  const [firstPromo] = await db
+    .select({ academicYearId: sessionModel.academicYearId })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .where(eq(promotionModel.studentId, studentId))
+    .orderBy(asc(promotionModel.id))
+    .limit(1);
+  return firstPromo?.academicYearId ?? null;
 }
 
 export async function findSubjectsSelections(studentId: number) {
@@ -374,10 +397,16 @@ export async function findSubjectsSelections(studentId: number) {
       ? [foundProgramCourse.stream.id]
       : [];
 
-    // Fetch subject selection meta data
-    // console.log("foundAcademicYear:", foundAcademicYear);
+    // Fetch subject selection meta data.
+    // Metas are keyed by the student's REGISTRATION year (first promotion's
+    // session's AY), not the current-semester AY. Everything else on this
+    // page (papers, program-course, class) stays on the current-semester AY
+    // because those are the papers the student is actually being offered now.
+    // Falls back to the current AY when a student somehow has no promotions.
+    const registrationAyId =
+      (await getRegistrationAcademicYearId(studentId)) ?? foundAcademicYear.id;
     const subjectSelectionMetas = await fetchSubjectSelectionMetaData(
-      foundAcademicYear.id,
+      registrationAyId,
       subjectTypeIds,
       streamIds,
     );
