@@ -22,7 +22,7 @@ import type {
   SubjectType,
 } from "@repo/db/index";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import { Edit, FileText, PlusCircle } from "lucide-react";
+import { Edit, FileText, PlusCircle, SlidersHorizontal, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,8 @@ interface UISubjectGroupingRow {
   code: string | null;
   academicYearId: number | null;
   subjectTypeId: number | null;
+  /** IDs of the mapped program courses; used by the Filters dialog cascade. */
+  programCourseIds: number[];
   programCourses: string[];
   subjectType: string;
   subjects: string[];
@@ -91,6 +93,11 @@ function SubjectGroupingsPage() {
   /** null = All Academic Years (default), so existing rows are not hidden by year. */
   const [filterAcademicYearId, setFilterAcademicYearId] = useState<number | null>(null);
   const [filterSubjectTypeId, setFilterSubjectTypeId] = useState<number | null>(null);
+  const [filterAffiliationId, setFilterAffiliationId] = useState<number | null>(null);
+  const [filterRegulationTypeId, setFilterRegulationTypeId] = useState<number | null>(null);
+  const [filterProgramCourseIds, setFilterProgramCourseIds] = useState<number[]>([]);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [filterProgramCourseSearch, setFilterProgramCourseSearch] = useState("");
 
   const loadGroupings = useCallback(async () => {
     let isMounted = true;
@@ -110,6 +117,9 @@ function SubjectGroupingsPage() {
               ? g.academicYearId
               : ((g.academicYear as AcademicYear | undefined)?.id ?? null),
           subjectTypeId: g.subjectType?.id ?? g.subjectTypeId ?? null,
+          programCourseIds: (g.subjectGroupingProgramCourses ?? [])
+            .map((pc) => pc.programCourseId)
+            .filter((id): id is number => typeof id === "number"),
           programCourses:
             g.subjectGroupingProgramCourses
               ?.map((pc) => pc.programCourse?.name || "")
@@ -144,19 +154,32 @@ function SubjectGroupingsPage() {
     setAcademicYears(availableAcademicYears || []);
   }, [availableAcademicYears]);
 
-  // Load subject types for filters on first mount
+  // Load master lists on mount — the Filters dialog needs affiliations,
+  // regulation types, subject types AND program courses to render without
+  // waiting for the Add dialog to open.
   useEffect(() => {
-    async function loadSubjectTypesForFilter() {
+    let cancelled = false;
+    async function loadFilterMasters() {
       try {
-        const st = await getSubjectTypes();
-        if (Array.isArray(st)) {
-          setSubjectTypes(st);
-        }
+        const [affs, regs, stypes, pcs] = await Promise.all([
+          getAffiliations(),
+          getRegulationTypes(),
+          getSubjectTypes(),
+          getProgramCourses(),
+        ]);
+        if (cancelled) return;
+        if (Array.isArray(affs)) setAffiliations(affs);
+        if (Array.isArray(regs)) setRegulationTypes(regs);
+        if (Array.isArray(stypes)) setSubjectTypes(stypes);
+        if (Array.isArray(pcs)) setProgramCourses(pcs);
       } catch {
-        // ignore filter-only load errors
+        // filter-only load errors are non-fatal; Add dialog re-fetches anyway
       }
     }
-    void loadSubjectTypesForFilter();
+    void loadFilterMasters();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const resetModalStateForCreate = () => {
@@ -247,16 +270,59 @@ function SubjectGroupingsPage() {
     };
   }, [isAddOpen]);
 
+  /**
+   * Program-course ids consistent with the current affiliation + regulation
+   * cascade. Rows are matched against this set — a grouping "passes" the
+   * program-course / affiliation / regulation filter if any of its mapped
+   * program-course ids is in the allowed set.
+   */
+  const filterAllowedProgramCourseIds = useMemo(() => {
+    if (!filterAffiliationId && !filterRegulationTypeId && filterProgramCourseIds.length === 0) {
+      return null; // no program-course-scoped filter active
+    }
+    const scoped = programCourses.filter((pc) => {
+      if (filterAffiliationId && pc.affiliationId !== filterAffiliationId) return false;
+      if (filterRegulationTypeId && pc.regulationTypeId !== filterRegulationTypeId) return false;
+      return true;
+    });
+    const cascade = new Set(scoped.map((pc) => pc.id!).filter((id): id is number => !!id));
+    if (filterProgramCourseIds.length === 0) return cascade;
+    // Intersect explicit picks with the cascade so a stale pick from a
+    // now-filtered-out affiliation is dropped.
+    return new Set(filterProgramCourseIds.filter((id) => cascade.has(id)));
+  }, [filterAffiliationId, filterRegulationTypeId, filterProgramCourseIds, programCourses]);
+
   const filteredRows = useMemo(() => {
     const term = searchText.trim().toLowerCase();
     return rows.filter((r) => {
       if (filterAcademicYearId && r.academicYearId !== filterAcademicYearId) return false;
       if (filterSubjectTypeId && r.subjectTypeId !== filterSubjectTypeId) return false;
+      if (filterAllowedProgramCourseIds !== null) {
+        const anyMatch = r.programCourseIds.some((id) => filterAllowedProgramCourseIds.has(id));
+        if (!anyMatch) return false;
+      }
       if (!term) return true;
       const haystack = [r.subjectType, ...r.programCourses, ...r.subjects].join(" ").toLowerCase();
       return haystack.includes(term);
     });
-  }, [rows, searchText, filterAcademicYearId, filterSubjectTypeId]);
+  }, [rows, searchText, filterAcademicYearId, filterSubjectTypeId, filterAllowedProgramCourseIds]);
+
+  const activeFilterCount =
+    (filterAcademicYearId ? 1 : 0) +
+    (filterSubjectTypeId ? 1 : 0) +
+    (filterAffiliationId ? 1 : 0) +
+    (filterRegulationTypeId ? 1 : 0) +
+    (filterProgramCourseIds.length > 0 ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setFilterAcademicYearId(null);
+    setFilterSubjectTypeId(null);
+    setFilterAffiliationId(null);
+    setFilterRegulationTypeId(null);
+    setFilterProgramCourseIds([]);
+    setFilterProgramCourseSearch("");
+    setCurrentPage(1);
+  };
 
   const totalItems = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
@@ -403,11 +469,13 @@ function SubjectGroupingsPage() {
                           <SelectValue placeholder="Select subject type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {subjectTypes.map((st) => (
-                            <SelectItem key={st.id!} value={String(st.id!)}>
-                              {st.code || st.name || ""}
-                            </SelectItem>
-                          ))}
+                          {subjectTypes
+                            .filter((st) => st.isActive !== false)
+                            .map((st) => (
+                              <SelectItem key={st.id!} value={String(st.id!)}>
+                                {st.code || st.name || ""}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -700,44 +768,30 @@ function SubjectGroupingsPage() {
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-40 bg-background p-2 sm:p-4 border-b flex flex-col lg:flex-row items-stretch lg:items-center gap-3 mb-0">
             <div className="flex flex-wrap gap-2 items-center flex-1">
-              <Select
-                value={filterAcademicYearId?.toString() ?? "all"}
-                onValueChange={(value) => {
-                  setFilterAcademicYearId(value === "all" ? null : Number(value));
-                  setCurrentPage(1);
-                }}
+              <Button
+                variant="outline"
+                onClick={() => setIsFiltersOpen(true)}
+                className="flex items-center gap-2"
               >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Academic Years" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Academic Years</SelectItem>
-                  {academicYears.map((ay) => (
-                    <SelectItem key={ay.id} value={String(ay.id)}>
-                      {ay.year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={filterSubjectTypeId?.toString() ?? "all"}
-                onValueChange={(value) => {
-                  setFilterSubjectTypeId(value === "all" ? null : Number(value));
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Subject Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Subject Types</SelectItem>
-                  {subjectTypes.map((st) => (
-                    <SelectItem key={st.id!} value={String(st.id!)}>
-                      {st.code || st.name || ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <Badge className="ml-1 bg-purple-600 hover:bg-purple-700 text-white">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="text-slate-500 hover:text-slate-800"
+                >
+                  <X className="mr-1 h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
             </div>
             <Input
               placeholder="Search..."
@@ -749,6 +803,180 @@ function SubjectGroupingsPage() {
               }}
             />
           </div>
+
+          <Dialog open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filters
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Academic Year</div>
+                  <Select
+                    value={filterAcademicYearId?.toString() ?? "all"}
+                    onValueChange={(value) => {
+                      setFilterAcademicYearId(value === "all" ? null : Number(value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Academic Years" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Academic Years</SelectItem>
+                      {academicYears.map((ay) => (
+                        <SelectItem key={ay.id} value={String(ay.id)}>
+                          {ay.year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Subject Type</div>
+                  <Select
+                    value={filterSubjectTypeId?.toString() ?? "all"}
+                    onValueChange={(value) => {
+                      setFilterSubjectTypeId(value === "all" ? null : Number(value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Subject Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Subject Types</SelectItem>
+                      {subjectTypes
+                        .filter((st) => st.isActive !== false)
+                        .map((st) => (
+                          <SelectItem key={st.id!} value={String(st.id!)}>
+                            {st.code || st.name || ""}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Affiliation</div>
+                  <Select
+                    value={filterAffiliationId?.toString() ?? "all"}
+                    onValueChange={(value) => {
+                      setFilterAffiliationId(value === "all" ? null : Number(value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Affiliations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Affiliations</SelectItem>
+                      {affiliations.map((a) => (
+                        <SelectItem key={a.id!} value={String(a.id!)}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Regulation Type</div>
+                  <Select
+                    value={filterRegulationTypeId?.toString() ?? "all"}
+                    onValueChange={(value) => {
+                      setFilterRegulationTypeId(value === "all" ? null : Number(value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Regulation Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Regulation Types</SelectItem>
+                      {regulationTypes.map((rt) => (
+                        <SelectItem key={rt.id!} value={String(rt.id!)}>
+                          {rt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <div className="flex items-center justify-between min-h-6">
+                    <div className="text-xs text-muted-foreground">
+                      Program Courses (cascaded from affiliation + regulation)
+                    </div>
+                    {/* Always rendered so ticking a box doesn't push the list down by
+                        the button's height. Hidden (not display:none) when count=0. */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-6 text-xs text-slate-500 ${
+                        filterProgramCourseIds.length > 0 ? "" : "invisible pointer-events-none"
+                      }`}
+                      onClick={() => setFilterProgramCourseIds([])}
+                    >
+                      Clear ({filterProgramCourseIds.length})
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Search program courses…"
+                    value={filterProgramCourseSearch}
+                    onChange={(e) => setFilterProgramCourseSearch(e.target.value)}
+                  />
+                  <div className="h-56 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {programCourses
+                      .filter((pc) =>
+                        filterAffiliationId ? pc.affiliationId === filterAffiliationId : true,
+                      )
+                      .filter((pc) =>
+                        filterRegulationTypeId
+                          ? pc.regulationTypeId === filterRegulationTypeId
+                          : true,
+                      )
+                      .filter((pc) =>
+                        filterProgramCourseSearch.trim()
+                          ? (pc.name || "")
+                              .toLowerCase()
+                              .includes(filterProgramCourseSearch.trim().toLowerCase())
+                          : true,
+                      )
+                      .map((pc) => (
+                        <label
+                          key={pc.id}
+                          className="flex items-center gap-2 text-sm text-slate-800"
+                        >
+                          <Checkbox
+                            className="border-slate-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                            checked={filterProgramCourseIds.includes(pc.id!)}
+                            onCheckedChange={(checked) => {
+                              setFilterProgramCourseIds((prev) =>
+                                checked ? [...prev, pc.id!] : prev.filter((id) => id !== pc.id),
+                              );
+                              setCurrentPage(1);
+                            }}
+                          />
+                          <span className="truncate">{pc.name}</span>
+                        </label>
+                      ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <Button variant="ghost" onClick={clearAllFilters}>
+                  Clear All
+                </Button>
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => setIsFiltersOpen(false)}
+                >
+                  Done
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <div className="relative z-10 bg-white" style={{ height: "600px" }}>
             <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Layers, Loader2, Pencil, Plus } from "lucide-react";
+import { Layers, Loader2, Pencil, Plus, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -123,6 +123,13 @@ export default function SubjectSelectionMetaPage() {
   const [editOptionSource, setEditOptionSource] = useState<OptionSource>("ELECTIVE_SUBJECTS");
   const [editSourceMetaIds, setEditSourceMetaIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Filters dialog state
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [filterSubjectTypeId, setFilterSubjectTypeId] = useState<string>("");
+  const [filterClassIds, setFilterClassIds] = useState<number[]>([]);
+  const [filterStreamIds, setFilterStreamIds] = useState<number[]>([]);
+  const [filterOptionSource, setFilterOptionSource] = useState<"" | OptionSource>("");
 
   // Add dialog state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -333,15 +340,60 @@ export default function SubjectSelectionMetaPage() {
 
   const rows = useMemo(() => {
     const yearId = currentAcademicYear?.id;
+    const term = search.toLowerCase();
     return (
       metas
         .filter((m) => (yearId ? m.academicYear?.id === yearId : true))
         // Inactive metas stay listed (flagged as a red row) so admins can find and
         // re-activate them — hiding them made them unreachable from this page.
-        .filter((m) => (m.label ?? "").toLowerCase().includes(search.toLowerCase()))
+        .filter((m) => (m.label ?? "").toLowerCase().includes(term))
+        .filter((m) =>
+          filterSubjectTypeId ? String(m.subjectType?.id ?? "") === filterSubjectTypeId : true,
+        )
+        .filter((m) => {
+          if (filterClassIds.length === 0) return true;
+          const rowClassIds = (m.forClasses ?? [])
+            .map((c) => c.class?.id)
+            .filter((id): id is number => typeof id === "number");
+          return rowClassIds.some((id) => filterClassIds.includes(id));
+        })
+        .filter((m) => {
+          if (filterStreamIds.length === 0) return true;
+          const rowStreamIds = (m.streams ?? [])
+            .map((s) => s.stream?.id)
+            .filter((id): id is number => typeof id === "number");
+          return rowStreamIds.some((id) => filterStreamIds.includes(id));
+        })
+        .filter((m) => {
+          if (!filterOptionSource) return true;
+          const src = ((m as { optionSource?: OptionSource }).optionSource ??
+            "ELECTIVE_SUBJECTS") as OptionSource;
+          return src === filterOptionSource;
+        })
         .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
     );
-  }, [metas, currentAcademicYear?.id, search]);
+  }, [
+    metas,
+    currentAcademicYear?.id,
+    search,
+    filterSubjectTypeId,
+    filterClassIds,
+    filterStreamIds,
+    filterOptionSource,
+  ]);
+
+  const activeFilterCount =
+    (filterSubjectTypeId ? 1 : 0) +
+    (filterClassIds.length > 0 ? 1 : 0) +
+    (filterStreamIds.length > 0 ? 1 : 0) +
+    (filterOptionSource ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setFilterSubjectTypeId("");
+    setFilterClassIds([]);
+    setFilterStreamIds([]);
+    setFilterOptionSource("");
+  };
 
   useResourceRoom("subject-selection/metas", () => loadMetas());
 
@@ -360,7 +412,30 @@ export default function SubjectSelectionMetaPage() {
             </div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <AcademicYearSelector showLabel={false} className="w-full sm:w-56" />
+            <Button
+              variant="outline"
+              onClick={() => setIsFiltersOpen(true)}
+              className="w-full sm:w-auto flex items-center gap-2"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <Badge className="ml-1 bg-purple-600 hover:bg-purple-700 text-white">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Button>
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAllFilters}
+                className="w-full sm:w-auto text-slate-500 hover:text-slate-800"
+              >
+                <X className="mr-1 h-3.5 w-3.5" />
+                Clear
+              </Button>
+            )}
             <Input
               placeholder="Search label…"
               className="w-full sm:w-64"
@@ -373,6 +448,129 @@ export default function SubjectSelectionMetaPage() {
             </Button>
           </div>
         </CardHeader>
+
+        <Dialog open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+              </DialogTitle>
+              <DialogDescription>
+                Filter subject-selection metas for the current academic year.
+              </DialogDescription>
+            </DialogHeader>
+            {/* Row 1: three single-select filters side-by-side so Category and
+                Subject-Options-From sit adjacent. Row 2: Semesters | Streams. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-1">
+                <Label>Academic Year</Label>
+                {/* The AY selector drives the global useAcademicYear() context so
+                    everything else on the page (header caption, Add dialog default,
+                    sourceMetaChoicesFor) follows automatically. */}
+                <AcademicYearSelector showLabel={false} className="w-full" />
+              </div>
+              <div className="space-y-1">
+                <Label>Subject Category</Label>
+                <Combobox
+                  value={filterSubjectTypeId}
+                  onChange={(v) => setFilterSubjectTypeId(v || "")}
+                  placeholder="Any category"
+                  dataArr={[
+                    { value: "", label: "Any category" },
+                    ...subjectTypes.map((st) => ({
+                      value: String(st.id),
+                      label: st.code || st.name || "",
+                    })),
+                  ]}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Subject options from</Label>
+                <Combobox
+                  value={filterOptionSource}
+                  onChange={(v) => setFilterOptionSource((v || "") as "" | OptionSource)}
+                  placeholder="Any source"
+                  dataArr={[
+                    { value: "", label: "Any source" },
+                    ...(Object.keys(OPTION_SOURCE_LABEL) as OptionSource[]).map((k) => ({
+                      value: k,
+                      label: OPTION_SOURCE_LABEL[k],
+                    })),
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <div className="flex items-center justify-between min-h-6">
+                  <Label>Semesters</Label>
+                  {/* Always rendered so ticking a checkbox doesn't push the list down
+                      by the Clear button's height. Hidden (not display:none) at 0. */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-6 text-xs text-slate-500 ${
+                      filterClassIds.length > 0 ? "" : "invisible pointer-events-none"
+                    }`}
+                    onClick={() => setFilterClassIds([])}
+                  >
+                    Clear ({filterClassIds.length})
+                  </Button>
+                </div>
+                <div className="mt-2 h-56 overflow-auto rounded border p-3">
+                  {classes.map((c) => (
+                    <div key={c.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`filter-cls-${c.id}`}
+                        checked={filterClassIds.includes(c.id)}
+                        onCheckedChange={() => toggleId(c.id, filterClassIds, setFilterClassIds)}
+                      />
+                      <Label htmlFor={`filter-cls-${c.id}`} className="text-sm">
+                        {sentenceCaseClass(c.name ?? "")}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between min-h-6">
+                  <Label>Streams</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-6 text-xs text-slate-500 ${
+                      filterStreamIds.length > 0 ? "" : "invisible pointer-events-none"
+                    }`}
+                    onClick={() => setFilterStreamIds([])}
+                  >
+                    Clear ({filterStreamIds.length})
+                  </Button>
+                </div>
+                <div className="mt-2 h-56 overflow-auto rounded border p-3">
+                  {streams.map((s) => (
+                    <div key={s.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`filter-str-${s.id}`}
+                        checked={filterStreamIds.includes(s.id)}
+                        onCheckedChange={() => toggleId(s.id, filterStreamIds, setFilterStreamIds)}
+                      />
+                      <Label htmlFor={`filter-str-${s.id}`} className="text-sm">
+                        {s.shortName || s.name || s.code}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="pt-3 sm:justify-between">
+              <Button variant="ghost" onClick={clearAllFilters}>
+                Clear All
+              </Button>
+              <Button onClick={() => setIsFiltersOpen(false)}>Done</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <CardContent className="px-0">
           <div className="rounded-md border">
