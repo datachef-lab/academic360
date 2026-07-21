@@ -806,21 +806,35 @@ export default function SubjectSelectionForm({
   /**
    * Saved rows to display: metas still offered first (so ordering follows the
    * configured sequence), then any saved meta the server no longer returns.
+   *
+   * ONE subject per meta: multiple saved rows under a meta are
+   * subject-grouping siblings (the legacy import stored per-semester papers
+   * of one group) and must not read as separate picks. Show the canonical
+   * one — prefer the subject the meta actually offers as an option.
    */
   const savedRows = useMemo(() => {
-    const rows: { metaId: number; label: string; subjects: string[] }[] = [];
+    const normName = (s: string) => s.trim().toUpperCase();
+    const canonicalSubject = (subjects: string[], options?: string[]) => {
+      const optionSet = new Set((options ?? []).map(normName));
+      return subjects.find((s) => optionSet.has(normName(s))) ?? subjects[0] ?? "";
+    };
+    const rows: { metaId: number; label: string; subject: string }[] = [];
     const seen = new Set<number>();
     for (const v of metaViews) {
       const saved = savedSelections[v.metaId];
       if (!saved || saved.subjects.length === 0) continue;
-      rows.push({ metaId: v.metaId, label: v.label, subjects: saved.subjects });
+      rows.push({
+        metaId: v.metaId,
+        label: v.label,
+        subject: canonicalSubject(saved.subjects, v.options),
+      });
       seen.add(v.metaId);
     }
     for (const [id, saved] of Object.entries(savedSelections)) {
       const metaId = Number(id);
       if (seen.has(metaId)) continue;
       if (!saved.subjects.length) continue;
-      rows.push({ metaId, label: saved.label, subjects: saved.subjects });
+      rows.push({ metaId, label: saved.label, subject: canonicalSubject(saved.subjects) });
     }
     return rows;
   }, [metaViews, savedSelections]);
@@ -868,17 +882,7 @@ export default function SubjectSelectionForm({
               {savedRows.map((row) => (
                 <tr key={row.metaId} className="hover:bg-gray-50 ">
                   <td className="border p-3 font-medium text-gray-700 text-base">{row.label}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">
-                    {row.subjects.length === 1 ? (
-                      row.subjects[0]
-                    ) : (
-                      <ul className="list-disc pl-5 space-y-1">
-                        {row.subjects.map((s) => (
-                          <li key={s}>{s}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{row.subject}</td>
                 </tr>
               ))}
             </tbody>
