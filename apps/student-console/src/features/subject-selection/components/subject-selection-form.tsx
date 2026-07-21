@@ -133,8 +133,12 @@ export default function SubjectSelectionForm({
    * Saved (read-only) selections, keyed by meta id. The label is stored with
    * the row so a meta the server no longer returns can still be displayed.
    */
+  // A single meta can hold multiple saved subjects (e.g. "Minor 2 (Sem III &
+  // IV)" carries one Sem III subject AND one Sem IV subject). Storing a list
+  // preserves both; earlier code kept a single `subject` and silently dropped
+  // all but the last one during hydrate.
   const [savedSelections, setSavedSelections] = useState<
-    Record<number, { label: string; subject: string }>
+    Record<number, { label: string; subjects: string[] }>
   >({});
   const [currentSession, setCurrentSession] = useState<{ id: number } | null>(null);
 
@@ -777,8 +781,8 @@ export default function SubjectSelectionForm({
    */
   const transformActualSelectionsToDisplayFormat = (
     actualSelections: any[],
-  ): Record<number, { label: string; subject: string }> => {
-    const result: Record<number, { label: string; subject: string }> = {};
+  ): Record<number, { label: string; subjects: string[] }> => {
+    const result: Record<number, { label: string; subjects: string[] }> = {};
     for (const selection of actualSelections ?? []) {
       if (!selection || typeof selection !== "object") continue;
       const metaId = selection.metaId ?? selection.subjectSelectionMeta?.id;
@@ -789,7 +793,12 @@ export default function SubjectSelectionForm({
       // no longer come back in perMetaOptions — without this the read-only
       // table would render empty for them.
       const label = selection.metaLabel ?? selection.subjectSelectionMeta?.label ?? "Subject";
-      result[metaId] = { label, subject: subjectName };
+      const bucket = result[metaId] ?? { label, subjects: [] };
+      // De-duplicate in case the server returns the same (meta, subject) twice.
+      if (!bucket.subjects.includes(subjectName)) bucket.subjects.push(subjectName);
+      // Prefer the meta's own label from the server; fall back to first-seen.
+      bucket.label = label || bucket.label;
+      result[metaId] = bucket;
     }
     return result;
   };
@@ -799,18 +808,19 @@ export default function SubjectSelectionForm({
    * configured sequence), then any saved meta the server no longer returns.
    */
   const savedRows = useMemo(() => {
-    const rows: { metaId: number; label: string; subject: string }[] = [];
+    const rows: { metaId: number; label: string; subjects: string[] }[] = [];
     const seen = new Set<number>();
     for (const v of metaViews) {
       const saved = savedSelections[v.metaId];
-      if (!saved) continue;
-      rows.push({ metaId: v.metaId, label: v.label, subject: saved.subject });
+      if (!saved || saved.subjects.length === 0) continue;
+      rows.push({ metaId: v.metaId, label: v.label, subjects: saved.subjects });
       seen.add(v.metaId);
     }
     for (const [id, saved] of Object.entries(savedSelections)) {
       const metaId = Number(id);
       if (seen.has(metaId)) continue;
-      rows.push({ metaId, label: saved.label, subject: saved.subject });
+      if (!saved.subjects.length) continue;
+      rows.push({ metaId, label: saved.label, subjects: saved.subjects });
     }
     return rows;
   }, [metaViews, savedSelections]);
@@ -858,7 +868,17 @@ export default function SubjectSelectionForm({
               {savedRows.map((row) => (
                 <tr key={row.metaId} className="hover:bg-gray-50 ">
                   <td className="border p-3 font-medium text-gray-700 text-base">{row.label}</td>
-                  <td className="border p-3 text-gray-800 font-medium text-base">{row.subject}</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">
+                    {row.subjects.length === 1 ? (
+                      row.subjects[0]
+                    ) : (
+                      <ul className="list-disc pl-5 space-y-1">
+                        {row.subjects.map((s) => (
+                          <li key={s}>{s}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

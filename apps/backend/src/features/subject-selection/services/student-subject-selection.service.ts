@@ -2354,7 +2354,15 @@ student_promotions_by_class AS (
   ORDER BY pr.student_id_fk, pr.class_id_fk, pr.id DESC
 ),
 
-/** One row per student + selection slot (meta), matching CU Registration admin form. */
+/**
+ * Latest active selection per (student, meta, subject). A single meta can
+ * legitimately hold >1 subject selection — e.g. "Minor 2 (Semester III & IV)"
+ * carries a Sem III subject AND a Sem IV subject under the same meta. Partitioning
+ * by (student, meta) alone would collapse those to one row via the id-DESC
+ * tie-breaker, silently dropping the earlier-id pick from the report. Including
+ * subject_id_fk preserves both picks while still keeping only the latest version
+ * of each (student, meta, subject) tuple.
+ */
 latest_student_selections AS (
   SELECT id,
          student_id_fk,
@@ -2366,7 +2374,8 @@ latest_student_selections AS (
     SELECT sss.*,
            ROW_NUMBER() OVER (
              PARTITION BY sss.student_id_fk,
-                          sss.subject_selection_meta_id_fk
+                          sss.subject_selection_meta_id_fk,
+                          sss.subject_id_fk
              ORDER BY sss.version DESC,
                       sss.updated_at DESC NULLS LAST,
                       sss.created_at DESC,
@@ -2574,9 +2583,13 @@ optional_grouped AS (
   JOIN subject_grouping_subjects sgs_selected
        ON sgs_selected.subject_grouping_main_id_fk = sgm.id
       AND sgs_selected.subject_id_fk = p_sel.subject_id_fk
+  -- Expand the selection to EVERY subject of its grouping: selecting one
+  -- member (e.g. Consumer Behaviour in "Group Marketing") enrols the student
+  -- in the group's other subjects' papers too. sgs_all is deliberately NOT
+  -- constrained to the selected subject — that constraint made expansion a
+  -- no-op and (with the old merge priority) kept grouping columns empty.
   JOIN subject_grouping_subjects sgs_all
        ON sgs_all.subject_grouping_main_id_fk = sgm.id
-      AND sgs_all.subject_id_fk = p_sel.subject_id_fk
   JOIN subjects sbj_all ON sbj_all.id = sgs_all.subject_id_fk
   JOIN papers p_all ON p_all.academic_year_id_fk = ay.id
                    AND p_all.programe_course_id_fk = pc.id
@@ -2601,9 +2614,14 @@ optional AS (
          paper_id, paper_type, paper, paper_code, is_optional, auto_assign, is_active,
          subject_grouping_main_id, subject_grouping_name, subject_grouping_code, promotion_id
   FROM (
-    SELECT *, 1 AS priority FROM optional_direct
+    -- optional_grouped carries the subject_grouping_* columns; optional_direct
+    -- emits them as NULL. When both variants produce the SAME (student, paper,
+    -- promotion) key, the grouped row must win the DISTINCT ON, else the
+    -- grouping name/code can never reach the export (they were structurally
+    -- unreachable while the direct row had priority 1).
+    SELECT *, 2 AS priority FROM optional_direct
     UNION ALL
-    SELECT *, 2 AS priority FROM optional_grouped
+    SELECT *, 1 AS priority FROM optional_grouped
   ) combined
   ORDER BY student_id, paper_id, promotion_id NULLS LAST, priority
 )

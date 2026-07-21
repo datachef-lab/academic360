@@ -17,6 +17,8 @@ import { fileURLToPath } from "url";
 import { createLogger } from "@/config/logger.js";
 import { runRegistrationYearDriftMigration } from "@/features/subject-selection/services/registration-year-drift-migration.service.js";
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
+import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
+import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -75,6 +77,25 @@ const MIGRATIONS: Migration[] = [
         reportDir,
       });
     },
+  },
+  {
+    // Rewires student_subject_selections filed under a meta whose stream-set
+    // excludes the student's stream (legacy loader resolved metas without a
+    // stream check — Commerce students' Minor picks landed on the
+    // Arts/Sci/Mgmt meta). State-based: second boot => 0 rows. Runs AFTER the
+    // registration-year drift heal so AY is already correct when stream is
+    // checked.
+    name: "stream-mismatch-heal",
+    run: async () => runStreamMismatchHeal({ commit: true }),
+  },
+  {
+    // Legacy fee-amount heal — reconciles fee_student_mappings /
+    // payments.amount against IRP's `Installment Total Amount To Pay`
+    // for every mapping outside the 2025-26 / 2026-27 Sem I fresh-admit
+    // scope. Idempotent: a mapping already matching IRP is skipped.
+    // See legacy-fees-amount-heal.service.ts for the exact rule.
+    name: "legacy-fees-amount-heal",
+    run: async () => runLegacyFeesAmountHeal({ commit: true, sampleLimit: 20 }),
   },
 ];
 
