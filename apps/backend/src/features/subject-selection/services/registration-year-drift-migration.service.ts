@@ -14,13 +14,17 @@
 //
 // Blast-radius controls:
 //   - Wraps every write in one transaction; the transaction rolls back if
-//     the migration would INCREASE the count of (student, meta) active-row
-//     duplicates (baseline vs post-migration). Pre-existing duplicates are
-//     out of scope for this heal.
-//   - Different-subject "cross-meta convergences" (two wrong-AY rows in two
-//     different wrong metas targeting the same right meta with DIFFERENT
-//     subjects) are skipped and returned in `manualReview` — the caller
-//     surfaces them for a human decision.
+//     the migration would INCREASE the count of (student, meta, subject)
+//     active-row duplicates (baseline vs post-migration). NOTE: the unit is
+//     the TRIPLE, not (student, meta) — a meta legitimately holds multiple
+//     subjects (multi-pick: Minor 2 carries a Sem III pick AND a Sem IV
+//     pick), so two different-subject rows on one meta are valid state.
+//   - Cross-meta convergences (two wrong-AY rows in different wrong metas
+//     targeting the same right meta) with DIFFERENT subjects are MOVED —
+//     they become that meta's multiple picks. Same-subject convergences
+//     keep the oldest row and deprecate the extras. (An earlier version
+//     sent different-subject convergences to manualReview; that predated
+//     multi-pick support and stranded valid picks on wrong-AY metas.)
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 
@@ -78,6 +82,7 @@ JOIN subject_selection_meta m2
 LEFT JOIN student_subject_selections existing
   ON existing.student_id_fk = sss.student_id_fk
  AND existing.subject_selection_meta_id_fk = m2.id
+ AND existing.subject_id_fk = sss.subject_id_fk
  AND existing.is_active
  AND existing.id <> sss.id
 WHERE sss.is_active
@@ -85,12 +90,14 @@ WHERE sss.is_active
 ORDER BY sss.id
 `;
 
+// Duplicate unit is the (student, meta, subject) TRIPLE — multi-pick metas
+// legitimately hold >1 active row per (student, meta) with distinct subjects.
 const DUP_COUNT_SQL = `
 SELECT count(*) AS c FROM (
-  SELECT student_id_fk, subject_selection_meta_id_fk
+  SELECT student_id_fk, subject_selection_meta_id_fk, subject_id_fk
   FROM student_subject_selections
   WHERE is_active
-  GROUP BY 1, 2
+  GROUP BY 1, 2, 3
   HAVING count(*) > 1
 ) d
 `;
@@ -116,39 +123,36 @@ export async function runRegistrationYearDriftMigration(
     groups.set(key, list);
   }
   const straight: DriftPlanRow[] = [];
-  const conflicts: DriftPlanRow[] = []; // an EXISTING right-AY active row already holds this slot
+  const conflicts: DriftPlanRow[] = []; // an EXISTING right-AY active row already holds this (meta, subject)
   const dedupeInGroup: DriftPlanRow[] = []; // extras in same-subject cross-meta convergences
-  const badConflicts: DriftPlanRow[] = []; // different-subject conflict against an existing right-AY row
-  const manualReview: DriftPlanRow[] = []; // different-subject cross-meta convergence
+  const manualReview: DriftPlanRow[] = []; // kept for result-shape compat; always empty now
 
+  // The PLAN_SQL `existing` join is subject-scoped, so a non-null
+  // existing_right_id always means the SAME subject already sits on the
+  // target meta — deprecate the wrong-AY copy. Different-subject rows on the
+  // target meta are other picks of a multi-pick meta and are not conflicts.
   const classifyOne = (r: DriftPlanRow) => {
     if (r.existing_right_id === null) straight.push(r);
-    else if (r.existing_right_subject === r.wrong_subject) conflicts.push(r);
-    else badConflicts.push(r);
+    else conflicts.push(r);
   };
 
   for (const [, rows] of groups) {
-    const wrongMetas = new Set(rows.map((r) => r.wrong_meta));
-    if (wrongMetas.size === 1) {
-      for (const r of rows) classifyOne(r);
-      continue;
+    // Within a (student, target-meta) group, dedupe per SUBJECT: the same
+    // subject arriving from several wrong metas keeps its oldest row; rows
+    // with distinct subjects all move — they become the target meta's
+    // multiple picks (e.g. Sem III + Sem IV Minor).
+    const bySubject = new Map<number, DriftPlanRow[]>();
+    for (const r of rows) {
+      const list = bySubject.get(r.wrong_subject) ?? [];
+      list.push(r);
+      bySubject.set(r.wrong_subject, list);
     }
-    const subjects = new Set(rows.map((r) => r.wrong_subject));
-    if (subjects.size > 1) {
-      for (const r of rows) manualReview.push(r);
-      continue;
+    for (const [, subjectRows] of bySubject) {
+      subjectRows.sort((a, b) => a.sss_id - b.sss_id);
+      const [keeper, ...extras] = subjectRows;
+      classifyOne(keeper);
+      for (const e of extras) dedupeInGroup.push(e);
     }
-    rows.sort((a, b) => a.sss_id - b.sss_id);
-    const [keeper, ...extras] = rows;
-    classifyOne(keeper);
-    for (const e of extras) dedupeInGroup.push(e);
-  }
-
-  if (badConflicts.length > 0) {
-    // Refuse to run when a heal step would silently lose a real selection.
-    throw new Error(
-      `[drift-heal] ABORT: ${badConflicts.length} rows would overwrite a different-subject active row. Sample: ${JSON.stringify(badConflicts.slice(0, 3))}`,
-    );
   }
 
   const toDeprecate = [...conflicts, ...dedupeInGroup];
