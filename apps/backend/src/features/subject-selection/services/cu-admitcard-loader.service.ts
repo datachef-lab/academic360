@@ -86,6 +86,16 @@ export type CuAdmitCardLoaderResult = {
   unmatched: UnmatchedEntry[];
   perMetaCount: Record<string, number>;
   reportPath: string | null;
+  /**
+   * Set when the target metas are not configured yet. The loader retries on
+   * every boot (no marker), so once the metas are created the next boot loads
+   * everyone whose (student, meta) pair doesn't exist yet. Deliberately does
+   * NOT auto-create metas — stream/class/source config is domain-owned.
+   */
+  skipped?: boolean;
+  skipReason?: string;
+  /** reg-AY year -> blocked slot-count, when SOME AYs lack the metas. */
+  metaMissingByAy?: Record<string, number>;
 };
 
 type ExcelRow = {
@@ -177,6 +187,29 @@ export async function runCuAdmitCardSemVSemVILoader(
   for (const m of metaRows)
     metaByYearLabel.set(`${m.academicYearId}|${norm(m.label)}`, m);
 
+  // Preflight: if NEITHER target meta exists in ANY academic year, the
+  // subject-selection metas haven't been configured in this environment yet
+  // (e.g. a fresh DB booting before setup). Skip loudly and let the next
+  // boot retry — inserting is impossible and per-row "problems" would bury
+  // the real cause under one entry per Excel row.
+  const anyTargetMetaConfigured = Object.values(META_LABELS).some((label) =>
+    metaRows.some((m) => norm(m.label) === norm(label)),
+  );
+  if (!anyTargetMetaConfigured) {
+    return {
+      excelRows: rows.length,
+      planned: 0,
+      inserted: 0,
+      skippedExistingPairs: 0,
+      problems: 0,
+      unmatched: [],
+      perMetaCount: {},
+      reportPath: null,
+      skipped: true,
+      skipReason: `metas "${Object.values(META_LABELS).join('" / "')}" not configured in any academic year — configure them and the next boot will load automatically`,
+    };
+  }
+
   const students = await db
     .select()
     .from(studentModel)
@@ -241,6 +274,16 @@ export async function runCuAdmitCardSemVSemVILoader(
   let skippedExistingPairs = 0;
   const inserts: (typeof studentSubjectSelectionModel.$inferInsert)[] = [];
   const perMetaCount = new Map<string, number>();
+  // reg-AY -> blocked slot-count where that AY lacks the target metas; goes
+  // into the boot-log summary so missing config is visible without opening
+  // the per-row report file.
+  const ayById = new Map<number, string>(
+    (await db.select().from(academicYearModel)).map((a) => [
+      a.id!,
+      String(a.year),
+    ]),
+  );
+  const metaMissingByAy = new Map<string, number>();
 
   for (const r of rows) {
     if (!r.code) {
@@ -280,6 +323,10 @@ export async function runCuAdmitCardSemVSemVILoader(
       }
       const meta = metaByYearLabel.get(`${regAyId}|${norm(label)}`);
       if (!meta) {
+        const ayKey =
+          (regAyId != null ? ayById.get(regAyId) : undefined) ??
+          `ay-id-${regAyId}`;
+        metaMissingByAy.set(ayKey, (metaMissingByAy.get(ayKey) ?? 0) + 1);
         problems.push({
           ...r,
           issue: `${label}: no meta configured for registration AY id=${regAyId}`,
@@ -367,5 +414,8 @@ export async function runCuAdmitCardSemVSemVILoader(
     unmatched: problems,
     perMetaCount: Object.fromEntries(perMetaCount),
     reportPath,
+    ...(metaMissingByAy.size > 0
+      ? { metaMissingByAy: Object.fromEntries(metaMissingByAy) }
+      : {}),
   };
 }
