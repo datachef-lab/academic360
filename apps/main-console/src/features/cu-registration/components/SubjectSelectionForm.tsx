@@ -118,7 +118,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
   // saved-selection count on restore).
   const [metaViews, setMetaViews] = useState<MetaView[]>([]);
   const [selections, setSelections] = useState<Record<number, string[]>>({});
-  const [slotCounts, setSlotCounts] = useState<Record<number, number>>({});
+  // One dropdown per meta: grouping siblings collapse to a single canonical
+  // pick (see the rehydrate block), so no meta ever grows extra slots. The
+  // slot machinery is kept in case a future meta legitimately needs >1.
+  const [slotCounts] = useState<Record<number, number>>({});
 
   // Restricted grouping caches for quick checks
   const [restrictedBySubject, setRestrictedBySubject] = useState<
@@ -192,13 +195,17 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           }
         }
 
-        // Rehydrate saved selections by meta id. A meta can legitimately hold
-        // >1 selection (e.g. "Minor 2 (Sem III & IV)" carries a Sem III subject
-        // AND a Sem IV subject); push each into an array so both pre-populate.
-        // Slot count for a meta = number of saved picks (min 1 so a fresh meta
-        // still shows one dropdown).
+        // Rehydrate saved selections by meta id — ONE dropdown per meta. When
+        // a meta holds several saved rows they are subject-grouping siblings
+        // (e.g. "Group Marketing" stored per-semester papers like Consumer
+        // Behaviour + Sales Management from the legacy import); the form must
+        // NOT render them as separate dropdowns. Show the single canonical
+        // pick — prefer the saved subject that the meta actually offers as an
+        // option (so the Combobox can display it) — and let the server-side
+        // subject-grouping expansion derive the sibling papers for reports
+        // and enrolment.
         if (hasExisting && resp.actualStudentSelections?.length) {
-          const restored: Record<number, string[]> = {};
+          const savedByMeta: Record<number, string[]> = {};
           for (const selection of resp.actualStudentSelections) {
             if (typeof selection !== "object" || selection === null) continue;
             const sel = selection as Record<string, unknown>;
@@ -209,14 +216,18 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
               (sel.subjectName as string | undefined) ??
               ((sel.subject as Record<string, unknown>)?.name as string | undefined);
             if (!metaId || !subjectName) continue;
-            (restored[metaId] ??= []).push(subjectName);
+            (savedByMeta[metaId] ??= []).push(subjectName);
+          }
+          const normName = (s: string) => s.trim().toUpperCase();
+          const restored: Record<number, string[]> = {};
+          for (const [midStr, arr] of Object.entries(savedByMeta)) {
+            const mid = Number(midStr);
+            const view = views.find((v) => v.metaId === mid);
+            const optionSet = new Set((view?.options ?? []).map(normName));
+            const pick = arr.find((s) => optionSet.has(normName(s))) ?? arr[0] ?? "";
+            if (pick) restored[mid] = [pick];
           }
           setSelections(restored);
-          const counts: Record<number, number> = {};
-          for (const [midStr, arr] of Object.entries(restored)) {
-            counts[Number(midStr)] = Math.max(1, arr.length);
-          }
-          setSlotCounts(counts);
         }
 
         // Earlier (admission-time) minor subjects, for the mismatch notice.
