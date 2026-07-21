@@ -321,7 +321,8 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         const arr = selections[v.metaId] ?? [];
         for (let i = 0; i < arr.length; i++) {
           if (v.metaId === exceptMetaId && i === exceptSlotIdx) continue;
-          if (arr[i]) out.push(arr[i]);
+          const held = arr[i];
+          if (held) out.push(held);
         }
       }
       return out;
@@ -353,7 +354,8 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         const arr = selections[v.metaId] ?? [];
         for (let i = 0; i < arr.length; i++) {
           if (v.metaId === exceptMetaId && i === exceptSlotIdx) continue;
-          if (arr[i]) out.push(arr[i]);
+          const held = arr[i];
+          if (held) out.push(held);
         }
       }
       return out;
