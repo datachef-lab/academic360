@@ -52,6 +52,7 @@ import {
   ensureDefaultFeeStudentMappingsForFeeStructure,
   calculateTotalPayableForFeeStudentMapping,
 } from "./fee-structure.service";
+import { findFeeSlabByComponentSum } from "./fee-student-mapping-slab-reassign.service";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -217,21 +218,23 @@ function buildLegacyFeesQuery(uid?: string | null): string {
         ) fsb_total
         ON fsb_total.parent_id = fsm.id
 
-        -- Join with the Fee Concession Tab (Mapping for getting slab and concessional amount)
+        -- Join with the Fee Concession Tab (Mapping for getting slab and
+        -- concessional amount). Anchored on FSM batch cols (not on crs/cl/
+        -- sess/sh derived from h), so the concession still matches when
+        -- the historicalrecord row is missing (e.g. Casual Fees).
         LEFT JOIN studentfeesconcessiontab sct ON (
             sct.student_id = spd.id
-            AND sct.courseid = crs.id
-            AND sct.classid = cl.id
-            AND sct.sessionid = sess.id
+            AND sct.courseid = fsm.courseId
+            AND sct.classid = fsm.classId
+            AND sct.sessionid = fsm.sessionid
             AND sct.sectionid = sec.id
-            AND sct.shiftid = sh.id
-            AND sct.receipttypeid = rt.id
+            AND sct.shiftid = fsm.shiftId
+            AND sct.receipttypeid = fsm.receipttype
         )
-        -- Join with the studentfeesconcessionnewsub
-        LEFT JOIN studentfeesconcessionnewsub sct_sub ON (
-            sct_sub.parent_id = sct.id
-            AND sct_sub.headid = fh.id
-        )
+        -- (Removed) studentfeesconcessionnewsub — was joined but never
+        -- selected, and its multiplicity could fan the row count when a
+        -- (parent, headid) pair had >1 row. csm/csm_sub below covers the
+        -- fields actually used downstream.
 
         -- Join with the Fee-concession slabs
         LEFT JOIN studentfeesconcessionslab csm ON csm.id = sct.slabid
@@ -249,7 +252,23 @@ function buildLegacyFeesQuery(uid?: string | null): string {
         -- Join with the fee-receipts
         LEFT JOIN feesreceiptmaintable frm ON frm.id = inst.feesreceiptid
         LEFT JOIN studentFeesPayMode frm_sfpm On frm_sfpm.id = frm.collegePayMode
-        LEFT JOIN feesinstonlinepayment p ON p.instid = inst.id AND p.status != 'Initiated'
+        -- ONE online-payment row per installment: the latest non-Initiated
+        -- attempt. Without this, a student who retried the gateway (Failed,
+        -- Failed, Success) produced 3 rows per installment × per fee head,
+        -- which then flowed into the LIMIT / group logic downstream.
+        LEFT JOIN (
+            SELECT p1.*
+            FROM feesinstonlinepayment p1
+            JOIN (
+                SELECT instid, MAX(dt) AS max_dt
+                FROM feesinstonlinepayment
+                WHERE status != 'Initiated'
+                GROUP BY instid
+            ) latest
+              ON latest.instid = p1.instid
+             AND latest.max_dt = p1.dt
+            WHERE p1.status != 'Initiated'
+        ) p ON p.instid = inst.id
 
         WHERE 1 = 1${uidClause}
         ORDER BY sess.sessionName, crs.courseName, cl.classname, spd.codeNumber, fsb.position
@@ -266,7 +285,7 @@ function buildLegacyFeesQuery(uid?: string | null): string {
  * (e.g. Slab O pre-prod-sync), the existing "Fee Group / Slab - Not Found!"
  * per-uid error surfaces it — the import is not aborted.
  */
-function resolveLegacySlabName(
+export function resolveLegacySlabName(
   rawSlab: string | null | undefined,
   academicYear: string | null | undefined,
 ): string {
@@ -473,14 +492,43 @@ export async function loadStudentFeesForUid(uid: string): Promise<{
         [sourceRow, ...studentRows]
           .map((r) => (r["Challan Number"] ?? "").toString().trim())
           .find((c) => c.length > 0) || null;
+      // Resolve the fee-slab for this batch. Prefer IRP's own letter; when
+      // IRP is silent (Admission-Fees cohort typically has no letter), the
+      // default "Slab F" is wrong for anyone who was actually charged a
+      // concessional installment total. Back-solve by matching the batch's
+      // IRP total against the fee_structure's per-slab component sums —
+      // if exactly one slab matches, use it. Ambiguous / no match keeps
+      // "Slab F" (default) and the heal will surface it for manual review.
+      let batchSlabName = resolveLegacySlabName(
+        sourceRow["Fee Slab"],
+        sourceRow["Academic Year"],
+      );
+      const irpRawSlab = String(sourceRow["Fee Slab"] ?? "").trim();
+      if (batchSlabName === "Slab F" && !irpRawSlab) {
+        // Sum DISTINCT installment amounts (rows are one-per-head, so the
+        // same installment.amount repeats — deduplicate on installment_id).
+        const seenInsts = new Set<number>();
+        let batchIrpTotal = 0;
+        for (const r of studentRows) {
+          const iid = Number(r.installment_id);
+          if (!Number.isFinite(iid) || seenInsts.has(iid)) continue;
+          seenInsts.add(iid);
+          const amt = Number(r["Installment Total Amount To Pay"] ?? 0);
+          if (Number.isFinite(amt)) batchIrpTotal += amt;
+        }
+        if (batchIrpTotal > 0) {
+          const match = await findFeeSlabByComponentSum(
+            feeStructureResult.id!,
+            batchIrpTotal,
+          );
+          if (match) batchSlabName = match.slabName;
+        }
+      }
       const result = await syncFeeStudentMapping(
         studentRows,
         uid,
         feeStructureResult.id!,
-        resolveLegacySlabName(
-          sourceRow["Fee Slab"],
-          sourceRow["Academic Year"],
-        ),
+        batchSlabName,
         Boolean(paidRow),
         sourceRow["Fee Receipt Entry Created At"],
         legacyChallanNumber,
@@ -625,14 +673,38 @@ export async function loadStudentFees() {
               // console.log(
               //   "in loop, Find the fee student mapping by - studentId, feeStructureId, amount and fees-slab name (if is missing or not provided then use Slab F as default)",
               // );
+              // See per-uid loader above for rationale on back-solving the slab
+              // when IRP has no letter.
+              let batchSlabName = resolveLegacySlabName(
+                studentRows[0]["Fee Slab"],
+                studentRows[0]["Academic Year"],
+              );
+              const irpRawSlab = String(
+                studentRows[0]["Fee Slab"] ?? "",
+              ).trim();
+              if (batchSlabName === "Slab F" && !irpRawSlab) {
+                const seenInsts = new Set<number>();
+                let batchIrpTotal = 0;
+                for (const r of studentRows) {
+                  const iid = Number(r.installment_id);
+                  if (!Number.isFinite(iid) || seenInsts.has(iid)) continue;
+                  seenInsts.add(iid);
+                  const amt = Number(r["Installment Total Amount To Pay"] ?? 0);
+                  if (Number.isFinite(amt)) batchIrpTotal += amt;
+                }
+                if (batchIrpTotal > 0) {
+                  const match = await findFeeSlabByComponentSum(
+                    feeStructureResult!.id!,
+                    batchIrpTotal,
+                  );
+                  if (match) batchSlabName = match.slabName;
+                }
+              }
               await syncFeeStudentMapping(
                 studentRows,
                 uid,
                 feeStructureResult!.id!,
-                resolveLegacySlabName(
-                  studentRows[0]["Fee Slab"],
-                  studentRows[0]["Academic Year"],
-                ),
+                batchSlabName,
                 studentRows[0]["Has Fees Paid?"] === "Yes" ? true : false,
                 studentRows[0]["Fee Receipt Entry Created At"],
                 // Preserve any old-DB challan/receipt number in the batch.

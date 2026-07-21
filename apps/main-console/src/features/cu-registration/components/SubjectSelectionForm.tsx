@@ -111,9 +111,14 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
   const [reason, setReason] = useState(""); // Reason for admin changes
   const [, setGroups] = useState<StudentSubjectSelectionGroupDto[]>([]);
 
-  // Meta-driven form state: one dropdown per meta, selections keyed by meta id.
+  // Meta-driven form state: N dropdowns per meta (a single meta may hold >1
+  // subject — e.g. "Minor 2 (Sem III & IV)" carries one subject per semester).
+  // Selections is an array per meta, indexed by slot position; slotCounts tells
+  // the renderer how many dropdowns to show (defaults to 1; grows to match the
+  // saved-selection count on restore).
   const [metaViews, setMetaViews] = useState<MetaView[]>([]);
-  const [selections, setSelections] = useState<Record<number, string>>({});
+  const [selections, setSelections] = useState<Record<number, string[]>>({});
+  const [slotCounts, setSlotCounts] = useState<Record<number, number>>({});
 
   // Restricted grouping caches for quick checks
   const [restrictedBySubject, setRestrictedBySubject] = useState<
@@ -124,8 +129,21 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
   const [earlierMinorSelections, setEarlierMinorSelections] = useState<string[]>([]);
   const [minorMismatch, setMinorMismatch] = useState(false);
 
-  const setSelection = (metaId: number, value: string) =>
-    setSelections((prev) => ({ ...prev, [metaId]: value }));
+  const getSlotCount = useCallback((metaId: number) => slotCounts[metaId] ?? 1, [slotCounts]);
+
+  const setSelection = (metaId: number, slotIdx: number, value: string) =>
+    setSelections((prev) => {
+      const arr = [...(prev[metaId] ?? [])];
+      while (arr.length <= slotIdx) arr.push("");
+      arr[slotIdx] = value;
+      return { ...prev, [metaId]: arr };
+    });
+
+  /** All non-empty selections held by this meta, in slot order. */
+  const metaValues = useCallback(
+    (metaId: number) => (selections[metaId] ?? []).filter(Boolean),
+    [selections],
+  );
 
   /** Metas that actually have something to offer — these are the dropdowns. */
   const visibleMetas = useMemo(() => metaViews.filter((v) => v.options.length > 0), [metaViews]);
@@ -174,11 +192,13 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           }
         }
 
-        // Rehydrate saved selections by meta id. (This used to substring-match
-        // the meta label, which silently dropped anything not named
-        // "Minor 1"/"IDC 2"/... — any new meta was invisible on reload.)
+        // Rehydrate saved selections by meta id. A meta can legitimately hold
+        // >1 selection (e.g. "Minor 2 (Sem III & IV)" carries a Sem III subject
+        // AND a Sem IV subject); push each into an array so both pre-populate.
+        // Slot count for a meta = number of saved picks (min 1 so a fresh meta
+        // still shows one dropdown).
         if (hasExisting && resp.actualStudentSelections?.length) {
-          const restored: Record<number, string> = {};
+          const restored: Record<number, string[]> = {};
           for (const selection of resp.actualStudentSelections) {
             if (typeof selection !== "object" || selection === null) continue;
             const sel = selection as Record<string, unknown>;
@@ -189,9 +209,14 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
               (sel.subjectName as string | undefined) ??
               ((sel.subject as Record<string, unknown>)?.name as string | undefined);
             if (!metaId || !subjectName) continue;
-            restored[metaId] = subjectName;
+            (restored[metaId] ??= []).push(subjectName);
           }
           setSelections(restored);
+          const counts: Record<number, number> = {};
+          for (const [midStr, arr] of Object.entries(restored)) {
+            counts[Number(midStr)] = Math.max(1, arr.length);
+          }
+          setSlotCounts(counts);
         }
 
         // Earlier (admission-time) minor subjects, for the mismatch notice.
@@ -283,13 +308,24 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
-  /** Selections held by every other meta of the same subject type. */
+  /**
+   * Selections held by every other meta of the same subject type, PLUS the
+   * other slots of this meta (a meta with >1 slot enforces uniqueness across
+   * its own slots too — e.g. Minor 2 Sem III subject ≠ Minor 2 Sem IV subject).
+   */
   const selectedInCategory = useCallback(
-    (code: string, exceptMetaId: number) =>
-      metaViews
-        .filter((v) => v.code === code && v.metaId !== exceptMetaId)
-        .map((v) => selections[v.metaId])
-        .filter((s): s is string => Boolean(s)),
+    (code: string, exceptMetaId: number, exceptSlotIdx: number) => {
+      const out: string[] = [];
+      for (const v of metaViews) {
+        if (v.code !== code) continue;
+        const arr = selections[v.metaId] ?? [];
+        for (let i = 0; i < arr.length; i++) {
+          if (v.metaId === exceptMetaId && i === exceptSlotIdx) continue;
+          if (arr[i]) out.push(arr[i]);
+        }
+      }
+      return out;
+    },
     [metaViews, selections],
   );
 
@@ -298,21 +334,30 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
     () =>
       metaViews
         .filter((v) => v.code === "AEC")
-        .map((v) => selections[v.metaId])
+        .flatMap((v) => selections[v.metaId] ?? [])
         .filter((s): s is string => Boolean(s)),
     [metaViews, selections],
   );
 
   /**
    * A subject picked anywhere else cannot be picked again — except AEC, which
-   * is deliberately allowed to reappear in other categories.
+   * is deliberately allowed to reappear in other categories. Also excludes
+   * this meta's OTHER slots so a Minor 2 Sem III pick blocks the same subject
+   * from appearing in Minor 2 Sem IV.
    */
   const getGlobalExcludes = useCallback(
-    (exceptMetaId: number) =>
-      metaViews
-        .filter((v) => v.metaId !== exceptMetaId && v.code !== "AEC")
-        .map((v) => selections[v.metaId])
-        .filter((s): s is string => Boolean(s)),
+    (exceptMetaId: number, exceptSlotIdx: number) => {
+      const out: string[] = [];
+      for (const v of metaViews) {
+        if (v.code === "AEC") continue;
+        const arr = selections[v.metaId] ?? [];
+        for (let i = 0; i < arr.length; i++) {
+          if (v.metaId === exceptMetaId && i === exceptSlotIdx) continue;
+          if (arr[i]) out.push(arr[i]);
+        }
+      }
+      return out;
+    },
     [metaViews, selections],
   );
 
@@ -336,6 +381,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       categoryCode: string,
       semesters: string[],
       metaId: number,
+      slotIdx: number,
     ) => {
       const norm = (s: string) =>
         String(s || "")
@@ -347,7 +393,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       // current pick into `selected` (that removed it from its own dropdown
       // and made the Combobox fall back to the placeholder).
       const normCurrent = norm(currentValue);
-      const selected = selectedInCategory(categoryCode, metaId).filter(
+      const selected = selectedInCategory(categoryCode, metaId, slotIdx).filter(
         (s) => norm(s) !== normCurrent,
       );
 
@@ -402,21 +448,38 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
     return [{ value: "", label: selectLabel }, ...options];
   };
 
-  /** The option list for one dropdown, with every filtering rule applied. */
+  /** The option list for one dropdown (identified by meta + slot). */
   const optionsForMeta = useCallback(
-    (v: MetaView) => {
-      const current = selections[v.metaId] ?? "";
+    (v: MetaView, slotIdx: number) => {
+      const current = selections[v.metaId]?.[slotIdx] ?? "";
+      const normVal = (s: string) =>
+        String(s || "")
+          .trim()
+          .toUpperCase();
+      // The slot's own current value must never be excluded from its own
+      // dropdown — the CU Minor-continuation pattern intentionally repeats a
+      // subject across slots (Minor 1 & Minor 3 share one subject, Minor 2 &
+      // Minor 4 the other), and excluding it here left the Combobox on the
+      // placeholder even though a value was saved (same symptom the
+      // getFilteredByCategory normCurrent fix addressed — this is the second
+      // exclusion pass, which needs the same exemption).
+      const excludesForSlot = () =>
+        getGlobalExcludes(v.metaId, slotIdx).filter((s) => normVal(s) !== normVal(current));
 
       // AEC is unfiltered: it may repeat elsewhere and has no peer rules applied.
       if (v.code === "AEC") return convertToComboboxData(v.options);
       // CVAC takes global uniqueness but no category rules.
-      if (v.code === "CVAC") return convertToComboboxData(v.options, getGlobalExcludes(v.metaId));
+      if (v.code === "CVAC") return convertToComboboxData(v.options, excludesForSlot());
 
-      const filtered = getFilteredByCategory(v.options, current, v.code, v.semesters, v.metaId);
-      return convertToComboboxData(
-        preserveAecIfPresent(v.options, filtered),
-        getGlobalExcludes(v.metaId),
+      const filtered = getFilteredByCategory(
+        v.options,
+        current,
+        v.code,
+        v.semesters,
+        v.metaId,
+        slotIdx,
       );
+      return convertToComboboxData(preserveAecIfPresent(v.options, filtered), excludesForSlot());
     },
     [selections, getFilteredByCategory, getGlobalExcludes, preserveAecIfPresent],
   );
@@ -432,7 +495,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
     for (const v of metaViews) {
       byCode.set(v.code, [...(byCode.get(v.code) ?? []), v]);
     }
-    const additions: Record<number, string> = {};
+    const additions: Array<{ metaId: number; slotIdx: number; value: string }> = [];
     for (const [, views] of byCode) {
       const autos = [...new Set(views.flatMap((v) => v.autoAssignSubjects))];
       if (!autos.length) continue;
@@ -441,25 +504,45 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       // a single-slot category (AEC) was filled on load, while a multi-slot
       // category (Minor) only auto-filled once the student had picked
       // something in it — so we do not pre-empt their first choice.
-      const hasSelection = views.some((v) => selections[v.metaId]);
-      if (views.length > 1 && !hasSelection) continue;
+      const hasSelection = views.some((v) => metaValues(v.metaId).length > 0);
+      const totalSlots = views.reduce((sum, v) => sum + getSlotCount(v.metaId), 0);
+      if (totalSlots > 1 && !hasSelection) continue;
 
       for (const auto of autos) {
-        if (views.some((v) => selections[v.metaId] === auto)) continue;
+        if (views.some((v) => metaValues(v.metaId).includes(auto))) continue;
         // Only place it where the restricted-grouping rules actually allow it.
-        const target = views.find(
-          (v) =>
-            !selections[v.metaId] &&
-            !additions[v.metaId] &&
-            getFilteredByCategory(v.options, "", v.code, v.semesters, v.metaId).includes(auto),
-        );
-        if (target) additions[target.metaId] = auto;
+        let placed = false;
+        for (const v of views) {
+          if (placed) break;
+          const slots = getSlotCount(v.metaId);
+          for (let s = 0; s < slots; s++) {
+            const currentAtSlot = selections[v.metaId]?.[s];
+            const alreadyAdded = additions.some((a) => a.metaId === v.metaId && a.slotIdx === s);
+            if (currentAtSlot || alreadyAdded) continue;
+            if (
+              !getFilteredByCategory(v.options, "", v.code, v.semesters, v.metaId, s).includes(auto)
+            )
+              continue;
+            additions.push({ metaId: v.metaId, slotIdx: s, value: auto });
+            placed = true;
+            break;
+          }
+        }
       }
     }
-    if (Object.keys(additions).length) {
-      setSelections((prev) => ({ ...prev, ...additions }));
+    if (additions.length) {
+      setSelections((prev) => {
+        const next = { ...prev };
+        for (const a of additions) {
+          const arr = [...(next[a.metaId] ?? [])];
+          while (arr.length <= a.slotIdx) arr.push("");
+          arr[a.slotIdx] = a.value;
+          next[a.metaId] = arr;
+        }
+        return next;
+      });
     }
-  }, [metaViews, selections]);
+  }, [metaViews, selections, metaValues, getSlotCount, getFilteredByCategory]);
 
   // Minor mismatch notice: compare the first two Minor picks against admission.
   useEffect(() => {
@@ -469,7 +552,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
     }
     const current = metaViews
       .filter((v) => v.code === "MN")
-      .map((v) => selections[v.metaId])
+      .flatMap((v) => selections[v.metaId] ?? [])
       .filter((s): s is string => Boolean(s))
       .slice(0, 2);
     if (current.length < 2) {
@@ -501,20 +584,39 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
     // Every dropdown on screen must be answered.
     for (const v of visibleMetas) {
-      if (!selections[v.metaId]) newErrors.push(`${v.label} is required`);
+      const slots = getSlotCount(v.metaId);
+      for (let s = 0; s < slots; s++) {
+        if (!selections[v.metaId]?.[s]) {
+          newErrors.push(
+            slots > 1 ? `${v.label} (slot ${s + 1}) is required` : `${v.label} is required`,
+          );
+        }
+      }
     }
 
-    // The same subject cannot be picked in two categories (AEC exempt).
+    // The same subject cannot be picked in two categories (AEC exempt), or
+    // twice within a multi-slot meta.
     const nonAec = visibleMetas.filter((v) => v.code !== "AEC");
     for (let i = 0; i < nonAec.length; i++) {
+      const left = nonAec[i];
+      if (!left) continue;
+      const leftVals = metaValues(left.metaId);
+      // Within-meta duplicate check.
+      const seen = new Set<string>();
+      for (const val of leftVals) {
+        if (seen.has(val)) {
+          newErrors.push(`${left.label} has the same subject picked twice`);
+          break;
+        }
+        seen.add(val);
+      }
       for (let j = i + 1; j < nonAec.length; j++) {
-        const left = nonAec[i];
         const right = nonAec[j];
-        if (!left || !right) continue;
-        const a = selections[left.metaId];
-        const b = selections[right.metaId];
-        if (a && b && a === b) {
-          newErrors.push(`${left.label} and ${right.label} cannot be the same subject`);
+        if (!right) continue;
+        const rightVals = metaValues(right.metaId);
+        const overlap = leftVals.find((a) => rightVals.includes(a));
+        if (overlap) {
+          newErrors.push(`${left.label} and ${right.label} cannot share subject "${overlap}"`);
         }
       }
     }
@@ -525,7 +627,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       const views = visibleMetas.filter((v) => v.code === code);
       const autos = [...new Set(views.flatMap((v) => v.autoAssignSubjects))];
       for (const auto of autos) {
-        if (views.some((v) => selections[v.metaId] === auto)) continue;
+        if (views.some((v) => metaValues(v.metaId).includes(auto))) continue;
         newErrors.push(`${auto} is mandatory and must be selected`);
       }
     }
@@ -536,15 +638,19 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
   const validateForm = () => updateValidationErrors(true);
 
-  const handleFieldChange = (metaId: number, value: string) => {
+  const handleFieldChange = (metaId: number, slotIdx: number, value: string) => {
     if (!hasUserInteracted) setHasUserInteracted(true);
-    setSelection(metaId, value);
+    setSelection(metaId, slotIdx, value);
 
     // Clear this field's "required" error as soon as it is answered.
     if (errors.length > 0 && value) {
       const view = metaViews.find((v) => v.metaId === metaId);
       if (view) {
-        const errorToRemove = `${view.label} is required`;
+        const slots = getSlotCount(metaId);
+        const errorToRemove =
+          slots > 1
+            ? `${view.label} (slot ${slotIdx + 1}) is required`
+            : `${view.label} is required`;
         setErrors((prev) => prev.filter((e) => e !== errorToRemove));
       }
     }
@@ -560,18 +666,21 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
     if (!student?.id || !currentSession?.id) return selectionsToSave;
 
     for (const v of visibleMetas) {
-      const subjectName = selections[v.metaId];
-      if (!subjectName) continue;
-      const subjectId = v.subjectIdByName[subjectName];
-      if (!subjectId) continue;
-      selectionsToSave.push({
-        studentId: student.id,
-        session: { id: currentSession.id },
-        subjectSelectionMeta: { id: v.metaId },
-        subject: { id: subjectId, name: subjectName },
-        createdBy: 1, // TODO: Get actual admin user ID
-        reason: reason || "Admin update",
-      });
+      const slots = getSlotCount(v.metaId);
+      for (let s = 0; s < slots; s++) {
+        const subjectName = selections[v.metaId]?.[s];
+        if (!subjectName) continue;
+        const subjectId = v.subjectIdByName[subjectName];
+        if (!subjectId) continue;
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: v.metaId },
+          subject: { id: subjectId, name: subjectName },
+          createdBy: 1, // TODO: Get actual admin user ID
+          reason: reason || "Admin update",
+        });
+      }
     }
     return selectionsToSave;
   };
@@ -703,22 +812,32 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
                         : "lg:grid-cols-1"
                   }`}
                 >
-                  {row.map((v) => (
-                    <div
-                      key={v.metaId}
-                      className="space-y-2 min-h-[84px]"
-                      onClick={() => handleFieldFocus(focusTargetFor(v.code))}
-                    >
-                      <label className="text-base font-medium text-gray-700">{v.label}</label>
-                      <Combobox
-                        dataArr={optionsForMeta(v)}
-                        value={selections[v.metaId] ?? ""}
-                        onChange={(value) => handleFieldChange(v.metaId, value)}
-                        placeholder={`Select ${v.label}`}
-                        className="w-full"
-                      />
-                    </div>
-                  ))}
+                  {row.map((v) => {
+                    const slots = getSlotCount(v.metaId);
+                    return (
+                      <div
+                        key={v.metaId}
+                        className="space-y-2 min-h-[84px]"
+                        onClick={() => handleFieldFocus(focusTargetFor(v.code))}
+                      >
+                        <label className="text-base font-medium text-gray-700">{v.label}</label>
+                        {Array.from({ length: slots }).map((_, slotIdx) => (
+                          <Combobox
+                            key={`${v.metaId}-${slotIdx}`}
+                            dataArr={optionsForMeta(v, slotIdx)}
+                            value={selections[v.metaId]?.[slotIdx] ?? ""}
+                            onChange={(value) => handleFieldChange(v.metaId, slotIdx, value)}
+                            placeholder={
+                              slots > 1
+                                ? `Select ${v.label} (${slotIdx + 1} of ${slots})`
+                                : `Select ${v.label}`
+                            }
+                            className="w-full"
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               ))
             )}
