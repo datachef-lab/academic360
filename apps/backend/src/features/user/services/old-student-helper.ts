@@ -593,6 +593,33 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
       ),
     );
 
+  // Previously-imported student whose user link changed (e.g. the user row
+  // was re-matched by email on a later run) — the legacy id is still the
+  // durable key.
+  if (!existingStudent) {
+    [existingStudent] = await db
+      .select()
+      .from(studentModel)
+      .where(eq(studentModel.legacyStudentId, oldStudent.id));
+  }
+
+  // Fresh-admit rows created by the NEW admission flow carry no
+  // legacy_student_id, so neither lookup above can ever match them — yet
+  // their uid already exists and the insert below would blow up on
+  // unique(uid) (e.g. 0101260515: user matched by legacy-id/email, student
+  // row belongs to the admission-flow account). Reuse the row by uid; the
+  // update branch stamps legacyStudentId and leaves userId untouched so the
+  // student's existing login link is preserved.
+  if (!existingStudent) {
+    const uid = oldStudent.codeNumber?.trim()?.toUpperCase();
+    if (uid) {
+      [existingStudent] = await db
+        .select()
+        .from(studentModel)
+        .where(eq(studentModel.uid, uid));
+    }
+  }
+
   let oldCourse: OldCourse | undefined;
 
   if (oldStudent.admissionid) {
@@ -659,6 +686,10 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
     const [updatedStudent] = await db
       .update(studentModel)
       .set({
+        // Stamp the legacy id: an admission-flow row matched via the uid
+        // fallback has NULL here, and stamping makes every future import
+        // resolve it through the primary (legacy id) lookup.
+        legacyStudentId: oldStudent.id,
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
         programCourseId: foundProgramCourse.id,
