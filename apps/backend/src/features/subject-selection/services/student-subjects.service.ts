@@ -405,10 +405,30 @@ export async function findSubjectsSelections(studentId: number) {
     // Falls back to the current AY when a student somehow has no promotions.
     const registrationAyId =
       (await getRegistrationAcademicYearId(studentId)) ?? foundAcademicYear.id;
+    // Pre-query metas the student already has active selections under. Passed
+    // to fetchSubjectSelectionMetaData so those metas are shown even when their
+    // stream config doesn't match — otherwise misfiled legacy picks (Commerce
+    // student with picks under Arts-only meta 29, from the CU admit-card
+    // loader) are invisible in the admin form and can't be corrected.
+    const existingSelectionMetaIdsRows = await db
+      .selectDistinct({
+        metaId: studentSubjectSelectionModel.subjectSelectionMetaId,
+      })
+      .from(studentSubjectSelectionModel)
+      .where(
+        and(
+          eq(studentSubjectSelectionModel.studentId, studentId),
+          eq(studentSubjectSelectionModel.isActive, true),
+        ),
+      );
+    const existingSelectionMetaIds = existingSelectionMetaIdsRows
+      .map((r) => r.metaId)
+      .filter((id): id is number => typeof id === "number");
     const subjectSelectionMetas = await fetchSubjectSelectionMetaData(
       registrationAyId,
       subjectTypeIds,
       streamIds,
+      existingSelectionMetaIds,
     );
 
     // Options resolved PER META, so the form can render one dropdown per meta
@@ -479,15 +499,24 @@ export async function findSubjectsSelections(studentId: number) {
           and(
             eq(studentSubjectSelectionModel.studentId, studentId),
             eq(studentSubjectSelectionModel.isActive, true),
-            // Only get the latest version for each subject category
+            // Latest version per (meta, subject). A single meta can hold >1
+            // subject pick (e.g. "Minor 2 (Sem III & IV)" carries a Sem III
+            // subject AND a Sem IV subject) — DISTINCT ON meta alone would
+            // drop one of them via the tie-breaker. Adding subject_id_fk to
+            // the DISTINCT ON preserves both while still keeping only the
+            // latest version of each (meta, subject) tuple.
             sql`${studentSubjectSelectionModel.id} IN (
-              SELECT DISTINCT ON (${studentSubjectSelectionModel.subjectSelectionMetaId}) 
+              SELECT DISTINCT ON (
+                       ${studentSubjectSelectionModel.subjectSelectionMetaId},
+                       ${studentSubjectSelectionModel.subjectId}
+                     )
                 ${studentSubjectSelectionModel.id}
               FROM ${studentSubjectSelectionModel}
               WHERE ${studentSubjectSelectionModel.studentId} = ${studentId}
                 AND ${studentSubjectSelectionModel.isActive} = true
-              ORDER BY ${studentSubjectSelectionModel.subjectSelectionMetaId}, 
-                       ${studentSubjectSelectionModel.version} DESC, 
+              ORDER BY ${studentSubjectSelectionModel.subjectSelectionMetaId},
+                       ${studentSubjectSelectionModel.subjectId},
+                       ${studentSubjectSelectionModel.version} DESC,
                        ${studentSubjectSelectionModel.createdAt} DESC
             )`,
           ),
@@ -814,6 +843,13 @@ async function fetchSubjectSelectionMetaData(
   academicYearId: number,
   subjectTypeIds: number[],
   streamIds: number[],
+  // Metas the student ALREADY has active selections under. These are shown even
+  // if their stream config doesn't match the student's stream — so misfiled
+  // legacy data (e.g. a Commerce student with picks under an Arts/Mgmt/Sci
+  // meta because the CU admit-card loader wrote to the wrong meta) stays
+  // visible in the admin form and can be corrected. Without this the picks are
+  // silently hidden and the admin has no way to see or fix them.
+  includeMetaIds: number[] = [],
 ): Promise<SubjectSelectionMetaDto[]> {
   console.log(subjectTypeIds, streamIds);
 
@@ -957,7 +993,13 @@ async function fetchSubjectSelectionMetaData(
 
   // Filter metas by subject types and streams. If a meta has no streams configured,
   // treat it as applicable to all streams. If caller passes empty streamIds, match all.
+  // A meta whose id is in includeMetaIds bypasses the stream/subjectType checks
+  // (still AY-scoped) so misfiled legacy selections remain visible for correction.
+  const includeSet = new Set(includeMetaIds);
   return fullDtos.filter((meta) => {
+    const academicYearMatch = meta.academicYear?.id === academicYearId;
+    if (!academicYearMatch) return false;
+    if (includeSet.has(meta.id as number)) return true;
     const streamMatch =
       streamIds.length === 0 ||
       meta.streams.length === 0 ||
@@ -966,8 +1008,7 @@ async function fetchSubjectSelectionMetaData(
     const subjectTypeMatch =
       typeof subjectTypeId === "number" &&
       subjectTypeIds.includes(subjectTypeId);
-    const academicYearMatch = meta.academicYear?.id === academicYearId;
-    return streamMatch && subjectTypeMatch && academicYearMatch;
+    return streamMatch && subjectTypeMatch;
   });
 }
 
