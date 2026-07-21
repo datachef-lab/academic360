@@ -739,6 +739,9 @@ export async function processStudentsFromExcelBuffer(
       );
     } finally {
       await lock.release();
+      // Yield event loop to let socket heartbeats and timer callbacks drain
+      // between each UID, preventing disconnect-on-timeout during heavy imports
+      await new Promise((r) => setImmediate(r));
       // Always emit after each uid completes, regardless of outcome.
       done++;
       emitProgress(done, done >= total ? "completed" : "in_progress");
