@@ -1,3 +1,4 @@
+import os from "os";
 import { Server, Socket } from "socket.io";
 import { getRealtimeTrackerRoomName } from "@/features/realtime-tracker/realtime-tracker.socket.js";
 import {
@@ -6,9 +7,18 @@ import {
 } from "@/utils/realtime-tracker-filters.js";
 import type { DefaultEventsMap } from "socket.io";
 import * as userService from "@/features/user/services/user.service";
+import { getRedisPubClient } from "@/config/redis.js";
 
 import { createLogger } from "@/config/logger.js";
 const log = createLogger("socket");
+
+// Redis presence store keys
+const ONLINE_USERS_SET = "a360:online_users";
+const userInfoKey = (userId: string) => `a360:user_info:${userId}`;
+const USER_INFO_TTL = 7200; // 2 hours
+
+// Instance identity for cross-instance signaling
+const INSTANCE_ID = `${os.hostname()}-${process.pid}`;
 // Define notification types
 export interface Notification {
   id: string;
@@ -258,7 +268,7 @@ class SocketService {
           socket.join(`user:${userId}`); // Join a room specific to this user
           log.info(`User ${userId} authenticated with socket ${socket.id}`);
           // Emit active users update after registration
-          this.broadcastActiveUsers();
+          await this.broadcastActiveUsers();
         } catch (error) {
           log.error(`Error authenticating user ${userId}`, { error });
         }
@@ -690,17 +700,43 @@ class SocketService {
       });
 
       // Handle disconnection
-      socket.on("disconnect", () => {
+      socket.on("disconnect", async () => {
         try {
-          this.removeSocket(socket.id);
+          await this.removeSocket(socket.id);
           log.debug(`Client disconnected: ${socket.id}`);
           // Emit active users update after removal
-          this.broadcastActiveUsers();
+          await this.broadcastActiveUsers();
         } catch (error) {
           log.error(`Error handling disconnect for ${socket.id}`, { error });
         }
       });
     });
+
+    // Cross-instance tracker signal listener — when one instance fires its throttle,
+    // signal others to do the same. Idle instances emit immediately (leading edge).
+    this.io.on(
+      "tracker_update_needed",
+      async ({
+        tab,
+        fromInstanceId,
+      }: {
+        tab: string;
+        fromInstanceId: string;
+      }) => {
+        try {
+          if (fromInstanceId === INSTANCE_ID) return; // skip echo to self
+          const { scheduleRealtimeTrackerThrottledBroadcast } =
+            await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+          scheduleRealtimeTrackerThrottledBroadcast(
+            tab as "affiliation" | "fee_mis",
+            "cross_instance",
+            {},
+          );
+        } catch (error) {
+          log.error("Error handling tracker_update_needed signal", { error });
+        }
+      },
+    );
   }
 
   // Register a user with their socket ID and fetch user info
@@ -746,6 +782,26 @@ class SocketService {
 
     // After adding a socket, recompute user's tabActive based on all sockets
     this.recomputeUserTabActive(userId);
+
+    // Write to Redis presence store for cross-instance visibility
+    const pub = getRedisPubClient();
+    if (pub && this.userInfoCache.has(userId)) {
+      const info = this.userInfoCache.get(userId)!;
+      try {
+        await pub.sAdd(ONLINE_USERS_SET, userId);
+        await pub.set(
+          userInfoKey(userId),
+          JSON.stringify({
+            name: info.name,
+            image: info.image,
+            type: info.type,
+          }),
+          { EX: USER_INFO_TTL },
+        );
+      } catch (error) {
+        log.error(`Error writing user ${userId} to Redis presence`, { error });
+      }
+    }
   }
 
   private recomputeUserTabActive(userId: string) {
@@ -768,7 +824,7 @@ class SocketService {
   }
 
   // Remove a socket when the connection is closed
-  private removeSocket(socketId: string) {
+  private async removeSocket(socketId: string) {
     const userIdForSocket = this.socketToUserId.get(socketId);
     this.socketToUserId.delete(socketId);
     this.socketTabActive.delete(socketId);
@@ -791,6 +847,27 @@ class SocketService {
     // Also recompute for socket-mapped userId in case it wasn't found via loop
     if (userIdForSocket) {
       this.recomputeUserTabActive(userIdForSocket);
+    }
+
+    // If this user has no sockets on this instance, check if they're offline globally
+    if (userIdForSocket && !this.activeConnections.has(userIdForSocket)) {
+      try {
+        const allGlobal = await this.io
+          ?.in(`user:${userIdForSocket}`)
+          .allSockets();
+        if (allGlobal && allGlobal.size === 0) {
+          // Truly offline on all instances — clean up Redis
+          const pub = getRedisPubClient();
+          if (pub) {
+            await pub.sRem(ONLINE_USERS_SET, userIdForSocket);
+            await pub.del(userInfoKey(userIdForSocket));
+          }
+        }
+      } catch (error) {
+        log.error(`Error checking global sockets for user ${userIdForSocket}`, {
+          error,
+        });
+      }
     }
   }
 
@@ -845,19 +922,84 @@ class SocketService {
     return connectedAt ? connectedAt.toISOString() : null;
   }
 
-  // Broadcast active users list to all connected clients
-  private broadcastActiveUsers() {
+  // Broadcast active users list to all connected clients (reads from global Redis if available)
+  private async broadcastActiveUsers() {
     if (!this.io) {
       return;
     }
 
     try {
-      const activeUsers = this.getActiveAdminStaffUsers();
-      this.io.emit("active_users_update", activeUsers);
-      this.io.emit("students_online_count", this.getOnlineStudentsCount());
-      log.debug(`Active users broadcast: ${activeUsers.length} users`);
+      const pub = getRedisPubClient();
+      if (pub) {
+        // Read from Redis for global presence
+        const userIds = await pub.sMembers(ONLINE_USERS_SET);
+        const adminStaff: ActiveUserInfo[] = [];
+        let studentCount = 0;
+
+        for (const userId of userIds) {
+          // Try local cache first (faster, covers users on this instance)
+          const cached = this.userInfoCache.get(userId);
+          if (cached) {
+            if (cached.type === "STUDENT") studentCount++;
+            else adminStaff.push(cached);
+            continue;
+          }
+
+          // Cross-instance user — read from Redis
+          const raw = await pub.get(userInfoKey(userId));
+          if (!raw) {
+            // Info expired or stale — clean up
+            await pub.sRem(ONLINE_USERS_SET, userId);
+            continue;
+          }
+
+          const info = JSON.parse(raw) as {
+            name: string;
+            image: string | null;
+            type: string;
+          };
+          if (info.type === "STUDENT") {
+            studentCount++;
+          } else {
+            adminStaff.push({
+              id: Number(userId),
+              name: info.name,
+              image: info.image,
+              type: info.type as "ADMIN" | "STAFF",
+              tabActive: true,
+            });
+          }
+        }
+
+        this.io.emit("active_users_update", adminStaff);
+        this.io.emit("students_online_count", studentCount);
+        log.debug(
+          `Active users broadcast: ${adminStaff.length} admin/staff, ${studentCount} students`,
+        );
+      } else {
+        // Redis not available — fall back to local data only
+        const activeUsers = this.getActiveAdminStaffUsers();
+        this.io.emit("active_users_update", activeUsers);
+        this.io.emit("students_online_count", this.getOnlineStudentsCount());
+        log.debug(
+          `Active users broadcast: ${activeUsers.length} users (local only)`,
+        );
+      }
     } catch (error) {
       log.error("Error broadcasting active users", { error });
+    }
+  }
+
+  // Signal other instances to fire their realtime tracker throttle
+  public crossInstanceSignal(event: string, data: Record<string, unknown>) {
+    if (!this.io) {
+      log.error("Cannot emit cross-instance signal: io is null");
+      return;
+    }
+    try {
+      this.io.serverSideEmit(event, { ...data, fromInstanceId: INSTANCE_ID });
+    } catch (error) {
+      log.error(`Error emitting cross-instance signal "${event}"`, { error });
     }
   }
 

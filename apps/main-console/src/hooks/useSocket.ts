@@ -114,12 +114,6 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
     };
   }, [socket, handleProgressUpdate, handleNotification]);
 
-  useEffect(() => {
-    if (socketRef.current && userId && isConnected) {
-      socketRef.current.emit("authenticate", String(userId));
-    }
-  }, [userId, isConnected]);
-
   const emit = useCallback((event: string, data?: unknown) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit(event, data);

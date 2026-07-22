@@ -71,6 +71,10 @@ export function getSessionStore(): RedisStore | null {
   return sessionStore;
 }
 
+export function getRedisPubClient(): RedisClientType | null {
+  return getRedisPubSubClients()?.pubClient ?? null;
+}
+
 export async function disconnectRedis(): Promise<void> {
   if (!connected) return;
 
