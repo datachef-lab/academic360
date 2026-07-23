@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { isCasualReceipt, type StudentDueFee } from "./use-student-due-fees";
 
 /**
@@ -132,14 +133,22 @@ export function FeesDueAlertDialog({
               </div>
             )}
 
+            {/* asChild + Button: the click handlers live on the native buttons, not on
+                the Radix Cancel/Action props — their prop typings vary across
+                @radix-ui/react-alert-dialog versions and broke the CI next build. */}
             <AlertDialogFooter className="mt-auto pt-6 sm:justify-between">
-              <AlertDialogCancel
-                onClick={() => router.push("/dashboard/enrollment-fees")}
-                className="mt-0"
-              >
-                View Fees &amp; Pay
+              <AlertDialogCancel asChild>
+                <Button
+                  variant="outline"
+                  className="mt-0"
+                  onClick={() => router.push("/dashboard/enrollment-fees")}
+                >
+                  View Fees &amp; Pay
+                </Button>
               </AlertDialogCancel>
-              <AlertDialogAction onClick={onProceed}>Okay, Continue</AlertDialogAction>
+              <AlertDialogAction asChild>
+                <Button onClick={onProceed}>Okay, Continue</Button>
+              </AlertDialogAction>
             </AlertDialogFooter>
           </div>
         </div>
