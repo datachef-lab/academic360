@@ -6,8 +6,6 @@ import { AlertTriangle } from "lucide-react";
 
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -133,22 +131,22 @@ export function FeesDueAlertDialog({
               </div>
             )}
 
-            {/* asChild + Button: the click handlers live on the native buttons, not on
-                the Radix Cancel/Action props — their prop typings vary across
-                @radix-ui/react-alert-dialog versions and broke the CI next build. */}
+            {/* Plain Buttons (no AlertDialogCancel/Action): the Radix prop typings
+                resolve differently under the box's strict pnpm linking and broke the
+                CI next build twice. The dialog is controlled via open/onOpenChange,
+                so native buttons are sufficient. */}
             <AlertDialogFooter className="mt-auto pt-6 sm:justify-between">
-              <AlertDialogCancel asChild>
-                <Button
-                  variant="outline"
-                  className="mt-0"
-                  onClick={() => router.push("/dashboard/enrollment-fees")}
-                >
-                  View Fees &amp; Pay
-                </Button>
-              </AlertDialogCancel>
-              <AlertDialogAction asChild>
-                <Button onClick={onProceed}>Okay, Continue</Button>
-              </AlertDialogAction>
+              <Button
+                variant="outline"
+                className="mt-0"
+                onClick={() => {
+                  onOpenChange(false);
+                  router.push("/dashboard/enrollment-fees");
+                }}
+              >
+                View Fees &amp; Pay
+              </Button>
+              <Button onClick={onProceed}>Okay, Continue</Button>
             </AlertDialogFooter>
           </div>
         </div>
