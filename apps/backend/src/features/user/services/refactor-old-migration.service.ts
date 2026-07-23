@@ -22,37 +22,10 @@ import {
   userTypeEnum,
 } from "@repo/db/schemas";
 
-/**
- * Durable per-UID import outcomes, appended as JSON lines to
- * logs/legacy-import.log. The upload's HTTP response is the only other place
- * these surface, and a dismissed response leaves no trace — the Jul 15-16
- * staging import lost 79 PG students' fees to legacy-DB timeouts that nobody
- * could see afterwards. A logging failure must never break the import itself.
- */
-async function recordImportLog(
-  uid: string,
-  kind: "student" | "fees",
-  status: "ok" | "error" | "skipped",
-  message: string | null,
-) {
-  try {
-    const fs = await import("fs").then((m) => m.promises);
-    await fs.mkdir("./logs", { recursive: true });
-    const line = JSON.stringify({
-      at: new Date().toISOString(),
-      uid,
-      kind,
-      status,
-      ...(message ? { message } : {}),
-    });
-    await fs.appendFile("./logs/legacy-import.log", line + "\n");
-  } catch (e) {
-    console.error(
-      "[LegacyImport] failed to write import log:",
-      (e as Error)?.message,
-    );
-  }
-}
+// recordImportLog moved to @/utils/legacy-import-log so the helper services
+// (old-student-helper, old-student.service) can log structure/subject-selection
+// outcomes without a circular import back into this module.
+import { recordImportLog } from "@/utils/legacy-import-log.js";
 import { and, count, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import * as oldStudentPersonalDetailsHelper from "./old-student-helper";
 import * as oldStudentAdmissionServices from "./old-student.service";
