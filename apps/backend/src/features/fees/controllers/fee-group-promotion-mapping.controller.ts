@@ -79,7 +79,12 @@ export async function getAllFeeGroupPromotionMappingsHandler(
       limitParam && !Number.isNaN(Number(limitParam))
         ? Number(limitParam)
         : 10000;
-    const rows = await getAllFeeGroupPromotionMappings(limit);
+    const searchParam =
+      typeof req.query?.search === "string" ? req.query.search.trim() : "";
+    const rows = await getAllFeeGroupPromotionMappings(
+      limit,
+      searchParam || undefined,
+    );
     return res
       .status(200)
       .json(

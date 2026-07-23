@@ -926,8 +926,14 @@ export interface FilteredFeeGroupPromotionMapping {
 
 export async function getAllFeeGroupPromotionMappings(
   limit: number = 10000,
+  search?: string,
 ): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings?limit=${limit}`);
+  const params = new URLSearchParams({ limit: String(limit) });
+  const trimmed = search?.trim();
+  if (trimmed) params.set("search", trimmed);
+  const response = await axiosInstance.get(
+    `${BASE_PATH}/group-promotion-mappings?${params.toString()}`,
+  );
   return response.data;
 }
 
