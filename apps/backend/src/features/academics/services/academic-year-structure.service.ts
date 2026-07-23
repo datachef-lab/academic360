@@ -72,12 +72,20 @@ export type EnsureYearStructureOpts = {
 
 /**
  * Guarantee a year's full structure: a session + the 4 year-scoped masters +
- * papers + paper_components. Idempotent — the session is find-or-create, and the
- * master/paper copy only runs when the year has NO papers yet (the whole copy
- * runs inside the caller's transaction, so it is all-or-nothing; once papers
- * exist, later calls fast-path out). Missing structure is copied from the
- * nearest academic year that has papers, and the previous_paper_id chain is
- * stitched to the adjacent years by a natural key.
+ * papers + paper_components. Idempotent TOP-UP — the session is find-or-create
+ * and every copy is a per-row find-or-create by natural key, so a partially
+ * seeded year (a few stray papers, missing metas) converges to the source
+ * catalog instead of being skipped. The old fast-path ("any papers => already
+ * structured") left 2023-24/2024-25 at 14/26 papers with ZERO metas on staging,
+ * which silently starved the legacy subject-selection loader (every row
+ * `skippedMeta`). The whole copy runs inside the caller's transaction, so it is
+ * all-or-nothing; a fully converged year exits via the cheap delta fast-path.
+ *
+ * Only the target year is ever touched — callers pass the AY being imported
+ * into (uid import), the freshly created AY (wizard/manual create), or an
+ * explicitly requested AY (scripts/ensure-ay-structure.ts). No call site sweeps
+ * other years, so e.g. an intentionally pruned current-year catalog stays
+ * as-is unless explicitly ensured.
  */
 export async function ensureAcademicYearStructure(
   tx: Dbx,
@@ -97,7 +105,7 @@ export async function ensureAcademicYearStructure(
   // Serialize per academic year: concurrent import workers all call this per
   // student, and two cold-path copies of the same (or adjacent) year collide
   // on the unique indexes and roll the whole tx back. Key convention mirrors
-  // the CU-registration locks (1001000 + ayId). The papers fast-path below
+  // the CU-registration locks (1001000 + ayId). The delta fast-path below
   // re-checks AFTER the lock, so a waiter queued behind a cold-path copier
   // exits cheaply once the copy is committed.
   await tx.execute(
@@ -113,49 +121,70 @@ export async function ensureAcademicYearStructure(
   // 1) Session — find-or-create (idempotent).
   result.sessionCreated = await ensureSession(tx, target, opts.legacySession);
 
-  // Fast path: a year that already has papers is considered structured.
-  const [{ papers: existingPapers }] = await tx
-    .select({ papers: count() })
-    .from(paperModel)
-    .where(eq(paperModel.academicYearId, targetYearId));
-  if (Number(existingPapers) > 0) return result;
-
-  // 2) Source year = explicit opt, else nearest academic year that has papers.
+  // 2) Source year = explicit opt, else the year with the MOST papers (the
+  // head catalog). "Nearest year with papers" is wrong for top-up: a sparse
+  // neighbour (2024-25 with 26 stray papers) must never be the template when
+  // a full catalog exists two years away.
   const allYears = await tx
     .select({
       id: academicYearModel.id,
       year: academicYearModel.year,
     })
     .from(academicYearModel);
-  const yearsWithPapers = await tx
-    .selectDistinct({ id: paperModel.academicYearId })
-    .from(paperModel);
-  const hasPapers = new Set(
-    yearsWithPapers.map((r) => r.id).filter((id): id is number => id != null),
-  );
+  const paperCounts = await tx
+    .select({ ayId: paperModel.academicYearId, papers: count() })
+    .from(paperModel)
+    .groupBy(paperModel.academicYearId);
+  const papersByYear = new Map<number, number>();
+  for (const r of paperCounts) {
+    if (r.ayId != null) papersByYear.set(r.ayId, Number(r.papers));
+  }
 
   let sourceId = opts.sourceYearId ?? null;
-  if (sourceId == null || !hasPapers.has(sourceId)) {
+  if (sourceId == null || !(papersByYear.get(sourceId) ?? 0)) {
     const targetStart = startYearOf(target.year);
-    let best: { id: number; start: number } | null = null;
+    let best: { id: number; papers: number; dist: number } | null = null;
     for (const y of allYears) {
-      if (y.id === targetYearId || !hasPapers.has(y.id)) continue;
+      const papers = papersByYear.get(y.id) ?? 0;
+      if (y.id === targetYearId || papers === 0) continue;
       const s = startYearOf(y.year);
-      if (s == null || targetStart == null) continue;
-      const dist = Math.abs(s - targetStart);
+      const dist =
+        s != null && targetStart != null
+          ? Math.abs(s - targetStart)
+          : Number.MAX_SAFE_INTEGER;
       if (
         best == null ||
-        dist < Math.abs(best.start - targetStart) ||
-        (dist === Math.abs(best.start - targetStart) && s > best.start)
+        papers > best.papers ||
+        (papers === best.papers && dist < best.dist)
       ) {
-        best = { id: y.id, start: s };
+        best = { id: y.id, papers, dist };
       }
     }
     sourceId = best?.id ?? null;
   }
   if (sourceId == null) return result; // nothing to seed from
 
-  // 3) Copy the masters + papers + components from the source year.
+  // Delta fast-path: when the target already carries at least the source's
+  // paper AND meta counts, treat it as converged. (Counts, not keys — cheap
+  // enough to run per imported student; the copy fns below do exact key-level
+  // deltas whenever this doesn't hold.)
+  const targetPapers = papersByYear.get(targetYearId) ?? 0;
+  const sourcePapers = papersByYear.get(sourceId) ?? 0;
+  const metaCounts = await tx
+    .select({ ayId: subjectSelectionMetaModel.academicYearId, metas: count() })
+    .from(subjectSelectionMetaModel)
+    .groupBy(subjectSelectionMetaModel.academicYearId);
+  const metasByYear = new Map<number, number>();
+  for (const r of metaCounts) {
+    if (r.ayId != null) metasByYear.set(r.ayId, Number(r.metas));
+  }
+  const targetMetas = metasByYear.get(targetYearId) ?? 0;
+  const sourceMetas = metasByYear.get(sourceId) ?? 0;
+  if (targetPapers >= sourcePapers && targetMetas >= sourceMetas) {
+    return result;
+  }
+
+  // 3) Top-up the masters + papers + components from the source year.
   await copyMetas(tx, sourceId, targetYearId, result);
   await copyRelatedSubjects(tx, sourceId, targetYearId, result);
   await copyRestrictedGroupings(tx, sourceId, targetYearId, result);
@@ -201,6 +230,10 @@ async function ensureSession(
   return true;
 }
 
+// Cross-year identity of a selection meta (within a year: subject type + label).
+const metaKey = (m: { subjectTypeId: number | null; label: string | null }) =>
+  `${m.subjectTypeId}|${m.label}`;
+
 async function copyMetas(
   tx: Dbx,
   sourceId: number,
@@ -216,7 +249,83 @@ async function copyMetas(
         activeOnly(subjectSelectionMetaModel.isActive),
       ),
     );
+  // Find-or-create by natural key: a partially seeded year keeps its existing
+  // metas (blind re-insert would duplicate them) but still gains the missing
+  // ones — and existing metas are topped up with any missing class/stream links.
+  const existingTarget = await tx
+    .select()
+    .from(subjectSelectionMetaModel)
+    .where(eq(subjectSelectionMetaModel.academicYearId, targetYearId));
+  const existingByKey = new Map(existingTarget.map((m) => [metaKey(m), m.id]));
+
   for (const meta of srcMetas) {
+    const srcClasses = await tx
+      .select()
+      .from(subjectSelectionMetaClassModel)
+      .where(
+        eq(subjectSelectionMetaClassModel.subjectSelectionMetaId, meta.id),
+      );
+    const srcStreams = await tx
+      .select()
+      .from(subjectSelectionMetaStreamModel)
+      .where(
+        eq(subjectSelectionMetaStreamModel.subjectSelectionMetaId, meta.id),
+      );
+
+    const existingId = existingByKey.get(metaKey(meta));
+    if (existingId != null) {
+      // Meta already present — only add class/stream links it is missing.
+      const haveClasses = new Set(
+        (
+          await tx
+            .select()
+            .from(subjectSelectionMetaClassModel)
+            .where(
+              eq(
+                subjectSelectionMetaClassModel.subjectSelectionMetaId,
+                existingId,
+              ),
+            )
+        ).map((c) => c.classId),
+      );
+      const missingClasses = srcClasses.filter(
+        (c) => !haveClasses.has(c.classId),
+      );
+      if (missingClasses.length) {
+        await tx.insert(subjectSelectionMetaClassModel).values(
+          missingClasses.map((c) => ({
+            subjectSelectionMetaId: existingId,
+            classId: c.classId,
+          })),
+        );
+      }
+      const haveStreams = new Set(
+        (
+          await tx
+            .select()
+            .from(subjectSelectionMetaStreamModel)
+            .where(
+              eq(
+                subjectSelectionMetaStreamModel.subjectSelectionMetaId,
+                existingId,
+              ),
+            )
+        ).map((s) => s.streamId),
+      );
+      const missingStreams = srcStreams.filter(
+        (s) => !haveStreams.has(s.streamId),
+      );
+      if (missingStreams.length) {
+        await tx.insert(subjectSelectionMetaStreamModel).values(
+          missingStreams.map((s) => ({
+            subjectSelectionMetaId: existingId,
+            streamId: s.streamId,
+          })),
+        );
+      }
+      continue;
+    }
+
     const [newMeta] = await tx
       .insert(subjectSelectionMetaModel)
       .values({
@@ -227,29 +336,17 @@ async function copyMetas(
         isActive: meta.isActive,
       })
       .returning({ id: subjectSelectionMetaModel.id });
-    const classes = await tx
-      .select()
-      .from(subjectSelectionMetaClassModel)
-      .where(
-        eq(subjectSelectionMetaClassModel.subjectSelectionMetaId, meta.id),
-      );
-    if (classes.length) {
+    if (srcClasses.length) {
       await tx.insert(subjectSelectionMetaClassModel).values(
-        classes.map((c) => ({
+        srcClasses.map((c) => ({
           subjectSelectionMetaId: newMeta.id,
           classId: c.classId,
         })),
       );
     }
-    const streams = await tx
-      .select()
-      .from(subjectSelectionMetaStreamModel)
-      .where(
-        eq(subjectSelectionMetaStreamModel.subjectSelectionMetaId, meta.id),
-      );
-    if (streams.length) {
+    if (srcStreams.length) {
       await tx.insert(subjectSelectionMetaStreamModel).values(
-        streams.map((s) => ({
+        srcStreams.map((s) => ({
           subjectSelectionMetaId: newMeta.id,
           streamId: s.streamId,
         })),
@@ -274,7 +371,19 @@ async function copyRelatedSubjects(
         activeOnly(relatedSubjectMainModel.isActive),
       ),
     );
+  // Find-or-create by natural key so a partial year is topped up, not duplicated.
+  const relKey = (m: {
+    programCourseId: number | null;
+    subjectTypeId: number | null;
+    boardSubjectNameId: number | null;
+  }) => `${m.programCourseId}|${m.subjectTypeId}|${m.boardSubjectNameId}`;
+  const existingRel = await tx
+    .select()
+    .from(relatedSubjectMainModel)
+    .where(eq(relatedSubjectMainModel.academicYearId, targetYearId));
+  const existingRelKeys = new Set(existingRel.map((m) => relKey(m)));
   for (const main of srcRel) {
+    if (existingRelKeys.has(relKey(main))) continue;
     const [newMain] = await tx
       .insert(relatedSubjectMainModel)
       .values({
@@ -316,7 +425,18 @@ async function copyRestrictedGroupings(
         activeOnly(restrictedGroupingMainModel.isActive),
       ),
     );
+  // Find-or-create by natural key so a partial year is topped up, not duplicated.
+  const rgKey = (m: {
+    subjectTypeId: number | null;
+    subjectId: number | null;
+  }) => `${m.subjectTypeId}|${m.subjectId}`;
+  const existingRg = await tx
+    .select()
+    .from(restrictedGroupingMainModel)
+    .where(eq(restrictedGroupingMainModel.academicYearId, targetYearId));
+  const existingRgKeys = new Set(existingRg.map((m) => rgKey(m)));
   for (const main of srcRg) {
+    if (existingRgKeys.has(rgKey(main))) continue;
     const [newMain] = await tx
       .insert(restrictedGroupingMainModel)
       .values({
@@ -552,38 +672,71 @@ async function copyPapersAndComponents(
     );
   if (!srcPapers.length) return;
 
-  const inserted = await tx
-    .insert(paperModel)
-    .values(
-      srcPapers.map((p) => ({
-        subjectId: p.subjectId,
-        affiliationId: p.affiliationId,
-        regulationTypeId: p.regulationTypeId,
-        academicYearId: target.id,
-        subjectTypeId: p.subjectTypeId,
-        programCourseId: p.programCourseId,
-        classId: p.classId,
-        name: p.name,
-        code: p.code,
-        isOptional: p.isOptional,
-        sequence: p.sequence,
-        isActive: p.isActive,
-        autoAssign: p.autoAssign,
-        previousPaperId: null, // chained below by natural key
-      })),
-    )
-    .returning();
+  // Find-or-create by natural key: a partially seeded year (stray wizard/manual
+  // papers) keeps its rows and only gains the MISSING source papers. Blind bulk
+  // insert here both duplicated existing keys and was the reason the old
+  // zero-papers fast-path had to skip partial years entirely.
+  const existingTargetPapers = await tx
+    .select()
+    .from(paperModel)
+    .where(eq(paperModel.academicYearId, target.id));
+  const existingByKey = new Map(
+    existingTargetPapers.map((p) => [paperKey(p), p]),
+  );
+
+  const missingSrcPapers = srcPapers.filter(
+    (p) => !existingByKey.has(paperKey(p)),
+  );
+  const inserted = missingSrcPapers.length
+    ? await tx
+        .insert(paperModel)
+        .values(
+          missingSrcPapers.map((p) => ({
+            subjectId: p.subjectId,
+            affiliationId: p.affiliationId,
+            regulationTypeId: p.regulationTypeId,
+            academicYearId: target.id,
+            subjectTypeId: p.subjectTypeId,
+            programCourseId: p.programCourseId,
+            classId: p.classId,
+            name: p.name,
+            code: p.code,
+            isOptional: p.isOptional,
+            sequence: p.sequence,
+            isActive: p.isActive,
+            autoAssign: p.autoAssign,
+            previousPaperId: null, // chained below by natural key
+          })),
+        )
+        .returning()
+    : [];
   result.papers = inserted.length;
 
-  // Components — clone each source paper's components onto the matching new paper
-  // (matched by natural key, since previousPaperId starts null here).
+  // All target papers that mirror a source paper — freshly inserted AND the
+  // pre-existing matches. Components and chaining below treat both alike, so a
+  // pre-existing stray paper also gets its missing components and prev-link.
+  const targetPapers = [...existingTargetPapers, ...inserted];
   const srcByKey = new Map(srcPapers.map((p) => [paperKey(p), p.id]));
-  const srcIdToNewId = new Map<number, number>();
-  for (const np of inserted) {
-    const srcId = srcByKey.get(paperKey(np));
-    if (srcId != null) srcIdToNewId.set(srcId, np.id);
+  const srcIdToTargetId = new Map<number, number>();
+  for (const topPaper of targetPapers) {
+    const srcId = srcByKey.get(paperKey(topPaper));
+    if (srcId != null) srcIdToTargetId.set(srcId, topPaper.id);
   }
-  const srcPaperIds = [...srcIdToNewId.keys()];
+
+  // Components — copy each source paper's components onto the matching target
+  // paper, but ONLY for target papers that currently have no components (never
+  // merge into a hand-configured set).
+  const targetIds = [...srcIdToTargetId.values()];
+  const targetComponentRows = targetIds.length
+    ? await tx
+        .select({ paperId: paperComponentModel.paperId })
+        .from(paperComponentModel)
+        .where(inArray(paperComponentModel.paperId, targetIds))
+    : [];
+  const targetIdsWithComponents = new Set(
+    targetComponentRows.map((c) => c.paperId),
+  );
+  const srcPaperIds = [...srcIdToTargetId.keys()];
   const srcComponents = srcPaperIds.length
     ? await tx
         .select()
@@ -592,10 +745,11 @@ async function copyPapersAndComponents(
     : [];
   const componentRows = srcComponents
     .map((c) => {
-      const newPaperId = srcIdToNewId.get(c.paperId);
-      if (newPaperId == null) return null;
+      const targetPaperId = srcIdToTargetId.get(c.paperId);
+      if (targetPaperId == null) return null;
+      if (targetIdsWithComponents.has(targetPaperId)) return null;
       return {
-        paperId: newPaperId,
+        paperId: targetPaperId,
         examComponentId: c.examComponentId,
         fullMarks: c.fullMarks,
         credit: c.credit,
@@ -607,7 +761,8 @@ async function copyPapersAndComponents(
     result.paperComponents = componentRows.length;
   }
 
-  // previous_paper_id chaining to the adjacent years (by natural key).
+  // previous_paper_id chaining to the adjacent years (by natural key) — over
+  // ALL matched target papers, so pre-existing rows get stitched too.
   const targetStart = startYearOf(target.year);
   if (targetStart == null) return;
   const prevYear = allYears.find(
@@ -623,33 +778,33 @@ async function copyPapersAndComponents(
       .from(paperModel)
       .where(eq(paperModel.academicYearId, prevYear.id));
     const prevByKey = new Map(prevPapers.map((p) => [paperKey(p), p.id]));
-    for (const np of inserted) {
-      const prevId = prevByKey.get(paperKey(np));
-      if (prevId != null) {
+    for (const tp of targetPapers) {
+      const prevId = prevByKey.get(paperKey(tp));
+      if (prevId != null && tp.previousPaperId !== prevId) {
         await tx
           .update(paperModel)
           .set({ previousPaperId: prevId })
-          .where(eq(paperModel.id, np.id));
+          .where(eq(paperModel.id, tp.id));
       }
     }
   }
 
   if (nextYear) {
-    // The next year's papers must point back to these freshly-created papers as
-    // their immediate previous year (e.g. importing 2024-25 -> update 2025-26's
+    // The next year's papers must point back to these papers as their immediate
+    // previous year (e.g. importing 2024-25 -> update 2025-26's
     // previous_paper_id to the new 2024-25 paper). Always re-point on a key match,
     // not only when null, so the chain reflects the now-nearest previous year.
-    const newByKey = new Map(inserted.map((p) => [paperKey(p), p.id]));
+    const targetByKey = new Map(targetPapers.map((p) => [paperKey(p), p.id]));
     const nextPapers = await tx
       .select()
       .from(paperModel)
       .where(eq(paperModel.academicYearId, nextYear.id));
     for (const nx of nextPapers) {
-      const newId = newByKey.get(paperKey(nx));
-      if (newId != null && nx.previousPaperId !== newId) {
+      const targetId = targetByKey.get(paperKey(nx));
+      if (targetId != null && nx.previousPaperId !== targetId) {
         await tx
           .update(paperModel)
-          .set({ previousPaperId: newId })
+          .set({ previousPaperId: targetId })
           .where(eq(paperModel.id, nx.id));
       }
     }
