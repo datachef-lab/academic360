@@ -96,6 +96,7 @@ import {
 
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
 import { migrateSubjectSelectionForStudent } from "./subject-selection-migration.service.js";
+import { recordImportLog } from "@/utils/legacy-import-log.js";
 import { and, eq, ilike, or } from "drizzle-orm";
 
 import { OldBoard } from "@/types/old-board";
@@ -2233,7 +2234,10 @@ export async function processStudent(
   await loadStudentAcademicInfoAndSubjects(oldStudent, student);
 
   // Step 11: Migrate legacy subject-selection (per-semester elective choices) into
-  // student_subject_selections. Idempotent + safe to re-run.
+  // student_subject_selections. Idempotent + safe to re-run. Outcomes are recorded
+  // durably: on Jul 22 staging the whole cohort loaded ZERO selections (every row
+  // skippedMeta — missing metas for their registration AY) and only console.log
+  // knew, so nobody noticed until the data was checked by hand.
   if (student) {
     try {
       const r = await migrateSubjectSelectionForStudent(student);
@@ -2243,8 +2247,34 @@ export async function processStudent(
           ...r,
         });
       }
+      const summary = `legacyRows=${r.legacyRows} inserted=${r.inserted} existing=${r.skippedExisting} dup=${r.skippedDup} skippedMeta=${r.skippedMeta} skippedSubject=${r.skippedSubject} skippedSession=${r.skippedSession} skippedClass=${r.skippedClass}`;
+      if (r.legacyRows === 0) {
+        await recordImportLog(
+          student.uid,
+          "subject-selection",
+          "skipped",
+          "no legacy selection rows",
+        );
+      } else if (r.inserted === 0 && r.skippedExisting === 0) {
+        // Rows existed in legacy but NONE landed or were already present —
+        // exactly the silent-starvation shape (e.g. missing metas).
+        await recordImportLog(
+          student.uid,
+          "subject-selection",
+          "error",
+          summary,
+        );
+      } else {
+        await recordImportLog(student.uid, "subject-selection", "ok", summary);
+      }
     } catch (e) {
       console.warn("[subject-selection-migration] failed for", student.uid, e);
+      await recordImportLog(
+        student.uid,
+        "subject-selection",
+        "error",
+        (e as Error)?.message || "unknown error",
+      );
     }
   }
 

@@ -48,6 +48,16 @@ type Bridges = {
 
 let cached: Bridges | null = null;
 
+/**
+ * Drop the cached bridges so the next call rebuilds them. Called by the import
+ * path after `ensureAcademicYearStructure` creates sessions/metas mid-run —
+ * the process-lifetime cache otherwise keeps resolving against the pre-copy
+ * snapshot and silently `skippedMeta`s every selection for the new year.
+ */
+export function invalidateSubjectSelectionBridges(): void {
+  cached = null;
+}
+
 function norm(s: any): string {
   return String(s ?? "")
     .toLowerCase()
@@ -344,14 +354,24 @@ export type SubjectSelectionResult = {
   skippedClass: number;
 };
 
+/** Anything drizzle-shaped that can run the write path (db or a transaction). */
+type WriteDb = Pick<typeof db, "select" | "insert">;
+
 /**
  * For one already-imported student (must have `student.legacyStudentId` set),
  * fetch their legacy optional paper links and write `student_subject_selections`
  * rows. Idempotent and safe to re-run.
+ *
+ * `opts.dbx` routes the existence-check + insert through a caller-supplied
+ * transaction — used by scripts/rerun-subject-selection.ts to dry-run the REAL
+ * code path (run inside a tx, then roll back). Defaults to the shared `db`;
+ * the import path is unchanged.
  */
 export async function migrateSubjectSelectionForStudent(
   student: Student,
+  opts?: { dbx?: WriteDb },
 ): Promise<SubjectSelectionResult> {
+  const dbx: WriteDb = opts?.dbx ?? db;
   const result: SubjectSelectionResult = {
     legacyRows: 0,
     resolved: 0,
@@ -365,8 +385,30 @@ export async function migrateSubjectSelectionForStudent(
   };
   if (!student.legacyStudentId) return result;
 
-  const b = await getBridges();
+  let b = await getBridges();
   if (!b.legacyClassIds.length) return result;
+
+  // Staleness guard: the bridges snapshot the metas at first use, but the
+  // import can CREATE a year's metas mid-run (ensureAcademicYearStructure).
+  // If the student's registration AY has no metas in the cached snapshot but
+  // does in the DB now, rebuild once — otherwise every row lands in
+  // skippedMeta even though the metas exist.
+  const registrationAyIdForCache = await getRegistrationAyId(student.id!);
+  if (
+    registrationAyIdForCache != null &&
+    !b.metasInDb.some((m: any) => m.academicYearId === registrationAyIdForCache)
+  ) {
+    const [{ freshCount }] = (await db
+      .select({ freshCount: sql<number>`count(*)` })
+      .from(subjectSelectionMetaModel)
+      .where(
+        eq(subjectSelectionMetaModel.academicYearId, registrationAyIdForCache),
+      )) as { freshCount: number }[];
+    if (Number(freshCount) > 0) {
+      invalidateSubjectSelectionBridges();
+      b = await getBridges();
+    }
+  }
 
   // Restrict to sessions whose legacy id has a sessionMap entry (i.e. exists in new DB sessions table)
   const knownLegacySessions = [...b.sessionMap.keys()];
@@ -390,8 +432,8 @@ export async function migrateSubjectSelectionForStudent(
   // Stream disambiguates metas that share (AY, subject type, class) — e.g.
   // Commerce vs Arts/Sci/Mgmt Minor metas in the same AY.
   const studentStreamId = await getStudentStreamId(student.id!);
-  // Registration AY anchors meta resolution (see getRegistrationAyId).
-  const registrationAyId = await getRegistrationAyId(student.id!);
+  // Registration AY anchors meta resolution (already fetched for the cache guard).
+  const registrationAyId = registrationAyIdForCache;
 
   const seen = new Set<string>();
 
@@ -463,7 +505,7 @@ export async function migrateSubjectSelectionForStudent(
     // Skip if a row exists in ANY state (active OR deprecated) — same
     // contract as the CU admit-card loader: a deliberate admin change or
     // deprecation is never resurrected by a re-import.
-    const [exists] = await db
+    const [exists] = await dbx
       .select({ id: studentSubjectSelectionModel.id })
       .from(studentSubjectSelectionModel)
       .where(
@@ -479,7 +521,7 @@ export async function migrateSubjectSelectionForStudent(
       continue;
     }
 
-    await db.insert(studentSubjectSelectionModel).values({
+    await dbx.insert(studentSubjectSelectionModel).values({
       studentId: student.id!,
       sessionId: sess.id,
       subjectSelectionMetaId: metaId,
