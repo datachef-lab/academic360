@@ -145,7 +145,7 @@ export function FeesDueAlertDialog({
                   <span className="font-semibold text-gray-800">{semesterDisplay}</span> enrolment
                   fee is not paid despite multiple reminders sent to your Institutional Email ID
                   and/or registered mobile number.{" "}
-                  <span className="rounded-sm bg-rose-100/80 px-1 py-0.5 font-semibold text-rose-700">
+                  <span className="font-semibold text-gray-800">
                     Consequently, you are currently not considered a bonafide student of the
                     College.
                   </span>
