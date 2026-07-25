@@ -257,16 +257,20 @@ export function FeeDueDeclarationModal({
             <View style={{ paddingHorizontal: 18, paddingTop: 14 }}>
               <Text style={{ color: subText, fontSize: 13, lineHeight: 19 }}>
                 As per our records, your Semester{" "}
-                <Text style={{ fontWeight: "700", color: theme.text }}>{semesterDisplay}</Text>{" "}
+                <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
+                  {semesterDisplay}
+                </Text>{" "}
                 enrolment fee is not paid despite multiple reminders sent to you previously.{" "}
-                <Text style={{ fontWeight: "700", color: theme.text }}>
+                <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
                   Consequently, you are currently not considered a bonafide student of the College.
                 </Text>
               </Text>
               <Text style={{ color: subText, fontSize: 13, lineHeight: 19, marginTop: 10 }}>
                 Please note that completing enrolment procedure including payment of the Semester{" "}
-                <Text style={{ fontWeight: "700", color: theme.text }}>{semesterDisplay}</Text> fee
-                is mandatory to appear for the Calcutta University End-Semester Examination.
+                <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
+                  {semesterDisplay}
+                </Text>{" "}
+                fee is mandatory to appear for the Calcutta University End-Semester Examination.
               </Text>
 
               {studentUid ? (
@@ -374,45 +378,46 @@ export function FeeDueDeclarationModal({
                       </View>
                     );
                   })}
+                  {/* Total row uses the SAME 5 cells/flexes as the rows above so
+                      every column divider lines up exactly */}
                   <View
                     style={{
                       flexDirection: "row",
-                      alignItems: "center",
                       backgroundColor: isDark ? "rgba(225,29,72,0.15)" : "#fff1f2",
                     }}
                   >
-                    <View
-                      style={{
-                        flex: 4.1,
-                        paddingVertical: 9,
-                        paddingHorizontal: 6,
-                        borderRightWidth: 1,
-                        borderRightColor: cardBorder,
-                      }}
-                    >
-                      <Text
+                    {(
+                      [
+                        ["", 0.5],
+                        ["", 1.2],
+                        ["Total Due", 1.7],
+                        ["", 0.7],
+                        [formatInr(totalDue), 1.3],
+                      ] as const
+                    ).map(([value, flex], i) => (
+                      <View
+                        key={i}
                         style={{
-                          color: theme.text,
-                          fontSize: 12,
-                          fontWeight: "700",
-                          textAlign: "center",
+                          flex,
+                          paddingVertical: 9,
+                          paddingHorizontal: 6,
+                          borderRightWidth: i < 4 ? 1 : 0,
+                          borderRightColor: cardBorder,
+                          justifyContent: "center",
                         }}
                       >
-                        Total Due
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1.3, paddingVertical: 9, paddingHorizontal: 6 }}>
-                      <Text
-                        style={{
-                          color: "#e11d48",
-                          fontSize: 12,
-                          fontWeight: "800",
-                          textAlign: "center",
-                        }}
-                      >
-                        {formatInr(totalDue)}
-                      </Text>
-                    </View>
+                        <Text
+                          style={{
+                            color: i === 4 ? "#e11d48" : theme.text,
+                            fontSize: 12,
+                            fontWeight: i === 4 ? "800" : "700",
+                            textAlign: "center",
+                          }}
+                        >
+                          {value}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
               )}
@@ -444,8 +449,8 @@ export function FeeDueDeclarationModal({
                   onToggle={() => setAcknowledgeChecked((v) => !v)}
                 >
                   I acknowledge that my Semester{" "}
-                  <Text style={{ fontWeight: "700" }}>{semesterDisplay}</Text> enrolment fee is
-                  pending and undertake to clear the dues as early as possible.
+                  <Text style={{ fontWeight: "700", fontStyle: "italic" }}>{semesterDisplay}</Text>{" "}
+                  enrolment fee is pending and undertake to clear the dues as early as possible.
                 </CheckboxRow>
                 <CheckboxRow
                   checked={consequenceChecked}

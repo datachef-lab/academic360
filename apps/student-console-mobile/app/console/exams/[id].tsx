@@ -280,7 +280,7 @@ export default function ExamDetailsScreen() {
             borderRadius: 8,
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "600", fontStyle: "italic" }}>Go Back</Text>
+          <Text style={{ color: "#fff", fontWeight: "600" }}>Go Back</Text>
         </Pressable>
       </View>
     );
@@ -319,9 +319,7 @@ export default function ExamDetailsScreen() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text
-                style={{ color: theme.text, fontSize: 20, fontWeight: "700", fontStyle: "italic" }}
-              >
+              <Text style={{ color: theme.text, fontSize: 20, fontWeight: "700" }}>
                 {exam.examType?.name ?? "Exam"}
               </Text>
               <View
@@ -334,9 +332,7 @@ export default function ExamDetailsScreen() {
                   backgroundColor: isDark ? "rgba(99,102,241,0.25)" : "#eef2ff",
                 }}
               >
-                <Text
-                  style={{ color: accent, fontSize: 13, fontWeight: "600", fontStyle: "italic" }}
-                >
+                <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>
                   {exam.class?.name ?? ""}
                 </Text>
               </View>
@@ -360,7 +356,6 @@ export default function ExamDetailsScreen() {
                   color: theme.text,
                   fontSize: 14,
                   fontWeight: "600",
-                  fontStyle: "italic",
                   marginBottom: 8,
                 }}
               >
@@ -467,7 +462,6 @@ export default function ExamDetailsScreen() {
                         color: theme.text,
                         fontSize: 12,
                         fontWeight: "700",
-                        fontStyle: "italic",
                         textTransform: "uppercase",
                       }}
                     >
@@ -578,7 +572,7 @@ export default function ExamDetailsScreen() {
             ) : (
               <Download size={20} color="#fff" />
             )}
-            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600", fontStyle: "italic" }}>
+            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>
               Download Admit Card
             </Text>
           </Pressable>
