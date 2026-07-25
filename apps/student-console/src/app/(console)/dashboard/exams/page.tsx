@@ -1091,6 +1091,7 @@ export default function ExamsContent() {
         onOpenChange={setIsFeesAlertOpen}
         dueFees={dueFees}
         semesterDisplay={semesterContext.display}
+        studentUid={student?.uid ?? undefined}
         onDeclared={markDeclared}
         onProceed={handleFeesAlertProceed}
       />
