@@ -124,7 +124,7 @@ export function FeesDueAlertDialog({
                 scroll area. Tighter cell padding/text on mobile keeps the five columns
                 within the viewport. */}
             {visibleFees.length > 0 && (
-              <div className="mt-5 overflow-hidden rounded-lg border border-gray-200">
+              <div className="mt-5 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200">
                 <table className="w-full border-collapse break-words text-center text-xs sm:text-[13px]">
                   <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
                     <tr>
@@ -193,7 +193,7 @@ export function FeesDueAlertDialog({
                 Native inputs on purpose: Radix checkbox/date typings broke the CI
                 next build under the box's strict pnpm linking (same lesson as the
                 footer buttons below). */}
-            <div className="mt-5 space-y-3 rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
+            <div className="mt-5 flex-shrink-0 space-y-3 rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
                 Declaration
               </p>
