@@ -60,9 +60,9 @@ export default function ExamsContent() {
   const [isFeesAlertOpen, setIsFeesAlertOpen] = useState(false);
   const { dueFees } = useStudentDueFees(student?.id);
   // Once a student has declared (both checkboxes + clear-by date) for the current dues
-  // context, the declaration dialog is never shown again — persisted server-side.
+  // context, the dialog is not shown again on this device (UI-only, localStorage).
   const semesterContext = useMemo(() => dueFeesSemesterContext(dueFees), [dueFees]);
-  const { declaration, markDeclared } = useFeeDueDeclaration(
+  const { declared, markDeclared } = useFeeDueDeclaration(
     student?.id,
     dueFees.length > 0 ? semesterContext.label : undefined,
   );
@@ -71,7 +71,7 @@ export default function ExamsContent() {
   // Intercepts the "view exam schedule" action: if fees are due AND the student has not
   // yet declared, show the declaration dialog first; otherwise open the schedule directly.
   const handleViewDetails = (exam: ExamDto) => {
-    if (dueFees.length > 0 && !declaration) {
+    if (dueFees.length > 0 && !declared) {
       setPendingExam(exam);
       setIsFeesAlertOpen(true);
       return;
@@ -1089,8 +1089,6 @@ export default function ExamsContent() {
         open={isFeesAlertOpen}
         onOpenChange={setIsFeesAlertOpen}
         dueFees={dueFees}
-        studentId={student?.id}
-        semesterLabel={semesterContext.label}
         semesterDisplay={semesterContext.display}
         onDeclared={markDeclared}
         onProceed={handleFeesAlertProceed}

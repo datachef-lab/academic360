@@ -3,8 +3,6 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
 
 import {
   AlertDialog,
@@ -16,7 +14,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { isCasualReceipt, type StudentDueFee } from "./use-student-due-fees";
-import { submitFeeDueDeclaration, type FeeDueDeclaration } from "./use-fee-due-declaration";
 
 const formatInr = (value: number): string =>
   new Intl.NumberFormat("en-IN", {
@@ -36,13 +33,10 @@ interface FeesDueAlertDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dueFees: StudentDueFee[];
-  studentId?: number;
-  /** DB key for the dues context, e.g. "SEMESTER II" (from dueFeesSemesterContext). */
-  semesterLabel: string;
   /** Human form for the "Semester {{X}}" copy, e.g. "II". */
   semesterDisplay: string;
-  /** Called after the declaration is saved, so the page can skip the dialog from now on. */
-  onDeclared: (declaration: FeeDueDeclaration) => void;
+  /** Called when the student proceeds, so the page can skip the dialog from now on. */
+  onDeclared: () => void;
   /** Called when the student clicks "Generate admit card" — opens the Exam Schedule. */
   onProceed: () => void;
 }
@@ -51,15 +45,14 @@ interface FeesDueAlertDialogProps {
  * "Important Notification" declaration shown before the Exam Schedule when the student
  * has outstanding semester dues. The student must tick both declarations (the first one
  * includes a clear-by date capped at one month out) before "Generate admit card"
- * unlocks; the declaration is persisted server-side so it is only ever asked once per
- * dues context.
+ * unlocks. The checkboxes and date are UI-only (explicit product decision — nothing is
+ * stored in the DB); "declared once" is remembered client-side so the dialog is not
+ * shown again on this device.
  */
 export function FeesDueAlertDialog({
   open,
   onOpenChange,
   dueFees,
-  studentId,
-  semesterLabel,
   semesterDisplay,
   onDeclared,
   onProceed,
@@ -69,7 +62,6 @@ export function FeesDueAlertDialog({
   const [acknowledgeChecked, setAcknowledgeChecked] = useState(false);
   const [consequenceChecked, setConsequenceChecked] = useState(false);
   const [clearByDate, setClearByDate] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   // Date picker window: today .. +1 month (per the notification spec).
   const { minDate, maxDate } = useMemo(() => {
@@ -85,25 +77,12 @@ export function FeesDueAlertDialog({
   const totalDue = visibleFees.reduce((sum, fee) => sum + Number(fee.totalPayable || 0), 0);
 
   const dateValid = clearByDate >= minDate && clearByDate <= maxDate;
-  const canGenerate =
-    acknowledgeChecked && consequenceChecked && dateValid && !!studentId && !submitting;
+  const canGenerate = acknowledgeChecked && consequenceChecked && dateValid;
 
-  const handleGenerateAdmitCard = async () => {
-    if (!canGenerate || !studentId) return;
-    setSubmitting(true);
-    try {
-      const declaration = await submitFeeDueDeclaration({
-        studentId,
-        semesterLabel,
-        undertakingClearDate: clearByDate,
-      });
-      onDeclared(declaration);
-      onProceed();
-    } catch {
-      toast.error("Could not save your declaration. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
+  const handleGenerateAdmitCard = () => {
+    if (!canGenerate) return;
+    onDeclared();
+    onProceed();
   };
 
   return (
@@ -294,7 +273,7 @@ export function FeesDueAlertDialog({
                 Click to Pay
               </Button>
               <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
-                {submitting ? "Saving..." : "Generate admit card"}
+                Generate admit card
               </Button>
             </AlertDialogFooter>
           </div>

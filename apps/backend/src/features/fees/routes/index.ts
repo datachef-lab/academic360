@@ -9,7 +9,6 @@ import feeStudentMappingRouter from "./fee-student-mapping.route.js";
 import feeGroupPromotionMappingRouter from "./fee-group-promotion-mapping.route.js";
 import feeCategoryPromotionMappingRouter from "./fee-category-promotion-mapping.route.js";
 import receiptTypeRouter from "./receipt-type.route.js";
-import feeDueDeclarationRouter from "./fee-due-declaration.route.js";
 import addonRouter from "./addon.route.js";
 
 const router = Router();
@@ -46,9 +45,6 @@ router.use(
 
 // Receipt Types
 router.use("/receipt-types", receiptTypeRouter);
-
-// Fee Due Declarations (student-console pending-fees undertaking)
-router.use("/due-declarations", feeDueDeclarationRouter);
 
 // Addons
 router.use("/addons", addonRouter);
