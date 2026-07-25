@@ -83,7 +83,8 @@ export function FeesDueAlertDialog({
             </AlertDialogHeader>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {/* Illustration as a cover banner below the title */}
+              {/* Illustration as a cover banner below the title, with a light dark
+                  overlay so it reads as a backdrop rather than competing with the text */}
               <div className="relative h-40 w-full sm:h-56">
                 <Image
                   src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
@@ -93,6 +94,7 @@ export function FeesDueAlertDialog({
                   unoptimized
                   className="object-cover object-center"
                 />
+                <div className="absolute inset-0 bg-black/20" />
               </div>
 
               <div className="flex flex-col px-6 pb-6 pt-4 sm:px-8 sm:pb-8">
