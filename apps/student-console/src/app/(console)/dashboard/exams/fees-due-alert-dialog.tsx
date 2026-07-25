@@ -88,7 +88,7 @@ export function FeesDueAlertDialog({
         Click to Pay
       </Button>
       <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
-        Generate admit card
+        Proceed to Download Admit Card
       </Button>
     </>
   );
@@ -120,8 +120,8 @@ export function FeesDueAlertDialog({
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {/* Title stays put while the content below scrolls */}
             <AlertDialogHeader className="flex-shrink-0 border-b border-gray-100 px-6 pb-4 pt-6 text-left sm:px-8 sm:pt-6 sm:text-left">
-              <AlertDialogTitle className="text-xl font-semibold text-rose-700">
-                Important Notification:
+              <AlertDialogTitle className="text-xl font-semibold text-gray-900">
+                Semester Fee Reminder
               </AlertDialogTitle>
             </AlertDialogHeader>
 
@@ -143,18 +143,21 @@ export function FeesDueAlertDialog({
               <div className="flex flex-col px-6 pb-6 pt-4 sm:px-8 sm:pb-8">
                 <AlertDialogDescription className="space-y-3 text-[13px] leading-relaxed text-gray-600">
                   <span className="block">
-                    As per our records, your Semester{" "}
-                    <span className="font-semibold text-gray-800">{semesterDisplay}</span> enrolment
-                    fee is not paid despite multiple reminders sent to you previously.{" "}
-                    <span className="font-semibold text-gray-800">
-                      Consequently, you are currently not considered a bonafide student of the
-                      College.
-                    </span>
+                    Our records show your{" "}
+                    <span className="font-semibold italic text-gray-800">
+                      Semester {semesterDisplay}
+                    </span>{" "}
+                    fee is still pending. You can still download your admit card now on confirming
+                    the acknowledgment below.
                   </span>
-                  <span className="block">
-                    Please note that completing enrolment procedure including payment of the
-                    Semester <span className="font-semibold text-gray-800">{semesterDisplay}</span>{" "}
-                    fee is mandatory to appear for the Calcutta University End-Semester Examination.
+                  <span className="block rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
+                    Please treat this as a reminder, not a block. However, prolonged delay in
+                    payment of fee may end up in deactivation of your UID and eventually an academic
+                    hold on your further education.
+                  </span>
+                  <span className="block font-semibold text-emerald-800">
+                    You are advised, in your interest, to clear the dues immediately to avoid any
+                    inconvenience.
                   </span>
                 </AlertDialogDescription>
 
@@ -252,9 +255,9 @@ export function FeesDueAlertDialog({
                       className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
                     />
                     <span>
-                      I acknowledge that my Semester{" "}
-                      <span className="font-semibold">{semesterDisplay}</span> enrolment fee is
-                      pending and undertake to clear the dues as early as possible.
+                      I acknowledge that my{" "}
+                      <span className="font-semibold italic">Semester {semesterDisplay}</span> fee
+                      is currently pending.
                     </span>
                   </label>
                   <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-gray-700">
@@ -264,16 +267,22 @@ export function FeesDueAlertDialog({
                       onChange={(e) => setConsequenceChecked(e.target.checked)}
                       className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
                     />
-                    <span>
-                      I understand that non-payment of my dues may affect my bonafide student status
-                      and Calcutta University examination eligibility.
-                    </span>
+                    <span>I confirm I will clear this amount at the earliest.</span>
                   </label>
                 </div>
                 {/* Mobile: buttons scroll with the content at its end */}
                 <AlertDialogFooter className="mt-6 gap-2 sm:hidden">
                   {actionButtons}
                 </AlertDialogFooter>
+                {/* Contact note for payment issues */}
+                <p className="mt-5 border-t border-dashed border-gray-200 pt-4 text-xs leading-relaxed text-gray-500">
+                  You may reach us on any working day between{" "}
+                  <span className="font-semibold text-gray-700">10:30 AM and 1:30 PM</span> at{" "}
+                  <span className="font-semibold text-gray-700">
+                    Room No. 424, System Control Room
+                  </span>
+                  , college campus, with any issues while making the fee payment.
+                </p>
               </div>
             </div>
 
