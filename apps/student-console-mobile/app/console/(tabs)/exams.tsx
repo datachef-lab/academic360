@@ -4,7 +4,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import { useExamSocketRefresh } from "@/providers/exam-socket-provider";
 import { fetchExamsByStudentId } from "@/services/exam-api";
-import { Calendar, Clock, Eye, FileText, GraduationCap, History } from "lucide-react-native";
+import { Calendar, Clock, FileText, GraduationCap, History } from "lucide-react-native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
@@ -294,32 +294,18 @@ export default function ExamsScreen() {
               )}
             </View>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-                backgroundColor: styles.iconBg,
-              }}
-            >
-              <Text style={{ color: styles.text, fontSize: 12, fontWeight: "500" }}>
-                {exam.class?.name ?? ""}
-              </Text>
-            </View>
-            <Pressable
-              onPress={onPress}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: styles.iconBg,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Eye size={18} color={styles.text} />
-            </Pressable>
+          {/* Whole card is pressable — no separate eye button */}
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 999,
+              backgroundColor: styles.iconBg,
+            }}
+          >
+            <Text style={{ color: styles.text, fontSize: 12, fontWeight: "500" }}>
+              {exam.class?.name ?? ""}
+            </Text>
           </View>
         </View>
       </Pressable>

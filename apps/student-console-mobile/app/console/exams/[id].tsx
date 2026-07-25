@@ -5,6 +5,10 @@ import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import { useExamSocketRefresh } from "@/providers/exam-socket-provider";
 import { fetchExamById, fetchExamCandidates } from "@/services/exam-api";
+import {
+  FeeDueDeclarationModal,
+  useFeeDueDeclarationGate,
+} from "@/components/fee-due-declaration-modal";
 import { Calendar, Clock, Download } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -45,6 +49,10 @@ export default function ExamDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [paperDetails, setPaperDetails] = useState<PaperDetail[]>([]);
   const [downloading, setDownloading] = useState(false);
+  // Fee-due declaration gate: with pending dues the student must declare once
+  // (per device, AsyncStorage) before the admit card can be downloaded.
+  const [declarationVisible, setDeclarationVisible] = useState(false);
+  const feeDueGate = useFeeDueDeclarationGate(student?.id ? Number(student.id) : undefined);
 
   const isDark = colorScheme === "dark";
   const accent = isDark ? "#6366f1" : "#4f46e5";
@@ -98,66 +106,59 @@ export default function ExamDetailsScreen() {
     fetchExamCandidates(examId, sid)
       .then((res) => {
         const candidates = Array.isArray(res.payload) ? res.payload : [];
-        const currentPromotionId = student?.currentPromotion?.id;
-        const seenSubjects = new Set<number>();
-        const details: PaperDetail[] = candidates
+        // Mirrors the student-console web modal (exam-papers-modal.tsx): a paper +
+        // matching exam subject is enough to list a row — room/seat allocation is
+        // OPTIONAL and shows as "Not assigned" until done. The old version dropped
+        // every candidate without a room, so the schedule was empty pre-allocation.
+        const details: (PaperDetail & { examSubjectId: number })[] = candidates
           .map((candidate) => {
             const data =
               (candidate as unknown as { exam_candidates?: Record<string, unknown> })
                 ?.exam_candidates ?? candidate;
-            const promotionId = (data as Record<string, unknown>)?.promotionId as
-              | number
-              | undefined;
             const examRoomId = (data as Record<string, unknown>)?.examRoomId;
             const examSubjectId = (data as Record<string, unknown>)?.examSubjectId as
               | number
               | undefined;
             const seatNumber = (data as Record<string, unknown>)?.seatNumber as string | undefined;
             const paper = candidate?.paper;
-            if (!paper || !examRoomId || !examSubjectId) return null;
-            if (
-              currentPromotionId != null &&
-              promotionId != null &&
-              promotionId !== currentPromotionId
-            )
-              return null;
-            if (examSubjectId != null && seenSubjects.has(examSubjectId)) return null;
-            if (examSubjectId != null) seenSubjects.add(examSubjectId);
-            const examRoom = exam.locations?.find((loc) => loc?.id === examRoomId);
+            if (!paper || !examSubjectId) return null;
             const examSubject = exam.examSubjects?.find((s) => s?.id === examSubjectId);
-            if (!examRoom?.room || !examSubject) return null;
+            if (!examSubject) return null;
+            let room = "Not assigned";
+            let floor = "";
+            if (examRoomId) {
+              const examRoom = exam.locations?.find((loc) => loc?.id === examRoomId);
+              if (examRoom?.room) {
+                room = examRoom.room?.name || "Not assigned";
+                floor = examRoom.room?.floor?.name || "";
+              }
+            }
             return {
               paperCode: (paper as { code?: string })?.code ?? "",
               subjectName: examSubject.subject?.name ?? "",
               startTime: new Date(examSubject.startTime),
               endTime: new Date(examSubject.endTime),
-              room: examRoom.room?.name ?? "",
-              floor: examRoom.room?.floor?.name ?? "",
+              room,
+              floor,
               seatNumber: seatNumber ?? "",
+              examSubjectId: Number(examSubjectId),
             };
           })
-          .filter((d): d is PaperDetail => d !== null)
-          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+          .filter((d): d is PaperDetail & { examSubjectId: number } => d !== null)
+          // Backend admit-card order: start time, then examSubjectId as tiebreaker
+          .sort(
+            (a, b) =>
+              a.startTime.getTime() - b.startTime.getTime() || a.examSubjectId - b.examSubjectId,
+          );
         setPaperDetails(details);
       })
       .catch(() => setPaperDetails([]));
-  }, [exam?.id, exam?.locations, exam?.examSubjects, student?.id, student?.currentPromotion?.id]);
+  }, [exam?.id, exam?.locations, exam?.examSubjects, student?.id]);
 
-  const handleDownloadAdmitCard = async () => {
+  const performDownload = async () => {
     if (!exam?.id || !student?.id) return;
     const examId = Number(exam.id);
     const sid = Number(student.id);
-    const now = Date.now();
-    const start = exam.admitCardStartDownloadDate
-      ? new Date(exam.admitCardStartDownloadDate).getTime()
-      : null;
-    const end = exam.admitCardLastDownloadDate
-      ? new Date(exam.admitCardLastDownloadDate).getTime()
-      : null;
-    if (!start || now < start || (end && now > end)) {
-      Alert.alert("Not available", "Admit card download is not available at this time.");
-      return;
-    }
     setDownloading(true);
     try {
       const { API_BASE_URL } = await import("@/lib/api");
@@ -196,6 +197,33 @@ export default function ExamDetailsScreen() {
     } finally {
       setDownloading(false);
     }
+  };
+
+  const handleDownloadAdmitCard = async () => {
+    if (!exam?.id || !student?.id) return;
+    const now = Date.now();
+    const start = exam.admitCardStartDownloadDate
+      ? new Date(exam.admitCardStartDownloadDate).getTime()
+      : null;
+    const end = exam.admitCardLastDownloadDate
+      ? new Date(exam.admitCardLastDownloadDate).getTime()
+      : null;
+    if (!start || now < start || (end && now > end)) {
+      Alert.alert("Not available", "Admit card download is not available at this time.");
+      return;
+    }
+    // Pending dues + not yet declared on this device → declaration first.
+    if (feeDueGate.dueFees.length > 0 && !(await feeDueGate.isDeclared())) {
+      setDeclarationVisible(true);
+      return;
+    }
+    await performDownload();
+  };
+
+  const handleDeclarationProceed = async () => {
+    await feeDueGate.markDeclared();
+    setDeclarationVisible(false);
+    await performDownload();
   };
 
   const showDownload =
@@ -541,6 +569,16 @@ export default function ExamDetailsScreen() {
           </Pressable>
         </View>
       )}
+
+      {/* Fee-due declaration shown before the first admit-card download when dues exist */}
+      <FeeDueDeclarationModal
+        visible={declarationVisible}
+        onClose={() => setDeclarationVisible(false)}
+        dueFees={feeDueGate.dueFees}
+        semesterDisplay={feeDueGate.context.display}
+        studentUid={student?.uid}
+        onProceed={handleDeclarationProceed}
+      />
     </View>
   );
 }
