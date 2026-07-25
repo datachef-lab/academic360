@@ -123,11 +123,6 @@ export function FeesDueAlertDialog({
               <AlertDialogTitle className="text-xl font-semibold text-rose-700">
                 Important Notification:
               </AlertDialogTitle>
-              {studentUid && (
-                <p className="text-xs font-medium text-gray-500">
-                  UID: <span className="text-gray-700">{studentUid}</span>
-                </p>
-              )}
             </AlertDialogHeader>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
@@ -167,8 +162,13 @@ export function FeesDueAlertDialog({
                 scrolling in either direction: the whole right column is the single
                 scroll area. Tighter cell padding/text on mobile keeps the five columns
                 within the viewport. */}
+                {studentUid && (
+                  <p className="mt-5 text-xs font-medium text-gray-500">
+                    UID: <span className="text-gray-700">{studentUid}</span>
+                  </p>
+                )}
                 {visibleFees.length > 0 && (
-                  <div className="mt-5 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200">
+                  <div className="mt-2 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200">
                     <table className="w-full border-collapse break-words text-center text-xs sm:text-[13px]">
                       <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
                         <tr>
