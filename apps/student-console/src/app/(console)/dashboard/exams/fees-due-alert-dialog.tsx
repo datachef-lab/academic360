@@ -1,8 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
 
 import {
   AlertDialog,
@@ -15,12 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { isCasualReceipt, type StudentDueFee } from "./use-student-due-fees";
 
-/**
- * Last date by which students must clear their dues. Shown in the alert below.
- * Change this single constant to update the deadline everywhere.
- */
-export const FEES_LAST_DATE = "14 August, 2026";
-
 const formatInr = (value: number): string =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -28,114 +22,246 @@ const formatInr = (value: number): string =>
     maximumFractionDigits: 0,
   }).format(Number(value || 0));
 
-const feeSubtitle = (fee: StudentDueFee): string =>
-  [
-    fee.feeStructure?.class?.name,
-    fee.feeStructure?.academicYear?.year,
-    fee.type === "INSTALLMENT" && fee.feeStructureInstallment?.name
-      ? fee.feeStructureInstallment.name
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+const toISODate = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
 interface FeesDueAlertDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dueFees: StudentDueFee[];
-  /** Called when the student clicks "Okay" — proceeds to open the Exam Schedule. */
+  /** Human form for the "Semester {{X}}" copy, e.g. "II". */
+  semesterDisplay: string;
+  /** Called when the student proceeds, so the page can skip the dialog from now on. */
+  onDeclared: () => void;
+  /** Called when the student clicks "Generate admit card" — opens the Exam Schedule. */
   onProceed: () => void;
 }
 
 /**
- * Shown before the Exam Schedule dialog when the student has outstanding fees.
- * Lists the due fees + the payment deadline; "Okay" continues to the schedule,
- * "View Fees" takes them to the Enrolment & Fees page to pay.
+ * "Important Notification" declaration shown before the Exam Schedule when the student
+ * has outstanding semester dues. The student must tick both declarations (the first one
+ * includes a clear-by date capped at one month out) before "Generate admit card"
+ * unlocks. The checkboxes and date are UI-only (explicit product decision — nothing is
+ * stored in the DB); "declared once" is remembered client-side so the dialog is not
+ * shown again on this device.
  */
 export function FeesDueAlertDialog({
   open,
   onOpenChange,
   dueFees,
+  semesterDisplay,
+  onDeclared,
   onProceed,
 }: FeesDueAlertDialogProps) {
   const router = useRouter();
+
+  const [acknowledgeChecked, setAcknowledgeChecked] = useState(false);
+  const [consequenceChecked, setConsequenceChecked] = useState(false);
+  const [clearByDate, setClearByDate] = useState("");
+
+  // Date picker window: today .. +1 month (per the notification spec).
+  const { minDate, maxDate } = useMemo(() => {
+    const now = new Date();
+    const max = new Date(now);
+    max.setMonth(max.getMonth() + 1);
+    return { minDate: toISODate(now), maxDate: toISODate(max) };
+  }, []);
 
   // Belt-and-suspenders: never render casual receipts here, and compute the total from
   // the same visible list so the two always agree (even if upstream data is stale).
   const visibleFees = dueFees.filter((fee) => !isCasualReceipt(fee));
   const totalDue = visibleFees.reduce((sum, fee) => sum + Number(fee.totalPayable || 0), 0);
 
+  const dateValid = clearByDate >= minDate && clearByDate <= maxDate;
+  const canGenerate = acknowledgeChecked && consequenceChecked && dateValid;
+
+  const handleGenerateAdmitCard = () => {
+    if (!canGenerate) return;
+    onDeclared();
+    onProceed();
+  };
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-3xl overflow-hidden p-0">
-        <div className="flex min-h-[560px] flex-col sm:flex-row">
-          {/* Left: illustration filling the full height of the dialog (cover, not centered) */}
-          <div className="relative h-56 w-full flex-shrink-0 bg-violet-50 sm:h-auto sm:w-[45%]">
+      {/* Two-column layout: full-height illustration left, content right. Sized
+          generously (5xl / ~90vh) so the notification, dues and declaration all
+          breathe; the right column scrolls if it ever overflows. */}
+      <AlertDialogContent className="max-w-6xl overflow-hidden p-0">
+        <div className="flex max-h-[92vh] min-h-[680px] flex-col sm:flex-row">
+          {/* Left: illustration shown whole (tightly cropped source, contain — not
+              cover). A soft gradient + caption fill the column so the space around
+              the square artwork reads as designed, not empty. */}
+          <div className="flex w-full flex-shrink-0 flex-col items-center justify-center gap-6 border-b border-gray-200 bg-gradient-to-b from-violet-50 via-white to-rose-50 p-6 sm:w-[38%] sm:border-b-0 sm:border-r sm:p-8">
             <Image
-              src={`${process.env.NEXT_PUBLIC_URL}/fee-details-1.png`}
-              alt="Fees payment details"
-              fill
+              src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
+              alt="Pending fees illustration"
+              width={840}
+              height={870}
               priority
               unoptimized
-              className="object-cover object-top"
+              className="h-auto w-full max-w-[420px]"
             />
+            <p className="text-center text-xs leading-relaxed text-gray-500">
+              Clear your Semester{" "}
+              <span className="font-semibold text-gray-700">{semesterDisplay}</span> dues to stay
+              exam-ready.
+            </p>
           </div>
 
-          {/* Right: message + outstanding dues */}
-          <div className="flex min-w-0 flex-1 flex-col p-6 sm:p-8">
-            <AlertDialogHeader className="space-y-2 text-left sm:text-left">
-              <AlertDialogTitle className="text-xl font-semibold">
-                Pending Fees — Please Clear Your Dues
+          {/* Right: notification + dues + declaration + actions */}
+          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-6 sm:p-8">
+            <AlertDialogHeader className="space-y-3 text-left sm:text-left">
+              <AlertDialogTitle className="text-xl font-semibold text-rose-700">
+                Important Notification:
               </AlertDialogTitle>
-              <AlertDialogDescription className="text-sm leading-relaxed">
-                You have outstanding fees on your account. Kindly complete the payment before{" "}
-                <span className="font-semibold text-rose-600">{FEES_LAST_DATE}</span> to avoid any
-                disruption to your examinations and admit card download.
+              <AlertDialogDescription className="space-y-3 text-[13px] leading-relaxed text-gray-600">
+                <span className="block">
+                  As per our records, your Semester{" "}
+                  <span className="font-semibold text-gray-800">{semesterDisplay}</span> enrolment
+                  fee is not paid despite multiple reminders sent to your Institutional Email ID
+                  and/or registered mobile number.{" "}
+                  <span className="font-semibold text-gray-800">
+                    Consequently, you are currently not considered a bonafide student of the
+                    College.
+                  </span>
+                </span>
+                <span className="block">
+                  Please note that payment of the Semester{" "}
+                  <span className="font-semibold text-gray-800">{semesterDisplay}</span> enrolment
+                  fee is mandatory to maintain your bonafide student status and to become eligible
+                  to appear for the Calcutta University End-Semester Examination.
+                </span>
+                <span className="block font-medium text-gray-700">
+                  Thus, you are advised to clear your outstanding dues at the earliest.
+                </span>
               </AlertDialogDescription>
             </AlertDialogHeader>
 
-            {/* Breakdown of what's due */}
+            {/* Breakdown of what's due — plain table, no inner scroll so the
+                Total row is never clipped (the whole right column scrolls) */}
             {visibleFees.length > 0 && (
-              <div className="mt-4 rounded-lg border border-rose-100 bg-rose-50/60 p-3">
-                <div className="mb-2 flex items-center gap-2 text-rose-700">
-                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                  <span className="text-xs font-medium uppercase tracking-wide">
-                    Outstanding Fees
-                  </span>
-                </div>
-                <div className="max-h-44 space-y-2 overflow-y-auto">
-                  {visibleFees.map((fee) => {
-                    const subtitle = feeSubtitle(fee);
-                    return (
-                      <div
-                        key={fee.id}
-                        className="flex items-start justify-between gap-3 rounded-md bg-white/70 px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-gray-800">
-                            {fee.feeStructure?.receiptType?.name ?? "Fee"}
-                          </p>
-                          {subtitle && <p className="truncate text-xs text-gray-500">{subtitle}</p>}
-                        </div>
-                        <span className="whitespace-nowrap text-sm font-semibold text-rose-600">
+              <div className="mt-5 overflow-hidden rounded-lg border border-gray-200">
+                <table className="w-full border-collapse text-center text-[13px]">
+                  <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">Sr No</th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">
+                        Academic Year
+                      </th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">Receipt</th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">Semester</th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleFees.map((fee, index) => (
+                      <tr key={fee.id}>
+                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
+                          {index + 1}.
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
+                          {fee.feeStructure?.academicYear?.year ?? "—"}
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2 font-medium text-gray-800">
+                          {fee.feeStructure?.receiptType?.name ?? "Fee"}
+                          {fee.type === "INSTALLMENT" && fee.feeStructureInstallment?.name
+                            ? ` (${fee.feeStructureInstallment.name})`
+                            : ""}
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
+                          {String(fee.feeStructure?.class?.name ?? "—").replace(
+                            /^SEMESTER\s*/i,
+                            "",
+                          )}
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2 font-semibold text-gray-800">
                           {formatInr(fee.totalPayable)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 flex items-center justify-between border-t border-rose-100 pt-2">
-                  <span className="text-sm font-semibold text-gray-700">Total Due</span>
-                  <span className="text-base font-bold text-rose-600">{formatInr(totalDue)}</span>
-                </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-rose-50/70">
+                      <td
+                        colSpan={4}
+                        className="border border-gray-200 px-3 py-2 font-semibold text-gray-700"
+                      >
+                        Total Due
+                      </td>
+                      <td className="border border-gray-200 px-3 py-2 font-bold text-rose-600">
+                        {formatInr(totalDue)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             )}
+
+            {/* Declarations — both must be ticked to unlock "Generate admit card".
+                Native inputs on purpose: Radix checkbox/date typings broke the CI
+                next build under the box's strict pnpm linking (same lesson as the
+                footer buttons below). */}
+            <div className="mt-5 space-y-3 rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                Declaration
+              </p>
+              {/* The date input must NOT live inside the label, else clicking it
+                toggles the checkbox instead of opening the picker. */}
+              <div className="flex items-start gap-3 text-[13px] leading-relaxed text-gray-700">
+                <input
+                  id="fee-due-ack"
+                  type="checkbox"
+                  checked={acknowledgeChecked}
+                  onChange={(e) => setAcknowledgeChecked(e.target.checked)}
+                  className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
+                />
+                <span>
+                  <label htmlFor="fee-due-ack" className="cursor-pointer">
+                    I acknowledge that my Semester{" "}
+                    <span className="font-semibold">{semesterDisplay}</span> enrolment fee is
+                    pending and undertake to clear the dues by
+                  </label>{" "}
+                  <input
+                    type="date"
+                    value={clearByDate}
+                    min={minDate}
+                    max={maxDate}
+                    onChange={(e) => setClearByDate(e.target.value)}
+                    className="inline-block rounded-md border border-gray-300 bg-white px-2 py-0.5 text-[13px] focus:border-indigo-500 focus:outline-none"
+                  />
+                  <label htmlFor="fee-due-ack" className="cursor-pointer">
+                    .
+                  </label>
+                </span>
+              </div>
+              <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={consequenceChecked}
+                  onChange={(e) => setConsequenceChecked(e.target.checked)}
+                  className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
+                />
+                <span>
+                  I understand that non-payment of my dues within the date specified by me above may
+                  affect my bonafide student status and Calcutta University examination eligibility.
+                </span>
+              </label>
+              {acknowledgeChecked && !dateValid && (
+                <p className="pl-7 text-xs text-rose-600">
+                  Please pick the date (within one month) by which you will clear the dues.
+                </p>
+              )}
+            </div>
 
             {/* Plain Buttons (no AlertDialogCancel/Action): the Radix prop typings
                 resolve differently under the box's strict pnpm linking and broke the
                 CI next build twice. The dialog is controlled via open/onOpenChange,
                 so native buttons are sufficient. */}
-            <AlertDialogFooter className="mt-auto pt-6 sm:justify-between">
+            <AlertDialogFooter className="mt-auto gap-2 pt-6 sm:justify-between">
               <Button
                 variant="outline"
                 className="mt-0"
@@ -144,9 +270,11 @@ export function FeesDueAlertDialog({
                   router.push("/dashboard/enrollment-fees");
                 }}
               >
-                View Fees &amp; Pay
+                Click to Pay
               </Button>
-              <Button onClick={onProceed}>Okay, Continue</Button>
+              <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
+                Generate admit card
+              </Button>
             </AlertDialogFooter>
           </div>
         </div>
