@@ -45,7 +45,7 @@ export function scheduleRealtimeTrackerBroadcast(
     tab,
     setTimeout(() => {
       debounceTimers.delete(tab);
-      void pushRealtimeTrackerSnapshot(tab, filters, reason);
+      void fireSnapshot(tab, filters, reason);
     }, 400),
   );
 }
@@ -81,7 +81,7 @@ export function scheduleRealtimeTrackerThrottledBroadcast(
       clearTimeout(trailing);
       throttleTrailing.delete(tab);
     }
-    void pushRealtimeTrackerSnapshot(tab, filters, reason);
+    void fireSnapshot(tab, filters, reason);
     return;
   }
   // Too soon since the last emit — schedule a single trailing flush so the
@@ -93,9 +93,24 @@ export function scheduleRealtimeTrackerThrottledBroadcast(
     setTimeout(() => {
       throttleTrailing.delete(tab);
       throttleLastAt.set(tab, Date.now());
-      void pushRealtimeTrackerSnapshot(tab, filters, reason);
+      void fireSnapshot(tab, filters, reason);
     }, minIntervalMs - elapsed),
   );
+}
+
+/**
+ * Fire and signal: emit this instance's snapshot and signal all other instances
+ * to also fire their local throttles. Idle instances emit immediately (leading edge).
+ */
+async function fireSnapshot(
+  tab: RealtimeTrackerTab,
+  filters: RealtimeTrackerFilters,
+  reason: string,
+): Promise<void> {
+  // Signal other instances to also fire their throttle for this tab
+  socketService.crossInstanceSignal("tracker_update_needed", { tab });
+  // Then emit this instance's snapshot
+  await pushRealtimeTrackerSnapshot(tab, filters, reason);
 }
 
 export async function pushRealtimeTrackerSnapshot(
@@ -108,7 +123,7 @@ export async function pushRealtimeTrackerSnapshot(
       const payload = await getAffiliationRegistrationData(filters);
       socketService.sendAffiliationRegistrationUpdate(
         filters as Record<string, unknown>,
-        payload as Record<string, unknown>,
+        { ...payload, _ts: Date.now() } as Record<string, unknown>,
         reason,
       );
       // The room above only reaches viewers whose filter hash matches the
@@ -125,7 +140,7 @@ export async function pushRealtimeTrackerSnapshot(
     const payload = await getFeeMisData(filters);
     socketService.sendFeeMisUpdate(
       filters as Record<string, unknown>,
-      payload as Record<string, unknown>,
+      { ...payload, _ts: Date.now() } as Record<string, unknown>,
       reason,
     );
     // Same as affiliation: the room above only reaches viewers whose filter

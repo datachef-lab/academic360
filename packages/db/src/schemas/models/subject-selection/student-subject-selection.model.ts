@@ -41,6 +41,13 @@ export const studentSubjectSelectionModel = pgTable("student_subject_selections"
     studentActiveIdx: index("student_subject_selections_student_active_idx")
         .on(t.studentId)
         .where(sql`${t.isActive} = true`),
+    // Subject Selection report groups selections by meta for the whole student
+    // set; composite (meta, student) serves the batched `meta = X AND student IN
+    // (...)` lookup that replaces the old per-student N+1.
+    metaStudentIdx: index("student_subject_selections_meta_student_idx")
+        .on(t.subjectSelectionMetaId, t.studentId),
+    sessionIdx: index("student_subject_selections_session_id_idx").on(t.sessionId),
+    subjectIdx: index("student_subject_selections_subject_id_idx").on(t.subjectId),
 }));
 
 export const createStudentSubjectSelection = createInsertSchema(studentSubjectSelectionModel);

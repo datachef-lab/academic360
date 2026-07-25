@@ -96,6 +96,7 @@ import {
 
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
 import { migrateSubjectSelectionForStudent } from "./subject-selection-migration.service.js";
+import { recordImportLog } from "@/utils/legacy-import-log.js";
 import { and, eq, ilike, or } from "drizzle-orm";
 
 import { OldBoard } from "@/types/old-board";
@@ -593,6 +594,33 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
       ),
     );
 
+  // Previously-imported student whose user link changed (e.g. the user row
+  // was re-matched by email on a later run) — the legacy id is still the
+  // durable key.
+  if (!existingStudent) {
+    [existingStudent] = await db
+      .select()
+      .from(studentModel)
+      .where(eq(studentModel.legacyStudentId, oldStudent.id));
+  }
+
+  // Fresh-admit rows created by the NEW admission flow carry no
+  // legacy_student_id, so neither lookup above can ever match them — yet
+  // their uid already exists and the insert below would blow up on
+  // unique(uid) (e.g. 0101260515: user matched by legacy-id/email, student
+  // row belongs to the admission-flow account). Reuse the row by uid; the
+  // update branch stamps legacyStudentId and leaves userId untouched so the
+  // student's existing login link is preserved.
+  if (!existingStudent) {
+    const uid = oldStudent.codeNumber?.trim()?.toUpperCase();
+    if (uid) {
+      [existingStudent] = await db
+        .select()
+        .from(studentModel)
+        .where(eq(studentModel.uid, uid));
+    }
+  }
+
   let oldCourse: OldCourse | undefined;
 
   if (oldStudent.admissionid) {
@@ -659,6 +687,10 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
     const [updatedStudent] = await db
       .update(studentModel)
       .set({
+        // Stamp the legacy id: an admission-flow row matched via the uid
+        // fallback has NULL here, and stamping makes every future import
+        // resolve it through the primary (legacy id) lookup.
+        legacyStudentId: oldStudent.id,
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
         programCourseId: foundProgramCourse.id,
@@ -1983,21 +2015,19 @@ export async function processStudent(
   // Step 1: Upsert the student first
   student = await upsertStudent(oldStudent, user);
   {
-    // CU registration requests are a live workflow — create them for ACTIVE
-    // students only (the intent of the original isActive gate, added 2025-10-10).
-    // The historical data import below runs for INACTIVE (cancelled/dropped)
-    // students too: their admission/profile data must still be loaded.
-    let cuRegistrationRequest: Awaited<
-      ReturnType<typeof addStudentCuRegistrationRequest>
-    > | null = null;
-    if (user.isActive && !user.isSuspended) {
-      cuRegistrationRequest = await addStudentCuRegistrationRequest(student);
-      console.log(
-        "cu registration request created for student:",
-        student?.uid,
-        cuRegistrationRequest,
-      );
-    }
+    // CU-reg requests are created for EVERY student — inactive/suspended
+    // included. They used to be active-only, which left inactive students
+    // without the request row and everything the UI reads through it, so they
+    // looked "partially imported" (on staging only 166 of 808 inactive
+    // students had one). Live-workflow screens must gate on the student's
+    // status themselves, not on this row's absence.
+    const cuRegistrationRequest =
+      await addStudentCuRegistrationRequest(student);
+    console.log(
+      "cu registration request created for student:",
+      student?.uid,
+      cuRegistrationRequest,
+    );
     if (!cuRegistrationRequest?.cuRegistrationApplicationNumber) {
       // Step 2: Check for the accomodation
       await upsertAccommodation(oldStudent, user.id!);
@@ -2204,7 +2234,10 @@ export async function processStudent(
   await loadStudentAcademicInfoAndSubjects(oldStudent, student);
 
   // Step 11: Migrate legacy subject-selection (per-semester elective choices) into
-  // student_subject_selections. Idempotent + safe to re-run.
+  // student_subject_selections. Idempotent + safe to re-run. Outcomes are recorded
+  // durably: on Jul 22 staging the whole cohort loaded ZERO selections (every row
+  // skippedMeta — missing metas for their registration AY) and only console.log
+  // knew, so nobody noticed until the data was checked by hand.
   if (student) {
     try {
       const r = await migrateSubjectSelectionForStudent(student);
@@ -2214,8 +2247,34 @@ export async function processStudent(
           ...r,
         });
       }
+      const summary = `legacyRows=${r.legacyRows} inserted=${r.inserted} existing=${r.skippedExisting} dup=${r.skippedDup} skippedMeta=${r.skippedMeta} skippedSubject=${r.skippedSubject} skippedSession=${r.skippedSession} skippedClass=${r.skippedClass}`;
+      if (r.legacyRows === 0) {
+        await recordImportLog(
+          student.uid,
+          "subject-selection",
+          "skipped",
+          "no legacy selection rows",
+        );
+      } else if (r.inserted === 0 && r.skippedExisting === 0) {
+        // Rows existed in legacy but NONE landed or were already present —
+        // exactly the silent-starvation shape (e.g. missing metas).
+        await recordImportLog(
+          student.uid,
+          "subject-selection",
+          "error",
+          summary,
+        );
+      } else {
+        await recordImportLog(student.uid, "subject-selection", "ok", summary);
+      }
     } catch (e) {
       console.warn("[subject-selection-migration] failed for", student.uid, e);
+      await recordImportLog(
+        student.uid,
+        "subject-selection",
+        "error",
+        (e as Error)?.message || "unknown error",
+      );
     }
   }
 

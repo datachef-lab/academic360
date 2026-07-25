@@ -116,7 +116,8 @@ class SocketService {
     }
 
     const { userName } = this.pendingAuth;
-    this.socket.emit("authenticate", { userName });
+    // Send plain userId string, not an object
+    this.socket.emit("authenticate", String(this.userId));
     console.log(`[SocketService] Authenticated user: ${userName}`);
     this.pendingAuth = null;
   }

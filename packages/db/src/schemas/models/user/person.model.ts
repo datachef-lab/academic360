@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import {  familyModel } from "@/schemas/models/user";
 import { occupationModel, qualificationModel } from "@/schemas/models/resources";
@@ -28,7 +28,10 @@ export const personModel = pgTable("person", {
     
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // Detailed report joins family → person (father/mother) by family_id_fk.
+    familyIdx: index("person_family_id_idx").on(t.familyId),
+}));
 
 export const personRelations = relations(personModel, ({ one }) => ({
     qualification: one(qualificationModel, {

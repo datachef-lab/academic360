@@ -8,7 +8,7 @@
 //
 // Scope is derived dynamically from the new-DB `papers` table (max class with rows).
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { db, mysqlConnection } from "@/db/index.js";
 import {
   paperModel,
@@ -18,8 +18,11 @@ import {
   sessionModel,
   subjectSelectionMetaModel,
   subjectSelectionMetaClassModel,
+  subjectSelectionMetaStreamModel,
   studentSubjectSelectionModel,
   userModel,
+  promotionModel,
+  programCourseModel,
 } from "@repo/db/schemas/models";
 import type { Student } from "@repo/db/schemas/models";
 
@@ -37,10 +40,23 @@ type Bridges = {
   sessionMap: Map<number, { id: number; academicYearId: number | null }>;
   metasInDb: (typeof subjectSelectionMetaModel.$inferSelect)[];
   metaClassesByMeta: Map<number, Set<number>>;
+  // Meta -> stream ids it applies to. A meta with NO rows here applies to all
+  // streams (wildcard), matching fetchSubjectSelectionMetaData's filter.
+  metaStreamsByMeta: Map<number, Set<number>>;
   auditUserId: number;
 };
 
 let cached: Bridges | null = null;
+
+/**
+ * Drop the cached bridges so the next call rebuilds them. Called by the import
+ * path after `ensureAcademicYearStructure` creates sessions/metas mid-run —
+ * the process-lifetime cache otherwise keeps resolving against the pre-copy
+ * snapshot and silently `skippedMeta`s every selection for the new year.
+ */
+export function invalidateSubjectSelectionBridges(): void {
+  cached = null;
+}
 
 function norm(s: any): string {
   return String(s ?? "")
@@ -215,6 +231,20 @@ async function buildBridges(): Promise<Bridges> {
     metaClassesByMeta.get(mc.subjectSelectionMetaId)!.add(mc.classId);
   }
 
+  // Meta stream memberships. Metas are stream-scoped (e.g. AY 2024-25 has
+  // "Minor 2 (Sem III & IV)" for Arts/Science/Management AND "Minor 3
+  // (Sem III to VI)" for Commerce — same subject type, overlapping classes).
+  // Resolving without the stream filed every Commerce student's Minor picks
+  // under the Arts/Sci/Mgmt meta (first candidate by array order).
+  const metaStreams = await db.select().from(subjectSelectionMetaStreamModel);
+  const metaStreamsByMeta = new Map<number, Set<number>>();
+  for (const ms of metaStreams) {
+    if (ms.subjectSelectionMetaId == null || ms.streamId == null) continue;
+    if (!metaStreamsByMeta.has(ms.subjectSelectionMetaId))
+      metaStreamsByMeta.set(ms.subjectSelectionMetaId, new Set());
+    metaStreamsByMeta.get(ms.subjectSelectionMetaId)!.add(ms.streamId);
+  }
+
   // Audit user
   const [adminUser] = await db
     .select()
@@ -234,6 +264,7 @@ async function buildBridges(): Promise<Bridges> {
     sessionMap,
     metasInDb,
     metaClassesByMeta,
+    metaStreamsByMeta,
     auditUserId: adminUser.id!,
   };
 }
@@ -248,16 +279,67 @@ function resolveMeta(
   academicYearId: number,
   subjectTypeId: number,
   classId: number,
+  studentStreamId: number | null,
 ): number | null {
   const candidates = b.metasInDb.filter(
     (m: any) =>
       m.academicYearId === academicYearId && m.subjectTypeId === subjectTypeId,
   );
+  // Stream-scoped pass first: a meta with stream rows must include the
+  // student's stream. Without this, a Commerce student's Sem III Minor
+  // resolved to the Arts/Sci/Mgmt "Minor 2" meta (first by array order)
+  // instead of the Commerce "Minor 3" meta.
   for (const m of candidates) {
     const classes = b.metaClassesByMeta.get(m.id!);
-    if (classes?.has(classId)) return m.id!;
+    if (!classes?.has(classId)) continue;
+    const streams = b.metaStreamsByMeta.get(m.id!);
+    const streamOk =
+      !streams || streams.size === 0
+        ? true // meta with no stream config applies to all streams
+        : studentStreamId != null && streams.has(studentStreamId);
+    if (streamOk) return m.id!;
   }
   return null;
+}
+
+/**
+ * Student's stream via their latest non-deprecated promotion's program course.
+ * Null when the student has no promotion or the program course has no stream.
+ */
+async function getStudentStreamId(studentId: number): Promise<number | null> {
+  const [row] = await db
+    .select({ streamId: programCourseModel.streamId })
+    .from(promotionModel)
+    .innerJoin(
+      programCourseModel,
+      eq(programCourseModel.id, promotionModel.programCourseId),
+    )
+    .where(eq(promotionModel.studentId, studentId))
+    .orderBy(desc(promotionModel.id))
+    .limit(1);
+  return row?.streamId ?? null;
+}
+
+/**
+ * Student's registration AY = first promotion's session's academic year (the
+ * same rule as getRegistrationAcademicYearId / the AY-drift heal's first_p).
+ * All of a student's selections must live under registration-year metas, so
+ * the loader resolves metas against THIS AY — not each legacy row's session
+ * AY, which for Sem III+ rows is a later AY and produced the drifted rows the
+ * registration-year-drift heal then had to move. Resolving correctly at load
+ * time means a freshly imported student needs no post-hoc heal.
+ */
+async function getRegistrationAyId(studentId: number): Promise<number | null> {
+  const res: any = await db.execute(
+    `SELECT s.academic_id_fk AS ay_id
+     FROM promotions p
+     JOIN sessions s ON s.id = p.session_id_fk
+     WHERE p.student_id_fk = ${Number(studentId)}
+     ORDER BY p.id ASC
+     LIMIT 1`,
+  );
+  const row = ((res as any).rows ?? (res as any))[0];
+  return row?.ay_id ?? null;
 }
 
 export type SubjectSelectionResult = {
@@ -272,14 +354,24 @@ export type SubjectSelectionResult = {
   skippedClass: number;
 };
 
+/** Anything drizzle-shaped that can run the write path (db or a transaction). */
+type WriteDb = Pick<typeof db, "select" | "insert">;
+
 /**
  * For one already-imported student (must have `student.legacyStudentId` set),
  * fetch their legacy optional paper links and write `student_subject_selections`
  * rows. Idempotent and safe to re-run.
+ *
+ * `opts.dbx` routes the existence-check + insert through a caller-supplied
+ * transaction — used by scripts/rerun-subject-selection.ts to dry-run the REAL
+ * code path (run inside a tx, then roll back). Defaults to the shared `db`;
+ * the import path is unchanged.
  */
 export async function migrateSubjectSelectionForStudent(
   student: Student,
+  opts?: { dbx?: WriteDb },
 ): Promise<SubjectSelectionResult> {
+  const dbx: WriteDb = opts?.dbx ?? db;
   const result: SubjectSelectionResult = {
     legacyRows: 0,
     resolved: 0,
@@ -293,8 +385,30 @@ export async function migrateSubjectSelectionForStudent(
   };
   if (!student.legacyStudentId) return result;
 
-  const b = await getBridges();
+  let b = await getBridges();
   if (!b.legacyClassIds.length) return result;
+
+  // Staleness guard: the bridges snapshot the metas at first use, but the
+  // import can CREATE a year's metas mid-run (ensureAcademicYearStructure).
+  // If the student's registration AY has no metas in the cached snapshot but
+  // does in the DB now, rebuild once — otherwise every row lands in
+  // skippedMeta even though the metas exist.
+  const registrationAyIdForCache = await getRegistrationAyId(student.id!);
+  if (
+    registrationAyIdForCache != null &&
+    !b.metasInDb.some((m: any) => m.academicYearId === registrationAyIdForCache)
+  ) {
+    const [{ freshCount }] = (await db
+      .select({ freshCount: sql<number>`count(*)` })
+      .from(subjectSelectionMetaModel)
+      .where(
+        eq(subjectSelectionMetaModel.academicYearId, registrationAyIdForCache),
+      )) as { freshCount: number }[];
+    if (Number(freshCount) > 0) {
+      invalidateSubjectSelectionBridges();
+      b = await getBridges();
+    }
+  }
 
   // Restrict to sessions whose legacy id has a sessionMap entry (i.e. exists in new DB sessions table)
   const knownLegacySessions = [...b.sessionMap.keys()];
@@ -314,6 +428,12 @@ export async function migrateSubjectSelectionForStudent(
     [student.legacyStudentId],
   );
   result.legacyRows = legacyRows.length;
+
+  // Stream disambiguates metas that share (AY, subject type, class) — e.g.
+  // Commerce vs Arts/Sci/Mgmt Minor metas in the same AY.
+  const studentStreamId = await getStudentStreamId(student.id!);
+  // Registration AY anchors meta resolution (already fetched for the cache guard).
+  const registrationAyId = registrationAyIdForCache;
 
   const seen = new Set<string>();
 
@@ -343,42 +463,65 @@ export async function migrateSubjectSelectionForStudent(
       result.skippedSubject++;
       continue;
     }
-    const metaId = resolveMeta(
-      b,
-      sess.academicYearId,
-      newSubjectTypeId,
-      newClassId,
-    );
+    // Resolve against the REGISTRATION AY first — the invariant everywhere
+    // else (write-path normalization, AY-drift heal) is that selections live
+    // under registration-year metas. Fall back to the legacy row's session AY
+    // only when no reg-AY meta matches (mirrors the drift heal, which also
+    // leaves rows alone when no reg-AY twin exists).
+    const metaId =
+      (registrationAyId != null
+        ? resolveMeta(
+            b,
+            registrationAyId,
+            newSubjectTypeId,
+            newClassId,
+            studentStreamId,
+          )
+        : null) ??
+      resolveMeta(
+        b,
+        sess.academicYearId,
+        newSubjectTypeId,
+        newClassId,
+        studentStreamId,
+      );
     if (!metaId) {
       result.skippedMeta++;
       continue;
     }
     result.resolved++;
 
-    const key = `${sess.id}|${metaId}|${newSubjectId}`;
+    // One active row per (student, meta, subject) — session must NOT be part
+    // of the key: the same meta+subject reached via legacy rows in different
+    // sessions is the SAME selection, and keying by session created duplicate
+    // active triples (cleaned once by the dedupe heal; this stops new ones).
+    const key = `${metaId}|${newSubjectId}`;
     if (seen.has(key)) {
       result.skippedDup++;
       continue;
     }
     seen.add(key);
 
-    const [exists] = await db
-      .select()
+    // Skip if a row exists in ANY state (active OR deprecated) — same
+    // contract as the CU admit-card loader: a deliberate admin change or
+    // deprecation is never resurrected by a re-import.
+    const [exists] = await dbx
+      .select({ id: studentSubjectSelectionModel.id })
       .from(studentSubjectSelectionModel)
       .where(
         and(
           eq(studentSubjectSelectionModel.studentId, student.id!),
-          eq(studentSubjectSelectionModel.sessionId, sess.id),
           eq(studentSubjectSelectionModel.subjectSelectionMetaId, metaId),
           eq(studentSubjectSelectionModel.subjectId, newSubjectId),
         ),
-      );
+      )
+      .limit(1);
     if (exists) {
       result.skippedExisting++;
       continue;
     }
 
-    await db.insert(studentSubjectSelectionModel).values({
+    await dbx.insert(studentSubjectSelectionModel).values({
       studentId: student.id!,
       sessionId: sess.id,
       subjectSelectionMetaId: metaId,

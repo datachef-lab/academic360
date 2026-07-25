@@ -471,6 +471,7 @@ export default function CURegistrationPage() {
           selectedMinorSubjects: [],
           studentSubjectsSelection: [],
           subjectSelectionMetas: [],
+          perMetaOptions: [],
           hasFormSubmissions: false,
           session: { id: 1 },
         }),

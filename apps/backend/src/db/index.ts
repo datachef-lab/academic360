@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { createLogger } from "@/config/logger.js";
 import { loadLibrary } from "@/features/library/old-irp-data";
 import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
+import { runBootMigrations } from "./boot-migrations.js";
 
 const log = createLogger("db");
 // Create a connection pool. `max` is env-tunable because the concurrent
@@ -96,6 +97,13 @@ export const connectToDatabase = async () => {
     } catch (e) {
       log.warn("CU Physical Reg Excel sync failed", { error: e });
     }
+
+    // One-shot data heals + Excel imports. Each entry is state-based
+    // (idempotent) so it can run on every boot without side effects. See
+    // db/boot-migrations.ts. Fire-and-forget: don't hold up the server.
+    runBootMigrations().catch((err) =>
+      log.warn("Boot migrations orchestrator threw", { error: err }),
+    );
   } catch (error) {
     log.debug(process.env.DATABASE_URL ?? "DATABASE_URL not set");
     log.error("Failed to connect to the database ⚠", { error });

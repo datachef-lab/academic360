@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, date, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { disabilityTypeEnum, genderTypeEnum, maritalStatusTypeEnum } from "@/schemas/enums";
 import { disabilityCodeModel, userModel } from "@/schemas/models/user";
@@ -55,7 +55,10 @@ export const personalDetailsModel = pgTable("personal_details", {
     
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // Report exports LEFT JOIN personal_details on user_id_fk for every student.
+    userIdx: index("personal_details_user_id_idx").on(t.userId),
+}));
 
 export const createPersonalDetailsSchema = createInsertSchema(personalDetailsModel);
 

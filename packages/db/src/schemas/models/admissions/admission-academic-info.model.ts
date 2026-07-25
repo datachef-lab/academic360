@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
     boolean,
     doublePrecision,
+    index,
     integer,
     pgTable,
     serial,
@@ -87,7 +88,11 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
     updatedAt: timestamp("updated_at")
         .defaultNow()
         .$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // 12th Subjects report joins application_form → admission_academic_info.
+    applicationFormIdx: index("admission_academic_info_application_form_id_idx").on(t.applicationFormId),
+    studentIdx: index("admission_academic_info_student_id_idx").on(t.studentId),
+}));
 
 export const createAdmissionAcademicInfoSchema: z.ZodTypeAny = createInsertSchema(
     admissionAcademicInfoModel,

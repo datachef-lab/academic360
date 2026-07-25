@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { admissionModel } from "@/schemas/models/admissions";
 import { admissionFormStatus, admissionSteps } from "@/schemas/enums";
@@ -33,7 +33,10 @@ export const applicationFormModel = pgTable("application_forms", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
     remarks: text("remarks"),
-});
+}, (t) => ({
+    // Reports join application_forms → admissions to reach the session/year.
+    admissionIdx: index("application_forms_admission_id_idx").on(t.admissionId),
+}));
 
 export const createApplicationFormSchema = createInsertSchema(applicationFormModel);
 

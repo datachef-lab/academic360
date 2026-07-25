@@ -6,6 +6,8 @@ import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db, mysqlConnection } from "@/db";
 import { getOrCreateWithLock, findOrCreate } from "@/utils/db-concurrency.js";
 import { ensureAcademicYearStructure } from "@/features/academics/services/academic-year-structure.service.js";
+import { invalidateSubjectSelectionBridges } from "./subject-selection-migration.service.js";
+import { recordImportLog } from "@/utils/legacy-import-log.js";
 import {
   OldCourseDetails,
   OldAdmStudentPersonalDetail,
@@ -1322,12 +1324,13 @@ export async function getOrCreateSessionForLegacySessionId(
       )[0]!,
   );
 
-  // Ensure the year's masters/papers/components exist (copied from the nearest
-  // year that has them) — so importing into a year that was never set up via the
-  // wizard still gets a complete, linked structure. Idempotent + fast-path when
-  // the year already has papers; failures must not abort the student import.
+  // Ensure the year's masters/papers/components exist (topped up from the head
+  // catalog year) — so importing into a year that was never (or only partially)
+  // set up still converges to a complete, linked structure. Idempotent +
+  // delta fast-path; failures must not abort the student import, but they are
+  // recorded durably — console.error alone hid the Jul 22 staging gap.
   try {
-    await db.transaction((tx) =>
+    const structure = await db.transaction((tx) =>
       ensureAcademicYearStructure(tx, foundAcademicYear.id, {
         legacySession: {
           legacySessionId: oldSession.id ?? null,
@@ -1335,10 +1338,31 @@ export async function getOrCreateSessionForLegacySessionId(
         },
       }),
     );
+    if (
+      structure.sessionCreated ||
+      structure.metas > 0 ||
+      structure.papers > 0
+    ) {
+      // The subject-selection bridges snapshot sessions/metas at first use;
+      // anything created here must be visible to later students in this run.
+      invalidateSubjectSelectionBridges();
+      await recordImportLog(
+        `AY:${foundAcademicYear.id}`,
+        "structure",
+        "ok",
+        `sessionCreated=${structure.sessionCreated} metas=${structure.metas} relatedSubjects=${structure.relatedSubjects} restrictedGroupings=${structure.restrictedGroupings} subjectGroupings=${structure.subjectGroupings} papers=${structure.papers} paperComponents=${structure.paperComponents}`,
+      );
+    }
   } catch (err) {
     console.error(
       `[import] ensureAcademicYearStructure failed for academic year ${foundAcademicYear.id}:`,
       err instanceof Error ? err.message : err,
+    );
+    await recordImportLog(
+      `AY:${foundAcademicYear.id}`,
+      "structure",
+      "error",
+      err instanceof Error ? err.message : String(err),
     );
   }
 

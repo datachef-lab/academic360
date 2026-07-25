@@ -1,0 +1,3 @@
+# Timestamped unmatched-data reports emitted by the CU admit-card loader on
+# boot — student ids inside, don't ship to git.
+reports/

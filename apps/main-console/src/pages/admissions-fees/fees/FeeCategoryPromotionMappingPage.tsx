@@ -59,6 +59,7 @@ import {
   useBulkUploadFeeGroupPromotionMappings,
 } from "@/hooks/useFeeGroupPromotionMappings";
 import { useError } from "@/hooks/useError";
+import useDebounce from "@/components/Hooks/useDebounce";
 import { PromotionDto } from "@repo/db/dtos/user";
 import { getAcademicYears, getProgramCourses } from "@/services/course-design.api";
 import { getAllReligions } from "@/services/religion.service";
@@ -176,6 +177,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const { user } = useAuth();
   const userId = (user?.id ?? "").toString();
   const [searchText, setSearchText] = useState("");
+  // Debounced so each keystroke doesn't fire a server search request.
+  const debouncedSearchText = useDebounce(searchText, 350);
   const [page, setPage] = useState(1);
   const pageSize = 25;
   const [promotions, setPromotions] = useState<PromotionDto[]>([]);
@@ -226,7 +229,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     !!filters.category ||
     !!filters.feeCategory ||
     !!filters.feeSlab;
-  const hasSearch = !!searchText.trim();
+  const hasSearch = !!debouncedSearchText.trim();
   const shouldFetchMappings = hasFilters || hasSearch;
   const queryClient = useQueryClient();
 
@@ -234,7 +237,14 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     data: mappings = [],
     isLoading: loading,
     refetch: refetchMappings,
-  } = useFeeGroupPromotionMappings(10000, shouldFetchMappings);
+  } = useFeeGroupPromotionMappings(
+    10000,
+    shouldFetchMappings,
+    // Server-side student search — returns the matching student's mappings even when
+    // total mappings exceed the fetch cap (the old client-only filter silently missed
+    // any student outside the newest `limit` rows).
+    debouncedSearchText,
+  );
   const createMutation = useCreateFeeGroupPromotionMapping();
   const updateMutation = useUpdateFeeGroupPromotionMapping();
   const deleteMutation = useDeleteFeeGroupPromotionMapping();

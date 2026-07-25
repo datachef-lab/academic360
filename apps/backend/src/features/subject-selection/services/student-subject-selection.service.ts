@@ -68,6 +68,115 @@ export interface SubjectSelectionValidationError {
   message: string;
 }
 
+/**
+ * Force every incoming selection's subjectSelectionMeta.id to belong to the
+ * student's REGISTRATION academic year. See getRegistrationAcademicYearId for
+ * the rationale — one student, one set of metas, always the year they were
+ * admitted under.
+ *
+ * If a client sends a meta id that belongs to some other AY (usually the
+ * current-semester AY, which is what the old read path served), we rewrite
+ * it to the equivalent meta (same label + subjectType) in the registration
+ * AY and log a WARN. If no equivalent exists, we emit a validation error
+ * instead of writing to the wrong AY — silently corrupting is worse than
+ * a visible failure.
+ *
+ * Returns { selections: normalized array, errors: [] }. `errors` is
+ * non-empty ONLY when the caller must return `{ success: false }`.
+ */
+export async function normalizeSelectionsToRegistrationYearMetas<
+  T extends {
+    subjectSelectionMeta?: { id?: number | null } | null | undefined;
+  },
+>(
+  studentId: number,
+  selections: T[],
+): Promise<{
+  selections: T[];
+  errors: SubjectSelectionValidationError[];
+}> {
+  const registrationAyId =
+    await studentSubjectsService.getRegistrationAcademicYearId(studentId);
+  if (!registrationAyId) {
+    // No promotions yet → nothing to anchor to; let downstream logic run
+    // unchanged (it likely errors out anyway with a clearer message).
+    return { selections, errors: [] };
+  }
+
+  const incomingMetaIds = Array.from(
+    new Set(
+      selections
+        .map((s) => s.subjectSelectionMeta?.id)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  );
+  if (incomingMetaIds.length === 0) return { selections, errors: [] };
+
+  const incomingMetas = await db
+    .select({
+      id: subjectSelectionMetaModel.id,
+      label: subjectSelectionMetaModel.label,
+      subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
+      academicYearId: subjectSelectionMetaModel.academicYearId,
+    })
+    .from(subjectSelectionMetaModel)
+    .where(inArray(subjectSelectionMetaModel.id, incomingMetaIds));
+  const incomingById = new Map(incomingMetas.map((m) => [m.id, m]));
+
+  // Only build the equivalence map if we actually have wrong-AY metas coming
+  // in — most requests will already be correct once the read path lands.
+  const wrong = incomingMetas.filter(
+    (m) => m.academicYearId !== registrationAyId,
+  );
+  const equivalentByKey = new Map<string, number>();
+  if (wrong.length > 0) {
+    const regMetas = await db
+      .select({
+        id: subjectSelectionMetaModel.id,
+        label: subjectSelectionMetaModel.label,
+        subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
+      })
+      .from(subjectSelectionMetaModel)
+      .where(eq(subjectSelectionMetaModel.academicYearId, registrationAyId));
+    for (const rm of regMetas) {
+      equivalentByKey.set(
+        `${rm.subjectTypeId}|${(rm.label ?? "").trim().toLowerCase()}`,
+        rm.id,
+      );
+    }
+  }
+
+  const errors: SubjectSelectionValidationError[] = [];
+  const normalized = selections.map((s) => {
+    const incomingId = s.subjectSelectionMeta?.id;
+    if (!incomingId) return s;
+    const incoming = incomingById.get(incomingId);
+    if (!incoming || incoming.academicYearId === registrationAyId) return s;
+
+    const key = `${incoming.subjectTypeId}|${(incoming.label ?? "").trim().toLowerCase()}`;
+    const targetId = equivalentByKey.get(key);
+    if (!targetId) {
+      errors.push({
+        field: "subjectSelectionMeta.id",
+        message: `Meta #${incomingId} ("${incoming.label}") belongs to AY #${incoming.academicYearId}, but student's registration AY is #${registrationAyId} and no equivalent meta (same label + subject type) exists there. Create the meta for the registration AY or send a valid id.`,
+      });
+      return s;
+    }
+    console.warn(
+      `[subject-selection] rewriting meta #${incomingId} (AY ${incoming.academicYearId}) -> #${targetId} (AY ${registrationAyId}) for student ${studentId}: "${incoming.label}". Client sent a non-registration-year meta; heal in-flight and log so the caller can be fixed.`,
+    );
+    return {
+      ...s,
+      subjectSelectionMeta: {
+        ...(s.subjectSelectionMeta as Record<string, unknown>),
+        id: targetId,
+      },
+    } as T;
+  });
+
+  return { selections: normalized, errors };
+}
+
 export interface SubjectSelectionData {
   minor1?: string;
   minor2?: string;
@@ -1261,6 +1370,21 @@ export async function createStudentSubjectSelectionsWithValidation(
   const studentId = selections[0].studentId;
   const sessionId = selections[0].session.id;
 
+  // Enforce the registration-year meta rule up front. Every selection's
+  // subjectSelectionMeta must belong to the AY the student was admitted
+  // under (see normalizeSelectionsToRegistrationYearMetas). Client sent the
+  // current-semester AY before the read-path fix, so we heal in-flight.
+  {
+    const normalized = await normalizeSelectionsToRegistrationYearMetas(
+      studentId,
+      selections,
+    );
+    if (normalized.errors.length > 0) {
+      return { success: false, errors: normalized.errors };
+    }
+    selections = normalized.selections;
+  }
+
   // Validate user exists if createdBy is provided
   if (createdBy) {
     const [user] = await db
@@ -1983,6 +2107,18 @@ export async function updateStudentSubjectSelectionsWithValidation(
     }
   }
 
+  // Registration-year meta guard, matching the create path.
+  {
+    const normalized = await normalizeSelectionsToRegistrationYearMetas(
+      studentId,
+      selections,
+    );
+    if (normalized.errors.length > 0) {
+      return { success: false, errors: normalized.errors };
+    }
+    selections = normalized.selections;
+  }
+
   // Validate the selections first
   const validationErrors = await validateStudentSubjectSelections(
     studentId,
@@ -2218,7 +2354,15 @@ student_promotions_by_class AS (
   ORDER BY pr.student_id_fk, pr.class_id_fk, pr.id DESC
 ),
 
-/** One row per student + selection slot (meta), matching CU Registration admin form. */
+/**
+ * Latest active selection per (student, meta, subject). A single meta can
+ * legitimately hold >1 subject selection — e.g. "Minor 2 (Semester III & IV)"
+ * carries a Sem III subject AND a Sem IV subject under the same meta. Partitioning
+ * by (student, meta) alone would collapse those to one row via the id-DESC
+ * tie-breaker, silently dropping the earlier-id pick from the report. Including
+ * subject_id_fk preserves both picks while still keeping only the latest version
+ * of each (student, meta, subject) tuple.
+ */
 latest_student_selections AS (
   SELECT id,
          student_id_fk,
@@ -2230,7 +2374,8 @@ latest_student_selections AS (
     SELECT sss.*,
            ROW_NUMBER() OVER (
              PARTITION BY sss.student_id_fk,
-                          sss.subject_selection_meta_id_fk
+                          sss.subject_selection_meta_id_fk,
+                          sss.subject_id_fk
              ORDER BY sss.version DESC,
                       sss.updated_at DESC NULLS LAST,
                       sss.created_at DESC,
@@ -2438,9 +2583,13 @@ optional_grouped AS (
   JOIN subject_grouping_subjects sgs_selected
        ON sgs_selected.subject_grouping_main_id_fk = sgm.id
       AND sgs_selected.subject_id_fk = p_sel.subject_id_fk
+  -- Expand the selection to EVERY subject of its grouping: selecting one
+  -- member (e.g. Consumer Behaviour in "Group Marketing") enrols the student
+  -- in the group's other subjects' papers too. sgs_all is deliberately NOT
+  -- constrained to the selected subject — that constraint made expansion a
+  -- no-op and (with the old merge priority) kept grouping columns empty.
   JOIN subject_grouping_subjects sgs_all
        ON sgs_all.subject_grouping_main_id_fk = sgm.id
-      AND sgs_all.subject_id_fk = p_sel.subject_id_fk
   JOIN subjects sbj_all ON sbj_all.id = sgs_all.subject_id_fk
   JOIN papers p_all ON p_all.academic_year_id_fk = ay.id
                    AND p_all.programe_course_id_fk = pc.id
@@ -2465,9 +2614,14 @@ optional AS (
          paper_id, paper_type, paper, paper_code, is_optional, auto_assign, is_active,
          subject_grouping_main_id, subject_grouping_name, subject_grouping_code, promotion_id
   FROM (
-    SELECT *, 1 AS priority FROM optional_direct
+    -- optional_grouped carries the subject_grouping_* columns; optional_direct
+    -- emits them as NULL. When both variants produce the SAME (student, paper,
+    -- promotion) key, the grouped row must win the DISTINCT ON, else the
+    -- grouping name/code can never reach the export (they were structurally
+    -- unreachable while the direct row had priority 1).
+    SELECT *, 2 AS priority FROM optional_direct
     UNION ALL
-    SELECT *, 2 AS priority FROM optional_grouped
+    SELECT *, 1 AS priority FROM optional_grouped
   ) combined
   ORDER BY student_id, paper_id, promotion_id NULLS LAST, priority
 )
@@ -2490,6 +2644,37 @@ const STUDENT_SUBJECTS_PAPER_ROWS_SQL_TEMPLATE =
     "__STUDENT_SUBJECTS_FINAL_SELECT__",
     STUDENT_SUBJECTS_FINAL_SELECT_PAPER,
   ).replace(/\/\*__SUBJECTS_EXPORT_ORDER__\*\/\s*ORDER BY[\s\S]*$/m, "");
+
+/**
+ * Runs the student-subjects export SQL with nested-loop joins disabled, scoped
+ * to a transaction.
+ *
+ * That SQL is a stack of CTEs; Postgres materializes them and then can't
+ * estimate their row counts, so it estimates `rows=1` on the joins that stitch
+ * them together and picks nested loops. On real data those loops iterate
+ * millions of times and the export runs 150s+ — while the exact same query with
+ * hash/merge joins returns in ~700ms (measured). `SET LOCAL enable_nestloop =
+ * off` forces hash joins and is scoped to this transaction, so the pooled
+ * connection is unaffected afterwards.
+ */
+export async function runStudentSubjectsExportQuery(
+  text: string,
+  values: unknown[],
+): Promise<{ rows: Record<string, unknown>[] }> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET LOCAL enable_nestloop = off");
+    const res = await client.query(text, values);
+    await client.query("COMMIT");
+    return { rows: res.rows as Record<string, unknown>[] };
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 
 export function buildStudentSubjectsExportSql(
   academicYearId: number,
@@ -2610,7 +2795,10 @@ export async function exportStudentSubjectsReport(
   );
 
   try {
-    const { rows } = await pool.query(trimmedQuery, queryValues);
+    const { rows } = await runStudentSubjectsExportQuery(
+      trimmedQuery,
+      queryValues,
+    );
     console.log(
       `[SUBJECTS-EXPORT] Retrieved ${rows.length} rows for academic year ${academicYearId}`,
     );
@@ -2908,6 +3096,18 @@ export async function updateStudentSubjectSelectionsEfficiently(
   // Extract studentId and sessionId from first selection
   const studentId = selections[0].studentId;
   const sessionId = selections[0].session.id;
+
+  // Same registration-year meta guard as the create path.
+  {
+    const normalized = await normalizeSelectionsToRegistrationYearMetas(
+      studentId,
+      selections,
+    );
+    if (normalized.errors.length > 0) {
+      return { success: false, errors: normalized.errors };
+    }
+    selections = normalized.selections;
+  }
 
   console.log(
     `🔍 Efficient Update - Processing ${selections.length} selections for student ${studentId}`,
@@ -4045,6 +4245,26 @@ export async function exportStudentSubjectSelections(
         inArray(studentModel.id, filteredStudentIds),
         eq(sessionModel.academicYearId, academicYearId),
         sql`COALESCE(${promotionModel.isDeprecated}, false) = false`,
+        // Report filters pushed into SQL (previously filtered in JS after
+        // fetching every student). Filtering on the LEFT-joined program course
+        // excludes null matches, exactly like the old `!= null && has(...)`.
+        ...(filters.programCourseIds?.length
+          ? [inArray(programCourseModel.id, filters.programCourseIds)]
+          : []),
+        ...(filters.affiliationIds?.length
+          ? [inArray(programCourseModel.affiliationId, filters.affiliationIds)]
+          : []),
+        ...(filters.regulationTypeIds?.length
+          ? [
+              inArray(
+                programCourseModel.regulationTypeId,
+                filters.regulationTypeIds,
+              ),
+            ]
+          : []),
+        ...(filters.classIds?.length
+          ? [inArray(promotionModel.classId, filters.classIds)]
+          : []),
       ),
     );
 
@@ -4060,53 +4280,13 @@ export async function exportStudentSubjectSelections(
   }
   studentsWithDetails = [...promotionRowByStudent.values()];
 
-  if (filters.programCourseIds?.length) {
-    const allow = new Set(filters.programCourseIds);
-    studentsWithDetails = studentsWithDetails.filter(
-      (s) => s.programCourseId != null && allow.has(s.programCourseId),
-    );
-  }
-  if (filters.affiliationIds?.length) {
-    const allow = new Set(filters.affiliationIds);
-    studentsWithDetails = studentsWithDetails.filter(
-      (s) =>
-        s.programAffiliationId != null && allow.has(s.programAffiliationId),
-    );
-  }
-  if (filters.regulationTypeIds?.length) {
-    const allow = new Set(filters.regulationTypeIds);
-    studentsWithDetails = studentsWithDetails.filter(
-      (s) =>
-        s.programRegulationTypeId != null &&
-        allow.has(s.programRegulationTypeId),
-    );
-  }
-  if (filters.classIds?.length) {
-    const allow = new Set(filters.classIds);
-    studentsWithDetails = studentsWithDetails.filter(
-      (s) => s.promotionClassId != null && allow.has(s.promotionClassId),
-    );
-  }
-
   // We'll compute subjectIds after loading allSelectionsForYear
   // we'll declare 'subjects' after we have subjectIds computed
   let subjects: { id: number; name: string; code: string | null }[] = [];
 
-  // Get user details for createdBy (collect from raw rows per student in meta later); initialize empty map for now
-  const createdByUsers = await db
-    .select({
-      id: userModel.id,
-      name: userModel.name,
-      type: userModel.type,
-    })
-    .from(userModel)
-    .where(sql`1=0`); // placeholder empty selection; we'll look up createdBy users dynamically below
-
-  // Create lookup maps (subjectMap will be created later after subjects are loaded)
-  const studentMap = new Map(studentsWithDetails.map((s) => [s.studentId, s]));
-  const userMap = new Map<number, { id: number; name: string; type: string }>(
-    createdByUsers.map((u) => [u.id, u]),
-  );
+  // userMap is filled once, in bulk, after the audit query below (createdBy
+  // users were previously fetched one-by-one inside the row loop).
+  const userMap = new Map<number, { id: number; name: string; type: string }>();
 
   // Get all student subject selections for all metas in the academic year
   const allSelectionsForYear = await db
@@ -4190,6 +4370,66 @@ export async function exportStudentSubjectSelections(
   });
   console.log("Selections by meta:", Object.fromEntries(selectionsByMeta));
 
+  // Audit info (who last changed each student's selections, remarks) for ALL
+  // students in ONE query, grouped by student — replaces the per-student query
+  // that used to run inside the row loop (the export's dominant cost). The
+  // composite index (subject_selection_meta_id_fk, student_id_fk) serves this.
+  const auditByStudent = new Map<
+    number,
+    {
+      studentId: number;
+      updatedAt: Date | null;
+      createdBy: number;
+      changeReason: string | null;
+    }[]
+  >();
+  const exportStudentIds = studentsWithDetails.map((s) => s.studentId);
+  if (exportStudentIds.length > 0) {
+    const auditRows = await db
+      .select({
+        studentId: studentSubjectSelectionModel.studentId,
+        updatedAt: studentSubjectSelectionModel.updatedAt,
+        createdBy: studentSubjectSelectionModel.createdBy,
+        changeReason: studentSubjectSelectionModel.changeReason,
+      })
+      .from(studentSubjectSelectionModel)
+      .where(
+        and(
+          inArray(
+            studentSubjectSelectionModel.subjectSelectionMetaId,
+            allMetasForYear.map((m) => m.id),
+          ),
+          inArray(studentSubjectSelectionModel.studentId, exportStudentIds),
+        ),
+      )
+      .orderBy(
+        desc(studentSubjectSelectionModel.updatedAt),
+        desc(studentSubjectSelectionModel.id),
+      );
+    for (const r of auditRows) {
+      const list = auditByStudent.get(r.studentId);
+      if (list) list.push(r);
+      else auditByStudent.set(r.studentId, [r]);
+    }
+
+    // Prefetch every distinct "created by" user in one query (was a per-student
+    // lookup inside the loop).
+    const createdByIds = [...new Set(auditRows.map((r) => r.createdBy))].filter(
+      (id): id is number => typeof id === "number",
+    );
+    if (createdByIds.length > 0) {
+      const createdByUserRows = await db
+        .select({
+          id: userModel.id,
+          name: userModel.name,
+          type: userModel.type,
+        })
+        .from(userModel)
+        .where(inArray(userModel.id, createdByIds));
+      for (const u of createdByUserRows) userMap.set(u.id, u);
+    }
+  }
+
   // Prepare Excel data
   const excelData = [];
 
@@ -4243,45 +4483,12 @@ export async function exportStudentSubjectSelections(
       }
     }
 
-    // Find the latest audit info for this student across all metas of this academic year
-    // This fulfills the requirement: last updated should be the latest among ALL student-subject-selection rows
-    const studentRowsForMeta = await db
-      .select({
-        id: studentSubjectSelectionModel.id,
-        studentId: studentSubjectSelectionModel.studentId,
-        updatedAt: studentSubjectSelectionModel.updatedAt,
-        createdBy: studentSubjectSelectionModel.createdBy,
-        changeReason: studentSubjectSelectionModel.changeReason,
-      })
-      .from(studentSubjectSelectionModel)
-      .where(
-        and(
-          inArray(
-            studentSubjectSelectionModel.subjectSelectionMetaId,
-            allMetasForYear.map((m) => m.id),
-          ),
-          eq(studentSubjectSelectionModel.studentId, studentDetail.studentId),
-        ),
-      )
-      .orderBy(
-        desc(studentSubjectSelectionModel.updatedAt),
-        desc(studentSubjectSelectionModel.id),
-      );
-
-    // Pick the very latest row (sorted desc by updatedAt, id)
+    // Latest audit info for this student, from the batched map (already sorted
+    // desc by updatedAt, id — so index 0 is the latest across all metas).
+    const studentRowsForMeta =
+      auditByStudent.get(studentDetail.studentId) || [];
     const latestAudit = studentRowsForMeta[0];
     if (latestAudit) {
-      if (!userMap.has(latestAudit.createdBy)) {
-        const [u] = await db
-          .select({
-            id: userModel.id,
-            name: userModel.name,
-            type: userModel.type,
-          })
-          .from(userModel)
-          .where(eq(userModel.id, latestAudit.createdBy));
-        if (u) userMap.set(u.id, u);
-      }
       const createdByUser = userMap.get(latestAudit.createdBy);
       row["Last updated by user type"] =
         createdByUser?.type?.toString().toUpperCase() || "";

@@ -1,0 +1,21 @@
+CREATE INDEX "sessions_academic_id_idx" ON "sessions" USING btree ("academic_id_fk");--> statement-breakpoint
+CREATE INDEX "admission_academic_info_application_form_id_idx" ON "admission_academic_info" USING btree ("application_form_id_fk");--> statement-breakpoint
+CREATE INDEX "admission_academic_info_student_id_idx" ON "admission_academic_info" USING btree ("student_id_fk");--> statement-breakpoint
+CREATE INDEX "admissions_session_id_idx" ON "admissions" USING btree ("session_id_fk");--> statement-breakpoint
+CREATE INDEX "application_forms_admission_id_idx" ON "application_forms" USING btree ("admission_id_fk");--> statement-breakpoint
+CREATE INDEX "student_academic_subjects_adm_academic_info_id_idx" ON "student_academic_subjects" USING btree ("admission_academic_info_id_fk");--> statement-breakpoint
+CREATE INDEX "student_academic_subjects_board_subject_id_idx" ON "student_academic_subjects" USING btree ("board_subject_id_fk");--> statement-breakpoint
+CREATE INDEX "promotions_class_id_idx" ON "promotions" USING btree ("class_id_fk");--> statement-breakpoint
+CREATE INDEX "promotions_section_id_idx" ON "promotions" USING btree ("section_id_fk");--> statement-breakpoint
+CREATE INDEX "promotions_shift_id_idx" ON "promotions" USING btree ("shift_id_fk");--> statement-breakpoint
+CREATE INDEX "student_subject_selections_meta_student_idx" ON "student_subject_selections" USING btree ("subject_selection_meta_id_fk","student_id_fk");--> statement-breakpoint
+CREATE INDEX "student_subject_selections_session_id_idx" ON "student_subject_selections" USING btree ("session_id_fk");--> statement-breakpoint
+CREATE INDEX "student_subject_selections_subject_id_idx" ON "student_subject_selections" USING btree ("subject_id_fk");--> statement-breakpoint
+CREATE INDEX "subject_selection_meta_academic_year_id_idx" ON "subject_selection_meta" USING btree ("academic_year_id_fk");--> statement-breakpoint
+CREATE INDEX "subject_selection_meta_subject_type_id_idx" ON "subject_selection_meta" USING btree ("subject_type_id_fk");--> statement-breakpoint
+CREATE INDEX "students_user_id_idx" ON "students" USING btree ("user_id_fk");--> statement-breakpoint
+CREATE INDEX "students_program_course_id_idx" ON "students" USING btree ("program_course_id_fk");--> statement-breakpoint
+CREATE INDEX "students_application_form_id_idx" ON "students" USING btree ("application_form_id_fk");--> statement-breakpoint
+CREATE INDEX "family_details_user_id_idx" ON "family_details" USING btree ("user_id_fk");--> statement-breakpoint
+CREATE INDEX "person_family_id_idx" ON "person" USING btree ("family_id_fk");--> statement-breakpoint
+CREATE INDEX "personal_details_user_id_idx" ON "personal_details" USING btree ("user_id_fk");

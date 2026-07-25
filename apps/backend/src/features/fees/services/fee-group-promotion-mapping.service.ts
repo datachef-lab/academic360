@@ -21,7 +21,18 @@ import {
   studentModel,
   personalDetailsModel,
 } from "@repo/db/schemas/models/user";
-import { and, inArray, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  inArray,
+  desc,
+  eq,
+  isNull,
+  ilike,
+  or,
+  sql,
+  getTableColumns,
+  type SQL,
+} from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import {
   feeStructureModel,
@@ -550,13 +561,44 @@ export const createFeeGroupPromotionMapping = async (
 
 export const getAllFeeGroupPromotionMappings = async (
   limit: number = 10000,
+  search?: string,
 ): Promise<FeeGroupPromotionMappingDto[]> => {
   // Order by id DESC to maintain consistent ordering (updated items stay in place)
-  const rows = await db
-    .select()
-    .from(feeGroupPromotionMappingModel)
-    .orderBy(desc(feeGroupPromotionMappingModel.id))
-    .limit(limit);
+  const searchTerm = search?.trim();
+  let rows;
+  if (searchTerm) {
+    // Server-side student search: the list can far exceed `limit`, so a client-side
+    // filter over the top-N window silently hides most students. Resolve matching
+    // mappings by joining student -> promotions -> mappings and matching the same
+    // identifiers the UI advertises (class/UID/roll). Selecting only the mapping
+    // columns keeps `rows` identical in shape to the non-search path below, so the
+    // DTO-building code that follows is reused unchanged.
+    const pattern = `%${searchTerm}%`;
+    rows = await db
+      .select(getTableColumns(feeGroupPromotionMappingModel))
+      .from(feeGroupPromotionMappingModel)
+      .innerJoin(
+        promotionModel,
+        eq(promotionModel.id, feeGroupPromotionMappingModel.promotionId),
+      )
+      .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+      .where(
+        or(
+          ilike(studentModel.uid, pattern),
+          ilike(studentModel.registrationNumber, pattern),
+          ilike(promotionModel.rollNumber, pattern),
+          ilike(promotionModel.classRollNumber, pattern),
+        ),
+      )
+      .orderBy(desc(feeGroupPromotionMappingModel.id))
+      .limit(limit);
+  } else {
+    rows = await db
+      .select()
+      .from(feeGroupPromotionMappingModel)
+      .orderBy(desc(feeGroupPromotionMappingModel.id))
+      .limit(limit);
+  }
 
   // Batch fetch fee groups and promotions to reduce queries
   const feeGroupIds = [...new Set(rows.map((r) => r.feeGroupId))];

@@ -50,6 +50,7 @@ export function useRealtimeTrackerSocket({
   const onFeeMisRefreshRef = useRef(onFeeMisRefresh);
   const onAffiliationRefreshRef = useRef(onAffiliationRefresh);
   const onErrorRef = useRef(onError);
+  const lastTsRef = useRef<Partial<Record<RealtimeTrackerTab, number>>>({});
 
   tabRef.current = tab;
   const canonical = canonicalRealtimeTrackerFilters(filters);
@@ -107,7 +108,14 @@ export function useRealtimeTrackerSocket({
     socket.on("disconnect", () => setIsConnected(false));
     socket.on("connect_error", (err) => onErrorRef.current?.(err.message));
 
-    socket.on("affiliation_registration_update", (payload: AffiliationRegistrationPayload) => {
+    socket.on("affiliation_registration_update", (payload: any) => {
+      // LWW guard: ignore stale messages (older _ts than last received)
+      if (payload._ts && payload._ts <= (lastTsRef.current.affiliation ?? 0)) {
+        return; // stale message
+      }
+      if (payload._ts) {
+        lastTsRef.current.affiliation = payload._ts;
+      }
       if (
         !realtimeTrackerFiltersMatch(
           payload?.filters,
@@ -119,7 +127,14 @@ export function useRealtimeTrackerSocket({
       onAffiliationRef.current?.(payload);
     });
 
-    socket.on("fee_mis_update", (payload: FeeMisPayload) => {
+    socket.on("fee_mis_update", (payload: any) => {
+      // LWW guard: ignore stale messages (older _ts than last received)
+      if (payload._ts && payload._ts <= (lastTsRef.current.fee_mis ?? 0)) {
+        return; // stale message
+      }
+      if (payload._ts) {
+        lastTsRef.current.fee_mis = payload._ts;
+      }
       if (!payload?.courseRows || !payload?.semesterRows) return;
       if (
         !realtimeTrackerFiltersMatch(
@@ -160,6 +175,8 @@ export function useRealtimeTrackerSocket({
     const prev = prevSubscriptionRef.current;
     if (prev && prev.filtersKey === filtersKey && prev.tab === tab) return;
     if (prev) unsubscribe(prev.tab, prev.filters);
+    // Reset timestamp tracker when filters change
+    lastTsRef.current = {};
     prevSubscriptionRef.current = { tab, filtersKey, filters: canonical };
     subscribe();
   }, [tab, filtersKey, filters, subscribe, unsubscribe]);

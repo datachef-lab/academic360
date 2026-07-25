@@ -1,5 +1,8 @@
 import { pool } from "@/db/index.js";
-import { buildStudentSubjectsExportSql } from "@/features/subject-selection/services/student-subject-selection.service.js";
+import {
+  buildStudentSubjectsExportSql,
+  runStudentSubjectsExportQuery,
+} from "@/features/subject-selection/services/student-subject-selection.service.js";
 import type { ReportExportFilters } from "@/utils/report-export-filters.js";
 import { applyReportHeaderAndFreezeOnly } from "@/utils/excel-report-styling.js";
 import ExcelJS from "exceljs";
@@ -172,7 +175,9 @@ export async function exportEnrolmentMasterReportBuffer(
   const rosterBundle = buildStudentRosterSql(academicYearId, filters);
 
   const [paperResult, rosterResult] = await Promise.all([
-    pool.query(paperBundle.text, paperBundle.values),
+    // The paper bundle is the same CTE-heavy query that explodes under nested
+    // loops; force hash joins. The roster is a plain join and runs as-is.
+    runStudentSubjectsExportQuery(paperBundle.text, paperBundle.values),
     pool.query(rosterBundle.text, rosterBundle.values),
   ]);
 

@@ -12,6 +12,10 @@ import {
 } from "drizzle-orm";
 import pLimit from "p-limit";
 import JSZip from "jszip";
+import {
+  buildReportFilterClauses,
+  type ReportExportFilters,
+} from "@/utils/report-export-filters.js";
 import { resolveStudentAvatarBuffer } from "@/features/user/services/student-avatar.service.js";
 import { db, mysqlConnection } from "@/db/index.js";
 import {
@@ -1426,10 +1430,24 @@ function calculateColumnWidth(header: string, allData?: any[]): number {
   return Math.min(calculatedWidth, 100);
 }
 
-export async function exportStudentDetailedReport(academicYearId: number) {
+export async function exportStudentDetailedReport(
+  academicYearId: number,
+  filters: ReportExportFilters = {},
+) {
   console.log(
     "[STUDENT-EXPORT] Generating detailed student report for academic year:",
     academicYearId,
+  );
+
+  // Report filters (program course / affiliation / regulation / class), spliced
+  // into the final WHERE. pc = program_courses, pr = student_promotion CTE.
+  const filterClause = sql.raw(
+    buildReportFilterClauses(filters, {
+      programCourseId: "pc.id",
+      affiliationId: "pc.affiliation_id_fk",
+      regulationTypeId: "pc.regulation_type_id_fk",
+      classId: "pr.class_id_fk",
+    }),
   );
 
   const { rows } = await db.execute(
@@ -1652,7 +1670,7 @@ export async function exportStudentDetailedReport(academicYearId: number) {
       LEFT JOIN person father ON father.family_id_fk = fd.id AND father.type = 'FATHER'
       LEFT JOIN person mother ON mother.family_id_fk = fd.id AND mother.type = 'MOTHER'
       LEFT JOIN addr_pivot ap ON ap.personal_details_id_fk = pd.id
-      WHERE u.type = 'STUDENT';
+      WHERE u.type = 'STUDENT'${filterClause};
     `,
   );
 
@@ -1724,10 +1742,22 @@ export async function exportStudentDetailedReport(academicYearId: number) {
 
 export async function exportStudentAcademicSubjectsReport(
   academicYearId: number,
+  filters: ReportExportFilters = {},
 ) {
   console.log(
     "[STUDENT-EXPORT] Generating student academic subjects report for academic year:",
     academicYearId,
+  );
+
+  // This report is admission/board based (no promotion), so class does not apply.
+  // programCourse comes straight off students; affiliation/regulation need the
+  // program_courses join added below.
+  const filterClause = sql.raw(
+    buildReportFilterClauses(filters, {
+      programCourseId: "std.program_course_id_fk",
+      affiliationId: "pc.affiliation_id_fk",
+      regulationTypeId: "pc.regulation_type_id_fk",
+    }),
   );
 
   const { rows } = await db.execute(
@@ -1779,12 +1809,13 @@ export async function exportStudentAcademicSubjectsReport(
       JOIN sessions sess ON sess.id = adm.session_id_fk
       JOIN students std ON std.application_form_id_fk = af.id
       JOIN users u ON u.id = std.user_id_fk
+      LEFT JOIN program_courses pc ON pc.id = std.program_course_id_fk
       JOIN board_subjects bs ON bs.id = sa.board_subject_id_fk
       JOIN board_subject_names bsn ON bsn.id = bs.board_subject_name_id_fk
       JOIN boards b ON b.id = bs.board_id_fk
       WHERE ai.student_id_fk IS NOT NULL
         AND u.is_active = true
-        AND sess.academic_id_fk = ${academicYearId}
+        AND sess.academic_id_fk = ${academicYearId}${filterClause}
       GROUP BY
         std.uid,
         b.name,

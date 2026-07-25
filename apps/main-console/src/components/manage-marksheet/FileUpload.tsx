@@ -170,7 +170,7 @@
 //   );
 // }
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { io, Socket } from "socket.io-client";
 import { Input } from "../ui/input";
@@ -183,14 +183,6 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import * as XLSX from "xlsx";
-
-const socket: Socket = io(import.meta.env.VITE_APP_BACKEND_URL as string, {
-  path: "/socket.io/",
-  // websocket first: the socket.io default is polling-first, and long-polling
-  // needs ALB sticky sessions across instances (otherwise the handshake and
-  // follow-up requests land on different nodes -> connect/disconnect loops).
-  transports: ["websocket", "polling"],
-});
 
 const expectedHeaders = [
   "registration_no",
@@ -254,8 +246,19 @@ export default function FileUpload() {
   const [progressStage, setProgressStage] = useState<string>("");
   const setProcessedData = useState<unknown[]>([])[1];
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const socketRef = useRef<Socket | null>(null);
 
+  // Initialize socket connection on mount
   useEffect(() => {
+    const socket: Socket = io(import.meta.env.VITE_APP_BACKEND_URL as string, {
+      path: "/socket.io/",
+      // websocket first: the socket.io default is polling-first, and long-polling
+      // needs ALB sticky sessions across instances (otherwise the handshake and
+      // follow-up requests land on different nodes -> connect/disconnect loops).
+      transports: ["websocket", "polling"],
+    });
+    socketRef.current = socket;
+
     socket.on("progress", (data: { stage: string; message: string; data?: unknown[] }) => {
       console.log("Progress update received:", data);
       setProgress(data.message);
@@ -269,6 +272,8 @@ export default function FileUpload() {
 
     return () => {
       socket.off("progress");
+      socket.disconnect();
+      socketRef.current = null;
     };
   }, [setProcessedData]);
 
@@ -311,8 +316,8 @@ export default function FileUpload() {
 
     const formData = new FormData();
     formData.append("file", file);
-    if (socket.id) {
-      formData.append("socketId", socket.id);
+    if (socketRef.current?.id) {
+      formData.append("socketId", socketRef.current.id);
     }
 
     try {

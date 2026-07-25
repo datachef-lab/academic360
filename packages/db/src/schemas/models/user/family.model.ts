@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createInsertSchema } from "drizzle-zod";
-import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { parentTypeEnum } from "@/schemas/enums";
 import { annualIncomeModel, occupationModel } from "@/schemas/models/resources";
@@ -31,7 +31,10 @@ export const familyModel = pgTable("family_details", {
     
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // Detailed report joins family_details on user_id_fk to reach parents.
+    userIdx: index("family_details_user_id_idx").on(t.userId),
+}));
 
 export const createFamilySchema = createInsertSchema(familyModel);
 

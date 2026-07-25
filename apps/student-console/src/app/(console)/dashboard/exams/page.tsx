@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Calendar, Clock, FileText, BarChart, GraduationCap, History, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -39,6 +39,9 @@ import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamPapersModal } from "./exam-papers-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { fetchExamGroupsByStudentId } from "@/services/exam-group.service";
+import { FeesDueAlertDialog } from "./fees-due-alert-dialog";
+import { useStudentDueFees } from "./use-student-due-fees";
+import { dueFeesSemesterContext, useFeeDueDeclaration } from "./use-fee-due-declaration";
 
 export default function ExamsContent() {
   const { student } = useStudent();
@@ -51,7 +54,41 @@ export default function ExamsContent() {
   const [activeTab, setActiveTab] = useState<string>("recent");
   const [selectedExam, setSelectedExam] = useState<ExamDto | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Fees-due gate: when a student with outstanding fees opens an exam schedule, show a
+  // reminder alert first; the schedule opens only after they acknowledge it.
+  const [pendingExam, setPendingExam] = useState<ExamDto | null>(null);
+  const [isFeesAlertOpen, setIsFeesAlertOpen] = useState(false);
+  const { dueFees } = useStudentDueFees(student?.id);
+  // Once a student has declared (both checkboxes + clear-by date) for the current dues
+  // context, the dialog is not shown again on this device (UI-only, localStorage).
+  const semesterContext = useMemo(() => dueFeesSemesterContext(dueFees), [dueFees]);
+  const { declared, markDeclared } = useFeeDueDeclaration(
+    student?.id,
+    dueFees.length > 0 ? semesterContext.label : undefined,
+  );
   const socketRef = useRef<any | null>(null);
+
+  // Intercepts the "view exam schedule" action: if fees are due AND the student has not
+  // yet declared, show the declaration dialog first; otherwise open the schedule directly.
+  const handleViewDetails = (exam: ExamDto) => {
+    if (dueFees.length > 0 && !declared) {
+      setPendingExam(exam);
+      setIsFeesAlertOpen(true);
+      return;
+    }
+    setSelectedExam(exam);
+    setIsModalOpen(true);
+  };
+
+  // "Generate admit card" on the fees declaration → close it and open the exam schedule.
+  const handleFeesAlertProceed = () => {
+    setIsFeesAlertOpen(false);
+    if (pendingExam) {
+      setSelectedExam(pendingExam);
+      setIsModalOpen(true);
+      setPendingExam(null);
+    }
+  };
 
   // Derived exam lists with improved categorization
   const today = new Date();
@@ -917,10 +954,7 @@ export default function ExamsContent() {
                         index={index}
                         examGroup={examGroups.find((group) => group.id === exam.examGroupId)}
                         variant="default"
-                        onViewDetails={(exam) => {
-                          setSelectedExam(exam);
-                          setIsModalOpen(true);
-                        }}
+                        onViewDetails={handleViewDetails}
                       />
                     ))}
                   </>
@@ -996,10 +1030,7 @@ export default function ExamsContent() {
                           examGroup={examGroup}
                           index={index}
                           variant="today"
-                          onViewDetails={(exam) => {
-                            setSelectedExam(exam);
-                            setIsModalOpen(true);
-                          }}
+                          onViewDetails={handleViewDetails}
                         />
                       );
                     })}
@@ -1041,10 +1072,7 @@ export default function ExamsContent() {
                         index={index}
                         examGroup={examGroup}
                         variant="completed"
-                        onViewDetails={(exam) => {
-                          setSelectedExam(exam);
-                          setIsModalOpen(true);
-                        }}
+                        onViewDetails={handleViewDetails}
                       />
                     );
                   });
@@ -1054,6 +1082,17 @@ export default function ExamsContent() {
           )}
         </motion.div>
       </div>
+
+      {/* Fees-due declaration shown before the exam schedule when the student has dues
+          and hasn't declared yet */}
+      <FeesDueAlertDialog
+        open={isFeesAlertOpen}
+        onOpenChange={setIsFeesAlertOpen}
+        dueFees={dueFees}
+        semesterDisplay={semesterContext.display}
+        onDeclared={markDeclared}
+        onProceed={handleFeesAlertProceed}
+      />
 
       {/* Exam Papers Modal */}
       {student?.id && (

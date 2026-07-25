@@ -255,6 +255,7 @@ import evidenceDocRouter from "@/features/library/routes/evidence-doc.route.js";
 import studentLibraryAnalyticsRouter from "@/features/library/routes/student-library-analytics.route.js";
 import libraryReportsRouter from "@/features/library/routes/library-reports.route.js";
 import libraryNotificationSeedRouter from "@/features/library/routes/library-notification-seed.route.js";
+import reportsJobsRouter from "@/features/reports/reports-jobs.route.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -720,6 +721,7 @@ app.use("/api/accommodations", accommodationRouter);
 app.use("/api/health", healthRouter);
 
 app.use("/api/reports", reportRouter);
+app.use("/api/reports", reportsJobsRouter);
 app.use("/api/classes", classRouter);
 
 // app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
@@ -1144,7 +1146,7 @@ app.use("/api/accommodations", accommodationRouter);
 
 app.use("/api/health", healthRouter);
 
-app.use("/api/reports", reportRouter);
+// (/api/reports mounted once above — reportRouter + reportsJobsRouter)
 
 app.use("/api/classes", classRouter);
 

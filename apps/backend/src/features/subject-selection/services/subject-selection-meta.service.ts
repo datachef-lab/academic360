@@ -1,8 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/index.js";
 import {
   subjectSelectionMetaModel,
   subjectSelectionMetaClassModel,
+  subjectSelectionMetaSourceModel,
   subjectSelectionMetaStreamModel,
   studentSubjectSelectionModel,
 } from "@repo/db/schemas/models/subject-selection";
@@ -17,6 +19,7 @@ import {
 import {
   SubjectSelectionMetaDto,
   SubjectSelectionMetaClassDto,
+  SubjectSelectionMetaSourceDto,
   SubjectSelectionMetaStreamDto,
 } from "@repo/db/dtos/subject-selection";
 
@@ -30,7 +33,21 @@ export interface CreateSubjectSelectionMetaInput {
   academicYear: { id: number };
   forClasses?: { id: number }[];
   isActive?: boolean;
+  /**
+   * Where this meta's options come from. Omitted => ELECTIVE_SUBJECTS (the
+   * existing behaviour), so callers that predate this field are unaffected.
+   */
+  optionSource?: SubjectSelectionOptionSource;
+  /**
+   * Metas whose prior student selections become this meta's options. Only
+   * applied when optionSource is PRIOR_SELECTION.
+   */
+  sourceMetas?: { id: number }[];
 }
+
+/** Mirrors the subject_selection_option_source pg enum. */
+export type SubjectSelectionOptionSource =
+  (typeof subjectSelectionMetaModel.$inferSelect)["optionSource"];
 
 type SubjectSelectionMetaRow = typeof subjectSelectionMetaModel.$inferSelect;
 type SubjectSelectionMetaClassRow =
@@ -459,10 +476,56 @@ export async function toDto(
     }),
   );
 
+  // The metas this one draws its student options from (PRIOR_SELECTION only;
+  // empty for ELECTIVE_SUBJECTS). Self-join: the row's source id points at
+  // another subject_selection_meta.
+  const sourceMetaAlias = alias(subjectSelectionMetaModel, "source_meta");
+  const metaSources = await db
+    .select({
+      id: subjectSelectionMetaSourceModel.id,
+      createdAt: subjectSelectionMetaSourceModel.createdAt,
+      updatedAt: subjectSelectionMetaSourceModel.updatedAt,
+      sourceMetaId: sourceMetaAlias.id,
+      sourceMetaLabel: sourceMetaAlias.label,
+      sourceMetaSequence: sourceMetaAlias.sequence,
+      sourceSubjectType: subjectTypeModel,
+    })
+    .from(subjectSelectionMetaSourceModel)
+    .innerJoin(
+      sourceMetaAlias,
+      eq(
+        subjectSelectionMetaSourceModel.sourceSubjectSelectionMetaId,
+        sourceMetaAlias.id,
+      ),
+    )
+    .innerJoin(
+      subjectTypeModel,
+      eq(sourceMetaAlias.subjectTypeId, subjectTypeModel.id),
+    )
+    .where(
+      eq(subjectSelectionMetaSourceModel.subjectSelectionMetaId, meta.id!),
+    );
+
+  const sources: SubjectSelectionMetaSourceDto[] = metaSources.map(
+    (row): SubjectSelectionMetaSourceDto => ({
+      id: row.id,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      sourceMeta: {
+        id: row.sourceMetaId,
+        label: row.sourceMetaLabel,
+        sequence: row.sourceMetaSequence,
+        subjectType:
+          row.sourceSubjectType as unknown as SubjectSelectionMetaDto["subjectType"],
+      },
+    }),
+  );
+
   const dto: SubjectSelectionMetaDto = {
     id: meta.id,
     label: meta.label,
     sequence: meta.sequence,
+    optionSource: meta.optionSource,
     isActive: meta.isActive,
     createdAt: meta.createdAt,
     updatedAt: meta.updatedAt,
@@ -472,6 +535,7 @@ export async function toDto(
     academicYear: (academicYear[0] ??
       null) as unknown as SubjectSelectionMetaDto["academicYear"],
     forClasses,
+    sources,
   };
   return dto;
 }
@@ -533,6 +597,7 @@ export async function createOrUpdateMetaWithRelations(
         sequence: input.sequence,
         subjectTypeId: input.subjectType.id,
         academicYearId: input.academicYear.id,
+        optionSource: input.optionSource ?? "ELECTIVE_SUBJECTS",
         isActive: input.isActive ?? true,
       })
       .returning();
@@ -600,8 +665,78 @@ export async function createOrUpdateMetaWithRelations(
     }
   }
 
+  await syncMetaSources(metaId, input.optionSource, input.sourceMetas);
+
   const dto = await findById(metaId);
   return dto;
+}
+
+/**
+ * Reconciles the meta's source list (which metas it draws student options from)
+ * to exactly `sourceMetas`, mirroring how streams/classes are reconciled.
+ *
+ * A meta cannot source from itself, and sources are only meaningful for
+ * PRIOR_SELECTION — switching a meta back to ELECTIVE_SUBJECTS clears them so a
+ * stale list can't silently drive options later.
+ */
+async function syncMetaSources(
+  metaId: number,
+  optionSource: SubjectSelectionOptionSource | undefined,
+  sourceMetas: { id: number }[] | undefined,
+): Promise<void> {
+  // Nothing declared and not switching to PRIOR_SELECTION => leave as-is.
+  if (optionSource === undefined && sourceMetas === undefined) return;
+
+  const desired =
+    optionSource === "PRIOR_SELECTION"
+      ? [
+          ...new Set(
+            (sourceMetas ?? [])
+              .map((m) => m?.id)
+              .filter((v): v is number => typeof v === "number")
+              .filter((id) => id !== metaId), // never source from itself
+          ),
+        ]
+      : []; // ELECTIVE_SUBJECTS => no sources
+
+  // Only keep ids that are real metas.
+  let valid: number[] = [];
+  if (desired.length > 0) {
+    const rows = await db
+      .select({ id: subjectSelectionMetaModel.id })
+      .from(subjectSelectionMetaModel)
+      .where(inArray(subjectSelectionMetaModel.id, desired));
+    valid = rows.map((r) => r.id);
+  }
+
+  const current = await db
+    .select({
+      id: subjectSelectionMetaSourceModel.id,
+      sourceId: subjectSelectionMetaSourceModel.sourceSubjectSelectionMetaId,
+    })
+    .from(subjectSelectionMetaSourceModel)
+    .where(eq(subjectSelectionMetaSourceModel.subjectSelectionMetaId, metaId));
+
+  const currentIds = new Set(current.map((r) => r.sourceId));
+  const desiredIds = new Set(valid);
+
+  for (const sourceId of valid) {
+    if (!currentIds.has(sourceId)) {
+      await db.insert(subjectSelectionMetaSourceModel).values({
+        subjectSelectionMetaId: metaId,
+        sourceSubjectSelectionMetaId: sourceId,
+      });
+    }
+  }
+  const stale = current.filter((r) => !desiredIds.has(r.sourceId));
+  if (stale.length > 0) {
+    await db.delete(subjectSelectionMetaSourceModel).where(
+      inArray(
+        subjectSelectionMetaSourceModel.id,
+        stale.map((r) => r.id),
+      ),
+    );
+  }
 }
 
 export async function createFromDto(
@@ -694,6 +829,10 @@ export interface UpdateSubjectSelectionMetaInput {
   academicYear?: { id: number };
   forClasses?: { id: number }[];
   isActive?: boolean;
+  /** Omit to leave the current source setting untouched. */
+  optionSource?: SubjectSelectionOptionSource;
+  /** Metas to draw options from; applied when optionSource is PRIOR_SELECTION. */
+  sourceMetas?: { id: number }[];
 }
 
 export async function updateFromDto(
@@ -706,6 +845,7 @@ export async function updateFromDto(
   if (typeof input.label === "string") partial.label = input.label;
   if (typeof input.sequence === "number") partial.sequence = input.sequence;
   if (typeof input.isActive === "boolean") partial.isActive = input.isActive;
+  if (input.optionSource) partial.optionSource = input.optionSource;
   if (input.subjectType?.id)
     partial.subjectTypeId = input.subjectType.id as number;
   if (input.academicYear?.id)
@@ -793,6 +933,8 @@ export async function updateFromDto(
     }
   }
 
+  await syncMetaSources(id, input.optionSource, input.sourceMetas);
+
   const dto = await findById(id);
   return dto;
 }
@@ -808,6 +950,18 @@ export async function remove(
   await db
     .delete(subjectSelectionMetaStreamModel)
     .where(eq(subjectSelectionMetaStreamModel.subjectSelectionMetaId, id));
+
+  // Source links point BOTH ways: rows where this meta is the owner, and rows
+  // where another meta sources FROM it. Both must go or the FK blocks delete
+  // (and a dangling source would silently empty another meta's options).
+  await db
+    .delete(subjectSelectionMetaSourceModel)
+    .where(eq(subjectSelectionMetaSourceModel.subjectSelectionMetaId, id));
+  await db
+    .delete(subjectSelectionMetaSourceModel)
+    .where(
+      eq(subjectSelectionMetaSourceModel.sourceSubjectSelectionMetaId, id),
+    );
 
   const [deleted] = await db
     .delete(subjectSelectionMetaModel)
@@ -840,6 +994,7 @@ export async function remove(
     id: deletedRow.id,
     label: deletedRow.label,
     sequence: deletedRow.sequence,
+    optionSource: deletedRow.optionSource,
     isActive: deletedRow.isActive,
     createdAt: deletedRow.createdAt,
     updatedAt: deletedRow.updatedAt,
@@ -849,5 +1004,6 @@ export async function remove(
     academicYear:
       academicYear as unknown as SubjectSelectionMetaDto["academicYear"],
     forClasses: [],
-  } as SubjectSelectionMetaDto;
+    sources: [],
+  } as unknown as SubjectSelectionMetaDto;
 }
