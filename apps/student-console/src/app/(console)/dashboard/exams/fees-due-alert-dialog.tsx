@@ -96,7 +96,7 @@ export function FeesDueAlertDialog({
           </div>
 
           {/* Right: notification + dues + declaration + actions */}
-          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-6 sm:p-8">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-6 sm:p-8">
             <AlertDialogHeader className="space-y-3 text-left sm:text-left">
               <AlertDialogTitle className="text-xl font-semibold text-rose-700">
                 Important Notification:
@@ -119,46 +119,54 @@ export function FeesDueAlertDialog({
               </AlertDialogDescription>
             </AlertDialogHeader>
 
-            {/* Breakdown of what's due — plain table, no vertical inner scroll so the
-                Total row is never clipped (the whole right column scrolls). overflow-x
-                lets the table scroll sideways on narrow screens instead of stretching
-                the dialog past the viewport. */}
+            {/* Breakdown of what's due — plain table at its natural height, no inner
+                scrolling in either direction: the whole right column is the single
+                scroll area. Tighter cell padding/text on mobile keeps the five columns
+                within the viewport. */}
             {visibleFees.length > 0 && (
-              <div className="mt-5 overflow-x-auto rounded-lg border border-gray-200">
-                <table className="w-full border-collapse text-center text-[13px]">
+              <div className="mt-5 overflow-hidden rounded-lg border border-gray-200">
+                <table className="w-full border-collapse break-words text-center text-xs sm:text-[13px]">
                   <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
                     <tr>
-                      <th className="border border-gray-200 px-3 py-2 font-medium">Sr No</th>
-                      <th className="border border-gray-200 px-3 py-2 font-medium">
+                      <th className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium">
+                        Sr No
+                      </th>
+                      <th className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium">
                         Academic Year
                       </th>
-                      <th className="border border-gray-200 px-3 py-2 font-medium">Receipt</th>
-                      <th className="border border-gray-200 px-3 py-2 font-medium">Semester</th>
-                      <th className="border border-gray-200 px-3 py-2 font-medium">Amount</th>
+                      <th className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium">
+                        Receipt
+                      </th>
+                      <th className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium">
+                        Semester
+                      </th>
+                      <th className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium">
+                        Amount
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {visibleFees.map((fee, index) => (
                       <tr key={fee.id}>
-                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
+                        <td className="border border-gray-200 px-1.5 py-2 sm:px-3 text-gray-600">
                           {index + 1}.
                         </td>
-                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
+                        <td className="border border-gray-200 px-1.5 py-2 sm:px-3 text-gray-600">
                           {fee.feeStructure?.academicYear?.year ?? "—"}
                         </td>
-                        <td className="border border-gray-200 px-3 py-2 font-medium text-gray-800">
+                        <td className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium text-gray-800">
                           {fee.feeStructure?.receiptType?.name ?? "Fee"}
                           {fee.type === "INSTALLMENT" && fee.feeStructureInstallment?.name
                             ? ` (${fee.feeStructureInstallment.name})`
                             : ""}
                         </td>
-                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
+                        <td className="border border-gray-200 px-1.5 py-2 sm:px-3 text-gray-600">
                           {String(fee.feeStructure?.class?.name ?? "—").replace(
                             /^SEMESTER\s*/i,
                             "",
                           )}
                         </td>
-                        <td className="border border-gray-200 px-3 py-2 font-semibold text-gray-800">
+                        <td className="border border-gray-200 px-1.5 py-2 sm:px-3 font-semibold text-gray-800">
                           {formatInr(fee.totalPayable)}
                         </td>
                       </tr>
@@ -168,11 +176,11 @@ export function FeesDueAlertDialog({
                     <tr className="bg-rose-50/70">
                       <td
                         colSpan={4}
-                        className="border border-gray-200 px-3 py-2 font-semibold text-gray-700"
+                        className="border border-gray-200 px-1.5 py-2 sm:px-3 font-semibold text-gray-700"
                       >
                         Total Due
                       </td>
-                      <td className="border border-gray-200 px-3 py-2 font-bold text-rose-600">
+                      <td className="border border-gray-200 px-1.5 py-2 sm:px-3 font-bold text-rose-600">
                         {formatInr(totalDue)}
                       </td>
                     </tr>
