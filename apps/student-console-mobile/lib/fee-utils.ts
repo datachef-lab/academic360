@@ -12,7 +12,7 @@ function normalizeRomanNumerals(text: string): string {
   return text.replace(/\b([ivxlcdm]+)\b/gi, (m) => m.toUpperCase());
 }
 
-function toSentenceCase(text: string): string {
+export function toSentenceCase(text: string): string {
   const lower = text.toLowerCase();
   const sentence = lower.replace(/\b\w/g, (ch) => ch.toUpperCase());
   return normalizeRomanNumerals(sentence);

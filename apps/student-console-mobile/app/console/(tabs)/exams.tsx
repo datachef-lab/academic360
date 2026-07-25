@@ -4,6 +4,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import { useExamSocketRefresh } from "@/providers/exam-socket-provider";
 import { fetchExamsByStudentId } from "@/services/exam-api";
+import { toSentenceCase } from "@/lib/fee-utils";
 import {
   Calendar,
   Clock,
@@ -312,11 +313,13 @@ export default function ExamsScreen() {
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderRadius: 999,
+                borderWidth: 1,
+                borderColor: styles.border,
                 backgroundColor: styles.iconBg,
               }}
             >
               <Text style={{ color: styles.text, fontSize: 12, fontWeight: "500" }}>
-                {exam.class?.name ?? ""}
+                {toSentenceCase(exam.class?.name ?? "")}
               </Text>
             </View>
           </View>

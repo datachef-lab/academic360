@@ -27,6 +27,7 @@ import {
 const BANNER_ASPECT = 16 / 9;
 
 import { formatDate, formatTime } from "@/lib/date";
+import { toSentenceCase } from "@/lib/fee-utils";
 
 interface PaperDetail {
   paperCode: string;
@@ -329,11 +330,13 @@ export default function ExamDetailsScreen() {
                   paddingVertical: 4,
                   borderRadius: 999,
                   alignSelf: "flex-start",
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(99,102,241,0.6)" : "#c7d2fe",
                   backgroundColor: isDark ? "rgba(99,102,241,0.25)" : "#eef2ff",
                 }}
               >
                 <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>
-                  {exam.class?.name ?? ""}
+                  {toSentenceCase(exam.class?.name ?? "")}
                 </Text>
               </View>
             </View>
@@ -507,11 +510,12 @@ export default function ExamDetailsScreen() {
                       justifyContent: "center",
                     }}
                   >
+                    {/* Start time only — the end time crowded the cell */}
                     <Text
                       style={{ color: theme.text, fontSize: 12, opacity: 0.9 }}
                       numberOfLines={2}
                     >
-                      {formatTime(p.startTime)} – {formatTime(p.endTime)}
+                      {formatTime(p.startTime)}
                     </Text>
                   </View>
                   <View

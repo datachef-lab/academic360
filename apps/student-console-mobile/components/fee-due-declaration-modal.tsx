@@ -256,9 +256,9 @@ export function FeeDueDeclarationModal({
 
             <View style={{ paddingHorizontal: 18, paddingTop: 14 }}>
               <Text style={{ color: subText, fontSize: 13, lineHeight: 19 }}>
-                As per our records, your Semester{" "}
+                As per our records, your{" "}
                 <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
-                  {semesterDisplay}
+                  Semester {semesterDisplay}
                 </Text>{" "}
                 enrolment fee is not paid despite multiple reminders sent to you previously.{" "}
                 <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
@@ -266,9 +266,9 @@ export function FeeDueDeclarationModal({
                 </Text>
               </Text>
               <Text style={{ color: subText, fontSize: 13, lineHeight: 19, marginTop: 10 }}>
-                Please note that completing enrolment procedure including payment of the Semester{" "}
+                Please note that completing enrolment procedure including payment of the{" "}
                 <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
-                  {semesterDisplay}
+                  Semester {semesterDisplay}
                 </Text>{" "}
                 fee is mandatory to appear for the Calcutta University End-Semester Examination.
               </Text>
@@ -448,8 +448,10 @@ export function FeeDueDeclarationModal({
                   checked={acknowledgeChecked}
                   onToggle={() => setAcknowledgeChecked((v) => !v)}
                 >
-                  I acknowledge that my Semester{" "}
-                  <Text style={{ fontWeight: "700", fontStyle: "italic" }}>{semesterDisplay}</Text>{" "}
+                  I acknowledge that my{" "}
+                  <Text style={{ fontWeight: "700", fontStyle: "italic" }}>
+                    Semester {semesterDisplay}
+                  </Text>{" "}
                   enrolment fee is pending and undertake to clear the dues as early as possible.
                 </CheckboxRow>
                 <CheckboxRow
