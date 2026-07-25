@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -22,13 +22,6 @@ const formatInr = (value: number): string =>
     maximumFractionDigits: 0,
   }).format(Number(value || 0));
 
-const toISODate = (d: Date): string => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
-
 interface FeesDueAlertDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -43,11 +36,10 @@ interface FeesDueAlertDialogProps {
 
 /**
  * "Important Notification" declaration shown before the Exam Schedule when the student
- * has outstanding semester dues. The student must tick both declarations (the first one
- * includes a clear-by date capped at one month out) before "Generate admit card"
- * unlocks. The checkboxes and date are UI-only (explicit product decision — nothing is
- * stored in the DB); "declared once" is remembered client-side so the dialog is not
- * shown again on this device.
+ * has outstanding semester dues. The student must tick both declarations before
+ * "Generate admit card" unlocks. The checkboxes are UI-only (explicit product
+ * decision — nothing is stored in the DB); "declared once" is remembered client-side
+ * so the dialog is not shown again on this device.
  */
 export function FeesDueAlertDialog({
   open,
@@ -61,23 +53,13 @@ export function FeesDueAlertDialog({
 
   const [acknowledgeChecked, setAcknowledgeChecked] = useState(false);
   const [consequenceChecked, setConsequenceChecked] = useState(false);
-  const [clearByDate, setClearByDate] = useState("");
-
-  // Date picker window: today .. +1 month (per the notification spec).
-  const { minDate, maxDate } = useMemo(() => {
-    const now = new Date();
-    const max = new Date(now);
-    max.setMonth(max.getMonth() + 1);
-    return { minDate: toISODate(now), maxDate: toISODate(max) };
-  }, []);
 
   // Belt-and-suspenders: never render casual receipts here, and compute the total from
   // the same visible list so the two always agree (even if upstream data is stale).
   const visibleFees = dueFees.filter((fee) => !isCasualReceipt(fee));
   const totalDue = visibleFees.reduce((sum, fee) => sum + Number(fee.totalPayable || 0), 0);
 
-  const dateValid = clearByDate >= minDate && clearByDate <= maxDate;
-  const canGenerate = acknowledgeChecked && consequenceChecked && dateValid;
+  const canGenerate = acknowledgeChecked && consequenceChecked;
 
   const handleGenerateAdmitCard = () => {
     if (!canGenerate) return;
@@ -122,21 +104,16 @@ export function FeesDueAlertDialog({
                 <span className="block">
                   As per our records, your Semester{" "}
                   <span className="font-semibold text-gray-800">{semesterDisplay}</span> enrolment
-                  fee is not paid despite multiple reminders sent to your Institutional Email ID
-                  and/or registered mobile number.{" "}
+                  fee is not paid despite multiple reminders sent to you previously.{" "}
                   <span className="font-semibold text-gray-800">
                     Consequently, you are currently not considered a bonafide student of the
                     College.
                   </span>
                 </span>
                 <span className="block">
-                  Please note that payment of the Semester{" "}
-                  <span className="font-semibold text-gray-800">{semesterDisplay}</span> enrolment
-                  fee is mandatory to maintain your bonafide student status and to become eligible
-                  to appear for the Calcutta University End-Semester Examination.
-                </span>
-                <span className="block font-medium text-gray-700">
-                  Thus, you are advised to clear your outstanding dues at the earliest.
+                  Please note that completing enrolment procedure including payment of the Semester{" "}
+                  <span className="font-semibold text-gray-800">{semesterDisplay}</span> fee is
+                  mandatory to appear for the Calcutta University End-Semester Examination.
                 </span>
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -209,35 +186,19 @@ export function FeesDueAlertDialog({
               <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
                 Declaration
               </p>
-              {/* The date input must NOT live inside the label, else clicking it
-                toggles the checkbox instead of opening the picker. */}
-              <div className="flex items-start gap-3 text-[13px] leading-relaxed text-gray-700">
+              <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-gray-700">
                 <input
-                  id="fee-due-ack"
                   type="checkbox"
                   checked={acknowledgeChecked}
                   onChange={(e) => setAcknowledgeChecked(e.target.checked)}
                   className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
                 />
                 <span>
-                  <label htmlFor="fee-due-ack" className="cursor-pointer">
-                    I acknowledge that my Semester{" "}
-                    <span className="font-semibold">{semesterDisplay}</span> enrolment fee is
-                    pending and undertake to clear the dues by
-                  </label>{" "}
-                  <input
-                    type="date"
-                    value={clearByDate}
-                    min={minDate}
-                    max={maxDate}
-                    onChange={(e) => setClearByDate(e.target.value)}
-                    className="inline-block rounded-md border border-gray-300 bg-white px-2 py-0.5 text-[13px] focus:border-indigo-500 focus:outline-none"
-                  />
-                  <label htmlFor="fee-due-ack" className="cursor-pointer">
-                    .
-                  </label>
+                  I acknowledge that my Semester{" "}
+                  <span className="font-semibold">{semesterDisplay}</span> enrolment fee is pending
+                  and undertake to clear the dues as early as possible.
                 </span>
-              </div>
+              </label>
               <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-gray-700">
                 <input
                   type="checkbox"
@@ -246,15 +207,10 @@ export function FeesDueAlertDialog({
                   className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
                 />
                 <span>
-                  I understand that non-payment of my dues within the date specified by me above may
-                  affect my bonafide student status and Calcutta University examination eligibility.
+                  I understand that non-payment of my dues may affect my bonafide student status and
+                  Calcutta University examination eligibility.
                 </span>
               </label>
-              {acknowledgeChecked && !dateValid && (
-                <p className="pl-7 text-xs text-rose-600">
-                  Please pick the date (within one month) by which you will clear the dues.
-                </p>
-              )}
             </div>
 
             {/* Plain Buttons (no AlertDialogCancel/Action): the Radix prop typings
