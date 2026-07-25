@@ -4,7 +4,15 @@ import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
 import { useExamSocketRefresh } from "@/providers/exam-socket-provider";
 import { fetchExamsByStudentId } from "@/services/exam-api";
-import { Calendar, Clock, FileText, GraduationCap, History } from "lucide-react-native";
+import {
+  Calendar,
+  Clock,
+  ClipboardCheck,
+  FilePen,
+  FileText,
+  History,
+  NotebookPen,
+} from "lucide-react-native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
@@ -205,8 +213,9 @@ export default function ExamsScreen() {
         ? { border: cardBorder, iconBg: "rgba(255,255,255,0.08)", text: theme.text }
         : { border: cardBorder, iconBg: "#f3f4f6", text: theme.text },
     }[variant];
+    // Exam-themed icons instead of the generic calendar/cap
     const Icon =
-      variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
+      variant === "completed" ? ClipboardCheck : variant === "today" ? FilePen : NotebookPen;
 
     let displayPaper: (typeof exam.examSubjects)[0] | null = null;
     if (exam.examSubjects?.length) {
@@ -294,19 +303,22 @@ export default function ExamsScreen() {
               )}
             </View>
           </View>
-          {/* Whole card is pressable — no separate eye button */}
-          <View
-            style={{
-              alignSelf: "center",
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 999,
-              backgroundColor: styles.iconBg,
-            }}
-          >
-            <Text style={{ color: styles.text, fontSize: 12, fontWeight: "500" }}>
-              {exam.class?.name ?? ""}
-            </Text>
+          {/* Whole card is pressable — no separate eye button. The fixed-height
+              centering wrapper aligns the badge with the exam-name + subject rows
+              (not the whole card, which includes the date row). */}
+          <View style={{ height: 44, justifyContent: "center" }}>
+            <View
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 999,
+                backgroundColor: styles.iconBg,
+              }}
+            >
+              <Text style={{ color: styles.text, fontSize: 12, fontWeight: "500" }}>
+                {exam.class?.name ?? ""}
+              </Text>
+            </View>
           </View>
         </View>
       </Pressable>
