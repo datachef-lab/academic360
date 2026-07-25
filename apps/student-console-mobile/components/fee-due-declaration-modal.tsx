@@ -214,8 +214,8 @@ export function FeeDueDeclarationModal({
               borderBottomColor: cardBorder,
             }}
           >
-            <Text style={{ color: "#e11d48", fontSize: 18, fontWeight: "700" }}>
-              Important Notification:
+            <Text style={{ color: theme.text, fontSize: 18, fontWeight: "700" }}>
+              Semester Fee Reminder
             </Text>
             <Pressable
               onPress={onClose}
@@ -256,21 +256,46 @@ export function FeeDueDeclarationModal({
 
             <View style={{ paddingHorizontal: 18, paddingTop: 14 }}>
               <Text style={{ color: subText, fontSize: 13, lineHeight: 19 }}>
-                As per our records, your{" "}
+                Our records show your{" "}
                 <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
                   Semester {semesterDisplay}
                 </Text>{" "}
-                enrolment fee is not paid despite multiple reminders sent to you previously.{" "}
-                <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
-                  Consequently, you are currently not considered a bonafide student of the College.
-                </Text>
+                fee is still pending. You can still download your admit card now on confirming the
+                acknowledgment below.
               </Text>
-              <Text style={{ color: subText, fontSize: 13, lineHeight: 19, marginTop: 10 }}>
-                Please note that completing enrolment procedure including payment of the{" "}
-                <Text style={{ fontWeight: "700", fontStyle: "italic", color: theme.text }}>
-                  Semester {semesterDisplay}
-                </Text>{" "}
-                fee is mandatory to appear for the Calcutta University End-Semester Examination.
+              <View
+                style={{
+                  marginTop: 10,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(245,158,11,0.4)" : "#fde68a",
+                  backgroundColor: isDark ? "rgba(245,158,11,0.12)" : "#fffbeb",
+                  padding: 12,
+                }}
+              >
+                <Text
+                  style={{
+                    color: isDark ? "#fbbf24" : "#92400e",
+                    fontSize: 13,
+                    lineHeight: 19,
+                  }}
+                >
+                  Please treat this as a reminder, not a block. However, prolonged delay in payment
+                  of fee may end up in deactivation of your UID and eventually an academic hold on
+                  your further education.
+                </Text>
+              </View>
+              <Text
+                style={{
+                  color: isDark ? "#6ee7b7" : "#065f46",
+                  fontSize: 13,
+                  lineHeight: 19,
+                  fontWeight: "700",
+                  marginTop: 10,
+                }}
+              >
+                You are advised, in your interest, to clear the dues immediately to avoid any
+                inconvenience.
               </Text>
 
               {studentUid ? (
@@ -452,16 +477,37 @@ export function FeeDueDeclarationModal({
                   <Text style={{ fontWeight: "700", fontStyle: "italic" }}>
                     Semester {semesterDisplay}
                   </Text>{" "}
-                  enrolment fee is pending and undertake to clear the dues as early as possible.
+                  fee is currently pending.
                 </CheckboxRow>
                 <CheckboxRow
                   checked={consequenceChecked}
                   onToggle={() => setConsequenceChecked((v) => !v)}
                 >
-                  I understand that non-payment of my dues may affect my bonafide student status and
-                  Calcutta University examination eligibility.
+                  I confirm I will clear this amount at the earliest.
                 </CheckboxRow>
               </View>
+
+              {/* Contact note for payment issues */}
+              <Text
+                style={{
+                  color: subText,
+                  fontSize: 11,
+                  lineHeight: 17,
+                  marginTop: 14,
+                  borderTopWidth: 1,
+                  borderTopColor: cardBorder,
+                  borderStyle: "dashed",
+                  paddingTop: 12,
+                }}
+              >
+                You may reach us on any working day between{" "}
+                <Text style={{ fontWeight: "700", color: theme.text }}>10:30 AM and 1:30 PM</Text>{" "}
+                at{" "}
+                <Text style={{ fontWeight: "700", color: theme.text }}>
+                  Room No. 424, System Control Room
+                </Text>
+                , college campus, with any issues while making the fee payment.
+              </Text>
             </View>
           </ScrollView>
 
@@ -505,7 +551,7 @@ export function FeeDueDeclarationModal({
               }}
             >
               <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>
-                Generate admit card
+                Proceed to Download
               </Text>
             </Pressable>
           </View>
