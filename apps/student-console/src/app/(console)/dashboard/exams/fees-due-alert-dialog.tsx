@@ -72,7 +72,7 @@ export function FeesDueAlertDialog({
       {/* Two-column layout: full-height illustration left, content right. Sized
           generously (5xl / ~90vh) so the notification, dues and declaration all
           breathe; the right column scrolls if it ever overflows. */}
-      <AlertDialogContent className="max-w-6xl overflow-hidden p-0">
+      <AlertDialogContent className="w-[95vw] max-w-6xl overflow-hidden rounded-lg p-0">
         <div className="flex max-h-[92vh] flex-col sm:min-h-[680px] sm:flex-row">
           {/* Left: illustration shown whole (tightly cropped source, contain — not
               cover). A soft gradient + caption fill the column so the space around
@@ -119,10 +119,12 @@ export function FeesDueAlertDialog({
               </AlertDialogDescription>
             </AlertDialogHeader>
 
-            {/* Breakdown of what's due — plain table, no inner scroll so the
-                Total row is never clipped (the whole right column scrolls) */}
+            {/* Breakdown of what's due — plain table, no vertical inner scroll so the
+                Total row is never clipped (the whole right column scrolls). overflow-x
+                lets the table scroll sideways on narrow screens instead of stretching
+                the dialog past the viewport. */}
             {visibleFees.length > 0 && (
-              <div className="mt-5 overflow-hidden rounded-lg border border-gray-200">
+              <div className="mt-5 overflow-x-auto rounded-lg border border-gray-200">
                 <table className="w-full border-collapse text-center text-[13px]">
                   <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
                     <tr>
