@@ -25,17 +25,6 @@ const formatInr = (value: number): string =>
     maximumFractionDigits: 0,
   }).format(Number(value || 0));
 
-const feeSubtitle = (fee: StudentDueFee): string =>
-  [
-    fee.feeStructure?.class?.name,
-    fee.feeStructure?.academicYear?.year,
-    fee.type === "INSTALLMENT" && fee.feeStructureInstallment?.name
-      ? fee.feeStructureInstallment.name
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
 const toISODate = (d: Date): string => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -124,25 +113,27 @@ export function FeesDueAlertDialog({
           breathe; the right column scrolls if it ever overflows. */}
       <AlertDialogContent className="max-w-5xl overflow-hidden p-0">
         <div className="flex max-h-[90vh] min-h-[620px] flex-col sm:flex-row">
-          {/* Left: illustration filling the full height of the dialog (cover, not centered) */}
-          <div className="relative h-48 w-full flex-shrink-0 bg-violet-50 sm:h-auto sm:w-[40%]">
+          {/* Left: illustration shown whole (tightly cropped source, contain — not
+              cover — so nothing gets cut off), centered in its column */}
+          <div className="flex w-full flex-shrink-0 items-center justify-center bg-white p-4 sm:w-[40%] sm:p-6">
             <Image
               src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
               alt="Pending fees illustration"
-              fill
+              width={840}
+              height={870}
               priority
               unoptimized
-              className="object-cover object-top"
+              className="h-auto max-h-48 w-auto sm:max-h-full sm:w-full"
             />
           </div>
 
           {/* Right: notification + dues + declaration + actions */}
           <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-6 sm:p-8">
             <AlertDialogHeader className="space-y-3 text-left sm:text-left">
-              <AlertDialogTitle className="text-xl font-semibold text-rose-700 sm:text-2xl">
+              <AlertDialogTitle className="text-xl font-semibold text-rose-700">
                 Important Notification:
               </AlertDialogTitle>
-              <AlertDialogDescription className="space-y-3 text-sm leading-relaxed text-gray-600 sm:text-[15px]">
+              <AlertDialogDescription className="space-y-3 text-[13px] leading-relaxed text-gray-600">
                 <span className="block">
                   As per our records, your Semester{" "}
                   <span className="font-semibold text-gray-800">{semesterDisplay}</span> enrolment
@@ -162,34 +153,56 @@ export function FeesDueAlertDialog({
               </AlertDialogDescription>
             </AlertDialogHeader>
 
-            {/* Breakdown of what's due */}
+            {/* Breakdown of what's due — plain table, no inner scroll so the
+                Total row is never clipped (the whole right column scrolls) */}
             {visibleFees.length > 0 && (
               <div className="mt-5 overflow-hidden rounded-lg border border-gray-200">
-                <div className="max-h-36 divide-y divide-gray-100 overflow-y-auto">
-                  {visibleFees.map((fee) => {
-                    const subtitle = feeSubtitle(fee);
-                    return (
-                      <div
-                        key={fee.id}
-                        className="flex items-center justify-between gap-3 px-4 py-2.5"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-gray-800">
-                            {fee.feeStructure?.receiptType?.name ?? "Fee"}
-                          </p>
-                          {subtitle && <p className="truncate text-xs text-gray-500">{subtitle}</p>}
-                        </div>
-                        <span className="whitespace-nowrap text-sm font-semibold text-gray-800">
+                <table className="w-full text-left text-[13px]">
+                  <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Sr No</th>
+                      <th className="px-3 py-2 font-medium">Academic Year</th>
+                      <th className="px-3 py-2 font-medium">Receipt</th>
+                      <th className="px-3 py-2 font-medium">Semester</th>
+                      <th className="px-3 py-2 text-right font-medium">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {visibleFees.map((fee, index) => (
+                      <tr key={fee.id}>
+                        <td className="px-3 py-2 text-gray-600">{index + 1}</td>
+                        <td className="px-3 py-2 text-gray-600">
+                          {fee.feeStructure?.academicYear?.year ?? "—"}
+                        </td>
+                        <td className="px-3 py-2 font-medium text-gray-800">
+                          {fee.feeStructure?.receiptType?.name ?? "Fee"}
+                          {fee.type === "INSTALLMENT" && fee.feeStructureInstallment?.name
+                            ? ` (${fee.feeStructureInstallment.name})`
+                            : ""}
+                        </td>
+                        <td className="px-3 py-2 text-gray-600">
+                          {String(fee.feeStructure?.class?.name ?? "—").replace(
+                            /^SEMESTER\s*/i,
+                            "",
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold text-gray-800">
                           {formatInr(fee.totalPayable)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex items-center justify-between border-t border-gray-200 bg-rose-50/70 px-4 py-2.5">
-                  <span className="text-sm font-semibold text-gray-700">Total Due</span>
-                  <span className="text-base font-bold text-rose-600">{formatInr(totalDue)}</span>
-                </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-gray-200 bg-rose-50/70">
+                      <td colSpan={4} className="px-3 py-2 font-semibold text-gray-700">
+                        Total Due
+                      </td>
+                      <td className="px-3 py-2 text-right font-bold text-rose-600">
+                        {formatInr(totalDue)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             )}
 
@@ -203,7 +216,7 @@ export function FeesDueAlertDialog({
               </p>
               {/* The date input must NOT live inside the label, else clicking it
                 toggles the checkbox instead of opening the picker. */}
-              <div className="flex items-start gap-3 text-sm leading-relaxed text-gray-700">
+              <div className="flex items-start gap-3 text-[13px] leading-relaxed text-gray-700">
                 <input
                   id="fee-due-ack"
                   type="checkbox"
@@ -223,14 +236,14 @@ export function FeesDueAlertDialog({
                     min={minDate}
                     max={maxDate}
                     onChange={(e) => setClearByDate(e.target.value)}
-                    className="inline-block rounded-md border border-gray-300 bg-white px-2 py-0.5 text-sm focus:border-indigo-500 focus:outline-none"
+                    className="inline-block rounded-md border border-gray-300 bg-white px-2 py-0.5 text-[13px] focus:border-indigo-500 focus:outline-none"
                   />
                   <label htmlFor="fee-due-ack" className="cursor-pointer">
                     .
                   </label>
                 </span>
               </div>
-              <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-gray-700">
+              <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-gray-700">
                 <input
                   type="checkbox"
                   checked={consequenceChecked}
