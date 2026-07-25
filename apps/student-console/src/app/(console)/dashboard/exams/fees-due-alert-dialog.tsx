@@ -83,16 +83,15 @@ export function FeesDueAlertDialog({
             </AlertDialogHeader>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {/* Illustration banner below the title: whole image shown (contain, not
-                  cover) over a soft gradient backdrop */}
-              <div className="relative h-40 w-full bg-gradient-to-r from-violet-50 via-rose-50/60 to-violet-50 sm:h-56">
+              {/* Illustration as a cover banner below the title */}
+              <div className="relative h-40 w-full sm:h-56">
                 <Image
                   src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
                   alt="Pending fees illustration"
                   fill
                   priority
                   unoptimized
-                  className="object-contain py-2"
+                  className="object-cover object-center"
                 />
               </div>
 
