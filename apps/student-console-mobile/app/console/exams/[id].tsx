@@ -239,12 +239,6 @@ export default function ExamDetailsScreen() {
 
   const bannerWidth = Dimensions.get("window").width;
   const bannerHeight = bannerWidth / BANNER_ASPECT;
-  const screenWidth = Dimensions.get("window").width;
-  const colGap = 8;
-  const availableWidth = screenWidth - 32 - 24 - colGap * 2;
-  const colName = Math.floor(availableWidth * 0.4);
-  const colTime = Math.floor(availableWidth * 0.3);
-  const colLocation = Math.floor(availableWidth * 0.3);
 
   if (loading) {
     return (
@@ -286,7 +280,7 @@ export default function ExamDetailsScreen() {
             borderRadius: 8,
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "600" }}>Go Back</Text>
+          <Text style={{ color: "#fff", fontWeight: "600", fontStyle: "italic" }}>Go Back</Text>
         </Pressable>
       </View>
     );
@@ -325,7 +319,9 @@ export default function ExamDetailsScreen() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.text, fontSize: 20, fontWeight: "700" }}>
+              <Text
+                style={{ color: theme.text, fontSize: 20, fontWeight: "700", fontStyle: "italic" }}
+              >
                 {exam.examType?.name ?? "Exam"}
               </Text>
               <View
@@ -338,7 +334,9 @@ export default function ExamDetailsScreen() {
                   backgroundColor: isDark ? "rgba(99,102,241,0.25)" : "#eef2ff",
                 }}
               >
-                <Text style={{ color: accent, fontSize: 13, fontWeight: "600" }}>
+                <Text
+                  style={{ color: accent, fontSize: 13, fontWeight: "600", fontStyle: "italic" }}
+                >
                   {exam.class?.name ?? ""}
                 </Text>
               </View>
@@ -357,7 +355,15 @@ export default function ExamDetailsScreen() {
                 borderColor: cardBorder,
               }}
             >
-              <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600", marginBottom: 8 }}>
+              <Text
+                style={{
+                  color: theme.text,
+                  fontSize: 14,
+                  fontWeight: "600",
+                  fontStyle: "italic",
+                  marginBottom: 8,
+                }}
+              >
                 Schedule
               </Text>
               {paperDetails.map((p, idx) => (
@@ -435,68 +441,40 @@ export default function ExamDetailsScreen() {
                 overflow: "hidden",
               }}
             >
-              {/* Table header */}
+              {/* Table header — padding lives on the CELLS so the vertical borders
+                  span the full row height (real grid lines, not short separators) */}
               <View
                 style={{
                   flexDirection: "row",
-                  alignItems: "center",
                   backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#f1f5f9",
-                  paddingVertical: 12,
-                  paddingHorizontal: 12,
                   borderBottomWidth: 1,
                   borderBottomColor: cardBorder,
                 }}
               >
-                <View
-                  style={{
-                    width: colName,
-                    marginRight: colGap,
-                    borderRightWidth: 1,
-                    borderRightColor: cardBorder,
-                  }}
-                >
-                  <Text
+                {(["Paper", "Time", "Location"] as const).map((label, i) => (
+                  <View
+                    key={label}
                     style={{
-                      color: theme.text,
-                      fontSize: 12,
-                      fontWeight: "700",
-                      textTransform: "uppercase",
+                      flex: [1.1, 1, 1.2][i],
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderRightWidth: i < 2 ? 1 : 0,
+                      borderRightColor: cardBorder,
                     }}
                   >
-                    Paper
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: colTime,
-                    marginRight: colGap,
-                    borderRightWidth: 1,
-                    borderRightColor: cardBorder,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: theme.text,
-                      fontSize: 12,
-                      fontWeight: "700",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Time
-                  </Text>
-                </View>
-                <View style={{ width: colLocation }}>
-                  <Text
-                    style={{
-                      color: theme.text,
-                      fontSize: 12,
-                      fontWeight: "700",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Location
-                  </Text>
-                </View>
+                    <Text
+                      style={{
+                        color: theme.text,
+                        fontSize: 12,
+                        fontWeight: "700",
+                        fontStyle: "italic",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </View>
+                ))}
               </View>
               {/* Table rows */}
               {paperDetails.map((p, idx) => (
@@ -504,9 +482,6 @@ export default function ExamDetailsScreen() {
                   key={idx}
                   style={{
                     flexDirection: "row",
-                    alignItems: "flex-start",
-                    paddingVertical: 12,
-                    paddingHorizontal: 12,
                     backgroundColor:
                       idx % 2 === 0 ? "transparent" : isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
                     borderBottomWidth: idx < paperDetails.length - 1 ? 1 : 0,
@@ -515,10 +490,12 @@ export default function ExamDetailsScreen() {
                 >
                   <View
                     style={{
-                      width: colName,
-                      marginRight: colGap,
+                      flex: 1.1,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
                       borderRightWidth: 1,
                       borderRightColor: cardBorder,
+                      justifyContent: "center",
                     }}
                   >
                     {/* Paper code only — the subject name made the cell crowded */}
@@ -528,10 +505,12 @@ export default function ExamDetailsScreen() {
                   </View>
                   <View
                     style={{
-                      width: colTime,
-                      marginRight: colGap,
+                      flex: 1,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
                       borderRightWidth: 1,
                       borderRightColor: cardBorder,
+                      justifyContent: "center",
                     }}
                   >
                     <Text
@@ -541,7 +520,14 @@ export default function ExamDetailsScreen() {
                       {formatTime(p.startTime)} – {formatTime(p.endTime)}
                     </Text>
                   </View>
-                  <View style={{ width: colLocation }}>
+                  <View
+                    style={{
+                      flex: 1.2,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      justifyContent: "center",
+                    }}
+                  >
                     <Text
                       style={{ color: theme.text, fontSize: 12, opacity: 0.9 }}
                       numberOfLines={2}
@@ -592,7 +578,7 @@ export default function ExamDetailsScreen() {
             ) : (
               <Download size={20} color="#fff" />
             )}
-            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>
+            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600", fontStyle: "italic" }}>
               Download Admit Card
             </Text>
           </Pressable>
