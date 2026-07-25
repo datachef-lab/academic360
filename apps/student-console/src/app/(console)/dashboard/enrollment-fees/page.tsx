@@ -1147,9 +1147,9 @@ export default function EnrollmentFeesPage() {
           {visibleCards.map((fee) => (
             <Card
               key={fee.id}
-              className="h-full max-w-[360px] overflow-hidden border bg-white shadow-lg transition-all hover:shadow-xl"
+              className="h-full w-full overflow-hidden border bg-white shadow-lg transition-all hover:shadow-xl"
             >
-              <div className="relative h-full">
+              <div className="relative flex h-full flex-col">
                 <div className="absolute top-0 h-1.5 w-full bg-gradient-to-r from-blue-500 to-indigo-600" />
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/[0.03] to-indigo-500/[0.03]" />
                 <CardHeader className="relative pb-4">
@@ -1169,13 +1169,14 @@ export default function EnrollmentFeesPage() {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="relative space-y-3 pt-0 text-sm">
+                <CardContent className="relative flex flex-1 flex-col space-y-3 pt-0 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[34px] font-bold leading-none text-blue-700">
                       {formatInr(fee.total)}
                     </p>
                   </div>
-                  <div className="flex pt-4 justify-center items-center gap-2 text-xs text-slate-600">
+                  {/* mt-auto pins the button row to the card bottom so all cards align */}
+                  <div className="mt-auto flex items-center justify-center gap-2 pt-4 text-xs text-slate-600">
                     <Button
                       onClick={() =>
                         openCareerProgression({

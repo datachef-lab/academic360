@@ -761,7 +761,8 @@ export default function ExamsContent() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 sm:pb-12">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+        {/* Stats cards — desktop/tablet only; on mobile they pushed the exam list below the fold */}
+        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -864,7 +865,7 @@ export default function ExamsContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.5 }}
-          className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-indigo-100 p-4 sm:p-6 md:p-8 relative"
+          className="relative sm:bg-white sm:rounded-2xl sm:shadow-lg sm:border sm:border-indigo-100 sm:p-6 md:p-8"
         >
           {loading ? (
             <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col justify-center items-center z-10">
@@ -891,26 +892,26 @@ export default function ExamsContent() {
             </div>
           ) : (
             <TabsFixed value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsListFixed className="flex flex-wrap sm:flex-nowrap h-auto sm:h-12 items-center justify-center rounded-lg bg-indigo-50/60 p-1 mb-6 sm:mb-8 gap-1">
+              <TabsListFixed className="flex flex-nowrap h-auto sm:h-12 items-center justify-center rounded-lg bg-indigo-50/60 p-1 mb-4 sm:mb-8 gap-1">
                 <TabsTriggerFixed
                   value="upcoming"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md flex-1 sm:flex-initial px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
-                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 shrink-0" />
+                  <Calendar className="hidden sm:inline-block sm:w-4 sm:h-4 sm:mr-2 shrink-0" />
                   Upcoming ({upcomingExamGroupCount})
                 </TabsTriggerFixed>
                 <TabsTriggerFixed
                   value="recent"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md flex-1 sm:flex-initial px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
-                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 shrink-0" />
+                  <Clock className="hidden sm:inline-block sm:w-4 sm:h-4 sm:mr-2 shrink-0" />
                   Today ({recentExamGroupCount})
                 </TabsTriggerFixed>
                 <TabsTriggerFixed
                   value="previous"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md flex-1 sm:flex-initial px-2 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
-                  <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 shrink-0" />
+                  <History className="hidden sm:inline-block sm:w-4 sm:h-4 sm:mr-2 shrink-0" />
                   Completed ({previousExamGroupCount})
                 </TabsTriggerFixed>
               </TabsListFixed>
@@ -1090,6 +1091,7 @@ export default function ExamsContent() {
         onOpenChange={setIsFeesAlertOpen}
         dueFees={dueFees}
         semesterDisplay={semesterContext.display}
+        studentUid={student?.uid ?? undefined}
         onDeclared={markDeclared}
         onProceed={handleFeesAlertProceed}
       />
