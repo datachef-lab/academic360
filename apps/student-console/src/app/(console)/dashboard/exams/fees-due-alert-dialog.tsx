@@ -28,6 +28,8 @@ interface FeesDueAlertDialogProps {
   dueFees: StudentDueFee[];
   /** Human form for the "Semester {{X}}" copy, e.g. "II". */
   semesterDisplay: string;
+  /** Student's UID (e.g. 0804250001), shown under the title. */
+  studentUid?: string;
   /** Called when the student proceeds, so the page can skip the dialog from now on. */
   onDeclared: () => void;
   /** Called when the student clicks "Generate admit card" — opens the Exam Schedule. */
@@ -46,6 +48,7 @@ export function FeesDueAlertDialog({
   onOpenChange,
   dueFees,
   semesterDisplay,
+  studentUid,
   onDeclared,
   onProceed,
 }: FeesDueAlertDialogProps) {
@@ -120,6 +123,11 @@ export function FeesDueAlertDialog({
               <AlertDialogTitle className="text-xl font-semibold text-rose-700">
                 Important Notification:
               </AlertDialogTitle>
+              {studentUid && (
+                <p className="text-xs font-medium text-gray-500">
+                  UID: <span className="text-gray-700">{studentUid}</span>
+                </p>
+              )}
             </AlertDialogHeader>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
