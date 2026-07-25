@@ -447,7 +447,14 @@ export default function ExamDetailsScreen() {
                   borderBottomColor: cardBorder,
                 }}
               >
-                <View style={{ width: colName, marginRight: colGap }}>
+                <View
+                  style={{
+                    width: colName,
+                    marginRight: colGap,
+                    borderRightWidth: 1,
+                    borderRightColor: cardBorder,
+                  }}
+                >
                   <Text
                     style={{
                       color: theme.text,
@@ -456,10 +463,17 @@ export default function ExamDetailsScreen() {
                       textTransform: "uppercase",
                     }}
                   >
-                    Name
+                    Paper
                   </Text>
                 </View>
-                <View style={{ width: colTime, marginRight: colGap }}>
+                <View
+                  style={{
+                    width: colTime,
+                    marginRight: colGap,
+                    borderRightWidth: 1,
+                    borderRightColor: cardBorder,
+                  }}
+                >
                   <Text
                     style={{
                       color: theme.text,
@@ -499,12 +513,27 @@ export default function ExamDetailsScreen() {
                     borderBottomColor: cardBorder,
                   }}
                 >
-                  <View style={{ width: colName, marginRight: colGap }}>
+                  <View
+                    style={{
+                      width: colName,
+                      marginRight: colGap,
+                      borderRightWidth: 1,
+                      borderRightColor: cardBorder,
+                    }}
+                  >
+                    {/* Paper code only — the subject name made the cell crowded */}
                     <Text style={{ color: theme.text, fontSize: 13 }} numberOfLines={2}>
-                      {p.subjectName} ({p.paperCode})
+                      {p.paperCode || p.subjectName}
                     </Text>
                   </View>
-                  <View style={{ width: colTime, marginRight: colGap }}>
+                  <View
+                    style={{
+                      width: colTime,
+                      marginRight: colGap,
+                      borderRightWidth: 1,
+                      borderRightColor: cardBorder,
+                    }}
+                  >
                     <Text
                       style={{ color: theme.text, fontSize: 12, opacity: 0.9 }}
                       numberOfLines={2}

@@ -1,11 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { feeDueIllustration } from "@/constants/Images";
 import { useTheme } from "@/hooks/use-theme";
 import { formatInr, isFeeMappingPaid } from "@/lib/fee-utils";
 import { fetchStudentFeeMappings, type StudentFeeMapping } from "@/services/fees-api";
-import { Check } from "lucide-react-native";
+import { Check, X } from "lucide-react-native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, Text, View } from "react-native";
 
 /**
  * Mobile twin of the student-console web "Important Notification" fee-due
@@ -164,12 +165,13 @@ export function FeeDueDeclarationModal({
     >
       <View
         style={{
-          width: 20,
-          height: 20,
+          width: 22,
+          height: 22,
           borderRadius: 4,
-          borderWidth: 1.5,
-          borderColor: checked ? accent : cardBorder,
-          backgroundColor: checked ? accent : "transparent",
+          borderWidth: 2,
+          // Strong border + solid background so the unchecked box is clearly visible
+          borderColor: checked ? accent : isDark ? "rgba(255,255,255,0.55)" : "#6b7280",
+          backgroundColor: checked ? accent : isDark ? "rgba(255,255,255,0.08)" : "#ffffff",
           alignItems: "center",
           justifyContent: "center",
           marginTop: 2,
@@ -199,9 +201,12 @@ export function FeeDueDeclarationModal({
             backgroundColor: isDark ? "#1f2130" : "#ffffff",
           }}
         >
-          {/* Static title bar */}
+          {/* Static title bar with close */}
           <View
             style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
               paddingHorizontal: 18,
               paddingTop: 18,
               paddingBottom: 12,
@@ -212,126 +217,244 @@ export function FeeDueDeclarationModal({
             <Text style={{ color: "#e11d48", fontSize: 18, fontWeight: "700" }}>
               Important Notification:
             </Text>
+            <Pressable
+              onPress={onClose}
+              hitSlop={8}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#f3f4f6",
+              }}
+            >
+              <X size={18} color={theme.text} />
+            </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 18, paddingTop: 14 }}>
-            <Text style={{ color: subText, fontSize: 13, lineHeight: 19 }}>
-              As per our records, your Semester{" "}
-              <Text style={{ fontWeight: "700", color: theme.text }}>{semesterDisplay}</Text>{" "}
-              enrolment fee is not paid despite multiple reminders sent to you previously.{" "}
-              <Text style={{ fontWeight: "700", color: theme.text }}>
-                Consequently, you are currently not considered a bonafide student of the College.
-              </Text>
-            </Text>
-            <Text style={{ color: subText, fontSize: 13, lineHeight: 19, marginTop: 10 }}>
-              Please note that completing enrolment procedure including payment of the Semester{" "}
-              <Text style={{ fontWeight: "700", color: theme.text }}>{semesterDisplay}</Text> fee is
-              mandatory to appear for the Calcutta University End-Semester Examination.
-            </Text>
-
-            {studentUid ? (
-              <Text style={{ color: subText, fontSize: 12, fontWeight: "600", marginTop: 14 }}>
-                UID: <Text style={{ color: theme.text }}>{studentUid}</Text>
-              </Text>
-            ) : null}
-
-            {/* Dues */}
-            {dueFees.length > 0 && (
+          <ScrollView contentContainerStyle={{ paddingBottom: 18 }}>
+            {/* Cover illustration banner (same artwork as the website) with a light
+                dark overlay */}
+            <View style={{ height: 150, width: "100%" }}>
+              <Image
+                source={feeDueIllustration}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="cover"
+              />
               <View
                 style={{
-                  marginTop: 8,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: cardBorder,
-                  overflow: "hidden",
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: "rgba(0,0,0,0.2)",
                 }}
-              >
-                {dueFees.map((fee, idx) => (
+              />
+            </View>
+
+            <View style={{ paddingHorizontal: 18, paddingTop: 14 }}>
+              <Text style={{ color: subText, fontSize: 13, lineHeight: 19 }}>
+                As per our records, your Semester{" "}
+                <Text style={{ fontWeight: "700", color: theme.text }}>{semesterDisplay}</Text>{" "}
+                enrolment fee is not paid despite multiple reminders sent to you previously.{" "}
+                <Text style={{ fontWeight: "700", color: theme.text }}>
+                  Consequently, you are currently not considered a bonafide student of the College.
+                </Text>
+              </Text>
+              <Text style={{ color: subText, fontSize: 13, lineHeight: 19, marginTop: 10 }}>
+                Please note that completing enrolment procedure including payment of the Semester{" "}
+                <Text style={{ fontWeight: "700", color: theme.text }}>{semesterDisplay}</Text> fee
+                is mandatory to appear for the Calcutta University End-Semester Examination.
+              </Text>
+
+              {studentUid ? (
+                <Text style={{ color: subText, fontSize: 12, fontWeight: "600", marginTop: 14 }}>
+                  UID: <Text style={{ color: theme.text }}>{studentUid}</Text>
+                </Text>
+              ) : null}
+
+              {/* Dues — bordered table, matching the web dialog (#, A.Y., Receipt, Sem, Amount) */}
+              {dueFees.length > 0 && (
+                <View
+                  style={{
+                    marginTop: 8,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                    overflow: "hidden",
+                  }}
+                >
                   <View
-                    key={fee.id ?? idx}
                     style={{
                       flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
+                      backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#f8fafc",
                       borderBottomWidth: 1,
                       borderBottomColor: cardBorder,
                     }}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.text, fontSize: 13, fontWeight: "600" }}>
-                        {fee.feeStructure?.receiptType?.name ?? "Fee"}
-                      </Text>
-                      <Text style={{ color: subText, fontSize: 11, marginTop: 2 }}>
-                        {[fee.feeStructure?.class?.name, fee.feeStructure?.academicYear?.year]
-                          .filter(Boolean)
-                          .join(" · ")}
+                    {(
+                      [
+                        ["#", 0.5],
+                        ["A.Y.", 1.2],
+                        ["Receipt", 1.7],
+                        ["Sem", 0.7],
+                        ["Amount", 1.3],
+                      ] as const
+                    ).map(([label, flex], i) => (
+                      <View
+                        key={label}
+                        style={{
+                          flex,
+                          paddingVertical: 8,
+                          paddingHorizontal: 6,
+                          borderRightWidth: i < 4 ? 1 : 0,
+                          borderRightColor: cardBorder,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: subText,
+                            fontSize: 10,
+                            fontWeight: "700",
+                            textTransform: "uppercase",
+                            textAlign: "center",
+                          }}
+                        >
+                          {label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                  {dueFees.map((fee, idx) => {
+                    const cells: [string, number][] = [
+                      [`${idx + 1}.`, 0.5],
+                      [String(fee.feeStructure?.academicYear?.year ?? "—"), 1.2],
+                      [String(fee.feeStructure?.receiptType?.name ?? "Fee"), 1.7],
+                      [
+                        String(fee.feeStructure?.class?.name ?? "—").replace(/^SEMESTER\s*/i, ""),
+                        0.7,
+                      ],
+                      [formatInr(Number(fee.totalPayable ?? 0)), 1.3],
+                    ];
+                    return (
+                      <View
+                        key={fee.id ?? idx}
+                        style={{
+                          flexDirection: "row",
+                          borderBottomWidth: 1,
+                          borderBottomColor: cardBorder,
+                        }}
+                      >
+                        {cells.map(([value, flex], i) => (
+                          <View
+                            key={i}
+                            style={{
+                              flex,
+                              paddingVertical: 8,
+                              paddingHorizontal: 6,
+                              borderRightWidth: i < 4 ? 1 : 0,
+                              borderRightColor: cardBorder,
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: theme.text,
+                                fontSize: 11,
+                                fontWeight: i === 2 || i === 4 ? "600" : "400",
+                                textAlign: "center",
+                              }}
+                            >
+                              {value}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  })}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      backgroundColor: isDark ? "rgba(225,29,72,0.15)" : "#fff1f2",
+                    }}
+                  >
+                    <View
+                      style={{
+                        flex: 4.1,
+                        paddingVertical: 9,
+                        paddingHorizontal: 6,
+                        borderRightWidth: 1,
+                        borderRightColor: cardBorder,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: theme.text,
+                          fontSize: 12,
+                          fontWeight: "700",
+                          textAlign: "center",
+                        }}
+                      >
+                        Total Due
                       </Text>
                     </View>
-                    <Text style={{ color: theme.text, fontSize: 13, fontWeight: "700" }}>
-                      {formatInr(Number(fee.totalPayable ?? 0))}
-                    </Text>
+                    <View style={{ flex: 1.3, paddingVertical: 9, paddingHorizontal: 6 }}>
+                      <Text
+                        style={{
+                          color: "#e11d48",
+                          fontSize: 12,
+                          fontWeight: "800",
+                          textAlign: "center",
+                        }}
+                      >
+                        {formatInr(totalDue)}
+                      </Text>
+                    </View>
                   </View>
-                ))}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    backgroundColor: isDark ? "rgba(225,29,72,0.15)" : "#fff1f2",
-                  }}
-                >
-                  <Text style={{ color: theme.text, fontSize: 13, fontWeight: "700" }}>
-                    Total Due
-                  </Text>
-                  <Text style={{ color: "#e11d48", fontSize: 14, fontWeight: "800" }}>
-                    {formatInr(totalDue)}
-                  </Text>
                 </View>
-              </View>
-            )}
+              )}
 
-            {/* Declaration */}
-            <View
-              style={{
-                marginTop: 16,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: isDark ? "rgba(99,102,241,0.4)" : "#e0e7ff",
-                backgroundColor: isDark ? "rgba(99,102,241,0.12)" : "rgba(238,242,255,0.5)",
-                padding: 14,
-              }}
-            >
-              <Text
+              {/* Declaration */}
+              <View
                 style={{
-                  color: accent,
-                  fontSize: 11,
-                  fontWeight: "700",
-                  letterSpacing: 1,
-                  textTransform: "uppercase",
+                  marginTop: 16,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(99,102,241,0.4)" : "#e0e7ff",
+                  backgroundColor: isDark ? "rgba(99,102,241,0.12)" : "rgba(238,242,255,0.5)",
+                  padding: 14,
                 }}
               >
-                Declaration
-              </Text>
-              <CheckboxRow
-                checked={acknowledgeChecked}
-                onToggle={() => setAcknowledgeChecked((v) => !v)}
-              >
-                I acknowledge that my Semester{" "}
-                <Text style={{ fontWeight: "700" }}>{semesterDisplay}</Text> enrolment fee is
-                pending and undertake to clear the dues as early as possible.
-              </CheckboxRow>
-              <CheckboxRow
-                checked={consequenceChecked}
-                onToggle={() => setConsequenceChecked((v) => !v)}
-              >
-                I understand that non-payment of my dues may affect my bonafide student status and
-                Calcutta University examination eligibility.
-              </CheckboxRow>
+                <Text
+                  style={{
+                    color: accent,
+                    fontSize: 11,
+                    fontWeight: "700",
+                    letterSpacing: 1,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Declaration
+                </Text>
+                <CheckboxRow
+                  checked={acknowledgeChecked}
+                  onToggle={() => setAcknowledgeChecked((v) => !v)}
+                >
+                  I acknowledge that my Semester{" "}
+                  <Text style={{ fontWeight: "700" }}>{semesterDisplay}</Text> enrolment fee is
+                  pending and undertake to clear the dues as early as possible.
+                </CheckboxRow>
+                <CheckboxRow
+                  checked={consequenceChecked}
+                  onToggle={() => setConsequenceChecked((v) => !v)}
+                >
+                  I understand that non-payment of my dues may affect my bonafide student status and
+                  Calcutta University examination eligibility.
+                </CheckboxRow>
+              </View>
             </View>
           </ScrollView>
 

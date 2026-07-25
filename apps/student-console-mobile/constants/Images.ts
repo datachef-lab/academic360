@@ -1,6 +1,7 @@
 import heroImage from "@/assets/images/hero-image.jpeg";
 import sampleQrcode from "@/assets/images/sample-qrcode.png";
 import examDetailsImage from "@/assets/images/exam-illustration.png";
+import feeDueIllustration from "@/assets/images/fee-due-illustration.png";
 
 // Onboarding illustrations. Swap these four files (same names) with your own
 // picks — colourful flat education illustrations — and the screen updates.
@@ -10,7 +11,7 @@ import onbExams from "@/assets/illustrations/exams.png";
 import onbDashboard from "@/assets/illustrations/dashboard.png";
 import onbFees from "@/assets/illustrations/fees.png";
 
-export { heroImage, sampleQrcode, examDetailsImage };
+export { heroImage, sampleQrcode, examDetailsImage, feeDueIllustration };
 
 // Remote college logo (served by the backend settings file endpoint).
 export const brandLogoUrl = "https://api.academic360.app/api/v1/settings/file/4";

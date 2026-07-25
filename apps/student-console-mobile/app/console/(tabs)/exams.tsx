@@ -297,6 +297,7 @@ export default function ExamsScreen() {
           {/* Whole card is pressable — no separate eye button */}
           <View
             style={{
+              alignSelf: "center",
               paddingHorizontal: 10,
               paddingVertical: 6,
               borderRadius: 999,
