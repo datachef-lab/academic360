@@ -239,28 +239,29 @@ export function FeesDueAlertDialog({
                     </span>
                   </label>
                 </div>
-
-                {/* Plain Buttons (no AlertDialogCancel/Action): the Radix prop typings
-                resolve differently under the box's strict pnpm linking and broke the
-                CI next build twice. The dialog is controlled via open/onOpenChange,
-                so native buttons are sufficient. */}
-                <AlertDialogFooter className="mt-auto flex-shrink-0 gap-2 pt-6 sm:justify-between">
-                  <Button
-                    variant="outline"
-                    className="mt-0"
-                    onClick={() => {
-                      onOpenChange(false);
-                      router.push("/dashboard/enrollment-fees");
-                    }}
-                  >
-                    Click to Pay
-                  </Button>
-                  <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
-                    Generate admit card
-                  </Button>
-                </AlertDialogFooter>
               </div>
             </div>
+
+            {/* Static footer bar — always visible below the scroll area. Plain
+                Buttons (no AlertDialogCancel/Action): the Radix prop typings
+                resolve differently under the box's strict pnpm linking and broke
+                the CI next build twice. The dialog is controlled via
+                open/onOpenChange, so native buttons are sufficient. */}
+            <AlertDialogFooter className="flex-shrink-0 gap-2 border-t border-gray-100 px-6 py-4 sm:justify-between sm:px-8">
+              <Button
+                variant="outline"
+                className="mt-0"
+                onClick={() => {
+                  onOpenChange(false);
+                  router.push("/dashboard/enrollment-fees");
+                }}
+              >
+                Click to Pay
+              </Button>
+              <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
+                Generate admit card
+              </Button>
+            </AlertDialogFooter>
           </div>
         </div>
       </AlertDialogContent>
