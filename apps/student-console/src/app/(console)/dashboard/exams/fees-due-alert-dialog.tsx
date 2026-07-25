@@ -111,11 +111,12 @@ export function FeesDueAlertDialog({
       {/* Two-column layout: full-height illustration left, content right. Sized
           generously (5xl / ~90vh) so the notification, dues and declaration all
           breathe; the right column scrolls if it ever overflows. */}
-      <AlertDialogContent className="max-w-5xl overflow-hidden p-0">
-        <div className="flex max-h-[90vh] min-h-[620px] flex-col sm:flex-row">
+      <AlertDialogContent className="max-w-6xl overflow-hidden p-0">
+        <div className="flex max-h-[92vh] min-h-[680px] flex-col sm:flex-row">
           {/* Left: illustration shown whole (tightly cropped source, contain — not
-              cover — so nothing gets cut off), centered in its column */}
-          <div className="flex w-full flex-shrink-0 items-center justify-center bg-white p-4 sm:w-[40%] sm:p-6">
+              cover). A soft gradient + caption fill the column so the space around
+              the square artwork reads as designed, not empty. */}
+          <div className="flex w-full flex-shrink-0 flex-col items-center justify-center gap-6 bg-gradient-to-b from-violet-50 via-white to-rose-50 p-6 sm:w-[38%] sm:p-8">
             <Image
               src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
               alt="Pending fees illustration"
@@ -123,8 +124,13 @@ export function FeesDueAlertDialog({
               height={870}
               priority
               unoptimized
-              className="h-auto max-h-48 w-auto sm:max-h-full sm:w-full"
+              className="h-auto w-full max-w-[420px]"
             />
+            <p className="text-center text-xs leading-relaxed text-gray-500">
+              Clear your Semester{" "}
+              <span className="font-semibold text-gray-700">{semesterDisplay}</span> dues to stay
+              exam-ready.
+            </p>
           </div>
 
           {/* Right: notification + dues + declaration + actions */}
@@ -157,47 +163,54 @@ export function FeesDueAlertDialog({
                 Total row is never clipped (the whole right column scrolls) */}
             {visibleFees.length > 0 && (
               <div className="mt-5 overflow-hidden rounded-lg border border-gray-200">
-                <table className="w-full text-left text-[13px]">
+                <table className="w-full border-collapse text-center text-[13px]">
                   <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
                     <tr>
-                      <th className="px-3 py-2 font-medium">Sr No</th>
-                      <th className="px-3 py-2 font-medium">Academic Year</th>
-                      <th className="px-3 py-2 font-medium">Receipt</th>
-                      <th className="px-3 py-2 font-medium">Semester</th>
-                      <th className="px-3 py-2 text-right font-medium">Amount</th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">Sr No</th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">
+                        Academic Year
+                      </th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">Receipt</th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">Semester</th>
+                      <th className="border border-gray-200 px-3 py-2 font-medium">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody>
                     {visibleFees.map((fee, index) => (
                       <tr key={fee.id}>
-                        <td className="px-3 py-2 text-gray-600">{index + 1}</td>
-                        <td className="px-3 py-2 text-gray-600">
+                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
+                          {index + 1}.
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
                           {fee.feeStructure?.academicYear?.year ?? "—"}
                         </td>
-                        <td className="px-3 py-2 font-medium text-gray-800">
+                        <td className="border border-gray-200 px-3 py-2 font-medium text-gray-800">
                           {fee.feeStructure?.receiptType?.name ?? "Fee"}
                           {fee.type === "INSTALLMENT" && fee.feeStructureInstallment?.name
                             ? ` (${fee.feeStructureInstallment.name})`
                             : ""}
                         </td>
-                        <td className="px-3 py-2 text-gray-600">
+                        <td className="border border-gray-200 px-3 py-2 text-gray-600">
                           {String(fee.feeStructure?.class?.name ?? "—").replace(
                             /^SEMESTER\s*/i,
                             "",
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right font-semibold text-gray-800">
+                        <td className="border border-gray-200 px-3 py-2 font-semibold text-gray-800">
                           {formatInr(fee.totalPayable)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t border-gray-200 bg-rose-50/70">
-                      <td colSpan={4} className="px-3 py-2 font-semibold text-gray-700">
+                    <tr className="bg-rose-50/70">
+                      <td
+                        colSpan={4}
+                        className="border border-gray-200 px-3 py-2 font-semibold text-gray-700"
+                      >
                         Total Due
                       </td>
-                      <td className="px-3 py-2 text-right font-bold text-rose-600">
+                      <td className="border border-gray-200 px-3 py-2 font-bold text-rose-600">
                         {formatInr(totalDue)}
                       </td>
                     </tr>
