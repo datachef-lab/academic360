@@ -5,6 +5,7 @@ export * from "./fee-group.model";
 export * from "./fee-head.model";
 export * from "./fee-slab.model";
 export * from "./fee-structure-component.model";
+export * from "./fee-due-declaration.model";
 export * from "./fee-structure-installment.model";
 export * from "./fee-structure.model";
 export * from "./fee-student-receipt-number.model";
