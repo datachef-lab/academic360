@@ -270,6 +270,8 @@ export default function ExamsScreen() {
                 width: 44,
                 height: 44,
                 borderRadius: 10,
+                borderWidth: 1,
+                borderColor: styles.border,
                 backgroundColor: styles.iconBg,
                 alignItems: "center",
                 justifyContent: "center",
