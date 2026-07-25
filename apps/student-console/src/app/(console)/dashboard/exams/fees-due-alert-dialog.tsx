@@ -116,7 +116,7 @@ export function FeesDueAlertDialog({
           {/* Left: illustration shown whole (tightly cropped source, contain — not
               cover). A soft gradient + caption fill the column so the space around
               the square artwork reads as designed, not empty. */}
-          <div className="flex w-full flex-shrink-0 flex-col items-center justify-center gap-6 bg-gradient-to-b from-violet-50 via-white to-rose-50 p-6 sm:w-[38%] sm:p-8">
+          <div className="flex w-full flex-shrink-0 flex-col items-center justify-center gap-6 border-b border-gray-200 bg-gradient-to-b from-violet-50 via-white to-rose-50 p-6 sm:w-[38%] sm:border-b-0 sm:border-r sm:p-8">
             <Image
               src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
               alt="Pending fees illustration"
@@ -144,8 +144,11 @@ export function FeesDueAlertDialog({
                   As per our records, your Semester{" "}
                   <span className="font-semibold text-gray-800">{semesterDisplay}</span> enrolment
                   fee is not paid despite multiple reminders sent to your Institutional Email ID
-                  and/or registered mobile number. Consequently, you are currently not considered a
-                  bonafide student of the College.
+                  and/or registered mobile number.{" "}
+                  <span className="rounded-sm bg-rose-100/80 px-1 py-0.5 font-semibold text-rose-700">
+                    Consequently, you are currently not considered a bonafide student of the
+                    College.
+                  </span>
                 </span>
                 <span className="block">
                   Please note that payment of the Semester{" "}
