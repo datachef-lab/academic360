@@ -128,11 +128,14 @@ export function FeesDueAlertDialog({
                 <table className="w-full border-collapse break-words text-center text-xs sm:text-[13px]">
                   <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
                     <tr>
-                      <th className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium">
-                        Sr No
+                      {/* Short labels on mobile so every header stays on one line */}
+                      <th className="whitespace-nowrap border border-gray-200 px-1.5 py-2 font-medium sm:px-3">
+                        <span className="sm:hidden">#</span>
+                        <span className="hidden sm:inline">Sr No</span>
                       </th>
-                      <th className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium">
-                        Academic Year
+                      <th className="whitespace-nowrap border border-gray-200 px-1.5 py-2 font-medium sm:px-3">
+                        <span className="sm:hidden">A.Y.</span>
+                        <span className="hidden sm:inline">Academic Year</span>
                       </th>
                       <th className="border border-gray-200 px-1.5 py-2 sm:px-3 font-medium">
                         Receipt
