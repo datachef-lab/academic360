@@ -85,7 +85,7 @@ export function FeesDueAlertDialog({
             <div className="min-h-0 flex-1 overflow-y-auto">
               {/* Illustration as a cover banner below the title, with a light dark
                   overlay so it reads as a backdrop rather than competing with the text */}
-              <div className="relative h-40 w-full sm:h-56">
+              <div className="relative h-48 w-full sm:h-72">
                 <Image
                   src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
                   alt="Pending fees illustration"
