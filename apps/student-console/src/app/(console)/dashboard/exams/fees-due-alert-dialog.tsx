@@ -73,11 +73,12 @@ export function FeesDueAlertDialog({
           generously (5xl / ~90vh) so the notification, dues and declaration all
           breathe; the right column scrolls if it ever overflows. */}
       <AlertDialogContent className="max-w-6xl overflow-hidden p-0">
-        <div className="flex max-h-[92vh] min-h-[680px] flex-col sm:flex-row">
+        <div className="flex max-h-[92vh] flex-col sm:min-h-[680px] sm:flex-row">
           {/* Left: illustration shown whole (tightly cropped source, contain — not
               cover). A soft gradient + caption fill the column so the space around
-              the square artwork reads as designed, not empty. */}
-          <div className="flex w-full flex-shrink-0 flex-col items-center justify-center gap-6 border-b border-gray-200 bg-gradient-to-b from-violet-50 via-white to-rose-50 p-6 sm:w-[38%] sm:border-b-0 sm:border-r sm:p-8">
+              the square artwork reads as designed, not empty. Hidden on mobile —
+              stacked on top it pushed all the content below the fold. */}
+          <div className="hidden w-full flex-shrink-0 flex-col items-center justify-center gap-6 border-gray-200 bg-gradient-to-b from-violet-50 via-white to-rose-50 sm:flex sm:w-[38%] sm:border-r sm:p-8">
             <Image
               src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
               alt="Pending fees illustration"
