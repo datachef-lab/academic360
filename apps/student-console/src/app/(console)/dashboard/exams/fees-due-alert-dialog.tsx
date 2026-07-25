@@ -69,11 +69,28 @@ export function FeesDueAlertDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      {/* Single column: static title bar, then one scrollable area starting with a
-          cover-style illustration banner, followed by the notification, dues,
-          declaration and actions. */}
-      <AlertDialogContent className="w-[95vw] max-w-3xl overflow-hidden rounded-lg p-0">
-        <div className="flex max-h-[92vh] flex-col">
+      {/* Desktop (sm+): two-column layout — illustration column left, content right.
+          Mobile: single column with a cover-style banner under the title. */}
+      <AlertDialogContent className="w-[95vw] max-w-3xl overflow-hidden rounded-lg p-0 sm:max-w-6xl">
+        <div className="flex max-h-[92vh] flex-col sm:min-h-[680px] sm:flex-row">
+          {/* Left (desktop only): illustration shown whole over a soft gradient */}
+          <div className="hidden w-full flex-shrink-0 flex-col items-center justify-center gap-6 border-gray-200 bg-gradient-to-b from-violet-50 via-white to-rose-50 sm:flex sm:w-[38%] sm:border-r sm:p-8">
+            <Image
+              src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
+              alt="Pending fees illustration"
+              width={840}
+              height={870}
+              priority
+              unoptimized
+              className="h-auto w-full max-w-[420px]"
+            />
+            <p className="text-center text-xs leading-relaxed text-gray-500">
+              Clear your Semester{" "}
+              <span className="font-semibold text-gray-700">{semesterDisplay}</span> dues to stay
+              exam-ready.
+            </p>
+          </div>
+
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {/* Title stays put while the content below scrolls */}
             <AlertDialogHeader className="flex-shrink-0 border-b border-gray-100 px-6 pb-4 pt-6 text-left sm:px-8 sm:pt-6 sm:text-left">
@@ -83,9 +100,9 @@ export function FeesDueAlertDialog({
             </AlertDialogHeader>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {/* Illustration as a cover banner below the title, with a light dark
-                  overlay so it reads as a backdrop rather than competing with the text */}
-              <div className="relative h-48 w-full sm:h-72">
+              {/* Mobile only: illustration as a cover banner below the title, with a
+                  light dark overlay so it reads as a backdrop */}
+              <div className="relative h-48 w-full sm:hidden">
                 <Image
                   src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
                   alt="Pending fees illustration"
