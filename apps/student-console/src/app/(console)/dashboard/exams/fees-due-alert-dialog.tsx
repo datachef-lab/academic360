@@ -67,6 +67,29 @@ export function FeesDueAlertDialog({
     onProceed();
   };
 
+  // Shared by both footers: pinned bar on desktop, end-of-content on mobile.
+  // Plain Buttons (no AlertDialogCancel/Action): the Radix prop typings resolve
+  // differently under the box's strict pnpm linking and broke the CI next build
+  // twice. The dialog is controlled via open/onOpenChange, so native buttons
+  // are sufficient.
+  const actionButtons = (
+    <>
+      <Button
+        variant="outline"
+        className="mt-0"
+        onClick={() => {
+          onOpenChange(false);
+          router.push("/dashboard/enrollment-fees");
+        }}
+      >
+        Click to Pay
+      </Button>
+      <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
+        Generate admit card
+      </Button>
+    </>
+  );
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       {/* Desktop (sm+): two-column layout — illustration column left, content right.
@@ -239,28 +262,16 @@ export function FeesDueAlertDialog({
                     </span>
                   </label>
                 </div>
+                {/* Mobile: buttons scroll with the content at its end */}
+                <AlertDialogFooter className="mt-6 gap-2 sm:hidden">
+                  {actionButtons}
+                </AlertDialogFooter>
               </div>
             </div>
 
-            {/* Static footer bar — always visible below the scroll area. Plain
-                Buttons (no AlertDialogCancel/Action): the Radix prop typings
-                resolve differently under the box's strict pnpm linking and broke
-                the CI next build twice. The dialog is controlled via
-                open/onOpenChange, so native buttons are sufficient. */}
-            <AlertDialogFooter className="flex-shrink-0 gap-2 border-t border-gray-100 px-6 py-4 sm:justify-between sm:px-8">
-              <Button
-                variant="outline"
-                className="mt-0"
-                onClick={() => {
-                  onOpenChange(false);
-                  router.push("/dashboard/enrollment-fees");
-                }}
-              >
-                Click to Pay
-              </Button>
-              <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
-                Generate admit card
-              </Button>
+            {/* Desktop: static footer bar below the scroll area */}
+            <AlertDialogFooter className="hidden flex-shrink-0 gap-2 border-t border-gray-100 px-6 py-4 sm:flex sm:justify-between sm:px-8">
+              {actionButtons}
             </AlertDialogFooter>
           </div>
         </div>
