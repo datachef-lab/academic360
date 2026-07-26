@@ -51,7 +51,6 @@ import {
 } from "@/services/course-design.api";
 import type { RegulationType, Affiliation, ProgramCourse } from "@repo/db/index";
 import { getAllClasses } from "@/services/classes.service";
-import { downloadAdmitCardDistributionsCsv } from "@/services/admit-card.service";
 import type { Class } from "@/types/academics/class";
 import {
   Dialog,
@@ -908,23 +907,12 @@ export default function ReportsPage() {
     });
   };
 
-  // Direct CSV save (small file, no background job needed) — moved here from
-  // the Admit Card Distributions page so all report downloads live together.
+  // Moved here from the Admit Card Distributions page; standard report job
+  // (styled Excel + toolbar export filters), like the other reports.
   const downloadAdmitCardCollectionReport = async () => {
-    const blob = await downloadAdmitCardDistributionsCsv();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(
-      now.getHours(),
-    )}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    link.href = url;
-    link.download = `admit-card-distributions_${timestamp}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    await runReportJob("admit-card-collection-report", "Admit Card Collection Report", {
+      ...filterParams(),
+    });
   };
 
   const downloadPromotionStudentsReport = async () => {
@@ -1098,6 +1086,7 @@ export default function ReportsPage() {
       downloadFunction: () =>
         handleDownload("admit-card-collection-report", downloadAdmitCardCollectionReport),
       requiresAcademicYear: false,
+      usesToolbarExportFilters: true,
     },
   ];
 

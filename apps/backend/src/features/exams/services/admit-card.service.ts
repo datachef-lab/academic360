@@ -1,4 +1,7 @@
-import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
+import ExcelJS from "exceljs";
+import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import { toSentenceCase } from "@/utils/helper.js";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/index.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
@@ -214,7 +217,17 @@ export async function distributeAdmitCard(
   return inserted;
 }
 
-export async function listAdmitCardDistributions(examGroupId?: number): Promise<
+export interface AdmitCardReportFilters {
+  programCourseIds?: number[];
+  affiliationIds?: number[];
+  regulationTypeIds?: number[];
+  classIds?: number[];
+}
+
+export async function listAdmitCardDistributions(
+  examGroupId?: number,
+  filters?: AdmitCardReportFilters,
+): Promise<
   Array<{
     studentId: number;
     studentName: string;
@@ -287,6 +300,27 @@ export async function listAdmitCardDistributions(examGroupId?: number): Promise<
         tempAdmitCardDistributionsModel.distributedByUserId,
       ),
     )
+    .where(
+      and(
+        ...(filters?.programCourseIds?.length
+          ? [inArray(promotionModel.programCourseId, filters.programCourseIds)]
+          : []),
+        ...(filters?.affiliationIds?.length
+          ? [inArray(programCourseModel.affiliationId, filters.affiliationIds)]
+          : []),
+        ...(filters?.regulationTypeIds?.length
+          ? [
+              inArray(
+                programCourseModel.regulationTypeId,
+                filters.regulationTypeIds,
+              ),
+            ]
+          : []),
+        ...(filters?.classIds?.length
+          ? [inArray(promotionModel.classId, filters.classIds)]
+          : []),
+      ),
+    )
     .orderBy(desc(tempAdmitCardDistributionsModel.createdAt));
 
   return rows.map((row) => {
@@ -311,4 +345,78 @@ export async function listAdmitCardDistributions(examGroupId?: number): Promise<
       savedByName: row.savedByName ?? null,
     };
   });
+}
+
+/**
+ * "Admit Card Collection Report" — same Excel formatting as the other reports
+ * (standard table styling, sentence-case headers, fitted column widths) and
+ * the same toolbar export filters (program course / affiliation / regulation /
+ * class). Rows come from the current-cycle collection list.
+ */
+export async function exportAdmitCardDistributionsReport(
+  filters?: AdmitCardReportFilters,
+): Promise<{ buffer: Buffer; fileName: string }> {
+  const rows = await listAdmitCardDistributions(undefined, filters);
+
+  const displayRows = rows.map((row) => ({
+    student_name: row.studentName ?? "",
+    uid: row.uid ?? "",
+    roll_number: row.rollNumber ?? "",
+    registration_no: row.registrationNumber ?? "",
+    program_course: row.programCourse ?? "",
+    semester: row.semester ?? "",
+    shift: row.shift ?? "",
+    appear_type: row.appearType ?? "",
+    date_of_collection: row.collectionDate
+      ? new Date(row.collectionDate).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "",
+    admit_card_saved_by: row.savedByName ?? "",
+  }));
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("admit-card-collections");
+
+  if (displayRows.length > 0) {
+    const headers = Object.keys(
+      displayRows[0],
+    ) as (keyof (typeof displayRows)[0])[];
+    const columnWidth = (header: string, data: unknown[]): number => {
+      const maxData = data.reduce<number>(
+        (max, v) => Math.max(max, String(v ?? "").length),
+        0,
+      );
+      return Math.min(Math.max(header.length, maxData) + 4, 45);
+    };
+
+    sheet.columns = headers.map((header) => ({
+      header: toSentenceCase(String(header)),
+      key: String(header),
+      width: columnWidth(
+        toSentenceCase(String(header)),
+        displayRows.map((r) => r[header]),
+      ),
+    }));
+    displayRows.forEach((row) => sheet.addRow(row));
+    applyStandardExcelReportTableStyling(sheet);
+  } else {
+    sheet.columns = [{ header: "message", key: "message", width: 20 }];
+    sheet.addRow({ message: "No data available" });
+  }
+
+  const excelBuffer = await workbook.xlsx.writeBuffer();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return {
+    buffer: Buffer.isBuffer(excelBuffer)
+      ? excelBuffer
+      : Buffer.from(excelBuffer),
+    fileName: `admit-card-collection-report-${timestamp}.xlsx`,
+  };
 }
