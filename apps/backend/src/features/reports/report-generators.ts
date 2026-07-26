@@ -12,6 +12,7 @@ import {
   exportStudentSubjectsReport,
 } from "@/features/subject-selection/services/student-subject-selection.service.js";
 import { exportPromotionStudentsReport } from "@/features/academics/services/promotion.service.js";
+import { exportAdmitCardDistributionsReport } from "@/features/exams/services/admit-card.service.js";
 import { exportCuRegistrationCorrectionRequests } from "@/features/admissions/services/cu-registration-correction-request.service.js";
 import { downloadCuRegistrationDocumentsAsZip } from "@/features/admissions/services/cu-registration-document-upload.service.js";
 import {
@@ -242,6 +243,17 @@ const DESCRIPTORS: ReportDescriptor[] = [
         affiliationIds: filters.affiliationIds,
         regulationTypeIds: filters.regulationTypeIds,
         classIds: filters.classIds,
+      });
+      return { buffer: res.buffer, fileName: res.fileName, contentType: XLSX };
+    },
+  },
+  {
+    key: "admit-card-collection-report",
+    label: "Admit Card Collection Report",
+    generate: async ({ req }) => {
+      const res = await exportAdmitCardDistributionsReport({
+        ...filtersOf(req),
+        academicYearId: num(req, "academicYearId"),
       });
       return { buffer: res.buffer, fileName: res.fileName, contentType: XLSX };
     },
