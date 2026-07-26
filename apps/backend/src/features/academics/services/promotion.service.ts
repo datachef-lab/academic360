@@ -9,7 +9,8 @@ import {
   studentModel,
   userModel,
 } from "@repo/db/schemas";
-import { and, eq } from "drizzle-orm";
+import crypto from "crypto";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import XLSX from "xlsx";
 import ExcelJS from "exceljs";
@@ -18,15 +19,33 @@ import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styli
 export async function findPromotionByStudentIdAndClassId(
   studentId: number,
   classId: number,
+  opts?: { activeOnly?: boolean },
 ) {
-  const [{ promotions: promotion }] = await db
+  // activeOnly: only the ongoing promotion — endDate still NULL (a completed
+  // promotion gets its endDate stamped, e.g. Sem I ended 2026-05-03 while the
+  // running Sem II row has endDate NULL) and not deprecated. Used by the CU
+  // Semester II exam-form flow; latest by startDate wins if several.
+  const rows = await db
     .select()
     .from(promotionModel)
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
-    .where(and(eq(studentModel.id, studentId), eq(classModel.id, classId)));
+    .where(
+      and(
+        eq(studentModel.id, studentId),
+        eq(classModel.id, classId),
+        ...(opts?.activeOnly
+          ? [
+              isNull(promotionModel.endDate),
+              eq(promotionModel.isDeprecated, false),
+            ]
+          : []),
+      ),
+    )
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
 
-  return promotion;
+  return rows[0]?.promotions;
 }
 
 export async function markExamFormSubmission(
@@ -142,6 +161,39 @@ export async function notifyExamForm(
 //     return "DROPPED_OUT";
 //   };
 
+/**
+ * Stable HMAC guard for the exam-form tunnel links: not guessable from a UID
+ * alone, verifiable without any DB lookup, and never expires (unlike S3
+ * presigned URLs). Secret = ACCESS_TOKEN_SECRET (always configured).
+ */
+export function examFormDownloadSig(uid: string): string {
+  return crypto
+    .createHmac("sha256", process.env.ACCESS_TOKEN_SECRET || "a360-exam-form")
+    .update(`exam-form:${uid}`)
+    .digest("hex");
+}
+
+/**
+ * Public base URL for links that must reach this Express app from outside
+ * (same precedence as the fee-receipt email links).
+ */
+function getApiPublicOrigin(): string {
+  for (const key of [
+    "API_PUBLIC_ORIGIN",
+    "BACKEND_PUBLIC_URL",
+    "BACKEND_URL",
+  ]) {
+    const v = process.env[key];
+    if (v && String(v).trim()) return String(v).trim().replace(/\/$/, "");
+  }
+  const port = process.env.PORT || "8080";
+  return `http://localhost:${port}`;
+}
+
+export function buildExamFormDownloadUrl(uid: string): string {
+  return `${getApiPublicOrigin()}/api/promotions/exam-form/${encodeURIComponent(uid)}/download?sig=${examFormDownloadSig(uid)}`;
+}
+
 function sqlIntIn(column: string, ids?: number[]) {
   const clean = ids?.filter((n) => Number.isInteger(n) && n > 0) ?? [];
   if (!clean.length) return sql``;
@@ -208,7 +260,10 @@ pr.is_exam_form_submitted AS "is_exam_form_submitted?",
     std.roll_number AS roll_number
 
   FROM students std
+  -- deprecated promotion rows are stale duplicates; keep the join LEFT so a
+  -- student without promotions still appears (condition lives in the ON clause)
   LEFT JOIN promotions pr ON pr.student_id_fk = std.id
+    AND COALESCE(pr.is_deprecated, false) = false
   JOIN users u ON u.id = std.user_id_fk
   LEFT JOIN program_courses pc ON pc.id = pr.program_course_id_fk
   LEFT JOIN affiliations aff ON aff.id = pc.affiliation_id_fk
@@ -230,6 +285,25 @@ pr.is_exam_form_submitted AS "is_exam_form_submitted?",
   ${sqlIntIn("pr.class_id_fk", classIds)}
   ORDER BY pr.exam_form_submission_time_stamp
 `);
+
+  // Attach a stable link to each submitted form PDF, served through the
+  // backend tunnel endpoint (GET /api/promotions/exam-form/:uid/download),
+  // guarded by a per-UID HMAC signature — unlike S3 presigned URLs these
+  // links in the exported sheet never expire, and the bucket stays private.
+  const formUrls: (string | null)[] = [];
+  for (const row of rows) {
+    const submitted =
+      (row as Record<string, unknown>)["is_exam_form_submitted?"] === true;
+    const uid = (row as Record<string, unknown>)["uid"];
+    let url: string | null = null;
+    if (submitted && typeof uid === "string" && uid) {
+      url = buildExamFormDownloadUrl(uid);
+    }
+    formUrls.push(url);
+    // Short placeholder so column-width calculation isn't blown up by the
+    // long URL; the real hyperlink is set on the cell after styling.
+    (row as Record<string, unknown>)["submitted_form"] = url ? "Open Form" : "";
+  }
 
   // Build Excel from rows
   const workbook = new ExcelJS.Workbook();
@@ -276,6 +350,18 @@ pr.is_exam_form_submitted AS "is_exam_form_submitted?",
     });
 
     applyStandardExcelReportTableStyling(sheet);
+
+    // Turn the "submitted form" placeholders into real hyperlinks (after
+    // styling so the link font survives). Data rows start at row 2.
+    const linkCol = headers.indexOf("submitted_form") + 1;
+    if (linkCol > 0) {
+      formUrls.forEach((url, i) => {
+        if (!url) return;
+        const cell = sheet.getRow(i + 2).getCell(linkCol);
+        cell.value = { text: "Open Form", hyperlink: url };
+        cell.font = { color: { argb: "FF1D4ED8" }, underline: true };
+      });
+    }
   } else {
     sheet.columns = [{ header: "message", key: "message", width: 20 }];
     sheet.addRow({ message: "No data available" });

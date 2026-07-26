@@ -376,6 +376,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isActive: pathname === "/dashboard/exams",
       badge: upcomingExamCount > 0 ? upcomingExamCount : undefined,
     },
+    {
+      title: "CU Form Upload",
+      url: "/dashboard/cu-form-upload",
+      icon: UploadCloud,
+      isActive: pathname === "/dashboard/cu-form-upload",
+    },
     // 20 Feb 2026, 16:00 PM IST
     // Date.now() > new Date("2026-02-20T16:00:00+05:30").getTime() && !isBlockedProgram
     //   ? {
