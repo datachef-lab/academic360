@@ -1,10 +1,13 @@
 import jwt from "jsonwebtoken";
 import { ApiResponse, handleError, verifyToken } from "@/utils";
 import { NextFunction, Request, Response } from "express";
+import crypto from "crypto";
 import {
+  examFormDownloadSig,
   findPromotionByStudentIdAndClassId,
   markExamFormSubmission,
 } from "../services/promotion.service";
+import { getFileFromS3 } from "@/services/s3.service.js";
 import { User, studentModel, userModel } from "@repo/db/schemas";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
@@ -153,6 +156,64 @@ export async function markExamFormSubmissionHandler(
           "Exam form submission marked successfully",
         ),
       );
+  } catch (error) {
+    return handleError(error, res);
+  }
+}
+
+/**
+ * Tunnel for the uploaded CU exam-form PDFs (private S3 objects
+ * exam-forms/<UID>.pdf). Auth = per-UID HMAC signature in the URL (links live
+ * inside the exported Excel report, where no Bearer header is possible);
+ * streams the object through the backend so the bucket stays private and the
+ * links never expire.
+ */
+export async function downloadExamFormHandler(req: Request, res: Response) {
+  try {
+    const uid = String(req.params.uid || "").trim();
+    const sig = String(req.query.sig || "");
+    const expected = examFormDownloadSig(uid);
+    const sigValid =
+      uid.length > 0 &&
+      sig.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+    if (!sigValid) {
+      return res
+        .status(403)
+        .json(
+          new ApiResponse(
+            403,
+            "FORBIDDEN",
+            null,
+            "Invalid or missing signature",
+          ),
+        );
+    }
+
+    let file: Awaited<ReturnType<typeof getFileFromS3>> = null;
+    try {
+      file = await getFileFromS3(
+        `${UploadConfigs.EXAM_FORMS.folder}/${uid}.pdf`,
+      );
+    } catch {
+      file = null;
+    }
+    if (!file?.Body) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Exam form not found for this UID",
+          ),
+        );
+    }
+
+    res.setHeader("Content-Type", file.ContentType || "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${uid}.pdf"`);
+    (file.Body as NodeJS.ReadableStream).pipe(res);
   } catch (error) {
     return handleError(error, res);
   }

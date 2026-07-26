@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction, Router } from "express";
 import {
+  downloadExamFormHandler,
   findPromotionByStudentIdAndClassIdHandler,
   markExamFormSubmissionHandler,
 } from "../controllers/promotion.controller";
@@ -34,5 +35,9 @@ router.get(
   verifyJWT,
   asyncHandler(exportPromotionStudentsReportHandler),
 );
+
+// Exam-form PDF tunnel — auth is the per-UID HMAC `sig` query param (links
+// live inside exported Excel reports where no Bearer header is possible).
+router.get("/exam-form/:uid/download", asyncHandler(downloadExamFormHandler));
 
 export default router;
