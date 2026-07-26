@@ -910,7 +910,9 @@ export default function ReportsPage() {
   // Moved here from the Admit Card Distributions page; standard report job
   // (styled Excel + toolbar export filters), like the other reports.
   const downloadAdmitCardCollectionReport = async () => {
+    const f = buildReportFilters();
     await runReportJob("admit-card-collection-report", "Admit Card Collection Report", {
+      academicYearId: f.academicYearId,
       ...filterParams(),
     });
   };

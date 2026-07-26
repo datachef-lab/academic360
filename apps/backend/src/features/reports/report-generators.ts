@@ -251,7 +251,10 @@ const DESCRIPTORS: ReportDescriptor[] = [
     key: "admit-card-collection-report",
     label: "Admit Card Collection Report",
     generate: async ({ req }) => {
-      const res = await exportAdmitCardDistributionsReport(filtersOf(req));
+      const res = await exportAdmitCardDistributionsReport({
+        ...filtersOf(req),
+        academicYearId: num(req, "academicYearId"),
+      });
       return { buffer: res.buffer, fileName: res.fileName, contentType: XLSX };
     },
   },

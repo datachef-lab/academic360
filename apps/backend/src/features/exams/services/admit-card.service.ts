@@ -11,6 +11,7 @@ import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model
 import {
   classModel,
   sectionModel,
+  sessionModel,
   shiftModel,
 } from "@repo/db/schemas/models/academics";
 import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions/admission-academic-info.model.js";
@@ -218,6 +219,8 @@ export async function distributeAdmitCard(
 }
 
 export interface AdmitCardReportFilters {
+  /** Filters by the promotion's session academic year. */
+  academicYearId?: number;
   programCourseIds?: number[];
   affiliationIds?: number[];
   regulationTypeIds?: number[];
@@ -289,6 +292,7 @@ export async function listAdmitCardDistributions(
     )
     .innerJoin(classModel, eq(classModel.id, promotionModel.classId))
     .innerJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
     .leftJoin(
       admissionAcademicInfoModel,
       eq(admissionAcademicInfoModel.studentId, studentModel.id),
@@ -302,6 +306,9 @@ export async function listAdmitCardDistributions(
     )
     .where(
       and(
+        ...(filters?.academicYearId
+          ? [eq(sessionModel.academicYearId, filters.academicYearId)]
+          : []),
         ...(filters?.programCourseIds?.length
           ? [inArray(promotionModel.programCourseId, filters.programCourseIds)]
           : []),
