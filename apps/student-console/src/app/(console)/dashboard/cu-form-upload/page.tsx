@@ -7,11 +7,18 @@ import { toast } from "sonner";
 import { axiosInstance } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
 import { useRouter } from "next/navigation";
+import { FeesDueAlertDialog } from "../exams/fees-due-alert-dialog";
+import { useStudentDueFees } from "../exams/use-student-due-fees";
+import { dueFeesSemesterContext } from "../exams/use-fee-due-declaration";
 
-const SEMESTER_ONE_CLASS_ID = 1;
+const SEMESTER_TWO_CLASS_ID = 2;
 
+// active=true → only the student's ACTIVE Semester II promotion (endDate set,
+// not deprecated); latest by startDate if several.
 const fetchPromotionByStudentIdAndClassId = async (studentId: number, classId: number) => {
-  const response = await axiosInstance.get(`/api/promotions/student/${studentId}/class/${classId}`);
+  const response = await axiosInstance.get(
+    `/api/promotions/student/${studentId}/class/${classId}?active=true`,
+  );
   return response;
 };
 
@@ -25,6 +32,13 @@ export default function CUFormUploadPage() {
   const router = useRouter();
 
   const { student } = useStudent();
+
+  // Fee-due declaration gate. Unlike the exams page there is NO "declared once"
+  // memory here (explicit requirement): with pending dues the alert shows on
+  // EVERY submission attempt.
+  const [isFeesAlertOpen, setIsFeesAlertOpen] = useState(false);
+  const { dueFees } = useStudentDueFees(student?.id);
+  const semesterContext = useMemo(() => dueFeesSemesterContext(dueFees), [dueFees]);
 
   // Check if student's program course is MA or MCOM (hide admission registration for these)
   const isBlockedProgram = useMemo(() => {
@@ -40,25 +54,13 @@ export default function CUFormUploadPage() {
     return blockedPrograms.some((program) => normalizedName.startsWith(program));
   }, [student?.programCourse?.course?.name]);
 
-  useEffect(() => {
-    router.replace("/dashboard");
-  }, [router]);
+  // useEffect(() => {
+  //   router.replace("/dashboard");
+  // }, [router]);
 
-  useEffect(() => {
-    if (!student) return; // wait until student is loaded
-
-    const now = Date.now();
-
-    // 19 Feb 2026, 11:00 PM IST
-    // const cutoff = new Date("2026-02-19T23:00:00+05:30").getTime();
-
-    // 20 Feb 2026, 4:00 PM IST
-    const cutoff = new Date("2026-02-20T16:00:00+05:30").getTime();
-
-    if (now < cutoff) {
-      router.replace("/dashboard/");
-    }
-  }, [student]);
+  // (The Semester I cycle had a hard-coded opening cutoff here — 20 Feb 2026,
+  // 4:00 PM IST. Removed for the Semester II cycle; add a new date gate here
+  // if this window needs to open at a fixed time.)
 
   useEffect(() => {
     if (isBlockedProgram) {
@@ -75,7 +77,7 @@ export default function CUFormUploadPage() {
       try {
         const promotionResponse = await fetchPromotionByStudentIdAndClassId(
           student.id,
-          SEMESTER_ONE_CLASS_ID,
+          SEMESTER_TWO_CLASS_ID,
         );
         const promotion = promotionResponse.data?.payload;
 
@@ -142,19 +144,34 @@ export default function CUFormUploadPage() {
       return;
     }
 
+    // Pending dues → the declaration shows before EVERY submission attempt;
+    // submission continues from the dialog's proceed button.
+    if (dueFees.length > 0) {
+      setIsFeesAlertOpen(true);
+      return;
+    }
+
+    await performSubmit();
+  };
+
+  const performSubmit = async () => {
+    if (!file || !student?.id) return;
+
     try {
       setIsSubmitting(true);
 
       // console.log("Submitting CU exam form for student ID:", student.id);
       const promotionResponse = await fetchPromotionByStudentIdAndClassId(
         student.id!,
-        SEMESTER_ONE_CLASS_ID,
+        SEMESTER_TWO_CLASS_ID,
       );
 
       const promotion = promotionResponse.data?.payload;
 
       if (!promotion || !promotion.id) {
-        toast.error("No promotion record found for Semester I. Please contact the college office.");
+        toast.error(
+          "No active promotion record found for Semester II. Please contact the college office.",
+        );
         return;
       }
 
@@ -172,7 +189,7 @@ export default function CUFormUploadPage() {
       );
 
       setSubmitted(true);
-      toast.success("Semester I CU Examination Form uploaded successfully.");
+      toast.success("Semester II CU Examination Form uploaded successfully.");
     } catch (error: any) {
       // console.error("Failed to submit CU exam form:", error);
 
@@ -229,10 +246,10 @@ export default function CUFormUploadPage() {
                   Exams
                 </p>
                 <h1 className="text-2xl md:text-3xl font-semibold leading-snug">
-                  CU Semester I Examination Form Upload
+                  CU Semester II Examination Form Upload
                 </h1>
                 <p className="mt-1 text-xs md:text-sm text-blue-100/90 max-w-xl">
-                  Upload your Calcutta University Semester I examination form and verify every page
+                  Upload your Calcutta University Semester II examination form and verify every page
                   before final submission.
                 </p>
               </div>
@@ -292,10 +309,10 @@ export default function CUFormUploadPage() {
                 Exams
               </p>
               <h1 className="text-2xl md:text-3xl font-semibold leading-snug">
-                CU Semester I Examination Form Upload
+                CU Semester II Examination Form Upload
               </h1>
               <p className="mt-1 text-xs md:text-sm text-blue-100/90 max-w-xl">
-                Upload your Calcutta University Semester I examination form and verify every page
+                Upload your Calcutta University Semester II examination form and verify every page
                 before final submission.
               </p>
             </div>
@@ -495,7 +512,7 @@ export default function CUFormUploadPage() {
                 }`}
               >
                 <CheckCircle2 className="w-5 h-5" />
-                {isSubmitting ? "Submitting..." : "Submit Semester I Examination Form"}
+                {isSubmitting ? "Submitting..." : "Submit Semester II Examination Form"}
               </button>
               <p className="text-[11px] text-slate-500">
                 Once submitted, changes cannot be made from the portal. For any corrections, please
@@ -518,13 +535,31 @@ export default function CUFormUploadPage() {
                 Form uploaded successfully
               </h2>
               <p className="mt-1 text-xs text-slate-600">
-                Your Semester I Calcutta University Examination Form has been submitted. Please
+                Your Semester II Calcutta University Examination Form has been submitted. Please
                 check your Institutional Email ID for the confirmation of the same.
               </p>
             </div>
           </div>
         </main>
       )}
+
+      {/* Fee-due declaration shown before EVERY submission attempt when dues exist
+          (no "declared once" memory on this page, by explicit requirement) */}
+      <FeesDueAlertDialog
+        open={isFeesAlertOpen}
+        onOpenChange={setIsFeesAlertOpen}
+        dueFees={dueFees}
+        semesterDisplay={semesterContext.display}
+        studentUid={student?.uid ?? undefined}
+        onDeclared={() => {
+          // Intentionally no persistence — the dialog reappears on the next attempt.
+        }}
+        onProceed={() => {
+          setIsFeesAlertOpen(false);
+          void performSubmit();
+        }}
+        proceedLabel="Proceed to Submit Form"
+      />
     </div>
   );
 }

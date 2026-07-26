@@ -42,6 +42,7 @@ export async function findPromotionByStudentIdAndClassIdHandler(
     const promotion = await findPromotionByStudentIdAndClassId(
       studentId,
       classId,
+      { activeOnly: String(req.query.active) === "true" },
     );
 
     if (!promotion) {

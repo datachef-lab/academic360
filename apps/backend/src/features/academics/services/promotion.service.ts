@@ -9,7 +9,7 @@ import {
   studentModel,
   userModel,
 } from "@repo/db/schemas";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import XLSX from "xlsx";
 import ExcelJS from "exceljs";
@@ -18,15 +18,31 @@ import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styli
 export async function findPromotionByStudentIdAndClassId(
   studentId: number,
   classId: number,
+  opts?: { activeOnly?: boolean },
 ) {
-  const [{ promotions: promotion }] = await db
+  // activeOnly: only "active" promotions — endDate set and not deprecated
+  // (CU Semester II exam-form flow); latest by startDate wins if several.
+  const rows = await db
     .select()
     .from(promotionModel)
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
-    .where(and(eq(studentModel.id, studentId), eq(classModel.id, classId)));
+    .where(
+      and(
+        eq(studentModel.id, studentId),
+        eq(classModel.id, classId),
+        ...(opts?.activeOnly
+          ? [
+              isNotNull(promotionModel.endDate),
+              eq(promotionModel.isDeprecated, false),
+            ]
+          : []),
+      ),
+    )
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
 
-  return promotion;
+  return rows[0]?.promotions;
 }
 
 export async function markExamFormSubmission(
