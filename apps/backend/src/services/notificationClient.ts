@@ -29,16 +29,32 @@ export async function enqueueNotification(dto: NotificationDto) {
     "[notif-client] enqueue called from:",
     new Error().stack?.split("\n")[2]?.trim(),
   );
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(dto),
-  });
-  console.log("[notif-client] enqueue <-", res.status);
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`enqueueNotification failed: ${res.status} ${text}`);
+  // Notifications are best-effort: several call sites fire without await, so a
+  // rejection here would become an unhandled promise rejection and CRASH the
+  // process (seen when the notification-system was down: ECONNREFUSED on
+  // :5010 killed the backend after the exam-form response was already sent).
+  // Never throw — log and return null instead.
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(dto),
+    });
+    console.log("[notif-client] enqueue <-", res.status);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(
+        `[notif-client] enqueue failed (non-fatal): ${res.status} ${text}`,
+      );
+      return null;
+    }
+    scheduleNotificationsDashboardBroadcast(`enqueue:${dto.variant}`);
+    return await res.json();
+  } catch (error) {
+    console.error(
+      "[notif-client] enqueue failed (non-fatal):",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
   }
-  scheduleNotificationsDashboardBroadcast(`enqueue:${dto.variant}`);
-  return res.json();
 }

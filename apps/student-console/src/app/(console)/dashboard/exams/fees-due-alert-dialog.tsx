@@ -34,6 +34,8 @@ interface FeesDueAlertDialogProps {
   onDeclared: () => void;
   /** Called when the student clicks "Generate admit card" — opens the Exam Schedule. */
   onProceed: () => void;
+  /** Label for the proceed button; defaults to the admit-card wording. */
+  proceedLabel?: string;
 }
 
 /**
@@ -51,6 +53,7 @@ export function FeesDueAlertDialog({
   studentUid,
   onDeclared,
   onProceed,
+  proceedLabel = "Proceed to Download Admit Card",
 }: FeesDueAlertDialogProps) {
   const router = useRouter();
 
@@ -88,7 +91,7 @@ export function FeesDueAlertDialog({
         Click to Pay
       </Button>
       <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
-        Proceed to Download Admit Card
+        {proceedLabel}
       </Button>
     </>
   );
