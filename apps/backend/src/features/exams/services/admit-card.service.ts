@@ -76,7 +76,12 @@ export async function searchCandidate(
     .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
     .leftJoin(
       tempAdmitCardDistributionsModel,
-      eq(tempAdmitCardDistributionsModel.studentId, studentModel.id),
+      and(
+        eq(tempAdmitCardDistributionsModel.studentId, studentModel.id),
+        // Current cycle only: the distribution must belong to the active Sem II
+        // promotion. Legacy Sem I rows have promotionId NULL and never match.
+        eq(tempAdmitCardDistributionsModel.promotionId, promotionModel.id),
+      ),
     )
     .leftJoin(
       distributedByUser,
@@ -176,12 +181,17 @@ export async function distributeAdmitCard(
     );
   }
 
-  // Server-side duplicate guard — previously only the UI prevented double
-  // inserts (two staff searching the same student could both save).
+  // Server-side duplicate guard — per CYCLE (promotion), so last cycle's rows
+  // don't block this one. Previously only the UI prevented double inserts.
   const [existing] = await db
     .select({ id: tempAdmitCardDistributionsModel.id })
     .from(tempAdmitCardDistributionsModel)
-    .where(eq(tempAdmitCardDistributionsModel.studentId, studentId))
+    .where(
+      and(
+        eq(tempAdmitCardDistributionsModel.studentId, studentId),
+        eq(tempAdmitCardDistributionsModel.promotionId, activePromotion.id),
+      ),
+    )
     .limit(1);
   if (existing) {
     throw new Error(
@@ -194,6 +204,7 @@ export async function distributeAdmitCard(
     .values({
       studentId,
       distributedByUserId: distributedByUserId,
+      promotionId: activePromotion.id,
     })
     .returning({
       id: tempAdmitCardDistributionsModel.id,
@@ -250,7 +261,15 @@ export async function listAdmitCardDistributions(examGroupId?: number): Promise<
       eq(studentModel.id, tempAdmitCardDistributionsModel.studentId),
     )
     .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .innerJoin(promotionModel, activeSem2PromotionOn(studentModel.id))
+    // Current cycle only: join via the distribution's own promotion (legacy
+    // Sem I rows with NULL promotionId drop out of the report here).
+    .innerJoin(
+      promotionModel,
+      and(
+        eq(promotionModel.id, tempAdmitCardDistributionsModel.promotionId),
+        activeSem2PromotionOn(studentModel.id),
+      ),
+    )
     .innerJoin(
       programCourseModel,
       eq(programCourseModel.id, promotionModel.programCourseId),
