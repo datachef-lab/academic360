@@ -51,6 +51,7 @@ import {
 } from "@/services/course-design.api";
 import type { RegulationType, Affiliation, ProgramCourse } from "@repo/db/index";
 import { getAllClasses } from "@/services/classes.service";
+import { downloadAdmitCardDistributionsCsv } from "@/services/admit-card.service";
 import type { Class } from "@/types/academics/class";
 import {
   Dialog,
@@ -907,6 +908,25 @@ export default function ReportsPage() {
     });
   };
 
+  // Direct CSV save (small file, no background job needed) — moved here from
+  // the Admit Card Distributions page so all report downloads live together.
+  const downloadAdmitCardCollectionReport = async () => {
+    const blob = await downloadAdmitCardDistributionsCsv();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(
+      now.getHours(),
+    )}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    link.href = url;
+    link.download = `admit-card-distributions_${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
   const downloadPromotionStudentsReport = async () => {
     const f = buildReportFilters();
     await runReportJob("exam-form-submission-report", "Exam Form Submitted Report", {
@@ -1067,6 +1087,17 @@ export default function ReportsPage() {
       requiresAcademicYear: false,
       includesSemesterInExport: true,
       usesToolbarExportFilters: true,
+    },
+    {
+      id: "admit-card-collection-report",
+      domain: "ADMIT_CARD_PHASE",
+      name: "Admit Card Collection Report",
+      description:
+        "Export list of students who have collected their admit card, with collection date and staff.",
+      icon: <FileText className="h-5 w-5 text-sky-700" />,
+      downloadFunction: () =>
+        handleDownload("admit-card-collection-report", downloadAdmitCardCollectionReport),
+      requiresAcademicYear: false,
     },
   ];
 

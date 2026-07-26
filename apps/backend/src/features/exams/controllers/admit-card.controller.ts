@@ -80,6 +80,13 @@ export async function distributeAdmitCard(req: Request, res: Response) {
       return res.status(409).json({ message: error.message });
     }
 
+    if (
+      error instanceof Error &&
+      error.message.includes("no active Semester II promotion")
+    ) {
+      return res.status(422).json({ message: error.message });
+    }
+
     return res
       .status(500)
       .json({ message: "Failed to mark admit card as distributed" });

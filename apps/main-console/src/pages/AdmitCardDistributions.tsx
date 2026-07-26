@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Loader2, List } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { CandidateInfoCard } from "@/components/admit-card/CandidateInfoCard";
 import { useToast } from "@/hooks/useToast";
 import { useSearchCandidate, useDistributeAdmitCard } from "@/hooks/useAdmitCard";
@@ -7,14 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { downloadAdmitCardDistributionsCsv } from "@/services/admit-card.service";
 
 const AdmitCardDistributions: React.FC = () => {
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTriggered, setSearchTriggered] = useState(false);
-  const [isDownloadingList, setIsDownloadingList] = useState(false);
 
   const {
     data: candidateData,
@@ -56,31 +54,6 @@ const AdmitCardDistributions: React.FC = () => {
     } catch (err: any) {
       const message = err?.message || "Failed to download or distribute admit card";
       toast({ title: "Error", description: message });
-    }
-  };
-
-  const handleDownloadCsv = async () => {
-    try {
-      setIsDownloadingList(true);
-      const blob = await downloadAdmitCardDistributionsCsv();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
-        now.getDate(),
-      )}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-      link.download = `admit-card-distributions_${timestamp}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      const message = err?.message || "Failed to download admit card distributions";
-      toast({ title: "Error", description: message });
-    } finally {
-      setIsDownloadingList(false);
     }
   };
 
@@ -177,35 +150,13 @@ const AdmitCardDistributions: React.FC = () => {
   return (
     <div className="min-h-screen py-4 sm:py-8">
       <div className="max-w-6xl mx-auto px-3 sm:px-4">
-        {/* Header Section - title, subtitle, and download action */}
-        <div className="mb-4 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Admit Card Distributions
-            </h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-2">
-              Search students and save admit card distribution status
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleDownloadCsv}
-            disabled={isDownloadingList}
-            className="w-full sm:w-auto flex items-center justify-center"
-          >
-            {isDownloadingList ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Downloading...
-              </>
-            ) : (
-              <>
-                <List className="w-4 h-4 mr-2" />
-                Download Collection Report
-              </>
-            )}
-          </Button>
+        {/* Header Section — the collection report download lives on the Reports
+            page now ("Admit Card Collection Report") */}
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admit Card Distributions</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">
+            Search students and save admit card distribution status
+          </p>
         </div>
 
         {/* Search Card - match layout and spacing */}

@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/index.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
@@ -13,6 +13,19 @@ import {
 import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions/admission-academic-info.model.js";
 import { tempAdmitCardDistributionsModel } from "@repo/db/schemas/models/exams/index.js";
 import type { AdmitCardSearchResponse } from "@/types/exams/admit-card.type.js";
+
+// This cycle distributes admit cards for the Semester II exams: student
+// details (program/semester/shift/section) must come from the ACTIVE Sem II
+// promotion — endDate still NULL and not deprecated (same semantics as the CU
+// Semester II exam-form flow) — never from stale/deprecated promotion rows.
+const SEMESTER_TWO_CLASS_ID = 2;
+const activeSem2PromotionOn = (studentIdCol: typeof studentModel.id) =>
+  and(
+    eq(promotionModel.studentId, studentIdCol),
+    eq(promotionModel.classId, SEMESTER_TWO_CLASS_ID),
+    isNull(promotionModel.endDate),
+    eq(promotionModel.isDeprecated, false),
+  );
 
 export async function searchCandidate(
   examGroupId: number | undefined,
@@ -53,7 +66,7 @@ export async function searchCandidate(
     })
     .from(studentModel)
     .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+    .leftJoin(promotionModel, activeSem2PromotionOn(studentModel.id))
     .leftJoin(
       programCourseModel,
       eq(programCourseModel.id, promotionModel.programCourseId),
@@ -143,6 +156,39 @@ export async function distributeAdmitCard(
   studentId: number,
   distributedByUserId: number,
 ) {
+  // Distribution is only for students in this cycle: an active Semester II
+  // promotion must exist.
+  const [activePromotion] = await db
+    .select({ id: promotionModel.id })
+    .from(promotionModel)
+    .where(
+      and(
+        eq(promotionModel.studentId, studentId),
+        eq(promotionModel.classId, SEMESTER_TWO_CLASS_ID),
+        isNull(promotionModel.endDate),
+        eq(promotionModel.isDeprecated, false),
+      ),
+    )
+    .limit(1);
+  if (!activePromotion) {
+    throw new Error(
+      "Student has no active Semester II promotion; admit card distribution is not allowed.",
+    );
+  }
+
+  // Server-side duplicate guard — previously only the UI prevented double
+  // inserts (two staff searching the same student could both save).
+  const [existing] = await db
+    .select({ id: tempAdmitCardDistributionsModel.id })
+    .from(tempAdmitCardDistributionsModel)
+    .where(eq(tempAdmitCardDistributionsModel.studentId, studentId))
+    .limit(1);
+  if (existing) {
+    throw new Error(
+      "Admit card is already marked as distributed for this student.",
+    );
+  }
+
   const [inserted] = await db
     .insert(tempAdmitCardDistributionsModel)
     .values({
@@ -204,7 +250,7 @@ export async function listAdmitCardDistributions(examGroupId?: number): Promise<
       eq(studentModel.id, tempAdmitCardDistributionsModel.studentId),
     )
     .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-    .innerJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+    .innerJoin(promotionModel, activeSem2PromotionOn(studentModel.id))
     .innerJoin(
       programCourseModel,
       eq(programCourseModel.id, promotionModel.programCourseId),
