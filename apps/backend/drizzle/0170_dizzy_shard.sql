@@ -1,0 +1,2 @@
+ALTER TABLE "temp_admit_card_distributions" ADD COLUMN "promotion_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "temp_admit_card_distributions" ADD CONSTRAINT "temp_admit_card_distributions_promotion_id_fk_promotions_id_fk" FOREIGN KEY ("promotion_id_fk") REFERENCES "public"."promotions"("id") ON DELETE no action ON UPDATE no action;

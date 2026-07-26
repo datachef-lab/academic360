@@ -907,6 +907,16 @@ export default function ReportsPage() {
     });
   };
 
+  // Moved here from the Admit Card Distributions page; standard report job
+  // (styled Excel + toolbar export filters), like the other reports.
+  const downloadAdmitCardCollectionReport = async () => {
+    const f = buildReportFilters();
+    await runReportJob("admit-card-collection-report", "Admit Card Collection Report", {
+      academicYearId: f.academicYearId,
+      ...filterParams(),
+    });
+  };
+
   const downloadPromotionStudentsReport = async () => {
     const f = buildReportFilters();
     await runReportJob("exam-form-submission-report", "Exam Form Submitted Report", {
@@ -1066,6 +1076,18 @@ export default function ReportsPage() {
         handleDownload("exam-form-submission-report", downloadPromotionStudentsReport),
       requiresAcademicYear: false,
       includesSemesterInExport: true,
+      usesToolbarExportFilters: true,
+    },
+    {
+      id: "admit-card-collection-report",
+      domain: "ADMIT_CARD_PHASE",
+      name: "Admit Card Collection Report",
+      description:
+        "Export list of students who have collected their admit card, with collection date and staff.",
+      icon: <FileText className="h-5 w-5 text-sky-700" />,
+      downloadFunction: () =>
+        handleDownload("admit-card-collection-report", downloadAdmitCardCollectionReport),
+      requiresAcademicYear: false,
       usesToolbarExportFilters: true,
     },
   ];
