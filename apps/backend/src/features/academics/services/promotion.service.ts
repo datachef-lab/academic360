@@ -9,7 +9,7 @@ import {
   studentModel,
   userModel,
 } from "@repo/db/schemas";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import XLSX from "xlsx";
 import ExcelJS from "exceljs";
@@ -20,8 +20,10 @@ export async function findPromotionByStudentIdAndClassId(
   classId: number,
   opts?: { activeOnly?: boolean },
 ) {
-  // activeOnly: only "active" promotions — endDate set and not deprecated
-  // (CU Semester II exam-form flow); latest by startDate wins if several.
+  // activeOnly: only the ongoing promotion — endDate still NULL (a completed
+  // promotion gets its endDate stamped, e.g. Sem I ended 2026-05-03 while the
+  // running Sem II row has endDate NULL) and not deprecated. Used by the CU
+  // Semester II exam-form flow; latest by startDate wins if several.
   const rows = await db
     .select()
     .from(promotionModel)
@@ -33,7 +35,7 @@ export async function findPromotionByStudentIdAndClassId(
         eq(classModel.id, classId),
         ...(opts?.activeOnly
           ? [
-              isNotNull(promotionModel.endDate),
+              isNull(promotionModel.endDate),
               eq(promotionModel.isDeprecated, false),
             ]
           : []),
