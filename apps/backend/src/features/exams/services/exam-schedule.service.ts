@@ -4697,22 +4697,43 @@ export async function downloadSingleAdmitCard(
   return pdfBuffer;
 }
 
+// Exam timings on admit cards / attendance sheets are ALWAYS IST. Without an
+// explicit timeZone these formatters render in the server's local zone — UTC
+// on prod, which printed an 8:00 AM IST paper as "02:30 AM" on admit cards.
+const IST_TIME_ZONE = "Asia/Kolkata";
+
+/** Hour + minute of a timestamp in IST, regardless of server timezone. */
+function istHourMinute(d: Date): { hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: IST_TIME_ZONE,
+  }).formatToParts(d);
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return { hour: get("hour") % 24, minute: get("minute") };
+}
+
 function formatExamDateFromTimestamp(date: Date): string {
   return date.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "long",
     year: "numeric",
+    timeZone: IST_TIME_ZONE,
   });
 }
 
 function formatExamTimeFromTimestamps(start: Date, end: Date): string {
   const formatTime = (d: Date) => {
     // Normalize 12:00 PM display across the app
-    if (d.getHours() === 12 && d.getMinutes() === 0) return "12 Noon";
+    const { hour, minute } = istHourMinute(d);
+    if (hour === 12 && minute === 0) return "12 Noon";
     return d.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
+      timeZone: IST_TIME_ZONE,
     });
   };
 
@@ -6115,17 +6136,24 @@ export async function downloadAttendanceSheetsByExamId(
 
             const d = item.examStartTime;
 
-            const date = `${String(d.getDate()).padStart(2, "0")}/${String(
-              d.getMonth() + 1,
-            ).padStart(2, "0")}/${d.getFullYear()}`;
+            // IST-pinned like the admit card (getDate/getHours are server-local
+            // and rendered UTC on prod)
+            const date = d.toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              timeZone: IST_TIME_ZONE,
+            });
 
+            const { hour, minute } = istHourMinute(d);
             const time =
-              d.getHours() === 12 && d.getMinutes() === 0
+              hour === 12 && minute === 0
                 ? "12 Noon"
                 : d.toLocaleTimeString("en-IN", {
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: true,
+                    timeZone: IST_TIME_ZONE,
                   });
 
             const paperCode = item.paperCode!;
