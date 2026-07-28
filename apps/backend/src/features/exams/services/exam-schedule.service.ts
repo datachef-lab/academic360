@@ -3113,11 +3113,34 @@ function sanitizeWorksheetName(name: string): string {
     .trim();
 }
 
+/**
+ * Optional streaming sink for the bulk admit-card ZIP.
+ *
+ * Without it the whole ZIP is built in memory and returned at the end — which
+ * means ZERO bytes reach the client while thousands of PDFs render, and the
+ * prod ALB (idle timeout) closes the connection mid-generation ("Network
+ * Error" at ~13% for a 2175-card group). With a sink, each PDF is handed to
+ * the caller as soon as it is rendered so bytes flow continuously.
+ *
+ * `onStart` fires once, before the first file, carrying the metadata the
+ * caller needs to set response headers (filename) at the right moment.
+ */
+export interface AdmitCardZipSink {
+  onStart?: (meta: {
+    admitCardCount: number;
+    examGroupName: string;
+    examCommencementDate: string | Date;
+  }) => void | Promise<void>;
+  append: (fileName: string, buffer: Buffer) => void | Promise<void>;
+  finalize: () => void | Promise<void>;
+}
+
 export async function downloadAdmitCardsAsZip(
   examId?: number,
   examGroupId?: number,
   userId?: number,
   uploadSessionId?: string,
+  sink?: AdmitCardZipSink,
 ): Promise<{
   zipBuffer: Buffer;
   admitCardCount: number;
@@ -3279,6 +3302,16 @@ export async function downloadAdmitCardsAsZip(
     }
   };
 
+  // Streaming callers set their response headers here — after the count and
+  // exam-group metadata are known, but before any ZIP bytes are written.
+  if (sink?.onStart) {
+    await sink.onStart({
+      admitCardCount: totalUids,
+      examGroupName: foundExamGroup.name,
+      examCommencementDate: foundExamGroup.examCommencementDate,
+    });
+  }
+
   for (let i = 0; i < uidEntries.length; i += CONCURRENCY) {
     const batch = uidEntries.slice(i, i + CONCURRENCY);
 
@@ -3359,7 +3392,11 @@ export async function downloadAdmitCardsAsZip(
             examRows: examRowsWithComponents,
           });
 
-        zip.file(`${uid}_admit_card.pdf`, pdfBuffer);
+        if (sink) {
+          await sink.append(`${uid}_admit_card.pdf`, pdfBuffer);
+        } else {
+          zip.file(`${uid}_admit_card.pdf`, pdfBuffer);
+        }
         processed++;
         emitProgress();
       }),
@@ -3379,6 +3416,17 @@ export async function downloadAdmitCardsAsZip(
       sessionId: uploadSessionId,
       stage: "zipping",
     });
+  }
+
+  if (sink) {
+    // Bytes already streamed to the caller; nothing to buffer.
+    await sink.finalize();
+    return {
+      zipBuffer: Buffer.alloc(0),
+      admitCardCount: totalUids,
+      examGroupName: foundExamGroup.name,
+      examCommencementDate: foundExamGroup.examCommencementDate,
+    };
   }
 
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });

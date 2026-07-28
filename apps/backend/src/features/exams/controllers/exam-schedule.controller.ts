@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { ZipArchive } from "archiver";
 import fs from "fs";
 
 import { NextFunction, Request, Response } from "express";
@@ -669,11 +670,64 @@ export const downloadAdmitCardsController = async (
       uploadSessionId,
     });
 
+    // Stream the ZIP as it is built. Buffering the whole archive meant no
+    // bytes reached the client for the entire generation, so the prod ALB
+    // closed the connection on its idle timeout ("Network Error" partway
+    // through a large group). Streaming keeps the connection busy and also
+    // avoids holding a multi-hundred-MB buffer in memory.
+    const archive = new ZipArchive({ zlib: { level: 6 } });
+    let headersSent = false;
+
+    archive.on("warning", (err: Error) => {
+      // ENOENT etc. are non-fatal for archiver; log and continue.
+      console.warn("[ADMIT-CARD-DOWNLOAD] archive warning:", err);
+    });
+    archive.on("error", (err: Error) => {
+      console.error("[ADMIT-CARD-DOWNLOAD] archive error:", err);
+      if (!headersSent) {
+        handleError(err, res, next);
+      } else {
+        res.destroy(err);
+      }
+    });
+
     const result = await downloadAdmitCardsAsZip(
       examIdNum,
       examGroupIdNum,
       (req as any)?.user!.id as number,
       uploadSessionId as string | undefined,
+      {
+        // Fires once, before any bytes: safe point to send headers (or to
+        // fall through to the 404 path when the group has no candidates).
+        onStart: ({ admitCardCount, examGroupName, examCommencementDate }) => {
+          if (admitCardCount === 0) return;
+
+          const dateStr =
+            examCommencementDate instanceof Date
+              ? examCommencementDate.toISOString().slice(0, 10)
+              : String(examCommencementDate || "").slice(0, 10);
+          const sanitizedName = (examGroupName || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const zipFileName = `${sanitizedName} ${dateStr}.zip`;
+
+          res.setHeader("Content-Type", "application/zip");
+          res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="${zipFileName.replace(/"/g, "%22")}"`,
+          );
+          headersSent = true;
+          archive.pipe(res);
+        },
+        append: (fileName, buffer) => {
+          archive.append(buffer, { name: fileName });
+        },
+        finalize: async () => {
+          if (headersSent) await archive.finalize();
+        },
+      },
     );
 
     if (result.admitCardCount === 0) {
@@ -685,34 +739,13 @@ export const downloadAdmitCardsController = async (
         .json(new ApiError(404, "No admit cards found for this exam"));
       return;
     }
-
-    // Ensure zipBuffer is a proper Buffer
-    const zipBuffer = Buffer.isBuffer(result.zipBuffer)
-      ? result.zipBuffer
-      : Buffer.from(result.zipBuffer);
-
-    // Build filename: exam group name + exam commencement date
-    const examCommencementDate =
-      result.examCommencementDate instanceof Date
-        ? result.examCommencementDate.toISOString().slice(0, 10)
-        : String(result.examCommencementDate || "").slice(0, 10);
-    const sanitizedName = (result.examGroupName || "exam")
-      .replace(/[/\\:*?"<>|]/g, "-")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 100);
-    const zipFileName = `${sanitizedName} ${examCommencementDate}.zip`;
-
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Length", zipBuffer.length);
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${zipFileName.replace(/"/g, "%22")}"`,
-    );
-
-    res.send(zipBuffer);
+    // Response is already streaming; nothing further to send.
   } catch (error) {
     console.error("[ADMIT-CARD-DOWNLOAD] Error:", error);
+    if (res.headersSent) {
+      res.destroy(error instanceof Error ? error : undefined);
+      return;
+    }
     handleError(error, res, next);
   }
 };
