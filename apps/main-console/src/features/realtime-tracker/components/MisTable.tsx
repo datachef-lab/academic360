@@ -7,19 +7,41 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, CheckCircle, Globe, Building, IdCard } from "lucide-react";
-import { MisTableData } from "../types/mis-types";
+import { Users, CheckCircle, Globe, Building, IdCard, type LucideIcon } from "lucide-react";
+import { MisTableRow } from "../types/mis-types";
 import { cn } from "@/lib/utils";
 
 /** How long a just-updated cell stays highlighted (ms). */
 const CELL_FLASH_MS = 1600;
 
-interface MisTableProps {
-  data: MisTableData;
+/** One coloured metric column: its header, cell palette and value accessor. */
+export type MisMetricColumn<Row> = {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  headBg: string;
+  headBorder: string;
+  cellBg: string;
+  cellBorder: string;
+  text: string;
+  getValue: (row: Row) => number;
+};
+
+/** Any row this table can render — the first column is always the course name. */
+type MisTableRowLike = { programCourseName: string };
+
+interface MisTableProps<Row extends MisTableRowLike> {
+  data: { updatedAt: string; data: Row[] };
   isLoading?: boolean;
+  /**
+   * Metric columns to render. Defaults to the affiliation-registration set, so
+   * every tab shares this table's Total-row styling and cell-flash logic
+   * instead of forking the component.
+   */
+  columns?: MisMetricColumn<Row>[];
 }
 
-const METRIC_COLUMNS = [
+const AFFILIATION_METRIC_COLUMNS: MisMetricColumn<MisTableRow>[] = [
   {
     key: "admitted",
     label: "Admitted",
@@ -29,7 +51,7 @@ const METRIC_COLUMNS = [
     cellBg: "bg-blue-50",
     cellBorder: "border-blue-200",
     text: "text-blue-900",
-    getValue: (row: MisTableData["data"][0]) => row.admitted,
+    getValue: (row) => row.admitted,
   },
   {
     key: "idCardIssued",
@@ -40,7 +62,7 @@ const METRIC_COLUMNS = [
     cellBg: "bg-teal-50",
     cellBorder: "border-teal-200",
     text: "text-teal-900",
-    getValue: (row: MisTableData["data"][0]) => row.idCardIssued ?? 0,
+    getValue: (row) => row.idCardIssued ?? 0,
   },
   {
     key: "subjectSelectionDone",
@@ -51,7 +73,7 @@ const METRIC_COLUMNS = [
     cellBg: "bg-green-50",
     cellBorder: "border-green-200",
     text: "text-green-900",
-    getValue: (row: MisTableData["data"][0]) => row.subjectSelectionDone,
+    getValue: (row) => row.subjectSelectionDone,
   },
   {
     key: "onlineRegDone",
@@ -62,7 +84,7 @@ const METRIC_COLUMNS = [
     cellBg: "bg-purple-50",
     cellBorder: "border-purple-200",
     text: "text-purple-900",
-    getValue: (row: MisTableData["data"][0]) => row.onlineRegDone,
+    getValue: (row) => row.onlineRegDone,
   },
   {
     key: "physicalRegDone",
@@ -73,9 +95,9 @@ const METRIC_COLUMNS = [
     cellBg: "bg-orange-50",
     cellBorder: "border-orange-200",
     text: "text-orange-900",
-    getValue: (row: MisTableData["data"][0]) => row.physicalRegDone,
+    getValue: (row) => row.physicalRegDone,
   },
-] as const;
+];
 
 function HeaderCell({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -92,7 +114,13 @@ function HeaderCell({ children, className }: { children: ReactNode; className?: 
   );
 }
 
-export function MisTable({ data, isLoading }: MisTableProps) {
+export function MisTable<Row extends MisTableRowLike = MisTableRow>({
+  data,
+  isLoading,
+  columns,
+}: MisTableProps<Row>) {
+  const METRIC_COLUMNS =
+    columns ?? (AFFILIATION_METRIC_COLUMNS as unknown as MisMetricColumn<Row>[]);
   // Realtime change flash: remember the previous value of every (row, metric)
   // cell; when a socket update changes a value, highlight that cell briefly so
   // the viewer can spot exactly what moved.
@@ -147,11 +175,9 @@ export function MisTable({ data, isLoading }: MisTableProps) {
         <Table containerClassName="overflow-x-auto" className="w-full table-fixed border-collapse">
           <colgroup>
             <col className="w-[30%]" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
+            {METRIC_COLUMNS.map((col) => (
+              <col key={col.key} style={{ width: `${70 / METRIC_COLUMNS.length}%` }} />
+            ))}
           </colgroup>
           <TableHeader className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50">
             <TableRow className="border-b-2 border-blue-200 hover:bg-transparent">

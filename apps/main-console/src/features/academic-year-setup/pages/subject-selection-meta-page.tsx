@@ -33,7 +33,7 @@ import { subjectSelectionApi } from "@/services/subject-selection.api";
 import { getSubjectTypes } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 import { getAllStreams } from "@/services/stream.api";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 import type { SubjectSelectionMetaDto } from "@repo/db/dtos/subject-selection";
 
 const BADGE = {

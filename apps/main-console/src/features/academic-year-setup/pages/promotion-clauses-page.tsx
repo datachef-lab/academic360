@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getPromotionClauses } from "@/services/promotion-logic.api";
 import type { PromotionClauseDto } from "@repo/db";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 export default function PromotionClausesPage() {
   const [searchText, setSearchText] = React.useState("");

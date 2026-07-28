@@ -180,6 +180,8 @@ export async function submitDeclaration(input: SubmitDeclarationInput) {
     console.error("[declaration] notify failed (non-fatal):", error);
   }
 
+  await broadcastDeclarationTrackerUpdate(promotionId);
+
   return {
     declaration: await findDeclarationByPromotion(
       promotionId,
@@ -187,6 +189,45 @@ export async function submitDeclaration(input: SubmitDeclarationInput) {
     ),
     created: true,
   };
+}
+
+/**
+ * Push the realtime-tracker "Fee Declarations" count to online viewers after a
+ * declaration is recorded. Broadcasts the unfiltered room plus the room for the
+ * promotion's academic year (the tracker's default filter set is year-scoped).
+ * Lazy import + try/catch: a broadcast failure must never fail the submission.
+ */
+async function broadcastDeclarationTrackerUpdate(
+  promotionId: number,
+): Promise<void> {
+  try {
+    const { scheduleRealtimeTrackerBroadcast } =
+      await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+    const { sessionModel } = await import("@repo/db/schemas/index.js");
+    const [row] = await db
+      .select({ academicYearId: sessionModel.academicYearId })
+      .from(promotionModel)
+      .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .where(eq(promotionModel.id, promotionId))
+      .limit(1);
+    scheduleRealtimeTrackerBroadcast(
+      "exam_form_declaration",
+      "declaration_submitted",
+      {},
+    );
+    if (row?.academicYearId) {
+      scheduleRealtimeTrackerBroadcast(
+        "exam_form_declaration",
+        "declaration_submitted",
+        { academicYearIds: [row.academicYearId] },
+      );
+    }
+  } catch (e) {
+    console.error(
+      "[declaration] tracker broadcast failed:",
+      (e as Error)?.message,
+    );
+  }
 }
 
 /**

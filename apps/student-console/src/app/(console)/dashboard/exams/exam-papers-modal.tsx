@@ -213,18 +213,22 @@ export function ExamPapersModal({
       setDownloading(true);
       const blob = await downloadAdmitCard(examId, studentIdNum);
 
-      // Save the file directly instead of opening it in a viewer tab.
-      //
-      // The previous version did `window.open(blobUrl)` and revoked the URL on
-      // the new tab's `load` event. That let the PDF render, but Chrome's PDF
-      // viewer re-requests the tab's blob: URL when its Download button is
-      // pressed — and by then the blob had already been revoked, so the button
-      // silently did nothing. An <a download> hands the file straight to the
-      // browser's download machinery, so there is no second request to fail.
-      //
-      // NOTE: a sandboxed iframe blocks this unless it carries `allow-downloads`
-      // — main-console's simulation iframe sets that (student-console-simulation.tsx).
+      // Open the PDF in a new tab so the student can preview it and save it
+      // from the browser's own viewer.
       const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const newTab = window.open(url, "_blank");
+
+      if (newTab) {
+        // Deliberately NOT revoked here. Chrome's built-in PDF viewer re-requests
+        // the tab's blob: URL when its Download button is pressed, so revoking —
+        // even on the new tab's `load` event, as this used to — leaves that
+        // button silently doing nothing. The URL is released by the browser when
+        // this document is discarded, which is a bounded, acceptable cost.
+        return;
+      }
+
+      // Popup blocked: fall back to saving the file directly, so the student
+      // still gets their admit card instead of nothing happening.
       const link = document.createElement("a");
       link.href = url;
       link.download = `admit-card-${studentIdNum}.pdf`;
@@ -232,8 +236,6 @@ export function ExamPapersModal({
       document.body.appendChild(link);
       link.click();
       link.remove();
-      // Revoked on a timer, not synchronously: some browsers finish reading the
-      // blob after click() returns, and an immediate revoke can truncate it.
       setTimeout(() => window.URL.revokeObjectURL(url), 10000);
     } catch (err) {
       toast({

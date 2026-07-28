@@ -3,6 +3,7 @@ import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import {
   getAffiliationRegistrationHandler,
   getAffiliationTabLabelHandler,
+  getExamFormDeclarationHandler,
   getFeeMisHandler,
 } from "../controllers/realtime-tracker.controller.js";
 
@@ -20,6 +21,10 @@ router.use(verifyJWT);
 router.get(
   "/affiliation-registration",
   asyncHandler(getAffiliationRegistrationHandler),
+);
+router.get(
+  "/exam-form-declaration",
+  asyncHandler(getExamFormDeclarationHandler),
 );
 router.get("/fee-mis", asyncHandler(getFeeMisHandler));
 router.get(

@@ -33,7 +33,7 @@ import * as XLSX from "xlsx";
 
 import axiosInstance from "@/utils/api";
 import { makeResourceApi, type ResourceRow } from "./resource-api";
-import { useResourceRoom } from "./useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 import { SearchableSelect } from "./SearchableSelect";
 import {
   RESOURCE_TABLE_BY_KEY,

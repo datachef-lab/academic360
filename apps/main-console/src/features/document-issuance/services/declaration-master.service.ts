@@ -1,3 +1,4 @@
+import axios from "axios";
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
 import type {
@@ -37,21 +38,29 @@ export const DECLARATION_FIELD_TYPES: DeclarationFieldType[] = [
   "DATE",
 ];
 
+/**
+ * How many student declarations already reference this row. The API returns it
+ * on every statement, field and option (0 when unused). Anything above 0 is
+ * frozen server-side — see `isDeclarationInUseError` below.
+ */
+type WithUsage = { usageCount: number };
+
 export type DeclarationMasterStatementFieldOption = Persisted<
   NonNullable<DeclarationMasterStatementFieldDto["options"]>[number]
->;
+> &
+  WithUsage;
 
 export type DeclarationMasterStatementField = Persisted<
   Omit<DeclarationMasterStatementFieldDto, "options">
-> & {
-  options?: DeclarationMasterStatementFieldOption[];
-};
+> &
+  WithUsage & {
+    options?: DeclarationMasterStatementFieldOption[];
+  };
 
-export type DeclarationMasterStatement = Persisted<
-  Omit<DeclarationMasterStatementDto, "fields">
-> & {
-  fields?: DeclarationMasterStatementField[];
-};
+export type DeclarationMasterStatement = Persisted<Omit<DeclarationMasterStatementDto, "fields">> &
+  WithUsage & {
+    fields?: DeclarationMasterStatementField[];
+  };
 
 export type DeclarationMaster = Persisted<Omit<DeclarationMasterDto, "statements">> & {
   statements?: DeclarationMasterStatement[];
@@ -87,6 +96,70 @@ export type DeclarationStatementFieldOptionPayload = {
   sequence?: number;
   isActive?: boolean;
 };
+
+/* ----------------------------- in-use guard ------------------------------- */
+
+/**
+ * A row a student has already declared against is immutable: its wording can
+ * never be edited, because that would retroactively change what those students
+ * agreed to. The sanctioned workflow is to deactivate the old row and add a new
+ * one. The server refuses such writes with HTTP 409 and this payload.
+ */
+export type DeclarationInUsePayload = {
+  code: "DECLARATION_IN_USE";
+  level: "STATEMENT" | "FIELD" | "OPTION";
+  id: number;
+  usageCount: number;
+  action: "UPDATE" | "DELETE";
+  /** Names of the immutable columns the request tried to change. */
+  blockedFields: string[];
+};
+
+/**
+ * `payload.code` is the stable marker — never string-match the message, which
+ * is prose meant for humans and is free to change.
+ */
+export function getDeclarationInUseError(
+  e: unknown,
+): { payload: DeclarationInUsePayload; message: string } | null {
+  if (!axios.isAxiosError(e)) return null;
+  const data: unknown = e.response?.data;
+  if (typeof data !== "object" || data === null) return null;
+
+  const payload = (data as { payload?: unknown }).payload;
+  if (typeof payload !== "object" || payload === null) return null;
+  if ((payload as { code?: unknown }).code !== "DECLARATION_IN_USE") return null;
+
+  const rawMessage = (data as { message?: unknown }).message;
+  return {
+    payload: payload as DeclarationInUsePayload,
+    message: typeof rawMessage === "string" ? rawMessage : "",
+  };
+}
+
+/** True when the server refused the write because the row is already in use. */
+export function isDeclarationInUseError(e: unknown): boolean {
+  return getDeclarationInUseError(e) !== null;
+}
+
+/** The server's ready-to-show sentence for a 409, or `null` for anything else. */
+export function declarationInUseMessage(e: unknown): string | null {
+  const hit = getDeclarationInUseError(e);
+  if (!hit) return null;
+  return (
+    hit.message ||
+    "This row has already been declared by a student. Deactivate it and add a new one instead."
+  );
+}
+
+/**
+ * Defensive read of `usageCount`: an older/cached API response may not carry it
+ * at all, and "missing" must mean "not in use" rather than crash the screen.
+ */
+export function usageCountOf(row: { usageCount?: number | null } | null | undefined): number {
+  const n = row?.usageCount;
+  return typeof n === "number" && n > 0 ? n : 0;
+}
 
 /* --------------------------------- masters -------------------------------- */
 

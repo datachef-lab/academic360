@@ -6,10 +6,14 @@ import {
 } from "@/utils/realtime-tracker-filters.js";
 import {
   getAffiliationRegistrationData,
+  getExamFormDeclarationData,
   getFeeMisData,
 } from "./services/realtime-tracker.service.js";
 
-export type RealtimeTrackerTab = "affiliation" | "fee_mis";
+export type RealtimeTrackerTab =
+  | "affiliation"
+  | "fee_mis"
+  | "exam_form_declaration";
 
 function stableFilterKey(filters: RealtimeTrackerFilters): string {
   return createHash("sha256")
@@ -134,6 +138,21 @@ export async function pushRealtimeTrackerSnapshot(
       // catch-ups, not data changes.
       if (reason !== "subscribe") {
         socketService.emitAffiliationRefresh(reason);
+      }
+      return;
+    }
+    if (tab === "exam_form_declaration") {
+      const payload = await getExamFormDeclarationData(filters);
+      socketService.sendExamFormDeclarationUpdate(
+        filters as Record<string, unknown>,
+        { ...payload, _ts: Date.now() } as Record<string, unknown>,
+        reason,
+      );
+      // Same as the other tabs: the filter-hash room only reaches viewers whose
+      // filters match the broadcast's exactly, so also tell EVERY viewer to
+      // refetch with their own filters. Skip subscribe-time catch-ups.
+      if (reason !== "subscribe") {
+        socketService.emitExamFormDeclarationRefresh(reason);
       }
       return;
     }

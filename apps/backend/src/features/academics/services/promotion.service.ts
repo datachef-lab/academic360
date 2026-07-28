@@ -99,7 +99,48 @@ export async function markExamFormSubmission(
   } catch (error) {
     console.error("Error notifying exam form submission:", error);
   }
+
+  await broadcastExamFormTrackerUpdate(promotionId);
+
   return updatedPromotion;
+}
+
+/**
+ * Push the realtime-tracker "Exam Form Uploaded" count to online viewers after
+ * a submission. Broadcasts the unfiltered room plus the room for the
+ * promotion's academic year (the tracker's default filter set is year-scoped).
+ * Lazy import + try/catch: a broadcast failure must never fail the submission.
+ */
+async function broadcastExamFormTrackerUpdate(
+  promotionId: number,
+): Promise<void> {
+  try {
+    const { scheduleRealtimeTrackerBroadcast } =
+      await import("@/features/realtime-tracker/realtime-tracker.socket.js");
+    const [row] = await db
+      .select({ academicYearId: sessionModel.academicYearId })
+      .from(promotionModel)
+      .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .where(eq(promotionModel.id, promotionId))
+      .limit(1);
+    scheduleRealtimeTrackerBroadcast(
+      "exam_form_declaration",
+      "exam_form_submitted",
+      {},
+    );
+    if (row?.academicYearId) {
+      scheduleRealtimeTrackerBroadcast(
+        "exam_form_declaration",
+        "exam_form_submitted",
+        { academicYearIds: [row.academicYearId] },
+      );
+    }
+  } catch (e) {
+    console.error(
+      "[promotion] exam-form tracker broadcast failed:",
+      (e as Error)?.message,
+    );
+  }
 }
 
 export async function notifyExamForm(

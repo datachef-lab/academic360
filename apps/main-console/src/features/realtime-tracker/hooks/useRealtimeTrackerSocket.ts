@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import type {
   AffiliationRegistrationPayload,
+  ExamFormDeclarationPayload,
   FeeMisPayload,
   RealtimeTrackerFilters,
   RealtimeTrackerTab,
@@ -19,6 +20,9 @@ type UseRealtimeTrackerSocketOptions = {
   onAffiliationUpdate?: (data: AffiliationRegistrationPayload) => void;
   onFeeMisUpdate?: (data: FeeMisPayload) => void;
   onFeeMisRefresh?: () => void;
+  onExamFormDeclarationUpdate?: (data: ExamFormDeclarationPayload) => void;
+  /** Global tracker refresh: refetch the exam-form/declaration tab with the CLIENT's own filters. */
+  onExamFormDeclarationRefresh?: () => void;
   /** Global tracker refresh: refetch the affiliation tab with the CLIENT's own filters. */
   onAffiliationRefresh?: () => void;
   onError?: (error: string) => void;
@@ -32,6 +36,8 @@ export function useRealtimeTrackerSocket({
   onFeeMisUpdate,
   onFeeMisRefresh,
   onAffiliationRefresh,
+  onExamFormDeclarationUpdate,
+  onExamFormDeclarationRefresh,
   onError,
 }: UseRealtimeTrackerSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
@@ -49,6 +55,8 @@ export function useRealtimeTrackerSocket({
   const onFeeMisRef = useRef(onFeeMisUpdate);
   const onFeeMisRefreshRef = useRef(onFeeMisRefresh);
   const onAffiliationRefreshRef = useRef(onAffiliationRefresh);
+  const onExamFormDeclarationRef = useRef(onExamFormDeclarationUpdate);
+  const onExamFormDeclarationRefreshRef = useRef(onExamFormDeclarationRefresh);
   const onErrorRef = useRef(onError);
   const lastTsRef = useRef<Partial<Record<RealtimeTrackerTab, number>>>({});
 
@@ -60,6 +68,8 @@ export function useRealtimeTrackerSocket({
   onFeeMisRef.current = onFeeMisUpdate;
   onFeeMisRefreshRef.current = onFeeMisRefresh;
   onAffiliationRefreshRef.current = onAffiliationRefresh;
+  onExamFormDeclarationRef.current = onExamFormDeclarationUpdate;
+  onExamFormDeclarationRefreshRef.current = onExamFormDeclarationRefresh;
   onErrorRef.current = onError;
 
   const subscribe = useCallback(() => {
@@ -145,6 +155,29 @@ export function useRealtimeTrackerSocket({
         return;
       }
       onFeeMisRef.current?.(payload);
+    });
+
+    socket.on("exam_form_declaration_update", (payload: any) => {
+      // LWW guard: ignore stale messages (older _ts than last received)
+      if (payload._ts && payload._ts <= (lastTsRef.current.exam_form_declaration ?? 0)) {
+        return; // stale message
+      }
+      if (payload._ts) {
+        lastTsRef.current.exam_form_declaration = payload._ts;
+      }
+      if (
+        !realtimeTrackerFiltersMatch(
+          payload?.filters,
+          canonicalRealtimeTrackerFilters(filtersRef.current),
+        )
+      ) {
+        return;
+      }
+      onExamFormDeclarationRef.current?.(payload);
+    });
+
+    socket.on("exam_form_declaration_refresh", () => {
+      onExamFormDeclarationRefreshRef.current?.();
     });
 
     socket.on("fee_mis_refresh", () => {

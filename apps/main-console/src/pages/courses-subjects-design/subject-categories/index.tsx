@@ -38,7 +38,7 @@ import {
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 const SubjectCategoriesPage = () => {
   const [categories, setCategories] = React.useState<SubjectType[]>([]);

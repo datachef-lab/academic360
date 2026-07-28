@@ -46,7 +46,7 @@ import {
   deletePromotionStatusApi,
 } from "@/services/promotion-status.api";
 import type { PromotionStatusT } from "@repo/db";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 const APPEAR_TYPES = ["REGULAR", "READMISSION", "CASUAL"] as const;
 

@@ -19,7 +19,7 @@ import { toast } from "sonner";
 
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { SearchableSelect } from "@/features/academic-year-setup/general/SearchableSelect";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 import {
   type AdmissionProgramCourse,
   type AdmissionCycle,

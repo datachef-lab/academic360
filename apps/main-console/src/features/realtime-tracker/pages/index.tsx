@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import MasterLayout from "@/components/layouts/MasterLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileCheck, FileSignature, IndianRupee, Users } from "lucide-react";
 import { toast } from "sonner";
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
@@ -12,12 +13,16 @@ import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { getProgramCourseDtos } from "@/services/course-design.api";
 import { deriveDefaultFiltersFromInProcessScopes } from "@/features/fees-dashboard/utils/scope-filter-defaults";
 import { hasDashboardScope } from "@/features/fees-dashboard/utils/filter-utils";
-import { MisTable } from "../components/MisTable";
+import { MisTable, type MisMetricColumn } from "../components/MisTable";
 import { RealtimeTrackerFiltersSidebar } from "../components/RealtimeTrackerFiltersSidebar";
 import { FeeMisTab } from "../components/FeeMisTab";
 import { useRealtimeTrackerSocket } from "../hooks/useRealtimeTrackerSocket";
 import { useRealtimeTrackerFilterOptions } from "../hooks/useRealtimeTrackerFilterOptions";
-import { fetchAffiliationRegistration, fetchFeeMis } from "../services/realtime-tracker-api";
+import {
+  fetchAffiliationRegistration,
+  fetchExamFormDeclaration,
+  fetchFeeMis,
+} from "../services/realtime-tracker-api";
 import { resolveAffiliationTabLabel } from "../utils/affiliation-tab-label";
 import {
   canonicalRealtimeTrackerFilters,
@@ -26,6 +31,8 @@ import {
 } from "../utils/filters-key";
 import type {
   AffiliationRegistrationPayload,
+  ExamFormDeclarationPayload,
+  ExamFormDeclarationRow,
   FeeMisPayload,
   RealtimeTrackerFilters,
   RealtimeTrackerTab,
@@ -34,6 +41,58 @@ import type {
 function buildFallbackFilters(academicYearId: number): RealtimeTrackerFilters {
   return { academicYearIds: [academicYearId] };
 }
+
+/**
+ * "Fee Declarations" counts only students who ALSO have dues — a student with
+ * nothing outstanding is never shown the declaration dialog, so the column is
+ * read against "Fee Pending / Due" beside it, not against "Admitted".
+ */
+const EXAM_FORM_METRIC_COLUMNS: MisMetricColumn<ExamFormDeclarationRow>[] = [
+  {
+    key: "admitted",
+    label: "Admitted",
+    icon: Users,
+    headBg: "bg-blue-600",
+    headBorder: "border-blue-700",
+    cellBg: "bg-blue-50",
+    cellBorder: "border-blue-200",
+    text: "text-blue-900",
+    getValue: (row) => row.admitted,
+  },
+  {
+    key: "feePending",
+    label: "Fee Pending / Due",
+    icon: IndianRupee,
+    headBg: "bg-rose-600",
+    headBorder: "border-rose-700",
+    cellBg: "bg-rose-50",
+    cellBorder: "border-rose-200",
+    text: "text-rose-900",
+    getValue: (row) => row.feePending,
+  },
+  {
+    key: "feeDeclarations",
+    label: "Fee Declarations",
+    icon: FileSignature,
+    headBg: "bg-amber-600",
+    headBorder: "border-amber-700",
+    cellBg: "bg-amber-50",
+    cellBorder: "border-amber-200",
+    text: "text-amber-900",
+    getValue: (row) => row.feeDeclarations,
+  },
+  {
+    key: "examFormUploaded",
+    label: "Exam Form Uploaded",
+    icon: FileCheck,
+    headBg: "bg-emerald-600",
+    headBorder: "border-emerald-700",
+    cellBg: "bg-emerald-50",
+    cellBorder: "border-emerald-200",
+    text: "text-emerald-900",
+    getValue: (row) => row.examFormUploaded,
+  },
+];
 
 type TrackerMainProps = {
   filters: RealtimeTrackerFilters;
@@ -68,6 +127,16 @@ function TrackerMain({
     keepPreviousData: true,
   });
 
+  const examFormDeclarationQuery = useQuery({
+    queryKey: ["rt-exam-form-declaration", filtersKey],
+    queryFn: () => fetchExamFormDeclaration(apiFilters),
+    enabled: filtersReady && activeTab === "exam_form_declaration",
+    staleTime: 30_000,
+    // Same reason as the affiliation query: keep the previous table on screen
+    // while the new filter set loads instead of flashing a skeleton.
+    keepPreviousData: true,
+  });
+
   const feeMisQuery = useQuery({
     queryKey: ["rt-fee-mis", filtersKey],
     queryFn: () => fetchFeeMis(apiFilters),
@@ -97,6 +166,15 @@ function TrackerMain({
     [queryClient, filtersKey, apiFilters],
   );
 
+  const onExamFormDeclarationUpdate = useCallback(
+    (payload: ExamFormDeclarationPayload) => {
+      if (!realtimeTrackerFiltersMatch(payload.filters, apiFilters)) return;
+      queryClient.setQueryData(["rt-exam-form-declaration", filtersKey], payload);
+      setLastUpdate(payload.updatedAt);
+    },
+    [queryClient, filtersKey, apiFilters],
+  );
+
   const onFeeMisRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["rt-fee-mis", filtersKey] });
   }, [queryClient, filtersKey]);
@@ -112,6 +190,20 @@ function TrackerMain({
     }, 1000);
   }, [queryClient, filtersKey]);
 
+  // Same trailing debounce as the affiliation refresh: a burst of declarations
+  // or exam-form submissions collapses into a single refetch.
+  const examFormDeclarationRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onExamFormDeclarationRefresh = useCallback(() => {
+    if (examFormDeclarationRefreshTimer.current)
+      clearTimeout(examFormDeclarationRefreshTimer.current);
+    examFormDeclarationRefreshTimer.current = setTimeout(() => {
+      examFormDeclarationRefreshTimer.current = null;
+      void queryClient.invalidateQueries({
+        queryKey: ["rt-exam-form-declaration", filtersKey],
+      });
+    }, 1000);
+  }, [queryClient, filtersKey]);
+
   const { isConnected } = useRealtimeTrackerSocket({
     userId: user?.id?.toString(),
     tab: activeTab,
@@ -120,11 +212,14 @@ function TrackerMain({
     onFeeMisUpdate,
     onFeeMisRefresh,
     onAffiliationRefresh,
+    onExamFormDeclarationUpdate,
+    onExamFormDeclarationRefresh,
     onError: handleSocketError,
   });
 
   const affiliationData = affiliationQuery.data;
   const feeMisData = feeMisQuery.data;
+  const examFormDeclarationData = examFormDeclarationQuery.data;
 
   useEffect(() => {
     if (affiliationData?.updatedAt) setLastUpdate(affiliationData.updatedAt);
@@ -133,6 +228,10 @@ function TrackerMain({
   useEffect(() => {
     if (feeMisData?.updatedAt) setLastUpdate(feeMisData.updatedAt);
   }, [feeMisData?.updatedAt]);
+
+  useEffect(() => {
+    if (examFormDeclarationData?.updatedAt) setLastUpdate(examFormDeclarationData.updatedAt);
+  }, [examFormDeclarationData?.updatedAt]);
 
   const misTableData = useMemo(() => {
     if (!affiliationData) return null;
@@ -143,6 +242,19 @@ function TrackerMain({
     filtersReady && activeTab === "affiliation" && affiliationQuery.isLoading && !affiliationData;
   const feeMisLoading =
     filtersReady && activeTab === "fee_mis" && feeMisQuery.isLoading && !feeMisData;
+
+  const examFormDeclarationTableData = useMemo(() => {
+    if (!examFormDeclarationData) return null;
+    return {
+      updatedAt: examFormDeclarationData.updatedAt,
+      data: examFormDeclarationData.data,
+    };
+  }, [examFormDeclarationData]);
+
+  const examFormDeclarationError =
+    activeTab === "exam_form_declaration" && examFormDeclarationQuery.isError
+      ? ((examFormDeclarationQuery.error as Error)?.message ?? "Failed to load data")
+      : null;
 
   const affiliationError =
     activeTab === "affiliation" && affiliationQuery.isError
@@ -157,12 +269,14 @@ function TrackerMain({
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="shrink-0 border-b bg-white px-2 pb-[8px]">
-          <TabsList className="h-10 bg-transparent">
-            <TabsTrigger value="affiliation" className="text-sm">
-              {affiliationTabLabel}
-            </TabsTrigger>
-            <TabsTrigger value="fee_mis" className="text-sm">
-              Fee MIS
+          {/* Default shadcn TabsList styling (muted track + raised active pill).
+              `bg-transparent` used to be set here, which flattened the triggers
+              into plain text so only the active one read as a control. */}
+          <TabsList>
+            <TabsTrigger value="affiliation">{affiliationTabLabel}</TabsTrigger>
+            <TabsTrigger value="fee_mis">Fee MIS</TabsTrigger>
+            <TabsTrigger value="exam_form_declaration">
+              Form Upload &amp; Fee Declaration
             </TabsTrigger>
           </TabsList>
         </div>
@@ -216,6 +330,42 @@ function TrackerMain({
                 data={feeMisData ?? null}
                 isLoading={feeMisLoading || feeMisQuery.isFetching}
               />
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent
+          value="exam_form_declaration"
+          className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
+        >
+          <div className="flex min-h-0 flex-1 flex-col bg-white">
+            {!filtersReady ? (
+              <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                Preparing filters…
+              </div>
+            ) : examFormDeclarationError ? (
+              <div className="flex h-64 flex-col items-center justify-center gap-2 px-4 text-center text-sm text-red-600">
+                <p>{examFormDeclarationError}</p>
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => examFormDeclarationQuery.refetch()}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : examFormDeclarationTableData ? (
+              <MisTable data={examFormDeclarationTableData} columns={EXAM_FORM_METRIC_COLUMNS} />
+            ) : examFormDeclarationQuery.isFetching ? (
+              <MisTable
+                data={{ updatedAt: "", data: [] as ExamFormDeclarationRow[] }}
+                columns={EXAM_FORM_METRIC_COLUMNS}
+                isLoading
+              />
+            ) : (
+              <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                No data
+              </div>
             )}
           </div>
         </TabsContent>

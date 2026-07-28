@@ -19,22 +19,11 @@ import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { toast } from "sonner";
 import { fetchExamGroupsByStudentId } from "@/services/exam-group.service";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
-import { axiosInstance } from "@/lib/utils";
-
-type AcademicActivityScopeDto = {
-  stream: { id: number };
-  class: { id: number };
-  startDate: string | null;
-  endDate: string | null;
-  isEnabled: boolean;
-};
-
-type AcademicActivityDto = {
-  master: { isActive: boolean; name: string };
-  academicYear: { id: number };
-  courseLevelId?: number | null;
-  scopes: AcademicActivityScopeDto[];
-};
+import {
+  fetchAcademicActivities,
+  getStudentActivityContext,
+  isActivityLive,
+} from "@/lib/academic-activity";
 
 export default function HomeContent() {
   const { student, loading, batches, error, refetch } = useStudent();
@@ -192,35 +181,13 @@ export default function HomeContent() {
 
   const refreshActivityCards = useCallback(() => {
     if (!student?.id) return;
-    const promotion = student?.currentPromotion;
-    const studentClassId = promotion?.class?.id;
-    const studentAyId = promotion?.session?.academicYearId ?? undefined;
-    const studentStreamId = student?.programCourse?.stream?.id ?? null;
+    const context = getStudentActivityContext(student);
 
-    axiosInstance
-      .get<{ payload: AcademicActivityDto[] }>("/api/academics/academic-activities")
-      .then(({ data }) => {
-        const activities = Array.isArray(data?.payload) ? data.payload : [];
+    fetchAcademicActivities()
+      .then((activities) => {
         const now = Date.now();
-
-        const isLive = (activityName: string) => {
-          const matched = activities.filter(
-            (a) =>
-              a.master?.isActive && (a.master?.name ?? "").trim().toLowerCase() === activityName,
-          );
-          if (!matched.length || !studentClassId || !studentAyId) return false;
-          return matched.some((activity) => {
-            if (activity.academicYear.id !== studentAyId) return false;
-            return activity.scopes.some((scope) => {
-              if (!scope.isEnabled) return false;
-              if (scope.class.id !== studentClassId) return false;
-              if (studentStreamId != null && scope.stream.id !== studentStreamId) return false;
-              const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
-              const end = scope.endDate ? new Date(scope.endDate).getTime() : Infinity;
-              return now >= start && now <= end;
-            });
-          });
-        };
+        const isLive = (activityName: string) =>
+          isActivityLive(activities, activityName, context, now);
 
         setShowSubjectSelection(isLive("subject selection"));
         setShowCuRegistration(isLive("cu registration"));

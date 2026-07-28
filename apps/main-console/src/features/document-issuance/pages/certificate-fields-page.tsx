@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Edit, ListTree, MessageCircleQuestion, PlusCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -52,6 +52,7 @@ import {
   isCertificateFieldDescriptionEmpty,
   normalizeCertificateFieldDescriptionForSave,
 } from "@/lib/certificate-field-html";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 type CertificateMaster = {
   id: number;
@@ -183,8 +184,18 @@ export default function CertificateFieldsPage() {
     return m;
   }, [masters]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  /**
+   * Guards against an out-of-order response: a slow earlier request must never
+   * overwrite the rows a newer one already put on screen.
+   */
+  const fetchSeq = useRef(0);
+
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const seq = ++fetchSeq.current;
+    // A silent refresh (socket-driven) skips the loading flag — flipping it
+    // swaps the whole screen for the "Loading…" card and back, which is a
+    // visible flicker every time another admin saves.
+    if (!opts?.silent) setLoading(true);
     try {
       const [cm, cf] = await Promise.all([
         axiosInstance.get<{ payload: CertificateMaster[] }>("/api/academics/certificate-masters"),
@@ -192,20 +203,49 @@ export default function CertificateFieldsPage() {
           "/api/academics/certificate-field-masters",
         ),
       ]);
+      if (seq !== fetchSeq.current) return;
       setMasters(Array.isArray(cm.data.payload) ? cm.data.payload : []);
       setFields(Array.isArray(cf.data.payload) ? cf.data.payload : []);
     } catch {
-      toast.error("Failed to load certificate fields");
-      setMasters([]);
-      setFields([]);
+      if (seq !== fetchSeq.current) return;
+      if (!opts?.silent) {
+        toast.error("Failed to load certificate fields");
+        setMasters([]);
+        setFields([]);
+      }
     } finally {
-      setLoading(false);
+      if (seq === fetchSeq.current && !opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  /*
+    Live updates. Saving one field can fire several events in a row (the field
+    write plus one per queued option), so the refresh is coalesced into a single
+    trailing call. Only the two list queries are re-run: the open dialog reads
+    from its own `form` / `editing` / `optionRows` state and is never rebuilt
+    from under the admin.
+  */
+  const remoteRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onRemoteChange = useCallback(() => {
+    if (remoteRefreshTimer.current) clearTimeout(remoteRefreshTimer.current);
+    remoteRefreshTimer.current = setTimeout(() => {
+      remoteRefreshTimer.current = null;
+      void load({ silent: true });
+    }, 300);
+  }, [load]);
+  useEffect(
+    () => () => {
+      if (remoteRefreshTimer.current) clearTimeout(remoteRefreshTimer.current);
+    },
+    [],
+  );
+  useResourceRoom("academics/certificate-masters", onRemoteChange);
+  useResourceRoom("academics/certificate-field-masters", onRemoteChange);
+  useResourceRoom("academics/certificate-field-option-masters", onRemoteChange);
 
   useEffect(() => {
     if (form.type !== "SELECT") {
@@ -865,11 +905,14 @@ export default function CertificateFieldsPage() {
                                     <TableCell>
                                       <div className="flex flex-wrap items-center gap-1">
                                         {row.isActive ? (
-                                          <Badge className="bg-green-600 text-white hover:bg-green-600 text-xs">
+                                          <Badge className="border-green-700 bg-green-600 text-white hover:bg-green-600 text-xs">
                                             Yes
                                           </Badge>
                                         ) : (
-                                          <Badge variant="secondary" className="text-xs">
+                                          <Badge
+                                            variant="secondary"
+                                            className="border-slate-300 text-xs"
+                                          >
                                             No
                                           </Badge>
                                         )}
@@ -917,11 +960,14 @@ export default function CertificateFieldsPage() {
                                     </TableCell>
                                     <TableCell>
                                       {row.isActive ? (
-                                        <Badge className="bg-green-600 text-white hover:bg-green-600 text-xs">
+                                        <Badge className="border-green-700 bg-green-600 text-white hover:bg-green-600 text-xs">
                                           Yes
                                         </Badge>
                                       ) : (
-                                        <Badge variant="secondary" className="text-xs">
+                                        <Badge
+                                          variant="secondary"
+                                          className="border-slate-300 text-xs"
+                                        >
                                           No
                                         </Badge>
                                       )}
@@ -1149,11 +1195,13 @@ export default function CertificateFieldsPage() {
                             </TableCell>
                             <TableCell>
                               {r.isActive ? (
-                                <Badge className="bg-green-500 text-white hover:bg-green-600">
+                                <Badge className="border-green-600 bg-green-500 text-white hover:bg-green-600">
                                   Active
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary">Inactive</Badge>
+                                <Badge variant="secondary" className="border-slate-300">
+                                  Inactive
+                                </Badge>
                               )}
                             </TableCell>
                             <TableCell>

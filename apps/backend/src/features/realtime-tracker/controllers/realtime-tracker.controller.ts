@@ -5,6 +5,7 @@ import { parseRealtimeTrackerFilters } from "@/utils/realtime-tracker-filters.js
 import {
   getAffiliationDisplayLabel,
   getAffiliationRegistrationData,
+  getExamFormDeclarationData,
   getFeeMisData,
 } from "../services/realtime-tracker.service.js";
 
@@ -25,6 +26,30 @@ export async function getAffiliationRegistrationHandler(
           "SUCCESS",
           payload,
           "Affiliation registration loaded",
+        ),
+      );
+  } catch (error) {
+    return handleError(error, res);
+  }
+}
+
+export async function getExamFormDeclarationHandler(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const filters = parseRealtimeTrackerFilters(
+      (req.query ?? {}) as Record<string, unknown>,
+    );
+    const payload = await getExamFormDeclarationData(filters);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          payload,
+          "Exam form upload & fee declarations loaded",
         ),
       );
   } catch (error) {

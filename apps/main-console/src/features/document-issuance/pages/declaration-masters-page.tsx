@@ -7,6 +7,7 @@ import {
   FileSignature,
   ListChecks,
   Loader2,
+  Lock,
   Pencil,
   PlusCircle,
   ScrollText,
@@ -60,18 +61,22 @@ import {
   deleteDeclarationStatement,
   deleteDeclarationStatementField,
   deleteDeclarationStatementFieldOption,
+  declarationInUseMessage,
   getAllDeclarationMasters,
+  isDeclarationInUseError,
   previewDeclarationMasterDraft,
   updateDeclarationMaster,
   updateDeclarationStatement,
   updateDeclarationStatementField,
   updateDeclarationStatementFieldOption,
+  usageCountOf,
   type DeclarationContext,
   type DeclarationFieldType,
   type DeclarationMaster,
   type DeclarationMasterDraftPreviewPayload,
   type DeclarationMasterPreview,
 } from "@/features/document-issuance/services/declaration-master.service";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 /* -------------------------------------------------------------------------- */
 /*                              draft (dialog) tree                            */
@@ -84,12 +89,18 @@ import {
  * the same pending-queue trick the certificate fields screen uses, extended so
  * create and edit behave identically.
  */
+/**
+ * `usageCount` rides along on every draft row: > 0 means students have already
+ * declared against it, so the server has frozen the parts of it that define
+ * what they agreed to. Rows the admin has just added are always 0.
+ */
 type DraftOption = {
   key: string;
   id: number | null;
   name: string;
   sequence: number;
   isActive: boolean;
+  usageCount: number;
 };
 
 type DraftField = {
@@ -99,6 +110,7 @@ type DraftField = {
   type: DeclarationFieldType;
   sequence: number;
   isActive: boolean;
+  usageCount: number;
   options: DraftOption[];
 };
 
@@ -109,6 +121,7 @@ type DraftStatement = {
   isRequired: boolean;
   sequence: number;
   isActive: boolean;
+  usageCount: number;
   fields: DraftField[];
 };
 
@@ -221,6 +234,7 @@ function toDraft(master: DeclarationMaster | null): DraftStatement[] {
     isRequired: s.isRequired ?? true,
     sequence: s.sequence ?? si + 1,
     isActive: isRowActive(s.isActive),
+    usageCount: usageCountOf(s),
     fields: sortBySequence(s.fields ?? []).map((f, fi) => ({
       key: `f-${f.id}`,
       id: f.id,
@@ -229,15 +243,24 @@ function toDraft(master: DeclarationMaster | null): DraftStatement[] {
       type: f.type ?? "TEXT",
       sequence: f.sequence ?? fi + 1,
       isActive: isRowActive(f.isActive),
+      usageCount: usageCountOf(f),
       options: sortBySequence(f.options ?? []).map((o, oi) => ({
         key: `o-${o.id}`,
         id: o.id,
         name: o.name,
         sequence: o.sequence ?? oi + 1,
         isActive: isRowActive(o.isActive),
+        usageCount: usageCountOf(o),
       })),
     })),
   }));
+}
+
+/** Copy that every in-use notice in this screen is phrased from. */
+function inUseNotice(count: number): string {
+  return `This statement has already been declared by ${count} student${
+    count === 1 ? "" : "s"
+  }. Its wording and Required flag are locked — editing them would change what those students agreed to. To change the wording, switch this statement off (Active) and add a new one; past declarations stay intact.`;
 }
 
 /** First empty required cell of one statement, as a message — `null` when valid. */
@@ -264,7 +287,14 @@ function draftProblem(draft: DraftStatement[]): string | null {
   return null;
 }
 
-/** Applies the dialog tree to the API: deletes first, then upserts top-down. */
+/**
+ * Applies the dialog tree to the API: deletes first, then upserts top-down.
+ *
+ * Rows students have already declared against only ever send the columns the
+ * server still accepts (`isActive` / `sequence`). Re-sending an unchanged
+ * wording would be accepted too, but trimming it — which this function does —
+ * counts as a change, so the frozen columns are simply left out.
+ */
 async function persistDraftApi(
   masterId: number,
   draft: DraftStatement[],
@@ -285,6 +315,11 @@ async function persistDraftApi(
         isActive: s.isActive,
       });
       statementId = created?.id ?? null;
+    } else if (s.usageCount > 0) {
+      await updateDeclarationStatement(statementId, {
+        sequence: s.sequence,
+        isActive: s.isActive,
+      });
     } else {
       await updateDeclarationStatement(statementId, {
         statement: s.statement.trim(),
@@ -306,6 +341,11 @@ async function persistDraftApi(
           isActive: f.isActive,
         });
         fieldId = created?.id ?? null;
+      } else if (f.usageCount > 0) {
+        await updateDeclarationStatementField(fieldId, {
+          sequence: f.sequence,
+          isActive: f.isActive,
+        });
       } else {
         await updateDeclarationStatementField(fieldId, {
           label: f.label.trim(),
@@ -321,6 +361,11 @@ async function persistDraftApi(
           await createDeclarationStatementFieldOption({
             declarationMasterStatementFieldId: fieldId,
             name: o.name.trim(),
+            sequence: o.sequence,
+            isActive: o.isActive,
+          });
+        } else if (o.usageCount > 0) {
+          await updateDeclarationStatementFieldOption(o.id, {
             sequence: o.sequence,
             isActive: o.isActive,
           });
@@ -404,6 +449,9 @@ function OptionRow({
   onChange: (patch: Partial<DraftOption>) => void;
   onRemove: () => void;
 }) {
+  // students have picked this option — its text is frozen, only the flags move
+  const locked = value.usageCount > 0;
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-center">
       <div className="sm:col-span-7 min-w-0">
@@ -413,8 +461,22 @@ function OptionRow({
           placeholder="Option text"
           aria-label="Option text"
           autoComplete="off"
-          className="h-9 w-full"
+          readOnly={locked}
+          aria-readonly={locked || undefined}
+          title={
+            locked ? `Chosen by ${value.usageCount} student(s) — the text is locked.` : undefined
+          }
+          className={cn(
+            "h-9 w-full",
+            locked && "cursor-not-allowed bg-muted text-muted-foreground",
+          )}
         />
+        {locked ? (
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-700">
+            <Lock className="h-3 w-3 shrink-0" />
+            In use by {value.usageCount} — text locked.
+          </p>
+        ) : null}
       </div>
       <div className="sm:col-span-2 min-w-0">
         <Input
@@ -442,7 +504,11 @@ function OptionRow({
           size="sm"
           className="h-9 w-9 p-0 text-red-600 border-red-200 hover:bg-red-50"
           onClick={onRemove}
+          disabled={locked}
           aria-label="Remove option"
+          title={
+            locked ? "Chosen by a student — switch it off instead of deleting it." : "Remove option"
+          }
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -472,6 +538,8 @@ function FieldRows({
 }) {
   const setOptions = (options: DraftOption[]) => onChange({ options });
   const isSelect = value.type === "SELECT";
+  // students have already answered this input — its label and type are frozen
+  const locked = value.usageCount > 0;
 
   return (
     <>
@@ -483,15 +551,35 @@ function FieldRows({
             placeholder="Field label"
             aria-label="Field label"
             autoComplete="off"
-            className="h-9 w-full"
+            readOnly={locked}
+            aria-readonly={locked || undefined}
+            title={
+              locked
+                ? `Answered by ${value.usageCount} student(s) — the label is locked.`
+                : undefined
+            }
+            className={cn(
+              "h-9 w-full",
+              locked && "cursor-not-allowed bg-muted text-muted-foreground",
+            )}
           />
+          {locked ? (
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-700">
+              <Lock className="h-3 w-3 shrink-0" />
+              In use by {value.usageCount} — label and type locked.
+            </p>
+          ) : null}
         </TableCell>
         <TableCell className="align-middle">
           <Select
             value={value.type}
             onValueChange={(v) => onChange({ type: v as DeclarationFieldType })}
+            disabled={locked}
           >
-            <SelectTrigger className="h-9 w-full" aria-label="Field type">
+            <SelectTrigger
+              className={cn("h-9 w-full", locked && "cursor-not-allowed bg-muted")}
+              aria-label="Field type"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -547,7 +635,13 @@ function FieldRows({
               size="sm"
               className="h-8 w-8 p-0 text-red-600 border-red-200 hover:bg-red-50"
               onClick={onRemove}
+              disabled={locked}
               aria-label="Remove field"
+              title={
+                locked
+                  ? "Answered by a student — switch it off instead of deleting it."
+                  : "Remove field"
+              }
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -579,6 +673,7 @@ function FieldRows({
                       name: "",
                       sequence: value.options.length + 1,
                       isActive: true,
+                      usageCount: 0,
                     },
                   ])
                 }
@@ -640,6 +735,8 @@ function StatementRow({
 }) {
   const statementHtml = useMemo(() => sanitizeStatementHtml(value.statement), [value.statement]);
   const statementText = useMemo(() => statementPlainText(value.statement), [value.statement]);
+  // already declared against — wording + Required are frozen server-side
+  const locked = value.usageCount > 0;
 
   return (
     <TableRow>
@@ -659,8 +756,18 @@ function StatementRow({
           <span className="text-sm italic text-muted-foreground">New statement</span>
         )}
         <div className="mt-1 flex flex-wrap items-center gap-1">
+          {locked ? (
+            <Badge
+              variant="outline"
+              className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-800"
+              title={inUseNotice(value.usageCount)}
+            >
+              <Lock className="h-3 w-3 shrink-0" />
+              In use · {value.usageCount}
+            </Badge>
+          ) : null}
           {value.isActive ? null : (
-            <Badge variant="secondary" className="text-[10px]">
+            <Badge variant="secondary" className="border-slate-300 text-[10px]">
               Inactive
             </Badge>
           )}
@@ -680,11 +787,16 @@ function StatementRow({
             id={`st-req-cell-${value.key}`}
             checked={value.isRequired}
             onCheckedChange={(c) => onChange({ isRequired: Boolean(c) })}
+            disabled={locked}
             aria-label="Required"
+            title={locked ? inUseNotice(value.usageCount) : undefined}
           />
           <Label
             htmlFor={`st-req-cell-${value.key}`}
-            className="cursor-pointer text-xs font-normal text-muted-foreground"
+            className={cn(
+              "text-xs font-normal text-muted-foreground",
+              locked ? "cursor-not-allowed" : "cursor-pointer",
+            )}
           >
             {value.isRequired ? "Yes" : "No"}
           </Label>
@@ -743,7 +855,13 @@ function StatementRow({
             size="sm"
             className="h-8 w-8 p-0 text-red-600 border-red-200 hover:bg-red-50"
             onClick={onRemove}
+            disabled={locked}
             aria-label="Remove statement"
+            title={
+              locked
+                ? "Already declared by students — switch it off instead of deleting it."
+                : "Remove statement"
+            }
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -775,6 +893,13 @@ function StatementEditorForm({
   const [value, setValue] = useState<DraftStatement>(statement);
   const [openFieldKey, setOpenFieldKey] = useState<string | null>(null);
 
+  /**
+   * Students have already declared against this statement, so the server has
+   * frozen everything that defines what they agreed to. The notice below says so
+   * up front — the greyed-out inputs must never be a surprise.
+   */
+  const locked = value.usageCount > 0;
+
   const patch = (p: Partial<DraftStatement>) => setValue((v) => ({ ...v, ...p }));
   const setFields = (fields: DraftField[]) => patch({ fields });
 
@@ -802,19 +927,70 @@ function StatementEditorForm({
 
       {/* same fixed-box trick as the master dialog: the body never resizes */}
       <div className="h-[68vh] min-h-[320px] overflow-y-auto px-6 py-5">
+        {/*
+          The primary channel for the immutability rule: a persistent panel the
+          admin reads before touching anything, not a toast that fires after the
+          save has already been refused.
+        */}
+        {locked ? (
+          <div
+            role="note"
+            className="mb-5 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3"
+          >
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-amber-900">
+                Locked — already declared by {value.usageCount} student
+                {value.usageCount === 1 ? "" : "s"}
+              </p>
+              <p className="text-xs leading-relaxed text-amber-900/90">
+                Its wording and Required flag cannot be edited — changing them would change what
+                those students agreed to. To change the wording, switch this statement off (Active,
+                below) and add a new statement instead; past declarations stay intact. Sequence,
+                Active and the order of its fields can still be changed.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* ------------------------ left: the wording ----------------------- */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor={`st-text-${value.key}`}>Statement</Label>
+              <Label htmlFor={`st-text-${value.key}`} className="flex items-center gap-2">
+                Statement
+                {locked ? (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 border-amber-200 bg-amber-50 text-[10px] font-medium text-amber-800"
+                  >
+                    <Lock className="h-3 w-3 shrink-0" />
+                    In use · {value.usageCount}
+                  </Badge>
+                ) : null}
+              </Label>
               <Textarea
                 id={`st-text-${value.key}`}
                 value={value.statement}
                 onChange={(e) => patch({ statement: e.target.value })}
                 placeholder="Checkbox wording shown to the student — basic HTML (<strong>, <em>, <a>) is allowed"
                 rows={10}
-                className="min-h-[240px] resize-y"
+                // read-only rather than disabled so the wording stays readable,
+                // scrollable and copyable while it is frozen
+                readOnly={locked}
+                aria-readonly={locked || undefined}
+                aria-describedby={locked ? `st-locked-${value.key}` : undefined}
+                className={cn(
+                  "min-h-[240px] resize-y",
+                  locked && "cursor-not-allowed bg-muted text-muted-foreground",
+                )}
               />
+              {locked ? (
+                <p id={`st-locked-${value.key}`} className="text-[11px] text-amber-700">
+                  Wording locked — {value.usageCount} student
+                  {value.usageCount === 1 ? " has" : "s have"} already declared against it.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor={`st-seq-${value.key}`}>Sequence</Label>
@@ -850,6 +1026,7 @@ function StatementEditorForm({
                       type: "TEXT",
                       sequence: value.fields.length + 1,
                       isActive: true,
+                      usageCount: 0,
                       options: [],
                     },
                   ])
@@ -922,9 +1099,18 @@ function StatementEditorForm({
               id={`st-req-${value.key}`}
               checked={value.isRequired}
               onCheckedChange={(c) => patch({ isRequired: c })}
+              disabled={locked}
+              title={locked ? inUseNotice(value.usageCount) : undefined}
             />
-            <Label htmlFor={`st-req-${value.key}`} className="cursor-pointer text-sm font-normal">
+            <Label
+              htmlFor={`st-req-${value.key}`}
+              className={cn(
+                "flex items-center gap-1 text-sm font-normal",
+                locked ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer",
+              )}
+            >
               Required
+              {locked ? <Lock className="h-3 w-3 shrink-0 text-amber-700" /> : null}
             </Label>
           </div>
           <div className="flex items-center gap-2">
@@ -1020,22 +1206,80 @@ export default function DeclarationMastersPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewState, setPreviewState] = useState<PreviewState>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const rows = await getAllDeclarationMasters();
-      setMasters(rows);
-    } catch {
-      toast.error("Failed to load declaration masters");
-      setMasters([]);
-    } finally {
-      setLoading(false);
-    }
+  /**
+   * Guards against an out-of-order response: a slow earlier read must never
+   * overwrite the list a newer one already put on screen.
+   */
+  const fetchSeq = useRef(0);
+
+  /**
+   * Re-reads the list without flipping the page-level loading flag — that flag
+   * swaps the whole screen (dialog included) for a spinner, which must not
+   * happen while the admin still has the dialog open. This is also the silent
+   * path used by the socket refresh.
+   */
+  const refreshMasters = useCallback(async (): Promise<DeclarationMaster[]> => {
+    const seq = ++fetchSeq.current;
+    const rows = await getAllDeclarationMasters();
+    if (seq === fetchSeq.current) setMasters(rows);
+    return rows;
   }, []);
+
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) setLoading(true);
+      try {
+        await refreshMasters();
+      } catch {
+        if (!opts?.silent) {
+          toast.error("Failed to load declaration masters");
+          setMasters([]);
+        }
+      } finally {
+        if (!opts?.silent) setLoading(false);
+      }
+    },
+    [refreshMasters],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  /*
+    Live updates when another admin saves a declaration master.
+
+    Only the underlying list is re-read; the dialog's draft tree is deliberately
+    left alone. The draft is built once (openEdit / the 409 recovery path) and
+    is the admin's unsaved work — rebuilding it from a remote write would throw
+    away whatever they are in the middle of typing. Staleness is already covered
+    on the way out: the server rejects a write against a row a student has since
+    declared with a 409, and that handler reloads the tree with the fresh locks.
+
+    Saving one master fires several events in a row (the master write plus one
+    per statement / field / option), so the refresh is coalesced into a single
+    trailing call.
+  */
+  const remoteRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onRemoteChange = useCallback(() => {
+    if (remoteRefreshTimer.current) clearTimeout(remoteRefreshTimer.current);
+    remoteRefreshTimer.current = setTimeout(() => {
+      remoteRefreshTimer.current = null;
+      void refreshMasters().catch(() => {
+        /* a failed background refresh must stay silent — the list stays as-is */
+      });
+    }, 300);
+  }, [refreshMasters]);
+  useEffect(
+    () => () => {
+      if (remoteRefreshTimer.current) clearTimeout(remoteRefreshTimer.current);
+    },
+    [],
+  );
+  useResourceRoom("academics/declaration-masters", onRemoteChange);
+  useResourceRoom("academics/declaration-masters/statements", onRemoteChange);
+  useResourceRoom("academics/declaration-masters/statement-fields", onRemoteChange);
+  useResourceRoom("academics/declaration-masters/statement-field-options", onRemoteChange);
 
   const filteredMasters = useMemo(() => {
     const q = searchText.trim().toLowerCase();
@@ -1054,6 +1298,9 @@ export default function DeclarationMastersPage() {
       return a.template.localeCompare(b.template);
     });
   }, [masters, searchText]);
+
+  /** How many statements in the open dialog are frozen by past declarations. */
+  const lockedStatementCount = useMemo(() => draft.filter((s) => s.usageCount > 0).length, [draft]);
 
   /* ------------------------------ dialog open ----------------------------- */
 
@@ -1164,6 +1411,7 @@ export default function DeclarationMastersPage() {
         isRequired: true,
         sequence: rows.length + 1,
         isActive: true,
+        usageCount: 0,
         fields: [],
       },
     ]);
@@ -1302,6 +1550,33 @@ export default function DeclarationMastersPage() {
       resetDialog();
       await load();
     } catch (e: unknown) {
+      /*
+        Belt and braces. The dialog already greys out every frozen input, but
+        the tree can go stale between opening the dialog and saving — a student
+        can declare in the meantime. In that case the server refuses with a 409
+        carrying a ready-to-show sentence: show that, never the generic message,
+        and pull the tree back in so the freshly-locked rows appear at once.
+      */
+      if (isDeclarationInUseError(e)) {
+        toast.error(declarationInUseMessage(e) ?? "This row is already in use.", {
+          duration: 12000,
+          description:
+            "The statements below have been reloaded — locked rows are marked “In use”. Deactivate the old statement and add a new one.",
+        });
+        try {
+          const rows = await refreshMasters();
+          const fresh = editingMasterId != null ? rows.find((m) => m.id === editingMasterId) : null;
+          if (fresh) {
+            setDraft(toDraft(fresh));
+            setRemoved(emptyRemoved);
+            setEditingStatementKey(null);
+            setNewStatementKey(null);
+          }
+        } catch {
+          toast.error("Could not reload the declaration master — close and reopen the dialog.");
+        }
+        return;
+      }
       toast.error(apiErrorMessage(e, "Save failed — the template name must be unique"));
     } finally {
       setSaving(false);
@@ -1449,8 +1724,25 @@ export default function DeclarationMastersPage() {
                           }
                           placeholder="fee-due-declaration"
                           autoComplete="off"
-                          className="h-10 w-full"
+                          disabled={editingMasterId != null}
+                          readOnly={editingMasterId != null}
+                          aria-describedby={
+                            editingMasterId != null ? "dm-template-hint" : undefined
+                          }
+                          className={`h-10 w-full ${
+                            editingMasterId != null
+                              ? "cursor-not-allowed bg-muted text-muted-foreground"
+                              : ""
+                          }`}
                         />
+                        {editingMasterId != null && (
+                          <p
+                            id="dm-template-hint"
+                            className="text-[11px] leading-snug text-muted-foreground"
+                          >
+                            Fixed after creation — it links this master to its email template.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </section>
@@ -1464,15 +1756,30 @@ export default function DeclarationMastersPage() {
                       </p>
                       <Button
                         type="button"
-                        variant="outline"
                         size="sm"
-                        className="h-9"
+                        className="h-9 bg-purple-600 text-white hover:bg-purple-700"
                         onClick={addStatement}
                       >
                         <PlusCircle className="mr-1 h-4 w-4" />
                         Add statement
                       </Button>
                     </div>
+
+                    {/*
+                      One line only — the per-row badge and the notice inside the
+                      statement editor carry the full explanation.
+                    */}
+                    {lockedStatementCount > 0 ? (
+                      <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+                        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          {lockedStatementCount} locked{" "}
+                          {lockedStatementCount === 1 ? "statement is" : "statements are"} already
+                          declared by students and can only be deactivated or reordered — use{" "}
+                          <strong>Add statement</strong> to introduce new wording.
+                        </span>
+                      </p>
+                    ) : null}
 
                     <div className="rounded-md border">
                       <Table containerClassName="min-w-0 !overflow-visible w-full">
@@ -1674,6 +1981,8 @@ export default function DeclarationMastersPage() {
                     filteredMasters.map((m, idx) => {
                       const statements = sortBySequence(m.statements ?? []);
                       const first = statements[0];
+                      // any statement students have already declared against
+                      const lockedCount = statements.filter((s) => usageCountOf(s) > 0).length;
                       return (
                         <TableRow key={m.id} className="group">
                           <TableCell className="tabular-nums text-sm text-muted-foreground">
@@ -1716,11 +2025,23 @@ export default function DeclarationMastersPage() {
                                 >
                                   {statementPlainText(first.statement)}
                                 </p>
-                                {statements.length > 1 ? (
-                                  <span className="text-xs text-muted-foreground">
-                                    +{statements.length - 1} more
-                                  </span>
-                                ) : null}
+                                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                                  {statements.length > 1 ? (
+                                    <span className="text-xs text-muted-foreground">
+                                      +{statements.length - 1} more
+                                    </span>
+                                  ) : null}
+                                  {lockedCount > 0 ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-800"
+                                      title={`${lockedCount} statement(s) have already been declared by students — their wording is locked. Deactivate and add a new statement to change it.`}
+                                    >
+                                      <Lock className="h-3 w-3 shrink-0" />
+                                      In use · {lockedCount}
+                                    </Badge>
+                                  ) : null}
+                                </div>
                               </div>
                             ) : (
                               <span className="text-xs text-muted-foreground">No statements</span>
@@ -1728,11 +2049,13 @@ export default function DeclarationMastersPage() {
                           </TableCell>
                           <TableCell>
                             {isRowActive(m.isActive) ? (
-                              <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              <Badge className="border-green-600 bg-green-500 text-white hover:bg-green-600">
                                 Active
                               </Badge>
                             ) : (
-                              <Badge variant="secondary">Inactive</Badge>
+                              <Badge variant="secondary" className="border-slate-300">
+                                Inactive
+                              </Badge>
                             )}
                           </TableCell>
                           <TableCell>
