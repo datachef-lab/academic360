@@ -1,11 +1,25 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { FileText, CheckCircle2, UploadCloud, FileSearch2, ShieldCheck, X } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FileText,
+  CheckCircle2,
+  UploadCloud,
+  FileSearch2,
+  ShieldCheck,
+  X,
+  CalendarClock,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { axiosInstance } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
+import { useFeeSocket } from "@/providers/fee-socket-provider";
+import {
+  fetchAcademicActivities,
+  getStudentActivityContext,
+  isActivityLive,
+} from "@/lib/academic-activity";
 import { useRouter } from "next/navigation";
 import {
   FeesDueAlertDialog,
@@ -36,6 +50,12 @@ export default function CUFormUploadPage() {
   const router = useRouter();
 
   const { student } = useStudent();
+  const { academicActivityVersion } = useFeeSocket();
+
+  // Academic-activity gate — same "Exam Form Upload" window that shows/hides the
+  // sidebar entry. `null` = not resolved yet, so the page shows its loader
+  // instead of flashing the closed state.
+  const [isExamFormUploadLive, setIsExamFormUploadLive] = useState<boolean | null>(null);
 
   // Fee-due declaration gate — same rule as the exams page: the dialog is shown
   // only until the student has declared for their current promotion. `declared`
@@ -102,6 +122,21 @@ export default function CUFormUploadPage() {
       router.replace("/dashboard/");
     }
   }, [student]);
+
+  const refreshExamFormUploadGate = useCallback(() => {
+    if (!student?.id) return;
+    const context = getStudentActivityContext(student);
+
+    fetchAcademicActivities()
+      .then((activities) => {
+        setIsExamFormUploadLive(isActivityLive(activities, "exam form upload", context));
+      })
+      .catch(() => setIsExamFormUploadLive(false));
+  }, [student?.id]);
+
+  useEffect(() => {
+    refreshExamFormUploadGate();
+  }, [refreshExamFormUploadGate, academicActivityVersion]);
 
   useEffect(() => {
     const checkExamFormStatus = async () => {
@@ -263,8 +298,9 @@ export default function CUFormUploadPage() {
   // ─── Loading state ───────────────────────────────────────────────────────────
   // Show a neutral loader while we wait for the student context AND the status
   // API call to resolve. This prevents a flash of the upload UI for students
-  // who have already submitted.
-  if (isCheckingStatus) {
+  // who have already submitted. The activity gate is resolved here too, so the
+  // closed state never flashes before the window status is known.
+  if (isCheckingStatus || isExamFormUploadLive === null) {
     return (
       <div className="min-h-screen flex flex-col">
         {/* Keep the same header so the page doesn't jump on load */}
@@ -362,8 +398,31 @@ export default function CUFormUploadPage() {
         </div>
       </div>
 
+      {/* Window closed — the "Exam Form Upload" activity is not live for this
+          student. A student who has already submitted still sees their
+          confirmation instead of this. */}
+      {!submitted && !isExamFormUploadLive && (
+        <main className="flex-1 flex items-center justify-center px-4 py-10">
+          <div className="w-full max-w-md rounded-lg border border-amber-200 bg-amber-50 p-6 text-center space-y-4">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+              <CalendarClock className="w-7 h-7" />
+            </div>
+            <div>
+              <h2 className="text-base md:text-lg font-semibold text-amber-900">
+                Examination form upload is not open
+              </h2>
+              <p className="mt-1 text-xs text-amber-800">
+                The upload window for your semester is not currently open. Please check back later —
+                you will be able to upload your Calcutta University examination form here once the
+                window opens. If you believe this is a mistake, please contact the college office.
+              </p>
+            </div>
+          </div>
+        </main>
+      )}
+
       {/* Main content when not submitted */}
-      {!submitted && (
+      {!submitted && isExamFormUploadLive && (
         <main className="flex-1">
           <div className="max-w-5xl mx-auto border bg-slate-50 rounded-xl shadow-sm p-4 md:p-6 space-y-6">
             {/* Steps – inline, no container box */}

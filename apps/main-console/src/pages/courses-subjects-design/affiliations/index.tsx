@@ -40,7 +40,7 @@ import {
 import { AffiliationForm } from "./affiliation-form";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 const AffiliationsPage = () => {
   const [searchText, setSearchText] = React.useState("");

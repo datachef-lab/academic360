@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Edit, PlusCircle, ScrollText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import axiosInstance from "@/utils/api";
@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 type CertificateMaster = {
   id: number;
@@ -63,24 +64,44 @@ export default function CertificateMasterPage() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  /**
+   * Guards against an out-of-order response: a slow earlier request must never
+   * overwrite the rows a newer one already put on screen.
+   */
+  const fetchSeq = useRef(0);
+
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const seq = ++fetchSeq.current;
+    // A silent refresh (socket-driven) skips the loading flag — flipping it
+    // swaps the whole table for the "Loading…" card and back, which is a
+    // visible flicker every time another admin saves.
+    if (!opts?.silent) setLoading(true);
     try {
       const { data } = await axiosInstance.get<{ payload: CertificateMaster[] }>(
         "/api/academics/certificate-masters",
       );
+      if (seq !== fetchSeq.current) return;
       setRows(Array.isArray(data.payload) ? data.payload : []);
     } catch {
-      toast.error("Failed to load certificate masters");
-      setRows([]);
+      if (seq !== fetchSeq.current) return;
+      if (!opts?.silent) {
+        toast.error("Failed to load certificate masters");
+        setRows([]);
+      }
     } finally {
-      setLoading(false);
+      if (seq === fetchSeq.current && !opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Live updates when another admin adds/edits/deletes a certificate master.
+  const onRemoteChange = useCallback(() => {
+    void load({ silent: true });
+  }, [load]);
+  useResourceRoom("academics/certificate-masters", onRemoteChange);
 
   const filteredRows = useMemo(() => {
     const q = searchText.trim().toLowerCase();
@@ -310,11 +331,13 @@ export default function CertificateMasterPage() {
                         </TableCell>
                         <TableCell>
                           {r.isActive ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                            <Badge className="border-green-600 bg-green-500 text-white hover:bg-green-600">
                               Active
                             </Badge>
                           ) : (
-                            <Badge variant="secondary">Inactive</Badge>
+                            <Badge variant="secondary" className="border-slate-300">
+                              Inactive
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell>

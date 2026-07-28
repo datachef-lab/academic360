@@ -21,6 +21,11 @@ const DEFAULT_ACTIVITIES = [
     description: "Subject selection window for the upcoming semester",
     type: "ACADEMIC" as const,
   },
+  {
+    name: "Exam Form Upload",
+    description: "Upload window for the filled-in CU examination form",
+    type: "EXAMINATION" as const,
+  },
 ];
 
 export async function initializeAcademicActivities() {

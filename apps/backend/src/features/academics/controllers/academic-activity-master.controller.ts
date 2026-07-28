@@ -91,6 +91,14 @@ export async function createActivityMasterController(
     }
 
     const created = await createActivityMaster(payload);
+    // Every other master/activity mutation broadcasts; create did not, so a
+    // newly added activity only reached the student console on the NEXT
+    // unrelated change (or a reload).
+    socketService.broadcastAcademicActivityUpdate({
+      masterId: created?.id,
+      activityName: created?.name,
+      action: "created",
+    });
     res
       .status(201)
       .json(

@@ -62,6 +62,22 @@ const REALTIME_RESOURCES = new Set<string>([
   "v1/batches/promotion-statuses",
   // academic setup · academic years
   "v1/academics",
+  // document issuance · certificate + declaration masters
+  "academics/certificate-masters",
+  "academics/certificate-field-masters",
+  "academics/certificate-field-option-masters",
+  "academics/declaration-masters",
+  /*
+    A declaration master is saved as a master write followed by one write per
+    statement / field / option, so the master-level event alone would reach the
+    other console before the tree is persisted. Listing the child collections
+    too means the *last* write is what triggers the final refresh. Note that
+    "academics/declaration-masters/preview" is deliberately absent: it is a
+    read-only POST that renders the unsaved draft and must not broadcast.
+  */
+  "academics/declaration-masters/statements",
+  "academics/declaration-masters/statement-fields",
+  "academics/declaration-masters/statement-field-options",
 ]);
 
 /**

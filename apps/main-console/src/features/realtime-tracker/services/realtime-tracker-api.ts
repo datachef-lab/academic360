@@ -1,6 +1,7 @@
 import api from "@/utils/api";
 import type {
   AffiliationRegistrationPayload,
+  ExamFormDeclarationPayload,
   FeeMisPayload,
   RealtimeTrackerFilters,
 } from "../types/realtime-tracker-types";
@@ -41,6 +42,14 @@ export async function fetchAffiliationRegistration(
     `/api/v1/realtime-tracker/affiliation-registration?${params.toString()}`,
   );
   return res.data.payload as AffiliationRegistrationPayload;
+}
+
+export async function fetchExamFormDeclaration(
+  filters: RealtimeTrackerFilters,
+): Promise<ExamFormDeclarationPayload> {
+  const params = filtersToParams(filters);
+  const res = await api.get(`/api/v1/realtime-tracker/exam-form-declaration?${params.toString()}`);
+  return res.data.payload as ExamFormDeclarationPayload;
 }
 
 export async function fetchFeeMis(filters: RealtimeTrackerFilters): Promise<FeeMisPayload> {

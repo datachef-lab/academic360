@@ -35,7 +35,7 @@ import { ClassForm } from "./class-form";
 import { Class } from "@/types/academics/class";
 import { getAllClasses } from "@/services/classes.service";
 import { addClass, updateClass } from "@/services/class.service";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 const ClassesPage = () => {
   const [Classs, setClasss] = React.useState<Class[]>([]);

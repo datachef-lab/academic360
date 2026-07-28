@@ -62,7 +62,7 @@ import type { ProgramCourse, SubjectType } from "@repo/db/index";
 import { toast as sonnerToast } from "sonner";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 // import axiosInstance from "@/utils/api";
 
 // UI shape derived from backend DTOs

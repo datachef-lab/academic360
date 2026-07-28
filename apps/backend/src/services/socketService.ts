@@ -19,6 +19,18 @@ const USER_INFO_TTL = 7200; // 2 hours
 
 // Instance identity for cross-instance signaling
 const INSTANCE_ID = `${os.hostname()}-${process.pid}`;
+
+/**
+ * Every realtime-tracker tab, in one place. Subscribe/unsubscribe used to
+ * coerce with `payload?.tab === "fee_mis" ? "fee_mis" : "affiliation"`, which
+ * silently rewrote any newly added tab to "affiliation" — a viewer would then
+ * join the wrong room and never receive its own tab's snapshots.
+ */
+const REALTIME_TRACKER_TABS = [
+  "affiliation",
+  "fee_mis",
+  "exam_form_declaration",
+] as const;
 // Define notification types
 export interface Notification {
   id: string;
@@ -397,11 +409,15 @@ class SocketService {
       socket.on(
         "subscribe_realtime_tracker",
         async (payload: {
-          tab?: "affiliation" | "fee_mis";
+          tab?: "affiliation" | "fee_mis" | "exam_form_declaration";
           filters?: Record<string, unknown>;
         }) => {
           try {
-            const tab = payload?.tab === "fee_mis" ? "fee_mis" : "affiliation";
+            const tab = REALTIME_TRACKER_TABS.includes(
+              payload?.tab as (typeof REALTIME_TRACKER_TABS)[number],
+            )
+              ? (payload!.tab as (typeof REALTIME_TRACKER_TABS)[number])
+              : "affiliation";
             const { parseRealtimeTrackerFilters } =
               await import("@/utils/realtime-tracker-filters.js");
             const { getRealtimeTrackerRoomName, pushRealtimeTrackerSnapshot } =
@@ -422,11 +438,15 @@ class SocketService {
       socket.on(
         "unsubscribe_realtime_tracker",
         async (payload: {
-          tab?: "affiliation" | "fee_mis";
+          tab?: "affiliation" | "fee_mis" | "exam_form_declaration";
           filters?: Record<string, unknown>;
         }) => {
           try {
-            const tab = payload?.tab === "fee_mis" ? "fee_mis" : "affiliation";
+            const tab = REALTIME_TRACKER_TABS.includes(
+              payload?.tab as (typeof REALTIME_TRACKER_TABS)[number],
+            )
+              ? (payload!.tab as (typeof REALTIME_TRACKER_TABS)[number])
+              : "affiliation";
             const { parseRealtimeTrackerFilters } =
               await import("@/utils/realtime-tracker-filters.js");
             const { getRealtimeTrackerRoomName } =
@@ -728,7 +748,7 @@ class SocketService {
           const { scheduleRealtimeTrackerThrottledBroadcast } =
             await import("@/features/realtime-tracker/realtime-tracker.socket.js");
           scheduleRealtimeTrackerThrottledBroadcast(
-            tab as "affiliation" | "fee_mis",
+            tab as (typeof REALTIME_TRACKER_TABS)[number],
             "cross_instance",
             {},
           );
@@ -1181,7 +1201,7 @@ class SocketService {
   }
 
   private realtimeTrackerRoom(
-    tab: "affiliation" | "fee_mis",
+    tab: (typeof REALTIME_TRACKER_TABS)[number],
     filters: Record<string, unknown>,
   ): string {
     const parsed = canonicalRealtimeTrackerFilters(
@@ -1218,6 +1238,37 @@ class SocketService {
     } catch (error) {
       log.error("Error sending fee MIS update", { error });
     }
+  }
+
+  sendExamFormDeclarationUpdate(
+    filters: Record<string, unknown>,
+    payload: Record<string, unknown>,
+    reason?: string,
+  ) {
+    if (!this.io) return;
+    try {
+      const roomName = this.realtimeTrackerRoom(
+        "exam_form_declaration",
+        filters,
+      );
+      const message = { ...payload, reason, filters };
+      this.io.to(roomName).emit("exam_form_declaration_update", message);
+    } catch (error) {
+      log.error("Error sending exam form declaration update", { error });
+    }
+  }
+
+  /**
+   * Tell all clients to refetch the exam-form/declaration tab. Same rationale
+   * as `emitAffiliationRefresh`: the filter-hash rooms only reach viewers whose
+   * EXACT filter set matches the broadcast's.
+   */
+  emitExamFormDeclarationRefresh(reason: string) {
+    if (!this.io) return;
+    this.io.emit("exam_form_declaration_refresh", {
+      reason,
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   /** Tell all clients to refetch Fee MIS (fee activity uses many filter rooms). */

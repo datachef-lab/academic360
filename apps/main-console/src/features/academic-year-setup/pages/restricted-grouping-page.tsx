@@ -49,7 +49,7 @@ import type { SubjectDto } from "@repo/db/dtos/course-design";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { AcademicYearSelector } from "@/components/academic-year/AcademicYearSelector";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 // Class DTO is not used directly here
 
 // Use only DTOs from packages/db. Define minimal local types for UI needs.

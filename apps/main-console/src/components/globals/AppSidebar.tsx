@@ -306,7 +306,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             {year.isCurrentYear === true && (
                               <Badge
                                 variant="outline"
-                                className="px-1.5 py-0.5 text-[10px] leading-none"
+                                className="border-green-300 bg-green-100 px-1.5 py-0.5 text-[10px] leading-none text-green-800"
                               >
                                 Current
                               </Badge>

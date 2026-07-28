@@ -40,26 +40,13 @@ import { axiosInstance } from "@/lib/utils";
 import { isFirstSemesterClassName } from "@/lib/semester-class-utils";
 import { useFeeSocket } from "@/providers/fee-socket-provider";
 import { FeeMapping } from "@/app/(console)/dashboard/enrollment-fees/page";
+import {
+  fetchAcademicActivities,
+  getStudentActivityContext,
+  isActivityLive,
+} from "@/lib/academic-activity";
 
 type ApiResponse<T> = { payload: T; message?: string };
-
-type AcademicActivityScopeApiDto = {
-  id: number;
-  stream: { id: number; name: string };
-  class: { id: number; name: string; sequence?: number | null };
-  startDate: string | null;
-  endDate: string | null;
-  isEnabled: boolean;
-};
-
-type AcademicActivityApiDto = {
-  id: number;
-  audience: "STUDENT" | "STAFF" | "ALL";
-  master: { id: number; name: string; type: string; isActive: boolean };
-  academicYear: { id: number; year: string };
-  courseLevelId?: number | null;
-  scopes: AcademicActivityScopeApiDto[];
-};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Sets <html data-env> so the env-driven brand palette applies app-wide.
@@ -81,6 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [hasCareerProgressionForm, setHasCareerProgressionForm] = React.useState(false);
   const [showCuRegistration, setShowCuRegistration] = React.useState(false);
   const [showSubjectSelection, setShowSubjectSelection] = React.useState(false);
+  const [showExamFormUpload, setShowExamFormUpload] = React.useState(false);
   const socketRef = React.useRef<any | null>(null);
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
   console.log("pathname:", pathname);
@@ -200,45 +188,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const refreshActivityGates = React.useCallback(() => {
     if (!student?.id) return;
-    const promotion = student?.currentPromotion;
-    const studentClassId: number | undefined = promotion?.class?.id;
-    const studentAyId: number | undefined = promotion?.session?.academicYearId ?? undefined;
-    const studentStreamId: number | null = student?.programCourse?.stream?.id ?? null;
+    const context = getStudentActivityContext(student);
 
-    axiosInstance
-      .get<ApiResponse<AcademicActivityApiDto[]>>("/api/academics/academic-activities")
-      .then(({ data }) => {
-        const activities: AcademicActivityApiDto[] = Array.isArray(data?.payload)
-          ? data.payload
-          : [];
-
+    fetchAcademicActivities()
+      .then((activities) => {
         const now = Date.now();
-
-        const isLive = (activityName: string) => {
-          const matched = activities.filter(
-            (a) =>
-              a.master?.isActive && (a.master?.name ?? "").trim().toLowerCase() === activityName,
-          );
-          if (!matched.length || !studentClassId || !studentAyId) return false;
-          return matched.some((activity) => {
-            if (activity.academicYear.id !== studentAyId) return false;
-            return activity.scopes.some((scope) => {
-              if (!scope.isEnabled) return false;
-              if (scope.class.id !== studentClassId) return false;
-              if (studentStreamId != null && scope.stream.id !== studentStreamId) return false;
-              const start = scope.startDate ? new Date(scope.startDate).getTime() : 0;
-              const end = scope.endDate ? new Date(scope.endDate).getTime() : Infinity;
-              return now >= start && now <= end;
-            });
-          });
-        };
+        const isLive = (activityName: string) =>
+          isActivityLive(activities, activityName, context, now);
 
         setShowCuRegistration(isLive("cu registration"));
         setShowSubjectSelection(isLive("subject selection"));
+        setShowExamFormUpload(isLive("exam form upload"));
       })
       .catch(() => {
         setShowCuRegistration(false);
         setShowSubjectSelection(false);
+        setShowExamFormUpload(false);
       });
   }, [student?.id]);
 
@@ -376,12 +341,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isActive: pathname === "/dashboard/exams",
       badge: upcomingExamCount > 0 ? upcomingExamCount : undefined,
     },
-    {
-      title: "CU Form Upload",
-      url: "/dashboard/cu-form-upload",
-      icon: UploadCloud,
-      isActive: pathname === "/dashboard/cu-form-upload",
-    },
+    // Gated on the "Exam Form Upload" academic activity — hidden until an
+    // enabled, in-window scope exists for this student (fail-closed).
+    showExamFormUpload
+      ? {
+          title: "CU Form Upload",
+          url: "/dashboard/cu-form-upload",
+          icon: UploadCloud,
+          isActive: pathname === "/dashboard/cu-form-upload",
+        }
+      : null,
     // 20 Feb 2026, 16:00 PM IST
     // Date.now() > new Date("2026-02-20T16:00:00+05:30").getTime() && !isBlockedProgram
     //   ? {

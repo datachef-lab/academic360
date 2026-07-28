@@ -4,12 +4,10 @@ import {
   declartionMasterStatementModel,
   declartionMasterStatementFieldModel,
   declartionMasterStatementFieldOptionModel,
+  declartionStatementModel,
+  declartionStatementFieldModel,
 } from "@repo/db/schemas";
-import type {
-  DeclarationMasterDto,
-  DeclarationMasterStatementDto,
-} from "@repo/db/dtos/academics";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 import ejs from "ejs";
@@ -36,17 +34,133 @@ export type DeclarationMasterStatementFieldRow =
 export type DeclarationMasterStatementFieldOptionRow =
   typeof declartionMasterStatementFieldOptionModel.$inferSelect;
 
+/* --------------------------------- usage --------------------------------- */
+
+/**
+ * A master row that has already been declared against is HISTORY: the wording
+ * (and its fields/options) is what past students agreed to, so it must not be
+ * rewritten in place. `usageCount` is how many student submissions point at the
+ * row — the console greys the row out, and {@link assertStatementEditable} &
+ * friends below enforce the same rule server-side.
+ */
+export interface WithUsage {
+  usageCount: number;
+}
+
+export type DeclarationMasterStatementFieldOptionWithUsage =
+  DeclarationMasterStatementFieldOptionRow & WithUsage;
+
+export type DeclarationMasterStatementFieldWithUsage =
+  DeclarationMasterStatementFieldRow &
+    WithUsage & {
+      options: DeclarationMasterStatementFieldOptionWithUsage[];
+    };
+
+export type DeclarationMasterStatementWithUsage =
+  DeclarationMasterStatementRow &
+    WithUsage & {
+      fields: DeclarationMasterStatementFieldWithUsage[];
+    };
+
+export type DeclarationMasterWithUsage = DeclarationMasterRow & {
+  statements: DeclarationMasterStatementWithUsage[];
+};
+
+/** Grouped COUNT keyed by master-row id — one query per level, never per row. */
+async function countByKey<T extends number>(
+  rows: Array<{ key: T | null; count: number }>,
+): Promise<Map<number, number>> {
+  const map = new Map<number, number>();
+  for (const row of rows) {
+    if (row.key === null) continue;
+    map.set(row.key, Number(row.count));
+  }
+  return map;
+}
+
+/** How many `declaration_statements` rows reference each master statement. */
+async function statementUsage(ids: number[]): Promise<Map<number, number>> {
+  if (!ids.length) return new Map();
+  const rows = await db
+    .select({
+      key: declartionStatementModel.declarationMasterStatementId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(declartionStatementModel)
+    .where(inArray(declartionStatementModel.declarationMasterStatementId, ids))
+    .groupBy(declartionStatementModel.declarationMasterStatementId);
+  return countByKey(rows);
+}
+
+/** How many `declaration_statement_fields` answers reference each master field. */
+async function fieldUsage(ids: number[]): Promise<Map<number, number>> {
+  if (!ids.length) return new Map();
+  const rows = await db
+    .select({
+      key: declartionStatementFieldModel.declarationMasterStatementFieldId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(declartionStatementFieldModel)
+    .where(
+      inArray(
+        declartionStatementFieldModel.declarationMasterStatementFieldId,
+        ids,
+      ),
+    )
+    .groupBy(declartionStatementFieldModel.declarationMasterStatementFieldId);
+  return countByKey(rows);
+}
+
+/** How many answers picked each option (SELECT fields store the option id). */
+async function optionUsage(ids: number[]): Promise<Map<number, number>> {
+  if (!ids.length) return new Map();
+  const rows = await db
+    .select({
+      key: declartionStatementFieldModel.declarationMasterStatementFieldOptionId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(declartionStatementFieldModel)
+    .where(
+      and(
+        isNotNull(
+          declartionStatementFieldModel.declarationMasterStatementFieldOptionId,
+        ),
+        inArray(
+          declartionStatementFieldModel.declarationMasterStatementFieldOptionId,
+          ids,
+        ),
+      ),
+    )
+    .groupBy(
+      declartionStatementFieldModel.declarationMasterStatementFieldOptionId,
+    );
+  return countByKey(rows);
+}
+
+export async function getStatementUsageCount(id: number): Promise<number> {
+  return (await statementUsage([id])).get(id) ?? 0;
+}
+
+export async function getFieldUsageCount(id: number): Promise<number> {
+  return (await fieldUsage([id])).get(id) ?? 0;
+}
+
+export async function getOptionUsageCount(id: number): Promise<number> {
+  return (await optionUsage([id])).get(id) ?? 0;
+}
+
 /* --------------------------------- reads --------------------------------- */
 
 /**
- * Loads the statements (+ fields + options) of a master in display order.
+ * Loads the statements (+ fields + options) of a master in display order,
+ * each row carrying its `usageCount` (0 when nothing references it).
  * `activeOnly` is what the student-facing endpoints use so drafts/retired rows
  * never reach a student.
  */
 async function loadStatements(
   declarationMasterId: number,
   activeOnly: boolean,
-): Promise<DeclarationMasterStatementDto[]> {
+): Promise<DeclarationMasterStatementWithUsage[]> {
   const statements = await db
     .select()
     .from(declartionMasterStatementModel)
@@ -102,21 +216,33 @@ async function loadStatements(
         )
     : [];
 
+  // Three grouped COUNTs for the whole tree — no per-row queries.
+  const [statementCounts, fieldCounts, optionCounts] = await Promise.all([
+    statementUsage(statementIds),
+    fieldUsage(relevantFields.map((f) => f.id)),
+    optionUsage(options.map((o) => o.id)),
+  ]);
+
   return statements.map((statement) => ({
     ...statement,
+    usageCount: statementCounts.get(statement.id) ?? 0,
     fields: relevantFields
       .filter((f) => f.declarationMasterStatementId === statement.id)
       .map((field) => ({
         ...field,
-        options: options.filter(
-          (o) => o.declarationMasterStatementFieldId === field.id,
-        ),
+        usageCount: fieldCounts.get(field.id) ?? 0,
+        options: options
+          .filter((o) => o.declarationMasterStatementFieldId === field.id)
+          .map((option) => ({
+            ...option,
+            usageCount: optionCounts.get(option.id) ?? 0,
+          })),
       })),
-  })) as DeclarationMasterStatementDto[];
+  }));
 }
 
 export async function findAllDeclarationMasters(): Promise<
-  DeclarationMasterDto[]
+  DeclarationMasterWithUsage[]
 > {
   const masters = await db
     .select()
@@ -128,13 +254,13 @@ export async function findAllDeclarationMasters(): Promise<
       ...master,
       statements: await loadStatements(master.id, false),
     })),
-  ) as Promise<DeclarationMasterDto[]>;
+  );
 }
 
 export async function findDeclarationMasterById(
   id: number,
   activeOnly = false,
-): Promise<DeclarationMasterDto | null> {
+): Promise<DeclarationMasterWithUsage | null> {
   const [master] = await db
     .select()
     .from(declartionMasterModel)
@@ -146,7 +272,7 @@ export async function findDeclarationMasterById(
   return {
     ...master,
     statements: await loadStatements(master.id, activeOnly),
-  } as DeclarationMasterDto;
+  };
 }
 
 /**
@@ -155,7 +281,7 @@ export async function findDeclarationMasterById(
  */
 export async function findDeclarationMasterByContext(
   context: DeclarationMasterRow["context"],
-): Promise<DeclarationMasterDto | null> {
+): Promise<DeclarationMasterWithUsage | null> {
   const [master] = await db
     .select()
     .from(declartionMasterModel)
@@ -173,7 +299,7 @@ export async function findDeclarationMasterByContext(
   return {
     ...master,
     statements: await loadStatements(master.id, true),
-  } as DeclarationMasterDto;
+  };
 }
 
 /* -------------------------------- preview -------------------------------- */
@@ -400,6 +526,68 @@ export async function deleteDeclarationMaster(id: number): Promise<boolean> {
   return deleted.length > 0;
 }
 
+/* ------------------------------- immutability ----------------------------- */
+
+export type DeclarationUsageLevel = "STATEMENT" | "FIELD" | "OPTION";
+
+/**
+ * Raised when an admin tries to rewrite (or delete) a master row that students
+ * have already declared against. Carries everything the console needs to
+ * explain itself; the controller turns it into a 409 whose `httpStatus` and
+ * `payload.code` are both `DECLARATION_IN_USE`.
+ */
+export class DeclarationInUseError extends Error {
+  readonly code = "DECLARATION_IN_USE" as const;
+  constructor(
+    readonly level: DeclarationUsageLevel,
+    readonly targetId: number,
+    readonly usageCount: number,
+    readonly action: "UPDATE" | "DELETE",
+    /** Which submitted keys the request tried to change (empty for DELETE). */
+    readonly blockedFields: string[],
+    message: string,
+  ) {
+    super(message);
+    this.name = "DeclarationInUseError";
+  }
+}
+
+/**
+ * True when `data` carries a key whose value actually DIFFERS from the row on
+ * disk. The console saves the whole master tree on "Save master", so untouched
+ * rows are re-sent verbatim — a no-op PUT must never 409.
+ */
+function changedKeys<T extends Record<string, unknown>>(
+  current: T,
+  data: Partial<T>,
+  keys: Array<keyof T & string>,
+): string[] {
+  return keys.filter(
+    (key) => data[key] !== undefined && data[key] !== current[key],
+  );
+}
+
+const inUseMessage = (
+  level: DeclarationUsageLevel,
+  usageCount: number,
+  action: "UPDATE" | "DELETE",
+) => {
+  const n = `${usageCount} student${usageCount === 1 ? "" : "s"}`;
+  if (level === "STATEMENT") {
+    return action === "UPDATE"
+      ? `This statement has already been declared by ${n}. Deactivate it and add a new statement instead — editing it would change what those students agreed to.`
+      : `This statement has already been declared by ${n}. Deleting it would erase their declarations — deactivate it and add a new statement instead.`;
+  }
+  if (level === "FIELD") {
+    return action === "UPDATE"
+      ? `This field has already been filled in by ${n}. Deactivate it and add a new field instead — editing it would change what those students submitted.`
+      : `This field has already been filled in by ${n}. Deleting it would erase their answers — deactivate it and add a new field instead.`;
+  }
+  return action === "UPDATE"
+    ? `This option has already been chosen by ${n}. Deactivate it and add a new option instead — renaming it would change what those students selected.`
+    : `This option has already been chosen by ${n}. Deleting it would erase their answers — deactivate it and add a new option instead.`;
+};
+
 /* ------------------------------- statements ------------------------------ */
 
 export async function findStatementsByMasterId(
@@ -430,10 +618,38 @@ export async function createStatement(
   return created ?? null;
 }
 
+/**
+ * MEANING of a declared statement is frozen: `statement` text and `isRequired`
+ * cannot change once a student has agreed to it. `isActive` and `sequence`
+ * stay editable — deactivating and reordering are the sanctioned escape hatch
+ * and rewrite no history.
+ */
 export async function updateStatement(
   id: number,
   data: Partial<typeof declartionMasterStatementModel.$inferInsert>,
 ): Promise<DeclarationMasterStatementRow | null> {
+  const [current] = await db
+    .select()
+    .from(declartionMasterStatementModel)
+    .where(eq(declartionMasterStatementModel.id, id))
+    .limit(1);
+  if (!current) return null;
+
+  const blocked = changedKeys(current, data, ["statement", "isRequired"]);
+  if (blocked.length) {
+    const usageCount = await getStatementUsageCount(id);
+    if (usageCount > 0) {
+      throw new DeclarationInUseError(
+        "STATEMENT",
+        id,
+        usageCount,
+        "UPDATE",
+        blocked,
+        inUseMessage("STATEMENT", usageCount, "UPDATE"),
+      );
+    }
+  }
+
   const [updated] = await db
     .update(declartionMasterStatementModel)
     .set(data)
@@ -442,7 +658,24 @@ export async function updateStatement(
   return updated ?? null;
 }
 
+/**
+ * Blocked once declared: `declaration_statements.declaration_master_statement_id_fk`
+ * is ON DELETE CASCADE, so removing the statement would silently delete the
+ * student rows (and their `declaration_statement_fields` answers) with it.
+ */
 export async function deleteStatement(id: number): Promise<boolean> {
+  const usageCount = await getStatementUsageCount(id);
+  if (usageCount > 0) {
+    throw new DeclarationInUseError(
+      "STATEMENT",
+      id,
+      usageCount,
+      "DELETE",
+      [],
+      inUseMessage("STATEMENT", usageCount, "DELETE"),
+    );
+  }
+
   const deleted = await db
     .delete(declartionMasterStatementModel)
     .where(eq(declartionMasterStatementModel.id, id))
@@ -480,10 +713,33 @@ export async function createField(
   return created ?? null;
 }
 
+/** `label`/`type` are frozen once answered; `isActive`/`sequence` are not. */
 export async function updateField(
   id: number,
   data: Partial<typeof declartionMasterStatementFieldModel.$inferInsert>,
 ): Promise<DeclarationMasterStatementFieldRow | null> {
+  const [current] = await db
+    .select()
+    .from(declartionMasterStatementFieldModel)
+    .where(eq(declartionMasterStatementFieldModel.id, id))
+    .limit(1);
+  if (!current) return null;
+
+  const blocked = changedKeys(current, data, ["label", "type"]);
+  if (blocked.length) {
+    const usageCount = await getFieldUsageCount(id);
+    if (usageCount > 0) {
+      throw new DeclarationInUseError(
+        "FIELD",
+        id,
+        usageCount,
+        "UPDATE",
+        blocked,
+        inUseMessage("FIELD", usageCount, "UPDATE"),
+      );
+    }
+  }
+
   const [updated] = await db
     .update(declartionMasterStatementFieldModel)
     .set(data)
@@ -492,7 +748,23 @@ export async function updateField(
   return updated ?? null;
 }
 
+/**
+ * Blocked once answered: `decl_stmt_field_master_field_fk` is ON DELETE
+ * CASCADE, so this would delete the students' submitted values.
+ */
 export async function deleteField(id: number): Promise<boolean> {
+  const usageCount = await getFieldUsageCount(id);
+  if (usageCount > 0) {
+    throw new DeclarationInUseError(
+      "FIELD",
+      id,
+      usageCount,
+      "DELETE",
+      [],
+      inUseMessage("FIELD", usageCount, "DELETE"),
+    );
+  }
+
   const deleted = await db
     .delete(declartionMasterStatementFieldModel)
     .where(eq(declartionMasterStatementFieldModel.id, id))
@@ -530,10 +802,33 @@ export async function createOption(
   return created ?? null;
 }
 
+/** `name` is frozen once chosen; `isActive`/`sequence` are not. */
 export async function updateOption(
   id: number,
   data: Partial<typeof declartionMasterStatementFieldOptionModel.$inferInsert>,
 ): Promise<DeclarationMasterStatementFieldOptionRow | null> {
+  const [current] = await db
+    .select()
+    .from(declartionMasterStatementFieldOptionModel)
+    .where(eq(declartionMasterStatementFieldOptionModel.id, id))
+    .limit(1);
+  if (!current) return null;
+
+  const blocked = changedKeys(current, data, ["name"]);
+  if (blocked.length) {
+    const usageCount = await getOptionUsageCount(id);
+    if (usageCount > 0) {
+      throw new DeclarationInUseError(
+        "OPTION",
+        id,
+        usageCount,
+        "UPDATE",
+        blocked,
+        inUseMessage("OPTION", usageCount, "UPDATE"),
+      );
+    }
+  }
+
   const [updated] = await db
     .update(declartionMasterStatementFieldOptionModel)
     .set(data)
@@ -542,7 +837,24 @@ export async function updateOption(
   return updated ?? null;
 }
 
+/**
+ * Blocked once chosen: `decl_stmt_field_option_fk` is ON DELETE CASCADE, and
+ * it cascades the WHOLE `declaration_statement_fields` row (not just the option
+ * reference) — the student's answer would vanish, not merely lose its label.
+ */
 export async function deleteOption(id: number): Promise<boolean> {
+  const usageCount = await getOptionUsageCount(id);
+  if (usageCount > 0) {
+    throw new DeclarationInUseError(
+      "OPTION",
+      id,
+      usageCount,
+      "DELETE",
+      [],
+      inUseMessage("OPTION", usageCount, "DELETE"),
+    );
+  }
+
   const deleted = await db
     .delete(declartionMasterStatementFieldOptionModel)
     .where(eq(declartionMasterStatementFieldOptionModel.id, id))

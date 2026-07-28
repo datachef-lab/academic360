@@ -40,7 +40,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AcademicYear } from "@/types/academics/academic-year";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 interface UISubjectGroupingRow {
   id: number;

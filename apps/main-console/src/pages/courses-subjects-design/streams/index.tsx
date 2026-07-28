@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { StreamForm } from "./stream-form";
 import { Label } from "@/components/ui/label";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 const StreamsPage = () => {
   const [streams, setStreams] = React.useState<Stream[]>([]);

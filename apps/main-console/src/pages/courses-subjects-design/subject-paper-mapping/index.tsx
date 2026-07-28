@@ -43,7 +43,7 @@ import {
   PaginatedResponse,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import type {
   Subject,

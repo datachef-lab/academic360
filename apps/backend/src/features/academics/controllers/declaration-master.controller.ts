@@ -8,6 +8,35 @@ const num = (v: unknown): number | undefined => {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 };
 
+/**
+ * Write-path error funnel. A master row that students have already declared
+ * against is immutable history, so the service refuses the edit/delete and the
+ * refusal surfaces as HTTP 409 with `httpStatus` AND `payload.code` set to
+ * `DECLARATION_IN_USE` — the stable marker the console keys on (it must not
+ * string-match the human message). Everything else falls through to the shared
+ * handleError as before.
+ */
+function handleWriteError(error: unknown, res: Response) {
+  if (error instanceof service.DeclarationInUseError) {
+    return res.status(409).json(
+      new ApiResponse(
+        409,
+        "DECLARATION_IN_USE",
+        {
+          code: error.code,
+          level: error.level,
+          id: error.targetId,
+          usageCount: error.usageCount,
+          action: error.action,
+          blockedFields: error.blockedFields,
+        },
+        error.message,
+      ),
+    );
+  }
+  return handleError(error, res);
+}
+
 /* --------------------------------- masters -------------------------------- */
 
 export async function getDeclarationMastersHandler(
@@ -291,7 +320,7 @@ export async function updateStatementHandler(req: Request, res: Response) {
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", updated, "Statement updated"));
   } catch (error) {
-    return handleError(error, res);
+    return handleWriteError(error, res);
   }
 }
 
@@ -315,7 +344,7 @@ export async function deleteStatementHandler(req: Request, res: Response) {
         ),
       );
   } catch (error) {
-    return handleError(error, res);
+    return handleWriteError(error, res);
   }
 }
 
@@ -374,7 +403,7 @@ export async function updateFieldHandler(req: Request, res: Response) {
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", updated, "Field updated"));
   } catch (error) {
-    return handleError(error, res);
+    return handleWriteError(error, res);
   }
 }
 
@@ -398,7 +427,7 @@ export async function deleteFieldHandler(req: Request, res: Response) {
         ),
       );
   } catch (error) {
-    return handleError(error, res);
+    return handleWriteError(error, res);
   }
 }
 
@@ -457,7 +486,7 @@ export async function updateOptionHandler(req: Request, res: Response) {
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", updated, "Option updated"));
   } catch (error) {
-    return handleError(error, res);
+    return handleWriteError(error, res);
   }
 }
 
@@ -481,6 +510,6 @@ export async function deleteOptionHandler(req: Request, res: Response) {
         ),
       );
   } catch (error) {
-    return handleError(error, res);
+    return handleWriteError(error, res);
   }
 }

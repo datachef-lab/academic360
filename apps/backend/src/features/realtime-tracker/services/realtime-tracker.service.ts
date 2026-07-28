@@ -3,6 +3,8 @@ import {
   affiliationModel,
   classModel,
   cuRegistrationCorrectionRequestModel,
+  declartionMasterModel,
+  declartionModel,
   feeStructureModel,
   feeStudentMappingModel,
   idCardIssueModel,
@@ -53,6 +55,24 @@ export type AffiliationRegistrationPayload = {
   updatedAt: string;
   filters: RealtimeTrackerFilters;
   data: AffiliationRegistrationRow[];
+};
+
+export type ExamFormDeclarationRow = {
+  programCourseName: string;
+  admitted: number;
+  /** Distinct students with at least one outstanding (unpaid) fee mapping. */
+  feePending: number;
+  /** Of the students with dues, those who recorded a FEES declaration. */
+  feeDeclarations: number;
+  /** Distinct students whose promotion has `is_exam_form_submitted = true`. */
+  examFormUploaded: number;
+  sortOrder: number;
+};
+
+export type ExamFormDeclarationPayload = {
+  updatedAt: string;
+  filters: RealtimeTrackerFilters;
+  data: ExamFormDeclarationRow[];
 };
 
 export type FeeMisCourseRow = {
@@ -397,6 +417,170 @@ export async function getAffiliationRegistrationData(
       subjectSelectionDone: Number(total.subjectSelectionDone),
       onlineRegDone: Number(total.onlineRegDone),
       physicalRegDone: Number(total.physicalRegDone),
+      sortOrder: 1,
+    },
+  ];
+
+  return {
+    updatedAt: new Date().toISOString(),
+    filters,
+    data,
+  };
+}
+
+/**
+ * Students carrying an OUTSTANDING fee mapping.
+ *
+ * The paid/unpaid rule is `UNPAID_MAPPING_SQL` — byte-for-byte the same
+ * predicate the Fee MIS tab counts `notPaid`/`pendingNos` with — so the two
+ * tabs can never disagree about who owes money. The fee STRUCTURE is scoped by
+ * the same four dimensions `buildFeeMisMappingWhere` scopes by (academic year /
+ * class / shift / program course), taken from the tracker's own filters, so a
+ * semester-filtered view counts that semester's dues and nothing else.
+ *
+ * EXISTS rather than a join: a student has many fee mappings, and fanning the
+ * spine out by them would break `countDistinct` on nothing but would still make
+ * the plan needlessly wide.
+ */
+function buildFeeDueExistsSql(filters: RealtimeTrackerFilters): SQL {
+  const scope: SQL[] = [UNPAID_MAPPING_SQL];
+  if (filters.academicYearIds?.length) {
+    scope.push(
+      inArray(feeStructureModel.academicYearId, filters.academicYearIds),
+    );
+  }
+  if (filters.classIds?.length) {
+    scope.push(inArray(feeStructureModel.classId, filters.classIds));
+  }
+  if (filters.shiftIds?.length) {
+    scope.push(inArray(feeStructureModel.shiftId, filters.shiftIds));
+  }
+  if (filters.programCourseIds?.length) {
+    scope.push(
+      inArray(feeStructureModel.programCourseId, filters.programCourseIds),
+    );
+  }
+  return sql`EXISTS (
+    SELECT 1 FROM ${feeStudentMappingModel}
+    INNER JOIN ${feeStructureModel}
+      ON ${feeStructureModel.id} = ${feeStudentMappingModel.feeStructureId}
+    WHERE ${feeStudentMappingModel.studentId} = ${studentModel.id}
+      AND ${and(...scope)!}
+  )`;
+}
+
+/**
+ * The student recorded a FEE declaration for THIS promotion (exam cycle).
+ *
+ * Scoped to `declaration_masters.context = 'FEES'` deliberately: this column
+ * sits next to "Fee Pending / Due", so an EXAM/LIBRARY declaration recorded
+ * against the same promotion must not inflate it.
+ */
+const FEE_DECLARATION_EXISTS_SQL = sql`EXISTS (
+  SELECT 1 FROM ${declartionModel}
+  INNER JOIN ${declartionMasterModel}
+    ON ${declartionMasterModel.id} = ${declartionModel.declarationMasterId}
+  WHERE ${declartionModel.promotionId} = ${promotionModel.id}
+    AND ${declartionMasterModel.context} = 'FEES'
+)`;
+
+/**
+ * Exam-form upload + fee-declaration tracker slice.
+ *
+ * Same shape, filtering and Total-row semantics as
+ * `getAffiliationRegistrationData` — only the metric expressions differ.
+ *
+ * "Fee Declarations" is deliberately INTERSECTED with the dues condition: a
+ * student with no outstanding fee is never shown the declaration dialog, so
+ * counting their (impossible) declaration would make the column
+ * incomparable with the "Fee Pending / Due" column beside it.
+ */
+export async function getExamFormDeclarationData(
+  filtersInput: RealtimeTrackerFilters = {},
+): Promise<ExamFormDeclarationPayload> {
+  const filters = canonicalRealtimeTrackerFilters(filtersInput);
+  const promotionWhere = await buildPromotionWhere(filters);
+  const pcParts = buildProgramCourseScope(filters);
+  const demoParts = buildStudentDemographicScope(filters);
+
+  const whereParts: SQL[] = [];
+  if (promotionWhere) whereParts.push(promotionWhere);
+  if (pcParts.length) whereParts.push(and(...pcParts)!);
+  if (demoParts.length) whereParts.push(and(...demoParts)!);
+
+  const whereClause = whereParts.length ? and(...whereParts) : undefined;
+
+  const feeDueExistsSql = buildFeeDueExistsSql(filters);
+
+  const metrics = {
+    admitted: countDistinct(studentModel.id),
+    feePending: sql<number>`COUNT(DISTINCT CASE WHEN ${feeDueExistsSql} THEN ${studentModel.id} END)`,
+    feeDeclarations: sql<number>`COUNT(DISTINCT CASE WHEN ${feeDueExistsSql} AND ${FEE_DECLARATION_EXISTS_SQL} THEN ${studentModel.id} END)`,
+    examFormUploaded: sql<number>`COUNT(DISTINCT CASE WHEN ${promotionModel.isExamFormSubmitted} = true THEN ${studentModel.id} END)`,
+  };
+
+  const programCourseData = await db
+    .select({
+      programCourseId: programCourseModel.id,
+      programCourseName: programCourseModel.name,
+      ...metrics,
+    })
+    .from(programCourseModel)
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.programCourseId, programCourseModel.id),
+    )
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      personalDetailsModel,
+      eq(personalDetailsModel.userId, userModel.id),
+    )
+    .where(whereClause)
+    .groupBy(programCourseModel.id, programCourseModel.name)
+    .orderBy(programCourseModel.name);
+
+  // Same query WITHOUT groupBy: the Total row must be a true distinct-student
+  // count, not the sum of the rows (a student enrolled in two program courses
+  // would otherwise be counted twice).
+  const totalData = await db
+    .select(metrics)
+    .from(programCourseModel)
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.programCourseId, programCourseModel.id),
+    )
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      personalDetailsModel,
+      eq(personalDetailsModel.userId, userModel.id),
+    )
+    .where(whereClause);
+
+  const total = totalData[0] ?? {
+    admitted: 0,
+    feePending: 0,
+    feeDeclarations: 0,
+    examFormUploaded: 0,
+  };
+
+  const data: ExamFormDeclarationRow[] = [
+    ...programCourseData.map((row) => ({
+      programCourseName:
+        row.programCourseName || `Program Course ${row.programCourseId}`,
+      admitted: Number(row.admitted),
+      feePending: Number(row.feePending),
+      feeDeclarations: Number(row.feeDeclarations),
+      examFormUploaded: Number(row.examFormUploaded),
+      sortOrder: 0,
+    })),
+    {
+      programCourseName: "Total",
+      admitted: Number(total.admitted),
+      feePending: Number(total.feePending),
+      feeDeclarations: Number(total.feeDeclarations),
+      examFormUploaded: Number(total.examFormUploaded),
       sortOrder: 1,
     },
   ];

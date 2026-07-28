@@ -48,7 +48,7 @@ import {
   BulkUploadResult,
   DeleteResult,
 } from "@/services/course-design.api";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 import * as XLSX from "xlsx";
 
 const CoursesPage = () => {

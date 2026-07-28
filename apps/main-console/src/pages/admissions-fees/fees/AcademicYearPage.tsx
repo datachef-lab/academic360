@@ -27,7 +27,7 @@ import { AcademicYear } from "@/types/academics/academic-year";
 import { getAllAcademicYears, updateAcademicYearById } from "@/services/academic-year-api";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import AddAcademicYearDialog from "./AddAcademicYearDialog";
-import { useResourceRoom } from "@/features/academic-year-setup/general/useResourceRoom";
+import { useResourceRoom } from "@/hooks/useResourceRoom";
 
 const AcademicYearPage: React.FC = () => {
   const [data, setData] = useState<AcademicYear[]>([]);

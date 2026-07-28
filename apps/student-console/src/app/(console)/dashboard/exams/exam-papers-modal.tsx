@@ -213,15 +213,30 @@ export function ExamPapersModal({
       setDownloading(true);
       const blob = await downloadAdmitCard(examId, studentIdNum);
 
-      // Create a download link
+      // Open the PDF in a new tab so the student can preview it and save it
+      // from the browser's own viewer.
       const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
       const newTab = window.open(url, "_blank");
 
       if (newTab) {
-        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
-      } else {
-        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+        // Deliberately NOT revoked here. Chrome's built-in PDF viewer re-requests
+        // the tab's blob: URL when its Download button is pressed, so revoking —
+        // even on the new tab's `load` event, as this used to — leaves that
+        // button silently doing nothing. The URL is released by the browser when
+        // this document is discarded, which is a bounded, acceptable cost.
+        return;
       }
+
+      // Popup blocked: fall back to saving the file directly, so the student
+      // still gets their admit card instead of nothing happening.
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `admit-card-${studentIdNum}.pdf`;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
     } catch (err) {
       toast({
         title: "Download failed",

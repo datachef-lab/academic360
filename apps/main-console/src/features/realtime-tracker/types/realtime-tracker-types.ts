@@ -22,6 +22,24 @@ export type AffiliationRegistrationPayload = {
   data: AffiliationRegistrationRow[];
 };
 
+export type ExamFormDeclarationRow = {
+  programCourseName: string;
+  admitted: number;
+  /** Distinct students with at least one outstanding (unpaid) fee mapping. */
+  feePending: number;
+  /** Of the students with dues, those who recorded a FEES declaration. */
+  feeDeclarations: number;
+  /** Distinct students whose promotion has `is_exam_form_submitted = true`. */
+  examFormUploaded: number;
+  sortOrder: number;
+};
+
+export type ExamFormDeclarationPayload = {
+  updatedAt: string;
+  filters: RealtimeTrackerFilters;
+  data: ExamFormDeclarationRow[];
+};
+
 export type FeeMisCourseRow = {
   index: number;
   courseName: string;
@@ -58,4 +76,4 @@ export type FeeMisPayload = {
   paidStatus: { paid: number; unpaid: number; paidPct: number };
 };
 
-export type RealtimeTrackerTab = "affiliation" | "fee_mis";
+export type RealtimeTrackerTab = "affiliation" | "fee_mis" | "exam_form_declaration";

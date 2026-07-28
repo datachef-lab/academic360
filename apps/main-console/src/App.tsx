@@ -537,10 +537,6 @@ const router = createBrowserRouter(
               path: "declaration-masters",
               element: <documentIssuanceModule.DeclarationMastersPage />,
             },
-            {
-              path: "career-progression",
-              element: <documentIssuanceModule.CareerProgressionHomePage />,
-            },
           ],
         },
         {
