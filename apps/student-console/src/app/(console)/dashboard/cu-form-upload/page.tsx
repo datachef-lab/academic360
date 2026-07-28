@@ -37,19 +37,20 @@ export default function CUFormUploadPage() {
 
   const { student } = useStudent();
 
-  // Fee-due declaration gate. Unlike the exams page there is NO "declared once"
-  // suppression here (explicit requirement): with pending dues the alert shows on
-  // EVERY submission attempt. The submit itself is idempotent per
-  // (master, promotion), so re-agreeing never duplicates rows or re-sends email.
+  // Fee-due declaration gate — same rule as the exams page: the dialog is shown
+  // only until the student has declared for their current promotion. `declared`
+  // is a DB row keyed on (master, promotion), so it survives a device change and
+  // resets when they move to the next cycle.
   const [isFeesAlertOpen, setIsFeesAlertOpen] = useState(false);
   const { dueFees } = useStudentDueFees(student?.id);
   const semesterContext = useMemo(() => dueFeesSemesterContext(dueFees), [dueFees]);
   const promotionId = (student as { currentPromotion?: { id?: number } | null } | null)
     ?.currentPromotion?.id;
-  const { master: declarationMaster, submit: submitDeclarationAgreement } = useFeeDueDeclaration(
-    promotionId,
-    "FEES",
-  );
+  const {
+    master: declarationMaster,
+    declared,
+    submit: submitDeclarationAgreement,
+  } = useFeeDueDeclaration(promotionId, "FEES");
   // The API already returns only ACTIVE fields/options in `sequence` order, so
   // this mapping preserves that order rather than re-sorting.
   const declarationStatements = useMemo<DeclarationStatementView[]>(
@@ -178,9 +179,12 @@ export default function CUFormUploadPage() {
       return;
     }
 
-    // Pending dues → the declaration shows before EVERY submission attempt;
-    // submission continues from the dialog's proceed button.
-    if (dueFees.length > 0) {
+    // Pending dues and not yet declared for this promotion → collect the
+    // declaration first; submission continues from the dialog's proceed button.
+    // Once recorded it never re-appears for this cycle, on this page or the
+    // exams page — the flag is a DB row keyed on the promotion, so it holds
+    // across devices and resets when the student is promoted.
+    if (dueFees.length > 0 && !declared && declarationStatements.length > 0) {
       setIsFeesAlertOpen(true);
       return;
     }
@@ -577,8 +581,8 @@ export default function CUFormUploadPage() {
         </main>
       )}
 
-      {/* Fee-due declaration shown before EVERY submission attempt when dues exist
-          (no "declared once" memory on this page, by explicit requirement) */}
+      {/* Fee-due declaration — shown on a submission attempt only while dues exist
+          and the student hasn't declared for this promotion yet */}
       <FeesDueAlertDialog
         open={isFeesAlertOpen}
         onOpenChange={setIsFeesAlertOpen}

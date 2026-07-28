@@ -225,7 +225,8 @@ function toDraft(master: DeclarationMaster | null): DraftStatement[] {
       key: `f-${f.id}`,
       id: f.id,
       label: f.label,
-      type: f.type,
+      // The DTO's `type` is optional (DB default), the draft's is not.
+      type: f.type ?? "TEXT",
       sequence: f.sequence ?? fi + 1,
       isActive: isRowActive(f.isActive),
       options: sortBySequence(f.options ?? []).map((o, oi) => ({
@@ -242,12 +243,11 @@ function toDraft(master: DeclarationMaster | null): DraftStatement[] {
 /** First empty required cell of one statement, as a message — `null` when valid. */
 function statementProblem(s: DraftStatement): string | null {
   if (!statementPlainText(s.statement)) return "the wording is required.";
-  for (let j = 0; j < s.fields.length; j += 1) {
-    const f = s.fields[j];
+  for (const [j, f] of s.fields.entries()) {
     if (!f.label.trim()) return `field ${j + 1} needs a label.`;
     if (f.type !== "SELECT") continue;
-    for (let k = 0; k < f.options.length; k += 1) {
-      if (!f.options[k].name.trim()) {
+    for (const [k, option] of f.options.entries()) {
+      if (!option.name.trim()) {
         return `option ${k + 1} of field "${f.label.trim() || j + 1}" needs its text.`;
       }
     }
@@ -257,8 +257,8 @@ function statementProblem(s: DraftStatement): string | null {
 
 /** First empty required cell in the tree, as a message — `null` when valid. */
 function draftProblem(draft: DraftStatement[]): string | null {
-  for (let i = 0; i < draft.length; i += 1) {
-    const problem = statementProblem(draft[i]);
+  for (const [i, statement] of draft.entries()) {
+    const problem = statementProblem(statement);
     if (problem) return `Statement ${i + 1}: ${problem}`;
   }
   return null;
@@ -1186,7 +1186,11 @@ export default function DeclarationMastersPage() {
       const target = index + direction;
       if (target < 0 || target >= rows.length) return rows;
       const next = [...rows];
-      [next[index], next[target]] = [next[target], next[index]];
+      const moved = next[index];
+      const displaced = next[target];
+      if (!moved || !displaced) return rows;
+      next[index] = displaced;
+      next[target] = moved;
       return next.map((s, i) => ({ ...s, sequence: i + 1 }));
     });
   };
@@ -1229,7 +1233,8 @@ export default function DeclarationMastersPage() {
   /* ------------------------ nested statement editor ------------------------ */
 
   const editingStatementIndex = draft.findIndex((s) => s.key === editingStatementKey);
-  const editingStatement = editingStatementIndex >= 0 ? draft[editingStatementIndex] : null;
+  const editingStatement =
+    editingStatementIndex >= 0 ? (draft[editingStatementIndex] ?? null) : null;
 
   /** Esc / overlay / Cancel on the nested dialog — a fresh row is rolled back. */
   const cancelStatementEdit = () => {

@@ -12,6 +12,8 @@ import {
   exportStudentSubjectsReport,
 } from "@/features/subject-selection/services/student-subject-selection.service.js";
 import { exportPromotionStudentsReport } from "@/features/academics/services/promotion.service.js";
+import { exportCareerProgressionFormsExcel } from "@/features/academics/services/career-progression-form-export.service.js";
+import { exportDeclarationsReport } from "@/features/academics/services/declaration-export.service.js";
 import { exportAdmitCardDistributionsReport } from "@/features/exams/services/admit-card.service.js";
 import { exportCuRegistrationCorrectionRequests } from "@/features/admissions/services/cu-registration-correction-request.service.js";
 import { downloadCuRegistrationDocumentsAsZip } from "@/features/admissions/services/cu-registration-document-upload.service.js";
@@ -254,6 +256,33 @@ const DESCRIPTORS: ReportDescriptor[] = [
       const res = await exportAdmitCardDistributionsReport({
         ...filtersOf(req),
         academicYearId: num(req, "academicYearId"),
+      });
+      return { buffer: res.buffer, fileName: res.fileName, contentType: XLSX };
+    },
+  },
+  {
+    key: "career-progression-form-report",
+    label: "Career Progression Form Report",
+    generate: async ({ req, onProgress }) => {
+      // academicYearId is optional here — the page allows "All years".
+      const res = await exportCareerProgressionFormsExcel({
+        academicYearId: num(req, "academicYearId"),
+        filters: filtersOf(req),
+        onProgress,
+      });
+      return { buffer: res.buffer, fileName: res.fileName, contentType: XLSX };
+    },
+  },
+  {
+    key: "declaration-report",
+    label: "Declaration Report",
+    generate: async ({ req, onProgress }) => {
+      const res = await exportDeclarationsReport({
+        academicYearId: num(req, "academicYearId"),
+        context: str(req, "context"),
+        declarationMasterId: num(req, "declarationMasterId"),
+        filters: filtersOf(req),
+        onProgress,
       });
       return { buffer: res.buffer, fileName: res.fileName, contentType: XLSX };
     },

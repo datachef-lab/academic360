@@ -33,6 +33,10 @@ import type {
   CareerProgressionFormCertificateDto,
   CareerProgressionFormDto,
 } from "@repo/db/dtos/academics";
+import {
+  buildReportFilterClauses,
+  type ReportExportFilters,
+} from "@/utils/report-export-filters.js";
 import { findCareerProgressionFormFieldsByCertificateId } from "./career-progression-form-field.service.js";
 import {
   activeCertificateFieldMasterIdWhere,
@@ -267,9 +271,58 @@ export async function careerProgressionFormRowToDto(
   };
 }
 
+/** True when at least one of the report multi-select filters is populated. */
+export function hasAnyReportExportFilter(
+  filters?: ReportExportFilters,
+): boolean {
+  return Boolean(
+    filters?.programCourseIds?.length ||
+    filters?.affiliationIds?.length ||
+    filters?.regulationTypeIds?.length ||
+    filters?.classIds?.length,
+  );
+}
+
+/**
+ * The students whose (non-deprecated) promotions match the report filters.
+ *
+ * Career progression forms hang off `students`, not `promotions`, so the
+ * program-course / affiliation / regulation / class filters are resolved to a
+ * set of eligible student ids first and the forms are then restricted by id —
+ * never by comparing the display names on the built DTOs.
+ */
+export async function findStudentIdsMatchingReportFilters(
+  filters: ReportExportFilters,
+  academicYearId?: number,
+): Promise<Set<number>> {
+  const filterClauses = buildReportFilterClauses(filters, {
+    programCourseId: "pc.id",
+    affiliationId: "pc.affiliation_id_fk",
+    regulationTypeId: "pc.regulation_type_id_fk",
+    classId: "pr.class_id_fk",
+  });
+
+  const { rows } = await db.execute(sql`
+    SELECT DISTINCT pr.student_id_fk AS student_id
+    FROM promotions pr
+    JOIN program_courses pc ON pc.id = pr.program_course_id_fk
+    LEFT JOIN sessions s ON s.id = pr.session_id_fk
+    WHERE COALESCE(pr.is_deprecated, false) = false
+    ${academicYearId ? sql` AND s.academic_id_fk = ${academicYearId}` : sql``}
+    ${sql.raw(filterClauses)}
+  `);
+
+  return new Set(
+    rows
+      .map((r) => Number((r as Record<string, unknown>).student_id))
+      .filter((n) => Number.isFinite(n)),
+  );
+}
+
 export async function findAllCareerProgressionForms(
   studentId?: number,
   academicYearId?: number,
+  filters?: ReportExportFilters,
 ): Promise<CareerProgressionFormDto[]> {
   const conditions = [];
   if (studentId != null) {
@@ -282,7 +335,7 @@ export async function findAllCareerProgressionForms(
   }
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const rows = whereClause
+  const allRows = whereClause
     ? await db
         .select()
         .from(careerProgressionFormModel)
@@ -292,6 +345,17 @@ export async function findAllCareerProgressionForms(
         .select()
         .from(careerProgressionFormModel)
         .orderBy(asc(careerProgressionFormModel.id));
+
+  // Filters are applied on ids, before the (expensive) DTO enrichment.
+  // With no filters supplied the row set is untouched.
+  let rows = allRows;
+  if (hasAnyReportExportFilter(filters)) {
+    const eligibleStudentIds = await findStudentIdsMatchingReportFilters(
+      filters!,
+      academicYearId,
+    );
+    rows = allRows.filter((r) => eligibleStudentIds.has(r.studentId));
+  }
 
   const dtos: Array<CareerProgressionFormDto | null> = await Promise.all(
     rows.map((r) => careerProgressionFormRowToDto(r)),

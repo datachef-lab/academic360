@@ -6,6 +6,7 @@ import {
 } from "@/utils/excel-report-styling.js";
 import { findAllCertificateFieldMasters } from "./certificate-field-master.service.js";
 import { findAllCertificateMasters } from "./certificate-master.service.js";
+import type { ReportExportFilters } from "@/utils/report-export-filters.js";
 import { findAllCareerProgressionForms } from "./career-progression-form.service.js";
 
 const FIXED_HEADERS = [
@@ -200,20 +201,29 @@ function buildDataRows(
 
 export async function exportCareerProgressionFormsExcel(params: {
   academicYearId?: number;
+  filters?: ReportExportFilters;
+  onProgress?: (pct: number, message: string) => void;
 }): Promise<{
   buffer: Buffer;
   fileName: string;
   rowCount: number;
   fieldColumnCount: number;
 }> {
+  const report = params.onProgress ?? (() => {});
+
+  report(10, "Loading career progression submissions…");
   const forms = await findAllCareerProgressionForms(
     undefined,
     params.academicYearId,
+    params.filters,
   );
 
+  report(55, `Building columns for ${forms.length} submission(s)…`);
   const fieldColumns = await resolveFieldColumns(forms);
   const headers = [...FIXED_HEADERS, ...fieldColumns.map((c) => c.header)];
   const dataRows = buildDataRows(forms, fieldColumns);
+
+  report(75, "Writing worksheet…");
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Career progression");

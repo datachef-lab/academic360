@@ -16,7 +16,10 @@ const BASE_URL = "/api/academics/declaration-masters";
 type Persisted<T> = Omit<T, "id"> & { id: number };
 
 export type DeclarationContext = DeclarationMasterDto["context"];
-export type DeclarationFieldType = DeclarationMasterStatementFieldDto["type"];
+// NonNullable because the DTO extends drizzle's INSERT type, where `type` has
+// a DB default and is therefore optional — without this the union carries
+// `undefined` and can't be handed to a <SelectItem value>.
+export type DeclarationFieldType = NonNullable<DeclarationMasterStatementFieldDto["type"]>;
 
 export const DECLARATION_CONTEXTS: DeclarationContext[] = [
   "ADMISSION",

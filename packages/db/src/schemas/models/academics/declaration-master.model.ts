@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { declarationMasterContextEnum } from "@/schemas/enums";
 
 export const declartionMasterModel = pgTable('declaration_masters', {

@@ -14,7 +14,7 @@ import {
   studentModel,
   userModel,
 } from "@repo/db/schemas";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
   declarationIllustrationUrl,
   findDeclarationMasterByContext,
@@ -200,7 +200,14 @@ export async function notifyDeclaration(declarationId: number) {
   const [row] = await db
     .select({
       declarationId: declartionModel.id,
-      createdAt: declartionModel.createdAt,
+      // Formatted in SQL, deliberately. `created_at` is `timestamp without
+      // time zone` and the pool opens every connection with
+      // `-c timezone=Asia/Kolkata` (db/index.ts), so now() already stores IST
+      // wall-clock. Reading it into JS and then calling toLocaleString with
+      // timeZone:"Asia/Kolkata" added a SECOND +5:30 whenever the node process
+      // runs in UTC — which is how a 5:07 pm declaration mailed as 10:37 pm.
+      // TO_CHAR prints the stored wall-clock as-is, independent of process TZ.
+      declaredOn: sql<string>`TO_CHAR(${declartionModel.createdAt}, 'DD FMMonth YYYY') || ' at ' || TO_CHAR(${declartionModel.createdAt}, 'HH12:MI AM')`,
       template: declartionMasterModel.template,
       context: declartionMasterModel.context,
       userId: userModel.id,
@@ -335,15 +342,7 @@ export async function notifyDeclaration(declarationId: number) {
         name: row.name ?? "",
         uid: row.uid ?? "",
         semester: row.semester ?? "",
-        declaredOn: (row.createdAt ?? new Date()).toLocaleString("en-IN", {
-          timeZone: "Asia/Kolkata",
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        }),
+        declaredOn: row.declaredOn ?? "",
         statements: emailStatements,
         studentConsoleUrl,
         illustrationUrl,
