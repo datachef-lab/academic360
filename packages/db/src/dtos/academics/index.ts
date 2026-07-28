@@ -1,4 +1,4 @@
-import { AcademicActivityMasterT, AcademicActivityScopeT, AcademicYearT, AffiliationT, CareerProgressionFormCertificateT, CareerProgressionFormFieldT, CareerProgressionFormT, CertificateFieldMasterT, CertificateFieldOptionMasterT, CertificateMasterT, ClassT, PromotionStatusT, RegulationTypeT, SessionT, StreamT } from "@/schemas";
+import { AcademicActivityMasterT, AcademicActivityScopeT, AcademicYearT, DeclartionMasterT, DeclartionT, AffiliationT, CareerProgressionFormCertificateT, CareerProgressionFormFieldT, CareerProgressionFormT, CertificateFieldMasterT, CertificateFieldOptionMasterT, CertificateMasterT, ClassT, PromotionStatusT, RegulationTypeT, SessionT, StreamT, DeclartionMasterStatementT, DeclartionMasterStatementFieldT, DeclartionMasterStatementFieldOptionT, DeclartionStatementT, DeclartionStatementFieldT } from "@/schemas";
 import { AcademicActivityT } from "@/schemas/models/academics/academic-activity.model";
 
 export interface SessionDto extends Omit<SessionT, "academicYearId"> {
@@ -63,4 +63,31 @@ export interface AcademicActivityDto extends Omit<AcademicActivityT,
     regulationType: RegulationTypeT;
     appearType: PromotionStatusT;
     scopes: AcademicActivityScopeDto[];
+}
+
+export interface DeclarationMasterStatementFieldDto extends DeclartionMasterStatementFieldT {
+    options?: DeclartionMasterStatementFieldOptionT[];
+}
+
+export interface DeclarationMasterStatementDto extends DeclartionMasterStatementT {
+    fields: DeclarationMasterStatementFieldDto[];
+}
+
+export interface DeclarationMasterDto extends DeclartionMasterT {
+    statements: DeclarationMasterStatementDto[];
+}
+
+export interface DeclarationStatementFieldDto extends Omit<DeclartionStatementFieldT, "declarationMasterStatementFieldId" | "declarationMasterStatementFieldOptionId"> {
+    masterField: DeclartionMasterStatementFieldT;
+    masterFieldOption?: DeclartionMasterStatementFieldOptionT;
+}
+
+export interface DeclarationStatementDto extends DeclartionStatementT {
+    statementMaster: DeclarationMasterDto;
+    fields: DeclarationStatementFieldDto[];
+}
+
+export interface DeclarationDto extends Omit<DeclartionT, "declarationMasterId"> {
+    master: DeclartionMasterT;
+    statements: DeclarationStatementDto[];
 }

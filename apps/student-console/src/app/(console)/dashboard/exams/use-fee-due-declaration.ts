@@ -1,6 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DeclarationMasterDto } from "@repo/db/dtos/academics";
+import {
+  fetchDeclarationState,
+  submitDeclaration,
+  type DeclarationContext,
+  type SubmitDeclarationBody,
+} from "@/services/declaration.service";
 import type { StudentDueFee } from "./use-student-due-fees";
 
 /**
@@ -30,41 +37,65 @@ export function dueFeesSemesterContext(dueFees: StudentDueFee[]): {
   };
 }
 
-const storageKey = (studentId: number, semesterLabel: string) =>
-  `a360:fee-due-declared:${studentId}:${semesterLabel}`;
-
 /**
- * UI-only "declared once" flag (per explicit product decision: the checkboxes and
- * date are presentation only — nothing is stored in the DB). Kept in localStorage
- * so, on this device/browser, the declaration dialog is not shown again for the
- * same student + dues context after they proceed once.
+ * Master-driven, DB-persisted declaration state for the fee-due dialog.
+ *
+ * Replaces the old localStorage flag: the statements come from the admin's
+ * declaration master and "already declared" is a row keyed on the student's
+ * PROMOTION, so it is device-independent and resets when they're promoted to
+ * the next cycle.
  */
-export function useFeeDueDeclaration(studentId?: number, semesterLabel?: string) {
+export function useFeeDueDeclaration(promotionId?: number, context: DeclarationContext = "FEES") {
+  const [master, setMaster] = useState<DeclarationMasterDto | null>(null);
   const [declared, setDeclared] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!studentId || !semesterLabel) {
+    if (!promotionId) {
+      setMaster(null);
       setDeclared(false);
       return;
     }
-    try {
-      setDeclared(window.localStorage.getItem(storageKey(studentId, semesterLabel)) === "1");
-    } catch {
-      setDeclared(false);
-    }
-  }, [studentId, semesterLabel]);
+    let cancelled = false;
+    setLoading(true);
+    fetchDeclarationState(promotionId, context)
+      .then((state) => {
+        if (cancelled) return;
+        setMaster(state.master);
+        setDeclared(Boolean(state.declaration));
+      })
+      .catch(() => {
+        // Never block the student on a lookup failure: with no master the
+        // dialog simply doesn't gate them.
+        if (!cancelled) {
+          setMaster(null);
+          setDeclared(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [promotionId, context]);
 
-  const markDeclared = useCallback(() => {
-    setDeclared(true);
-    if (studentId && semesterLabel) {
-      try {
-        window.localStorage.setItem(storageKey(studentId, semesterLabel), "1");
-      } catch {
-        // Storage unavailable (private mode etc.) — the in-memory flag still
-        // suppresses the dialog for this session.
-      }
-    }
-  }, [studentId, semesterLabel]);
+  /** Persists the agreement; the backend is idempotent per (master, promotion). */
+  const submit = useCallback(
+    async (statements: SubmitDeclarationBody["statements"]) => {
+      if (!promotionId || !master?.id) return;
+      await submitDeclaration({
+        promotionId,
+        declarationMasterId: master.id,
+        statements,
+      });
+      setDeclared(true);
+    },
+    [promotionId, master?.id],
+  );
 
-  return useMemo(() => ({ declared, markDeclared }), [declared, markDeclared]);
+  return useMemo(
+    () => ({ master, declared, loading, submit }),
+    [master, declared, loading, submit],
+  );
 }

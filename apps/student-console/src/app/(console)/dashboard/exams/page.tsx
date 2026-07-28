@@ -39,7 +39,11 @@ import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamPapersModal } from "./exam-papers-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { fetchExamGroupsByStudentId } from "@/services/exam-group.service";
-import { FeesDueAlertDialog } from "./fees-due-alert-dialog";
+import {
+  FeesDueAlertDialog,
+  type DeclarationFieldView,
+  type DeclarationStatementView,
+} from "./fees-due-alert-dialog";
 import { useStudentDueFees } from "./use-student-due-fees";
 import { dueFeesSemesterContext, useFeeDueDeclaration } from "./use-fee-due-declaration";
 
@@ -59,19 +63,41 @@ export default function ExamsContent() {
   const [pendingExam, setPendingExam] = useState<ExamDto | null>(null);
   const [isFeesAlertOpen, setIsFeesAlertOpen] = useState(false);
   const { dueFees } = useStudentDueFees(student?.id);
-  // Once a student has declared (both checkboxes + clear-by date) for the current dues
-  // context, the dialog is not shown again on this device (UI-only, localStorage).
+  // Declaration state lives in the DB against the student's active PROMOTION, so
+  // "already declared" survives a device change and resets on the next cycle.
   const semesterContext = useMemo(() => dueFeesSemesterContext(dueFees), [dueFees]);
-  const { declared, markDeclared } = useFeeDueDeclaration(
-    student?.id,
-    dueFees.length > 0 ? semesterContext.label : undefined,
+  const promotionId = (student as { currentPromotion?: { id?: number } | null } | null)
+    ?.currentPromotion?.id;
+  const { master, declared, submit } = useFeeDueDeclaration(promotionId, "FEES");
+  // The API already returns only ACTIVE fields/options in `sequence` order, so
+  // this mapping preserves that order rather than re-sorting.
+  const declarationStatements = useMemo<DeclarationStatementView[]>(
+    () =>
+      (master?.statements ?? [])
+        .filter((s) => s.id != null)
+        .map((s) => ({
+          id: s.id as number,
+          statement: s.statement,
+          isRequired: Boolean(s.isRequired),
+          fields: (s.fields ?? [])
+            .filter((f) => f.id != null)
+            .map((f) => ({
+              id: f.id as number,
+              label: f.label,
+              type: (f.type ?? "TEXT") as DeclarationFieldView["type"],
+              options: (f.options ?? [])
+                .filter((o) => o.id != null)
+                .map((o) => ({ id: o.id as number, name: o.name })),
+            })),
+        })),
+    [master],
   );
   const socketRef = useRef<any | null>(null);
 
   // Intercepts the "view exam schedule" action: if fees are due AND the student has not
   // yet declared, show the declaration dialog first; otherwise open the schedule directly.
   const handleViewDetails = (exam: ExamDto) => {
-    if (dueFees.length > 0 && !declared) {
+    if (dueFees.length > 0 && !declared && declarationStatements.length > 0) {
       setPendingExam(exam);
       setIsFeesAlertOpen(true);
       return;
@@ -1092,7 +1118,23 @@ export default function ExamsContent() {
         dueFees={dueFees}
         semesterDisplay={semesterContext.display}
         studentUid={student?.uid ?? undefined}
-        onDeclared={markDeclared}
+        statements={declarationStatements}
+        onDeclared={(agreed) =>
+          submit(
+            declarationStatements.map((s) => {
+              const match = agreed.find((a) => a.statementId === s.id);
+              return {
+                declarationMasterStatementId: s.id,
+                isAgreed: Boolean(match),
+                fields: (match?.fields ?? []).map((f) => ({
+                  declarationMasterStatementFieldId: f.fieldId,
+                  declarationMasterStatementFieldOptionId: f.optionId ?? null,
+                  value: f.value,
+                })),
+              };
+            }),
+          )
+        }
         onProceed={handleFeesAlertProceed}
       />
 

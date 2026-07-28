@@ -1,0 +1,1 @@
+ALTER TABLE "declaration_masters" ADD COLUMN "name" varchar(255) DEFAULT '' NOT NULL;

@@ -178,6 +178,17 @@ function checkRequiredEnvs() {
             message: e instanceof Error ? e.message : String(e),
           }),
         );
+      // Declaration masters (fee-due dialog) + their email notification
+      // master. Keyed on the template slug and only seeds statements when the
+      // master has none, so console edits are never overwritten.
+      void import("@/features/academics/services/declaration-seed.service.js")
+        .then(({ seedDeclarationMasters }) => seedDeclarationMasters())
+        .then((r) => log.debug("declaration-seed done", r))
+        .catch((e) =>
+          log.error("declaration-seed failed to start", {
+            message: e instanceof Error ? e.message : String(e),
+          }),
+        );
     });
   } catch (error) {
     log.error("Failed to start the application ⚠️", {

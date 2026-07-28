@@ -1191,6 +1191,34 @@
       "when": 1785071627420,
       "tag": "0170_dizzy_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 171,
+      "version": "7",
+      "when": 1785222675867,
+      "tag": "0171_lyrical_ironclad",
+      "breakpoints": true
+    },
+    {
+      "idx": 172,
+      "version": "7",
+      "when": 1785223965625,
+      "tag": "0172_omniscient_madripoor",
+      "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1785227233004,
+      "tag": "0173_fine_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
+      "when": 1785228612043,
+      "tag": "0174_kind_magneto",
+      "breakpoints": true
     }
   ]
 }

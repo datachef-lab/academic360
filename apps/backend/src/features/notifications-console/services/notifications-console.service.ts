@@ -760,7 +760,7 @@ export async function getResendStatus(newNotificationId: number) {
  * The EJS templates belong to the notification-system app, which lives in the
  * same monorepo checkout — resolve its templates dir relative to the backend.
  */
-function resolveTemplatesDir(): string | null {
+export function resolveTemplatesDir(): string | null {
   const candidates = [
     process.env.NOTIFICATION_TEMPLATES_DIR,
     path.resolve(process.cwd(), "../notification-system/src/templates"),

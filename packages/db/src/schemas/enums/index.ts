@@ -488,6 +488,13 @@ export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [
     "REISSUED",
 ]);
 
+export const declarationMasterContextEnum = pgEnum("declaration_master_context", [
+    "ADMISSION",
+    "EXAM",
+    "FEES",
+    "LIBRARY",
+    "OTHER",
+]);
 /**
  * Where a subject-selection meta draws its selectable subject options from.
  *

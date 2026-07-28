@@ -31,7 +31,6 @@ import GradeCard from "./components/GradeMarks/GradeCard";
 import * as courseSubjectModule from "@/pages/courses-subjects-design";
 import * as admissionFeesModule from "@/pages/admissions-fees";
 import * as documentIssuanceModule from "@/features/document-issuance";
-import * as careerProgressionModule from "@/features/career-progression";
 import * as batchModule from "@/pages/batches";
 import * as studentModule from "@/pages/students";
 import * as attendanceModule from "@/pages/attendance-timetable";
@@ -526,20 +525,21 @@ const router = createBrowserRouter(
             { path: "types", element: <documentIssuanceModule.DocumentTypesPage /> },
             { path: "templates", element: <documentIssuanceModule.DocumentTemplatesPage /> },
             { path: "logs", element: <documentIssuanceModule.DocumentIssuanceLogsPage /> },
-          ],
-        },
-        {
-          path: "career-progression",
-          element: <careerProgressionModule.CareerProgressionMasterLayout />,
-          children: [
-            { path: "", element: <careerProgressionModule.CareerProgressionHomePage /> },
             {
               path: "certificate-master",
-              element: <careerProgressionModule.CertificateMasterPage />,
+              element: <documentIssuanceModule.CertificateMasterPage />,
             },
             {
               path: "certificate-fields",
-              element: <careerProgressionModule.CertificateFieldsPage />,
+              element: <documentIssuanceModule.CertificateFieldsPage />,
+            },
+            {
+              path: "declaration-masters",
+              element: <documentIssuanceModule.DeclarationMastersPage />,
+            },
+            {
+              path: "career-progression",
+              element: <documentIssuanceModule.CareerProgressionHomePage />,
             },
           ],
         },

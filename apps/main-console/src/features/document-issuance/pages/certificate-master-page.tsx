@@ -3,7 +3,7 @@ import { Edit, PlusCircle, ScrollText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import axiosInstance from "@/utils/api";
 import { Button } from "@/components/ui/button";
-import { CertificateNameBadge } from "@/features/career-progression/components/certificate-name-badge";
+import { CertificateNameBadge } from "@/features/document-issuance/components/certificate-name-badge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";

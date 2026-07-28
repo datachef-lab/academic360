@@ -47,6 +47,8 @@ import {
   certificateFieldMasterRouter,
   certificateFieldOptionMasterRouter,
   certificateMasterRouter,
+  declarationMasterRouter,
+  declarationRouter,
   academicActivityRouter,
   academicActivityMasterRouter,
 } from "@/features/academics/routes/index.js";
@@ -601,6 +603,8 @@ app.use(
 );
 
 app.use("/api/academics/certificate-masters", certificateMasterRouter);
+app.use("/api/academics/declaration-masters", declarationMasterRouter);
+app.use("/api/academics/declarations", declarationRouter);
 
 app.use(
   "/api/academics/certificate-field-masters",

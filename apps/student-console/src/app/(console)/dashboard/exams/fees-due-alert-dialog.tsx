@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import {
   AlertDialog,
@@ -22,6 +23,36 @@ const formatInr = (value: number): string =>
     maximumFractionDigits: 0,
   }).format(Number(value || 0));
 
+/**
+ * An extra input configured under a statement in the declaration master.
+ * `type` mirrors `certificate_field_master_type` (packages/db → enums).
+ */
+export type DeclarationFieldView = {
+  id: number;
+  label: string;
+  type: "TEXT" | "TEXTAREA" | "SELECT" | "NUMBER" | "DATE";
+  /** Only meaningful for SELECT; empty for the other types. */
+  options: { id: number; name: string }[];
+};
+
+/** A statement the student must agree to, as authored in the declaration master. */
+export type DeclarationStatementView = {
+  id: number;
+  statement: string;
+  isRequired: boolean;
+  fields: DeclarationFieldView[];
+};
+
+/**
+ * What the student actually agreed to: the ticked statements plus the values
+ * they entered for that statement's configured fields. SELECT fields carry the
+ * chosen option id, everything else the raw text — blank inputs are omitted.
+ */
+export type DeclarationAgreedStatement = {
+  statementId: number;
+  fields: { fieldId: number; optionId?: number | null; value?: string }[];
+};
+
 interface FeesDueAlertDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,20 +61,26 @@ interface FeesDueAlertDialogProps {
   semesterDisplay: string;
   /** Student's UID (e.g. 0804250001), shown under the title. */
   studentUid?: string;
-  /** Called when the student proceeds, so the page can skip the dialog from now on. */
-  onDeclared: () => void;
-  /** Called when the student clicks "Generate admit card" — opens the Exam Schedule. */
+  /** Statements from the declaration master (admin-managed). */
+  statements: DeclarationStatementView[];
+  /**
+   * Called with the agreed statements (and their field values) when the student
+   * proceeds; the page persists them (and the backend emails the confirmation).
+   */
+  onDeclared: (agreed: DeclarationAgreedStatement[]) => void | Promise<void>;
+  /** Called after a successful declaration — continues the original action. */
   onProceed: () => void;
   /** Label for the proceed button; defaults to the admit-card wording. */
   proceedLabel?: string;
 }
 
 /**
- * "Important Notification" declaration shown before the Exam Schedule when the student
- * has outstanding semester dues. The student must tick both declarations before
- * "Generate admit card" unlocks. The checkboxes are UI-only (explicit product
- * decision — nothing is stored in the DB); "declared once" is remembered client-side
- * so the dialog is not shown again on this device.
+ * Fee reminder + declaration shown before the Exam Schedule / CU form submission
+ * when the student has outstanding dues.
+ *
+ * The statements are MASTER-DRIVEN (declaration_masters → statements), and
+ * agreeing is persisted server-side against the student's promotion — the old
+ * hard-coded texts and localStorage flag are gone.
  */
 export function FeesDueAlertDialog({
   open,
@@ -51,26 +88,81 @@ export function FeesDueAlertDialog({
   dueFees,
   semesterDisplay,
   studentUid,
+  statements,
   onDeclared,
   onProceed,
   proceedLabel = "Proceed to Download Admit Card",
 }: FeesDueAlertDialogProps) {
   const router = useRouter();
 
-  const [acknowledgeChecked, setAcknowledgeChecked] = useState(false);
-  const [consequenceChecked, setConsequenceChecked] = useState(false);
+  const [agreed, setAgreed] = useState<Record<number, boolean>>({});
+  // fieldId → raw input value; for SELECT this is the chosen option id as a string.
+  const [fieldValues, setFieldValues] = useState<Record<number, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  // Reset ticks + typed values whenever the dialog reopens so a previous visit
+  // can't carry over.
+  useEffect(() => {
+    if (open) {
+      setAgreed({});
+      setFieldValues({});
+      setSubmitting(false);
+    }
+  }, [open]);
 
   // Belt-and-suspenders: never render casual receipts here, and compute the total from
   // the same visible list so the two always agree (even if upstream data is stale).
   const visibleFees = dueFees.filter((fee) => !isCasualReceipt(fee));
   const totalDue = visibleFees.reduce((sum, fee) => sum + Number(fee.totalPayable || 0), 0);
 
-  const canGenerate = acknowledgeChecked && consequenceChecked;
+  const fieldValueOf = (fieldId: number) => (fieldValues[fieldId] ?? "").trim();
 
-  const handleGenerateAdmitCard = () => {
+  /**
+   * The master has no per-field "required" flag, so the rule is: once a
+   * statement is ticked, every field configured under it must be filled — a
+   * ticked declaration with blank inputs is not a meaningful record.
+   */
+  const isFieldMissing = (statement: DeclarationStatementView, field: DeclarationFieldView) =>
+    Boolean(agreed[statement.id]) && !fieldValueOf(field.id);
+
+  // Every REQUIRED statement must be ticked (mirrors the server-side check), and
+  // every ticked statement's fields must be filled in.
+  const canGenerate =
+    statements.length > 0 &&
+    statements.every((s) => !s.isRequired || agreed[s.id]) &&
+    statements.every((s) => s.fields.every((f) => !isFieldMissing(s, f))) &&
+    !submitting;
+
+  /** Ticked statements + their non-blank field values, in the submit shape. */
+  const buildAgreedPayload = (): DeclarationAgreedStatement[] =>
+    statements
+      .filter((s) => agreed[s.id])
+      .map((s) => ({
+        statementId: s.id,
+        fields: s.fields.flatMap((field): DeclarationAgreedStatement["fields"] => {
+          const raw = fieldValueOf(field.id);
+          if (!raw) return []; // never send empty values
+          if (field.type === "SELECT") {
+            const optionId = Number(raw);
+            return Number.isFinite(optionId) && optionId > 0
+              ? [{ fieldId: field.id, optionId }]
+              : [];
+          }
+          return [{ fieldId: field.id, value: raw }];
+        }),
+      }));
+
+  const handleGenerateAdmitCard = async () => {
     if (!canGenerate) return;
-    onDeclared();
-    onProceed();
+    setSubmitting(true);
+    try {
+      await onDeclared(buildAgreedPayload());
+      onProceed();
+    } catch {
+      toast.error("Could not record your declaration. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Shared by both footers: pinned bar on desktop, end-of-content on mobile.
@@ -91,7 +183,7 @@ export function FeesDueAlertDialog({
         Click to Pay
       </Button>
       <Button disabled={!canGenerate} onClick={handleGenerateAdmitCard}>
-        {proceedLabel}
+        {submitting ? "Saving…" : proceedLabel}
       </Button>
     </>
   );
@@ -242,36 +334,108 @@ export function FeesDueAlertDialog({
                   </div>
                 )}
 
-                {/* Declarations — both must be ticked to unlock "Generate admit card".
-                Native inputs on purpose: Radix checkbox/date typings broke the CI
-                next build under the box's strict pnpm linking (same lesson as the
+                {/* Declarations come from the declaration master (admin-managed);
+                every required one must be ticked to unlock the proceed button.
+                Native inputs on purpose: Radix checkbox typings broke the CI next
+                build under the box's strict pnpm linking (same lesson as the
                 footer buttons below). */}
                 <div className="mt-5 flex-shrink-0 space-y-3 rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
                     Declaration
                   </p>
-                  <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={acknowledgeChecked}
-                      onChange={(e) => setAcknowledgeChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
-                    />
-                    <span>
-                      I acknowledge that my{" "}
-                      <span className="font-semibold italic">Semester {semesterDisplay}</span> fee
-                      is currently pending.
-                    </span>
-                  </label>
-                  <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={consequenceChecked}
-                      onChange={(e) => setConsequenceChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
-                    />
-                    <span>I confirm I will clear this amount at the earliest.</span>
-                  </label>
+                  {statements.map((statement) => (
+                    <div key={statement.id} className="space-y-2">
+                      <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(agreed[statement.id])}
+                          onChange={(e) =>
+                            setAgreed((prev) => ({
+                              ...prev,
+                              [statement.id]: e.target.checked,
+                            }))
+                          }
+                          className="mt-1 h-4 w-4 flex-shrink-0 accent-indigo-600"
+                        />
+                        <span>{statement.statement}</span>
+                      </label>
+
+                      {/* Extra inputs configured on this statement, aligned with
+                          the statement TEXT (checkbox 1rem + gap 0.75rem = pl-7).
+                          They sit OUTSIDE the label so clicking one doesn't
+                          toggle the checkbox, and stay editable when unticked.
+                          Native controls only — Radix Select typings are the same
+                          CI-build hazard as the checkbox/buttons above. */}
+                      {statement.fields.length > 0 && (
+                        <div className="space-y-2.5 pl-7">
+                          {statement.fields.map((field) => {
+                            const value = fieldValues[field.id] ?? "";
+                            const missing = isFieldMissing(statement, field);
+                            const controlClass = `w-full rounded-md border bg-white px-2.5 py-1.5 text-[13px] text-gray-800 outline-none focus:ring-1 ${
+                              missing
+                                ? "border-rose-300 focus:border-rose-400 focus:ring-rose-200"
+                                : "border-gray-300 focus:border-indigo-400 focus:ring-indigo-200"
+                            }`;
+                            const onValueChange = (next: string) =>
+                              setFieldValues((prev) => ({ ...prev, [field.id]: next }));
+
+                            return (
+                              <div key={field.id} className="space-y-1">
+                                <label
+                                  htmlFor={`declaration-field-${field.id}`}
+                                  className="block text-[12px] font-medium text-gray-600"
+                                >
+                                  {field.label}
+                                </label>
+                                {field.type === "TEXTAREA" ? (
+                                  <textarea
+                                    id={`declaration-field-${field.id}`}
+                                    rows={3}
+                                    value={value}
+                                    onChange={(e) => onValueChange(e.target.value)}
+                                    className={controlClass}
+                                  />
+                                ) : field.type === "SELECT" ? (
+                                  <select
+                                    id={`declaration-field-${field.id}`}
+                                    value={value}
+                                    onChange={(e) => onValueChange(e.target.value)}
+                                    className={controlClass}
+                                  >
+                                    <option value="">Select…</option>
+                                    {field.options.map((option) => (
+                                      <option key={option.id} value={String(option.id)}>
+                                        {option.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    id={`declaration-field-${field.id}`}
+                                    type={
+                                      field.type === "NUMBER"
+                                        ? "number"
+                                        : field.type === "DATE"
+                                          ? "date"
+                                          : "text"
+                                    }
+                                    value={value}
+                                    onChange={(e) => onValueChange(e.target.value)}
+                                    className={controlClass}
+                                  />
+                                )}
+                                {missing && (
+                                  <p className="text-[11px] text-rose-600">
+                                    Required once you agree to this declaration.
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
                 {/* Mobile: buttons scroll with the content at its end */}
                 <AlertDialogFooter className="mt-6 gap-2 sm:hidden">

@@ -42,7 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CertificateNameBadge } from "@/features/career-progression/components/certificate-name-badge";
+import { CertificateNameBadge } from "@/features/document-issuance/components/certificate-name-badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CertificateFieldHtmlEditor } from "@/components/certificate-field-html-editor";

@@ -30,7 +30,6 @@ import {
   FileText,
   BookOpen,
   Layers,
-  TrendingUp,
   SlidersHorizontal,
   Wrench,
   CreditCard,
@@ -115,7 +114,6 @@ const data = {
     { title: "Library*", url: "/dashboard/library", icon: BookOpen },
     { title: "Fees Module*", url: "/dashboard/fees", icon: IndianRupee },
     { title: "Document Issuance*", url: "/dashboard/document-issuance", icon: FileText },
-    { title: "Career Progression", url: "/dashboard/career-progression", icon: TrendingUp },
     { title: "Bulk Data Upload", url: "/dashboard/bulk-upload", icon: Layers },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
@@ -228,7 +226,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const PENDING_TITLES = [
     "Admission Process",
     "Library",
-    "Document Issuance",
     "Notice Management",
     "User Groups & Accesses",
   ];
@@ -413,6 +410,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       "CU Registration",
                       "Fees Module",
                       "Exam Management",
+                      "Document Issuance",
                       "Reports",
                     ];
                     const modulesRank = (t: string) => {
@@ -429,7 +427,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       "Bulk Data Upload",
                       "Physical CUReg Marking",
                       "Promote Students",
-                      "Career Progression",
                     ];
                     const othersRank = (t: string) => {
                       const i = OTHERS_ORDER.indexOf(t);

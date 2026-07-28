@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Declaration Confirmation</title>
+  <style>
+    /* ─────────────────────────────────────────────────────────────────
+       TYPE & SPACING SYSTEM — one scale, applied everywhere.
+
+       Font      : system stack only (no serif / italic flourishes).
+       Sizes     : 19px heading · 14px body · 12px meta+label · 12px footer.
+       Colours   : #0f1f3d heading · #3f4a5a body · #7a8899 muted.
+                   #0f2d5e navy and #22c55e green are chrome/accent only.
+       Rhythm    : 8 / 16 / 24 vertical, 32px side padding (18px mobile).
+       Body copy : line-height 1.6.
+
+       Every rule below is duplicated INLINE on the element itself — many
+       clients strip <style> entirely, so classes are enhancement only.
+       ───────────────────────────────────────────────────────────────── */
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f1f4f9;
+      color: #3f4a5a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .shell {
+      max-width: 560px;
+      margin: 24px auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 32px rgba(15, 31, 61, 0.08);
+    }
+
+    /* ── LOGO BAR ── */
+    .logo-bar {
+      background: #ffffff;
+      padding: 16px 32px;
+      border-bottom: 3px solid #0f2d5e;
+    }
+
+    .logo-bar img {
+      height: 40px;
+      width: auto;
+    }
+
+    .lb-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f1f3d;
+      line-height: 1.4;
+    }
+
+    .lb-dept {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7a8899;
+      line-height: 1.6;
+    }
+
+    /* ── HERO ──
+       The navy cover panel that sits directly under the logo bar, matching
+       exam-form-submission.ejs in style and proportion. Everything here is
+       also written inline on the elements themselves — the gradient and the
+       radii degrade to a flat navy block in clients that drop them, which is
+       an acceptable fallback, but the layout must never depend on this CSS. */
+    .hero {
+      background: #0f2d5e;
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(45, 95, 166, 0.55) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(15, 60, 110, 0.6) 0%, transparent 55%);
+      padding: 40px 32px 36px;
+      text-align: center;
+    }
+
+    .check-wrap {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #22c55e;
+      margin: 0 auto;
+      text-align: center;
+      line-height: 72px;
+      font-size: 34px;
+      font-weight: bold;
+      color: #ffffff;
+    }
+
+    .hero-tag {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 100px;
+      padding: 5px 16px;
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #c7d2e3;
+    }
+
+    .hero-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: #a8cafe;
+    }
+
+    .hero-sub {
+      font-size: 13px;
+      font-weight: 400;
+      color: #8fa6c8;
+      letter-spacing: 0.03em;
+      margin: 0;
+    }
+
+    /* ── BODY ── */
+    .body {
+      background: #ffffff;
+      padding: 24px 32px 32px;
+    }
+
+    .h1 {
+      font-size: 19px;
+      font-weight: 600;
+      line-height: 1.35;
+      color: #0f1f3d;
+      margin: 0 0 16px;
+    }
+
+    .para {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: #3f4a5a;
+      margin: 0;
+    }
+
+    .meta {
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.6;
+      color: #7a8899;
+      margin: 0;
+    }
+
+    .label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7a8899;
+    }
+
+    /* ── META TABLE (UID / Semester / Declared on) ──
+       Fixed-width label column so the values line up in a single column. */
+    .meta-label {
+      width: 120px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7a8899;
+      line-height: 1.6;
+    }
+
+    .meta-value {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: #3f4a5a;
+    }
+
+    /* ── CTA ── */
+    .cta {
+      display: inline-block;
+      background: #0f2d5e;
+      color: #ffffff !important;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.6;
+      padding: 8px 24px;
+      border-radius: 6px;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: #0f2d5e;
+      padding: 16px 32px;
+      text-align: center;
+    }
+
+    .footer p {
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: #c7d2e3;
+      margin: 0;
+    }
+
+    @media(max-width:560px) {
+
+      body {
+        padding: 0 !important;
+      }
+
+      .shell {
+        margin: 0 !important;
+        border-radius: 0 !important;
+      }
+
+      .logo-bar,
+      .hero,
+      .body,
+      .footer {
+        padding-left: 18px !important;
+        padding-right: 18px !important;
+      }
+
+      .logo-bar img {
+        height: 34px !important;
+      }
+
+      .lb-name {
+        font-size: 13px !important;
+      }
+
+      .lb-dept {
+        font-size: 11px !important;
+        letter-spacing: 0.06em !important;
+      }
+
+      /* HERO — smaller check circle, tighter padding, smaller headline. */
+      .hero {
+        padding-top: 30px !important;
+        padding-bottom: 28px !important;
+      }
+
+      .check-wrap {
+        width: 60px !important;
+        height: 60px !important;
+        line-height: 60px !important;
+        font-size: 28px !important;
+      }
+
+      .hero-tag {
+        font-size: 9px !important;
+        letter-spacing: 0.16em !important;
+        padding: 4px 12px !important;
+      }
+
+      .hero-title {
+        font-size: 20px !important;
+        line-height: 1.35 !important;
+      }
+
+      .hero-sub {
+        font-size: 12px !important;
+      }
+
+      .body {
+        padding-top: 24px !important;
+        padding-bottom: 24px !important;
+      }
+
+      .h1 {
+        font-size: 18px !important;
+      }
+
+      /* META TABLE — keep the label readable but let it give up some width
+         rather than squashing the value column into a one-word ribbon. */
+      .meta-label {
+        width: 92px !important;
+        font-size: 11px !important;
+        letter-spacing: 0.06em !important;
+      }
+
+      .meta-value {
+        font-size: 13px !important;
+      }
+    }
+  </style>
+</head>
+
+<body
+  style="background:#f1f4f9; color:#3f4a5a; margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif;">
+  <div class="shell"
+    style="max-width:560px; margin:24px auto; border:1px solid #e3e9f2; border-radius:12px; overflow:hidden;">
+
+    <!-- LOGO BAR — table, not flex: Outlook ignores display:flex -->
+    <div class="logo-bar" style="background:#ffffff; padding:16px 32px; border-bottom:3px solid #0f2d5e;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="border-collapse:collapse;">
+        <tr>
+          <td width="56" style="width:56px; padding:0 16px 0 0; vertical-align:middle;">
+            <img src="https://api.academic360.app/api/v1/settings/file/4" alt="BESC Logo"
+              style="height:40px; width:auto; display:block; border:0; outline:none;" />
+          </td>
+          <td style="vertical-align:middle;">
+            <div class="lb-name" style="font-size:14px; font-weight:600; color:#0f1f3d; line-height:1.4;">The
+              Bhawanipur Education Society College</div>
+            <div class="lb-dept"
+              style="font-size:12px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7a8899; line-height:1.6;">
+              Accounts &amp; Examination Department</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- HERO — navy cover panel, tables all the way down. The check mark is a
+         text entity inside a fixed 72px cell (line-height centres it) rather
+         than an image: remote images are blocked by default in most clients.
+         The radial gradient and border-radius degrade to flat navy / a square
+         block where unsupported, which is fine — no layout depends on them. -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      style="border-collapse:collapse; background:#0f2d5e;">
+      <tr>
+        <td class="hero" align="center"
+          style="padding:40px 32px 36px; text-align:center; background:#0f2d5e; background-image:radial-gradient(ellipse at 20% 50%, rgba(45,95,166,0.55) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(15,60,110,0.6) 0%, transparent 55%);">
+
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"
+            style="border-collapse:collapse; margin:0 auto;">
+            <tr>
+              <td class="check-wrap" width="72" height="72" align="center"
+                style="width:72px; height:72px; border-radius:50%; background:#22c55e; text-align:center; line-height:72px; font-size:34px; font-weight:bold; color:#ffffff;">
+                &#10003;</td>
+            </tr>
+          </table>
+
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"
+            style="border-collapse:collapse; margin:20px auto 16px;">
+            <tr>
+              <td class="hero-tag" align="center"
+                style="padding:5px 16px; background:#17396d; border:1px solid #2d5fa6; border-radius:100px; font-size:10.5px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:#c7d2e3; line-height:1.6; white-space:nowrap;">
+                Declaration Recorded</td>
+            </tr>
+          </table>
+
+          <p class="hero-title"
+            style="font-size:24px; font-weight:600; line-height:1.35; color:#ffffff; margin:0;">Your declaration has
+            been <em style="font-style:italic; color:#a8cafe;">recorded.</em>
+          </p>
+
+          <% if (content.dtoTemplateData.semester) { %>
+          <p class="hero-sub"
+            style="font-size:13px; font-weight:400; line-height:1.6; color:#8fa6c8; letter-spacing:0.03em; margin:12px 0 0;">
+            <%= content.dtoTemplateData.semester %>
+          </p>
+          <% } %>
+
+        </td>
+      </tr>
+    </table>
+
+    <!-- BODY -->
+    <div class="body" style="background:#ffffff; padding:24px 32px 32px;">
+
+      <!-- No body heading: the hero above already carries "Your declaration has
+           been recorded", and repeating it here read as a duplicate headline. -->
+      <p class="para" style="font-size:14px; font-weight:400; line-height:1.6; color:#3f4a5a; margin:0;">Dear
+        <%= content.dtoTemplateData.name %>,
+      </p>
+
+      <!-- IDENTITY META — two columns: fixed-width label, then value. Each row
+           is gated on its own variable, so a missing value drops that row
+           entirely instead of leaving a labelled blank. -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="border-collapse:collapse; margin:16px 0 0;">
+        <% if (content.dtoTemplateData.uid) { %>
+        <tr>
+          <td class="meta-label" width="120"
+            style="width:120px; border:1px solid #e5eaf1; padding:8px 12px; font-size:12px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; line-height:1.6; color:#7a8899; vertical-align:top;">
+            UID</td>
+          <td class="meta-value"
+            style="border:1px solid #e5eaf1; padding:8px 12px; font-size:14px; font-weight:400; line-height:1.6; color:#3f4a5a; vertical-align:top;">
+            <%= content.dtoTemplateData.uid %>
+          </td>
+        </tr>
+        <% } %>
+        <% if (content.dtoTemplateData.semester) { %>
+        <tr>
+          <td class="meta-label" width="120"
+            style="width:120px; border:1px solid #e5eaf1; padding:8px 12px; font-size:12px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; line-height:1.6; color:#7a8899; vertical-align:top;">
+            Semester</td>
+          <td class="meta-value"
+            style="border:1px solid #e5eaf1; padding:8px 12px; font-size:14px; font-weight:400; line-height:1.6; color:#3f4a5a; vertical-align:top;">
+            <%= content.dtoTemplateData.semester %>
+          </td>
+        </tr>
+        <% } %>
+        <% if (content.dtoTemplateData.declaredOn) { %>
+        <tr>
+          <td class="meta-label" width="120"
+            style="width:120px; border:1px solid #e5eaf1; padding:8px 12px; font-size:12px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; line-height:1.6; color:#7a8899; vertical-align:top;">
+            Declared on</td>
+          <td class="meta-value"
+            style="border:1px solid #e5eaf1; padding:8px 12px; font-size:14px; font-weight:400; line-height:1.6; color:#3f4a5a; vertical-align:top;">
+            <%= content.dtoTemplateData.declaredOn %>
+          </td>
+        </tr>
+        <% } %>
+      </table>
+
+      <!-- hairline rule -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="border-collapse:collapse; margin:16px 0 24px;">
+        <tr>
+          <td style="padding:0; height:1px; line-height:1px; font-size:0; background:#e9eef6;">&nbsp;</td>
+        </tr>
+      </table>
+
+      <p class="para" style="font-size:14px; font-weight:400; line-height:1.6; color:#3f4a5a; margin:0 0 24px;">
+        The declaration below was submitted through the Student Console and has been recorded against your account.
+        A copy is sent to you here so you have it on file.
+      </p>
+
+      <%
+        /* Coerce before iterating: the console's template preview feeds every
+           placeholder in as the string "{{statements}}", so a bare .forEach
+           throws and the preview silently degrades to "no preview available". */
+        var declaredStatements = content.dtoTemplateData.statements;
+        declaredStatements = Array.isArray(declaredStatements)
+          ? declaredStatements
+          : (declaredStatements ? [declaredStatements] : []);
+      %>
+      <!-- Statements read as a ticked list sitting directly on white — one
+           2-cell row per statement (check glyph, then text). The check is a
+           text entity, not an image or emoji: remote images are blocked by
+           default in most clients and emoji render inconsistently. -->
+      <% declaredStatements.forEach(function (entry, entryIndex) {
+           /* Entries are either a plain string (legacy / preview placeholders)
+              or { statement, fields: [{ label, value }] }. */
+           var isObject = entry !== null && typeof entry === "object";
+           var statementText = isObject ? (entry.statement || "") : entry;
+           var statementFields = (isObject && Array.isArray(entry.fields)) ? entry.fields : [];
+      %>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="border-collapse:collapse; margin:<%= entryIndex === 0 ? '0' : '16px' %> 0 0;">
+        <tr>
+          <td width="16" valign="top"
+            style="width:16px; padding:0; font-size:14px; line-height:1.6; font-weight:bold; color:#22c55e; vertical-align:top;">
+            &#10003;</td>
+          <td valign="top" style="vertical-align:top;">
+            <p class="para" style="font-size:14px; font-weight:400; line-height:1.6; color:#3f4a5a; margin:0;">
+              <%= statementText %>
+            </p>
+            <% if (statementFields.length) { %>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+              style="border-collapse:collapse; margin:0;">
+              <% statementFields.forEach(function (field) { %>
+              <tr>
+                <td class="label"
+                  style="padding:8px 16px 0 0; font-size:12px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; line-height:1.6; color:#7a8899; vertical-align:top; width:36%;">
+                  <%= (field && field.label) ? field.label : "" %>
+                </td>
+                <td
+                  style="padding:8px 0 0; font-size:14px; font-weight:600; line-height:1.6; color:#0f1f3d; vertical-align:top;">
+                  <%= (field && field.value) ? field.value : "—" %>
+                </td>
+              </tr>
+              <% }); %>
+            </table>
+            <% } %>
+          </td>
+        </tr>
+      </table>
+      <% }); %>
+
+      <p class="meta" style="font-size:12px; font-weight:500; line-height:1.6; color:#7a8899; margin:24px 0 0;">
+        Please retain this email for your records. If you did not make this declaration, contact the College office
+        immediately.
+      </p>
+
+      <% if (content.dtoTemplateData.studentConsoleUrl) { %>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="border-collapse:collapse; margin:24px 0 0;">
+        <tr>
+          <td align="left" style="padding:0;">
+            <a href="<%= content.dtoTemplateData.studentConsoleUrl %>" target="_blank" class="cta"
+              style="display:inline-block; background:#0f2d5e; color:#ffffff; text-decoration:none; font-size:14px; font-weight:600; line-height:1.6; padding:8px 24px; border-radius:6px;">Access
+              Student Console</a>
+          </td>
+        </tr>
+      </table>
+      <% } %>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="border-collapse:collapse; margin:24px 0 0;">
+        <tr>
+          <td style="border-top:1px solid #e9eef6; padding:16px 0 0;">
+            <p class="meta" style="font-size:12px; font-weight:500; line-height:1.6; color:#7a8899; margin:0 0 8px;">
+              Best regards,</p>
+            <p style="font-size:14px; font-weight:600; line-height:1.6; color:#0f1f3d; margin:0;">Accounts &amp;
+              Examination Department</p>
+            <p class="meta" style="font-size:12px; font-weight:500; line-height:1.6; color:#7a8899; margin:0;">The
+              Bhawanipur Education Society College</p>
+          </td>
+        </tr>
+      </table>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer" style="background:#0f2d5e; padding:16px 32px; text-align:center;">
+      <p style="font-size:12px; font-weight:400; line-height:1.6; color:#c7d2e3; margin:0;">
+        This is a system-generated email. Please do not reply.</p>
+    </div>
+
+  </div>
+</body>
+
+</html>

@@ -7,9 +7,13 @@ import { toast } from "sonner";
 import { axiosInstance } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
 import { useRouter } from "next/navigation";
-import { FeesDueAlertDialog } from "../exams/fees-due-alert-dialog";
+import {
+  FeesDueAlertDialog,
+  type DeclarationFieldView,
+  type DeclarationStatementView,
+} from "../exams/fees-due-alert-dialog";
 import { useStudentDueFees } from "../exams/use-student-due-fees";
-import { dueFeesSemesterContext } from "../exams/use-fee-due-declaration";
+import { dueFeesSemesterContext, useFeeDueDeclaration } from "../exams/use-fee-due-declaration";
 
 const SEMESTER_TWO_CLASS_ID = 2;
 
@@ -34,11 +38,41 @@ export default function CUFormUploadPage() {
   const { student } = useStudent();
 
   // Fee-due declaration gate. Unlike the exams page there is NO "declared once"
-  // memory here (explicit requirement): with pending dues the alert shows on
-  // EVERY submission attempt.
+  // suppression here (explicit requirement): with pending dues the alert shows on
+  // EVERY submission attempt. The submit itself is idempotent per
+  // (master, promotion), so re-agreeing never duplicates rows or re-sends email.
   const [isFeesAlertOpen, setIsFeesAlertOpen] = useState(false);
   const { dueFees } = useStudentDueFees(student?.id);
   const semesterContext = useMemo(() => dueFeesSemesterContext(dueFees), [dueFees]);
+  const promotionId = (student as { currentPromotion?: { id?: number } | null } | null)
+    ?.currentPromotion?.id;
+  const { master: declarationMaster, submit: submitDeclarationAgreement } = useFeeDueDeclaration(
+    promotionId,
+    "FEES",
+  );
+  // The API already returns only ACTIVE fields/options in `sequence` order, so
+  // this mapping preserves that order rather than re-sorting.
+  const declarationStatements = useMemo<DeclarationStatementView[]>(
+    () =>
+      (declarationMaster?.statements ?? [])
+        .filter((s) => s.id != null)
+        .map((s) => ({
+          id: s.id as number,
+          statement: s.statement,
+          isRequired: Boolean(s.isRequired),
+          fields: (s.fields ?? [])
+            .filter((f) => f.id != null)
+            .map((f) => ({
+              id: f.id as number,
+              label: f.label,
+              type: (f.type ?? "TEXT") as DeclarationFieldView["type"],
+              options: (f.options ?? [])
+                .filter((o) => o.id != null)
+                .map((o) => ({ id: o.id as number, name: o.name })),
+            })),
+        })),
+    [declarationMaster],
+  );
 
   // Check if student's program course is MA or MCOM (hide admission registration for these)
   const isBlockedProgram = useMemo(() => {
@@ -551,9 +585,23 @@ export default function CUFormUploadPage() {
         dueFees={dueFees}
         semesterDisplay={semesterContext.display}
         studentUid={student?.uid ?? undefined}
-        onDeclared={() => {
-          // Intentionally no persistence — the dialog reappears on the next attempt.
-        }}
+        statements={declarationStatements}
+        onDeclared={(agreed) =>
+          submitDeclarationAgreement(
+            declarationStatements.map((s) => {
+              const match = agreed.find((a) => a.statementId === s.id);
+              return {
+                declarationMasterStatementId: s.id,
+                isAgreed: Boolean(match),
+                fields: (match?.fields ?? []).map((f) => ({
+                  declarationMasterStatementFieldId: f.fieldId,
+                  declarationMasterStatementFieldOptionId: f.optionId ?? null,
+                  value: f.value,
+                })),
+              };
+            }),
+          )
+        }
         onProceed={() => {
           setIsFeesAlertOpen(false);
           void performSubmit();
