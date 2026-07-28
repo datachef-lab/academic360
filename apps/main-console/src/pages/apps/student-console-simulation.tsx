@@ -316,7 +316,11 @@ export default function StudentConsoleSimulation() {
         </Button>
       )}
 
-      {/* Student Console Iframe - Full width and height */}
+      {/* Student Console Iframe - Full width and height.
+          `allow-downloads` in the sandbox is required for <a download> / blob
+          saves started INSIDE the frame (admit card, XLSX exports). Without it
+          Chrome blocks the download silently — console warning only, nothing
+          the user can see. */}
       <div className="w-full h-full overflow-hidden">
         <iframe
           ref={iframeRef}
@@ -324,7 +328,7 @@ export default function StudentConsoleSimulation() {
           className="w-full h-full border-0"
           title="Student Console Simulation"
           allow="camera; microphone; geolocation; fullscreen"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
         />
       </div>
     </div>
