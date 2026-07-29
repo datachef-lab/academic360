@@ -12,6 +12,9 @@ import fs from "fs";
 import path from "path";
 import ejs from "ejs";
 import { resolveTemplatesDir } from "@/features/notifications-console/services/notifications-console.service.js";
+import { createLogger } from "@/config/logger.js";
+
+const log = createLogger("declaration-master");
 
 /**
  * Declaration masters are the admin-authored templates behind the student
@@ -434,7 +437,20 @@ async function renderDeclarationPreview(input: {
       : null;
 
   if (!file || !fs.existsSync(file)) {
-    return { kind: "NONE", templateKey };
+    if (!templateKey) return { kind: "NONE", templateKey };
+    // Distinguish "no templates dir on this host" (the production Docker
+    // failure mode) from "that template name doesn't exist" — a bare NONE
+    // made this undiagnosable from the console.
+    const error = !templatesDir
+      ? "Notification EJS templates directory not found on the server. Set NOTIFICATION_TEMPLATES_DIR or rebuild the backend image so the templates are bundled."
+      : `Template file not found: ${file}`;
+    log.warn("declaration preview unavailable", {
+      templateKey,
+      templatesDir,
+      cwd: process.cwd(),
+      error,
+    });
+    return { kind: "NONE", templateKey, error };
   }
 
   const studentConsoleUrl = (
@@ -486,11 +502,13 @@ async function renderDeclarationPreview(input: {
   } catch (error) {
     // Surfaced (not swallowed) — the console shows it so template bugs are
     // debuggable instead of silently degrading to "no preview".
-    return {
-      kind: "NONE",
+    const message = error instanceof Error ? error.message : String(error);
+    log.warn("declaration preview render failed", {
       templateKey,
-      error: error instanceof Error ? error.message : String(error),
-    };
+      file,
+      error: message,
+    });
+    return { kind: "NONE", templateKey, error: message };
   }
 }
 

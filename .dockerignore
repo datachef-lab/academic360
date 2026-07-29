@@ -3,7 +3,13 @@
 .gitignore
 
 # Node / pnpm
+# `node_modules` alone only matches the ROOT directory — nested ones
+# (apps/*/node_modules) still enter the build context, get carried through
+# `turbo prune` into out/full, and then collide with the freshly installed
+# tree ("cannot copy to non-directory"). CI never hits this because it builds
+# from a clean checkout; a developer building locally always would.
 node_modules
+**/node_modules
 .pnpm-store
 .pnp*
 
