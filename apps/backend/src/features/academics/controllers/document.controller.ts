@@ -10,13 +10,6 @@ import {
   scanExistingMarksheetFilesByRollNumber,
 } from "../services/document.service.js";
 
-// /**
-//  * Coerces a client-supplied "is active" value to a real boolean. Accepts a
-//  * boolean, the numbers 0/1, or the strings "true"/"false"/"1"/"0" (any case),
-//  * since JSON clients and form posts represent booleans differently. Returns
-//  * `null` when the value is missing or not boolean-like, so the caller can treat
-//  * that as a validation failure.
-//  */
 const normalizeBoolean = (value: unknown): boolean | null => {
   if (typeof value === "boolean") return value;
   if (value === 1) return true;
@@ -66,7 +59,6 @@ export const createDocumentMetadata = async (
       return;
     }
 
-    
     let normalizedSequence: number | null = null;
     if (sequence !== undefined && sequence !== null && sequence !== "") {
       const parsed = Number(sequence);
@@ -79,7 +71,6 @@ export const createDocumentMetadata = async (
       normalizedSequence = parsed === 0 ? null : parsed;
     }
 
-   
     const [newDocument] = await db
       .insert(documentModel)
       .values({
