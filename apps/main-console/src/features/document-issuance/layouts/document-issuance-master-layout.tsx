@@ -14,7 +14,6 @@ import { Outlet, useLocation } from "react-router-dom";
 
 const quickLinks = [
   { title: "Home", url: "/dashboard/document-issuance", icon: LayoutDashboard },
-  { title: "Reports", url: "/dashboard/document-issuance/reports", icon: BarChart2 },
   {
     title: "Document Batch Receipt",
     url: "/dashboard/document-issuance/batch-receipt",
@@ -25,11 +24,13 @@ const quickLinks = [
     url: "/dashboard/document-issuance/student-ledger",
     icon: BookUser,
   },
+
   {
     title: "Document Requests",
     url: "/dashboard/document-issuance/requests",
     icon: FileClock,
   },
+  { title: "Reports", url: "/dashboard/document-issuance/reports", icon: BarChart2 },
 ];
 
 // Document Types / Issuance Templates / Issuance Logs are still placeholder
