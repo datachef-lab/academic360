@@ -171,7 +171,7 @@ export async function listNotificationMasters() {
 export type MasterPreview =
   | { kind: "IMAGE"; url: string; templateKey: string | null }
   | { kind: "EMAIL"; html: string; templateKey: string | null }
-  | { kind: "NONE"; templateKey: string | null };
+  | { kind: "NONE"; templateKey: string | null; error?: string };
 
 export async function getMasterPreview(masterId: number) {
   const res = await axiosInstance.get<ApiResponse<MasterPreview>>(

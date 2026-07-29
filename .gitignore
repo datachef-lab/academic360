@@ -73,3 +73,6 @@ db.json
 
 
 a360-assets
+# Docker build staging: notification-system EJS templates copied into the
+# backend app dir by apps/backend/Dockerfile (see copy-public-assets.mjs).
+apps/backend/notification-templates

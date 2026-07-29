@@ -12,8 +12,10 @@ import {
 } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import crypto from "crypto";
 import ejs from "ejs";
+import { createLogger } from "@/config/logger.js";
 import { db } from "@/db/index.js";
 import { createOtp, verifyOtp } from "@/features/auth/services/otp.service.js";
 import { enqueueNotification } from "@/services/notificationClient.js";
@@ -50,6 +52,8 @@ import {
  * notification tables directly — the notification-system worker service
  * and its /internal proxy are intentionally untouched.
  */
+
+const log = createLogger("notifications-console");
 
 export type NotificationListFilters = {
   page: number;
@@ -757,12 +761,43 @@ export async function getResendStatus(newNotificationId: number) {
 // ---------------------------------------------------------------------------
 
 /**
- * The EJS templates belong to the notification-system app, which lives in the
- * same monorepo checkout — resolve its templates dir relative to the backend.
+ * Locate the EJS templates used by the email previews.
+ *
+ * The templates are owned by the notification-system app. In a monorepo
+ * checkout (local/dev/staging) that app sits next to the backend, but in
+ * production the backend is its own Docker image built from
+ * `turbo prune --scope=backend`, which does not include
+ * apps/notification-system at all. So the build bundles a copy into the
+ * backend's own dist (`dist/apps/backend/notification-templates`) and that copy
+ * is looked up FIRST, relative to this compiled file's own directory — never
+ * process.cwd(), which differs between `node dist/...` and a container
+ * ENTRYPOINT and is exactly why previews broke in production.
+ *
+ * Order: NOTIFICATION_TEMPLATES_DIR override → bundled copy → monorepo siblings.
  */
+const BUNDLED_TEMPLATES_DIRNAME = "notification-templates";
+
+function bundledTemplatesCandidates(): string[] {
+  // dist/apps/backend/src/features/notifications-console/services → 4 levels up
+  // is dist/apps/backend. Walk instead of hard-coding the depth so the lookup
+  // survives a change in output layout (and works from src under tsx too).
+  let dir = path.dirname(fileURLToPath(import.meta.url));
+  const out: string[] = [];
+  for (let i = 0; i <= 5; i++) {
+    out.push(path.join(dir, BUNDLED_TEMPLATES_DIRNAME));
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return out;
+}
+
 export function resolveTemplatesDir(): string | null {
   const candidates = [
+    // Ops escape hatch — must stay first so a mounted dir can override.
     process.env.NOTIFICATION_TEMPLATES_DIR,
+    ...bundledTemplatesCandidates(),
+    // Monorepo checkout fallbacks (dev/staging run from the repo).
     path.resolve(process.cwd(), "../notification-system/src/templates"),
     path.resolve(process.cwd(), "../../apps/notification-system/src/templates"),
   ].filter(Boolean) as string[];
@@ -891,8 +926,15 @@ export async function getNotificationPreview(notificationId: number) {
           { async: true },
         );
         return { subject, html, templateKey, rendered: true };
-      } catch {
-        // fall through to the generic preview
+      } catch (error) {
+        // Fall through to the generic preview — but say why, so a template bug
+        // is debuggable instead of silently degrading.
+        log.warn("notification preview render failed", {
+          notificationId,
+          templateKey,
+          file,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   }
@@ -968,11 +1010,29 @@ export async function getMasterPreview(masterId: number) {
     return { kind: "IMAGE" as const, url, templateKey: master.template };
   }
 
+  let previewError: string | undefined;
+
   if (master.variant === "EMAIL" && master.template) {
     const templatesDir = resolveTemplatesDir();
     const file = templatesDir
       ? path.join(templatesDir, "email", `${master.template}.ejs`)
       : null;
+    if (!file) {
+      previewError =
+        "Notification EJS templates directory not found on the server. Set NOTIFICATION_TEMPLATES_DIR or rebuild the backend image so the templates are bundled.";
+      log.warn("master preview: templates dir unresolved", {
+        masterId,
+        templateKey: master.template,
+        cwd: process.cwd(),
+      });
+    } else if (!fs.existsSync(file)) {
+      previewError = `Template file not found: ${file}`;
+      log.warn("master preview: template file missing", {
+        masterId,
+        templateKey: master.template,
+        file,
+      });
+    }
     if (file && fs.existsSync(file)) {
       const fields = await listMasterFields(masterId);
       const sample: Record<string, unknown> = {};
@@ -1001,13 +1061,26 @@ export async function getMasterPreview(masterId: number) {
           { async: true },
         );
         return { kind: "EMAIL" as const, html, templateKey: master.template };
-      } catch {
-        // template needs real data — no static preview possible
+      } catch (error) {
+        // Template needs real data (or has a bug) — no static preview possible.
+        // Surface the reason instead of a bare "NONE"; prod debugging of a
+        // silent NONE was painful.
+        previewError = error instanceof Error ? error.message : String(error);
+        log.warn("master preview render failed", {
+          masterId,
+          templateKey: master.template,
+          file,
+          error: previewError,
+        });
       }
     }
   }
 
-  return { kind: "NONE" as const, templateKey: master.template };
+  return {
+    kind: "NONE" as const,
+    templateKey: master.template,
+    ...(previewError ? { error: previewError } : {}),
+  };
 }
 
 /** Console-created masters are manual (not wired to backend code). */

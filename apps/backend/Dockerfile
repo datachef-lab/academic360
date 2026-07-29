@@ -23,6 +23,14 @@ RUN pnpm install --frozen-lockfile
 # Copy pruned source
 COPY --from=pruner /app/out/full/ .
 
+# The console email previews render the notification-system app's EJS templates.
+# `turbo prune --scope=backend` drops apps/notification-system entirely (backend
+# has no package dependency on it), so those files are NOT in /app/out/full —
+# take them from the pruner stage, which still holds the whole checkout. Staged
+# into the backend app dir so the build's copy-public-assets step lands them in
+# dist/apps/backend/notification-templates, matching a monorepo build.
+COPY --from=pruner /app/apps/notification-system/src/templates ./apps/backend/notification-templates
+
 RUN pnpm turbo run build --filter=backend...
 
 # tsc-alias rewrites the tsconfig "paths" entries for redis/socket.io into
