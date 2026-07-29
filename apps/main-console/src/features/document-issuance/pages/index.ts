@@ -7,6 +7,9 @@ import DocumentIssuanceLogsPage from "./document-issuance-logs-page";
 import CertificateMasterPage from "./certificate-master-page";
 import CertificateFieldsPage from "./certificate-fields-page";
 import DeclarationMastersPage from "./declaration-masters-page";
+import DocumentBatchReceiptPage from "./document-batch-receipt-page";
+import StudentLedgerPage from "./student-ledger-page";
+import DocumentRequestsPage from "./document-requests-page";
 
 export {
   DocumentIssuanceHomePage,
@@ -18,4 +21,7 @@ export {
   CertificateMasterPage,
   CertificateFieldsPage,
   DeclarationMastersPage,
+  DocumentBatchReceiptPage,
+  StudentLedgerPage,
+  DocumentRequestsPage,
 };

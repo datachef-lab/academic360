@@ -1,11 +1,35 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
-import { LayoutDashboard, BarChart2, ScrollText, ListTree, FileSignature } from "lucide-react";
+import {
+  LayoutDashboard,
+  BarChart2,
+  ScrollText,
+  ListTree,
+  FileSignature,
+  ReceiptText,
+  BookUser,
+  FileClock,
+} from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
 const quickLinks = [
   { title: "Home", url: "/dashboard/document-issuance", icon: LayoutDashboard },
   { title: "Reports", url: "/dashboard/document-issuance/reports", icon: BarChart2 },
+  {
+    title: "Document Batch Receipt",
+    url: "/dashboard/document-issuance/batch-receipt",
+    icon: ReceiptText,
+  },
+  {
+    title: "Student's Ledger",
+    url: "/dashboard/document-issuance/student-ledger",
+    icon: BookUser,
+  },
+  {
+    title: "Document Requests",
+    url: "/dashboard/document-issuance/requests",
+    icon: FileClock,
+  },
 ];
 
 // Document Types / Issuance Templates / Issuance Logs are still placeholder
