@@ -10,6 +10,25 @@ import {
   scanExistingMarksheetFilesByRollNumber,
 } from "../services/document.service.js";
 
+// /**
+//  * Coerces a client-supplied "is active" value to a real boolean. Accepts a
+//  * boolean, the numbers 0/1, or the strings "true"/"false"/"1"/"0" (any case),
+//  * since JSON clients and form posts represent booleans differently. Returns
+//  * `null` when the value is missing or not boolean-like, so the caller can treat
+//  * that as a validation failure.
+//  */
+const normalizeBoolean = (value: unknown): boolean | null => {
+  if (typeof value === "boolean") return value;
+  if (value === 1) return true;
+  if (value === 0) return false;
+  if (typeof value === "string") {
+    const v = value.trim().toLowerCase();
+    if (v === "true" || v === "1") return true;
+    if (v === "false" || v === "0") return false;
+  }
+  return null;
+};
+
 //createDocumentMetadata
 export const createDocumentMetadata = async (
   req: Request,
@@ -17,13 +36,69 @@ export const createDocumentMetadata = async (
   next: NextFunction,
 ) => {
   try {
-    console.log(req.body);
-    const newDocumentModel = await db.insert(documentModel).values(req.body);
-    console.log("New Document added", newDocumentModel);
+    const { name, description, sequence, isActive } = req.body ?? {};
+
+    // name — required, non-empty string.
+    if (typeof name !== "string" || name.trim() === "") {
+      res
+        .status(400)
+        .json(new ApiError(400, "Please enter a document type name."));
+      return;
+    }
+
+    // description — required, non-empty string.
+    if (typeof description !== "string" || description.trim() === "") {
+      res.status(400).json(new ApiError(400, "Please enter a description."));
+      return;
+    }
+
+    // isActive — required; must be a boolean (or a boolean-like value).
+    const normalizedIsActive = normalizeBoolean(isActive);
+    if (normalizedIsActive === null) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            "Please specify whether the document type is active (true or false).",
+          ),
+        );
+      return;
+    }
+
+    
+    let normalizedSequence: number | null = null;
+    if (sequence !== undefined && sequence !== null && sequence !== "") {
+      const parsed = Number(sequence);
+      if (!Number.isInteger(parsed)) {
+        res
+          .status(400)
+          .json(new ApiError(400, "Sequence must be a whole number."));
+        return;
+      }
+      normalizedSequence = parsed === 0 ? null : parsed;
+    }
+
+   
+    const [newDocument] = await db
+      .insert(documentModel)
+      .values({
+        name: name.trim(),
+        description: description.trim(),
+        sequence: normalizedSequence,
+        isActive: normalizedIsActive,
+      })
+      .returning();
+
     res
       .status(201)
       .json(
-        new ApiResponse(201, "SUCCESS", null, "New Document is added to db!"),
+        new ApiResponse(
+          201,
+          "SUCCESS",
+          newDocument,
+          "New Document is added to db!",
+        ),
       );
   } catch (error) {
     handleError(error, res, next);
@@ -284,6 +359,7 @@ export const uploadDocument = async (
   next: NextFunction,
 ) => {
   try {
+    //
   } catch (error) {
     handleError(error, res, next);
   }

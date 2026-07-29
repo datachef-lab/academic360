@@ -14,7 +14,7 @@ import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
 router.post("/", createDocumentMetadata);
 
