@@ -197,7 +197,7 @@ export function FeesDueAlertDialog({
           {/* Left (desktop only): illustration shown whole over a soft gradient */}
           <div className="hidden w-full flex-shrink-0 flex-col items-center justify-center gap-6 border-gray-200 bg-gradient-to-b from-violet-50 via-white to-rose-50 sm:flex sm:w-[38%] sm:border-r sm:p-8">
             <Image
-              src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
+              src="/fee-due-illustration.png"
               alt="Pending fees illustration"
               width={840}
               height={870}
@@ -225,7 +225,7 @@ export function FeesDueAlertDialog({
                   light dark overlay so it reads as a backdrop */}
               <div className="relative h-48 w-full sm:hidden">
                 <Image
-                  src={`${process.env.NEXT_PUBLIC_URL}/fee-due-illustration.png`}
+                  src="/fee-due-illustration.png"
                   alt="Pending fees illustration"
                   fill
                   priority
