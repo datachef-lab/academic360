@@ -489,8 +489,7 @@ export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [
 ]);
 
 export const documentDomainEnum = pgEnum("document_domain", [
-    "PRE_ADMISSION",
-    "POST_ADMISSION",
+    "ADMISSION",
     "ENROLMENT",
     "PRE_CU_REGISTRATION",
     "POST_CU_REGISTRATION",
