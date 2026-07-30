@@ -1,20 +1,25 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
-import { FileText, Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
+import {
+  BookOpen,
+  Building2,
+  FileText,
+  Filter,
+  FolderTree,
+  Layers,
+  Loader2,
+  Pencil,
+  PlusCircle,
+  Repeat,
+  ShieldCheck,
+  Wallet,
+} from "lucide-react";
+import documentTypesIllustration from "@/features/document-issuance/assets/document-types-illustration.svg?raw";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +52,6 @@ import {
   DOCUMENT_ELIGIBILITY_RULES,
   DOCUMENT_ISSUING_AUTHORITIES,
   createDocumentType,
-  deleteDocumentType,
   getAllDocumentTypes,
   updateDocumentType,
   type DocumentCategory,
@@ -59,7 +63,61 @@ import {
 } from "@/features/document-issuance/services/document-type.service";
 
 const NONE = "__none__";
+const ALL = "__all__";
 const DOCUMENT_TYPES_QUERY_KEY = ["document-types"] as const;
+
+type TriState = typeof ALL | "YES" | "NO";
+
+type Filters = {
+  domain: DocumentDomain | typeof ALL;
+  category: DocumentCategory | typeof ALL;
+  eligibilityRule: DocumentEligibilityRule | typeof ALL;
+  requiresFeeClearance: TriState;
+  requiresLibraryClearance: TriState;
+  issuingAuthority: DocumentIssuingAuthority | typeof ALL;
+};
+
+const emptyFilters = (): Filters => ({
+  domain: ALL,
+  category: ALL,
+  eligibilityRule: ALL,
+  requiresFeeClearance: ALL,
+  requiresLibraryClearance: ALL,
+  issuingAuthority: ALL,
+});
+
+/** Switch defaults to `bg-primary` when on; these read as "enabled" instead. */
+const SWITCH_ON = "data-[state=checked]:bg-green-400";
+
+/**
+ * New types get a colour pair off this list rather than a colour picker — the
+ * badges stay legible and consistent, and it's one less thing to fill in.
+ * Light background, darker text of the same hue, matching the seeded types.
+ */
+const BADGE_PALETTE: { bgColor: string; textColor: string }[] = [
+  { bgColor: "#DBEAFE", textColor: "#1D4ED8" },
+  { bgColor: "#DCFCE7", textColor: "#15803D" },
+  { bgColor: "#FEF3C7", textColor: "#B45309" },
+  { bgColor: "#EDE9FE", textColor: "#6D28D9" },
+  { bgColor: "#CCFBF1", textColor: "#0F766E" },
+  { bgColor: "#FCE7F3", textColor: "#BE185D" },
+];
+
+const countActiveFilters = (f: Filters) => Object.values(f).filter((v) => v !== ALL).length;
+
+/**
+ * Header cells pin to the top of the page's scroll container (MasterLayout owns
+ * it) — hence no inner `overflow` wrapper around the table, which would make
+ * `sticky` resolve against a box that never scrolls.
+ * Deliberately no `whitespace-nowrap` — headers wrap so the table can fit a
+ * narrow screen instead of forcing a horizontal scrollbar.
+ */
+const STICKY_HEAD =
+  "sticky top-0 z-20 bg-[#f3f4f6] shadow-[inset_0_-1px_0_0_hsl(var(--border))] " +
+  "first:rounded-tl-md last:rounded-tr-md";
+
+const matchesTriState = (state: TriState, value: boolean) =>
+  state === ALL || (state === "YES") === value;
 
 type FormState = {
   domain: DocumentDomain;
@@ -71,10 +129,7 @@ type FormState = {
   requiresFeeClearance: boolean;
   requiresLibraryClearance: boolean;
   isRecurring: boolean;
-  sequence: string;
   isActive: boolean;
-  bgColor: string;
-  textColor: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -87,10 +142,7 @@ const emptyForm = (): FormState => ({
   requiresFeeClearance: false,
   requiresLibraryClearance: false,
   isRecurring: false,
-  sequence: "",
   isActive: true,
-  bgColor: "#E2E8F0",
-  textColor: "#1E293B",
 });
 
 const rowToForm = (row: DocumentType): FormState => ({
@@ -103,10 +155,7 @@ const rowToForm = (row: DocumentType): FormState => ({
   requiresFeeClearance: row.requiresFeeClearance ?? false,
   requiresLibraryClearance: row.requiresLibraryClearance ?? false,
   isRecurring: row.isRecurring ?? false,
-  sequence: row.sequence != null ? String(row.sequence) : "",
   isActive: row.isActive !== false,
-  bgColor: row.bgColor ?? "#E2E8F0",
-  textColor: row.textColor ?? "#1E293B",
 });
 
 const formToBody = (f: FormState): DocumentTypeUpsertBody => ({
@@ -122,10 +171,10 @@ const formToBody = (f: FormState): DocumentTypeUpsertBody => ({
   requiresFeeClearance: f.requiresFeeClearance,
   requiresLibraryClearance: f.requiresLibraryClearance,
   isRecurring: f.isRecurring,
-  sequence: f.sequence.trim() ? Number(f.sequence) : null,
   isActive: f.isActive,
-  bgColor: f.bgColor.trim() || null,
-  textColor: f.textColor.trim() || null,
+  // sequence / bgColor / textColor are deliberately absent. On create they are
+  // assigned below; on update the PUT parses partially, so leaving them out
+  // means the stored values survive untouched.
 });
 
 const label = (value: string) =>
@@ -172,8 +221,45 @@ function issuingAuthorityBadgeClass(
     case "COLLEGE":
       return "border-teal-200 bg-teal-50 text-teal-800";
     default:
-      return "border-slate-200 bg-slate-50 text-slate-800";
+      // null authority renders as "Student" — student-supplied uploads.
+      return "border-slate-300 bg-slate-100 text-slate-700";
   }
+}
+
+function FlagRow({
+  id,
+  icon,
+  title,
+  hint,
+  checked,
+  onChange,
+}: {
+  id: string;
+  icon: ReactNode;
+  title: string;
+  hint: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="flex shrink-0 items-center">{icon}</span>
+        <div className="min-w-0">
+          <Label htmlFor={id} className="cursor-pointer text-sm font-medium">
+            {title}
+          </Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
+        </div>
+      </div>
+      <Switch
+        id={id}
+        checked={checked}
+        onCheckedChange={onChange}
+        className={`shrink-0 ${SWITCH_ON}`}
+      />
+    </div>
+  );
 }
 
 function YesNoBadge({ value, activeLabel = "Yes" }: { value: boolean; activeLabel?: string }) {
@@ -182,7 +268,7 @@ function YesNoBadge({ value, activeLabel = "Yes" }: { value: boolean; activeLabe
       {activeLabel}
     </Badge>
   ) : (
-    <span className="text-xs text-muted-foreground">No</span>
+    <span className="text-sm text-foreground">No</span>
   );
 }
 
@@ -194,7 +280,12 @@ export default function DocumentTypesPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
 
-  const [deleteTarget, setDeleteTarget] = useState<DocumentType | null>(null);
+  // `filters` is what the table honours; `filterDraft` is what the dialog edits,
+  // so opening the dialog and closing it without hitting Apply changes nothing.
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<Filters>(emptyFilters());
+  const [filterDraft, setFilterDraft] = useState<Filters>(emptyFilters());
+  const activeFilterCount = countActiveFilters(filters);
 
   const {
     data: rows = [],
@@ -232,33 +323,50 @@ export default function DocumentTypesPage() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteDocumentType(id),
-    onSuccess: async () => {
-      toast.success("Document type deleted");
-      setDeleteTarget(null);
-      await invalidate();
-    },
-    onError: (e) => {
-      toast.error(apiErrorMessage(e, "Delete failed — this document type may already be in use."));
-    },
-  });
-
   const saving = createMutation.isLoading || updateMutation.isLoading;
-  const deleting = deleteMutation.isLoading;
 
   const filteredRows = useMemo(() => {
     const q = searchText.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
+    return rows.filter((r) => {
+      const matchesSearch =
+        !q ||
         r.name.toLowerCase().includes(q) ||
         (r.description ?? "").toLowerCase().includes(q) ||
         (r.domain ?? "").toLowerCase().includes(q) ||
         (r.category ?? "").toLowerCase().includes(q) ||
-        (r.issuingAuthority ?? "").toLowerCase().includes(q),
-    );
-  }, [rows, searchText]);
+        (r.issuingAuthority ?? "").toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+
+      if (filters.domain !== ALL && (r.domain ?? "OTHER") !== filters.domain) return false;
+      if (filters.category !== ALL && (r.category ?? "ADMINISTRATIVE") !== filters.category) {
+        return false;
+      }
+      // A row with no rule only matches when the rule filter is off.
+      if (filters.eligibilityRule !== ALL && r.eligibilityRule !== filters.eligibilityRule) {
+        return false;
+      }
+      if (filters.issuingAuthority !== ALL && r.issuingAuthority !== filters.issuingAuthority) {
+        return false;
+      }
+      if (!matchesTriState(filters.requiresFeeClearance, r.requiresFeeClearance ?? false)) {
+        return false;
+      }
+      if (!matchesTriState(filters.requiresLibraryClearance, r.requiresLibraryClearance ?? false)) {
+        return false;
+      }
+      return true;
+    });
+  }, [rows, searchText, filters]);
+
+  const openFilter = () => {
+    setFilterDraft(filters);
+    setFilterOpen(true);
+  };
+
+  const applyFilters = () => {
+    setFilters(filterDraft);
+    setFilterOpen(false);
+  };
 
   const openCreate = () => {
     setEditingId(null);
@@ -279,15 +387,17 @@ export default function DocumentTypesPage() {
     }
     const body = formToBody(form);
     if (editingId == null) {
-      createMutation.mutate(body);
+      // Sequence and colours are system-assigned: next free slot, and the next
+      // palette entry so consecutive types don't all look alike.
+      const nextSequence = rows.reduce((max, r) => Math.max(max, r.sequence ?? 0), 0) + 1;
+      createMutation.mutate({
+        ...body,
+        sequence: nextSequence,
+        ...BADGE_PALETTE[rows.length % BADGE_PALETTE.length],
+      });
     } else {
       updateMutation.mutate({ id: editingId, body });
     }
-  };
-
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    deleteMutation.mutate(deleteTarget.id);
   };
 
   return (
@@ -304,18 +414,37 @@ export default function DocumentTypesPage() {
               rules that govern them.
             </p>
           </div>
-          <Button
-            type="button"
-            onClick={openCreate}
-            className="w-full bg-purple-600 text-white shadow-none hover:bg-purple-700 sm:w-auto"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add document type
-          </Button>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={openFilter}
+              className="flex-1 shadow-none sm:flex-none"
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              Filter
+              {activeFilterCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-2 border-purple-200 bg-purple-50 px-1.5 text-[11px] text-purple-700"
+                >
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              type="button"
+              onClick={openCreate}
+              className="flex-1 bg-purple-600 text-white shadow-none hover:bg-purple-700 sm:flex-none"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="px-0">
-          <div className="mb-3 border-b bg-background px-2 py-3 sm:px-4">
+          <div className="mb-3 bg-background px-2 py-3 sm:px-4">
             <Input
               placeholder="Search by name, description, domain, category or issuing authority..."
               className="w-full max-w-md"
@@ -339,97 +468,83 @@ export default function DocumentTypesPage() {
                 No document types found.
               </div>
             ) : (
-              <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
-                <Table containerClassName="min-w-max">
-                  <TableHeader style={{ background: "#f3f4f6" }}>
+              <div className="rounded-md border bg-background">
+                <Table containerClassName="max-w-full">
+                  <TableHeader>
                     <TableRow>
-                      <TableHead className="whitespace-nowrap">#</TableHead>
-                      <TableHead className="whitespace-nowrap">Name</TableHead>
-                      <TableHead className="whitespace-nowrap">Description</TableHead>
-                      <TableHead className="whitespace-nowrap">Issued By</TableHead>
-                      <TableHead className="whitespace-nowrap">Category</TableHead>
-                      <TableHead className="whitespace-nowrap text-center">Fee Clearance</TableHead>
-                      <TableHead className="whitespace-nowrap text-center">
+                      {/* Sticky lives on the cells, not the <thead> — a collapsed
+                          border table won't hold a sticky section reliably. */}
+                      <TableHead className={STICKY_HEAD}>#</TableHead>
+                      <TableHead className={`${STICKY_HEAD} w-[26%]`}>Document</TableHead>
+                      <TableHead className={STICKY_HEAD}>Description</TableHead>
+                      <TableHead className={STICKY_HEAD}>Category</TableHead>
+                      <TableHead className={`${STICKY_HEAD} text-center`}>Fee Clearance</TableHead>
+                      <TableHead className={`${STICKY_HEAD} text-center`}>
                         Library Clearance
                       </TableHead>
-                      <TableHead className="whitespace-nowrap text-center">Recurring</TableHead>
-                      <TableHead className="whitespace-nowrap text-center">Status</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Actions</TableHead>
+                      <TableHead className={`${STICKY_HEAD} text-right`}>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRows.map((row, i) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="whitespace-nowrap">{i + 1}</TableCell>
-                        <TableCell className="whitespace-nowrap">{row.name}</TableCell>
-                        <TableCell
-                          className="max-w-[240px] truncate whitespace-nowrap text-xs text-muted-foreground"
-                          title={row.description ?? undefined}
-                        >
-                          {row.description}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {row.issuingAuthority ? (
+                      <TableRow
+                        key={row.id}
+                        className={
+                          row.isActive === false ? "bg-red-50 hover:bg-red-100/80" : undefined
+                        }
+                      >
+                        <TableCell className="whitespace-nowrap align-top">{i + 1}</TableCell>
+                        <TableCell className="align-top">
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="flex items-start gap-1.5 font-medium">
+                              <span className="break-words">{row.name}</span>
+                              {row.isRecurring && (
+                                <Repeat
+                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600"
+                                  aria-label="Recurring"
+                                >
+                                  <title>Issued every semester / promotion</title>
+                                </Repeat>
+                              )}
+                            </span>
                             <Badge
                               variant="outline"
-                              className={`text-xs ${issuingAuthorityBadgeClass(row.issuingAuthority)}`}
+                              className={`text-[11px] ${issuingAuthorityBadgeClass(row.issuingAuthority)}`}
                             >
-                              {label(row.issuingAuthority)}
+                              {/* No authority on the row means nobody at the
+                                  college or university issues it — the student
+                                  supplies it. */}
+                              {row.issuingAuthority ? label(row.issuingAuthority) : "Student"}
                             </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                          </div>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-normal break-words align-top text-sm text-foreground">
+                          {row.description}
+                        </TableCell>
+                        <TableCell className="align-top">
                           <Badge
                             variant="outline"
-                            className={`text-xs ${categoryBadgeClass(row.category)}`}
+                            className={`whitespace-nowrap text-xs ${categoryBadgeClass(row.category)}`}
                           >
                             {label(row.category ?? "ADMINISTRATIVE")}
                           </Badge>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-center">
+                        <TableCell className="whitespace-nowrap text-center align-top">
                           <YesNoBadge value={row.requiresFeeClearance ?? false} />
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-center">
+                        <TableCell className="whitespace-nowrap text-center align-top">
                           <YesNoBadge value={row.requiresLibraryClearance ?? false} />
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-center">
-                          <YesNoBadge value={row.isRecurring ?? false} />
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-center">
-                          <Badge
-                            variant="outline"
-                            className={
-                              row.isActive !== false
-                                ? "border-green-200 bg-green-50 text-green-700"
-                                : "border-slate-300 text-slate-600"
-                            }
+                        <TableCell className="whitespace-nowrap text-right align-top">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEdit(row)}
                           >
-                            {row.isActive !== false ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-right">
-                          <div className="inline-flex items-center gap-0.5">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => openEdit(row)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
-                              onClick={() => setDeleteTarget(row)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -441,262 +556,406 @@ export default function DocumentTypesPage() {
         </CardContent>
       </Card>
 
-      {/* ------------------------------ create/edit ----------------------------- */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[92vh] w-[min(96vw,760px)] overflow-y-auto sm:max-w-[760px]">
-          <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>
-              {editingId == null ? "Add document type" : "Edit document type"}
+      {/* -------------------------------- filters ------------------------------- */}
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="flex max-h-[84vh] w-[min(96vw,620px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]">
+          <DialogHeader className="shrink-0 border-b bg-muted/40 px-6 py-3">
+            <DialogTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-purple-700" />
+              Filter document types
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-5 px-6 py-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Name *</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Class XII Marksheet"
-                />
-              </div>
+          <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                Domain
+              </Label>
+              <Select
+                value={filterDraft.domain}
+                onValueChange={(v) =>
+                  setFilterDraft((f) => ({ ...f, domain: v as Filters["domain"] }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All domains</SelectItem>
+                  {DOCUMENT_DOMAINS.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {label(d)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Optional description shown to staff"
-                  rows={2}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <FolderTree className="h-3.5 w-3.5 text-muted-foreground" />
+                Category
+              </Label>
+              <Select
+                value={filterDraft.category}
+                onValueChange={(v) =>
+                  setFilterDraft((f) => ({ ...f, category: v as Filters["category"] }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All categories</SelectItem>
+                  {DOCUMENT_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {label(c)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label>Domain *</Label>
-                <Select
-                  value={form.domain}
-                  onValueChange={(v) => setForm((f) => ({ ...f, domain: v as DocumentDomain }))}
-                >
-                  <SelectTrigger className="h-10 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DOCUMENT_DOMAINS.map((d) => (
-                      <SelectItem key={d} value={d}>
-                        {label(d)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                Eligibility rule
+              </Label>
+              <Select
+                value={filterDraft.eligibilityRule}
+                onValueChange={(v) =>
+                  setFilterDraft((f) => ({
+                    ...f,
+                    eligibilityRule: v as Filters["eligibilityRule"],
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All rules</SelectItem>
+                  {DOCUMENT_ELIGIBILITY_RULES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {label(r)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label>Category *</Label>
-                <Select
-                  value={form.category}
-                  onValueChange={(v) =>
-                    setForm((f) => ({
-                      ...f,
-                      category: v as DocumentCategory,
-                      // eligibilityRule only applies to EXAM_LINKED — drop it otherwise
-                      eligibilityRule: v === "EXAM_LINKED" ? f.eligibilityRule : NONE,
-                    }))
-                  }
-                >
-                  <SelectTrigger className="h-10 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DOCUMENT_CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {label(c)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                Issued by
+              </Label>
+              <Select
+                value={filterDraft.issuingAuthority}
+                onValueChange={(v) =>
+                  setFilterDraft((f) => ({
+                    ...f,
+                    issuingAuthority: v as Filters["issuingAuthority"],
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All authorities</SelectItem>
+                  {DOCUMENT_ISSUING_AUTHORITIES.map((a) => (
+                    <SelectItem key={a} value={a}>
+                      {label(a)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {form.category === "EXAM_LINKED" ? (
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                Fee clearance
+              </Label>
+              <Select
+                value={filterDraft.requiresFeeClearance}
+                onValueChange={(v) =>
+                  setFilterDraft((f) => ({ ...f, requiresFeeClearance: v as TriState }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Any</SelectItem>
+                  <SelectItem value="YES">Required</SelectItem>
+                  <SelectItem value="NO">Not required</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                Library clearance
+              </Label>
+              <Select
+                value={filterDraft.requiresLibraryClearance}
+                onValueChange={(v) =>
+                  setFilterDraft((f) => ({ ...f, requiresLibraryClearance: v as TriState }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Any</SelectItem>
+                  <SelectItem value="YES">Required</SelectItem>
+                  <SelectItem value="NO">Not required</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="shrink-0 flex-row items-center justify-between border-t bg-muted/40 px-6 py-3 sm:justify-between">
+            <Button type="button" variant="ghost" onClick={() => setFilterDraft(emptyFilters())}>
+              Clear all
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => setFilterOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={applyFilters}
+                className="bg-purple-600 text-white hover:bg-purple-700"
+              >
+                Apply
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------ create/edit ----------------------------- */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="flex max-h-[84vh] w-[min(96vw,940px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[940px] sm:flex-row">
+          {/* Decorative only, so it drops out below `sm` rather than squeezing
+              the form. "Personal files" by Storyset — see ATTRIBUTION.txt. */}
+          <aside
+            aria-hidden="true"
+            className="relative hidden w-[38%] shrink-0 overflow-hidden border-r-2 border-purple-200 bg-purple-50/60 sm:block"
+          >
+            {/* Inlined rather than <img src>, so the accent can resolve
+                `--brand-400` and follow the environment palette. The svg carries
+                preserveAspectRatio="slice", which fills the rail top to bottom. */}
+            <div
+              className="absolute inset-0 [&>svg]:h-full [&>svg]:w-full"
+              dangerouslySetInnerHTML={{ __html: documentTypesIllustration }}
+            />
+          </aside>
+
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <DialogHeader className="shrink-0 border-b bg-muted/40 px-6 py-3">
+              <DialogTitle className="flex items-center gap-2">
+                {editingId == null ? (
+                  <PlusCircle className="h-5 w-5 text-purple-700" />
+                ) : (
+                  <Pencil className="h-5 w-5 text-purple-700" />
+                )}
+                {editingId == null ? "Add document type" : "Edit document type"}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>
+                    Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. Class XII Marksheet"
+                  />
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Optional description shown to staff"
+                    rows={2}
+                  />
+                </div>
+
                 <div className="space-y-1.5">
-                  <Label>Eligibility rule</Label>
+                  <Label>
+                    Domain <span className="text-red-500">*</span>
+                  </Label>
                   <Select
-                    value={form.eligibilityRule}
-                    onValueChange={(v) =>
-                      setForm((f) => ({ ...f, eligibilityRule: v as DocumentEligibilityRule }))
-                    }
+                    value={form.domain}
+                    onValueChange={(v) => setForm((f) => ({ ...f, domain: v as DocumentDomain }))}
                   >
                     <SelectTrigger className="h-10 w-full">
-                      <SelectValue placeholder="Select rule" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NONE}>— None —</SelectItem>
-                      {DOCUMENT_ELIGIBILITY_RULES.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {label(r)}
+                      {DOCUMENT_DOMAINS.map((d) => (
+                        <SelectItem key={d} value={d}>
+                          {label(d)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              ) : null}
 
-              <div className="space-y-1.5">
-                <Label>Issued By</Label>
-                <Select
-                  value={form.issuingAuthority}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, issuingAuthority: v as DocumentIssuingAuthority }))
-                  }
-                >
-                  <SelectTrigger className="h-10 w-full">
-                    <SelectValue placeholder="Select authority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>— None —</SelectItem>
-                    {DOCUMENT_ISSUING_AUTHORITIES.map((a) => (
-                      <SelectItem key={a} value={a}>
-                        {label(a)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1.5">
+                  <Label>Issued By</Label>
+                  <Select
+                    value={form.issuingAuthority}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, issuingAuthority: v as DocumentIssuingAuthority }))
+                    }
+                  >
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue placeholder="Select authority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>— None —</SelectItem>
+                      {DOCUMENT_ISSUING_AUTHORITIES.map((a) => (
+                        <SelectItem key={a} value={a}>
+                          {label(a)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>
+                    Category <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={form.category}
+                    onValueChange={(v) =>
+                      setForm((f) => ({
+                        ...f,
+                        category: v as DocumentCategory,
+                        // eligibilityRule only applies to EXAM_LINKED — dropped
+                        // otherwise. Switching it on seeds the usual rule instead
+                        // of leaving it unset; RCSI_RECORDED stays selectable for
+                        // revised-marksheet types.
+                        eligibilityRule:
+                          v !== "EXAM_LINKED"
+                            ? NONE
+                            : f.eligibilityRule === NONE
+                              ? "FORM_FILLUP_RECORDED"
+                              : f.eligibilityRule,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_CATEGORIES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {label(c)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {form.category === "EXAM_LINKED" ? (
+                  <div className="space-y-1.5">
+                    <Label>Eligibility rule</Label>
+                    <Select
+                      value={form.eligibilityRule}
+                      onValueChange={(v) =>
+                        setForm((f) => ({ ...f, eligibilityRule: v as DocumentEligibilityRule }))
+                      }
+                    >
+                      <SelectTrigger className="h-10 w-full">
+                        <SelectValue placeholder="Select rule" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>— None —</SelectItem>
+                        {DOCUMENT_ELIGIBILITY_RULES.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {label(r)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Sequence</Label>
-                <Input
-                  type="number"
-                  value={form.sequence}
-                  onChange={(e) => setForm((f) => ({ ...f, sequence: e.target.value }))}
-                  placeholder="Display order"
+              <div className="divide-y rounded-md border bg-muted/20">
+                <FlagRow
+                  id="dt-fee"
+                  icon={<Wallet className="h-4 w-4 text-muted-foreground" />}
+                  title="Requires fee clearance"
+                  hint="Gates issue on fee dues: an outstanding balance holds the document until it is cleared, or until a staff member overrides the check with a remark."
+                  checked={form.requiresFeeClearance}
+                  onChange={(c) => setForm((f) => ({ ...f, requiresFeeClearance: c }))}
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Background color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    className="h-10 w-14 p-1"
-                    value={form.bgColor}
-                    onChange={(e) => setForm((f) => ({ ...f, bgColor: e.target.value }))}
-                  />
-                  <Input
-                    value={form.bgColor}
-                    onChange={(e) => setForm((f) => ({ ...f, bgColor: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Text color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    className="h-10 w-14 p-1"
-                    value={form.textColor}
-                    onChange={(e) => setForm((f) => ({ ...f, textColor: e.target.value }))}
-                  />
-                  <Input
-                    value={form.textColor}
-                    onChange={(e) => setForm((f) => ({ ...f, textColor: e.target.value }))}
-                  />
-                </div>
+                <FlagRow
+                  id="dt-library"
+                  icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
+                  title="Requires library clearance"
+                  hint="The same gate for the library: unreturned books or pending fines hold the document until they are settled or the check is overridden."
+                  checked={form.requiresLibraryClearance}
+                  onChange={(c) => setForm((f) => ({ ...f, requiresLibraryClearance: c }))}
+                />
+                <FlagRow
+                  id="dt-recurring"
+                  icon={<Repeat className="h-4 w-4 text-muted-foreground" />}
+                  title="Recurring"
+                  hint="The student gets a fresh copy each semester or promotion (admit cards, fee receipts). Leave off for one-time documents such as an ID card or the CU registration form."
+                  checked={form.isRecurring}
+                  onChange={(c) => setForm((f) => ({ ...f, isRecurring: c }))}
+                />
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-6 rounded-md border bg-muted/20 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="dt-fee"
-                  checked={form.requiresFeeClearance}
-                  onCheckedChange={(c) => setForm((f) => ({ ...f, requiresFeeClearance: c }))}
-                />
-                <Label htmlFor="dt-fee" className="cursor-pointer text-sm font-normal">
-                  Requires fee clearance
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="dt-library"
-                  checked={form.requiresLibraryClearance}
-                  onCheckedChange={(c) => setForm((f) => ({ ...f, requiresLibraryClearance: c }))}
-                />
-                <Label htmlFor="dt-library" className="cursor-pointer text-sm font-normal">
-                  Requires library clearance
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="dt-recurring"
-                  checked={form.isRecurring}
-                  onCheckedChange={(c) => setForm((f) => ({ ...f, isRecurring: c }))}
-                />
-                <Label htmlFor="dt-recurring" className="cursor-pointer text-sm font-normal">
-                  Recurring
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
+            <DialogFooter className="shrink-0 flex-col gap-3 border-t bg-muted/40 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 sm:mr-auto">
                 <Switch
                   id="dt-active"
                   checked={form.isActive}
                   onCheckedChange={(c) => setForm((f) => ({ ...f, isActive: c }))}
+                  className={SWITCH_ON}
                 />
                 <Label htmlFor="dt-active" className="cursor-pointer text-sm font-normal">
                   Active
                 </Label>
               </div>
-            </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => setDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="w-full bg-purple-600 text-white shadow-none hover:bg-purple-700 sm:ml-2 sm:w-auto"
+                disabled={saving}
+                onClick={handleSave}
+              >
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
           </div>
-
-          <DialogFooter className="flex-col gap-2 border-t bg-muted/30 px-6 py-4 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => setDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="w-full bg-purple-600 text-white shadow-none hover:bg-purple-700 sm:ml-2 sm:w-auto"
-              disabled={saving}
-              onClick={handleSave}
-            >
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {saving ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* -------------------------------- delete -------------------------------- */}
-      <AlertDialog
-        open={deleteTarget != null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <AlertDialogContent className="max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete document type?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You are about to delete{" "}
-              <span className="font-medium text-foreground">&quot;{deleteTarget?.name}&quot;</span>.
-              This cannot be undone, and may fail if the document type is already referenced
-              elsewhere.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <Button type="button" variant="destructive" disabled={deleting} onClick={confirmDelete}>
-              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
