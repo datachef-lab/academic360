@@ -15,6 +15,9 @@ const quickLinks = [
   { title: "Reports", url: "/dashboard/document-issuance/reports", icon: BarChart2 },
 ];
 
+// Issuance Templates / Issuance Logs are still placeholder screens, so they are
+// hidden from the nav for now. Their routes remain registered — restore the
+// entries here once the pages are built.
 const mastersLinks = [
   {
     title: "Document Type",

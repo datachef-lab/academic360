@@ -10,8 +10,7 @@ export type DocumentEligibilityRule = NonNullable<DocumentTypeT["eligibilityRule
 export type DocumentIssuingAuthority = NonNullable<DocumentTypeT["issuingAuthority"]>;
 
 export const DOCUMENT_DOMAINS: DocumentDomain[] = [
-  "PRE_ADMISSION",
-  "POST_ADMISSION",
+  "ADMISSION",
   "ENROLMENT",
   "PRE_CU_REGISTRATION",
   "POST_CU_REGISTRATION",
@@ -69,7 +68,7 @@ export async function createDocumentType(
 
 export async function updateDocumentType(
   id: number,
-  body: DocumentTypeUpsertBody,
+  body: Partial<DocumentTypeUpsertBody>,
 ): Promise<ApiResponse<DocumentType>> {
   const response = await axiosInstance.put<ApiResponse<DocumentType>>(`${BASE_URL}/${id}`, body);
   return response.data;
