@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
-import { documentModel } from "@repo/db/schemas/models/academics";
+import { documentTypeModel } from "@repo/db/schemas/models/documents";
 import { eq, and, desc, count } from "drizzle-orm";
 import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import { CuRegistrationDocumentUploadDto } from "@repo/db/dtos/admissions/index.js";
@@ -203,8 +203,8 @@ async function modelToDto(
   // Get document details
   const [documentDetails] = await db
     .select()
-    .from(documentModel)
-    .where(eq(documentModel.id, document.documentId));
+    .from(documentTypeModel)
+    .where(eq(documentTypeModel.id, document.documentId));
 
   return {
     id: document.id,
@@ -222,6 +222,8 @@ async function modelToDto(
       description: documentDetails!.description,
       sequence: documentDetails!.sequence,
       isActive: documentDetails!.isActive,
+      bgColor: documentDetails!.bgColor,
+      textColor: documentDetails!.textColor,
       createdAt: documentDetails!.createdAt,
       updatedAt: documentDetails!.updatedAt,
     },
