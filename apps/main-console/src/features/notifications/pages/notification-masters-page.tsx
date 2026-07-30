@@ -879,15 +879,22 @@ export default function NotificationMastersPage() {
                       className="h-full w-full rounded bg-white"
                     />
                   ) : (
-                    <p className="px-4 text-center text-xs text-gray-400">
-                      {canUploadImage
-                        ? "Click to upload a preview image (stored in S3)."
-                        : dialogVariant === "WHATSAPP"
-                          ? "No preview available."
-                          : dialogMode === "add"
-                            ? "The EJS template preview appears after the master is created."
-                            : "No preview available."}
-                    </p>
+                    <div className="px-4 text-center">
+                      <p className="text-xs text-gray-400">
+                        {canUploadImage
+                          ? "Click to upload a preview image (stored in S3)."
+                          : dialogVariant === "WHATSAPP"
+                            ? "No preview available."
+                            : dialogMode === "add"
+                              ? "The EJS template preview appears after the master is created."
+                              : "No preview available."}
+                      </p>
+                      {!canUploadImage && preview?.kind === "NONE" && preview.error && (
+                        <p className="mt-2 break-words text-[11px] text-rose-500">
+                          {preview.error}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
                 {canUploadImage && imageFile && (

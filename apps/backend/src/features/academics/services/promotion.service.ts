@@ -82,9 +82,19 @@ export async function markExamFormSubmission(
 
   console.log("Notify the user..");
 
+  // "SEMESTER II" -> "Semester II". Title-casing every word would render the
+  // roman numeral as "Ii", so numerals are uppercased whole. The lookahead
+  // pattern is a strict roman check, so ordinary words that happen to be built
+  // from roman letters (e.g. "civil", "mix") are still title-cased normally.
   const formattedSemester = tmpResult
     .semester!.toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/\b[a-z]+\b/g, (word) =>
+      /^(?=[ivxlcdm]+$)m*(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/.test(
+        word,
+      )
+        ? word.toUpperCase()
+        : word.charAt(0).toUpperCase() + word.slice(1),
+    );
 
   try {
     await notifyExamForm(

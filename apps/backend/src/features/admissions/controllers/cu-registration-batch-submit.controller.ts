@@ -18,7 +18,7 @@ import {
 } from "../services/cu-registration-document-path.service.js";
 import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
 import { db } from "@/db/index.js";
-import { documentModel } from "@repo/db/schemas";
+import { documentTypeModel } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 import multer from "multer";
 import {
@@ -227,8 +227,8 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
         // Look up document ID from database using document name
         const [documentRecord] = await db
           .select()
-          .from(documentModel)
-          .where(eq(documentModel.name, documentName));
+          .from(documentTypeModel)
+          .where(eq(documentTypeModel.name, documentName));
 
         if (!documentRecord) {
           console.warn(
@@ -413,8 +413,8 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
             // Find the PDF document type (assuming it has ID 6 or we need to create one)
             const [pdfDocument] = await db
               .select()
-              .from(documentModel)
-              .where(eq(documentModel.name, "CU Registration PDF"))
+              .from(documentTypeModel)
+              .where(eq(documentTypeModel.name, "CU Registration PDF"))
               .limit(1);
 
             if (pdfDocument) {

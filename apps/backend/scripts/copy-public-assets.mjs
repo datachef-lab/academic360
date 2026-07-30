@@ -38,6 +38,27 @@ copyDir(
   path.join(distRoot, "src/templates"),
 );
 
+// The email previews (notification masters + declaration masters) render the
+// notification-system app's EJS templates. In production the backend is its own
+// Docker image built from `turbo prune --scope=backend`, which does NOT include
+// apps/notification-system — so a monorepo-relative lookup resolves to nothing
+// and every preview degrades to "no preview". Bundle the templates into the
+// backend's own dist so resolution never depends on a sibling app's filesystem.
+// (In the Docker build the sibling source is absent here; apps/backend/Dockerfile
+// copies the same directory into the same dist location from the pruner stage.)
+const notificationTemplatesDest = path.join(distRoot, "notification-templates");
+for (const candidate of [
+  // Docker: staged into the backend app dir before the build.
+  path.join(appRoot, "notification-templates"),
+  // Monorepo checkout (local, dev, staging).
+  path.resolve(appRoot, "../notification-system/src/templates"),
+]) {
+  if (fs.existsSync(candidate)) {
+    copyDir(candidate, notificationTemplatesDest);
+    break;
+  }
+}
+
 const seedSrcDir = path.join(
   appRoot,
   "src/features/notifications-console/seed",

@@ -19,6 +19,7 @@ import { runRegistrationYearDriftMigration } from "@/features/subject-selection/
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
+import { loadDefaultDocuments } from "@/features/academics/services/document.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -96,6 +97,14 @@ const MIGRATIONS: Migration[] = [
     // See legacy-fees-amount-heal.service.ts for the exact rule.
     name: "legacy-fees-amount-heal",
     run: async () => runLegacyFeesAmountHeal({ commit: true, sampleLimit: 20 }),
+  },
+  {
+    // Seeds document_types and back-fills the classification columns on the
+    // six upload rows that predate the documents module. Marker-guarded, so
+    // unlike the state-based migrations above it runs on exactly one boot —
+    // a type an admin later renames, edits or deletes must stay that way.
+    name: "document-types-seed",
+    run: async () => loadDefaultDocuments(),
   },
 ];
 
