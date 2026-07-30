@@ -503,13 +503,34 @@ export const documentDomainEnum = pgEnum("document_domain", [
 export const documentCategoryEnum = pgEnum("document_category", [
     "EXAM_LINKED",
     "ADMINISTRATIVE",
-    "STUDENT_UPLOAD",
+    "UPLOAD",
     "SYSTEM_GENERATED",
 ]);
 
 export const documentBatchReceiptModeEnum = pgEnum("document_batch_receipt_mode", [
     "EXAM_LINKED",
     "ADMINISTRATIVE",
+]);
+
+export const serviceRequestMasterTypeEnum = pgEnum("service_request_master_type", [
+    "ADMISSION",
+    "EXAM",
+    "LIBRARY",
+    "BATCH",
+    "FEES",
+    "DOCUMENT",
+]);
+
+export const serviceRequestFlowTypeEnum = pgEnum("service_request_flow_type", [
+    "OPENED",
+    "IN_PROGRESS",
+    "CLOSED",
+]);
+
+export const serviceRequestFlowConclusionEnum = pgEnum("service_request_flow_conclusion", [
+    "PENDING",
+    "APPROVED",
+    "REJECTED",
 ]);
 
 export const documentLedgerStatusEnum = pgEnum("document_ledger_status", [

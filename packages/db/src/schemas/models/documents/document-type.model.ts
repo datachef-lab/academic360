@@ -10,10 +10,11 @@ export const documentTypeModel = pgTable("document_types", {
     description: varchar({ length: 255 }),
     issuingAuthority:  issuingAuthorityEnum(),
     category: documentCategoryEnum().default("ADMINISTRATIVE").notNull(),
-    eligibilityRule: documentEligibilityRuleEnum(),
+    eligibilityRule: documentEligibilityRuleEnum(), // Should only be set if the category is of type "EXAM_LINKED"
     requiresFeeClearance: boolean().notNull().default(false),
     requiresLibraryClearance: boolean().notNull().default(false),
     isRecurring: boolean().notNull().default(false),
+    isAvailableForServiceRequest: boolean().notNull().default(false),
     sequence: integer().unique(),
     isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
