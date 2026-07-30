@@ -1,6 +1,13 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
-import { LayoutDashboard, BarChart2, ScrollText, ListTree, FileSignature } from "lucide-react";
+import {
+  LayoutDashboard,
+  BarChart2,
+  ScrollText,
+  ListTree,
+  FileSignature,
+  FileText,
+} from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
 const quickLinks = [
@@ -8,10 +15,12 @@ const quickLinks = [
   { title: "Reports", url: "/dashboard/document-issuance/reports", icon: BarChart2 },
 ];
 
-// Document Types / Issuance Templates / Issuance Logs are still placeholder
-// screens, so they are hidden from the nav for now. Their routes remain
-// registered — restore the entries here once the pages are built.
 const mastersLinks = [
+  {
+    title: "Document Type",
+    url: "/dashboard/document-issuance/types",
+    icon: FileText,
+  },
   {
     title: "Certificate Type",
     url: "/dashboard/document-issuance/certificate-master",
