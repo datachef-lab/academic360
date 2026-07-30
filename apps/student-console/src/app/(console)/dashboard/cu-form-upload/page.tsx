@@ -493,7 +493,7 @@ export default function CUFormUploadPage() {
                     to notify us. It is advised to submit the form using your institutional email ID
                     only.
                     <a
-                      href="https://docs.google.com/forms/d/e/1FAIpQLScwVkcMABpAExw-6TZwtMfdKycygF9DzCJhX1GAkum3ajoP7w/viewform?pli=1"
+                      href="https://docs.google.com/forms/d/e/1FAIpQLSccgC27RhIHZR6tNXTLOREur1hNX2kHUyxuo6MX_9txEu4SeQ/viewform"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="ml-1 text-blue-700 underline hover:text-blue-900 font-semibold  cursor-pointer"
