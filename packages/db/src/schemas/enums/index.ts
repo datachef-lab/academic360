@@ -488,6 +488,18 @@ export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [
     "REISSUED",
 ]);
 
+export const documentContextEnum = pgEnum("document_context", [
+    "PRE_ADMISSION",
+    "POST_ADMISSION",
+    "ENROLMENT",
+    "PRE_CU_REGISTRATION",
+    "POST_CU_REGISTRATION",
+    "EXAM",
+    "FEES",
+    "LIBRARY",
+    "OTHER",
+]);
+
 export const declarationMasterContextEnum = pgEnum("declaration_master_context", [
     "ADMISSION",
     "EXAM",
@@ -495,6 +507,13 @@ export const declarationMasterContextEnum = pgEnum("declaration_master_context",
     "LIBRARY",
     "OTHER",
 ]);
+
+export const documentCategoryEnum = pgEnum("document_category", [
+    "EXAM_LINKED",
+    "ADMINISTRATIVE",
+]);
+
+
 /**
  * Where a subject-selection meta draws its selectable subject options from.
  *
