@@ -1,6 +1,6 @@
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
-import { documentModel } from "@repo/db/schemas/models/academics";
+import { documentTypeModel } from "@repo/db/schemas/models/documents";
 import { db } from "@/db/index.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { eq } from "drizzle-orm";
@@ -18,7 +18,9 @@ export const createDocumentMetadata = async (
 ) => {
   try {
     console.log(req.body);
-    const newDocumentModel = await db.insert(documentModel).values(req.body);
+    const newDocumentModel = await db
+      .insert(documentTypeModel)
+      .values(req.body);
     console.log("New Document added", newDocumentModel);
     res
       .status(201)
@@ -38,7 +40,7 @@ export const getAllDocumentsMetadata = async (
 ) => {
   try {
     console.log(req.body);
-    const getAllDocumentsMetadata = await db.select().from(documentModel);
+    const getAllDocumentsMetadata = await db.select().from(documentTypeModel);
     res
       .status(200)
       .json(
@@ -70,8 +72,8 @@ export const getDocumentMetadataById = async (
 
     const document = await db
       .select()
-      .from(documentModel)
-      .where(eq(documentModel.id, +id))
+      .from(documentTypeModel)
+      .where(eq(documentTypeModel.id, +id))
       .then((documents) => documents[0]);
 
     if (!document) {
@@ -105,8 +107,8 @@ export const getDocumentMetadataByName = async (
     console.log(name);
     const document = await db
       .select()
-      .from(documentModel)
-      .where(eq(documentModel.name, name as string))
+      .from(documentTypeModel)
+      .where(eq(documentTypeModel.name, name as string))
       .then((documents) => documents[0]);
 
     if (!document) {
@@ -142,8 +144,8 @@ export const updateDocumentMetadata = async (
 
     const existingDocument = await db
       .select()
-      .from(documentModel)
-      .where(eq(documentModel.id, +id))
+      .from(documentTypeModel)
+      .where(eq(documentTypeModel.id, +id))
       .then((documents) => documents[0]);
 
     if (!existingDocument) {
@@ -152,9 +154,9 @@ export const updateDocumentMetadata = async (
     }
 
     const updatedDocument = await db
-      .update(documentModel)
+      .update(documentTypeModel)
       .set(updatedData)
-      .where(eq(documentModel.id, +id))
+      .where(eq(documentTypeModel.id, +id))
       .returning();
 
     if (updatedDocument.length > 0) {
@@ -186,8 +188,8 @@ export const deleteDocumentMetadata = async (
     const { id } = req.params;
     console.log(id);
     const deletedDocument = await db
-      .delete(documentModel)
-      .where(eq(documentModel.id, +id))
+      .delete(documentTypeModel)
+      .where(eq(documentTypeModel.id, +id))
       .returning();
 
     if (deletedDocument.length > 0) {

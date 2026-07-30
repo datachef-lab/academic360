@@ -34,8 +34,8 @@ export const documentBatchReceiptModel = pgTable("document_batch_receipts", {
     documentsReceivedBy: integer("documents_received_by_user_id_fk")
         .references(() => userModel.id), // If documents from the university are received by a user, this field will be populated
     documentsReceivedAt: timestamp({ withTimezone: true }), // If documents from the university are received by a user, this field will be populated
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createDocumentBatchReceiptModel = createInsertSchema(documentBatchReceiptModel);

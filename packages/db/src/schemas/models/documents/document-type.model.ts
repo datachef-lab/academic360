@@ -14,11 +14,12 @@ export const documentTypeModel = pgTable("document_types", {
     requiresFeeClearance: boolean().notNull().default(false),
     requiresLibraryClearance: boolean().notNull().default(false),
     isRecurring: boolean().notNull().default(false),
-    isAvailableForServiceRequest: boolean().notNull().default(false),
     sequence: integer().unique(),
     isActive: boolean().default(true),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    bgColor: varchar({length: 255}),
+    textColor: varchar({length: 255}),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createDocumentTypeModel = createInsertSchema(documentTypeModel);

@@ -512,27 +512,6 @@ export const documentBatchReceiptModeEnum = pgEnum("document_batch_receipt_mode"
     "ADMINISTRATIVE",
 ]);
 
-export const serviceRequestMasterTypeEnum = pgEnum("service_request_master_type", [
-    "ADMISSION",
-    "EXAM",
-    "LIBRARY",
-    "BATCH",
-    "FEES",
-    "DOCUMENT",
-]);
-
-export const serviceRequestFlowTypeEnum = pgEnum("service_request_flow_type", [
-    "OPENED",
-    "IN_PROGRESS",
-    "CLOSED",
-]);
-
-export const serviceRequestFlowConclusionEnum = pgEnum("service_request_flow_conclusion", [
-    "PENDING",
-    "APPROVED",
-    "REJECTED",
-]);
-
 export const documentLedgerStatusEnum = pgEnum("document_ledger_status", [
     "UPLOADED", // Document uploaded to the system.
     "PENDING", // Document physically available at counter, not yet collected. Never expires.

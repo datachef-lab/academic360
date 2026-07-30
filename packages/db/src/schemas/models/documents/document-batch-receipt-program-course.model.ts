@@ -6,7 +6,7 @@ import { z } from "zod";
 import { programCourseModel } from "../course-design";
 import { documentBatchReceiptModel } from "./document-batch-receipt.model";
 
-export const documentBatchReceiptProgramCourseModel = pgTable("document_batch_receipt_program_course", {
+export const documentBatchReceiptProgramCourseModel = pgTable("document_batch_receipt_program_courses", {
     id: serial().primaryKey(),
     documentBatchReceiptId: integer("document_batch_receipt_id_fk")
         .references(() => documentBatchReceiptModel.id)

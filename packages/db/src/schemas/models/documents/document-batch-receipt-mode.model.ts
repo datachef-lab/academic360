@@ -4,12 +4,13 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 import { documentBatchReceiptModeEnum } from "@/schemas/enums";
-import { documentTypeModel } from "./document-type.model";
+import { documentBatchReceiptModel } from "./document-batch-receipt.model";
 
-export const documentBatchReceiptModeModel = pgTable("document_batch_receipt_mode", {
+
+export const documentBatchReceiptModeModel = pgTable("document_batch_receipt_modes", {
     id: serial().primaryKey(),
     documentBatchReceiptModeId: integer("document_batch_receipt_id_fk")
-        .references(() => documentTypeModel.id)
+        .references(() => documentBatchReceiptModel.id)
         .notNull(),
     mode: documentBatchReceiptModeEnum().default("ADMINISTRATIVE").notNull(),
     isEnabled: boolean().default(false),

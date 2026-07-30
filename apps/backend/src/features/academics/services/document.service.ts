@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { documentModel, DocumentT } from "@repo/db/schemas";
+import { documentTypeModel, DocumentTypeT } from "@repo/db/schemas";
 import "dotenv/config";
 import { ilike } from "drizzle-orm";
 import { promises as fs } from "fs";
@@ -17,13 +17,46 @@ interface ScanExistingMarksheetFilesByRollNumbrProps {
   semester: number;
 }
 
-const defaultDocuments: DocumentT[] = [
-  { name: "Class XII Marksheet", description: "Class XII Marksheet" },
-  { name: "Aadhaar Card", description: "Aadhaar Card" },
-  { name: "APAAR ID Card", description: "APAAR ID Card" },
-  { name: "Father Photo ID", description: "Father Photo ID" },
-  { name: "Mother Photo ID", description: "Mother Photo ID" },
-  { name: "EWS Certificate", description: "EWS Certificate" },
+// `bgColor`/`textColor` are NOT NULL with no DB default on document_types, so
+// every seeded row must carry a pair. These follow the same Tailwind-ish
+// palette the certificate masters use (light bg + darker text of the same hue).
+const defaultDocuments: DocumentTypeT[] = [
+  {
+    name: "Class XII Marksheet",
+    description: "Class XII Marksheet",
+    bgColor: "#DBEAFE",
+    textColor: "#1D4ED8",
+  },
+  {
+    name: "Aadhaar Card",
+    description: "Aadhaar Card",
+    bgColor: "#FEF3C7",
+    textColor: "#B45309",
+  },
+  {
+    name: "APAAR ID Card",
+    description: "APAAR ID Card",
+    bgColor: "#CCFBF1",
+    textColor: "#0F766E",
+  },
+  {
+    name: "Father Photo ID",
+    description: "Father Photo ID",
+    bgColor: "#EDE9FE",
+    textColor: "#6D28D9",
+  },
+  {
+    name: "Mother Photo ID",
+    description: "Mother Photo ID",
+    bgColor: "#FCE7F3",
+    textColor: "#BE185D",
+  },
+  {
+    name: "EWS Certificate",
+    description: "EWS Certificate",
+    bgColor: "#DCFCE7",
+    textColor: "#15803D",
+  },
 ];
 
 function marksheetS3Key(
@@ -60,10 +93,10 @@ export async function loadDefaultDocuments() {
   for (const document of defaultDocuments) {
     const existingDocument = await db
       .select()
-      .from(documentModel)
-      .where(ilike(documentModel.name, document.name));
+      .from(documentTypeModel)
+      .where(ilike(documentTypeModel.name, document.name));
     if (existingDocument.length === 0) {
-      await db.insert(documentModel).values(document);
+      await db.insert(documentTypeModel).values(document);
     }
   }
 }

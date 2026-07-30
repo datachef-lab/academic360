@@ -1219,6 +1219,13 @@
       "when": 1785228612043,
       "tag": "0174_kind_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1785403141514,
+      "tag": "0175_loud_firelord",
+      "breakpoints": true
     }
   ]
 }
