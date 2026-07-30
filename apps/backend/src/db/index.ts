@@ -58,7 +58,7 @@ export const connectToDatabase = async () => {
     // loadCourseType();
     // loadRegulationType();
     // loadDefaultOtpNotificationMasters();
-    // loadDefaultDocuments();
+    // loadDefaultDocuments(); -> now runs via boot-migrations.ts (marker-guarded)
     // Clear existing duplicates and load fresh metas (only in development)
 
     // loadDefaultSubjectSelectionMetas();
