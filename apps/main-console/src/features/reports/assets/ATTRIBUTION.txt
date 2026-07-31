@@ -1,0 +1,14 @@
+export-filters-illustration.svg
+  "Filter" (Cuate style) by Storyset
+  https://storyset.com/illustration/filter/cuate
+  Source SVG: https://stories.freepiklabs.com/storage/37364/Filter_Mesa-de-trabajo-1.svg
+
+  Freepik License: free for commercial and personal use, modifications allowed,
+  attribution required. Storyset asks that the credit link be kept wherever the
+  illustration is shown or, failing that, recorded alongside the asset.
+
+  Local modifications: the single accent colour (#FFC727) was replaced with
+  rgb(var(--brand-400)) so the artwork follows the environment palette (purple
+  in production, blue in staging, navy in development), and the viewBox was
+  trimmed to the artwork bounds and windowed ("63 24 260 440") so the tall rail
+  crops onto the figure and funnel.
