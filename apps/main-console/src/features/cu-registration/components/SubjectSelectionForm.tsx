@@ -520,7 +520,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           const arr = selections[other.metaId] ?? [];
           for (let i = 0; i < arr.length; i++) {
             if (other.metaId === v.metaId && i === slotIdx) continue;
-            if (arr[i]) heldBySiblingContinuations.push(arr[i]);
+            // Bind before pushing: `if (arr[i])` does not narrow an indexed
+            // access, so pushing arr[i] straight in is a string | undefined.
+            const held = arr[i];
+            if (held) heldBySiblingContinuations.push(held);
           }
         }
         return convertToComboboxData(
