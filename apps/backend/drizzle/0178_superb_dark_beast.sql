@@ -1,0 +1,3 @@
+ALTER TABLE "cu_registration_document_uploads" ADD COLUMN "document_ledger_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "cu_registration_document_uploads" ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk" FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "cu_registration_document_uploads" ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_unique" UNIQUE("document_ledger_id_fk");

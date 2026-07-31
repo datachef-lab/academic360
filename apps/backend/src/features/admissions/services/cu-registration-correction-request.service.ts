@@ -69,6 +69,10 @@ import { getCuRegPdfPathDynamic } from "./cu-registration-document-path.service.
 import { getSignedUrlForFile } from "@/services/s3.service.js";
 import axios from "axios";
 import { UserDto } from "@repo/db/index.js";
+import {
+  deleteCuRegUploadLedgerEntry,
+  upsertCuRegUploadLedgerEntry,
+} from "@/features/documents/services/document-ledger.service.js";
 
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
@@ -1376,7 +1380,36 @@ export async function updateCuRegistrationCorrectionRequest(
     if (Array.isArray(docs) && docs.length > 0) {
       for (const d of docs) {
         if (!d?.documentId) continue;
-        // Replace existing record for this request+documentId with latest metadata
+        // Replace existing record for this request+documentId with latest metadata.
+        // This is a hard delete + insert, so the row id changes — the passbook
+        // entry has to be dropped with the old row and recreated for the new one,
+        // or the FK would be left pointing at a deleted upload.
+        const [outgoing] = await tx
+          .select({
+            id: cuRegistrationDocumentUploadModel.id,
+            documentLedgerId:
+              cuRegistrationDocumentUploadModel.documentLedgerId,
+          })
+          .from(cuRegistrationDocumentUploadModel)
+          .where(
+            and(
+              eq(
+                cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+                id,
+              ),
+              eq(cuRegistrationDocumentUploadModel.documentId, d.documentId),
+            ),
+          )
+          .limit(1);
+
+        if (outgoing) {
+          await deleteCuRegUploadLedgerEntry(
+            outgoing.id,
+            outgoing.documentLedgerId,
+            tx,
+          );
+        }
+
         await tx
           .delete(cuRegistrationDocumentUploadModel)
           .where(
@@ -1389,16 +1422,30 @@ export async function updateCuRegistrationCorrectionRequest(
             ),
           );
 
-        await tx.insert(cuRegistrationDocumentUploadModel).values({
-          cuRegistrationCorrectionRequestId: id,
-          documentId: d.documentId,
-          fileName: d.fileName ?? null,
-          fileType: d.fileType ?? null,
-          fileSize: (d as any).fileSize ?? null,
-          path: (d as any).path ?? null,
-          documentUrl: (d as any).documentUrl ?? null,
-          remarks: d.remarks ?? null,
-        });
+        const [reinserted] = await tx
+          .insert(cuRegistrationDocumentUploadModel)
+          .values({
+            cuRegistrationCorrectionRequestId: id,
+            documentId: d.documentId,
+            fileName: d.fileName ?? null,
+            fileType: d.fileType ?? null,
+            fileSize: (d as any).fileSize ?? null,
+            path: (d as any).path ?? null,
+            documentUrl: (d as any).documentUrl ?? null,
+            remarks: d.remarks ?? null,
+          })
+          .returning();
+
+        if (reinserted) {
+          await upsertCuRegUploadLedgerEntry(
+            {
+              ...reinserted,
+              studentId: existing.studentId,
+              academicYearId: existing.academicYearId ?? null,
+            },
+            tx,
+          );
+        }
       }
     }
 

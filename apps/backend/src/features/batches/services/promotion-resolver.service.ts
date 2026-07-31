@@ -1,5 +1,6 @@
 import { db } from "@/db/index.js";
 import { promotionModel } from "@repo/db/schemas/models/batches";
+import { sessionModel } from "@repo/db/schemas/models/academics";
 import { and, eq, sql } from "drizzle-orm";
 
 /**
@@ -90,4 +91,35 @@ export async function resolvePromotionForDate(
     .limit(1);
 
   return latest ? { promotionId: latest.id, matchedBy: "fallback" } : null;
+}
+
+/**
+ * The promotion a student held in a given academic year.
+ *
+ * Preferred over {@link resolvePromotionForDate} whenever the source row carries
+ * an explicit academic year — CU registration correction requests do, which is
+ * why every one of their 15,295 uploads resolves without needing the date grace.
+ *
+ * A student holds one promotion per SEMESTER, so a year yields two candidates;
+ * `class_id ASC` picks the odd/first semester, matching the ID card rule.
+ */
+export async function resolvePromotionForAcademicYear(
+  studentId: number,
+  academicYearId: number,
+): Promise<ResolvedPromotion | null> {
+  const [row] = await db
+    .select({ id: promotionModel.id })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .where(
+      and(
+        eq(promotionModel.studentId, studentId),
+        eq(sessionModel.academicYearId, academicYearId),
+        NON_DEPRECATED_PROMOTION_SQL,
+      ),
+    )
+    .orderBy(sql`${promotionModel.classId} ASC`, sql`${promotionModel.id} ASC`)
+    .limit(1);
+
+  return row ? { promotionId: row.id, matchedBy: "window" } : null;
 }

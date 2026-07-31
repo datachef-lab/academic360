@@ -1240,6 +1240,13 @@
       "when": 1785477715993,
       "tag": "0177_complete_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 178,
+      "version": "7",
+      "when": 1785481510938,
+      "tag": "0178_superb_dark_beast",
+      "breakpoints": true
     }
   ]
 }

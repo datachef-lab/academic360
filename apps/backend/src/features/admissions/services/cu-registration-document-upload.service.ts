@@ -11,6 +11,28 @@ import {
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { ApiError } from "@/utils/index.js";
 import JSZip from "jszip";
+import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions";
+import {
+  deleteCuRegUploadLedgerEntry,
+  refreshCuRegUploadLedgerEntry,
+  upsertCuRegUploadLedgerEntry,
+} from "@/features/documents/services/document-ledger.service.js";
+
+/**
+ * The upload row has no student or academic year of its own — both live on the
+ * parent correction request, which is the join every ledger write needs.
+ */
+async function loadRequestOwner(correctionRequestId: number) {
+  const [req] = await db
+    .select({
+      studentId: cuRegistrationCorrectionRequestModel.studentId,
+      academicYearId: cuRegistrationCorrectionRequestModel.academicYearId,
+    })
+    .from(cuRegistrationCorrectionRequestModel)
+    .where(eq(cuRegistrationCorrectionRequestModel.id, correctionRequestId))
+    .limit(1);
+  return req ?? null;
+}
 
 // CREATE
 export async function createCuRegistrationDocumentUpload(
@@ -48,6 +70,19 @@ export async function createCuRegistrationDocumentUpload(
       })
       .where(eq(cuRegistrationDocumentUploadModel.id, (existing as any).id))
       .returning();
+
+    // A re-upload replaces the file in place — same row id — so the passbook
+    // entry is refreshed, not duplicated. If the row predates the ledger (or its
+    // entry was skipped), create one now.
+    if (updated!.documentLedgerId != null) {
+      await refreshCuRegUploadLedgerEntry(updated!);
+    } else {
+      const owner = await loadRequestOwner(
+        updated!.cuRegistrationCorrectionRequestId,
+      );
+      if (owner) await upsertCuRegUploadLedgerEntry({ ...updated!, ...owner });
+    }
+
     return await modelToDto(updated);
   }
 
@@ -55,6 +90,11 @@ export async function createCuRegistrationDocumentUpload(
     .insert(cuRegistrationDocumentUploadModel)
     .values(documentData)
     .returning();
+
+  const owner = await loadRequestOwner(
+    created!.cuRegistrationCorrectionRequestId,
+  );
+  if (owner) await upsertCuRegUploadLedgerEntry({ ...created!, ...owner });
 
   return await modelToDto(created);
 }
@@ -166,6 +206,9 @@ export async function updateCuRegistrationDocumentUpload(
 
   if (!updatedDocument) return null;
 
+  // Keep the passbook entry's link in step with the file it points at.
+  await refreshCuRegUploadLedgerEntry(updatedDocument);
+
   return await modelToDto(updatedDocument);
 }
 
@@ -173,9 +216,23 @@ export async function updateCuRegistrationDocumentUpload(
 export async function deleteCuRegistrationDocumentUpload(
   id: number,
 ): Promise<boolean> {
-  const result = await db
-    .delete(cuRegistrationDocumentUploadModel)
-    .where(eq(cuRegistrationDocumentUploadModel.id, id));
+  const [existing] = await db
+    .select({
+      id: cuRegistrationDocumentUploadModel.id,
+      documentLedgerId: cuRegistrationDocumentUploadModel.documentLedgerId,
+    })
+    .from(cuRegistrationDocumentUploadModel)
+    .where(eq(cuRegistrationDocumentUploadModel.id, id))
+    .limit(1);
+
+  // The FK lives on the upload row, so the ledger entry has to be cleared and
+  // deleted together with it or it orphans.
+  const result = await db.transaction(async (tx) => {
+    await deleteCuRegUploadLedgerEntry(id, existing?.documentLedgerId, tx);
+    return await tx
+      .delete(cuRegistrationDocumentUploadModel)
+      .where(eq(cuRegistrationDocumentUploadModel.id, id));
+  });
 
   return (result.rowCount ?? 0) > 0;
 }
@@ -184,14 +241,32 @@ export async function deleteCuRegistrationDocumentUpload(
 export async function deleteCuRegistrationDocumentUploadsByRequestId(
   requestId: number,
 ): Promise<boolean> {
-  const result = await db
-    .delete(cuRegistrationDocumentUploadModel)
+  const existing = await db
+    .select({
+      id: cuRegistrationDocumentUploadModel.id,
+      documentLedgerId: cuRegistrationDocumentUploadModel.documentLedgerId,
+    })
+    .from(cuRegistrationDocumentUploadModel)
     .where(
       eq(
         cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
         requestId,
       ),
     );
+
+  const result = await db.transaction(async (tx) => {
+    for (const row of existing) {
+      await deleteCuRegUploadLedgerEntry(row.id, row.documentLedgerId, tx);
+    }
+    return await tx
+      .delete(cuRegistrationDocumentUploadModel)
+      .where(
+        eq(
+          cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+          requestId,
+        ),
+      );
+  });
 
   return (result.rowCount ?? 0) > 0;
 }

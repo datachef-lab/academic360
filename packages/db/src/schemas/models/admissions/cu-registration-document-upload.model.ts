@@ -4,6 +4,7 @@ import { cuRegistrationCorrectionRequestModel } from "./cu-registration-correcti
 import z from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { documentTypeModel } from "../documents";
+import { documentLedgerModel } from "../documents/document-ledger.model";
 
 
 export const cuRegistrationDocumentUploadModel = pgTable("cu_registration_document_uploads", {
@@ -18,6 +19,13 @@ export const cuRegistrationDocumentUploadModel = pgTable("cu_registration_docume
     fileType: varchar("file_type", { length: 255 }),
     fileSize: integer("file_size"),
     remarks: text("remarks"),
+    // The upload's entry in the student's document passbook. Mirrors the pattern
+    // used by id_card_issues: the source row is the system of record and the
+    // ledger row is its projection, so the link lives here and document_ledger
+    // stays generic across flows.
+    documentLedgerId: integer("document_ledger_id_fk")
+        .references(() => documentLedgerModel.id)
+        .unique(),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

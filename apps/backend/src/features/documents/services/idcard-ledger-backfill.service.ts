@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { createLogger } from "@/config/logger.js";
 import { idCardIssueModel } from "@repo/db/schemas/models/idcard";
-import { asc, isNull } from "drizzle-orm";
+import { asc, eq, isNull } from "drizzle-orm";
 import { upsertIdCardLedgerEntry } from "./document-ledger.service.js";
 
 const log = createLogger("idcard-ledger-backfill");
@@ -49,10 +49,22 @@ export async function runIdCardLedgerBackfill(): Promise<
     let progressedThisBatch = 0;
     for (const issue of pending) {
       try {
-        const ledgerId = await upsertIdCardLedgerEntry(issue);
+        // Lock the source row and re-check inside the transaction — two
+        // instances booting together would otherwise both insert a ledger row
+        // for the same card and orphan the loser's.
+        const ledgerId = await db.transaction(async (tx) => {
+          const [locked] = await tx
+            .select({ documentLedgerId: idCardIssueModel.documentLedgerId })
+            .from(idCardIssueModel)
+            .where(eq(idCardIssueModel.id, issue.id))
+            .for("update");
+
+          if (!locked || locked.documentLedgerId != null) return null;
+          return await upsertIdCardLedgerEntry(issue, tx);
+        });
         if (ledgerId == null) {
-          // No promotion to hang it off. Counted, not retried forever — it stays
-          // NULL, so it is picked up automatically once a promotion exists.
+          // Either no promotion to hang it off, or another runner claimed the
+          // row first. Left NULL so it is retried rather than mis-written.
           skippedNoPromotion++;
         } else {
           linked++;

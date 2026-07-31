@@ -15,12 +15,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createLogger } from "@/config/logger.js";
+import { pool } from "@/db/index.js";
 import { runRegistrationYearDriftMigration } from "@/features/subject-selection/services/registration-year-drift-migration.service.js";
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
 import { loadDefaultDocuments } from "@/features/academics/services/document.service.js";
 import { runIdCardLedgerBackfill } from "@/features/documents/services/idcard-ledger-backfill.service.js";
+import { runCuRegUploadLedgerBackfill } from "@/features/documents/services/cureg-upload-ledger-backfill.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -115,13 +117,76 @@ const MIGRATIONS: Migration[] = [
     name: "idcard-ledger-backfill",
     run: async () => runIdCardLedgerBackfill(),
   },
+  {
+    // Same treatment for the documents students upload during CU registration.
+    // State-based for the same reason: the rows are derived from
+    // cu_registration_document_uploads, so re-deriving them is always correct.
+    name: "cureg-upload-ledger-backfill",
+    run: async () => runCuRegUploadLedgerBackfill(),
+  },
 ];
+
+/**
+ * Advisory-lock key for the whole boot-migration run.
+ *
+ * Production runs MULTIPLE backend instances, and every one of them calls this
+ * on startup. Without a lock they interleave: two instances both see the same
+ * "work item" (a NULL FK, a missing marker), both act on it, and the loser's
+ * write is duplicated or orphaned. That is not theoretical — it produced 2,412
+ * orphaned document_ledger rows on dev when a manual backfill overlapped a boot.
+ *
+ * `pg_try_advisory_lock` returns immediately rather than queueing: the instance
+ * that wins runs the migrations, the others skip and move on with their startup.
+ * Nothing is lost — every migration here is state-based or marker-guarded, so
+ * whatever the winner does not finish is picked up on the next boot.
+ *
+ * The lock is session-scoped, so it is released automatically if an instance
+ * crashes mid-run. Arbitrary but fixed constant; do not reuse it elsewhere.
+ */
+const BOOT_MIGRATION_ADVISORY_LOCK_KEY = 918360001;
 
 export async function runBootMigrations(): Promise<void> {
   if ((process.env.BACKEND_BOOT_MIGRATIONS ?? "").toLowerCase() === "off") {
     log.info("BACKEND_BOOT_MIGRATIONS=off — skipping boot migrations");
     return;
   }
+
+  // Held on a dedicated connection for the whole run — advisory locks belong to
+  // a session, so it must be the same client that unlocks.
+  const lockClient = await pool.connect();
+  let holdsLock = false;
+  try {
+    const res = await lockClient.query<{ locked: boolean }>(
+      "SELECT pg_try_advisory_lock($1) AS locked",
+      [BOOT_MIGRATION_ADVISORY_LOCK_KEY],
+    );
+    holdsLock = res.rows[0]?.locked === true;
+
+    if (!holdsLock) {
+      log.info(
+        "another instance is running boot migrations — skipping (they are state-based; the next boot picks up anything unfinished)",
+      );
+      return;
+    }
+
+    await runMigrationList();
+  } finally {
+    if (holdsLock) {
+      await lockClient
+        .query("SELECT pg_advisory_unlock($1)", [
+          BOOT_MIGRATION_ADVISORY_LOCK_KEY,
+        ])
+        .catch((err) =>
+          log.warn(
+            `failed to release the boot-migration advisory lock: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+    }
+    lockClient.release();
+  }
+}
+
+async function runMigrationList(): Promise<void> {
   for (const m of MIGRATIONS) {
     const started = Date.now();
     try {
