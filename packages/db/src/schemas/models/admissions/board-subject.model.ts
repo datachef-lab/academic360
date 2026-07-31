@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { boolean, doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { boolean, doublePrecision, integer, pgTable, serial, timestamp, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
 
@@ -19,7 +19,16 @@ export const boardSubjectModel = pgTable("board_subjects", {
     isActive: boolean().default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+    // (board, subject) is the natural key. Nothing enforced it, and the
+    // per-student legacy importer inserted a fresh row whenever the legacy
+    // mapping lookup fell through — 14,307 rows for 661 real pairs. The app
+    // guards this now too, but the constraint is what makes it impossible.
+    uniqueBoardSubject: unique("board_subjects_board_id_fk_board_subject_name_id_fk_unique").on(
+        t.boardId,
+        t.boardSubjectNameId,
+    ),
+}));
 
 export const createBoardSubjects = createInsertSchema(boardSubjectModel);
 

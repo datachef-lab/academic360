@@ -40,6 +40,7 @@ const BoardSubjectForm = ({
   isLoading,
   boardOptions,
   boardSubjectNameOptions,
+  existingMappings,
 }: {
   initialData: BoardSubjectDto | null;
   onSubmit: (data: {
@@ -55,6 +56,8 @@ const BoardSubjectForm = ({
   isLoading: boolean;
   boardOptions: BoardDto[];
   boardSubjectNameOptions: BoardSubjectNameDto[];
+  /** Current page of mappings, used to warn before hitting the unique constraint. */
+  existingMappings: BoardSubjectDto[];
 }) => {
   const [formData, setFormData] = React.useState({
     boardId: initialData?.boardId || 0,
@@ -91,8 +94,25 @@ const BoardSubjectForm = ({
     }
   }, [initialData]);
 
+  /**
+   * (board, subject) is unique in the database now. Catch it here so the user
+   * gets a clear message instead of a raw constraint violation.
+   */
+  const duplicateOf = React.useMemo(() => {
+    if (!formData.boardId || !formData.boardSubjectNameId) return null;
+    return (
+      existingMappings.find(
+        (m) =>
+          m.board?.id === formData.boardId &&
+          m.boardSubjectName?.id === formData.boardSubjectNameId &&
+          m.id !== initialData?.id,
+      ) ?? null
+    );
+  }, [formData.boardId, formData.boardSubjectNameId, existingMappings, initialData?.id]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (duplicateOf) return;
     onSubmit({
       boardId: formData.boardId,
       boardSubjectNameId: formData.boardSubjectNameId,
@@ -139,6 +159,13 @@ const BoardSubjectForm = ({
           />
         </div>
       </div>
+
+      {duplicateOf && (
+        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          This board and subject are already mapped. Edit that row instead — a board can only map a
+          subject once.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -199,7 +226,7 @@ const BoardSubjectForm = ({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading || !!duplicateOf}>
           {isLoading ? "Saving..." : initialData ? "Update" : "Create"}
         </Button>
       </div>
@@ -228,9 +255,13 @@ export default function BoardSubjectPage() {
     () => allBoards.filter((b) => b.isActive !== false),
     [allBoards],
   );
-  const [boardSubjectNameOptions, setBoardSubjectNameOptions] = React.useState<
-    BoardSubjectNameDto[]
-  >([]);
+  const [allBoardSubjectNames, setAllBoardSubjectNames] = React.useState<BoardSubjectNameDto[]>([]);
+
+  /** Retired subject names stay in the DB for historical rows but are not offered. */
+  const boardSubjectNameOptions = React.useMemo(
+    () => allBoardSubjectNames.filter((n) => (n as { isActive?: boolean }).isActive !== false),
+    [allBoardSubjectNames],
+  );
   const [degreeOptions, setDegreeOptions] = React.useState<DegreeDto[]>([]);
 
   // Pagination state
@@ -252,7 +283,7 @@ export default function BoardSubjectPage() {
         degreeService.getAll(),
       ]);
       setAllBoards(boardsResult.data);
-      setBoardSubjectNameOptions(subjectNames);
+      setAllBoardSubjectNames(subjectNames);
       // Map Degree[] to DegreeDto[] by converting disabled to isActive
       const degreeDtos: DegreeDto[] = degrees.map((degree) => ({
         id: degree.id!,
@@ -498,6 +529,7 @@ export default function BoardSubjectPage() {
                 </AlertDialogHeader>
                 <BoardSubjectForm
                   boardOptions={boardOptions}
+                  existingMappings={boardSubjects}
                   boardSubjectNameOptions={boardSubjectNameOptions}
                   initialData={selectedBoardSubject}
                   onSubmit={handleSubmit}

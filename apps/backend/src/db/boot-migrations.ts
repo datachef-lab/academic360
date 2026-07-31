@@ -19,6 +19,7 @@ import { runRegistrationYearDriftMigration } from "@/features/subject-selection/
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
+import { runBoardSubjectDedupe } from "@/features/admissions/services/board-subject-dedupe.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -96,6 +97,14 @@ const MIGRATIONS: Migration[] = [
     // See legacy-fees-amount-heal.service.ts for the exact rule.
     name: "legacy-fees-amount-heal",
     run: async () => runLegacyFeesAmountHeal({ commit: true, sampleLimit: 20 }),
+  },
+  {
+    // Collapses duplicate board_subjects and installs the unique constraint that
+    // makes the duplication impossible. Normally migration 0175 has already done
+    // it; this self-heals a database where migrations were skipped. Takes its
+    // OWN advisory lock, so it is multi-instance safe on its own.
+    name: "board-subject-dedupe",
+    run: async () => runBoardSubjectDedupe(),
   },
 ];
 
