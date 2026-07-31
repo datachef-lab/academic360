@@ -4,7 +4,7 @@ import {
   BoardSubject,
   BoardSubjectT,
 } from "@repo/db/schemas/models/admissions/board-subject.model";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, countDistinct, eq, ilike, ne, or } from "drizzle-orm";
 import { boardModel, degreeModel } from "@repo/db/schemas/models/resources";
 // import { addressModel } from "@repo/db/schemas/models/user";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
@@ -72,6 +72,7 @@ export async function getAllBoardSubjects(
   pageSize: number = 10,
   search?: string,
   degreeId?: number,
+  boardId?: number,
 ): Promise<{
   data: BoardSubjectDto[];
   total: number;
@@ -84,12 +85,25 @@ export async function getAllBoardSubjects(
   const whereConditions = [];
 
   if (search) {
-    whereConditions.push(ilike(boardModel.name, `%${search}%`));
-    whereConditions.push(ilike(boardSubjectNameModel.name, `%${search}%`));
+    // These were pushed as two separate conditions and then AND-ed, so a search
+    // only matched when the board name AND the subject name both contained the
+    // term — i.e. almost never. The placeholder promises either.
+    whereConditions.push(
+      or(
+        ilike(boardModel.name, `%${search}%`),
+        ilike(boardSubjectNameModel.name, `%${search}%`),
+      )!,
+    );
   }
 
   if (degreeId) {
     whereConditions.push(eq(degreeModel.id, degreeId));
+  }
+
+  // Board filtering used to happen client-side over the current page of 10 rows,
+  // so picking a board that did not appear on that page returned nothing.
+  if (boardId) {
+    whereConditions.push(eq(boardSubjectModel.boardId, boardId));
   }
 
   // Get total count

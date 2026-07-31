@@ -310,23 +310,21 @@ export default function BoardSubjectPage() {
       try {
         setLoading(true);
         setError(null);
+        // Board filtering is server-side. It used to be applied to the returned
+        // page of 10 rows, so choosing a board that did not happen to appear on
+        // that page showed nothing and the total was wrong too.
         const result = await boardSubjectService.getAll(
           currentPage,
           pageSize,
           searchText,
           selectedDegreeId,
+          selectedBoardId,
         );
 
         if (!isMounted) return; // Prevent state updates if component unmounted
 
-        // Filter by board on the frontend if board is selected
-        let filteredData = result.data;
-        if (selectedBoardId) {
-          filteredData = result.data.filter((bs) => bs.boardId === selectedBoardId);
-        }
-
-        setBoardSubjects(filteredData);
-        setTotalItems(selectedBoardId ? filteredData.length : result.total);
+        setBoardSubjects(result.data);
+        setTotalItems(result.total);
       } catch (err) {
         if (!isMounted) return;
         setError(err instanceof Error ? err.message : "Failed to load board subjects");
@@ -578,7 +576,7 @@ export default function BoardSubjectPage() {
                 onChange={(e) => setSearchText(e.target.value)}
               />
               <Combobox
-                className="w-full sm:w-48"
+                className="w-full sm:w-64"
                 dataArr={[
                   { value: "all", label: "All Degrees" },
                   ...degreeOptions.map((d) => ({ value: d.id.toString(), label: d.name })),
@@ -591,7 +589,7 @@ export default function BoardSubjectPage() {
                 placeholder="Filter by Degree"
               />
               <Combobox
-                className="w-full sm:w-48"
+                className="w-full sm:w-64"
                 dataArr={[
                   { value: "all", label: "All Boards" },
                   ...boardOptions.map((b) => ({ value: b.id.toString(), label: b.name })),
