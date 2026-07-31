@@ -20,6 +20,7 @@ import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/serv
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
 import { loadDefaultDocuments } from "@/features/academics/services/document.service.js";
+import { runIdCardLedgerBackfill } from "@/features/documents/services/idcard-ledger-backfill.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -105,6 +106,14 @@ const MIGRATIONS: Migration[] = [
     // a type an admin later renames, edits or deletes must stay that way.
     name: "document-types-seed",
     run: async () => loadDefaultDocuments(),
+  },
+  {
+    // Gives every existing ID card issue its document_ledger entry. Runs after
+    // the seed above, which is what creates the ID_CARD document type. State-based
+    // (the work item is "issues with a NULL ledger FK"), so a second boot does
+    // nothing and it self-heals as the legacy sync adds rows.
+    name: "idcard-ledger-backfill",
+    run: async () => runIdCardLedgerBackfill(),
   },
 ];
 

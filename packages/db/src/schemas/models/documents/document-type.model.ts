@@ -6,6 +6,10 @@ import { z } from "zod";
 export const documentTypeModel = pgTable("document_types", {
     id: serial().primaryKey(),
     domain: documentDomainEnum().default("OTHER").notNull(),
+    // Internal, server-assigned key that code binds to (e.g. "ID_CARD"). Never
+    // surfaced in the console and never editable, so staff stay free to rename
+    // `name` without breaking a lookup. Derived from `name` on create.
+    code: varchar({ length: 64 }).notNull().unique(),
     name: varchar({ length: 255 }).notNull().unique(),
     description: varchar({ length: 255 }),
     issuingAuthority:  issuingAuthorityEnum(),

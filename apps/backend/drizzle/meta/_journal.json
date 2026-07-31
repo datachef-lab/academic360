@@ -1233,6 +1233,13 @@
       "when": 1785415990101,
       "tag": "0176_aspiring_wendell_vaughn",
       "breakpoints": true
+    },
+    {
+      "idx": 177,
+      "version": "7",
+      "when": 1785477715993,
+      "tag": "0177_complete_expediter",
+      "breakpoints": true
     }
   ]
 }

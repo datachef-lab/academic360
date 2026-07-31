@@ -28,6 +28,7 @@ import {
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
 import { sendAdmissionRegistrationNotification } from "../services/cu-registration-correction-request.service.js";
 import { UserDto } from "@repo/db/index.js";
+import { DOCUMENT_TYPE_CODES } from "@/features/documents/services/document-ledger.service.js";
 
 // Configure multer for handling multiple files
 const upload = multer({
@@ -224,7 +225,9 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       }
 
       try {
-        // Look up document ID from database using document name
+        // Still matched by display name: `documentName` arrives from the client
+        // (the `documentNames` array in the request body), so this cannot move to
+        // `code` without the student console sending codes too.
         const [documentRecord] = await db
           .select()
           .from(documentTypeModel)
@@ -410,11 +413,20 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
 
           // Add the generated PDF to the document uploads table so it appears in frontend
           try {
-            // Find the PDF document type (assuming it has ID 6 or we need to create one)
+            // Bound by `code`, not display name: this used to match the literal
+            // "CU Registration PDF", so before that row was seeded the else-branch
+            // below silently skipped recording every generated PDF. `code` is
+            // server-assigned and never editable, so a console rename cannot
+            // reintroduce that.
             const [pdfDocument] = await db
               .select()
               .from(documentTypeModel)
-              .where(eq(documentTypeModel.name, "CU Registration PDF"))
+              .where(
+                eq(
+                  documentTypeModel.code,
+                  DOCUMENT_TYPE_CODES.CU_REGISTRATION_PDF,
+                ),
+              )
               .limit(1);
 
             if (pdfDocument) {

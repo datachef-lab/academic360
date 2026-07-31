@@ -13,6 +13,33 @@ import {
   scanExistingMarksheetFilesByRollNumber,
 } from "../services/document.service.js";
 
+/**
+ * `code` is the internal key that application code binds to. It is derived here
+ * rather than accepted from the client: the console never shows or sends it, and
+ * it must never change once assigned, so staff stay free to rename `name`.
+ */
+async function deriveDocumentTypeCode(name: string): Promise<string> {
+  const base =
+    name
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 64) || "DOCUMENT_TYPE";
+
+  const existing = await db
+    .select({ code: documentTypeModel.code })
+    .from(documentTypeModel);
+  const taken = new Set(existing.map((r) => r.code));
+
+  if (!taken.has(base)) return base;
+  // `code` is UNIQUE, so suffix until it is free.
+  for (let i = 2; ; i++) {
+    const candidate = `${base.slice(0, 64 - String(i).length - 1)}_${i}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
 function eligibilityRuleError(
   category: string | null | undefined,
   eligibilityRule: string | null | undefined,
@@ -30,7 +57,11 @@ export const createDocumentMetadata = async (
   next: NextFunction,
 ) => {
   try {
-    const parsed = createDocumentTypeModel.safeParse(req.body);
+    // `code` is omitted from the schema here so a client-supplied one is ignored
+    // rather than trusted.
+    const parsed = createDocumentTypeModel
+      .omit({ code: true })
+      .safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json(
         new ApiError(
@@ -55,7 +86,10 @@ export const createDocumentMetadata = async (
 
     const [newDocumentType] = await db
       .insert(documentTypeModel)
-      .values(parsed.data)
+      .values({
+        ...parsed.data,
+        code: await deriveDocumentTypeCode(parsed.data.name),
+      })
       .returning();
 
     res
@@ -183,7 +217,12 @@ export const updateDocumentMetadata = async (
   try {
     const { id } = req.params;
 
-    const parsed = createDocumentTypeModel.partial().safeParse(req.body);
+    const parsed = createDocumentTypeModel
+      .partial()
+      // `code` is immutable once assigned — drop it rather than 400, so a client
+      // echoing back a full row still updates cleanly.
+      .omit({ code: true })
+      .safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json(
         new ApiError(

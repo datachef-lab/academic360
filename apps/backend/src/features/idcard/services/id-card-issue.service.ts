@@ -18,6 +18,10 @@ import {
   userModel,
 } from "@repo/db/schemas/index.js";
 import { asc } from "drizzle-orm";
+import {
+  deleteIdCardLedgerEntry,
+  upsertIdCardLedgerEntry,
+} from "@/features/documents/services/document-ledger.service.js";
 
 export type IssueListFilters = {
   page: number;
@@ -210,11 +214,26 @@ export async function createIssue(
 
   if (!values.uidSnapshot) values.uidSnapshot = student.uid;
 
-  const [created] = await db
-    .insert(idCardIssueModel)
-    .values(values)
-    .returning({ id: idCardIssueModel.id });
-  const issueId = created.id;
+  // The issue and its passbook entry are written together: a card must never
+  // exist without a document_ledger row. The S3 uploads stay OUTSIDE this
+  // transaction so a slow network call can't hold it open.
+  const { issueId, ledgerId } = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(idCardIssueModel)
+      .values(values)
+      .returning({
+        id: idCardIssueModel.id,
+        studentId: idCardIssueModel.studentId,
+        issueDate: idCardIssueModel.issueDate,
+        issuedByUserId: idCardIssueModel.issuedByUserId,
+        frontImageUrl: idCardIssueModel.frontImageUrl,
+        createdAt: idCardIssueModel.createdAt,
+        updatedAt: idCardIssueModel.updatedAt,
+      });
+
+    const ledger = await upsertIdCardLedgerEntry(created, tx);
+    return { issueId: created.id, ledgerId: ledger };
+  });
 
   let frontImageKey: string | null = null;
   let photoImageKey: string | null = null;
@@ -253,7 +272,12 @@ export async function createIssue(
       photoImageKey = uploaded.key;
     }
   } catch (err) {
-    await db.delete(idCardIssueModel).where(eq(idCardIssueModel.id, issueId));
+    // Compensating rollback for the S3 failure — the ledger entry has to go with
+    // the issue, otherwise it orphans (the FK lives on the issue side).
+    await db.transaction(async (tx) => {
+      await deleteIdCardLedgerEntry(issueId, ledgerId, tx);
+      await tx.delete(idCardIssueModel).where(eq(idCardIssueModel.id, issueId));
+    });
     throw err;
   }
 
@@ -399,7 +423,13 @@ export async function deleteIssue(id: number) {
     .limit(1);
   if (!existing) throw new ApiError(404, "Issue not found.");
 
-  await db.delete(idCardIssueModel).where(eq(idCardIssueModel.id, id));
+  // The passbook entry goes with the card; the FK lives on the issue, so it must
+  // be cleared and deleted in the same transaction or it orphans.
+  await db.transaction(async (tx) => {
+    await deleteIdCardLedgerEntry(id, existing.documentLedgerId, tx);
+    await tx.delete(idCardIssueModel).where(eq(idCardIssueModel.id, id));
+  });
+
   if (existing.frontImageKey)
     await deleteFromS3(existing.frontImageKey).catch(() => undefined);
   if (existing.photoImageKey)

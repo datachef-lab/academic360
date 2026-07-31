@@ -2211,6 +2211,7 @@ async function modelToDto(
       updatedAt: cuRegistrationDocumentUploadModel.updatedAt,
       document: {
         id: documentTypeModel.id,
+        code: documentTypeModel.code,
         name: documentTypeModel.name,
         description: documentTypeModel.description,
         sequence: documentTypeModel.sequence,

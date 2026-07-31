@@ -24,11 +24,9 @@ interface ScanExistingMarksheetFilesByRollNumbrProps {
 /**
  * The document types every install needs.
  *
- * `name` is UNIQUE and is what code binds to — `cu-registration-batch-submit`
- * looks the CU registration form up by the literal "CU Registration PDF", and
- * the supporting-upload names below are matched the same way. Renaming any of
- * these in the console silently breaks that link; a sturdier binding is a
- * separate discussion.
+ * `code` is the key code binds to — it is server-assigned, never shown in the
+ * console and never editable, so staff can rename `name` freely without
+ * breaking a lookup. `name` is still UNIQUE, but only as a display label.
  *
  * Colours follow the palette the certificate masters use (light bg, darker
  * text of the same hue).
@@ -36,6 +34,7 @@ interface ScanExistingMarksheetFilesByRollNumbrProps {
 const defaultDocuments: DocumentTypeT[] = [
   // ── System-bound types (seq 1-5) ──────────────────────────────────────────
   {
+    code: "EXAM_ADMIT_CARD",
     name: "Exam Admit Card",
     description: "University semester examination admit card",
     domain: "EXAM",
@@ -49,6 +48,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#1D4ED8",
   },
   {
+    code: "FEE_RECEIPT",
     name: "Fee Receipt",
     description: "Semester fee receipt / challan generated for the student",
     domain: "FEES",
@@ -60,6 +60,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#15803D",
   },
   {
+    code: "CU_REGISTRATION_PDF",
     name: "CU Registration PDF",
     description: "Generated CU registration (adm-reg) form",
     domain: "PRE_CU_REGISTRATION",
@@ -70,6 +71,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#6D28D9",
   },
   {
+    code: "ID_CARD",
     name: "ID Card",
     description: "Student identity card issued by the college",
     domain: "ENROLMENT",
@@ -80,6 +82,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#0F766E",
   },
   {
+    code: "CU_EXAM_FORM",
     name: "CU Exam Form",
     description: "CU examination form uploaded by the student",
     domain: "EXAM",
@@ -94,6 +97,7 @@ const defaultDocuments: DocumentTypeT[] = [
   // Collected from the applicant at admission; re-used later as the supporting
   // uploads of the CU registration form.
   {
+    code: "CLASS_XII_MARKSHEET",
     name: "Class XII Marksheet",
     description: "Class XII Marksheet",
     domain: "ADMISSION",
@@ -103,6 +107,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#1D4ED8",
   },
   {
+    code: "AADHAAR_CARD",
     name: "Aadhaar Card",
     description: "Aadhaar Card",
     domain: "ADMISSION",
@@ -112,6 +117,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#B45309",
   },
   {
+    code: "APAAR_ID_CARD",
     name: "APAAR ID Card",
     description: "APAAR ID Card",
     domain: "ADMISSION",
@@ -121,6 +127,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#0F766E",
   },
   {
+    code: "FATHER_PHOTO_ID",
     name: "Father Photo ID",
     description: "Father Photo ID",
     domain: "ADMISSION",
@@ -130,6 +137,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#6D28D9",
   },
   {
+    code: "MOTHER_PHOTO_ID",
     name: "Mother Photo ID",
     description: "Mother Photo ID",
     domain: "ADMISSION",
@@ -139,6 +147,7 @@ const defaultDocuments: DocumentTypeT[] = [
     textColor: "#BE185D",
   },
   {
+    code: "EWS_CERTIFICATE",
     name: "EWS Certificate",
     description: "EWS Certificate",
     domain: "ADMISSION",

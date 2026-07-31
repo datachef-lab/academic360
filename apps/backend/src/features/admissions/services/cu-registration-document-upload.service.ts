@@ -218,6 +218,7 @@ async function modelToDto(
     updatedAt: document.updatedAt,
     document: {
       id: documentDetails!.id,
+      code: documentDetails!.code,
       name: documentDetails!.name,
       description: documentDetails!.description,
       sequence: documentDetails!.sequence,
