@@ -25,6 +25,38 @@ export interface BulkUploadResult {
 export async function createBoardSubject(
   data: BoardSubject,
 ): Promise<BoardSubjectDto> {
+  // (board, subject) is the natural key. Nothing enforced it — not this
+  // service, not the controller, not the schema — so a re-run of the bulk
+  // upload, or a second admin adding the same pair, silently duplicated it.
+  // Upsert instead: the caller's intent is "this pair should have these
+  // marks", which an update satisfies exactly.
+  const [existing] = await db
+    .select({ id: boardSubjectModel.id })
+    .from(boardSubjectModel)
+    .where(
+      and(
+        eq(boardSubjectModel.boardId, data.boardId as number),
+        eq(
+          boardSubjectModel.boardSubjectNameId,
+          data.boardSubjectNameId as number,
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    const [updated] = await db
+      .update(boardSubjectModel)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(boardSubjectModel.id, existing.id))
+      .returning();
+    const existingResult = await getBoardSubjectById(updated!.id);
+    if (!existingResult) {
+      throw new Error("Failed to retrieve updated board subject");
+    }
+    return existingResult;
+  }
+
   const [created] = await db.insert(boardSubjectModel).values(data).returning();
 
   // Get related data for the created record

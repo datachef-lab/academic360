@@ -20,14 +20,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/ui/combobox";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { boardSubjectService, type BoardSubjectDto } from "@/services/board-subject.service";
@@ -118,39 +112,31 @@ const BoardSubjectForm = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="boardId">Board *</Label>
-          <Select
+          {/*
+            Combobox, not Select: this form lives inside an AlertDialog
+            (z-[100]) and SelectContent is z-50, so its list rendered UNDERNEATH
+            the dialog. The shared Combobox popover is z-[120], already tuned to
+            sit above dialogs — and it brings typeahead, which matters with 66
+            boards.
+          */}
+          <Combobox
+            dataArr={boardOptions.map((b) => ({ value: b.id.toString(), label: b.name }))}
             value={formData.boardId > 0 ? formData.boardId.toString() : ""}
-            onValueChange={(v) => setFormData({ ...formData, boardId: parseInt(v) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Board" />
-            </SelectTrigger>
-            <SelectContent>
-              {boardOptions.map((board) => (
-                <SelectItem key={board.id} value={board.id.toString()}>
-                  {board.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(v) => setFormData({ ...formData, boardId: parseInt(v) })}
+            placeholder="Select Board"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="boardSubjectNameId">Subject Name *</Label>
-          <Select
+          <Combobox
+            dataArr={boardSubjectNameOptions.map((n) => ({
+              value: n.id.toString(),
+              label: n.name,
+            }))}
             value={formData.boardSubjectNameId > 0 ? formData.boardSubjectNameId.toString() : ""}
-            onValueChange={(v) => setFormData({ ...formData, boardSubjectNameId: parseInt(v) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Subject Name" />
-            </SelectTrigger>
-            <SelectContent>
-              {boardSubjectNameOptions.map((subjectName) => (
-                <SelectItem key={subjectName.id} value={subjectName.id.toString()}>
-                  {subjectName.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(v) => setFormData({ ...formData, boardSubjectNameId: parseInt(v) })}
+            placeholder="Select Subject Name"
+          />
         </div>
       </div>
 
@@ -231,7 +217,17 @@ export default function BoardSubjectPage() {
     null,
   );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [boardOptions, setBoardOptions] = React.useState<BoardDto[]>([]);
+  const [allBoards, setAllBoards] = React.useState<BoardDto[]>([]);
+  /**
+   * Only ACTIVE boards are selectable. The legacy DB holds several board rows
+   * sharing a name (e.g. CBSE ids 1 and 9) with different legacy ids, one of
+   * each pair retired — the importer reproduces both, so the raw list shows
+   * duplicates. The retired ones carry zero admissions and zero subjects.
+   */
+  const boardOptions = React.useMemo(
+    () => allBoards.filter((b) => b.isActive !== false),
+    [allBoards],
+  );
   const [boardSubjectNameOptions, setBoardSubjectNameOptions] = React.useState<
     BoardSubjectNameDto[]
   >([]);
@@ -255,7 +251,7 @@ export default function BoardSubjectPage() {
         boardSubjectNameService.getAll(),
         degreeService.getAll(),
       ]);
-      setBoardOptions(boardsResult.data);
+      setAllBoards(boardsResult.data);
       setBoardSubjectNameOptions(subjectNames);
       // Map Degree[] to DegreeDto[] by converting disabled to isActive
       const degreeDtos: DegreeDto[] = degrees.map((degree) => ({
@@ -549,44 +545,32 @@ export default function BoardSubjectPage() {
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
-              <Select
+              <Combobox
+                className="w-full sm:w-48"
+                dataArr={[
+                  { value: "all", label: "All Degrees" },
+                  ...degreeOptions.map((d) => ({ value: d.id.toString(), label: d.name })),
+                ]}
                 value={selectedDegreeId?.toString() || "all"}
-                onValueChange={(value) => {
+                onChange={(value) => {
                   setSelectedDegreeId(value === "all" ? undefined : parseInt(value));
                   setCurrentPage(1); // Reset to first page when filter changes
                 }}
-              >
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by Degree" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Degrees</SelectItem>
-                  {degreeOptions.map((degree) => (
-                    <SelectItem key={degree.id} value={degree.id.toString()}>
-                      {degree.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
+                placeholder="Filter by Degree"
+              />
+              <Combobox
+                className="w-full sm:w-48"
+                dataArr={[
+                  { value: "all", label: "All Boards" },
+                  ...boardOptions.map((b) => ({ value: b.id.toString(), label: b.name })),
+                ]}
                 value={selectedBoardId?.toString() || "all"}
-                onValueChange={(value) => {
+                onChange={(value) => {
                   setSelectedBoardId(value === "all" ? undefined : parseInt(value));
                   setCurrentPage(1); // Reset to first page when filter changes
                 }}
-              >
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by Board" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Boards</SelectItem>
-                  {boardOptions.map((board) => (
-                    <SelectItem key={board.id} value={board.id.toString()}>
-                      {board.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Filter by Board"
+              />
             </div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-shrink-0">
               <span className="hidden sm:inline">

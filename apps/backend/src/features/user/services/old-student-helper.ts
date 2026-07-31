@@ -2665,19 +2665,43 @@ async function loadStudentAcademicInfoAndSubjects(
         continue; // Skip this subject if no board found
       }
 
-      // Create board subject with default values
-      const [newBoardSubject] = await db
-        .insert(boardSubjectModel)
-        .values({
-          boardId: foundBoard.id!,
-          boardSubjectNameId: foundBoardSubjectName.id!,
-          passingMarksTheory: 0,
-          passingMarksPractical: 0,
-          fullMarksTheory: 0,
-          fullMarksPractical: 0,
-        })
-        .returning();
-      boardSubject = newBoardSubject;
+      // Find-or-create, NOT create.
+      //
+      // This runs once per student, and `addBoardSubject` above returns
+      // undefined for any board whose legacy boardsubjectmapping rows are
+      // missing — so without this lookup every student sharing that (board,
+      // subject) pair inserted another placeholder row. That is how the table
+      // reached 14,307 rows for 661 real pairs, 13,159 of them all-zero
+      // duplicates created right here.
+      const [existingBoardSubject] = await db
+        .select()
+        .from(boardSubjectModel)
+        .where(
+          and(
+            eq(boardSubjectModel.boardId, foundBoard.id!),
+            eq(boardSubjectModel.boardSubjectNameId, foundBoardSubjectName.id!),
+          ),
+        )
+        .limit(1);
+
+      if (existingBoardSubject) {
+        boardSubject = existingBoardSubject;
+      } else {
+        // Still zeroed: the real marks live in the legacy mapping tables, which
+        // by definition are absent on this path. A later admin edit fills them.
+        const [newBoardSubject] = await db
+          .insert(boardSubjectModel)
+          .values({
+            boardId: foundBoard.id!,
+            boardSubjectNameId: foundBoardSubjectName.id!,
+            passingMarksTheory: 0,
+            passingMarksPractical: 0,
+            fullMarksTheory: 0,
+            fullMarksPractical: 0,
+          })
+          .returning();
+        boardSubject = newBoardSubject;
+      }
     }
 
     // Collect this subject's total for the best-of-N aggregate.
