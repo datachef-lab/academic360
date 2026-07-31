@@ -659,6 +659,8 @@ export interface PerMetaOptions {
    * can derive it exactly as they do today.
    */
   classNames: string[];
+  /** PRIOR_SELECTION only: the metas this one draws its options from. */
+  sourceMetaIds: number[];
   options: {
     subjectId: number;
     subjectName: string;
@@ -740,13 +742,22 @@ async function buildPerMetaOptions(
           // so take only the latest version — otherwise a superseded subject
           // would be offered alongside the current one. Mirrors the
           // latest-version filter used for actualStudentSelections above.
+          // DISTINCT ON must include subject_id: a source meta like "Minor 1
+          // (Semester I & II)" legitimately holds TWO subjects (one per
+          // semester), and keying on the meta alone collapsed it to one, so the
+          // continuation dropdown silently lost half its options. Mirrors the
+          // same fix already applied to actualStudentSelections above.
           sql`${studentSubjectSelectionModel.id} IN (
-            SELECT DISTINCT ON (${studentSubjectSelectionModel.subjectSelectionMetaId})
+            SELECT DISTINCT ON (
+                     ${studentSubjectSelectionModel.subjectSelectionMetaId},
+                     ${studentSubjectSelectionModel.subjectId}
+                   )
               ${studentSubjectSelectionModel.id}
             FROM ${studentSubjectSelectionModel}
             WHERE ${studentSubjectSelectionModel.studentId} = ${studentId}
               AND ${studentSubjectSelectionModel.isActive} = true
             ORDER BY ${studentSubjectSelectionModel.subjectSelectionMetaId},
+                     ${studentSubjectSelectionModel.subjectId},
                      ${studentSubjectSelectionModel.version} DESC,
                      ${studentSubjectSelectionModel.createdAt} DESC
           )`,
@@ -782,6 +793,9 @@ async function buildPerMetaOptions(
       sequence: meta.sequence ?? null,
       classIds,
       classNames,
+      // Sent so the client can recompute a PRIOR_SELECTION list live as the
+      // source dropdowns change, instead of waiting for a save + refetch.
+      sourceMetaIds: (((meta as any).sourceMetaIds ?? []) as number[]) || [],
     };
 
     if (optionSource === "PRIOR_SELECTION") {

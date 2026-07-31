@@ -38,6 +38,14 @@ interface MetaView {
   subjectIdByName: Record<string, number>;
   /** Subjects that must end up selected somewhere in this category. */
   autoAssignSubjects: string[];
+  /**
+   * Where the options came from. PRIOR_SELECTION metas (Minor 3/4) are offered
+   * the student's OWN earlier picks, so the usual uniqueness rules must not
+   * apply to them — see `optionsForMeta`.
+   */
+  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+  /** PRIOR_SELECTION only: the metas whose live picks feed this slot. */
+  sourceMetaIds: number[];
 }
 
 const romanMap: Record<string, string> = {
@@ -85,6 +93,8 @@ function toMetaViews(perMetaOptions: PerMetaOptionsDto[]): MetaView[] {
         options,
         subjectIdByName,
         autoAssignSubjects,
+        optionSource: m.optionSource ?? "ELECTIVE_SUBJECTS",
+        sourceMetaIds: m.sourceMetaIds ?? [],
       };
     })
     .sort((a, b) => a.sequence - b.sequence || a.metaId - b.metaId);
@@ -481,6 +491,43 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
       // AEC is unfiltered: it may repeat elsewhere and has no peer rules applied.
       if (v.code === "AEC") return convertToComboboxData(v.options);
+      // PRIOR_SELECTION metas (Minor 3/4) carry their own uniqueness rule.
+      //
+      // Their options ARE the student's Minor 1/2 picks, so the normal global
+      // exclusion would strip every one and the slot would render "0 options
+      // available" (the current-value exemption above only rescues an
+      // already-saved pick, never an empty slot). But they must still not
+      // duplicate EACH OTHER: across 619 students loaded from the CU admit-card
+      // Excel, Minor 3 and Minor 4 never once hold the same subject, while
+      // either may continue either prior minor (597 keep Minor 1 in Sem V, 22
+      // swap). So exclude only what a sibling continuation slot already holds.
+      if (v.optionSource === "PRIOR_SELECTION") {
+        // Follow the source dropdowns LIVE. The server list is a snapshot of the
+        // SAVED Minor 1/2, so editing Minor 1 here has to re-drive Minor 3/4
+        // immediately rather than after a save + refetch. Falls back to the
+        // server list while the source slots are still empty.
+        const liveFromSources: string[] = [];
+        for (const sourceId of v.sourceMetaIds) {
+          for (const held of selections[sourceId] ?? []) {
+            if (held && !liveFromSources.includes(held)) liveFromSources.push(held);
+          }
+        }
+        const base = liveFromSources.length > 0 ? liveFromSources : v.options;
+
+        const heldBySiblingContinuations: string[] = [];
+        for (const other of metaViews) {
+          if (other.optionSource !== "PRIOR_SELECTION") continue;
+          const arr = selections[other.metaId] ?? [];
+          for (let i = 0; i < arr.length; i++) {
+            if (other.metaId === v.metaId && i === slotIdx) continue;
+            if (arr[i]) heldBySiblingContinuations.push(arr[i]);
+          }
+        }
+        return convertToComboboxData(
+          base,
+          heldBySiblingContinuations.filter((x) => normVal(x) !== normVal(current)),
+        );
+      }
       // CVAC takes global uniqueness but no category rules.
       if (v.code === "CVAC") return convertToComboboxData(v.options, excludesForSlot());
 
@@ -494,7 +541,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       );
       return convertToComboboxData(preserveAecIfPresent(v.options, filtered), excludesForSlot());
     },
-    [selections, getFilteredByCategory, getGlobalExcludes, preserveAecIfPresent],
+    [selections, metaViews, getFilteredByCategory, getGlobalExcludes, preserveAecIfPresent],
   );
 
   /**
@@ -683,7 +730,13 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       for (let s = 0; s < slots; s++) {
         const subjectName = selections[v.metaId]?.[s];
         if (!subjectName) continue;
-        const subjectId = v.subjectIdByName[subjectName];
+        // A PRIOR_SELECTION slot can now offer a subject that was only just
+        // chosen in its source dropdown, so it may not be in this meta's own
+        // server-built map yet. Fall back to any other meta's map — subject
+        // names are unique within a student's option set.
+        const subjectId =
+          v.subjectIdByName[subjectName] ??
+          metaViews.find((m) => m.subjectIdByName[subjectName])?.subjectIdByName[subjectName];
         if (!subjectId) continue;
         selectionsToSave.push({
           studentId: student.id,
