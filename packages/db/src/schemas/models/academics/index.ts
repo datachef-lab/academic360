@@ -24,7 +24,7 @@ export * from "./declaration-master-statement-field-option.model";
 export * from "./declaration.model";
 export * from "./declaration-statement.model";
 export * from "./declaration-statement-field.model";
-export * from "./document.model";
+
 export * from "./marksheet-paper-component-mapping.model";
 export * from "./marksheet-paper-mapping.model";
 export * from "./marksheet.model";

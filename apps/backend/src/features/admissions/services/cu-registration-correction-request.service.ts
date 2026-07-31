@@ -12,8 +12,8 @@ import {
   personModel,
   familyModel,
 } from "@repo/db/schemas/models/user";
+import { documentTypeModel } from "@repo/db/schemas/models/documents";
 import {
-  documentModel,
   sessionModel,
   academicYearModel,
 } from "@repo/db/schemas/models/academics";
@@ -2210,19 +2210,21 @@ async function modelToDto(
       createdAt: cuRegistrationDocumentUploadModel.createdAt,
       updatedAt: cuRegistrationDocumentUploadModel.updatedAt,
       document: {
-        id: documentModel.id,
-        name: documentModel.name,
-        description: documentModel.description,
-        sequence: documentModel.sequence,
-        isActive: documentModel.isActive,
-        createdAt: documentModel.createdAt,
-        updatedAt: documentModel.updatedAt,
+        id: documentTypeModel.id,
+        name: documentTypeModel.name,
+        description: documentTypeModel.description,
+        sequence: documentTypeModel.sequence,
+        isActive: documentTypeModel.isActive,
+        bgColor: documentTypeModel.bgColor,
+        textColor: documentTypeModel.textColor,
+        createdAt: documentTypeModel.createdAt,
+        updatedAt: documentTypeModel.updatedAt,
       },
     })
     .from(cuRegistrationDocumentUploadModel)
     .leftJoin(
-      documentModel,
-      eq(cuRegistrationDocumentUploadModel.documentId, documentModel.id),
+      documentTypeModel,
+      eq(cuRegistrationDocumentUploadModel.documentId, documentTypeModel.id),
     )
     .where(
       eq(

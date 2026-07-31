@@ -1,0 +1,23 @@
+document-types-illustration.svg
+  "Personal files" (Cuate style) by Storyset
+  https://storyset.com/illustration/personal-files/cuate
+  Source SVG: https://stories.freepiklabs.com/storage/62687/Personal-files-cuate.svg
+
+  Freepik License: free for commercial and personal use, modifications allowed,
+  attribution required. Storyset asks that the credit link be kept wherever the
+  illustration is shown or, failing that, recorded alongside the asset.
+
+  Local modification: the single accent colour (#FFC727) was replaced with
+  rgb(var(--brand-400)) so the illustration follows the environment palette
+  (purple in production, blue in staging, navy in development). Everything else
+  is untouched.
+
+declaration-masters-illustration.svg
+  "Consent" (Cuate style) by Storyset
+  https://storyset.com/illustration/consent/cuate
+  Source SVG: https://stories.freepiklabs.com/storage/58995/Consent_Mesa-de-trabajo-1.svg
+
+  Same licence and same local modification as above: accent #FFC727 replaced
+  with rgb(var(--brand-400)). The viewBox is also windowed ("54 29 200 435") so
+  the tall rail crops onto the figure and the clipboard edge instead of the
+  middle of the board.

@@ -1,14 +1,27 @@
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
-import { documentModel } from "@repo/db/schemas/models/academics";
+import {
+  createDocumentTypeModel,
+  documentTypeModel,
+} from "@repo/db/schemas/models/documents";
 import { db } from "@/db/index.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
 import {
   getFile,
   scanExistingMarksheetFilesByRollNumber,
 } from "../services/document.service.js";
+
+function eligibilityRuleError(
+  category: string | null | undefined,
+  eligibilityRule: string | null | undefined,
+): string | null {
+  if (eligibilityRule != null && category !== "EXAM_LINKED") {
+    return "eligibilityRule can only be set when category is EXAM_LINKED.";
+  }
+  return null;
+}
 
 //createDocumentMetadata
 export const createDocumentMetadata = async (
@@ -17,13 +30,43 @@ export const createDocumentMetadata = async (
   next: NextFunction,
 ) => {
   try {
-    console.log(req.body);
-    const newDocumentModel = await db.insert(documentModel).values(req.body);
-    console.log("New Document added", newDocumentModel);
+    const parsed = createDocumentTypeModel.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json(
+        new ApiError(
+          400,
+          "Validation failed",
+          parsed.error.issues.map(
+            (issue) => `${issue.path.join(".")}: ${issue.message}`,
+          ),
+        ),
+      );
+      return;
+    }
+
+    const ruleError = eligibilityRuleError(
+      parsed.data.category,
+      parsed.data.eligibilityRule,
+    );
+    if (ruleError) {
+      res.status(400).json(new ApiError(400, ruleError));
+      return;
+    }
+
+    const [newDocumentType] = await db
+      .insert(documentTypeModel)
+      .values(parsed.data)
+      .returning();
+
     res
       .status(201)
       .json(
-        new ApiResponse(201, "SUCCESS", null, "New Document is added to db!"),
+        new ApiResponse(
+          201,
+          "SUCCESS",
+          newDocumentType,
+          "New Document is added to db!",
+        ),
       );
   } catch (error) {
     handleError(error, res, next);
@@ -37,8 +80,10 @@ export const getAllDocumentsMetadata = async (
   next: NextFunction,
 ) => {
   try {
-    console.log(req.body);
-    const getAllDocumentsMetadata = await db.select().from(documentModel);
+    const getAllDocumentsMetadata = await db
+      .select()
+      .from(documentTypeModel)
+      .orderBy(asc(documentTypeModel.sequence), asc(documentTypeModel.name));
     res
       .status(200)
       .json(
@@ -70,8 +115,8 @@ export const getDocumentMetadataById = async (
 
     const document = await db
       .select()
-      .from(documentModel)
-      .where(eq(documentModel.id, +id))
+      .from(documentTypeModel)
+      .where(eq(documentTypeModel.id, +id))
       .then((documents) => documents[0]);
 
     if (!document) {
@@ -105,8 +150,8 @@ export const getDocumentMetadataByName = async (
     console.log(name);
     const document = await db
       .select()
-      .from(documentModel)
-      .where(eq(documentModel.name, name as string))
+      .from(documentTypeModel)
+      .where(eq(documentTypeModel.name, name as string))
       .then((documents) => documents[0]);
 
     if (!document) {
@@ -137,13 +182,25 @@ export const updateDocumentMetadata = async (
 ) => {
   try {
     const { id } = req.params;
-    console.log(id);
-    const updatedData = req.body;
+
+    const parsed = createDocumentTypeModel.partial().safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json(
+        new ApiError(
+          400,
+          "Validation failed",
+          parsed.error.issues.map(
+            (issue) => `${issue.path.join(".")}: ${issue.message}`,
+          ),
+        ),
+      );
+      return;
+    }
 
     const existingDocument = await db
       .select()
-      .from(documentModel)
-      .where(eq(documentModel.id, +id))
+      .from(documentTypeModel)
+      .where(eq(documentTypeModel.id, +id))
       .then((documents) => documents[0]);
 
     if (!existingDocument) {
@@ -151,10 +208,27 @@ export const updateDocumentMetadata = async (
       return;
     }
 
+    const effectiveCategory =
+      "category" in parsed.data
+        ? parsed.data.category
+        : existingDocument.category;
+    const effectiveEligibilityRule =
+      "eligibilityRule" in parsed.data
+        ? parsed.data.eligibilityRule
+        : existingDocument.eligibilityRule;
+    const ruleError = eligibilityRuleError(
+      effectiveCategory,
+      effectiveEligibilityRule,
+    );
+    if (ruleError) {
+      res.status(400).json(new ApiError(400, ruleError));
+      return;
+    }
+
     const updatedDocument = await db
-      .update(documentModel)
-      .set(updatedData)
-      .where(eq(documentModel.id, +id))
+      .update(documentTypeModel)
+      .set(parsed.data)
+      .where(eq(documentTypeModel.id, +id))
       .returning();
 
     if (updatedDocument.length > 0) {
@@ -186,8 +260,8 @@ export const deleteDocumentMetadata = async (
     const { id } = req.params;
     console.log(id);
     const deletedDocument = await db
-      .delete(documentModel)
-      .where(eq(documentModel.id, +id))
+      .delete(documentTypeModel)
+      .where(eq(documentTypeModel.id, +id))
       .returning();
 
     if (deletedDocument.length > 0) {

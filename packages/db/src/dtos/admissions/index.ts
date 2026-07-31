@@ -1,4 +1,4 @@
-import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardSubjectUnivSubjectMappingT, BoardT, ClassT, DegreeT, DocumentT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, StudentT, SubjectT, TransportDetailsT, UserT } from "@/schemas";
+import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardSubjectUnivSubjectMappingT, BoardT, ClassT, DegreeT, DocumentTypeT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, StudentT, SubjectT, TransportDetailsT, UserT } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 import { AddressDto } from "../user";
 import { BoardSubjectNameT } from "@/schemas/models/admissions/board-subject-name.model";
@@ -79,7 +79,7 @@ export interface BoardSubjectUnivSubjectMappingDto extends Omit<BoardSubjectUniv
 }
 
 export interface CuRegistrationDocumentUploadDto extends Omit<CuRegistrationDocumentUpload, "cuRegistrationCorrectionRequestId" | "documentId"> {
-    document: DocumentT;
+    document: DocumentTypeT;
     file: File;
 }
 
