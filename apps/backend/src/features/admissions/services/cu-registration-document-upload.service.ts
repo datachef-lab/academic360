@@ -13,7 +13,9 @@ import { ApiError } from "@/utils/index.js";
 import JSZip from "jszip";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions";
 import {
+  DOCUMENT_TYPE_CODES,
   deleteCuRegUploadLedgerEntry,
+  getDocumentTypeIdByCode,
   refreshCuRegUploadLedgerEntry,
   upsertCuRegUploadLedgerEntry,
 } from "@/features/documents/services/document-ledger.service.js";
@@ -22,8 +24,13 @@ import {
  * The upload row has no student or academic year of its own — both live on the
  * parent correction request, which is the join every ledger write needs.
  */
-async function loadRequestOwner(correctionRequestId: number) {
-  const [req] = await db
+async function loadRequestOwner(
+  correctionRequestId: number,
+  executor:
+    | typeof db
+    | Parameters<Parameters<typeof db.transaction>[0]>[0] = db,
+) {
+  const [req] = await executor
     .select({
       studentId: cuRegistrationCorrectionRequestModel.studentId,
       academicYearId: cuRegistrationCorrectionRequestModel.academicYearId,
@@ -32,6 +39,98 @@ async function loadRequestOwner(correctionRequestId: number) {
     .where(eq(cuRegistrationCorrectionRequestModel.id, correctionRequestId))
     .limit(1);
   return req ?? null;
+}
+
+/**
+ * Record a generated adm-reg PDF against its correction request.
+ *
+ * The PDF is produced on every final submission and emailed to the student, but
+ * only the batch-submit path ever wrote it down — a staff submission from
+ * main-console left it existing in S3 and in the student's inbox with no record
+ * at all. This is the shared recorder for all of those paths.
+ *
+ * Keyed on (request, CU_REGISTRATION_PDF) like every other upload, so a
+ * regeneration updates the row in place and refreshes the passbook entry rather
+ * than piling up duplicates — there is only ever one current PDF per request.
+ *
+ * Never throws: a bookkeeping failure must not fail a submission that has
+ * already succeeded.
+ */
+export async function recordGeneratedCuRegPdf(
+  input: {
+    correctionRequestId: number;
+    applicationNumber: string;
+    documentUrl: string;
+  },
+  executor:
+    | typeof db
+    | Parameters<Parameters<typeof db.transaction>[0]>[0] = db,
+): Promise<void> {
+  try {
+    const documentTypeId = await getDocumentTypeIdByCode(
+      DOCUMENT_TYPE_CODES.CU_REGISTRATION_PDF,
+      executor,
+    );
+
+    const [existing] = await executor
+      .select()
+      .from(cuRegistrationDocumentUploadModel)
+      .where(
+        and(
+          eq(
+            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+            input.correctionRequestId,
+          ),
+          eq(cuRegistrationDocumentUploadModel.documentId, documentTypeId),
+        ),
+      )
+      .limit(1);
+
+    const values = {
+      documentUrl: input.documentUrl,
+      path: input.documentUrl,
+      fileName: `CU_${input.applicationNumber}.pdf`,
+      fileType: "application/pdf",
+      remarks: "Generated CU Registration PDF",
+    };
+
+    if (existing) {
+      const [updated] = await executor
+        .update(cuRegistrationDocumentUploadModel)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(cuRegistrationDocumentUploadModel.id, existing.id))
+        .returning();
+
+      if (updated!.documentLedgerId != null) {
+        await refreshCuRegUploadLedgerEntry(updated!, executor);
+        return;
+      }
+      const owner = await loadRequestOwner(input.correctionRequestId, executor);
+      if (owner) {
+        await upsertCuRegUploadLedgerEntry({ ...updated!, ...owner }, executor);
+      }
+      return;
+    }
+
+    const [created] = await executor
+      .insert(cuRegistrationDocumentUploadModel)
+      .values({
+        cuRegistrationCorrectionRequestId: input.correctionRequestId,
+        documentId: documentTypeId,
+        ...values,
+      })
+      .returning();
+
+    const owner = await loadRequestOwner(input.correctionRequestId, executor);
+    if (owner) {
+      await upsertCuRegUploadLedgerEntry({ ...created!, ...owner }, executor);
+    }
+  } catch (err) {
+    console.error(
+      "[CU-REG PDF] failed to record the generated PDF — the submission itself is unaffected",
+      err,
+    );
+  }
 }
 
 // CREATE

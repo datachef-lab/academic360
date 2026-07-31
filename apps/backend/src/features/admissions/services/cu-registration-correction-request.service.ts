@@ -73,6 +73,7 @@ import {
   deleteCuRegUploadLedgerEntry,
   upsertCuRegUploadLedgerEntry,
 } from "@/features/documents/services/document-ledger.service.js";
+import { recordGeneratedCuRegPdf } from "./cu-registration-document-upload.service.js";
 
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
@@ -981,6 +982,18 @@ export async function updateCuRegistrationCorrectionRequest(
               applicationNumber,
             },
           );
+
+          // Record it. Until now this path generated the PDF and emailed it but
+          // wrote nothing down, so a staff submission left no upload row and no
+          // passbook entry.
+          await recordGeneratedCuRegPdf(
+            {
+              correctionRequestId: id,
+              applicationNumber,
+              documentUrl: pdfResult.s3Url || pdfResult.pdfPath || "",
+            },
+            tx,
+          );
         } else {
           console.error("[CU-REG CORRECTION][UPDATE] PDF generation failed", {
             error: pdfResult.error,
@@ -1611,6 +1624,14 @@ export async function updateCuRegistrationCorrectionRequest(
             note: "Application number unchanged - PDF contains updated student data",
           },
         );
+
+        // A regeneration keeps the same application number, so this updates the
+        // existing row and refreshes its passbook entry rather than adding one.
+        await recordGeneratedCuRegPdf({
+          correctionRequestId: id,
+          applicationNumber: existingApplicationNumber,
+          documentUrl: pdfResult.s3Url || pdfResult.pdfPath || "",
+        });
 
         // Send email notification with PDF attachment (same as student console)
         // Only send notifications if CU application number is not null
@@ -4538,6 +4559,14 @@ async function tmptriggerNotif(
       );
 
     if (pdfResult.success) {
+      // Same recording gap here — this helper regenerates and emails without
+      // writing anything down.
+      await recordGeneratedCuRegPdf({
+        correctionRequestId: cuRegReqCorrection.id!,
+        applicationNumber: existingApplicationNumber,
+        documentUrl: pdfResult.s3Url || pdfResult.pdfPath || "",
+      });
+
       console.info(
         "[CU-REG CORRECTION][UPDATE] PDF regenerated successfully with updated data",
         {
