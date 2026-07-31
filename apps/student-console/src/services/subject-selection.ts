@@ -54,6 +54,8 @@ export interface PerMetaOptionsDto {
   sequence: number | null;
   classIds: number[];
   classNames: string[];
+  /** PRIOR_SELECTION only: the metas feeding this one's options. */
+  sourceMetaIds?: number[];
   options: PerMetaOptionDto[];
 }
 
