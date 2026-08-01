@@ -344,6 +344,39 @@ class SocketService {
         },
       );
 
+      // Library: one join covers every page in the module (dashboard, lists,
+      // masters). Extra optional joins scope events to a specific patron or
+      // book for detail pages. The Redis adapter guarantees delivery across
+      // instances, so an emit from any node reaches clients on every node.
+      socket.on(
+        "subscribe_library",
+        (opts?: { bookId?: number; userId?: number }) => {
+          try {
+            socket.join("library");
+            if (opts?.bookId) socket.join(`library:book:${opts.bookId}`);
+            if (opts?.userId) socket.join(`library:user:${opts.userId}`);
+            log.debug(
+              `Socket ${socket.id} joined library rooms (book=${opts?.bookId ?? "-"}, user=${opts?.userId ?? "-"})`,
+            );
+          } catch (error) {
+            log.error("Error subscribing to library rooms", { error });
+          }
+        },
+      );
+
+      socket.on(
+        "unsubscribe_library",
+        (opts?: { bookId?: number; userId?: number }) => {
+          try {
+            socket.leave("library");
+            if (opts?.bookId) socket.leave(`library:book:${opts.bookId}`);
+            if (opts?.userId) socket.leave(`library:user:${opts.userId}`);
+          } catch (error) {
+            log.error("Error unsubscribing from library rooms", { error });
+          }
+        },
+      );
+
       socket.on("subscribe_fees_dashboard", () => {
         try {
           socket.join("fees_dashboard");

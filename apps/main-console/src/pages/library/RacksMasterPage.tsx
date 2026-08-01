@@ -28,14 +28,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Package2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Loader2, Package2, Plus, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
 import {
   STICKY_THEAD_CLASS,
   STICKY_TH_BASE,
   STICKY_TH_LEFT,
-  STICKY_TH_RIGHT,
 } from "@/components/library/LibraryTablePage";
 import type { LibraryRackRow, LibraryRackUpsertBody } from "@/services/library-racks.service";
 import {
@@ -74,38 +73,10 @@ const parseDate = (value: string) => {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
 };
 
-function RowActions({
-  row,
-  onEdit,
-  onDelete,
-}: {
-  row: LibraryRackRow;
-  onEdit: (_id: number) => void;
-  onDelete: (_row: LibraryRackRow) => void;
-}) {
-  return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => onEdit(row.id)}
-      >
-        <Pencil className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
-        onClick={() => onDelete(row)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-}
+// Row-level actions were removed — the whole row is now clickable and opens
+// the edit dialog. Delete lives inside the edit dialog (bottom-left button),
+// which also narrows the table by ~90px and buys space back on medium
+// screens that used to horizontally-scroll to reach the Actions column.
 
 export default function RacksMasterPage() {
   const { user } = useAuth();
@@ -217,7 +188,6 @@ export default function RacksMasterPage() {
     }
   };
 
-  const openDeleteDialog = (row: LibraryRackRow) => setDeleteTarget(row);
   const closeDeleteDialog = () => {
     setDeleteTarget(null);
     setDeleteInProgress(false);
@@ -290,17 +260,25 @@ export default function RacksMasterPage() {
               </div>
             ) : (
               <>
-                <div className="max-h-[70vh] space-y-3 overflow-y-auto pb-2 lg:hidden">
+                <div className="space-y-3 pb-2 lg:hidden">
                   {rows.map((row, i) => (
                     <div
                       key={row.id}
-                      className="rounded-lg border border-slate-200 bg-card p-3 shadow-sm"
+                      className="cursor-pointer rounded-lg border border-slate-200 bg-card p-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50/60 focus-within:ring-2 focus-within:ring-violet-300"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openEdit(row.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openEdit(row.id);
+                        }
+                      }}
                     >
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <span className="text-xs font-medium text-slate-500">
                           #{(page - 1) * limit + i + 1}
                         </span>
-                        <RowActions row={row} onEdit={openEdit} onDelete={openDeleteDialog} />
                       </div>
 
                       <div className="space-y-1">
@@ -317,22 +295,25 @@ export default function RacksMasterPage() {
                 </div>
 
                 <div className="hidden min-w-0 pb-2 lg:block">
-                  <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
+                  <div className="max-h-[70vh] overflow-auto [&>div]:!overflow-visible rounded-md border bg-background">
                     <Table
                       className="border-separate border-spacing-0"
-                      containerClassName="overflow-visible min-w-[720px]"
+                      containerClassName="overflow-visible min-w-[630px]"
                     >
                       <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow className="border-b-0 hover:bg-transparent">
                           <TableHead className={STICKY_TH_LEFT}>#</TableHead>
                           <TableHead className={STICKY_TH_BASE}>Name</TableHead>
                           <TableHead className={STICKY_TH_BASE}>Updated</TableHead>
-                          <TableHead className={STICKY_TH_RIGHT}>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {rows.map((row, i) => (
-                          <TableRow key={row.id}>
+                          <TableRow
+                            key={row.id}
+                            className="cursor-pointer hover:bg-gray-50/60"
+                            onClick={() => openEdit(row.id)}
+                          >
                             <TableCell className="align-top whitespace-nowrap">
                               {(page - 1) * limit + i + 1}
                             </TableCell>
@@ -343,9 +324,6 @@ export default function RacksMasterPage() {
                             </TableCell>
                             <TableCell className="align-top text-xs text-muted-foreground">
                               {parseDate(row.updatedAt)}
-                            </TableCell>
-                            <TableCell className="text-right align-top">
-                              <RowActions row={row} onEdit={openEdit} onDelete={openDeleteDialog} />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -405,19 +383,44 @@ export default function RacksMasterPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t bg-muted/30 px-6 py-4">
-            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="ml-2 bg-purple-600 hover:bg-purple-700 text-white shadow-none"
-              disabled={saving}
-              onClick={() => void handleSave()}
-            >
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {saving ? "Saving..." : "Save"}
-            </Button>
+          <DialogFooter className="border-t bg-muted/30 px-6 py-4 sm:justify-between">
+            {/* Delete moved from the per-row action column into the edit
+                dialog. Only shown for existing rows (editingId != null) —
+                the create-new flow doesn't need it. Kicks the same
+                AlertDialog confirmation the row buttons used to fire. */}
+            <div>
+              {editingId != null && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => {
+                    const target = rows.find((r) => r.id === editingId);
+                    if (target) {
+                      setDialogOpen(false);
+                      setDeleteTarget(target);
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="bg-purple-600 hover:bg-purple-700 text-white shadow-none"
+                disabled={saving}
+                onClick={() => void handleSave()}
+              >
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

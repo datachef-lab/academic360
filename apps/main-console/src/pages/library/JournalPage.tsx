@@ -814,7 +814,7 @@ export default function JournalPage() {
             ) : (
               <>
                 {/* Narrow viewports: stacked cards (no horizontal table squeeze) */}
-                <div className="max-h-[70vh] space-y-3 overflow-y-auto pb-2 lg:hidden">
+                <div className="space-y-3 pb-2 lg:hidden">
                   {rows.map((row, i) => (
                     <div
                       key={row.id}
