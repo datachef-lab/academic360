@@ -63,6 +63,11 @@ const PALETTES = [
   },
 ] as const;
 
+/** Modulo always lands in range, but strict indexed access can't prove it. */
+function getPalette(idx: number): (typeof PALETTES)[number] {
+  return PALETTES[Math.abs(idx) % PALETTES.length] ?? PALETTES[0];
+}
+
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = [
   "January",
@@ -88,8 +93,8 @@ const MAX_LANES_PER_CELL = 4;
 // which in negative-offset zones renders as the day before).
 
 function parseYMD(s: string): Date {
-  const [y, m, d] = s.split("-").map(Number);
-  return new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1, 12));
+  const [y = 1970, m = 1, d = 1] = s.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12));
 }
 
 /** UTC-noon Date for a Y/M/D triple — matches parseYMD's convention. */
@@ -127,11 +132,6 @@ function fmtDMY(d: Date): string {
  */
 function academicYearStart(d: Date): number {
   return d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1;
-}
-
-/** Given an AY-start (2026 → 2026-27), return the Jul-1 UTC-noon Date. */
-function academicYearStartDate(ayStart: number): Date {
-  return utcNoon(ayStart, 6, 1);
 }
 
 // ── Grid + lane assignment ──────────────────────────────────────────────────
@@ -220,8 +220,9 @@ function buildMonthGrid(year: number, monthIdx: number, holidays: ParsedHoliday[
     for (const h of overlapping) {
       for (let d = 0; d < 7; d++) {
         const day = days[d];
+        if (!day) continue; // loop is bounded, but strict indexed access can't see it
         if (day.getTime() >= h.fromDate.getTime() && day.getTime() <= h.toDate.getTime()) {
-          perDay[d].push(h);
+          perDay[d]?.push(h);
         }
       }
     }
@@ -485,7 +486,7 @@ function WeekRowView({
   // Per-day overflow: how many holidays touch this day but are on a lane
   // beyond the visible budget.
   const overflowPerDay = week.days.map((_, i) => {
-    const inCell = week.perDay[i];
+    const inCell = week.perDay[i] ?? [];
     // Count holidays whose lane is beyond MAX_LANES_PER_CELL for this row.
     return inCell.filter((h) => {
       const bar = week.bars.find((b) => b.holiday.id === h.id);
@@ -505,7 +506,7 @@ function WeekRowView({
         const isCurrentMonth = day.getUTCMonth() === cursorMonth;
         const isToday = ymdKey(day) === todayKey;
         const isWeekend = dIdx === 0 || dIdx === 6;
-        const overflow = overflowPerDay[dIdx];
+        const overflow = overflowPerDay[dIdx] ?? 0;
         return (
           <div
             key={dIdx}
@@ -531,7 +532,7 @@ function WeekRowView({
                 {day.getUTCDate()}
               </span>
               {overflow > 0 && (
-                <DayOverflowPopover day={day} holidays={week.perDay[dIdx]} count={overflow} />
+                <DayOverflowPopover day={day} holidays={week.perDay[dIdx] ?? []} count={overflow} />
               )}
             </div>
           </div>
@@ -562,7 +563,7 @@ function WeekRowView({
 }
 
 function HolidayBar({ bar }: { bar: Bar }) {
-  const palette = PALETTES[bar.holiday.paletteIdx];
+  const palette = getPalette(bar.holiday.paletteIdx);
   const isMultiDay = bar.holiday.days > 1;
   return (
     <Popover>
@@ -636,7 +637,7 @@ function DayOverflowPopover({
 }
 
 function HolidayDetails({ holiday, compact }: { holiday: ParsedHoliday; compact?: boolean }) {
-  const palette = PALETTES[holiday.paletteIdx];
+  const palette = getPalette(holiday.paletteIdx);
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-start gap-2">
