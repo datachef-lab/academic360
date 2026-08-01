@@ -281,10 +281,6 @@ export default function ArticlesMasterPage() {
     }
   };
 
-  const openDeleteDialog = (row: LibraryArticleRow) => {
-    setDeleteTarget(row);
-  };
-
   const closeDeleteDialog = () => {
     setDeleteTarget(null);
     setDeleteInProgress(false);

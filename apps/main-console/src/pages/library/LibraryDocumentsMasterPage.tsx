@@ -236,8 +236,6 @@ export default function LibraryDocumentsMasterPage() {
     }
   };
 
-  const openDeleteDialog = (row: LibraryDocumentTypeRow) => setDeleteTarget(row);
-
   const closeDeleteDialog = () => {
     setDeleteTarget(null);
     setDeleteInProgress(false);
