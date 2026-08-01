@@ -49,10 +49,7 @@ import {
   getLibraryDashboardStats,
   type LibraryDashboardFilters,
   type LibraryDashboardStats,
-  getActivePatrons,
-  getBranchesWithZones,
   getCirculationPolicies,
-  getItemCategories,
   getLibrarySeedStatus,
   getLibraryLoadStatus,
   getCatalogueCounts,
@@ -74,7 +71,7 @@ import {
 // Raw shadcn TableCell for the rowSpan-merged cells in the Policies matrix —
 // FeesTableCell only proxies colSpan, so rowSpan={n} was being dropped.
 import { TableCell } from "@/components/ui/table";
-import { AlertTriangle, ExternalLink, X } from "lucide-react";
+import { AlertTriangle, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ZoneOccupancyPanel } from "./ZoneOccupancyPanel";
 import { HolidayMonthCalendar } from "./HolidayMonthCalendar";
@@ -97,8 +94,6 @@ const DASHBOARD_TABS = [
   // course × semester), which doesn't fit next to a simple counts table.
   { value: "holidays", label: "Holidays" },
 ] as const;
-
-const SEED_BANNER_DISMISS_KEY = "library:seed-banner:dismissed-at";
 
 const RANGE_PRESETS = [
   // "Last 7 days" is the default now — operator sees the past week's
@@ -370,9 +365,9 @@ function useLoaderRateETA(
     }
     while (samples.length > 30) samples.shift();
 
-    if (samples.length >= 2) {
-      const first = samples[0];
-      const latest = samples[samples.length - 1];
+    const first = samples[0];
+    const latest = samples[samples.length - 1];
+    if (samples.length >= 2 && first && latest) {
       const dt = latest.t - first.t;
       const dRows = latest.rows - first.rows;
       if (dt > 0 && dRows > 0) {
@@ -810,21 +805,6 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
 }
 
 function HoldingsTab({ stats }: { stats: LibraryDashboardStats }) {
-  // Two donuts + KPIs read as one collection view; the flat ranked-lists in the
-  // earlier layout gave four columns of "just numbers" that looked like a
-  // spreadsheet.
-  const langDonut = stats.booksByLanguage.slice(0, 7).map((r, i) => ({
-    name: r.language,
-    value: r.count,
-    color: STATUS_COLOURS[i % STATUS_COLOURS.length] as string,
-  }));
-  const docDonut = stats.booksByDocumentType.slice(0, 7).map((r, i) => ({
-    name: r.documentType,
-    value: r.count,
-    // Reversed slice so the two donuts don't share the same first-slice hue.
-    color: STATUS_COLOURS[(STATUS_COLOURS.length - 1 - i) % STATUS_COLOURS.length] as string,
-  }));
-
   const totalCopies = stats.copiesByRack.reduce((a, r) => a + r.count, 0);
 
   return (
@@ -1349,295 +1329,6 @@ function StatusPill({ active }: { active: boolean }) {
     >
       {active ? "Active" : "Inactive"}
     </Badge>
-  );
-}
-
-/**
- * Patrons — with a search + type filter + paging so it stays readable at
- * scale. Filtering runs on the client (the endpoint already returns "active"
- * patrons only — patrons with an open loan or unpaid fine — so total volume
- * is bounded to ~few hundred rows). Move server-side when it grows past ~500.
- */
-function PatronsTab() {
-  const { data = [], isLoading } = useQuery({
-    queryKey: ["library-active-patrons"],
-    queryFn: () => getActivePatrons(500),
-  });
-
-  const [q, setQ] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("__all__");
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 20;
-
-  const types = useMemo(() => Array.from(new Set(data.map((r) => r.userType))).sort(), [data]);
-
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return data.filter((r) => {
-      if (typeFilter !== "__all__" && r.userType !== typeFilter) return false;
-      if (!term) return true;
-      return (r.userName ?? "").toLowerCase().includes(term);
-    });
-  }, [data, q, typeFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  // Reset to page 1 when filters change so the operator isn't stuck on an
-  // empty later page.
-  useEffect(() => setPage(1), [q, typeFilter]);
-
-  const summary = useMemo(() => {
-    let overdue = 0;
-    let fines = 0;
-    for (const r of filtered) {
-      overdue += r.overdue;
-      fines += r.outstandingFine;
-    }
-    return { count: filtered.length, overdue, fines };
-  }, [filtered]);
-
-  return (
-    <PanelCard
-      title="Active patrons — with open loans or outstanding fines"
-      action={
-        <span className="text-[11px] text-[#555]">
-          {nfmt.format(summary.count)} match
-          {summary.count === 1 ? "" : "es"}
-          {summary.overdue > 0 ? ` · ${nfmt.format(summary.overdue)} overdue` : ""}
-          {summary.fines > 0 ? ` · ${inr(summary.fines)} outstanding` : ""}
-        </span>
-      }
-    >
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search patron name…"
-            className="h-8 sm:max-w-xs"
-          />
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={() => setTypeFilter("__all__")}
-              className={cn(
-                "rounded-md border px-2 py-1 text-[11px] font-medium",
-                typeFilter === "__all__"
-                  ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
-              )}
-            >
-              All ({nfmt.format(data.length)})
-            </button>
-            {types.map((t) => {
-              const n = data.filter((r) => r.userType === t).length;
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTypeFilter(t)}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-[11px] font-medium",
-                    typeFilter === t
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
-                  )}
-                >
-                  {t} ({nfmt.format(n)})
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[560px]">
-          <FeesTableHeader>
-            <FeesTableHead>Patron</FeesTableHead>
-            <FeesTableHead>Type</FeesTableHead>
-            <FeesTableHead className="text-right">Active issues</FeesTableHead>
-            <FeesTableHead className="text-right">Overdue</FeesTableHead>
-            <FeesTableHead className="text-right">Outstanding fine</FeesTableHead>
-          </FeesTableHeader>
-          <FeesTableBody>
-            {isLoading ? (
-              <SkeletonRows cols={5} />
-            ) : pageRows.length === 0 ? (
-              <EmptyRow
-                label={
-                  q || typeFilter !== "__all__"
-                    ? "No patrons match the current filter."
-                    : "No patrons with active loans or unpaid fines."
-                }
-                cols={5}
-              />
-            ) : (
-              pageRows.map((p) => (
-                <FeesTableRow key={p.userId}>
-                  <FeesTableCell className="font-medium">
-                    {p.userName ?? `Patron #${p.userId}`}
-                  </FeesTableCell>
-                  <FeesTableCell className="text-xs text-[#555]">{p.userType}</FeesTableCell>
-                  <FeesTableCell className="text-right tabular-nums">
-                    {nfmt.format(p.activeIssues)}
-                  </FeesTableCell>
-                  <FeesTableCell
-                    className={cn(
-                      "text-right tabular-nums",
-                      p.overdue > 0 && "font-semibold text-rose-600",
-                    )}
-                  >
-                    {nfmt.format(p.overdue)}
-                  </FeesTableCell>
-                  <FeesTableCell
-                    className={cn(
-                      "text-right tabular-nums",
-                      p.outstandingFine > 0 && "font-semibold text-amber-700",
-                    )}
-                  >
-                    {p.outstandingFine > 0 ? inr(p.outstandingFine) : "—"}
-                  </FeesTableCell>
-                </FeesTableRow>
-              ))
-            )}
-          </FeesTableBody>
-        </FeesTable>
-
-        {filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between text-xs text-slate-600">
-            <span>
-              Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-              {Math.min(currentPage * PAGE_SIZE, filtered.length)} of {nfmt.format(filtered.length)}
-            </span>
-            <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2"
-                disabled={currentPage === 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Prev
-              </Button>
-              <span className="tabular-nums">
-                {currentPage} / {totalPages}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2"
-                disabled={currentPage === totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </PanelCard>
-  );
-}
-
-function ItemsTab() {
-  const { data = [], isLoading } = useQuery({
-    queryKey: ["library-item-categories"],
-    queryFn: getItemCategories,
-  });
-  return (
-    <PanelCard title="Item categories">
-      <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[520px]">
-        <FeesTableHeader>
-          <FeesTableHead>Name</FeesTableHead>
-          <FeesTableHead>Code</FeesTableHead>
-          <FeesTableHead>Description</FeesTableHead>
-          <FeesTableHead className="text-center">Status</FeesTableHead>
-        </FeesTableHeader>
-        <FeesTableBody>
-          {isLoading ? (
-            <SkeletonRows cols={4} />
-          ) : data.length === 0 ? (
-            <EmptyRow label="No item categories yet." cols={4} />
-          ) : (
-            data.map((r) => (
-              <FeesTableRow key={r.id}>
-                <FeesTableCell className="font-medium">{r.name}</FeesTableCell>
-                <FeesTableCell className="font-mono text-xs text-[#666]">{r.code}</FeesTableCell>
-                <FeesTableCell className="text-sm text-[#444]">{r.description}</FeesTableCell>
-                <FeesTableCell className="text-center">
-                  <StatusPill active={r.isActive} />
-                </FeesTableCell>
-              </FeesTableRow>
-            ))
-          )}
-        </FeesTableBody>
-      </FeesTable>
-    </PanelCard>
-  );
-}
-
-function BranchesTab() {
-  const { data = [], isLoading } = useQuery({
-    queryKey: ["library-branches-with-zones"],
-    queryFn: getBranchesWithZones,
-  });
-  return (
-    <PanelCard title="Branches & zones">
-      <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[520px]">
-        <FeesTableHeader>
-          <FeesTableHead>Branch</FeesTableHead>
-          <FeesTableHead>Code</FeesTableHead>
-          <FeesTableHead>Zones</FeesTableHead>
-          <FeesTableHead className="text-right">Copies</FeesTableHead>
-          <FeesTableHead className="text-right">In library now</FeesTableHead>
-          <FeesTableHead className="text-center">Status</FeesTableHead>
-        </FeesTableHeader>
-        <FeesTableBody>
-          {isLoading ? (
-            <SkeletonRows cols={6} />
-          ) : data.length === 0 ? (
-            <EmptyRow label="No branches configured yet." cols={6} />
-          ) : (
-            data.map((b) => (
-              <FeesTableRow key={b.branchId}>
-                <FeesTableCell className="font-medium">{b.branchName}</FeesTableCell>
-                <FeesTableCell className="font-mono text-xs text-[#666]">
-                  {b.branchCode ?? "—"}
-                </FeesTableCell>
-                <FeesTableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {b.zones.length === 0 ? (
-                      <span className="text-xs text-[#888]">No zones</span>
-                    ) : (
-                      b.zones.map((z) => (
-                        <Badge
-                          key={z.id}
-                          variant="outline"
-                          className="border-indigo-200 bg-indigo-50 text-[11px] text-indigo-700"
-                        >
-                          {z.name}
-                          {z.capacity ? ` · ${z.capacity}` : ""}
-                        </Badge>
-                      ))
-                    )}
-                  </div>
-                </FeesTableCell>
-                <FeesTableCell className="text-right tabular-nums">
-                  {nfmt.format(b.copies)}
-                </FeesTableCell>
-                <FeesTableCell className="text-right tabular-nums">
-                  {nfmt.format(b.currentlyInside)}
-                </FeesTableCell>
-                <FeesTableCell className="text-center">
-                  <StatusPill active={b.isActive} />
-                </FeesTableCell>
-              </FeesTableRow>
-            ))
-          )}
-        </FeesTableBody>
-      </FeesTable>
-    </PanelCard>
   );
 }
 
