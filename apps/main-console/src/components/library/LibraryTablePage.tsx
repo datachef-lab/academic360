@@ -146,6 +146,13 @@ export function LibraryTablePage({
 // Wrapper for the desktop table block. Render a `<Table>` inside this; pass
 // `containerClassName="overflow-visible min-w-[900px]"` on that Table so the inner scroll
 // shell here owns scrolling and the table itself just provides the min-width canvas.
+//
+// Styling matches the notification-masters page (see
+// `features/notifications/pages/notification-masters-page.tsx`) — same
+// `overflow-hidden rounded-md border` shell, same `max-h-[65vh] overflow-auto`
+// inner scroll, same subtle right-borders on cells (`[&_th]:border-r` etc.),
+// so every library master page reads as the same family without needing the
+// notification page's inline utility soup on each call site.
 export function LibraryDesktopTableShell({
   children,
   className,
@@ -155,8 +162,20 @@ export function LibraryDesktopTableShell({
 }) {
   return (
     <div className={cn("hidden min-w-0 pb-2 lg:block", className)}>
-      <div className="max-h-[min(70vh,640px)] overflow-auto rounded-md border bg-background">
-        {children}
+      <div className="overflow-hidden rounded-md border bg-background">
+        {/*
+          `[&>div]:!overflow-visible` forces the shadcn `<Table>` wrapper
+          (which defaults to `overflow-auto` when the caller doesn't pass
+          `containerClassName="overflow-visible …"`) to NOT create a nested
+          scroll container. Without this, sticky table headers anchor
+          against the shadcn wrapper (which has no max-height → nothing to
+          scroll → sticky never engages). With it, sticky anchors against
+          THIS div's `max-h-[65vh] overflow-auto` — so headers stay fixed
+          when the body scrolls.
+        */}
+        <div className="max-h-[65vh] overflow-auto [&>div]:!overflow-visible [&_table]:w-full [&_table_th]:border-r [&_table_td]:border-r [&_table_th:last-child]:border-r-0 [&_table_td:last-child]:border-r-0">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -169,31 +188,56 @@ export function LibraryMobileCardsShell({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <div className={cn("max-h-[70vh] space-y-3 overflow-y-auto pb-2 lg:hidden", className)}>
-      {children}
-    </div>
-  );
+  // No max-h + overflow-y-auto: the page itself scrolls below `lg`, and
+  // pinning a mid-page card list to 70vh creates a nested scroll (page +
+  // inner list) that reads as two scrollbars stacked on small screens.
+  return <div className={cn("space-y-3 pb-2 lg:hidden", className)}>{children}</div>;
 }
 
-// Sticky, colored thead. Pass through any child <TableRow> / <TableHead>.
-// Use <LibraryTableHead sticky="left|right"> for first/last frozen columns.
-export const STICKY_THEAD_CLASS =
-  "sticky top-0 z-20 border-b-2 border-slate-500 bg-muted/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-muted/80 dark:border-slate-400";
+// Sticky, light-grey header row. Kept minimal: the shell above sets the shared
+// right-borders via `[&_table_th]:border-r`, so per-cell classes only carry
+// the sticky positioning + colour. Palette matches the notification-masters
+// table exactly (bg-gray-50, tracking-wide uppercase text-gray-500 labels,
+// inset bottom border via shadow) so both modules read as one family.
+export const STICKY_THEAD_CLASS = "sticky top-0 z-10 bg-gray-50 shadow-[inset_0_-1px_0_#e5e7eb]";
 
 export const STICKY_TH_BASE =
-  "h-auto whitespace-nowrap border-r border-solid border-slate-300 bg-muted/95 px-3 py-2.5 text-xs font-semibold text-slate-800 backdrop-blur dark:border-slate-400";
+  "h-auto whitespace-nowrap bg-gray-50 px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500";
 
+// `STICKY_TH_LEFT` no longer pins the column horizontally. Every page uses
+// it on the narrow "#" column, but the corresponding body <TableCell>s
+// don't carry a matching `sticky left-0` class — so on horizontal scroll
+// the row content used to slide UNDER the pinned header, reading as
+// overlapping columns. Now it's just a header cell with the # column's
+// width; still sticks to the TOP of the shell (inherited from the parent
+// `<TableHeader className={STICKY_THEAD_CLASS}>`), which is what actually
+// matters for vertical scroll.
+//
+// Width bumped from `w-10` (40px, only 8px of content room after `px-4`) to
+// `w-16` (matches the notification-master table). Any 2- or 3-digit index
+// used to overflow into the Name column, showing as visual column overlap
+// on pages with >99 rows. Every page that calls this with a redundant
+// `w-10` in a `cn(STICKY_TH_LEFT, "w-10")` will still be forced back to 40px
+// — those redundant sizes should be dropped (they're leftovers from the
+// pre-shared-shell era), but the default is now honest.
 export const STICKY_TH_LEFT =
-  "sticky left-0 z-30 h-auto w-10 whitespace-nowrap border-r border-solid border-slate-300 bg-muted/95 px-3 py-2.5 text-xs font-semibold text-slate-800 backdrop-blur dark:border-slate-400";
+  "h-auto w-16 whitespace-nowrap bg-gray-50 px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500";
 
+// Same reasoning for right-sticky: after the Actions column removal, no page
+// keeps a right-pinned column, and any residual left-over usage would suffer
+// the same overlap problem. Kept as a "right-aligned header cell" for pages
+// that still put a rightward stat there.
 export const STICKY_TH_RIGHT =
-  "sticky right-0 z-30 h-auto min-w-[72px] border-solid border-l-slate-300 border-r border-r-slate-300 bg-muted/95 px-3 py-2.5 text-right text-xs font-semibold text-slate-800 backdrop-blur shadow-[-8px_0_12px_-6px_rgba(15,23,42,0.12)] dark:border-l-slate-400 dark:border-r-slate-300";
+  "h-auto min-w-[72px] bg-gray-50 px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500";
 
 export const STICKY_TD_LEFT =
-  "border-b border-slate-200 sticky left-0 z-10 whitespace-nowrap bg-background px-2 text-muted-foreground shadow-[6px_0_10px_-4px_rgba(15,23,42,0.06)]";
+  "border-b border-slate-200 sticky left-0 z-10 whitespace-nowrap bg-background px-4 py-3 text-gray-600 shadow-[6px_0_10px_-4px_rgba(15,23,42,0.06)]";
 
 export const STICKY_TD_RIGHT =
-  "border-b border-slate-200 sticky right-0 z-10 bg-background px-2 text-right align-top shadow-[-8px_0_12px_-6px_rgba(15,23,42,0.08)]";
+  "border-b border-slate-200 sticky right-0 z-10 bg-background px-4 py-3 text-right align-top shadow-[-8px_0_12px_-6px_rgba(15,23,42,0.08)]";
 
-export const TABLE_TD = "border-b border-slate-200 align-top px-2";
+export const TABLE_TD = "border-b border-slate-200 align-top px-4 py-3";
+
+// Utility for body rows — apply on every `<TableRow>` inside the library
+// tables so hover-highlight matches the notification-masters aesthetic.
+export const TABLE_ROW_HOVER = "border-b last:border-0 hover:bg-gray-50/60";
