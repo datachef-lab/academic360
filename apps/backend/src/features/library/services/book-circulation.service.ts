@@ -32,6 +32,7 @@ import {
 } from "@/features/library/services/circulation-policy-resolver.service.js";
 import { countWorkingDaysBetween } from "@/features/library/services/holiday-calendar.service.js";
 import { emitLibraryNotification } from "@/features/library/services/library-notifications.service.js";
+import { emitLibraryEvent } from "@/features/library/services/library-realtime.service.js";
 
 type UserType = "ADMIN" | "STUDENT" | "FACULTY" | "STAFF" | "PARENTS";
 
@@ -557,11 +558,21 @@ export async function returnBookCirculationById(id: number): Promise<void> {
       copyDetailsId: bookCirculationModel.copyDetailsId,
       issueTimestamp: bookCirculationModel.issueTimestamp,
       returnTimestamp: bookCirculationModel.returnTimestamp,
+      // Guarded reads: don't re-return a returned row, don't rewrite a paid fine.
+      isReturned: bookCirculationModel.isReturned,
+      existingFineAmount: bookCirculationModel.fineAmount,
+      paymentId: bookCirculationModel.paymentId,
     })
     .from(bookCirculationModel)
     .where(eq(bookCirculationModel.id, id))
     .limit(1);
   if (!base) return;
+
+  // Double-return guard. Without this, a second click at the counter would
+  // recompute `fineAmount` (potentially higher, since the new "actual return"
+  // is later than the first one) and stamp a new `actualReturnTimestamp` —
+  // both destructive to a completed handover.
+  if (base.isReturned) return;
 
   const actualReturn = new Date();
   const policy = await resolvePolicyForCirculation(
@@ -590,14 +601,30 @@ export async function returnBookCirculationById(id: number): Promise<void> {
     fineAmount = billableDays * policy.finePerDay;
   }
 
+  // Paid-fine preservation. If a payment already sits on this row, the fine
+  // is history — the patron has already paid what they were charged. Re-
+  // computing it here would either undercharge (write ₹0 over a paid ₹200)
+  // or overcharge (raise it after payment) depending on timing. Keep the
+  // stored amount when a payment is linked.
+  const fineAmountToWrite = base.paymentId
+    ? (base.existingFineAmount ?? 0)
+    : fineAmount;
+  const fineToNotify = base.paymentId ? 0 : fineAmount;
+
   await db
     .update(bookCirculationModel)
     .set({
       isReturned: true,
       actualReturnTimestamp: actualReturn,
       returnedToId: null,
-      fineAmount,
-      fineDate: fineAmount > 0 ? actualReturn : null,
+      fineAmount: fineAmountToWrite,
+      fineDate:
+        fineAmountToWrite > 0
+          ? // Preserve fineDate for a paid fine; only set NOW for a fresh charge.
+            base.paymentId
+            ? undefined
+            : actualReturn
+          : null,
       updatedAt: new Date(),
     })
     .where(eq(bookCirculationModel.id, id));
@@ -607,13 +634,17 @@ export async function returnBookCirculationById(id: number): Promise<void> {
     userId: base.userId,
     variables: { circulationId: id, returnedAt: actualReturn.toISOString() },
   });
-  if (fineAmount > 0) {
+  if (fineToNotify > 0) {
     await emitLibraryNotification({
       event: "LIBRARY_FINE_CHARGED",
       userId: base.userId,
-      variables: { circulationId: id, fineAmount },
+      variables: { circulationId: id, fineAmount: fineToNotify },
     });
   }
+  emitLibraryEvent("library:circulation:updated", {
+    userId: base.userId,
+    detail: { id, action: "returned", fineAmount: fineAmountToWrite },
+  });
 }
 
 export async function reissueBookCirculationById(id: number): Promise<void> {
@@ -679,6 +710,10 @@ export async function reissueBookCirculationById(id: number): Promise<void> {
       newReturnTimestamp: due.toISOString(),
     },
   });
+  emitLibraryEvent("library:circulation:updated", {
+    userId: base.userId,
+    detail: { id, action: "reissued" },
+  });
 }
 
 export async function issueBookCirculationFromExistingById(
@@ -731,6 +766,10 @@ export async function issueBookCirculationFromExistingById(
       copyDetailsId: base.copyDetailsId,
       returnTimestamp: due.toISOString(),
     },
+  });
+  emitLibraryEvent("library:circulation:updated", {
+    userId: base.userId,
+    detail: { id: inserted?.id, action: "issued" },
   });
 }
 
