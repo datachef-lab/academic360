@@ -598,7 +598,7 @@ export function formatNotificationTime(s: string | null): string {
   if (!s) return "—";
   const d = new Date(s.endsWith("Z") || s.includes("+") ? s : s.replace(" ", "T") + "Z");
   return d.toLocaleString("en-IN", {
-    timeZone: "UTC",
+    timeZone: "Asia/Kolkata",
     day: "2-digit",
     month: "short",
     year: "numeric",
