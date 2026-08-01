@@ -20,7 +20,10 @@ import { runRegistrationYearDriftMigration } from "@/features/subject-selection/
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
-import { loadDefaultDocuments } from "@/features/academics/services/document.service.js";
+import {
+  loadDefaultDocuments,
+  loadDocumentTypesV2,
+} from "@/features/academics/services/document.service.js";
 import { runIdCardLedgerBackfill } from "@/features/documents/services/idcard-ledger-backfill.service.js";
 import { runCuRegUploadLedgerBackfill } from "@/features/documents/services/cureg-upload-ledger-backfill.service.js";
 
@@ -108,6 +111,16 @@ const MIGRATIONS: Migration[] = [
     // a type an admin later renames, edits or deletes must stay that way.
     name: "document-types-seed",
     run: async () => loadDefaultDocuments(),
+  },
+  {
+    // Second document-types step: the three university-issued types
+    // (marksheet / degree / registration certificate) and the "Exam Admit Card"
+    // -> "University Admit Card" rename. Separate marker because the seed above
+    // has already run everywhere and returns on its own marker before it ever
+    // reads the list. Matches on `code`, so an admin-renamed row is still found,
+    // and the rename only touches a name still reading the original.
+    name: "document-types-seed-v2",
+    run: async () => loadDocumentTypesV2(),
   },
   {
     // Gives every existing ID card issue its document_ledger entry. Runs after

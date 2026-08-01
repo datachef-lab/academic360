@@ -27,7 +27,6 @@ const log = createLogger("document-ledger");
 /** Codes are the stable, server-assigned keys on `document_types`. */
 export const DOCUMENT_TYPE_CODES = {
   EXAM_ADMIT_CARD: "EXAM_ADMIT_CARD",
-  FEE_RECEIPT: "FEE_RECEIPT",
   CU_REGISTRATION_PDF: "CU_REGISTRATION_PDF",
   ID_CARD: "ID_CARD",
   CU_EXAM_FORM: "CU_EXAM_FORM",
