@@ -7,12 +7,12 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getZoneOccupancyList, type ZoneOccupancyRow } from "@/services/library-zones.service";
 import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
+import { useLibraryRealtime } from "@/features/library/hooks/useLibraryRealtime";
 
 export function ZoneOccupancyPanel() {
   const [activeBranchId] = useActiveLibraryBranchId();
@@ -35,21 +35,22 @@ export function ZoneOccupancyPanel() {
     void fetchRows();
   }, [fetchRows]);
 
+  // A manual Refresh button used to sit up top. That was redundant: every
+  // circulation / copy / entry-exit / master mutation already fires a socket
+  // event that reaches every dashboard on every EC2 instance (Redis adapter),
+  // so this panel refetches on its own the moment anything changes.
+  useLibraryRealtime({ onAnyEvent: () => void fetchRows() });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200"
     >
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-emerald-600" />
-          <h2 className="text-sm font-semibold text-gray-800">Zone occupancy (today)</h2>
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => void fetchRows()}>
-          <RefreshCw className={`mr-1 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+      <div className="mb-4 flex items-center gap-2">
+        <MapPin className="h-4 w-4 text-emerald-600" />
+        <h2 className="text-sm font-semibold text-gray-800">Zone occupancy (today)</h2>
+        {loading && <Loader2 className="ml-auto h-3.5 w-3.5 animate-spin text-gray-400" />}
       </div>
 
       {loading && rows.length === 0 ? (
