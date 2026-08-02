@@ -240,16 +240,19 @@ export async function getLibrarySyncStatus(): Promise<LibrarySyncStatus> {
       ).toISOString()
     : null;
 
-  // Prefer the scheduler-level duration (whole tick, including between-table
-  // overhead). Fall back to the sum of per-table durations from
-  // library_sync_state on the very first tick before the scheduler row has a
-  // value recorded — otherwise the banner has no "usually takes ~Xs" to show.
+  // Only trust the scheduler-level duration (the recorded wall-clock of the
+  // most recent COMPLETED tick). The per-table SUM(last_duration_ms) looked
+  // like a sensible fallback but it accumulates across DIFFERENT runs of
+  // each table (some rows come from the legacy full-load, others from
+  // partial sync ticks) — the sum can hit multiple hours and is not a
+  // truthful "usually takes ~X" number. Better to expose null and let the
+  // banner say "estimate available after first sync completes" than to
+  // publish a misleading ceiling that lets a runaway raw-rate ETA slip past
+  // the clamp.
   const lastDurationMs =
     sched.last_duration_ms != null && Number(sched.last_duration_ms) > 0
       ? Number(sched.last_duration_ms)
-      : agg.sum_table_ms != null && Number(agg.sum_table_ms) > 0
-        ? Number(agg.sum_table_ms)
-        : null;
+      : null;
 
   // If the currently-running tick was started under an older build that
   // didn't write `planned_rows`, or if the banner is called between ticks
