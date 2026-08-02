@@ -100,6 +100,16 @@ const MIGRATIONS: Migration[] = [
     run: async () => runLegacyFeesAmountHeal({ commit: true, sampleLimit: 20 }),
   },
   {
+    // Seeds the library masters — branch, patron & item categories, zones,
+    // circulation policies — on a fresh database, once. Marker-guarded,
+    // advisory-locked, and matches on `code` so staff edits are never
+    // clobbered. MUST stay ahead of library-legacy-load: the runner awaits
+    // each entry, and the load is a multi-hour walk that would otherwise
+    // starve this fast seed (and the dashboard's seed banner) until it ends.
+    name: "library-masters-seed",
+    run: async () => runLibraryMastersSeed(),
+  },
+  {
     // Loads the library data from IRP. Unlike everything above it is a long
     // walk (~200k legacy rows), so it takes its OWN advisory lock: the
     // resolvers are find-or-create, which makes a sequential re-run safe but
@@ -108,14 +118,6 @@ const MIGRATIONS: Migration[] = [
     // completes; LIBRARY_LEGACY_LOAD=off disables it.
     name: "library-legacy-load",
     run: async () => runLibraryLegacyLoad(),
-  },
-  {
-    // Seeds the library masters — branch, patron & item categories, zones,
-    // circulation policies — on a fresh database, once. Marker-guarded,
-    // advisory-locked, and matches on `code` so staff edits are never
-    // clobbered. Runs BEFORE the IRP load reads them.
-    name: "library-masters-seed",
-    run: async () => runLibraryMastersSeed(),
   },
 ];
 
