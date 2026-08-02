@@ -19,9 +19,14 @@ function formatDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return "0s";
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rest = s % 60;
-  return rest === 0 ? `${m}m` : `${m}m ${rest}s`;
+  const totalMin = Math.floor(s / 60);
+  const restSec = s % 60;
+  if (totalMin < 60) {
+    return restSec === 0 ? `${totalMin}m` : `${totalMin}m ${restSec}s`;
+  }
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
 function humaniseAgo(iso: string | null): string {
