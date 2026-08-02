@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from "express";
-import { promises as fs } from "node:fs";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { getReportDescriptor } from "./report-generators.js";
 import {
   createReportJob,
   getReportJob,
+  getReportJobFile,
   runReportJob,
   reportDownloadPath,
 } from "./report-job.service.js";
@@ -19,7 +19,7 @@ function requestUserId(req: Request): string {
  * Validates the report + params, creates a background job, and responds
  * immediately with the jobId. Generation streams progress over the socket.
  */
-export const startReportJobController = (
+export const startReportJobController = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -40,7 +40,7 @@ export const startReportJobController = (
         .json(new ApiError(401, "Authentication required to run a report"));
     }
 
-    const job = createReportJob(userId, descriptor.key, descriptor.label);
+    const job = await createReportJob(userId, descriptor.key, descriptor.label);
 
     // Respond first; run in the background (mirrors the async student import).
     res
@@ -75,7 +75,7 @@ export const downloadReportJobController = async (
 ) => {
   try {
     const jobId = String(req.params.jobId);
-    const job = getReportJob(jobId);
+    const job = await getReportJob(jobId);
     if (!job) {
       return res
         .status(404)
@@ -92,11 +92,11 @@ export const downloadReportJobController = async (
         .status(500)
         .json(new ApiError(500, job.error || "Report generation failed"));
     }
-    if (job.status !== "completed" || !job.filePath) {
+    const buffer =
+      job.status === "completed" ? await getReportJobFile(jobId) : null;
+    if (!buffer) {
       return res.status(409).json(new ApiError(409, "Report is not ready yet"));
     }
-
-    const buffer = await fs.readFile(job.filePath);
     res.setHeader(
       "Content-Type",
       job.contentType ||
@@ -117,13 +117,13 @@ export const downloadReportJobController = async (
  * GET /api/reports/jobs/:jobId
  * Status fallback for clients that miss the socket event.
  */
-export const reportJobStatusController = (
+export const reportJobStatusController = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const job = getReportJob(String(req.params.jobId));
+    const job = await getReportJob(String(req.params.jobId));
     if (!job) {
       return res
         .status(404)

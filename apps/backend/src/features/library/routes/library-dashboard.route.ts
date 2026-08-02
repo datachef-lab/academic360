@@ -5,6 +5,7 @@ import {
   getLibrarySeedStatusController,
   getLibraryConsistencyReportController,
   getLibraryLoadStatusController,
+  getLibrarySyncStatusController,
   listActivePatronsController,
   listBranchesWithZonesController,
   listCirculationPoliciesController,
@@ -23,6 +24,9 @@ router.get("/consistency-check", getLibraryConsistencyReportController);
 // In-memory snapshot of the current legacy load — lets a dashboard opening
 // mid-load hydrate the banner immediately, without waiting for the next emit.
 router.get("/load-status", getLibraryLoadStatusController);
+// Delta-sync scheduler status — feeds the "Auto-syncing · Last synced N min
+// ago · Next sync in ~M min" pill on the dashboard.
+router.get("/sync-status", getLibrarySyncStatusController);
 // Read-only listings that back the new dashboard tabs.
 router.get("/patrons", listActivePatronsController);
 router.get("/item-categories", listItemCategoriesController);

@@ -1442,11 +1442,21 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
     : await db.insert(bookCirculationModel).values(payload).returning();
 
   if (newIssueReturn.isReIssued) {
-    await db.insert(bookReissueModel).values({
-      bookCirculationId: newIssueReturn.id!,
-      reissuedBy: newIssueReturn.issuedFromId,
-      returnTimestamp: newIssueReturn.returnTimestamp,
-    });
+    // Guard against duplicates: this path re-runs on every upsert of the same
+    // circulation (restartable loads + the delta-sync), and book_reissue has
+    // no unique constraint to catch the repeat insert.
+    const [existingReissue] = await db
+      .select({ id: bookReissueModel.id })
+      .from(bookReissueModel)
+      .where(eq(bookReissueModel.bookCirculationId, newIssueReturn.id!))
+      .limit(1);
+    if (!existingReissue) {
+      await db.insert(bookReissueModel).values({
+        bookCirculationId: newIssueReturn.id!,
+        reissuedBy: newIssueReturn.issuedFromId,
+        returnTimestamp: newIssueReturn.returnTimestamp,
+      });
+    }
   }
 
   return newIssueReturn;

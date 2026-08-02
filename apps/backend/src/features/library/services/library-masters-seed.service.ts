@@ -286,10 +286,20 @@ export type LibraryMastersSeedResult =
  *  - **Never overwrites an edit.** Every lookup is by `code`; if a matching
  *    code already exists, the row is left as it stands. Staff can rename,
  *    recolour, mark inactive — the seed will not fight them.
- *  - **Multi-instance safe.** Held under `pg_try_advisory_lock(918360004)` for
- *    the whole run; a losing instance skips and gets on with its boot.
+ *  - **Never duplicated across instances.** Held under
+ *    `pg_try_advisory_lock(918360004)` for the whole run — losing instances
+ *    skip and get on with their boot.
  *  - **Fine per day = 0 across the board.** A fresh install must not silently
  *    over-charge; staff opt in by editing the policies.
+ *
+ * Interaction with the ongoing legacy sync (`library-legacy-sync.service.ts`):
+ * seeded rows have `legacy_<x>_id = NULL` because they were never in the IRP
+ * source. The sync's delete step only removes rows with NON-NULL legacy IDs
+ * that aren't in the source, so seeded rows are safe from resurrection AND
+ * from deletion. If the loader later happens to encounter an IRP row whose
+ * `code` matches a seeded row (e.g. a "MAIN" branch on both sides), the
+ * find-or-create resolver attaches the legacy ID to the seeded row — that's
+ * the intended merge, not a duplication.
  */
 export async function runLibraryMastersSeed(opts?: {
   force?: boolean;
