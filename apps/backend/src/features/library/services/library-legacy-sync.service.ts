@@ -45,6 +45,12 @@ import {
   emitLibraryEvent,
   type LibraryEventName,
 } from "./library-realtime.service.js";
+import {
+  addSchedulerProcessed,
+  clearStaleSchedulerRunning,
+  writeSchedulerPlanned,
+  writeSchedulerRunning,
+} from "./library-sync-status.service.js";
 
 const log = createLogger("library-legacy-sync");
 
@@ -94,6 +100,65 @@ const SYNC_EVENT_BY_TABLE: Record<string, LibraryEventName> = {
  * DELETE / DDL emitted by any future edit here fails loudly at call time
  * instead of silently mutating the source.
  */
+// In-memory cache of MySQL COUNT(*) per legacy source table (capped at
+// MAX_ROWS_PER_TABLE_PER_TICK — a tick never processes more). Refreshed
+// every 10 min so getLibrarySyncStatus can hand the banner a "planned rows"
+// number even between ticks, and so the tick can order tables smallest-first
+// without re-counting.
+let cachedPlannedCounts: {
+  perTable: Map<string, number>;
+  total: number;
+  at: number;
+} | null = null;
+const PLANNED_CACHE_TTL_MS = 10 * 60 * 1000;
+
+async function computePlannedSyncCounts(): Promise<{
+  perTable: Map<string, number>;
+  total: number;
+}> {
+  if (
+    cachedPlannedCounts &&
+    Date.now() - cachedPlannedCounts.at < PLANNED_CACHE_TTL_MS
+  ) {
+    return cachedPlannedCounts;
+  }
+  const perTable = new Map<string, number>();
+  let total = 0;
+  await Promise.all(
+    SYNC_MAP.map(async (m) => {
+      try {
+        const [row] = await mysqlSelectQuery<{ c: number }>(
+          `SELECT COUNT(*) AS c FROM ${m.legacyTable}`,
+        );
+        const n = Number(row?.c ?? 0);
+        // Cap each table's contribution at the per-tick scan limit —
+        // otherwise planned totals 1.6M+ while a tick scans ≤20k/table and
+        // the banner's percent/ETA are off by 50x.
+        const capped = Number.isFinite(n)
+          ? Math.min(n, MAX_ROWS_PER_TABLE_PER_TICK)
+          : 0;
+        perTable.set(m.legacyTable, capped);
+        total += capped;
+      } catch (err) {
+        log.warn(
+          `computePlannedSyncCounts: count failed for ${m.legacyTable}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }),
+  );
+  cachedPlannedCounts = { perTable, total, at: Date.now() };
+  return cachedPlannedCounts;
+}
+
+/**
+ * Sum of the per-table planned counts. Callable from anywhere (the
+ * /sync-status endpoint uses it as a fallback); failures per-table are
+ * logged and treated as 0 so a broken count query never poisons the number.
+ */
+export async function computePlannedSyncTotal(): Promise<number> {
+  return (await computePlannedSyncCounts()).total;
+}
+
 async function mysqlSelectQuery<T = Record<string, unknown>>(
   raw: string,
   params: unknown[] = [],
@@ -229,13 +294,26 @@ async function findLegacyEntry(table: string): Promise<LegacyEntry | null> {
  * The resolvers are find-or-create so this both loads new rows and updates
  * existing ones — the sync doesn't need a separate "update path".
  */
+const PROGRESS_BATCH = 500;
+
 async function upsertIds(
   entry: LegacyEntry,
   ids: number[],
+  onProgress?: (delta: number) => void,
 ): Promise<{ upserted: number; failed: number }> {
   let cursor = 0;
   let upserted = 0;
   let failed = 0;
+  // Rows processed since the last onProgress call. Reported every
+  // PROGRESS_BATCH rows so the banner's ETA moves DURING a big table, not
+  // only after it completes (issuereturn alone can take minutes).
+  let sinceReport = 0;
+  const report = () => {
+    if (sinceReport > 0 && onProgress) {
+      onProgress(sinceReport);
+      sinceReport = 0;
+    }
+  };
   const runOne = async () => {
     while (true) {
       const idx = cursor++;
@@ -253,11 +331,14 @@ async function upsertIds(
           }`,
         );
       }
+      sinceReport++;
+      if (sinceReport >= PROGRESS_BATCH) report();
     }
   };
   await Promise.all(
     Array.from({ length: Math.min(ROW_WORKERS, ids.length) }, runOne),
   );
+  report();
   return { upserted, failed };
 }
 
@@ -322,13 +403,13 @@ async function reconcileDeletes(
  */
 async function syncOneTable(
   mapping: SyncMapping,
-): Promise<{ changed: boolean }> {
+): Promise<{ changed: boolean; scanned: number }> {
   const started = Date.now();
   try {
     const entry = await findLegacyEntry(mapping.legacyTable);
     if (!entry) {
       log.warn(`no legacy entry found for ${mapping.legacyTable}, skipping`);
-      return { changed: false };
+      return { changed: false, scanned: 0 };
     }
 
     const inScopeRows = await mysqlSelectQuery<{ id: number }>(entry.sql);
@@ -339,7 +420,19 @@ async function syncOneTable(
     // 10-minute cadence. Bookmark not needed: the next tick just re-scans.
     const scannedIds = inScopeIds.slice(0, MAX_ROWS_PER_TABLE_PER_TICK);
 
-    const { upserted } = await upsertIds(entry, scannedIds);
+    // Persist progress mid-table (fire-and-forget so workers never block on
+    // the counter write) and nudge the banner at most every 5s.
+    let lastProgressEmit = 0;
+    const { upserted } = await upsertIds(entry, scannedIds, (delta) => {
+      void addSchedulerProcessed(delta).catch(() => undefined);
+      const now = Date.now();
+      if (now - lastProgressEmit >= 5_000) {
+        lastProgressEmit = now;
+        emitLibraryEvent("library:sync-status:updated", {
+          detail: { at: new Date().toISOString(), running: true },
+        });
+      }
+    });
 
     // Unfiltered id set for delete detection. Sourced from a plain "SELECT id
     // FROM <table>" — no filter — so anything actually removed upstream shows
@@ -381,7 +474,7 @@ async function syncOneTable(
         },
       });
     }
-    return { changed };
+    return { changed, scanned: scannedIds.length };
   } catch (err) {
     await writeSyncFailure(mapping.legacyTable, err);
     log.warn(
@@ -389,7 +482,7 @@ async function syncOneTable(
         err instanceof Error ? err.message : String(err)
       }`,
     );
-    return { changed: false };
+    return { changed: false, scanned: 0 };
   }
 }
 
@@ -424,6 +517,16 @@ export async function runLibrarySyncTick(): Promise<{
     holdsLock = lockRes.rows[0]?.locked === true;
     if (!holdsLock) return { skipped: "another instance is running the tick" };
 
+    // Bookend the tick so /api/library/dashboard/sync-status can flip the
+    // dashboard banner between "Auto-syncing · Next sync in ~N min" and
+    // "Syncing for Ns…". State is DB-backed so every instance in the fleet
+    // reads the same value (per-instance memory would give wrong answers
+    // behind a load balancer).
+    await writeSchedulerRunning(true);
+    emitLibraryEvent("library:sync-status:updated", {
+      detail: { at: new Date().toISOString(), running: true },
+    });
+
     await ensureStateTable();
 
     // Seed each table's watermark with the initial-load's marker timestamp on
@@ -436,16 +539,46 @@ export async function runLibrarySyncTick(): Promise<{
       await readSyncState(mapping.legacyTable, fallback);
     }
 
+    // Planning phase — hand off to `computePlannedSyncCounts` so the tick
+    // and the getLibrarySyncStatus fallback share the same cached numbers.
+    const planned = await computePlannedSyncCounts();
+    const plannedTotal = planned.total;
+
     // Sort so tables with more dependents are DELETED last (deletePriority
-    // ASC means leaves first). Upserts happen in the same order — safe for
-    // upsert because resolvers are find-or-create and don't require a parent.
+    // ASC means leaves first). Within the same priority group order by
+    // SMALLEST planned count first — the big tables (issuereturn ~200k)
+    // spend minutes in their remote in-scope SELECT with zero visible
+    // progress; letting the small tables finish first gets `processedRows`
+    // moving within seconds, so the banner's live ETA appears immediately
+    // instead of after the first giant fetch. Safe: same-priority tables
+    // never reference each other, and upserts are find-or-create anyway.
     const ordered = [...SYNC_MAP].sort(
-      (a, b) => a.deletePriority - b.deletePriority,
+      (a, b) =>
+        a.deletePriority - b.deletePriority ||
+        (planned.perTable.get(a.legacyTable) ?? 0) -
+          (planned.perTable.get(b.legacyTable) ?? 0),
     );
+    await writeSchedulerPlanned(plannedTotal);
+    emitLibraryEvent("library:sync-status:updated", {
+      detail: {
+        at: new Date().toISOString(),
+        running: true,
+        plannedRows: plannedTotal,
+      },
+    });
+
     let anyChanged = false;
     for (const mapping of ordered) {
+      // Processed counter is bumped per-batch inside syncOneTable/upsertIds
+      // (every PROGRESS_BATCH rows) — no per-table add here or rows would
+      // double-count.
       const { changed } = await syncOneTable(mapping);
       if (changed) anyChanged = true;
+      // Nudge every listener so the banner re-fetches sync-status and its
+      // elapsed / remaining recompute mid-tick.
+      emitLibraryEvent("library:sync-status:updated", {
+        detail: { at: new Date().toISOString(), running: true },
+      });
     }
 
     // Belt-and-braces: one final aggregate `library:master:updated` so any
@@ -465,6 +598,18 @@ export async function runLibrarySyncTick(): Promise<{
       await lockClient
         .query("SELECT pg_advisory_unlock($1)", [SYNC_LOCK_KEY])
         .catch(() => undefined);
+      // Only clear the running flag on the instance that actually held the
+      // lock (the one that ran the tick). Losers of the try-lock skip fast
+      // and never flipped the flag in the first place. `.catch(() => ...)`
+      // guards against a bad-day DB failure never leaving the flag stuck.
+      await writeSchedulerRunning(false).catch((err) =>
+        log.warn(
+          `failed to clear scheduler running flag: ${err instanceof Error ? err.message : String(err)}`,
+        ),
+      );
+      emitLibraryEvent("library:sync-status:updated", {
+        detail: { at: new Date().toISOString(), running: false },
+      });
     }
     lockClient.release();
   }
@@ -488,6 +633,30 @@ export function startLibrarySyncScheduler(): void {
   log.info(
     `scheduler starting: first tick in ${Math.round(SYNC_STARTUP_DELAY_MS / 1000)}s, then every ${Math.round(SYNC_INTERVAL_MS / 60000)} min`,
   );
+  // Boot reconcile: a previous process that died mid-tick (nodemon restart,
+  // crash) leaves running=true stuck in the scheduler-state row. If we can
+  // briefly take the sync advisory lock, no instance anywhere is ticking, so
+  // the flag is provably stale — clear it now instead of making the banner
+  // wait out the 10-min staleness window.
+  void (async () => {
+    const client = await pool.connect();
+    try {
+      const res = await client.query<{ locked: boolean }>(
+        "SELECT pg_try_advisory_lock($1) AS locked",
+        [SYNC_LOCK_KEY],
+      );
+      if (res.rows[0]?.locked === true) {
+        await clearStaleSchedulerRunning();
+        await client.query("SELECT pg_advisory_unlock($1)", [SYNC_LOCK_KEY]);
+      }
+    } catch (err) {
+      log.warn(
+        `boot reconcile of scheduler running flag failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      client.release();
+    }
+  })();
   const fire = () => {
     runLibrarySyncTick()
       .then((r) => {

@@ -1,19 +1,20 @@
 /**
- * Library reports — flat catalog UI mirroring apps/main-console/src/features/
- * reports/page/index.tsx (the platform-wide Reports page): plain h1 header,
+ * Library reports — flat catalog UI mirroring the platform-wide Reports page
+ * (apps/main-console/src/features/reports/page/index.tsx). Plain h1 header,
  * multi-select Domain filter, sticky-header table, per-row Download button,
- * and a shared "Export filters" dialog that pins branch/date/year narrowers
- * across every download.
+ * and a shared "Export filters" dialog with the full slice-and-dice set
+ * (branch, date range, academic year, affiliation, regulation, program
+ * course, class/semester, shift, session, section, user type, patron
+ * category, community, gender, item category, circulation type, return
+ * status, fine status, zone).
  *
- * Each row downloads a styled Excel client-side (XLSX.json_to_sheet with
- * auto-fit columns, one sheet per section for compound payloads). Paginated
- * endpoints (popular, publications, batch, holdings) are pulled at a
- * larger-than-UI page size (500) so the export is comprehensive.
+ * Downloads hit the backend `/api/library/reports/<id>/download` endpoints —
+ * every workbook is built with ExcelJS + applyStandardExcelReportTableStyling
+ * on the server so formatting is consistent across every report.
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import DialogMultiSelect from "@/components/ui/DialogMultiSelect";
+import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import {
   BarChart3,
   Bell,
@@ -65,497 +68,202 @@ import {
   ScrollText,
   ShieldCheck,
   TrendingUp,
-  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  getAisheReport,
-  getBatchUsageReport,
-  getBookDemandForecast,
-  getFinesCollectedReport,
-  getFinesOutstandingReport,
-  getFootfallForecast,
-  getFootfallReport,
-  getHighDemandReport,
-  getHoldingsReport,
-  getNaacReport,
-  getNirfReport,
-  getOverdueReport,
-  getPopularBooksReport,
-  getPublicationUsageReport,
-  getStockSummaryReport,
-  type ReportFilters,
-} from "@/services/library-reports.service";
+import type { LibraryReportFilters } from "@/services/library-reports.service";
 import { getLibraryBranches } from "@/services/library-branches.service";
+import { getLibraryPatronCategories } from "@/services/library-patron-categories.service";
+import { getLibraryItemCategories } from "@/services/library-item-categories.service";
+import { getLibraryZones } from "@/services/library-zones.service";
+import {
+  getAffiliations,
+  getProgramCourses,
+  getRegulationTypes,
+} from "@/services/course-design.api";
+import { getAllClasses } from "@/services/classes.service";
+import { getAllSections, getAllShifts } from "@/services/academic";
+import { findAllSessions } from "@/services/session.service";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+import { ExportService } from "@/services/exportService";
+import { useSocket } from "@/hooks/useSocket";
+import { useAuth } from "@/features/auth/providers/auth-provider";
+import type { ProgressUpdate } from "@/types/progress";
 
 type Domain =
   | "CIRCULATION"
   | "INVENTORY"
   | "FOOTFALL"
-  | "DEMOGRAPHICS"
+  | "PUBLICATIONS"
   | "PREDICTIONS"
   | "COMPLIANCE";
 
-type Ctx = {
-  filters: ReportFilters;
-  academicYear: string;
-};
-
 type ReportEntry = {
   id: string;
+  /** Backend job key registered in `apps/backend/src/features/reports/report-generators.ts`. */
+  jobKey: string;
   domain: Domain;
   name: string;
   description: string;
   icon: ReactNode;
   requiresAcademicYear?: boolean;
-  download: (ctx: Ctx) => Promise<void>;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Excel helper — mirrors handleExportExcel in FilterAndExportComponent (dynamic
-// column widths, ISO-dated filename).
-// ─────────────────────────────────────────────────────────────────────────────
-
-function autoCols<T extends Record<string, unknown>>(rows: T[]): XLSX.ColInfo[] {
-  if (rows.length === 0) return [];
-  const first = rows[0] as Record<string, unknown>;
-  const headers = Object.keys(first);
-  return headers.map((h) => ({
-    wch: Math.max(
-      15,
-      h.length + 2,
-      ...rows.map((r) => String((r as Record<string, unknown>)[h] ?? "").length),
-    ),
-  }));
-}
-
-function writeWorkbook(
-  filename: string,
-  sheets: Array<{ name: string; rows: Array<Record<string, unknown>> }>,
-) {
-  const nonEmpty = sheets.filter((s) => s.rows.length > 0);
-  if (nonEmpty.length === 0) {
-    toast.error("No data available for export.");
-    return;
-  }
-  const wb = XLSX.utils.book_new();
-  for (const s of nonEmpty) {
-    const ws = XLSX.utils.json_to_sheet(s.rows);
-    ws["!cols"] = autoCols(s.rows);
-    // Sheet name max is 31 chars; trim to be safe.
-    XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
-  }
-  XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split("T")[0]}.xlsx`);
-  toast.success("Report exported successfully!");
-}
-
-const nfDate = (v?: string | null) => (v ? new Date(v).toLocaleDateString() : "");
-const nfDateTime = (v?: string | null) => (v ? new Date(v).toLocaleString() : "");
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Downloaders — one per catalog row. Paginated endpoints pull pageSize=500 for
-// a comprehensive export.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const EXPORT_PAGE_SIZE = 500;
-
-async function downloadOverdue({ filters }: Ctx) {
-  const r = await getOverdueReport(filters);
-  const rows = (r.payload ?? []).map((row, i) => ({
-    "#": i + 1,
-    User: row.userName ?? `User #${row.userId}`,
-    Title: row.bookTitle,
-    Accession: row.accessNumber ?? "",
-    Branch: row.branchName ?? "",
-    "Issued at": nfDate(row.issuedAt),
-    "Due at": nfDate(row.dueAt),
-    "Days late": row.daysLate,
-  }));
-  writeWorkbook("Library_Overdue_List", [{ name: "Overdue", rows }]);
-}
-
-async function downloadFinesOutstanding({ filters }: Ctx) {
-  const r = await getFinesOutstandingReport(filters);
-  const p = r.payload;
-  if (!p) return writeWorkbook("Library_Fines_Outstanding", []);
-  const buckets = p.buckets.map((b) => ({
-    Bucket: `${b.bucket} days`,
-    Circulations: b.circulationCount,
-    "Total outstanding (INR)": b.totalOutstanding,
-  }));
-  const debtors = p.topDebtors.map((d, i) => ({
-    "#": i + 1,
-    User: d.userName ?? `User #${d.userId}`,
-    "Outstanding (INR)": d.outstanding,
-    Circulations: d.circulationCount,
-    "Oldest fine": nfDate(d.oldestFineDate),
-  }));
-  writeWorkbook("Library_Fines_Outstanding", [
-    { name: "Age buckets", rows: buckets },
-    { name: "Top debtors", rows: debtors },
-  ]);
-}
-
-async function downloadFinesCollected({ filters }: Ctx) {
-  const r = await getFinesCollectedReport(filters);
-  const p = r.payload;
-  const rows = (p?.rows ?? []).map((row) => ({
-    "Payment #": row.paymentId,
-    User: row.userId ?? "",
-    "Amount (INR)": row.amount,
-    "Paid at": nfDateTime(row.paidAt),
-  }));
-  const summary = p ? [{ "Total collected (INR)": p.total, "Payment count": p.count }] : [];
-  writeWorkbook("Library_Fines_Collected", [
-    { name: "Summary", rows: summary },
-    { name: "Payments", rows },
-  ]);
-}
-
-async function downloadStockSummary({ filters }: Ctx) {
-  const r = await getStockSummaryReport(filters);
-  const rows = (r.payload ?? []).map((row) => ({
-    Branch: row.branchName,
-    Status: row.statusName,
-    Copies: row.copyCount,
-  }));
-  writeWorkbook("Library_Stock_Summary", [{ name: "Stock", rows }]);
-}
-
-async function downloadHighDemand({ filters }: Ctx) {
-  const r = await getHighDemandReport(filters, 100);
-  const rows = (r.payload ?? []).map((row, i) => ({
-    "#": i + 1,
-    Title: row.title,
-    ISBN: row.isbn ?? "",
-    Issues: row.issueCount,
-    "Copies owned": row.copiesOwned,
-    "Issues / copy": row.copiesOwned > 0 ? +(row.issueCount / row.copiesOwned).toFixed(2) : "",
-  }));
-  writeWorkbook("Library_High_Demand_Titles", [{ name: "High demand", rows }]);
-}
-
-async function downloadPopularBooks({ filters }: Ctx) {
-  const r = await getPopularBooksReport(filters, { page: 1, pageSize: EXPORT_PAGE_SIZE });
-  const rows = (r.payload?.content ?? []).map((row, i) => ({
-    "#": i + 1,
-    Title: row.title,
-    Category: row.categoryName,
-    ISBN: row.isbn ?? "",
-    Issues: row.issueCount,
-    "Unique readers": row.uniqueReaders,
-  }));
-  writeWorkbook("Library_Popular_Books", [{ name: "Popular", rows }]);
-}
-
-async function downloadFootfall({ filters }: Ctx) {
-  const r = await getFootfallReport(filters);
-  const p = r.payload;
-  if (!p) return writeWorkbook("Library_Footfall", []);
-  const daily = p.daily.map((row) => ({
-    Date: row.date,
-    Entries: row.entries,
-    "Unique visitors": row.uniqueVisitors,
-    "Avg duration (min)": row.avgDurationMinutes,
-  }));
-  const byHour = p.byHour.map((row) => ({
-    Hour: `${String(row.hour).padStart(2, "0")}:00`,
-    Entries: row.entries,
-  }));
-  const byZone = p.byZone.map((row) => ({ Zone: row.zoneName, Entries: row.entries }));
-  writeWorkbook("Library_Footfall", [
-    { name: "Daily", rows: daily },
-    { name: "By hour", rows: byHour },
-    { name: "By zone", rows: byZone },
-  ]);
-}
-
-async function downloadHoldings({ filters }: Ctx) {
-  // Bundle all four groupings — one sheet each.
-  const groupings = ["category", "status", "language", "publisher"] as const;
-  const sheets = await Promise.all(
-    groupings.map(async (g) => {
-      const r = await getHoldingsReport(filters, g, 1, EXPORT_PAGE_SIZE);
-      const rows = (r.payload?.content ?? []).map((row) => ({
-        Group: row.groupName,
-        Books: row.bookCount,
-        Copies: row.copyCount,
-        "Value (INR)": row.totalPriceINR,
-      }));
-      return {
-        name: `By ${g}`,
-        rows,
-      };
-    }),
-  );
-  writeWorkbook("Library_Holdings", sheets);
-}
-
-async function downloadPublications({ filters }: Ctx) {
-  const dims = ["publisher", "journal", "series"] as const;
-  const sheets = await Promise.all(
-    dims.map(async (d) => {
-      const r = await getPublicationUsageReport(filters, d, 1, EXPORT_PAGE_SIZE);
-      const rows = (r.payload?.content ?? []).map((row) => ({
-        Name: row.name,
-        Titles: row.titleCount,
-        Issues: row.issueCount,
-        "Unique readers": row.uniqueReaders,
-        ...(d === "journal"
-          ? {
-              ISSN: row.issnNumber ?? "",
-              "Active subscriptions": row.activeSubscriptions ?? 0,
-            }
-          : {}),
-      }));
-      return { name: `By ${d}`, rows };
-    }),
-  );
-  writeWorkbook("Library_Publications_Usage", sheets);
-}
-
-async function downloadBatchUsage({ filters }: Ctx) {
-  const metrics = ["circulation", "footfall"] as const;
-  const sheets = await Promise.all(
-    metrics.map(async (m) => {
-      const r = await getBatchUsageReport(filters, m, 1, EXPORT_PAGE_SIZE);
-      const rows = (r.payload?.content ?? []).map((row) => ({
-        "Program course": row.programCourseName,
-        Class: row.className,
-        Session: row.sessionName,
-        Shift: row.shiftName,
-        Students: row.studentCount,
-        Events: row.eventCount,
-        "Events / student": row.eventsPerStudent,
-      }));
-      return {
-        name: m === "circulation" ? "Book issues" : "Library visits",
-        rows,
-      };
-    }),
-  );
-  writeWorkbook("Library_Batch_Usage", sheets);
-}
-
-async function downloadBookDemandForecast({ filters }: Ctx) {
-  const r = await getBookDemandForecast(filters, { horizonDays: 30, limit: 100 });
-  const rows = (r.payload?.rows ?? []).map((row, i) => ({
-    "#": i + 1,
-    Title: row.title,
-    "Recent monthly avg": row.recentMonthlyAvg,
-    "Seasonal index": row.seasonalIndex,
-    Trend: row.trend,
-    "Predicted issues (30d)": row.predictedDemand,
-    Confidence: row.confidence,
-  }));
-  writeWorkbook("Library_Book_Demand_Forecast_30d", [{ name: "Book demand", rows }]);
-}
-
-async function downloadFootfallForecast({ filters }: Ctx) {
-  const r = await getFootfallForecast(filters);
-  const p = r.payload;
-  if (!p) return writeWorkbook("Library_Footfall_Forecast_14d", []);
-  const summary = [{ "Exam uplift factor": p.examUpliftFactor }];
-  const exams = p.upcomingExams.map((e) => ({
-    Exam: e.name,
-    "Commencement date": e.commencementDate,
-  }));
-  const forecast = p.rows.map((row) => ({
-    Date: row.date,
-    Day: row.dayOfWeek,
-    Baseline: row.baseline,
-    "Seasonal idx": row.seasonalIndex,
-    "Exam uplift": row.examUplift,
-    Predicted: row.predicted,
-    "Peak?": row.isPeak ? "Yes" : "",
-    Drivers: row.drivers.join("; "),
-  }));
-  writeWorkbook("Library_Footfall_Forecast_14d", [
-    { name: "Summary", rows: summary },
-    { name: "Upcoming exams", rows: exams },
-    { name: "Forecast", rows: forecast },
-  ]);
-}
-
-async function downloadNaac({ academicYear }: Ctx) {
-  if (!academicYear.trim()) {
-    toast.error("Academic year is required. Open Export filters to set it.");
-    return;
-  }
-  const r = await getNaacReport(academicYear.trim());
-  const p = r.payload;
-  if (!p) return writeWorkbook("Library_NAAC", []);
-  const rows = Object.entries(p.metrics).map(([Metric, Value]) => ({ Metric, Value }));
-  writeWorkbook(`Library_NAAC_${academicYear.trim()}`, [
-    {
-      name: "Header",
-      rows: [{ Framework: p.framework, Criterion: p.criterion, "Academic year": p.academicYear }],
-    },
-    { name: "Metrics", rows },
-  ]);
-}
-
-async function downloadNirf({ academicYear }: Ctx) {
-  if (!academicYear.trim()) {
-    toast.error("Academic year is required. Open Export filters to set it.");
-    return;
-  }
-  const r = await getNirfReport(academicYear.trim());
-  const p = r.payload;
-  if (!p) return writeWorkbook("Library_NIRF", []);
-  const rows = Object.entries(p.libraryResources).map(([Metric, Value]) => ({ Metric, Value }));
-  writeWorkbook(`Library_NIRF_${academicYear.trim()}`, [{ name: "NIRF", rows }]);
-}
-
-async function downloadAishe({ academicYear }: Ctx) {
-  if (!academicYear.trim()) {
-    toast.error("Academic year is required. Open Export filters to set it.");
-    return;
-  }
-  const r = await getAisheReport(academicYear.trim());
-  const p = r.payload;
-  if (!p) return writeWorkbook("Library_AISHE", []);
-  const rows = Object.entries(p.library).map(([Metric, Value]) => ({ Metric, Value }));
-  writeWorkbook(`Library_AISHE_${academicYear.trim()}`, [{ name: "AISHE", rows }]);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Registry
+// Report catalog — 12 rows after the merges:
+//   - Book circulation (was: overdue + separate returned + issued)
+//   - Fines (was: outstanding + collected as two)
+//   - Popular / high-demand books (was: popular + high-demand as two)
+// The Batch-wise demographic report was dropped — the Export filters dialog
+// now carries program course / class / shift / etc., so any circulation or
+// footfall report can be sliced by batch.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const REPORTS: ReportEntry[] = [
   {
-    id: "overdue",
+    id: "book-circulation",
+    jobKey: "library-book-circulation",
     domain: "CIRCULATION",
-    name: "Overdue list",
-    description: "Books currently issued past their due date, ordered by earliest due.",
+    name: "Book circulation",
+    description:
+      "Every issued, returned, overdue, reissued or forced-issue event with full user, book and copy details.",
     icon: <ScrollText className="h-5 w-5 text-amber-600" />,
-    download: downloadOverdue,
   },
   {
-    id: "fines-outstanding",
+    id: "fines",
+    jobKey: "library-fines",
     domain: "CIRCULATION",
-    name: "Fines outstanding",
+    name: "Fines (outstanding + collected)",
     description:
-      "Unpaid fine amounts bucketed by age (0-7, 8-30, 31-90, 90+ days) with top debtors.",
+      "Unpaid fines with student and book context, collected fine payments, and a summary of totals.",
     icon: <Coins className="h-5 w-5 text-amber-600" />,
-    download: downloadFinesOutstanding,
-  },
-  {
-    id: "fines-collected",
-    domain: "CIRCULATION",
-    name: "Fines collected",
-    description: "Library fine payments (SUCCESS) in the selected date range, with totals.",
-    icon: <Coins className="h-5 w-5 text-emerald-600" />,
-    download: downloadFinesCollected,
-  },
-  {
-    id: "high-demand-titles",
-    domain: "CIRCULATION",
-    name: "High-demand titles",
-    description:
-      "Top titles by issues in the window with a demand-vs-supply ratio for procurement.",
-    icon: <TrendingUp className="h-5 w-5 text-amber-600" />,
-    download: downloadHighDemand,
   },
   {
     id: "popular-books",
+    jobKey: "library-popular-books",
     domain: "CIRCULATION",
-    name: "Popular books",
-    description: "Titles ranked by issues and unique readers over the selected date range.",
-    icon: <BookOpen className="h-5 w-5 text-amber-600" />,
-    download: downloadPopularBooks,
+    name: "Popular / high-demand books",
+    description:
+      "Top titles by issues in the window, plus a second sheet sorted by issues per copy (buy-more candidates).",
+    icon: <TrendingUp className="h-5 w-5 text-amber-600" />,
   },
   {
     id: "stock-summary",
+    jobKey: "library-stock-summary",
     domain: "INVENTORY",
     name: "Stock summary",
-    description: "Copy counts by branch and status (available, issued, lost, damaged, etc.).",
+    description: "Number of copies grouped by branch, item category and status.",
     icon: <ClipboardList className="h-5 w-5 text-emerald-600" />,
-    download: downloadStockSummary,
   },
   {
     id: "holdings",
+    jobKey: "library-holdings",
     domain: "INVENTORY",
     name: "Books & copies (holdings)",
     description:
-      "One sheet each for holdings grouped by category, status, language, and publisher.",
+      "Holdings grouped four ways — by item category, by copy status, by language and by publisher — one sheet each.",
     icon: <BookOpen className="h-5 w-5 text-emerald-600" />,
-    download: downloadHoldings,
   },
   {
-    id: "footfall",
+    id: "entry-exit",
+    jobKey: "library-entry-exit",
     domain: "FOOTFALL",
     name: "Entry / Exit footfall",
     description:
-      "Daily entries, unique visitors and average visit duration; plus by-hour and by-zone breakdowns.",
+      "Every entry/exit event with the same user context columns the entry/exit page uses, plus a daily summary sheet.",
     icon: <DoorOpen className="h-5 w-5 text-teal-600" />,
-    download: downloadFootfall,
   },
   {
     id: "publications",
-    domain: "DEMOGRAPHICS",
+    jobKey: "library-publications",
+    domain: "PUBLICATIONS",
     name: "Publications usage",
     description:
-      "Circulation aggregated by publisher, journal (with ISSN + active subs), and series — one sheet each.",
+      "Circulation aggregated by publisher, journal (with ISSN + active subscriptions) and series — one sheet each.",
     icon: <ScrollText className="h-5 w-5 text-indigo-600" />,
-    download: downloadPublications,
   },
   {
-    id: "batch-usage",
-    domain: "DEMOGRAPHICS",
-    name: "Batch-wise demographic usage",
-    description:
-      "Book issues and library visits attributed to each batch (program × class × session × shift).",
-    icon: <Users className="h-5 w-5 text-indigo-600" />,
-    download: downloadBatchUsage,
-  },
-  {
-    id: "forecast-book-demand",
+    id: "book-demand-forecast",
+    jobKey: "library-book-demand-forecast",
     domain: "PREDICTIONS",
-    name: "Book demand forecast (30 days)",
+    name: "Book demand estimate (next 30 days)",
     description:
-      "Statistical per-title 30-day demand forecast: recent monthly avg × month-of-year seasonal index.",
+      "Per-title estimated issues for the next 30 days using recent-month averages and time-of-year adjustments.",
     icon: <LineChart className="h-5 w-5 text-fuchsia-600" />,
-    download: downloadBookDemandForecast,
   },
   {
-    id: "forecast-footfall",
+    id: "footfall-forecast",
+    jobKey: "library-footfall-forecast",
     domain: "PREDICTIONS",
-    name: "Footfall forecast (14 days)",
+    name: "Footfall estimate (next 14 days)",
     description:
-      "Statistical 14-day footfall forecast with day-of-week seasonality and pre-exam uplift.",
+      "Day-by-day estimated library entries for the next 14 days with a pre-exam uplift factor.",
     icon: <LineChart className="h-5 w-5 text-fuchsia-600" />,
-    download: downloadFootfallForecast,
   },
   {
     id: "naac",
+    jobKey: "library-naac",
     domain: "COMPLIANCE",
     name: "NAAC criterion 4.2",
     description: "NAAC evidence figures for library resources and expenditure by academic year.",
     icon: <ShieldCheck className="h-5 w-5 text-purple-600" />,
     requiresAcademicYear: true,
-    download: downloadNaac,
   },
   {
     id: "nirf",
+    jobKey: "library-nirf",
     domain: "COMPLIANCE",
     name: "NIRF library resources",
     description: "NIRF submission figures — books, copies, e-journals, annual spend, circulation.",
     icon: <BarChart3 className="h-5 w-5 text-purple-600" />,
     requiresAcademicYear: true,
-    download: downloadNirf,
   },
   {
     id: "aishe",
+    jobKey: "library-aishe",
     domain: "COMPLIANCE",
     name: "AISHE library figures",
     description:
       "AISHE library data — books & volumes available, journals subscribed, subscription spend.",
     icon: <Bell className="h-5 w-5 text-purple-600" />,
     requiresAcademicYear: true,
-    download: downloadAishe,
   },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Static enums the backend accepts (mirrors library-report-filters.ts values)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const USER_TYPE_OPTIONS = [
+  { label: "Student", value: "STUDENT" },
+  { label: "Staff", value: "STAFF" },
+  { label: "Faculty", value: "FACULTY" },
+  { label: "Parents", value: "PARENTS" },
+  { label: "Admin", value: "ADMIN" },
+];
+const COMMUNITY_OPTIONS = [
+  { label: "Gujarati", value: "GUJARATI" },
+  { label: "Non-Gujarati", value: "NON-GUJARATI" },
+];
+const GENDER_OPTIONS = [
+  { label: "Male", value: "MALE" },
+  { label: "Female", value: "FEMALE" },
+  { label: "Other", value: "OTHER" },
+];
+const CIRCULATION_TYPE_OPTIONS = [
+  { label: "Issue", value: "ISSUE" },
+  { label: "Reissue", value: "REISSUE" },
+  { label: "Forced issue", value: "FORCED_ISSUE" },
+];
+const RETURN_STATUS_OPTIONS = [
+  { label: "Any", value: "" },
+  { label: "Returned", value: "RETURNED" },
+  { label: "Not returned", value: "NOT_RETURNED" },
+];
+const FINE_STATUS_OPTIONS = [
+  { label: "Any", value: "" },
+  { label: "Paid", value: "PAID" },
+  { label: "Outstanding", value: "OUTSTANDING" },
+  { label: "Waived", value: "WAIVED" },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -575,7 +283,7 @@ function domainBadgeClassName(domain: Domain): string {
       return "bg-emerald-50 text-emerald-800 border-emerald-200";
     case "FOOTFALL":
       return "bg-teal-50 text-teal-700 border-teal-200";
-    case "DEMOGRAPHICS":
+    case "PUBLICATIONS":
       return "bg-indigo-50 text-indigo-700 border-indigo-200";
     case "PREDICTIONS":
       return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200";
@@ -586,38 +294,270 @@ function domainBadgeClassName(domain: Domain): string {
   }
 }
 
+const parseIdStrings = (values: string[]): number[] =>
+  values.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+
+type Option = { label: string; value: string };
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function LibraryReportsPage() {
   const [domainFilter, setDomainFilter] = useState<Domain[]>([]);
-
-  // Global "Export filters" state — one dialog controls filters for every download.
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Background-job + progress-dialog state — mirrors the platform Reports page
+  // (apps/main-console/src/features/reports/page/index.tsx).
+  const { user } = useAuth();
+  const userId = (user?.id ?? "").toString();
+  const [exportProgressOpen, setExportProgressOpen] = useState(false);
+  const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
+  const activeJobIdRef = useRef<string | null>(null);
+  const activeReportRef = useRef<ReportEntry | null>(null);
+
+  // Academic years — dropdown source
+  const { availableAcademicYears, currentAcademicYear, loadAcademicYears } = useAcademicYear();
+  useEffect(() => {
+    if (availableAcademicYears.length === 0) loadAcademicYears();
+  }, [availableAcademicYears.length, loadAcademicYears]);
+
+  // Filter values — sectioned by group for the dialog
   const [branchId, setBranchId] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
-  const [academicYear, setAcademicYear] = useState<string>("2025-26");
-  const [branchOptions, setBranchOptions] = useState<{ value: string; label: string }[]>([]);
+  const [academicYear, setAcademicYear] = useState<string>("");
 
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  // Default the academic year to the current one as soon as it loads.
+  useEffect(() => {
+    if (academicYear) return;
+    const cur = currentAcademicYear?.year || availableAcademicYears[0]?.year;
+    if (cur) setAcademicYear(cur);
+  }, [availableAcademicYears, currentAcademicYear, academicYear]);
+
+  const [affiliationIds, setAffiliationIds] = useState<number[]>([]);
+  const [regulationTypeIds, setRegulationTypeIds] = useState<number[]>([]);
+  const [programCourseIds, setProgramCourseIds] = useState<number[]>([]);
+  const [classIds, setClassIds] = useState<number[]>([]);
+  const [shiftIds, setShiftIds] = useState<number[]>([]);
+  const [sessionIds, setSessionIds] = useState<number[]>([]);
+  const [sectionIds, setSectionIds] = useState<number[]>([]);
+
+  const [userTypes, setUserTypes] = useState<string[]>([]);
+  const [patronCategoryIds, setPatronCategoryIds] = useState<number[]>([]);
+  const [communities, setCommunities] = useState<string[]>([]);
+  const [genders, setGenders] = useState<string[]>([]);
+
+  const [itemCategoryIds, setItemCategoryIds] = useState<number[]>([]);
+  const [circulationTypes, setCirculationTypes] = useState<string[]>([]);
+  const [returnStatus, setReturnStatus] = useState<string>("");
+  const [fineStatus, setFineStatus] = useState<string>("");
+
+  const [zoneIds, setZoneIds] = useState<number[]>([]);
+
+  // Option lists loaded from the platform services
+  const [branchOptions, setBranchOptions] = useState<Option[]>([]);
+  const [affiliationOptions, setAffiliationOptions] = useState<Option[]>([]);
+  const [regulationOptions, setRegulationOptions] = useState<Option[]>([]);
+  const [allProgramCourses, setAllProgramCourses] = useState<
+    Array<{
+      id: number;
+      name: string;
+      shortName?: string | null;
+      affiliationId?: number | null;
+      regulationTypeId?: number | null;
+    }>
+  >([]);
+  const [classOptions, setClassOptions] = useState<Option[]>([]);
+  const [shiftOptions, setShiftOptions] = useState<Option[]>([]);
+  const [sessionOptions, setSessionOptions] = useState<Option[]>([]);
+  const [sectionOptions, setSectionOptions] = useState<Option[]>([]);
+  const [patronCategoryOptions, setPatronCategoryOptions] = useState<Option[]>([]);
+  const [itemCategoryOptions, setItemCategoryOptions] = useState<Option[]>([]);
+  const [zoneOptions, setZoneOptions] = useState<Option[]>([]);
 
   useEffect(() => {
     void (async () => {
       try {
-        const res = await getLibraryBranches({ page: 1, limit: 200 });
+        const [
+          branches,
+          affiliations,
+          regulations,
+          programCourses,
+          classes,
+          shifts,
+          sessions,
+          sections,
+          patrons,
+          items,
+          zones,
+        ] = await Promise.all([
+          getLibraryBranches({ page: 1, limit: 200 }),
+          getAffiliations().catch(() => []),
+          getRegulationTypes().catch(() => []),
+          getProgramCourses().catch(() => []),
+          getAllClasses().catch(() => []),
+          getAllShifts().catch(() => []),
+          findAllSessions().catch(() => ({ payload: [] as unknown[] }) as never),
+          getAllSections().catch(() => []),
+          getLibraryPatronCategories({ page: 1, limit: 200 }).catch(
+            () => ({ payload: { rows: [] } }) as never,
+          ),
+          getLibraryItemCategories({ page: 1, limit: 200 }).catch(
+            () => ({ payload: { rows: [] } }) as never,
+          ),
+          getLibraryZones({ page: 1, limit: 200 }).catch(
+            () => ({ payload: { rows: [] } }) as never,
+          ),
+        ]);
         setBranchOptions(
-          (res.payload?.rows ?? []).map((b) => ({
+          (branches.payload?.rows ?? []).map((b) => ({
             value: String(b.id),
             label: b.code ? `${b.name} (${b.code})` : b.name,
           })),
         );
+        const affArr = (Array.isArray(affiliations) ? affiliations : []) as Array<{
+          id?: number | null;
+          name?: string | null;
+          shortName?: string | null;
+        }>;
+        setAffiliationOptions(
+          affArr
+            .filter((a) => a?.id != null)
+            .map((a) => ({
+              value: String(a.id),
+              label: a.shortName || a.name || `Affiliation ${a.id}`,
+            })),
+        );
+        const regArr = (Array.isArray(regulations) ? regulations : []) as Array<{
+          id?: number | null;
+          name?: string | null;
+          shortName?: string | null;
+        }>;
+        setRegulationOptions(
+          regArr
+            .filter((r) => r?.id != null)
+            .map((r) => ({
+              value: String(r.id),
+              label: r.shortName || r.name || `Regulation ${r.id}`,
+            })),
+        );
+        const pcArr = (Array.isArray(programCourses) ? programCourses : []) as Array<{
+          id?: number | null;
+          name?: string | null;
+          shortName?: string | null;
+          affiliationId?: number | null;
+          regulationTypeId?: number | null;
+        }>;
+        setAllProgramCourses(
+          pcArr
+            .filter((pc) => pc?.id != null)
+            .map((pc) => ({
+              id: pc.id as number,
+              name: pc.name || pc.shortName || `Program ${pc.id}`,
+              shortName: pc.shortName ?? null,
+              affiliationId: pc.affiliationId ?? null,
+              regulationTypeId: pc.regulationTypeId ?? null,
+            })),
+        );
+        setClassOptions(
+          (Array.isArray(classes) ? classes : [])
+            .filter((c) => c && (c as { type?: string }).type === "SEMESTER")
+            .map((c) => ({
+              value: String((c as { id: number }).id),
+              label: (c as { name: string }).name,
+            })),
+        );
+        setShiftOptions(
+          (Array.isArray(shifts) ? shifts : []).map((s) => ({
+            value: String((s as { id: number }).id),
+            label: (s as { name: string }).name,
+          })),
+        );
+        const sessionArr =
+          (sessions as { payload?: Array<{ id?: number; name?: string; year?: string }> })
+            ?.payload ?? [];
+        setSessionOptions(
+          sessionArr
+            .filter(
+              (s): s is { id: number; name?: string; year?: string } =>
+                s != null && typeof s.id === "number",
+            )
+            .map((s) => ({ value: String(s.id), label: s.name || s.year || `Session ${s.id}` })),
+        );
+        setSectionOptions(
+          (Array.isArray(sections) ? sections : []).map((s) => ({
+            value: String((s as { id: number }).id),
+            label: (s as { name: string }).name,
+          })),
+        );
+        setPatronCategoryOptions(
+          (
+            (
+              patrons as {
+                payload?: { rows?: Array<{ id: number; name: string; code?: string | null }> };
+              }
+            ).payload?.rows ?? []
+          ).map((r) => ({
+            value: String(r.id),
+            label: r.code ? `${r.name} (${r.code})` : r.name,
+          })),
+        );
+        setItemCategoryOptions(
+          (
+            (
+              items as {
+                payload?: { rows?: Array<{ id: number; name: string; code?: string | null }> };
+              }
+            ).payload?.rows ?? []
+          ).map((r) => ({
+            value: String(r.id),
+            label: r.code ? `${r.name} (${r.code})` : r.name,
+          })),
+        );
+        setZoneOptions(
+          (
+            (
+              zones as {
+                payload?: { rows?: Array<{ id: number; name: string; code?: string | null }> };
+              }
+            ).payload?.rows ?? []
+          ).map((r) => ({
+            value: String(r.id),
+            label: r.code ? `${r.name} (${r.code})` : r.name,
+          })),
+        );
       } catch (e) {
-        console.error(e);
+        console.error("Failed to load report filter options", e);
       }
     })();
   }, []);
+
+  // Program courses narrow by selected affiliation + regulation, same pattern
+  // as apps/main-console/src/features/reports/page/index.tsx:1150-1178
+  const programCourseFilterOptions = useMemo<Option[]>(() => {
+    let list = allProgramCourses;
+    if (affiliationIds.length > 0) {
+      const aff = new Set(affiliationIds);
+      list = list.filter((pc) => pc.affiliationId != null && aff.has(pc.affiliationId));
+    }
+    if (regulationTypeIds.length > 0) {
+      const reg = new Set(regulationTypeIds);
+      list = list.filter((pc) => pc.regulationTypeId != null && reg.has(pc.regulationTypeId));
+    }
+    return list
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((pc) => ({ value: String(pc.id), label: pc.name }));
+  }, [allProgramCourses, affiliationIds, regulationTypeIds]);
+
+  useEffect(() => {
+    const allowed = new Set(programCourseFilterOptions.map((o) => Number(o.value)));
+    setProgramCourseIds((prev) => {
+      const next = prev.filter((id) => allowed.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [programCourseFilterOptions]);
 
   const allDomains = useMemo(
     () =>
@@ -646,7 +586,132 @@ export default function LibraryReportsPage() {
   };
 
   const activeExportFilterCount =
-    (branchId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (academicYear ? 1 : 0);
+    (branchId ? 1 : 0) +
+    (dateFrom ? 1 : 0) +
+    (dateTo ? 1 : 0) +
+    (academicYear ? 1 : 0) +
+    affiliationIds.length +
+    regulationTypeIds.length +
+    programCourseIds.length +
+    classIds.length +
+    shiftIds.length +
+    sessionIds.length +
+    sectionIds.length +
+    userTypes.length +
+    patronCategoryIds.length +
+    communities.length +
+    genders.length +
+    itemCategoryIds.length +
+    circulationTypes.length +
+    (returnStatus ? 1 : 0) +
+    (fineStatus ? 1 : 0) +
+    zoneIds.length;
+
+  const filters: LibraryReportFilters = {
+    branchId: branchId === "" ? null : Number(branchId),
+    dateFrom: dateFrom || null,
+    dateTo: dateTo || null,
+    academicYear: academicYear || null,
+    affiliationIds,
+    regulationTypeIds,
+    programCourseIds,
+    classIds,
+    shiftIds,
+    sessionIds,
+    sectionIds,
+    userTypes,
+    patronCategoryIds,
+    communities,
+    genders,
+    itemCategoryIds,
+    circulationTypes,
+    returnStatus: returnStatus || null,
+    fineStatus: fineStatus || null,
+    zoneIds,
+  };
+
+  const clearFilters = () => {
+    setBranchId("");
+    setDateFrom("");
+    setDateTo("");
+    setAffiliationIds([]);
+    setRegulationTypeIds([]);
+    setProgramCourseIds([]);
+    setClassIds([]);
+    setShiftIds([]);
+    setSessionIds([]);
+    setSectionIds([]);
+    setUserTypes([]);
+    setPatronCategoryIds([]);
+    setCommunities([]);
+    setGenders([]);
+    setItemCategoryIds([]);
+    setCirculationTypes([]);
+    setReturnStatus("");
+    setFineStatus("");
+    setZoneIds([]);
+  };
+
+  // Flatten filters to a single-string-per-key params bag for
+  // ExportService.startReportJob (which encodes each as a URL query param).
+  const flatFilterParams = useMemo(() => {
+    const out: Record<string, string | number | undefined | null> = {};
+    if (filters.branchId != null) out.branchId = filters.branchId;
+    if (filters.dateFrom) out.dateFrom = filters.dateFrom;
+    if (filters.dateTo) out.dateTo = filters.dateTo;
+    if (filters.academicYear) out.academicYear = filters.academicYear;
+    const joinIds = (arr: number[] | undefined) =>
+      arr && arr.length > 0 ? arr.join(",") : undefined;
+    const joinStrs = (arr: string[] | undefined) =>
+      arr && arr.length > 0 ? arr.join(",") : undefined;
+    out.academicYearIds = joinIds(filters.academicYearIds);
+    out.affiliationIds = joinIds(filters.affiliationIds);
+    out.regulationTypeIds = joinIds(filters.regulationTypeIds);
+    out.programCourseIds = joinIds(filters.programCourseIds);
+    out.classIds = joinIds(filters.classIds);
+    out.shiftIds = joinIds(filters.shiftIds);
+    out.sessionIds = joinIds(filters.sessionIds);
+    out.sectionIds = joinIds(filters.sectionIds);
+    out.patronCategoryIds = joinIds(filters.patronCategoryIds);
+    out.itemCategoryIds = joinIds(filters.itemCategoryIds);
+    out.zoneIds = joinIds(filters.zoneIds);
+    out.userTypes = joinStrs(filters.userTypes);
+    out.communities = joinStrs(filters.communities);
+    out.genders = joinStrs(filters.genders);
+    out.circulationTypes = joinStrs(filters.circulationTypes);
+    if (filters.returnStatus) out.returnStatus = filters.returnStatus;
+    if (filters.fineStatus) out.fineStatus = filters.fineStatus;
+    return out;
+  }, [filters]);
+
+  // Progress dialog handler — correlates events by meta.jobId; ignores other
+  // background operations happening on the same socket. Once the job hits
+  // status "completed", pulls the file via ExportService.downloadReportJobFile.
+  const handleProgressUpdate = useCallback((data: ProgressUpdate) => {
+    const jobId = (data?.meta as { jobId?: string } | undefined)?.jobId;
+    if (activeJobIdRef.current && jobId && jobId !== activeJobIdRef.current) return;
+    setCurrentProgressUpdate(data);
+    if (data.status === "completed") {
+      if (jobId && jobId === activeJobIdRef.current) {
+        const fallbackName =
+          activeReportRef.current?.name.replace(/[^\w-]+/g, "_") ?? "library-report";
+        void ExportService.downloadReportJobFile(jobId, data.fileName || fallbackName).catch((e) =>
+          toast.error(e instanceof Error ? e.message : "Failed to download report"),
+        );
+        activeJobIdRef.current = null;
+        activeReportRef.current = null;
+      }
+      setDownloadingId(null);
+    } else if (data.status === "error") {
+      if (jobId && jobId === activeJobIdRef.current) {
+        activeJobIdRef.current = null;
+        activeReportRef.current = null;
+      }
+      setDownloadingId(null);
+    }
+  }, []);
+
+  useSocket({ userId, onProgressUpdate: handleProgressUpdate });
 
   const handleDownload = useCallback(
     async (report: ReportEntry) => {
@@ -656,26 +721,43 @@ export default function LibraryReportsPage() {
         return;
       }
       setDownloadingId(report.id);
+      activeReportRef.current = report;
+      setExportProgressOpen(true);
+      activeJobIdRef.current = null;
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId,
+        type: "export_progress",
+        message: `Starting ${report.name}…`,
+        progress: 0,
+        status: "started",
+        createdAt: new Date(),
+      });
       try {
-        await report.download({
-          filters: {
-            branchId: branchId === "" ? null : Number(branchId),
-            dateFrom: dateFrom || null,
-            dateTo: dateTo || null,
-          },
-          academicYear,
-        });
+        const { jobId } = await ExportService.startReportJob(report.jobKey, flatFilterParams);
+        activeJobIdRef.current = jobId;
       } catch (e) {
-        console.error(`Download failed for ${report.id}:`, e);
+        console.error(`Download failed to start for ${report.id}:`, e);
         const msg =
           (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-          (e instanceof Error ? e.message : "Download failed");
+          (e instanceof Error ? e.message : "Failed to start report");
         toast.error(msg);
-      } finally {
+        setCurrentProgressUpdate({
+          id: `export_${Date.now()}`,
+          userId,
+          type: "export_progress",
+          message: msg,
+          progress: 0,
+          status: "error",
+          error: msg,
+          createdAt: new Date(),
+        });
+        activeJobIdRef.current = null;
+        activeReportRef.current = null;
         setDownloadingId(null);
       }
     },
-    [branchId, dateFrom, dateTo, academicYear],
+    [academicYear, flatFilterParams, userId],
   );
 
   return (
@@ -684,8 +766,15 @@ export default function LibraryReportsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Library Reports</h1>
           <p className="text-sm sm:text-base text-slate-600 mt-2">
-            Download library reports as Excel. Open Export filters to pin branch, date range or
-            academic year for every download.
+            Download library reports as Excel. Open Export filters to pin branch, date range,
+            academic year, program course, class, shift, user type and more for every download.
+          </p>
+          <p className="text-[11px] text-slate-500 mt-1">
+            <strong>Which filters apply:</strong> batch, user and circulation filters (program
+            course, class, shift, user type, community, etc.) apply to Book circulation, Fines,
+            Popular / high-demand, Entry / Exit and Publications reports. Item category applies to
+            Stock summary and Holdings. Zone applies to Entry / Exit only. Academic year is required
+            for the Compliance (NAAC / NIRF / AISHE) downloads.
           </p>
         </div>
 
@@ -753,77 +842,304 @@ export default function LibraryReportsPage() {
                 ) : null}
               </Button>
             </DialogTrigger>
-            <DialogContent className="flex max-h-[min(90vh,720px)] max-w-md flex-col overflow-hidden sm:max-w-lg">
+            <DialogContent className="flex max-h-[min(90vh,780px)] max-w-md flex-col overflow-hidden sm:max-w-2xl">
               <DialogHeader className="shrink-0">
                 <DialogTitle>Export filters</DialogTitle>
                 <DialogDescription className="text-left text-slate-600">
-                  Optional narrowers applied to every download on this page. Branch and date range
-                  scope circulation / footfall reports; academic year is required by the compliance
-                  reports (NAAC / NIRF / AISHE).
+                  Optional narrowers applied to every download on this page. Reports that don&apos;t
+                  care about a filter (e.g. Holdings ignores date range) will just skip it.
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Branch</Label>
-                  <Select
-                    value={branchId || "__all__"}
-                    onValueChange={(v) => setBranchId(v === "__all__" ? "" : v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((b) => (
-                        <SelectItem key={b.value} value={b.value}>
-                          {b.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto py-2 px-1">
+                {/* Location & time */}
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Location &amp; time
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Branch</Label>
+                      <Select
+                        value={branchId || "__all__"}
+                        onValueChange={(v) => setBranchId(v === "__all__" ? "" : v)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All branches" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">All branches</SelectItem>
+                          {branchOptions.map((b) => (
+                            <SelectItem key={b.value} value={b.value}>
+                              {b.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">From date</Label>
+                      <Input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">To date</Label>
+                      <Input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">
+                      Academic year{" "}
+                      <span className="text-slate-500">(required for NAAC / NIRF / AISHE)</span>
+                    </Label>
+                    <Select
+                      value={academicYear || "__none__"}
+                      onValueChange={(v) => setAcademicYear(v === "__none__" ? "" : v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select academic year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">(not set)</SelectItem>
+                        {availableAcademicYears
+                          .filter((y) => y.year)
+                          .map((y) => (
+                            <SelectItem key={y.id} value={String(y.year)}>
+                              {y.year}
+                              {currentAcademicYear?.id === y.id ? " (current)" : ""}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </section>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-slate-800">From date</Label>
-                    <Input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
+                {/* Batch / demographics */}
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Batch (program course, class, shift, session, section)
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Affiliation</Label>
+                      <DialogMultiSelect
+                        placeholder="All affiliations"
+                        options={affiliationOptions}
+                        selectedOptions={affiliationIds.map(String)}
+                        onChange={(s) => setAffiliationIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Regulation type</Label>
+                      <DialogMultiSelect
+                        placeholder="All regulations"
+                        options={regulationOptions}
+                        selectedOptions={regulationTypeIds.map(String)}
+                        onChange={(s) => setRegulationTypeIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Program course</Label>
+                      <DialogMultiSelect
+                        placeholder="All program courses"
+                        options={programCourseFilterOptions}
+                        selectedOptions={programCourseIds.map(String)}
+                        onChange={(s) => setProgramCourseIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Class / Semester</Label>
+                      <DialogMultiSelect
+                        placeholder="All classes"
+                        options={classOptions}
+                        selectedOptions={classIds.map(String)}
+                        onChange={(s) => setClassIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Shift</Label>
+                      <DialogMultiSelect
+                        placeholder="All shifts"
+                        options={shiftOptions}
+                        selectedOptions={shiftIds.map(String)}
+                        onChange={(s) => setShiftIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Session</Label>
+                      <DialogMultiSelect
+                        placeholder="All sessions"
+                        options={sessionOptions}
+                        selectedOptions={sessionIds.map(String)}
+                        onChange={(s) => setSessionIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Section</Label>
+                      <DialogMultiSelect
+                        placeholder="All sections"
+                        options={sectionOptions}
+                        selectedOptions={sectionIds.map(String)}
+                        onChange={(s) => setSectionIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* User attributes */}
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    User attributes
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">User type</Label>
+                      <DialogMultiSelect
+                        placeholder="All user types"
+                        options={USER_TYPE_OPTIONS}
+                        selectedOptions={userTypes}
+                        onChange={setUserTypes}
+                        contentClassName="min-w-[240px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Library patron category</Label>
+                      <DialogMultiSelect
+                        placeholder="All patron categories"
+                        options={patronCategoryOptions}
+                        selectedOptions={patronCategoryIds.map(String)}
+                        onChange={(s) => setPatronCategoryIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Community</Label>
+                      <DialogMultiSelect
+                        placeholder="All communities"
+                        options={COMMUNITY_OPTIONS}
+                        selectedOptions={communities}
+                        onChange={setCommunities}
+                        contentClassName="min-w-[240px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Gender</Label>
+                      <DialogMultiSelect
+                        placeholder="All genders"
+                        options={GENDER_OPTIONS}
+                        selectedOptions={genders}
+                        onChange={setGenders}
+                        contentClassName="min-w-[240px]"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Circulation attributes */}
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Circulation attributes (issues, fines, book categories)
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Item category</Label>
+                      <DialogMultiSelect
+                        placeholder="All item categories"
+                        options={itemCategoryOptions}
+                        selectedOptions={itemCategoryIds.map(String)}
+                        onChange={(s) => setItemCategoryIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Circulation type</Label>
+                      <DialogMultiSelect
+                        placeholder="Any circulation type"
+                        options={CIRCULATION_TYPE_OPTIONS}
+                        selectedOptions={circulationTypes}
+                        onChange={setCirculationTypes}
+                        contentClassName="min-w-[240px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Return status</Label>
+                      <Select
+                        value={returnStatus || "__any__"}
+                        onValueChange={(v) => setReturnStatus(v === "__any__" ? "" : v)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Any" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__any__">Any</SelectItem>
+                          {RETURN_STATUS_OPTIONS.filter((o) => o.value !== "").map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Fine status</Label>
+                      <Select
+                        value={fineStatus || "__any__"}
+                        onValueChange={(v) => setFineStatus(v === "__any__" ? "" : v)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Any" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__any__">Any</SelectItem>
+                          {FINE_STATUS_OPTIONS.filter((o) => o.value !== "").map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Zone — footfall only */}
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Zone{" "}
+                    <span className="text-[10px] normal-case text-slate-400">
+                      (applies to Entry/Exit only)
+                    </span>
+                  </h3>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Zone</Label>
+                    <DialogMultiSelect
+                      placeholder="All zones"
+                      options={zoneOptions}
+                      selectedOptions={zoneIds.map(String)}
+                      onChange={(s) => setZoneIds(parseIdStrings(s))}
+                      contentClassName="min-w-[280px]"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-slate-800">To date</Label>
-                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Academic year</Label>
-                  <Input
-                    placeholder="2025-26"
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                  />
-                  <p className="text-[11px] text-slate-500">
-                    Required by NAAC / NIRF / AISHE downloads.
-                  </p>
-                </div>
+                </section>
               </div>
 
               <DialogFooter className="shrink-0 gap-2 sm:gap-0 flex-col sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setBranchId("");
-                    setDateFrom("");
-                    setDateTo("");
-                    setAcademicYear("");
-                  }}
-                >
-                  Clear narrowers
+                <Button type="button" variant="outline" onClick={clearFilters}>
+                  Clear all filters
                 </Button>
                 <Button type="button" onClick={() => setFilterDialogOpen(false)}>
                   Done
@@ -917,6 +1233,15 @@ export default function LibraryReportsPage() {
           })}
         </TableBody>
       </Table>
+
+      <ExportProgressDialog
+        isOpen={exportProgressOpen}
+        onClose={() => {
+          setExportProgressOpen(false);
+          setCurrentProgressUpdate(null);
+        }}
+        progressUpdate={currentProgressUpdate}
+      />
     </div>
   );
 }

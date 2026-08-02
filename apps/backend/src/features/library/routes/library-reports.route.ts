@@ -23,6 +23,10 @@ import {
   popularBooksController,
   publicationUsageController,
 } from "@/features/library/controllers/library-analytics-reports.controller.js";
+// Downloads run through the background-job infra registered in
+// apps/backend/src/features/reports/report-generators.ts — each library report
+// is keyed "library-<id>" there. See LibraryReportsPage.tsx (frontend) for the
+// Download button → runReportJob → socket-driven ExportProgressDialog flow.
 
 const router = express.Router();
 router.use(verifyJWT);

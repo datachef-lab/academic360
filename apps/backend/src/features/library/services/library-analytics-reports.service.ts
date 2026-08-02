@@ -236,7 +236,7 @@ export async function getHoldingsReport(
           groupName: dims.name,
           bookCount: sql<number>`COUNT(DISTINCT ${bookModel.id})::int`,
           copyCount: count(copyDetailsModel.id),
-          totalPriceINR: sql<number>`COALESCE(SUM(${copyDetailsModel.priceInINR}), 0)`,
+          totalPriceINR: sql<number>`COALESCE(SUM(NULLIF(${copyDetailsModel.priceInINR}, '')::numeric), 0)`,
         })
         .from(copyDetailsModel)
         .innerJoin(bookModel, eq(bookModel.id, copyDetailsModel.bookId)),

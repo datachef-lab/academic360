@@ -66,6 +66,10 @@ export type DashboardStats = {
   booksByDocumentType: Array<{ documentType: string; count: number }>;
   copiesByRack: Array<{ rack: string; count: number }>; // top 10 by copy count
   booksAddedPerYear: Array<{ year: string; count: number }>;
+  /** DISTINCT publisher count across all books (not the top-10 shown). */
+  totalPublishers: number;
+  /** DISTINCT language count across all books. */
+  totalLanguages: number;
 
   // Footfall tab — visits, not attendance.
   entriesByHourOfDay: Array<{ hour: number; count: number }>;
@@ -84,6 +88,22 @@ export type DashboardStats = {
     amount: number;
   }>; // top 10
 };
+
+/**
+ * Midnight today in Asia/Kolkata, as a UTC Date. IST is a fixed UTC+5:30
+ * (no DST), so plain offset arithmetic is safe.
+ */
+function istTodayStart(): Date {
+  const IST_OFFSET_MS = 5.5 * 3_600_000;
+  const istNow = new Date(Date.now() + IST_OFFSET_MS);
+  return new Date(
+    Date.UTC(
+      istNow.getUTCFullYear(),
+      istNow.getUTCMonth(),
+      istNow.getUTCDate(),
+    ) - IST_OFFSET_MS,
+  );
+}
 
 export async function getLibraryDashboardStats(
   filters: DashboardFilters = {},
@@ -318,12 +338,13 @@ export async function getLibraryDashboardStats(
     finesByDayResult,
     outstandingByPatronRaw,
   ] = await Promise.all([
-    // "In library now" — historically counted every legacy row whose
-    // current_status is CHECKED_IN, which returned thousands of entries from
-    // years ago whose exit was never recorded in IRP. Restricted to entries
-    // whose entry timestamp is TODAY (server local midnight), so the tile
-    // reads as "people who actually walked in today and haven't left yet",
-    // not "everyone who ever forgot to check out since 2014".
+    // "In library now" — TODAY's (IST) entries still checked in. Matches the
+    // entry/exit page's "Checked in" badge, which always filters date=today.
+    // The today restriction is essential: the legacy system left thousands
+    // of historical rows permanently CHECKED_IN with no exit recorded
+    // (8.6k dangling all-time on develop), and nobody who entered last
+    // month is still physically inside. Deliberately ignores the
+    // dashboard's date-range filter — the tile is "now".
     db
       .select({ currentlyInLibrary: count() })
       .from(libraryEntryExitModel)
@@ -333,10 +354,8 @@ export async function getLibraryDashboardStats(
             ? [eq(libraryEntryExitModel.branchId, filters.branchId)]
             : []),
           eq(libraryEntryExitModel.currentStatus, "CHECKED_IN"),
-          gte(
-            libraryEntryExitModel.entryTimestamp,
-            new Date(now2.getFullYear(), now2.getMonth(), now2.getDate()),
-          ),
+          isNull(libraryEntryExitModel.exitTimestamp),
+          gte(libraryEntryExitModel.entryTimestamp, istTodayStart()),
         ),
       ),
     db
@@ -442,30 +461,21 @@ export async function getLibraryDashboardStats(
       .where(bookConditions())
       .groupBy(sql`EXTRACT(YEAR FROM ${bookModel.createdAt})`)
       .orderBy(sql`EXTRACT(YEAR FROM ${bookModel.createdAt})`),
-    // Entries/exits by hour are a TODAY-ONLY picture (fixed to server-local
-    // midnight, independent of the dashboard date filter) — the widget answers
-    // "how is the library filling up right now", not a range histogram.
+    // Entries/exits by hour — respect the dashboard date filter so setting a
+    // range on the page updates the chart. Was hard-coded to today only in an
+    // earlier iteration; the user hit an empty chart on days without traffic
+    // yet, so they now expect it to reflect whatever window they picked.
     db
       .select({
         hour: sql<number>`EXTRACT(HOUR FROM ${libraryEntryExitModel.entryTimestamp})::int`,
         count: count(),
       })
       .from(libraryEntryExitModel)
-      .where(
-        and(
-          ...(filters.branchId != null
-            ? [eq(libraryEntryExitModel.branchId, filters.branchId)]
-            : []),
-          gte(
-            libraryEntryExitModel.entryTimestamp,
-            new Date(now2.getFullYear(), now2.getMonth(), now2.getDate()),
-          ),
-        ),
-      )
+      .where(entryExitConditions())
       .groupBy(sql`EXTRACT(HOUR FROM ${libraryEntryExitModel.entryTimestamp})`)
       .orderBy(sql`EXTRACT(HOUR FROM ${libraryEntryExitModel.entryTimestamp})`),
-    // Exits by hour of day — same shape, different timestamp. Only rows with
-    // a recorded exit contribute (a still-checked-in row has no exit hour).
+    // Exits by hour — same shape, different timestamp. Only rows with a
+    // recorded exit contribute (a still-checked-in row has no exit hour).
     db
       .select({
         hour: sql<number>`EXTRACT(HOUR FROM ${libraryEntryExitModel.exitTimestamp})::int`,
@@ -477,10 +487,13 @@ export async function getLibraryDashboardStats(
           ...(filters.branchId != null
             ? [eq(libraryEntryExitModel.branchId, filters.branchId)]
             : []),
-          gte(
-            libraryEntryExitModel.exitTimestamp,
-            new Date(now2.getFullYear(), now2.getMonth(), now2.getDate()),
-          ),
+          ...(filters.dateFrom
+            ? [gte(libraryEntryExitModel.exitTimestamp, filters.dateFrom)]
+            : []),
+          ...(filters.dateTo
+            ? [lte(libraryEntryExitModel.exitTimestamp, filters.dateTo)]
+            : []),
+          sql`${libraryEntryExitModel.exitTimestamp} IS NOT NULL`,
         ),
       )
       .groupBy(sql`EXTRACT(HOUR FROM ${libraryEntryExitModel.exitTimestamp})`)
@@ -547,6 +560,25 @@ export async function getLibraryDashboardStats(
         ),
       )
       .limit(10),
+  ]);
+
+  // DISTINCT publisher + language counts — separate cheap queries because
+  // `booksByLanguage.length` is capped by the top-N slice above and
+  // `booksByPublisher.length` is hard-capped at 10, both of which
+  // under-count for the dashboard tile.
+  const [[{ totalPublishers }], [{ totalLanguages }]] = await Promise.all([
+    db
+      .select({
+        totalPublishers: sql<number>`COUNT(DISTINCT ${bookModel.publisherId})::int`,
+      })
+      .from(bookModel)
+      .where(bookConditions()),
+    db
+      .select({
+        totalLanguages: sql<number>`COUNT(DISTINCT ${bookModel.languageId})::int`,
+      })
+      .from(bookModel)
+      .where(bookConditions()),
   ]);
 
   return {
@@ -620,6 +652,8 @@ export async function getLibraryDashboardStats(
       year: r.year,
       count: Number(r.count),
     })),
+    totalPublishers: Number(totalPublishers ?? 0),
+    totalLanguages: Number(totalLanguages ?? 0),
 
     exitsByHourOfDay: exitsByHourRaw.map((r) => ({
       hour: Number(r.hour),

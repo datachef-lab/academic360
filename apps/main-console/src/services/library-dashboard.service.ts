@@ -36,6 +36,8 @@ export type LibraryDashboardStats = {
   booksByDocumentType: Array<{ documentType: string; count: number }>;
   copiesByRack: Array<{ rack: string; count: number }>;
   booksAddedPerYear: Array<{ year: string; count: number }>;
+  totalPublishers: number;
+  totalLanguages: number;
 
   entriesByHourOfDay: Array<{ hour: number; count: number }>;
   exitsByHourOfDay: Array<{ hour: number; count: number }>;
@@ -79,6 +81,42 @@ export type LibrarySeedStatus = {
 
 export async function getLibrarySeedStatus() {
   const res = await axiosInstance.get<ApiResponse<LibrarySeedStatus>>(`${BASE}/seed-status`);
+  return res.data.payload;
+}
+
+// ── Sync scheduler status ───────────────────────────────────────────────────
+
+export type LibrarySyncStatus = {
+  running: boolean;
+  /** ISO timestamp of when the currently-running tick started, or null. */
+  startedAt: string | null;
+  /** Wall-clock duration of the most recent complete tick (ms). */
+  lastDurationMs: number | null;
+  /**
+   * Rows the currently-running tick will process across every table (sum of
+   * COUNT(*) on each legacy source). Cached 10 min on the backend so this
+   * value is populated even before a tick's planning phase runs.
+   */
+  plannedRows: number | null;
+  /**
+   * Rows the currently-running tick has processed so far. Used with
+   * `plannedRows` and `startedAt` to compute a live ETA in the banner.
+   */
+  processedRows: number | null;
+  lastSyncedAt: string | null;
+  intervalMinutes: number;
+  nextSyncAt: string | null;
+  lastTickSummary: {
+    tables: number;
+    rowsUpdated: number;
+    rowsRemoved: number;
+    rowsScanned: number;
+    slowestTableMs: number;
+  };
+};
+
+export async function getLibrarySyncStatus() {
+  const res = await axiosInstance.get<ApiResponse<LibrarySyncStatus>>(`${BASE}/sync-status`);
   return res.data.payload;
 }
 

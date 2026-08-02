@@ -245,47 +245,79 @@ export async function getFootfallForecast(
     entries: Number(r.entries),
   }));
 
-  // Baseline: trimmed mean of the last 8 weeks (drop top/bottom 10% so a
-  // one-off event day does not move every forecast).
+  // Simpler, more accurate model that matches actual DOW averages rather
+  // than double-counting seasonality:
+  //   predicted(day) = avg entries for THIS day-of-week over last 8 weeks
+  //                    × exam-window multiplier
+  //
+  // The prior model multiplied a global "baseline" by a "seasonal factor"
+  // that was itself `dow-avg / overall-avg` — so a Monday's prediction was
+  // overall-avg × (mon-avg / overall-avg) = mon-avg (roughly), except the
+  // baseline was trimmed and the seasonal was per-(dow, month) which pulled
+  // in month-of-year outliers. Result on develop: Monday predictions of
+  // 1024 when the actual Monday average is 345.
   const eightWeeksAgo = new Date(Date.now() - 56 * 86400000);
-  const recent = daily
-    .filter((d) => d.date >= eightWeeksAgo)
-    .map((d) => d.entries)
-    .sort((a, b) => a - b);
-  const trim = Math.floor(recent.length * 0.1);
-  const trimmed = recent.slice(trim, recent.length - trim || undefined);
+  const twoWeeksAgo = new Date(Date.now() - 14 * 86400000);
+  const recent = daily.filter((d) => d.date >= eightWeeksAgo);
+  // Per-DOW average over the whole 8-week window (the "normal" baseline).
+  const byDowRecent = new Map<number, { sum: number; n: number }>();
+  // Per-DOW average over JUST the last 2 weeks (short-term trend signal).
+  const byDowLast2 = new Map<number, { sum: number; n: number }>();
+  for (const d of recent) {
+    const dow = d.date.getDay();
+    const dd = byDowRecent.get(dow) ?? { sum: 0, n: 0 };
+    dd.sum += d.entries;
+    dd.n += 1;
+    byDowRecent.set(dow, dd);
+    if (d.date >= twoWeeksAgo) {
+      const d2 = byDowLast2.get(dow) ?? { sum: 0, n: 0 };
+      d2.sum += d.entries;
+      d2.n += 1;
+      byDowLast2.set(dow, d2);
+    }
+  }
+  // "Baseline" shown in the report = trimmed 8-week overall mean. This is
+  // for context in the Summary sheet only — the actual per-day prediction
+  // uses the per-DOW average below.
+  const sortedRecent = recent.map((d) => d.entries).sort((a, b) => a - b);
+  const trim = Math.floor(sortedRecent.length * 0.1);
+  const trimmed = sortedRecent.slice(
+    trim,
+    sortedRecent.length - trim || undefined,
+  );
   const baseline =
     trimmed.length > 0
       ? trimmed.reduce((s, v) => s + v, 0) / trimmed.length
       : 0;
 
-  // Seasonality: avg entries per (dow, month) and per dow, vs overall avg.
-  const overallAvg =
-    daily.length > 0
-      ? daily.reduce((s, d) => s + d.entries, 0) / daily.length
-      : 0;
-  const byDowMonth = new Map<string, { sum: number; n: number }>();
-  const byDow = new Map<number, { sum: number; n: number }>();
-  for (const d of daily) {
-    const dow = d.date.getDay();
-    const key = `${dow}-${d.date.getMonth()}`;
-    const dm = byDowMonth.get(key) ?? { sum: 0, n: 0 };
-    dm.sum += d.entries;
-    dm.n += 1;
-    byDowMonth.set(key, dm);
-    const dd = byDow.get(dow) ?? { sum: 0, n: 0 };
-    dd.sum += d.entries;
-    dd.n += 1;
-    byDow.set(dow, dd);
-  }
-  const seasonalFor = (date: Date): number => {
-    if (overallAvg <= 0) return 1;
+  // Per-DOW average from the last 8 weeks — the "Normal visits per day"
+  // column and the baseline for exam-uplift math.
+  const dowAverageFor = (date: Date): number => {
     const dow = date.getDay();
-    const dm = byDowMonth.get(`${dow}-${date.getMonth()}`);
-    if (dm && dm.n >= 3) return dm.sum / dm.n / overallAvg;
-    const dd = byDow.get(dow);
-    if (dd && dd.n >= 3) return dd.sum / dd.n / overallAvg;
-    return 1;
+    const dd = byDowRecent.get(dow);
+    if (dd && dd.n > 0) return dd.sum / dd.n;
+    return baseline; // fallback for a DOW with no recent data
+  };
+  // Short-term trend factor: how much the last 2 weeks' same-DOW average
+  // differs from the 8-week average. > 1 means Mondays have been trending
+  // up recently; < 1 means down. Capped to [0.5, 2.0] so an anomalous
+  // single day can't blow up the estimate for the whole next 2 weeks.
+  const recentTrendFactorFor = (date: Date): number => {
+    const dow = date.getDay();
+    const d8 = byDowRecent.get(dow);
+    const d2 = byDowLast2.get(dow);
+    if (!d8 || d8.n === 0 || !d2 || d2.n === 0) return 1;
+    const avg8 = d8.sum / d8.n;
+    const avg2 = d2.sum / d2.n;
+    if (avg8 <= 0) return 1;
+    const raw = avg2 / avg8;
+    return Math.min(2, Math.max(0.5, raw));
+  };
+  // Kept for the report's "Day / month factor" column so the reader sees
+  // whether the DOW is above or below the trimmed overall baseline.
+  const seasonalFactorFor = (date: Date): number => {
+    if (baseline <= 0) return 1;
+    return dowAverageFor(date) / baseline;
   };
 
   // Exam uplift: historical footfall in the N days before each past
@@ -324,11 +356,19 @@ export async function getFootfallForecast(
   }
   examUpliftFactor = Math.round(examUpliftFactor * 100) / 100;
 
-  // Forecast the next 14 days.
+  // Forecast the next 14 days — skip Sundays entirely (library is closed;
+  // predicting "0 visits" for those rows is noise and just makes the sheet
+  // longer). Loop until we've emitted 14 non-Sunday rows OR walked 21
+  // calendar days (safety cap so an oddly-scheduled library never loops
+  // forever).
   const rows: FootfallForecastRow[] = [];
-  for (let i = 1; i <= 14; i++) {
-    const date = new Date(today.getTime() + i * 86400000);
-    const seasonal = seasonalFor(date);
+  let dayOffset = 1;
+  while (rows.length < 14 && dayOffset <= 21) {
+    const date = new Date(today.getTime() + dayOffset * 86400000);
+    dayOffset += 1;
+    if (date.getDay() === 0) continue; // Sunday — library closed, skip
+    const dowAvg = dowAverageFor(date);
+    const seasonal = seasonalFactorFor(date);
     const drivers: string[] = [];
 
     let upliftApplied = 1;
@@ -341,22 +381,35 @@ export async function getFootfallForecast(
         break;
       }
     }
-    if (date.getDay() === 0) drivers.push("Sunday low");
-    else if (seasonal < 0.75) drivers.push("Historically quiet");
-    else if (seasonal > 1.25) drivers.push("Historically busy");
+    // Drivers explain WHY the estimate is what it is. Sunday rows are now
+    // skipped in the loop above, so the only meaningful driver left is the
+    // exam-window one (pushed inside the exam-loop above).
 
-    const predicted = Math.max(
-      0,
-      Math.round(baseline * seasonal * upliftApplied),
-    );
+    // Predict using per-DOW average × short-term trend × exam uplift.
+    // The short-term trend keeps the estimate from being identical to the
+    // "Normal visits per day" column on quiet weeks — a Monday that has
+    // been trending up in the last 2 weeks (e.g. semester ramp-up) gets a
+    // higher estimate than the plain 8-week average.
+    const trend = recentTrendFactorFor(date);
+    const predicted = Math.max(0, Math.round(dowAvg * trend * upliftApplied));
     rows.push({
       date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
       dayOfWeek: DOW_NAMES[date.getDay()] ?? "",
-      baseline: Math.round(baseline),
+      // "Normal visits per day" per row = the historical average for THIS
+      // day-of-week, so a reader can compare "Estimated" against a normal
+      // Monday-vs-Monday number, not against the overall trimmed mean.
+      baseline: Math.round(dowAvg),
       seasonalIndex: Math.round(seasonal * 100) / 100,
       examUplift: upliftApplied,
       predicted,
-      isPeak: baseline > 0 && predicted >= 1.3 * baseline,
+      // "Busy day?" — flag ONLY when there is unusual pressure for this
+      // day-of-week. The old rule `predicted >= 1.3 * baseline` was almost
+      // always true for weekdays (baseline is dragged down by weekends), so
+      // Mon–Fri all lit up as "Busy" every single week and the flag became
+      // useless. New rule: the day is busy if the exam-window uplift is
+      // meaningfully >1 (i.e. we're inside the 14-day pre-exam window).
+      // Everything else — a normal Wednesday — is NOT flagged.
+      isPeak: upliftApplied > 1.15,
       drivers,
     });
   }
