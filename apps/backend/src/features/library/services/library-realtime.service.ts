@@ -28,7 +28,8 @@ export type LibraryEventName =
   | "library:entry-exit:updated"
   | "library:fine:updated"
   | "library:master:updated"
-  | "library:load:progress";
+  | "library:load:progress"
+  | "library:sync-status:updated";
 
 type EmitOptions = {
   bookId?: number | null;
@@ -212,6 +213,14 @@ function formatSnapshot(
 export function readCurrentLoadSnapshot() {
   return currentLoadSnapshot;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Sync running flag — MULTI-INSTANCE-SAFE. See library-sync-status.service.ts
+// for the DB-backed state that any instance in the fleet can read (the flag
+// used to be per-instance in-memory, which meant a dashboard hitting instance
+// B while instance A was running the tick saw running=false). Kept here as an
+// in-memory hint only; authoritative state lives in library_sync_scheduler_state.
+// ───────────────────────────────────────────────────────────────────────────
 
 /** Called by the loader on start and on final done — bookends the snapshot. */
 export function markLoadRunning(running: boolean): void {

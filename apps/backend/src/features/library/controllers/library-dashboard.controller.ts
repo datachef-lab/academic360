@@ -7,6 +7,7 @@ import {
 } from "@/features/library/services/library-dashboard.service.js";
 import { readLibrarySeedStatus } from "@/features/library/services/library-masters-seed.service.js";
 import { readCurrentLoadSnapshot } from "@/features/library/services/library-realtime.service.js";
+import { getLibrarySyncStatus } from "@/features/library/services/library-sync-status.service.js";
 import { runLibraryConsistencyCheck } from "@/features/library/services/library-consistency-check.service.js";
 import {
   listActivePatrons,
@@ -79,6 +80,18 @@ export const getLibraryLoadStatusController = async (
 ) => {
   try {
     ok(res, { snapshot: readCurrentLoadSnapshot() });
+  } catch (err) {
+    handleError(err, res, next);
+  }
+};
+
+export const getLibrarySyncStatusController = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    ok(res, await getLibrarySyncStatus());
   } catch (err) {
     handleError(err, res, next);
   }

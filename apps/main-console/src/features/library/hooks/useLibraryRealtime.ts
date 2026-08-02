@@ -85,6 +85,10 @@ export function useLibraryRealtime(opts?: {
       "library:entry-exit:updated",
       "library:fine:updated",
       "library:master:updated",
+      // Fires on every sync tick start / end — invalidates the sync-status
+      // query so the dashboard banner flips between "Syncing now…" and
+      // "Auto-syncing · Next sync in ~N min" without polling.
+      "library:sync-status:updated",
     ] as const;
 
     for (const ev of events) socket.on(ev, invalidate);

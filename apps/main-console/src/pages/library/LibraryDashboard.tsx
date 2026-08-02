@@ -44,6 +44,7 @@ import { LiveUpdatesBadge } from "@/features/fees-dashboard/components/LiveUpdat
 import { formatCompactIN } from "@/features/notifications/utils/format";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { useLibraryRealtime } from "@/features/library/hooks/useLibraryRealtime";
+import { LibrarySyncBanner } from "./LibrarySyncBanner";
 import { getLibraryBranches } from "@/services/library-branches.service";
 import {
   getLibraryDashboardStats,
@@ -73,7 +74,6 @@ import {
 import { TableCell } from "@/components/ui/table";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ZoneOccupancyPanel } from "./ZoneOccupancyPanel";
 import { HolidayMonthCalendar } from "./HolidayMonthCalendar";
 
 const DASHBOARD_TABS = [
@@ -96,11 +96,11 @@ const DASHBOARD_TABS = [
 ] as const;
 
 const RANGE_PRESETS = [
-  // "Last 7 days" is the default now — operator sees the past week's
-  // activity on open. Non-date-scoped stats (Books, Copies, In library now)
-  // are unaffected by this filter.
-  { value: "7d", label: "Last 7 days", days: 7 },
+  // "Today" is the default — the dashboard opens on the current day's
+  // activity. Non-date-scoped stats (Books, Copies, In library now) are
+  // unaffected by this filter.
   { value: "today", label: "Today", days: 0 },
+  { value: "7d", label: "Last 7 days", days: 7 },
   { value: "14d", label: "Last 14 days", days: 14 },
   { value: "30d", label: "Last 30 days", days: 30 },
   { value: "month", label: "This month", days: null as number | null },
@@ -635,6 +635,10 @@ function OverviewTab({
                       <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
                       <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
                     </linearGradient>
+                    <linearGradient id="reissuesFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
+                    </linearGradient>
                   </defs>
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -652,13 +656,32 @@ function OverviewTab({
                   <Tooltip cursor={{ fill: "#f1f5f9" }} />
                   <Area
                     type="monotone"
-                    dataKey="count"
+                    dataKey="issues"
+                    name="Issues"
+                    stackId="circ"
                     stroke="#6366f1"
                     strokeWidth={2}
                     fill="url(#issuesFill)"
                   />
+                  <Area
+                    type="monotone"
+                    dataKey="reissues"
+                    name="Reissues"
+                    stackId="circ"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    fill="url(#reissuesFill)"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
+              <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-indigo-500" /> Issues
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" /> Reissues
+                </span>
+              </div>
             </div>
           )}
         </PanelCard>
@@ -828,15 +851,15 @@ function HoldingsTab({ stats }: { stats: LibraryDashboardStats }) {
           gradient={GRADIENTS.emerald}
           icon={BookMarked}
           label="Languages"
-          value={formatCompactIN(stats.booksByLanguage.length)}
-          hint="distinct languages"
+          value={formatCompactIN(stats.totalLanguages)}
+          hint="distinct languages in the catalogue"
         />
         <GradientStatCard
           gradient={GRADIENTS.violet}
           icon={Boxes}
           label="Publishers"
-          value={formatCompactIN(stats.booksByPublisher.length)}
-          hint="represented in the catalogue"
+          value={formatCompactIN(stats.totalPublishers)}
+          hint="distinct publishers in the catalogue"
         />
       </div>
 
@@ -1110,13 +1133,7 @@ function HolidaysTab() {
   );
 }
 
-function FootfallTab({
-  stats,
-  applied,
-}: {
-  stats: LibraryDashboardStats;
-  applied: LibraryDashboardFilters;
-}) {
+function FootfallTab({ stats }: { stats: LibraryDashboardStats }) {
   // Both series in one row per hour so recharts can draw them side by side —
   // easier to read than two separate charts and shows the entry-vs-exit
   // pattern at a glance.
@@ -1125,16 +1142,6 @@ function FootfallTab({
     entries: stats.entriesByHourOfDay.find((r) => r.hour === h)?.count ?? 0,
     exits: stats.exitsByHourOfDay.find((r) => r.hour === h)?.count ?? 0,
   }));
-
-  // Derive the dd/mm/yyyy range for the hour-of-day chart title. The chart is
-  // an aggregate across the selected window, so each hour bucket is really
-  // "everything that happened in this hour, across these dates" — the user
-  // asked for the date to sit next to the hour, and the title is the honest
-  // place to put it (the x-axis has 24 buckets, not 24×N).
-  const rangeLabel = formatDateRangeDMY(applied.dateFrom, applied.dateTo, {
-    fallback: "all time",
-    entryDays: stats.entryExitByDay,
-  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -1162,7 +1169,7 @@ function FootfallTab({
         />
       </div>
 
-      <PanelCard title={`Entries vs exits — by hour of day · ${rangeLabel}`}>
+      <PanelCard title="Entries vs exits — by hour of day">
         <div className="h-[240px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={hours}>
@@ -1210,7 +1217,9 @@ function FootfallTab({
             }))}
           />
         </PanelCard>
-        <ZoneOccupancyPanel />
+        {/* Zone occupancy widget removed per product ask — was noisy on
+            days with no attendance and duplicated info already present in
+            the Entry/Exit reports. */}
       </div>
     </div>
   );
@@ -1700,9 +1709,9 @@ export default function LibraryDashboard() {
   const [activeTab, setActiveTab] = useState<(typeof DASHBOARD_TABS)[number]["value"]>("overview");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [draft, setDraft] = useState<DraftFilters>({
-    // Last 7 days by default — operator sees a week of activity on open;
-    // other ranges (today, month, all time) one click away.
-    preset: "7d",
+    // Today by default — the dashboard answers "what's happening right now";
+    // wider ranges (7d, month, all time) one click away.
+    preset: "today",
     branchId: null,
     dateFrom: null,
     dateTo: null,
@@ -1713,7 +1722,7 @@ export default function LibraryDashboard() {
     return { branchId: draft.branchId ?? null, ...range };
   }, [draft]);
 
-  const activeFilterCount = (draft.branchId ? 1 : 0) + (draft.preset !== "7d" ? 1 : 0);
+  const activeFilterCount = (draft.branchId ? 1 : 0) + (draft.preset !== "today" ? 1 : 0);
 
   const { data: branchList } = useQuery({
     queryKey: ["library-branches", "all"],
@@ -1871,6 +1880,8 @@ export default function LibraryDashboard() {
 
         <SeedInfoDialog />
 
+        <LibrarySyncBanner />
+
         {loadBanner && loadBanner.percent < 100 && (
           // Amber / progress-orange — distinct from the purple module accent
           // so it reads as "a running task" rather than another decorated
@@ -1990,7 +2001,7 @@ export default function LibraryDashboard() {
                     <HoldingsTab stats={stats} />
                   </TabsContent>
                   <TabsContent value="footfall" className="mt-0 focus-visible:outline-none">
-                    <FootfallTab stats={stats} applied={applied} />
+                    <FootfallTab stats={stats} />
                   </TabsContent>
                   <TabsContent value="fines" className="mt-0 focus-visible:outline-none">
                     <FinesTab stats={stats} />
