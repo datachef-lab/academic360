@@ -635,6 +635,10 @@ function OverviewTab({
                       <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
                       <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
                     </linearGradient>
+                    <linearGradient id="reissuesFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
+                    </linearGradient>
                   </defs>
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -652,13 +656,32 @@ function OverviewTab({
                   <Tooltip cursor={{ fill: "#f1f5f9" }} />
                   <Area
                     type="monotone"
-                    dataKey="count"
+                    dataKey="issues"
+                    name="Issues"
+                    stackId="circ"
                     stroke="#6366f1"
                     strokeWidth={2}
                     fill="url(#issuesFill)"
                   />
+                  <Area
+                    type="monotone"
+                    dataKey="reissues"
+                    name="Reissues"
+                    stackId="circ"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    fill="url(#reissuesFill)"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
+              <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-indigo-500" /> Issues
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" /> Reissues
+                </span>
+              </div>
             </div>
           )}
         </PanelCard>
@@ -1110,13 +1133,7 @@ function HolidaysTab() {
   );
 }
 
-function FootfallTab({
-  stats,
-  applied,
-}: {
-  stats: LibraryDashboardStats;
-  applied: LibraryDashboardFilters;
-}) {
+function FootfallTab({ stats }: { stats: LibraryDashboardStats }) {
   // Both series in one row per hour so recharts can draw them side by side —
   // easier to read than two separate charts and shows the entry-vs-exit
   // pattern at a glance.
@@ -1125,16 +1142,6 @@ function FootfallTab({
     entries: stats.entriesByHourOfDay.find((r) => r.hour === h)?.count ?? 0,
     exits: stats.exitsByHourOfDay.find((r) => r.hour === h)?.count ?? 0,
   }));
-
-  // Derive the dd/mm/yyyy range for the hour-of-day chart title. The chart is
-  // an aggregate across the selected window, so each hour bucket is really
-  // "everything that happened in this hour, across these dates" — the user
-  // asked for the date to sit next to the hour, and the title is the honest
-  // place to put it (the x-axis has 24 buckets, not 24×N).
-  const rangeLabel = formatDateRangeDMY(applied.dateFrom, applied.dateTo, {
-    fallback: "all time",
-    entryDays: stats.entryExitByDay,
-  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -1162,7 +1169,7 @@ function FootfallTab({
         />
       </div>
 
-      <PanelCard title={`Entries vs exits — by hour of day · ${rangeLabel}`}>
+      <PanelCard title="Entries vs exits — by hour of day · today">
         <div className="h-[240px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={hours}>
@@ -1990,7 +1997,7 @@ export default function LibraryDashboard() {
                     <HoldingsTab stats={stats} />
                   </TabsContent>
                   <TabsContent value="footfall" className="mt-0 focus-visible:outline-none">
-                    <FootfallTab stats={stats} applied={applied} />
+                    <FootfallTab stats={stats} />
                   </TabsContent>
                   <TabsContent value="fines" className="mt-0 focus-visible:outline-none">
                     <FinesTab stats={stats} />

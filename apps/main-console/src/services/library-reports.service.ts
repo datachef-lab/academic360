@@ -168,3 +168,203 @@ export async function getHighDemandReport(filters: ReportFilters = {}, limit = 2
   });
   return res.data;
 }
+
+// ─── Usage / analytics reports ───
+
+export type Paginated<T> = {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+};
+
+export type FootfallPayload = {
+  daily: Array<{
+    date: string;
+    entries: number;
+    uniqueVisitors: number;
+    avgDurationMinutes: number;
+  }>;
+  byHour: Array<{ hour: number; entries: number }>;
+  byZone: Array<{ zoneId: number | null; zoneName: string; entries: number }>;
+};
+
+export type HoldingsGroupBy = "category" | "status" | "language" | "publisher";
+
+export type HoldingsRow = {
+  groupId: number | null;
+  groupName: string;
+  bookCount: number;
+  copyCount: number;
+  totalPriceINR: number;
+};
+
+export type AccessionGrowthRow = { year: string; copiesAdded: number; cumulative: number };
+
+export type CopiesDistributionRow = { bucket: string; bookCount: number };
+
+export type PopularBookRow = {
+  bookId: number;
+  title: string;
+  isbn: string | null;
+  categoryName: string;
+  issueCount: number;
+  uniqueReaders: number;
+};
+
+export type PublicationDimension = "publisher" | "journal" | "series";
+
+export type PublicationUsageRow = {
+  id: number;
+  name: string;
+  titleCount: number;
+  issueCount: number;
+  uniqueReaders: number;
+  issnNumber: string | null;
+  activeSubscriptions: number | null;
+};
+
+export type BatchUsageMetric = "circulation" | "footfall";
+
+export type BatchUsageRow = {
+  programCourseName: string;
+  className: string;
+  sessionName: string;
+  shiftName: string;
+  studentCount: number;
+  eventCount: number;
+  eventsPerStudent: number;
+};
+
+export type BookDemandForecastRow = {
+  bookId: number;
+  title: string;
+  recentMonthlyAvg: number;
+  seasonalIndex: number;
+  predictedDemand: number;
+  trend: "up" | "flat" | "down";
+  confidence: "high" | "medium" | "low";
+};
+
+export type BookDemandForecastPayload = { horizonDays: number; rows: BookDemandForecastRow[] };
+
+export type FootfallForecastRow = {
+  date: string;
+  dayOfWeek: string;
+  baseline: number;
+  seasonalIndex: number;
+  examUplift: number;
+  predicted: number;
+  isPeak: boolean;
+  drivers: string[];
+};
+
+export type FootfallForecastPayload = {
+  examUpliftFactor: number;
+  upcomingExams: Array<{ name: string; commencementDate: string }>;
+  rows: FootfallForecastRow[];
+};
+
+export async function getFootfallReport(filters: ReportFilters = {}) {
+  const res = await axiosInstance.get<ApiResponse<FootfallPayload>>(`${BASE}/footfall`, {
+    params: clean(filters),
+  });
+  return res.data;
+}
+
+export async function getHoldingsReport(
+  filters: ReportFilters = {},
+  groupBy: HoldingsGroupBy = "category",
+  page = 1,
+  pageSize = 10,
+) {
+  const res = await axiosInstance.get<ApiResponse<Paginated<HoldingsRow>>>(`${BASE}/holdings`, {
+    params: { ...clean(filters), groupBy, page, pageSize },
+  });
+  return res.data;
+}
+
+export async function getAccessionGrowthReport(filters: ReportFilters = {}) {
+  const res = await axiosInstance.get<ApiResponse<AccessionGrowthRow[]>>(
+    `${BASE}/accession-growth`,
+    { params: clean(filters) },
+  );
+  return res.data;
+}
+
+export async function getCopiesDistributionReport(filters: ReportFilters = {}) {
+  const res = await axiosInstance.get<ApiResponse<CopiesDistributionRow[]>>(
+    `${BASE}/copies-distribution`,
+    { params: clean(filters) },
+  );
+  return res.data;
+}
+
+export async function getPopularBooksReport(
+  filters: ReportFilters = {},
+  opts: { itemCategoryId?: number | null; page?: number; pageSize?: number } = {},
+) {
+  const params: Record<string, string | number> = {
+    ...clean(filters),
+    page: opts.page ?? 1,
+    pageSize: opts.pageSize ?? 10,
+  };
+  if (opts.itemCategoryId != null) params.itemCategoryId = opts.itemCategoryId;
+  const res = await axiosInstance.get<ApiResponse<Paginated<PopularBookRow>>>(
+    `${BASE}/popular-books`,
+    { params },
+  );
+  return res.data;
+}
+
+export async function getPublicationUsageReport(
+  filters: ReportFilters = {},
+  dimension: PublicationDimension = "publisher",
+  page = 1,
+  pageSize = 10,
+) {
+  const res = await axiosInstance.get<ApiResponse<Paginated<PublicationUsageRow>>>(
+    `${BASE}/publication-usage`,
+    { params: { ...clean(filters), dimension, page, pageSize } },
+  );
+  return res.data;
+}
+
+export async function getBatchUsageReport(
+  filters: ReportFilters = {},
+  metric: BatchUsageMetric = "circulation",
+  page = 1,
+  pageSize = 10,
+) {
+  const res = await axiosInstance.get<ApiResponse<Paginated<BatchUsageRow>>>(
+    `${BASE}/batch-usage`,
+    { params: { ...clean(filters), metric, page, pageSize } },
+  );
+  return res.data;
+}
+
+export async function getBookDemandForecast(
+  filters: ReportFilters = {},
+  opts: { horizonDays?: 30 | 60; itemCategoryId?: number | null; limit?: number } = {},
+) {
+  const params: Record<string, string | number> = {
+    ...clean(filters),
+    horizonDays: opts.horizonDays ?? 30,
+    limit: opts.limit ?? 25,
+  };
+  if (opts.itemCategoryId != null) params.itemCategoryId = opts.itemCategoryId;
+  const res = await axiosInstance.get<ApiResponse<BookDemandForecastPayload>>(
+    `${BASE}/predict/book-demand`,
+    { params },
+  );
+  return res.data;
+}
+
+export async function getFootfallForecast(filters: ReportFilters = {}) {
+  const res = await axiosInstance.get<ApiResponse<FootfallForecastPayload>>(
+    `${BASE}/predict/footfall`,
+    { params: clean(filters) },
+  );
+  return res.data;
+}

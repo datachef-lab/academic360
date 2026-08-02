@@ -33,7 +33,13 @@ export type DashboardStats = {
   finesOutstanding: number;
   topBooks: Array<{ bookId: number; title: string; issueCount: number }>;
   topPatrons: Array<{ userId: number; userName: string; issueCount: number }>;
-  dailyIssuesLast14: Array<{ day: string; count: number }>;
+  /** Per-day circulation events; `count` = issues + reissues (total). */
+  dailyIssuesLast14: Array<{
+    day: string;
+    issues: number;
+    reissues: number;
+    count: number;
+  }>;
   copiesByStatus: Array<{
     statusId: number | null;
     statusName: string;
@@ -235,7 +241,9 @@ export async function getLibraryDashboardStats(
     db
       .select({
         day: sql<string>`TO_CHAR(${bookCirculationModel.issueTimestamp}, 'YYYY-MM-DD')`,
-        count: count(bookCirculationModel.id),
+        // IS NOT TRUE keeps NULL flags counted as plain issues.
+        issues: sql<number>`COUNT(*) FILTER (WHERE ${bookCirculationModel.isReIssued} IS NOT TRUE)::int`,
+        reissues: sql<number>`COUNT(*) FILTER (WHERE ${bookCirculationModel.isReIssued} IS TRUE)::int`,
       })
       .from(bookCirculationModel)
       .where(circulationConditions(issueRange))
@@ -434,13 +442,26 @@ export async function getLibraryDashboardStats(
       .where(bookConditions())
       .groupBy(sql`EXTRACT(YEAR FROM ${bookModel.createdAt})`)
       .orderBy(sql`EXTRACT(YEAR FROM ${bookModel.createdAt})`),
+    // Entries/exits by hour are a TODAY-ONLY picture (fixed to server-local
+    // midnight, independent of the dashboard date filter) — the widget answers
+    // "how is the library filling up right now", not a range histogram.
     db
       .select({
         hour: sql<number>`EXTRACT(HOUR FROM ${libraryEntryExitModel.entryTimestamp})::int`,
         count: count(),
       })
       .from(libraryEntryExitModel)
-      .where(entryExitConditions())
+      .where(
+        and(
+          ...(filters.branchId != null
+            ? [eq(libraryEntryExitModel.branchId, filters.branchId)]
+            : []),
+          gte(
+            libraryEntryExitModel.entryTimestamp,
+            new Date(now2.getFullYear(), now2.getMonth(), now2.getDate()),
+          ),
+        ),
+      )
       .groupBy(sql`EXTRACT(HOUR FROM ${libraryEntryExitModel.entryTimestamp})`)
       .orderBy(sql`EXTRACT(HOUR FROM ${libraryEntryExitModel.entryTimestamp})`),
     // Exits by hour of day — same shape, different timestamp. Only rows with
@@ -456,7 +477,10 @@ export async function getLibraryDashboardStats(
           ...(filters.branchId != null
             ? [eq(libraryEntryExitModel.branchId, filters.branchId)]
             : []),
-          sql`${libraryEntryExitModel.exitTimestamp} IS NOT NULL`,
+          gte(
+            libraryEntryExitModel.exitTimestamp,
+            new Date(now2.getFullYear(), now2.getMonth(), now2.getDate()),
+          ),
         ),
       )
       .groupBy(sql`EXTRACT(HOUR FROM ${libraryEntryExitModel.exitTimestamp})`)
@@ -544,7 +568,9 @@ export async function getLibraryDashboardStats(
     })),
     dailyIssuesLast14: dailyIssuesRaw.map((r) => ({
       day: r.day,
-      count: r.count,
+      issues: Number(r.issues),
+      reissues: Number(r.reissues),
+      count: Number(r.issues) + Number(r.reissues),
     })),
     copiesByStatus: copiesByStatusRaw.map((r) => ({
       statusId: r.statusId,
