@@ -110,24 +110,32 @@ export function LibrarySyncBanner() {
     const historicalExpected =
       lastDurationMs && lastDurationMs > 0 ? formatDuration(lastDurationMs) : null;
 
-    // Show a "remaining" number only when we can defend it. The raw formula
-    // `elapsed × (planned - processed) / processed` is extrapolated from the
-    // overall pace so far; the tick alternates between fast-processing
-    // phases and multi-minute silent remote-fetch phases, so during a fetch
-    // the pace collapses and the extrapolation blows up (users see 2h+
-    // ETAs that are pure math artefact, not real time). We only trust the
-    // extrapolation when history exists to clamp it against.
+    // Show a "remaining" number that ALWAYS shrinks over time, even before
+    // we've recorded a real completed tick. The raw formula
+    // `elapsed × (planned - processed) / processed` is extrapolated from
+    // the overall pace so far, and the tick alternates between fast-
+    // processing phases and multi-minute silent remote-fetch phases — during
+    // a fetch the pace collapses and the raw extrapolation blows up
+    // (users saw 2h+ ETAs that were pure math artefact). We defend the
+    // number by clamping it against a ceiling that shrinks with elapsed:
+    //   - When we have a real prior tick duration: clamp to (lastDurationMs - elapsed)
+    //   - When we don't: clamp to (FIRST_TICK_CEILING - elapsed)
+    // Either way, `remainingMs` is monotonically bounded above by a
+    // shrinking value, so the displayed number can never grow unboundedly.
+    // 45 min is a reasonable heuristic for a sync tick's upper bound on
+    // develop / prod (individual big tables can take 15-30 min end-to-end).
+    const FIRST_TICK_CEILING_MS = 45 * 60_000;
     let liveRemainingLabel: string | null = null;
     let livePercent: number | null = null;
     if (plannedRows && plannedRows > 0 && processedRows != null) {
       livePercent = Math.min(100, Math.round((processedRows / plannedRows) * 100));
-      if (processedRows > 0 && lastDurationMs && lastDurationMs > 0) {
+      if (processedRows > 0) {
         const rate = processedRows / Math.max(1, elapsedMs); // rows per ms
         const rawRemaining = Math.max(0, (plannedRows - processedRows) / rate);
-        // Clamp by history: never claim longer than a full tick has ever
-        // taken. Also floor at a small positive so 100% shows "wrapping up".
-        const historicalRemaining = Math.max(0, lastDurationMs - elapsedMs);
-        const remainingMs = Math.min(rawRemaining, historicalRemaining);
+        const ceilingMs =
+          lastDurationMs && lastDurationMs > 0 ? lastDurationMs : FIRST_TICK_CEILING_MS;
+        const ceilingRemaining = Math.max(0, ceilingMs - elapsedMs);
+        const remainingMs = Math.min(rawRemaining, ceilingRemaining);
         liveRemainingLabel =
           remainingMs > 0 ? `~${formatDuration(remainingMs)} remaining` : "wrapping up…";
       }
@@ -149,12 +157,6 @@ export function LibrarySyncBanner() {
           ? `usually takes ~${historicalExpected}, ~${formatDuration(remainingMs)} left`
           : `wrapping up (usually ~${historicalExpected})`,
       );
-    } else if (livePercent != null) {
-      // Live progress exists but no prior tick history to clamp against.
-      // The overall-rate extrapolation is unreliable during fetch phases,
-      // so we don't quote a specific number — the percent is honest, an
-      // ETA would be theatre.
-      parts.push("estimate available after first sync completes");
     } else {
       // No planning data AND no prior tick history. This is the very first
       // tick after a fresh install — we genuinely don't have anything to
