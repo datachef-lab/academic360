@@ -78,19 +78,16 @@ import { getStatesByCountry } from "@/services/state.service";
 import { getCitiesByState } from "@/services/city.service";
 import { cn } from "@/lib/utils";
 import CopyDialog, { formatPriceInrDisplay } from "./components/CopyDialog";
-
-const STICKY_THEAD_CLASS =
-  "sticky top-0 z-20 border-b-2 border-slate-500 bg-muted/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-muted/80 dark:border-slate-400";
-const STICKY_TH_BASE =
-  "h-auto whitespace-nowrap border-r border-solid border-slate-300 bg-muted/95 px-3 py-2.5 text-xs font-semibold text-slate-800 backdrop-blur dark:border-slate-400";
-const STICKY_TH_LEFT = cn(
+// Use the shared shell's classes so this page stays in sync with the
+// notification-master aesthetic everywhere else in the library module.
+// Historically this file kept a local copy of these constants; they drifted
+// and this page ended up as the sore thumb after the shell update.
+import {
+  STICKY_THEAD_CLASS,
   STICKY_TH_BASE,
-  "sticky left-0 z-30 shadow-[6px_0_10px_-4px_rgba(15,23,42,0.06)]",
-);
-const STICKY_TH_RIGHT = cn(
-  STICKY_TH_BASE,
-  "sticky right-0 z-30 shadow-[-8px_0_12px_-6px_rgba(15,23,42,0.12)]",
-);
+  STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
+} from "@/components/library/LibraryTablePage";
 
 type LibraryBookSocketUpdate = {
   id: string;

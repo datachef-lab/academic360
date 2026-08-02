@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { promises as fs } from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { sql } from "drizzle-orm";
+import { db } from "@/db/index.js";
 import { socketService } from "@/services/socketService.js";
 
 /**
@@ -14,10 +13,14 @@ import { socketService } from "@/services/socketService.js";
  * background emitting real progress to the user's socket room tagged with the
  * jobId, and the finished file is fetched from a tokenized download endpoint.
  *
- * The registry is in-memory: jobs and their temp files live for JOB_TTL_MS.
- * That is fine for a single backend process; if the API is ever run as multiple
- * workers, the download request must land on the worker that produced the file
- * (or move the file to shared storage) — see reports.route notes.
+ * MULTI-INSTANCE: the registry and the finished file bytes live in Postgres
+ * (`report_jobs`), NOT in per-process memory or the local tmp dir. Behind a
+ * round-robin load balancer the download GET routinely lands on a different
+ * instance than the one that generated the file — the previous in-memory
+ * registry produced intermittent 404s in production for exactly that reason.
+ * Any instance can now serve any job's status or file. Progress events still
+ * stream from the generating instance; the Socket.IO Redis adapter fans them
+ * out to whichever instance holds the user's connection.
  */
 
 export type ReportJobStatus = "pending" | "running" | "completed" | "error";
@@ -33,28 +36,68 @@ export interface ReportJob {
   progress: number;
   message: string;
   fileName?: string;
-  filePath?: string;
   contentType?: string;
   error?: string;
   createdAt: number;
   completedAt?: number;
 }
 
-const jobs = new Map<string, ReportJob>();
-
-const TMP_DIR = path.join(os.tmpdir(), "academic360-reports");
-const JOB_TTL_MS = 30 * 60 * 1000; // keep a finished file downloadable for 30 min
-
 /** Path the client fetches the finished file from. */
 export function reportDownloadPath(jobId: string): string {
   return `/api/reports/jobs/${jobId}/download`;
 }
 
-export function createReportJob(
+let tableEnsured: Promise<void> | null = null;
+
+function ensureReportJobsTable(): Promise<void> {
+  if (!tableEnsured) {
+    tableEnsured = db
+      .execute(
+        sql`
+          CREATE TABLE IF NOT EXISTS report_jobs (
+            job_id       uuid PRIMARY KEY,
+            user_id      text NOT NULL,
+            report       text NOT NULL,
+            report_label text NOT NULL,
+            status       text NOT NULL DEFAULT 'pending',
+            progress     integer NOT NULL DEFAULT 0,
+            message      text NOT NULL DEFAULT '',
+            file_name    text,
+            content_type text,
+            file_bytes   bytea,
+            error        text,
+            created_at   timestamptz NOT NULL DEFAULT NOW(),
+            completed_at timestamptz
+          )
+        `,
+      )
+      .then(() => undefined)
+      .catch((err) => {
+        tableEnsured = null; // retry on next call
+        throw err;
+      });
+  }
+  return tableEnsured;
+}
+
+/**
+ * Drop expired jobs (and their file bytes). Runs opportunistically on job
+ * creation so cleanup doesn't depend on any one instance staying alive —
+ * a setTimeout-based cleanup dies with the process that scheduled it.
+ */
+async function sweepExpiredJobs(): Promise<void> {
+  await db.execute(sql`
+    DELETE FROM report_jobs
+    WHERE created_at < NOW() - INTERVAL '60 minutes'
+  `);
+}
+
+export async function createReportJob(
   userId: string,
   report: string,
   reportLabel: string,
-): ReportJob {
+): Promise<ReportJob> {
+  await ensureReportJobsTable();
   const job: ReportJob = {
     jobId: randomUUID(),
     userId,
@@ -65,12 +108,72 @@ export function createReportJob(
     message: "Queued…",
     createdAt: Date.now(),
   };
-  jobs.set(job.jobId, job);
+  await db.execute(sql`
+    INSERT INTO report_jobs (job_id, user_id, report, report_label, status, progress, message)
+    VALUES (${job.jobId}, ${userId}, ${report}, ${reportLabel}, 'pending', 0, ${job.message})
+  `);
+  void sweepExpiredJobs().catch(() => undefined);
   return job;
 }
 
-export function getReportJob(jobId: string): ReportJob | undefined {
-  return jobs.get(jobId);
+type ReportJobRow = {
+  job_id: string;
+  user_id: string;
+  report: string;
+  report_label: string;
+  status: ReportJobStatus;
+  progress: number;
+  message: string;
+  file_name: string | null;
+  content_type: string | null;
+  error: string | null;
+  created_at: Date | string;
+  completed_at: Date | string | null;
+};
+
+function rowToJob(r: ReportJobRow): ReportJob {
+  return {
+    jobId: r.job_id,
+    userId: r.user_id,
+    report: r.report,
+    reportLabel: r.report_label,
+    status: r.status,
+    progress: Number(r.progress ?? 0),
+    message: r.message ?? "",
+    fileName: r.file_name ?? undefined,
+    contentType: r.content_type ?? undefined,
+    error: r.error ?? undefined,
+    createdAt: new Date(r.created_at).getTime(),
+    completedAt: r.completed_at
+      ? new Date(r.completed_at).getTime()
+      : undefined,
+  };
+}
+
+/** Job metadata WITHOUT the file bytes — cheap for status checks. */
+export async function getReportJob(
+  jobId: string,
+): Promise<ReportJob | undefined> {
+  await ensureReportJobsTable();
+  const res = await db.execute(sql`
+    SELECT job_id, user_id, report, report_label, status, progress, message,
+           file_name, content_type, error, created_at, completed_at
+    FROM report_jobs
+    WHERE job_id = ${jobId}
+  `);
+  const row = res.rows[0] as ReportJobRow | undefined;
+  return row ? rowToJob(row) : undefined;
+}
+
+/** Finished file bytes for the download endpoint. */
+export async function getReportJobFile(jobId: string): Promise<Buffer | null> {
+  await ensureReportJobsTable();
+  const res = await db.execute(sql`
+    SELECT file_bytes FROM report_jobs WHERE job_id = ${jobId}
+  `);
+  const bytes = (res.rows[0] as { file_bytes?: Buffer | null } | undefined)
+    ?.file_bytes;
+  return bytes instanceof Buffer ? bytes : bytes ? Buffer.from(bytes) : null;
 }
 
 function statusForSocket(
@@ -107,6 +210,23 @@ function emit(job: ReportJob, downloadUrl?: string): void {
   }
 }
 
+/**
+ * Persist progress so the HTTP status fallback (served by ANY instance) shows
+ * live numbers even when the socket event was missed. Fire-and-forget — a lost
+ * progress write only staleness-lags the fallback, never the socket stream.
+ */
+function persistProgress(job: ReportJob): void {
+  void db
+    .execute(
+      sql`
+        UPDATE report_jobs
+        SET status = ${job.status}, progress = ${job.progress}, message = ${job.message}
+        WHERE job_id = ${job.jobId}
+      `,
+    )
+    .catch(() => undefined);
+}
+
 /** What a report generator produces. */
 export interface GeneratedReport {
   buffer: Buffer;
@@ -118,14 +238,10 @@ export interface GeneratedReport {
  * "queued" (0–5) and "finalizing/writing" (90–100) stay reserved. */
 export type ReportProgress = (pct: number, message: string) => void;
 
-function sanitizeFileName(name: string): string {
-  return name.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 180) || "report";
-}
-
 /**
  * Run a report generator in the background: emit progress, write the result to
- * a temp file, then emit completion carrying the download URL. Never throws —
- * failures are reported to the client as an "error" progress event.
+ * the report_jobs row, then emit completion carrying the download URL. Never
+ * throws — failures are reported to the client as an "error" progress event.
  */
 export async function runReportJob(
   job: ReportJob,
@@ -135,6 +251,7 @@ export async function runReportJob(
   job.progress = 5;
   job.message = `Preparing ${job.reportLabel}…`;
   emit(job);
+  persistProgress(job);
 
   // Most generators are opaque (one big query → a Buffer) and report no
   // intermediate progress, which left the bar frozen at 5% for the whole run.
@@ -153,6 +270,7 @@ export async function runReportJob(
       job.progress = heartbeat;
       job.message = `Generating ${job.reportLabel}…`;
       emit(job);
+      persistProgress(job);
     }
   }, 1200);
   timer.unref?.();
@@ -163,6 +281,7 @@ export async function runReportJob(
       job.progress = Math.max(5, Math.min(90, Math.round(pct)));
       job.message = message;
       emit(job);
+      persistProgress(job);
     };
 
     const { buffer, fileName, contentType } = await generate(onProgress);
@@ -172,28 +291,25 @@ export async function runReportJob(
     job.message = "Finalizing file…";
     emit(job);
 
-    await fs.mkdir(TMP_DIR, { recursive: true });
-    const filePath = path.join(
-      TMP_DIR,
-      `${job.jobId}-${sanitizeFileName(fileName)}`,
-    );
-    await fs.writeFile(filePath, buffer);
-
     job.fileName = fileName;
-    job.filePath = filePath;
     job.contentType = contentType;
     job.status = "completed";
     job.progress = 100;
     job.completedAt = Date.now();
     job.message = `${job.reportLabel} is ready`;
+    await db.execute(sql`
+      UPDATE report_jobs
+      SET status = 'completed', progress = 100, message = ${job.message},
+          file_name = ${fileName}, content_type = ${contentType},
+          file_bytes = ${buffer}, error = NULL, completed_at = NOW()
+      WHERE job_id = ${job.jobId}
+    `);
     emit(job, reportDownloadPath(job.jobId));
     console.log(
       `[report-job] ${job.report} (${job.jobId}) completed in ${
         job.completedAt - job.createdAt
       }ms → ${fileName} (${buffer.length}b)`,
     );
-
-    scheduleCleanup(job.jobId);
   } catch (err) {
     clearInterval(timer);
     console.error(`[report-job] ${job.report} (${job.jobId}) failed`, err);
@@ -201,23 +317,16 @@ export async function runReportJob(
     job.progress = 100;
     job.error = err instanceof Error ? err.message : "Report generation failed";
     job.message = `Failed to generate ${job.reportLabel}`;
+    await db
+      .execute(
+        sql`
+          UPDATE report_jobs
+          SET status = 'error', progress = 100, message = ${job.message},
+              error = ${job.error}, completed_at = NOW()
+          WHERE job_id = ${job.jobId}
+        `,
+      )
+      .catch(() => undefined);
     emit(job);
-    scheduleCleanup(job.jobId);
   }
-}
-
-/** Delete the temp file and drop the job after the TTL. */
-function scheduleCleanup(jobId: string): void {
-  setTimeout(() => {
-    void cleanupJob(jobId);
-  }, JOB_TTL_MS).unref?.();
-}
-
-export async function cleanupJob(jobId: string): Promise<void> {
-  const job = jobs.get(jobId);
-  if (!job) return;
-  if (job.filePath) {
-    await fs.rm(job.filePath, { force: true }).catch(() => {});
-  }
-  jobs.delete(jobId);
 }

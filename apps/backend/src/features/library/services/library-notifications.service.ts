@@ -18,9 +18,20 @@ export type LibraryNotificationPayload = {
   variables?: Record<string, string | number | null | undefined>;
 };
 
+/**
+ * Library notifications are opt-in. The notification service isn't reachable
+ * from every environment (dev / restricted staging) and the scheduler otherwise
+ * spams ECONNREFUSED with a stack per overdue book. Off by default; set
+ * `LIBRARY_NOTIFICATIONS_ENABLED=true` to turn them on.
+ */
 export async function emitLibraryNotification(
   payload: LibraryNotificationPayload,
 ): Promise<void> {
+  if (
+    (process.env.LIBRARY_NOTIFICATIONS_ENABLED ?? "").toLowerCase() !== "true"
+  ) {
+    return;
+  }
   try {
     await enqueueNotification({
       event: payload.event,

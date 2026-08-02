@@ -36,3 +36,11 @@ export * from "./series.model";
 export * from "./shelf.model";
 export * from "./status.model";
 export * from "./vendor.model";
+export * from "./library-sync-state.model";
+// Missing from the barrel until now — drizzle-kit couldn't see either model,
+// so no migration was ever generated for `library_floor_plans` (broke the
+// Digital Twin page: SELECT hit a nonexistent table → 500) or the CDL session
+// table. Adding them here so the next `pnpm run db:generate` produces the
+// CREATE TABLE statements.
+export * from "./floor-plan.model";
+export * from "./cdl-session.model";
