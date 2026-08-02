@@ -111,7 +111,17 @@ export function LibrarySyncBanner() {
       livePercent = Math.min(100, Math.round((processedRows / plannedRows) * 100));
       if (processedRows > 0) {
         const rate = processedRows / Math.max(1, elapsedMs); // rows per ms
-        const remainingMs = Math.max(0, (plannedRows - processedRows) / rate);
+        let remainingMs = Math.max(0, (plannedRows - processedRows) / rate);
+        // Clamp by history: the sync runs table-by-table (fetch → process),
+        // so the counter freezes during a table's remote-fetch phase. When
+        // `processed` stays flat while `elapsed` climbs, the raw formula
+        // sends the ETA toward infinity. If we know how long a full tick
+        // usually takes, cap the estimate at (lastDurationMs - elapsed).
+        // Never show a live ETA larger than history says is possible.
+        if (lastDurationMs && lastDurationMs > 0) {
+          const historicalRemaining = Math.max(0, lastDurationMs - elapsedMs);
+          if (historicalRemaining > 0) remainingMs = Math.min(remainingMs, historicalRemaining);
+        }
         liveRemainingLabel =
           remainingMs > 0 ? `~${formatDuration(remainingMs)} remaining` : "wrapping up…";
       }
