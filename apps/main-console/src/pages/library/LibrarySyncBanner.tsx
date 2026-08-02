@@ -19,9 +19,14 @@ function formatDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return "0s";
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rest = s % 60;
-  return rest === 0 ? `${m}m` : `${m}m ${rest}s`;
+  const totalMin = Math.floor(s / 60);
+  const restSec = s % 60;
+  if (totalMin < 60) {
+    return restSec === 0 ? `${totalMin}m` : `${totalMin}m ${restSec}s`;
+  }
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
 function humaniseAgo(iso: string | null): string {
@@ -111,7 +116,17 @@ export function LibrarySyncBanner() {
       livePercent = Math.min(100, Math.round((processedRows / plannedRows) * 100));
       if (processedRows > 0) {
         const rate = processedRows / Math.max(1, elapsedMs); // rows per ms
-        const remainingMs = Math.max(0, (plannedRows - processedRows) / rate);
+        let remainingMs = Math.max(0, (plannedRows - processedRows) / rate);
+        // Clamp by history: the sync runs table-by-table (fetch → process),
+        // so the counter freezes during a table's remote-fetch phase. When
+        // `processed` stays flat while `elapsed` climbs, the raw formula
+        // sends the ETA toward infinity. If we know how long a full tick
+        // usually takes, cap the estimate at (lastDurationMs - elapsed).
+        // Never show a live ETA larger than history says is possible.
+        if (lastDurationMs && lastDurationMs > 0) {
+          const historicalRemaining = Math.max(0, lastDurationMs - elapsedMs);
+          if (historicalRemaining > 0) remainingMs = Math.min(remainingMs, historicalRemaining);
+        }
         liveRemainingLabel =
           remainingMs > 0 ? `~${formatDuration(remainingMs)} remaining` : "wrapping up…";
       }
