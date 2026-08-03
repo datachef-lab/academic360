@@ -520,7 +520,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           const arr = selections[other.metaId] ?? [];
           for (let i = 0; i < arr.length; i++) {
             if (other.metaId === v.metaId && i === slotIdx) continue;
-            if (arr[i]) heldBySiblingContinuations.push(arr[i]);
+            // Bind before pushing: `if (arr[i])` does not narrow an indexed
+            // access, so pushing arr[i] straight in is a string | undefined.
+            const held = arr[i];
+            if (held) heldBySiblingContinuations.push(held);
           }
         }
         return convertToComboboxData(
@@ -673,6 +676,20 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       for (let j = i + 1; j < nonAec.length; j++) {
         const right = nonAec[j];
         if (!right) continue;
+
+        // PRIOR_SELECTION metas (Sem V/VI Minor 3/4) continue an earlier
+        // Minor pick — the dropdown literally offers those prior picks and
+        // nothing else, so sharing a subject with the source meta is the
+        // design (see optionsForMeta comments at lines 425-429 / 495-503,
+        // and ADR 0014). Sibling PRIOR_SELECTION metas (Minor 3 vs Minor 4)
+        // still get the overlap check — their mutual exclusion is the real
+        // invariant.
+        const leftContinuesRight =
+          left.optionSource === "PRIOR_SELECTION" && left.sourceMetaIds.includes(right.metaId);
+        const rightContinuesLeft =
+          right.optionSource === "PRIOR_SELECTION" && right.sourceMetaIds.includes(left.metaId);
+        if (leftContinuesRight || rightContinuesLeft) continue;
+
         const rightVals = metaValues(right.metaId);
         const overlap = leftVals.find((a) => rightVals.includes(a));
         if (overlap) {
