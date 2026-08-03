@@ -1589,6 +1589,8 @@ export async function exportStudentDetailedReport(
         sec.name AS section,
         std.rfid_number AS student_rfid_number,
         std.class_roll_number AS student_class_roll_number,
+        std.community AS community,
+        cl.name AS semester,
         pd.aadhaar_card_number AS personal_details_aadhaar_card_number,
         pd.date_of_birth AS personal_details_dateOfBirth,
         pd.gender AS personal_details_gender,
@@ -1667,6 +1669,7 @@ export async function exportStudentDetailedReport(
       LEFT JOIN family_details fd ON fd.user_id_fk = u.id
       LEFT JOIN sections sec ON sec.id = pr.section_id_fk
       LEFT JOIN shifts sh ON sh.id = pr.shift_id_fk
+      LEFT JOIN classes cl ON cl.id = pr.class_id_fk
       LEFT JOIN person father ON father.family_id_fk = fd.id AND father.type = 'FATHER'
       LEFT JOIN person mother ON mother.family_id_fk = fd.id AND mother.type = 'MOTHER'
       LEFT JOIN addr_pivot ap ON ap.personal_details_id_fk = pd.id

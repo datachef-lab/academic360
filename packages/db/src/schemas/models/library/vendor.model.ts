@@ -8,11 +8,15 @@ export const vendorModel = pgTable("vendors", {
     name: varchar({ length: 1000 }).notNull(),
     code: varchar({ length: 500 }),
     email: varchar({ length: 500 }),
-    phone: varchar({ length: 15 }),
+    // Widened from 15: IRP stores multiple comma-separated numbers in this
+    // single field (e.g. "033-2249-0933, 033-2249-3102, 033-2252-0698"), so a
+    // 15-char cap failed every library-load row that resolved back through a
+    // vendor with more than one number. Same for personOfContactPhone below.
+    phone: varchar({ length: 500 }),
     website: varchar({ length: 5000 }),
     personOfContact: varchar({ length: 1000 }),
     personOfContactEmail: varchar({ length: 500 }),
-    personOfContactPhone: varchar({ length: 15 }),
+    personOfContactPhone: varchar({ length: 500 }),
     pan: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
