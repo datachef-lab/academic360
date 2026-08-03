@@ -222,12 +222,24 @@ function buildLegacyFeesQuery(uid?: string | null): string {
         -- concessional amount). Anchored on FSM batch cols (not on crs/cl/
         -- sess/sh derived from h), so the concession still matches when
         -- the historicalrecord row is missing (e.g. Casual Fees).
+        --
+        -- Section is DELIBERATELY NOT matched. IRP records the concession
+        -- against the section it was granted in (e.g. E1), which can differ
+        -- from the student's current historicalrecord enrollment section
+        -- (e.g. E2 after a section change / data-entry drift). Requiring
+        -- sct.sectionid = sec.id silently dropped the concession for those
+        -- students, so the loader fell back to "Slab F" (full fee) and billed
+        -- a near-fully-waived student the whole amount (e.g. 34,900 instead of
+        -- 445). Verified in IRP: 0 of 16,553 concession groups by
+        -- (student, course, class, session, shift, receipttype) have a
+        -- conflicting slab across sections, so dropping section resolves the
+        -- SAME slab without ambiguity (it also matches the section-less join
+        -- the amount-heal already uses — legacy-fees-amount-heal.service.ts).
         LEFT JOIN studentfeesconcessiontab sct ON (
             sct.student_id = spd.id
             AND sct.courseid = fsm.courseId
             AND sct.classid = fsm.classId
             AND sct.sessionid = fsm.sessionid
-            AND sct.sectionid = sec.id
             AND sct.shiftid = fsm.shiftId
             AND sct.receipttypeid = fsm.receipttype
         )
