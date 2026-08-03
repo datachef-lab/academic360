@@ -129,6 +129,16 @@ export async function runBootMigrations(): Promise<void> {
   for (const m of MIGRATIONS) {
     const started = Date.now();
     try {
+      if (
+        process.env.NODE_ENV &&
+        process.env.NODE_ENV === "development" &&
+        m.name === "library-legacy-load"
+      ) {
+        log.info(
+          `[${m.name}] skipping library-legacy-load in development mode`,
+        );
+        continue;
+      }
       const result = await m.run();
       const ms = Date.now() - started;
       log.info(`[${m.name}] done in ${ms}ms`, result);
