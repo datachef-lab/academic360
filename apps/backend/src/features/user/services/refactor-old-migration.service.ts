@@ -745,6 +745,38 @@ export async function processStudentsFromExcelBuffer(
     }
   }
 
+  // Once every student in this batch is imported and their fee mappings exist,
+  // heal the fee slab for just these UIDs. The fresh loader points a
+  // concession student at the default full-fee slab whenever it cannot see the
+  // concession — the section on studentfeesconcessiontab differs from the
+  // enrollment section, or IRP has not raised an installment for the term yet
+  // (the 0017 Sem IV case). This targeted heal re-points those mappings to the
+  // real concession slab (reading the concession tab directly, section-less),
+  // so the console never shows full fee for a waived student. It is scoped to
+  // this batch, never touches the global heal marker, and — like the fee load
+  // itself — a failure here is logged but never fails the import.
+  if (processed > 0) {
+    try {
+      const { runLegacyFeesAmountHeal } =
+        await import("@/features/fees/services/legacy-fees-amount-heal.service.js");
+      const healResult = await runLegacyFeesAmountHeal({
+        commit: true,
+        uids,
+        onProgress: (msg) => console.log(`[LegacyImport][fees-heal] ${msg}`),
+      });
+      console.log(
+        `[LegacyImport][fees-heal] reassigned=${healResult.mappingsReassigned} ` +
+          `unresolved=${healResult.mappingsUnresolved} checked=${healResult.mappingsChecked} ` +
+          `paymentsUpdated=${healResult.paymentsUpdated}`,
+      );
+    } catch (e) {
+      console.error(
+        "[LegacyImport][fees-heal] post-import heal failed:",
+        (e as Error)?.message,
+      );
+    }
+  }
+
   return {
     totalRows: parsed.totalRows,
     totalUids: uids.length,
