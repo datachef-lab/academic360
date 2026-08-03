@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { useActiveUsers } from "@/hooks/useActiveUsers";
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -8,11 +8,28 @@ import { getOnlineStudents, type OnlineStudentDto } from "@/services/student";
 import { OnlineStudentsModal } from "./onlineStudentModal";
 import { Users } from "lucide-react";
 
+const ONLINE_STUDENTS_QUERY_KEY = ["online-students"];
+
 export function ActiveUsersAvatars() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { activeUsers, studentsOnlineCount, isConnected } = useActiveUsers({
     userId: user?.id?.toString(),
+    // Splice presence changes straight into the cache instead of refetching —
+    // the socket already carries the student's full row data.
+    onStudentOnline: (student) => {
+      queryClient.setQueryData<OnlineStudentDto[]>(ONLINE_STUDENTS_QUERY_KEY, (old = []) =>
+        old.some((s) => s.id === student.id)
+          ? old.map((s) => (s.id === student.id ? student : s))
+          : [...old, student],
+      );
+    },
+    onStudentOffline: (userId) => {
+      queryClient.setQueryData<OnlineStudentDto[]>(ONLINE_STUDENTS_QUERY_KEY, (old = []) =>
+        old.filter((s) => s.userId !== userId),
+      );
+    },
   });
 
   const [isStudentsModalOpen, setIsStudentsModalOpen] = useState(false);
@@ -22,7 +39,7 @@ export function ActiveUsersAvatars() {
     isLoading,
     isError,
   } = useQuery<OnlineStudentDto[]>({
-    queryKey: ["online-students"],
+    queryKey: ONLINE_STUDENTS_QUERY_KEY,
     queryFn: () => getOnlineStudents(),
     enabled: isStudentsModalOpen,
     staleTime: 30 * 1000,
