@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { boardService } from "@/services/board.service";
 import { getAllLanguageMediums } from "@/services/language-medium.service";
@@ -29,7 +30,6 @@ import { cityService } from "@/services/city.service";
 import axiosInstance from "@/utils/api";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import { deriveResultStatus } from "@/utils/resultStatus";
 import type { SubjectResultStatusType } from "@/types/enums";
 import { averageOfBestNTotals } from "@/utils/bestOfFourUtils";
 import { SearchableSelect } from "@/features/academic-year-setup/general/SearchableSelect";
@@ -204,12 +204,30 @@ export default function AcademicDetails({
   const [form, setForm] = useState<AdmissionAcademicInfoDto | null>(studentAcademicDetails ?? null);
   const subjects: StudentAcademicSubjectsDto[] = useMemo(() => {
     const list = (form?.subjects ?? []) as StudentAcademicSubjectsDto[];
-    return [...list].sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0));
+    // Real rows (positive ids from the server) first, ordered by id, then any
+    // newly-added rows (temp negative ids, in the order they were added). The
+    // negative ids are placeholders that get stripped at save time — sorting
+    // ascending on them would flip added rows into reverse-add order.
+    return [...list].sort((a, b) => {
+      const ai = Number(a?.id ?? 0);
+      const bi = Number(b?.id ?? 0);
+      const aNew = ai <= 0;
+      const bNew = bi <= 0;
+      if (aNew !== bNew) return aNew ? 1 : -1;
+      return aNew ? bi - ai : ai - bi;
+    });
   }, [form?.subjects]);
-  // Best of Four / Five are derived from the subject totals, not stored state.
-  // They used to be copied into `form` by a handler and an effect; whenever a
-  // marks edit took a path that missed one of them the displayed figure went
-  // stale. Deriving in render means they cannot lag the marks they come from.
+  // Monotonically-decreasing counter for newly-added rows: -1, -2, -3, …
+  // Kept in a ref so re-renders don't reset it and we don't reuse an id even
+  // after the user deletes a just-added row.
+  const tempSubjectIdRef = useRef(-1);
+
+  // Best of Four / Five is derived from the subject totals, not stored state.
+  // A useEffect that mirrored subjects → form.bestOfFour clears to null when
+  // every total is 0 (e.g. staff cleared the marks), which the old
+  // `bof ?? curBof` fallback then reverted to the stale figure, so the field
+  // read as auto-calculated but silently disagreed with what the operator
+  // could see in the table. Deriving in render can't lag.
   const derivedBestOfFour = useMemo(() => averageOfBestNTotals(subjects, 4), [subjects]);
   const derivedBestOfFive = useMemo(() => averageOfBestNTotals(subjects, 5), [subjects]);
 
@@ -242,6 +260,133 @@ export default function AcademicDetails({
     }>
   >([]);
   const boardResultOptions: BoardResultStatusType[] = ["PASS", "FAIL", "COMPARTMENTAL"];
+  // Per-row max marks — resolved from the board_subject the row currently
+  // points at. Returned as zeros when the board carries no full-marks entry
+  // (an unbounded row: don't enforce a cap, don't render a hint).
+  const rowMaxes = (row: StudentAcademicSubjectsDto) => {
+    const bsId = Number(
+      (row as unknown as { boardSubjectId?: number }).boardSubjectId ??
+        (row as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
+        0,
+    );
+    const bs = boardSubjects.find((b) => Number(b.id) === bsId);
+    const maxTheory = Number(bs?.fullMarksTheory ?? 0);
+    const maxPractical = Number(bs?.fullMarksPractical ?? 0);
+    return { maxTheory, maxPractical, maxTotal: maxTheory + maxPractical };
+  };
+  // Rows whose theory / practical / total exceeds the board subject's own
+  // full marks. Save is blocked until these are cleared — the backend has no
+  // per-row bound, so a typo like `theory=800` would otherwise land in the
+  // DB and poison every downstream aggregate.
+  const invalidSubjectRows = useMemo(() => {
+    const bad: Array<{
+      idx: number;
+      subjectName: string;
+      issues: string[];
+    }> = [];
+    subjects.forEach((s, idx) => {
+      const { maxTheory, maxPractical, maxTotal } = rowMaxes(s);
+      const theory = Number((s as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
+      const practical = Number((s as unknown as { practicalMarks?: number }).practicalMarks ?? 0);
+      const total = Number((s as unknown as { totalMarks?: number }).totalMarks ?? 0);
+      const issues: string[] = [];
+      if (maxTheory > 0 && theory > maxTheory) issues.push(`theory > ${maxTheory}`);
+      if (maxPractical > 0 && practical > maxPractical) issues.push(`practical > ${maxPractical}`);
+      if (maxTotal > 0 && total > maxTotal) issues.push(`total > ${maxTotal}`);
+      if (issues.length > 0) {
+        bad.push({
+          idx: idx + 1,
+          subjectName:
+            (s as unknown as { boardSubject?: { boardSubjectName?: { name?: string } } })
+              .boardSubject?.boardSubjectName?.name ??
+            (s as unknown as { boardSubject?: { name?: string } }).boardSubject?.name ??
+            `#${idx + 1}`,
+          issues,
+        });
+      }
+    });
+    return bad;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjects, boardSubjects]);
+
+  // Board-derived Result rule — same shape the backend uses for its own
+  // auto-fill. Returns null when the board has no pass-mark for either
+  // component (nothing to compare a manual pick against).
+  const deriveResult = (
+    theory: number,
+    practical: number,
+    bs?: {
+      fullMarksTheory?: number;
+      passingMarksTheory?: number;
+      fullMarksPractical?: number;
+      passingMarksPractical?: number;
+    },
+  ): "PASS" | "FAIL" | "FAIL IN THEORY" | "FAIL IN PRACTICAL" | null => {
+    const theoryJudgeable =
+      Number(bs?.fullMarksTheory ?? 0) > 0 && Number(bs?.passingMarksTheory ?? 0) > 0;
+    const practicalJudgeable =
+      Number(bs?.fullMarksPractical ?? 0) > 0 && Number(bs?.passingMarksPractical ?? 0) > 0;
+    if (!theoryJudgeable && !practicalJudgeable) return null;
+    const theoryFailed = theoryJudgeable && theory < Number(bs?.passingMarksTheory ?? 0);
+    const practicalFailed =
+      practicalJudgeable && practical < Number(bs?.passingMarksPractical ?? 0);
+    if (theoryFailed && practicalFailed) return "FAIL";
+    if (theoryFailed) return "FAIL IN THEORY";
+    if (practicalFailed) return "FAIL IN PRACTICAL";
+    return "PASS";
+  };
+
+  // Per-row soft warnings — total that disagrees with theory+practical, and a
+  // Result choice that contradicts what the board's own pass marks imply.
+  // These are non-blocking (staff sometimes have legitimate overrides:
+  // moderation deltas on the marksheet, awaiting-result rows, etc.) but the
+  // save flow surfaces them for confirmation.
+  const subjectWarnings = useMemo(() => {
+    type SubjectWarn = {
+      idx: number;
+      subjectName: string;
+      totalMismatch?: { entered: number; expected: number };
+      resultMismatch?: { entered: string; expected: string };
+    };
+    const warnings: SubjectWarn[] = [];
+    subjects.forEach((s, idx) => {
+      const bsId = Number(
+        (s as unknown as { boardSubjectId?: number }).boardSubjectId ??
+          (s as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
+          0,
+      );
+      const bs = boardSubjects.find((b) => Number(b.id) === bsId);
+      const theory = Number((s as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
+      const practical = Number((s as unknown as { practicalMarks?: number }).practicalMarks ?? 0);
+      const totalRaw = (s as unknown as { totalMarks?: number | null }).totalMarks;
+      const enteredResult = String(
+        (s as unknown as { resultStatus?: string }).resultStatus ?? "",
+      ).trim();
+      const w: SubjectWarn = {
+        idx: idx + 1,
+        subjectName:
+          (s as unknown as { boardSubject?: { boardSubjectName?: { name?: string } } }).boardSubject
+            ?.boardSubjectName?.name ??
+          (s as unknown as { boardSubject?: { name?: string } }).boardSubject?.name ??
+          `#${idx + 1}`,
+      };
+      // Only warn on total mismatch once staff have actually entered a total
+      // (a blank field is a placeholder, not a mistake).
+      if (totalRaw != null && String(totalRaw) !== "") {
+        const expectedTotal = theory + practical;
+        if (Number(totalRaw) !== expectedTotal) {
+          w.totalMismatch = { entered: Number(totalRaw), expected: expectedTotal };
+        }
+      }
+      const derived = deriveResult(theory, practical, bs);
+      if (derived && enteredResult && enteredResult !== derived) {
+        w.resultMismatch = { entered: enteredResult, expected: derived };
+      }
+      if (w.totalMismatch || w.resultMismatch) warnings.push(w);
+    });
+    return warnings;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjects, boardSubjects]);
   const [institutions, setInstitutions] = useState<Array<{ id: number; name: string }>>([]);
   const [countries, setCountries] = useState<Array<{ id: number; name: string }>>([]);
   const [states, setStates] = useState<Array<{ id: number; name: string }>>([]);
@@ -535,44 +680,52 @@ export default function AcademicDetails({
         (current as unknown as Record<string, unknown>)[field] = value as unknown;
       }
 
-      // Auto-calc total marks when theory or practical marks change
-      if (field === "theoryMarks" || field === "practicalMarks") {
-        const theory = Number((current as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
-        const practical = Number(
-          (current as unknown as { practicalMarks?: number }).practicalMarks ?? 0,
-        );
-        (current as unknown as { totalMarks?: number }).totalMarks = theory + practical;
-      }
-
-      // Auto-calc result (PASS/FAIL) based on board subject passing marks and total marks
-      const bsId = Number(
-        (current as unknown as { boardSubjectId?: number }).boardSubjectId ??
-          (current as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
-          0,
-      );
-      const bs = boardSubjects.find((b) => Number(b.id) === bsId);
-      const theory = Number((current as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
-      const practical = Number(
-        (current as unknown as { practicalMarks?: number }).practicalMarks ?? 0,
-      );
-
-      // Result follows the board's own passing marks, and reports WHICH
-      // component failed — the enum has FAIL IN THEORY / FAIL IN PRACTICAL for
-      // exactly that. Returns null when the board states no pass mark, in which
-      // case whatever is already stored is left untouched rather than being
-      // overwritten with an invented PASS.
-      // Only re-derive when the inputs to the rule change. Running on every
-      // field change meant a staff member's manual Result pick was clobbered in
-      // the same setState that recorded it.
-      const derived =
-        field === "resultStatus" ? null : deriveResultStatus(theory, practical, bs ?? null);
-      if (derived) {
-        (current as unknown as { resultStatus?: string }).resultStatus = derived;
-      }
+      // Total and Result are edited by staff directly — no auto-fill from
+      // theory/practical or from the board's passing marks. Staff kept
+      // reporting that their manual Result pick was being clobbered and that
+      // Total lagged the actual marksheet (which can carry moderation deltas
+      // that pure theory+practical don't capture).
       nextSubjects[targetIndex] = current as unknown as StudentAcademicSubjectsDto;
+      // Best of Four / Five are derived from `subjects` in a memo above, so
+      // there is nothing to copy into the form here.
+      return { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
+    });
+  };
 
-      // Best of Four / Five are derived in render from these subjects, so there
-      // is nothing to copy into the form here.
+  // Only unsaved rows (temp negative id from handleAddSubject) can be
+  // removed from the client. Real rows (positive id) round-trip through the
+  // backend and would need a delete endpoint / cascade decision that is out
+  // of scope for this hotfix.
+  const handleRemoveNewSubject = (tempId: number) => {
+    setForm((prev) => {
+      if (!prev) return prev;
+      const nextSubjects = (prev.subjects ?? []).filter(
+        (s) => Number((s as unknown as { id?: number })?.id ?? 0) !== Number(tempId),
+      );
+      return { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
+    });
+  };
+
+  const handleAddSubject = () => {
+    setForm((prev) => {
+      if (!prev) return prev;
+      // A negative placeholder id so `handleSubjectChangeById` (which looks up
+      // rows by id) can address the new row. Stripped to `undefined` at save
+      // time so the backend inserts it (positive ids there are the update
+      // path).
+      const tempId = tempSubjectIdRef.current;
+      tempSubjectIdRef.current -= 1;
+      const blank = {
+        id: tempId,
+        boardSubject: { id: 0 },
+        boardSubjectId: 0,
+        theoryMarks: null,
+        practicalMarks: null,
+        totalMarks: null,
+        grade: { name: "" },
+        resultStatus: "",
+      } as unknown as StudentAcademicSubjectsDto;
+      const nextSubjects = [...(prev.subjects ?? []), blank];
       return { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
     });
   };
@@ -648,6 +801,58 @@ export default function AcademicDetails({
             disabled={!(form as AdmissionAcademicInfoDto | null)?.id}
             onClick={async () => {
               if (!form || !(form as AdmissionAcademicInfoDto).id) return;
+
+              // Hard block: any row above the board's full marks. Sending
+              // these would land in the DB unchecked (the backend has no
+              // per-row upper bound) and poison downstream aggregates.
+              if (invalidSubjectRows.length > 0) {
+                const rows = invalidSubjectRows
+                  .map(
+                    (r) =>
+                      `<li><b>Row ${r.idx}</b> (${r.subjectName}): ${r.issues.join(", ")}</li>`,
+                  )
+                  .join("");
+                await Swal.fire({
+                  icon: "error",
+                  title: "Marks exceed the board's full marks",
+                  html: `<div style="text-align:left"><p>Fix these rows before saving:</p><ul style="margin:8px 0 0 16px">${rows}</ul></div>`,
+                  confirmButtonColor: "#2563eb",
+                });
+                return;
+              }
+
+              // Soft warn: total ≠ theory + practical, or Result doesn't
+              // match what the board's pass marks imply. Legitimate in some
+              // cases (moderation deltas, awaiting-result rows), so ask
+              // rather than block.
+              if (subjectWarnings.length > 0) {
+                const lines = subjectWarnings
+                  .map((w) => {
+                    const bits: string[] = [];
+                    if (w.totalMismatch)
+                      bits.push(
+                        `total ${w.totalMismatch.entered} ≠ theory + practical (${w.totalMismatch.expected})`,
+                      );
+                    if (w.resultMismatch)
+                      bits.push(
+                        `result "${w.resultMismatch.entered}" vs expected "${w.resultMismatch.expected}"`,
+                      );
+                    return `<li><b>Row ${w.idx}</b> (${w.subjectName}): ${bits.join("; ")}</li>`;
+                  })
+                  .join("");
+                const proceed = await Swal.fire({
+                  icon: "warning",
+                  title: "Some subject rows look off",
+                  html: `<div style="text-align:left"><p>These entries don't match the derived rule. Save anyway?</p><ul style="margin:8px 0 0 16px">${lines}</ul></div>`,
+                  showCancelButton: true,
+                  confirmButtonText: "Save anyway",
+                  cancelButtonText: "Go back",
+                  confirmButtonColor: "#2563eb",
+                  cancelButtonColor: "#6b7280",
+                });
+                if (!proceed.isConfirmed) return;
+              }
+
               const confirm = await Swal.fire({
                 title: "Save academic details?",
                 text: "Do you want to save the changes to this student's academic details?",
@@ -799,8 +1004,12 @@ export default function AcademicDetails({
                   .studiedUpToClass ??
                   (original as unknown as { studiedUpToClass?: number }).studiedUpToClass ??
                   null) as number | null,
-                // Send exactly what the read-only inputs show. (The server
-                // recomputes both from the submitted subject totals anyway.)
+                // Send what the UI just showed: the live-derived value
+                // wins, and only falls back to whatever was in the form or on
+                // the original record when the derivation can't produce a
+                // number (no scored subjects yet). The server recomputes from
+                // the submitted subject totals anyway — this keeps the two in
+                // step for the round-trip.
                 bestOfFour: (derivedBestOfFour ??
                   (f as unknown as { bestOfFour?: number }).bestOfFour ??
                   (original as unknown as { bestOfFour?: number }).bestOfFour ??
@@ -815,18 +1024,37 @@ export default function AcademicDetails({
               };
 
               if (Array.isArray((form as AdmissionAcademicInfoDto).subjects)) {
-                payload.subjects = (form as AdmissionAcademicInfoDto).subjects!.map((s) => {
-                  const subject = s as unknown as StudentAcademicSubjectsDto & {
-                    boardSubjectId?: number;
-                  };
-                  const bsId =
-                    subject.boardSubjectId ?? (subject.boardSubject?.id as number | undefined);
-                  const normalized: StudentAcademicSubjectsDto = {
-                    ...(subject as unknown as StudentAcademicSubjectsDto),
-                  };
-                  (normalized as unknown as { boardSubjectId?: number }).boardSubjectId = bsId;
-                  return normalized;
-                });
+                payload.subjects = (form as AdmissionAcademicInfoDto)
+                  .subjects!.map((s) => {
+                    const subject = s as unknown as StudentAcademicSubjectsDto & {
+                      boardSubjectId?: number;
+                    };
+                    const bsId =
+                      subject.boardSubjectId ?? (subject.boardSubject?.id as number | undefined);
+                    const normalized: StudentAcademicSubjectsDto = {
+                      ...(subject as unknown as StudentAcademicSubjectsDto),
+                    };
+                    (normalized as unknown as { boardSubjectId?: number }).boardSubjectId = bsId;
+                    // Client-side rows added via "Add subject" carry a
+                    // negative placeholder id (see tempSubjectIdRef). The
+                    // backend uses `if (subject.id) update else create`, so
+                    // any id — even negative — would send it down the
+                    // update path against an id that doesn't exist. Drop it
+                    // so the row is inserted.
+                    if (Number((normalized as unknown as { id?: number }).id ?? 0) <= 0) {
+                      delete (normalized as unknown as { id?: number }).id;
+                    }
+                    return normalized;
+                  })
+                  // A row with no board subject picked is a placeholder from
+                  // clicking "Add subject" and never filling it in; sending
+                  // it would just be skipped by the backend anyway.
+                  .filter((s) => {
+                    const bsId = Number(
+                      (s as unknown as { boardSubjectId?: number }).boardSubjectId ?? 0,
+                    );
+                    return Number.isFinite(bsId) && bsId > 0;
+                  });
               }
 
               try {
@@ -1109,6 +1337,15 @@ export default function AcademicDetails({
             <div className="h-5 w-1.5 rounded bg-gradient-to-b from-violet-500 to-purple-400" />
             <div className="text-sm font-semibold text-gray-800">Subjects</div>
             <div className="flex-1 border-b border-gray-200 ml-2" />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1"
+              onClick={handleAddSubject}
+            >
+              <Plus className="h-4 w-4" /> Add subject
+            </Button>
           </div>
 
           <div className="overflow-hidden rounded-md border">
@@ -1123,162 +1360,275 @@ export default function AcademicDetails({
                   <th className="text-left font-medium px-3 py-2">Total</th>
                   <th className="text-left font-medium px-3 py-2">Grade</th>
                   <th className="text-left font-medium px-3 py-2">Result</th>
+                  <th className="w-8 px-3 py-2" aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
                 {subjects.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
+                    <td colSpan={9} className="px-3 py-4 text-center text-gray-500">
                       No subjects available
                     </td>
                   </tr>
                 ) : (
-                  subjects.map((s, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="px-3 py-2 text-gray-700">{idx + 1}</td>
-                      <td className="px-3 py-2 text-gray-800">
-                        <SearchableSelect
-                          className="h-8 min-w-[160px]"
-                          value={s.boardSubject?.id ? String(s.boardSubject.id) : ""}
-                          onChange={(val) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "boardSubjectId",
-                              Number(val),
-                            )
-                          }
-                          options={withSelected(
-                            boardSubjects.map((bs) => ({
-                              value: String(bs.id),
-                              label: bs.name ?? "",
-                            })),
-                            s.boardSubject?.id,
-                            s.boardSubject?.boardSubjectName?.name ?? "",
-                          )}
-                          placeholder="Select subject"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Input
-                          value={
-                            (s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? ""
-                          }
-                          type="number"
-                          min={0}
-                          max={100}
-                          className="h-8"
-                          onChange={(e) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "theoryMarks",
-                              Number(e.target.value),
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Input
-                          value={
-                            (s as unknown as { practicalMarks?: number } | null)?.practicalMarks ??
-                            ""
-                          }
-                          type="number"
-                          min={0}
-                          max={100}
-                          className="h-8"
-                          onChange={(e) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "practicalMarks",
-                              Number(e.target.value),
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        {(() => {
-                          const bsId = Number(
-                            (s as unknown as { boardSubjectId?: number }).boardSubjectId ??
-                              (s as unknown as { boardSubject?: { id?: number } }).boardSubject
-                                ?.id ??
-                              0,
-                          );
-                          const bs = boardSubjects.find((b) => Number(b.id) === bsId);
-                          const fullMarks =
-                            Number(bs?.fullMarksTheory ?? 0) + Number(bs?.fullMarksPractical ?? 0);
-                          return Number.isFinite(fullMarks) && fullMarks > 0 ? fullMarks : "-";
-                        })()}
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        {/*
-                          Read-only: total is always theory + practical, kept in
-                          step by handleSubjectChangeById. Leaving it editable let
-                          it drift out of agreement with the marks it is derived
-                          from, and the drifted value is what got saved.
-                        */}
-                        <Input
-                          value={(s as unknown as { totalMarks?: number } | null)?.totalMarks ?? ""}
-                          type="number"
-                          readOnly
-                          tabIndex={-1}
-                          aria-label="Total marks (calculated from theory and practical)"
-                          title="Calculated from theory + practical"
-                          className="h-8 cursor-not-allowed bg-muted/50 text-muted-foreground"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Select
-                          value={
-                            (s as unknown as { grade?: { name?: string } } | null)?.grade?.name ??
-                            ""
-                          }
-                          onValueChange={(val) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "gradeName",
-                              val,
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gradeOptions.map((g) => (
-                              <SelectItem key={g} value={g}>
-                                {g}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <Select
-                          value={
-                            (s as unknown as { resultStatus?: string } | null)?.resultStatus ?? ""
-                          }
-                          onValueChange={(val) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "resultStatus",
-                              val,
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Result" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {resultOptions.map((r) => (
-                              <SelectItem key={r} value={r}>
-                                {r}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                    </tr>
-                  ))
+                  subjects.map((s, idx) => {
+                    const { maxTheory, maxPractical, maxTotal } = rowMaxes(s);
+                    const rowTheory = Number(
+                      (s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? 0,
+                    );
+                    const rowPractical = Number(
+                      (s as unknown as { practicalMarks?: number } | null)?.practicalMarks ?? 0,
+                    );
+                    const rowTotalRaw = (s as unknown as { totalMarks?: number | null } | null)
+                      ?.totalMarks;
+                    const rowTotal = Number(rowTotalRaw ?? 0);
+                    const theoryOver = maxTheory > 0 && rowTheory > maxTheory;
+                    const practicalOver = maxPractical > 0 && rowPractical > maxPractical;
+                    const totalOver = maxTotal > 0 && rowTotal > maxTotal;
+                    const overBase = "h-8 border-red-500 text-red-700 focus-visible:ring-red-500";
+                    const warnBase = "h-8 border-amber-500 focus-visible:ring-amber-500";
+                    // Soft warnings — same source of truth as subjectWarnings
+                    // but computed per-row for the inline hints (avoids an
+                    // O(rows × warnings) lookup).
+                    const expectedTotal = rowTheory + rowPractical;
+                    const totalMismatch =
+                      rowTotalRaw != null &&
+                      String(rowTotalRaw) !== "" &&
+                      Number(rowTotalRaw) !== expectedTotal;
+                    const bsForRow = boardSubjects.find(
+                      (b) =>
+                        Number(b.id) ===
+                        Number(
+                          (s as unknown as { boardSubjectId?: number }).boardSubjectId ??
+                            (s as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
+                            0,
+                        ),
+                    );
+                    const enteredResult = String(
+                      (s as unknown as { resultStatus?: string }).resultStatus ?? "",
+                    ).trim();
+                    const derivedResult = deriveResult(rowTheory, rowPractical, bsForRow);
+                    const resultMismatch =
+                      !!derivedResult && !!enteredResult && enteredResult !== derivedResult;
+                    return (
+                      <tr key={idx} className="border-t align-top">
+                        <td className="px-3 py-2 text-gray-700">{idx + 1}</td>
+                        <td className="px-3 py-2 text-gray-800">
+                          <SearchableSelect
+                            className="h-8 min-w-[160px]"
+                            value={s.boardSubject?.id ? String(s.boardSubject.id) : ""}
+                            onChange={(val) =>
+                              handleSubjectChangeById(
+                                (s as unknown as { id?: number })?.id,
+                                "boardSubjectId",
+                                Number(val),
+                              )
+                            }
+                            options={withSelected(
+                              boardSubjects.map((bs) => ({
+                                value: String(bs.id),
+                                label: bs.name ?? "",
+                              })),
+                              s.boardSubject?.id,
+                              s.boardSubject?.boardSubjectName?.name ?? "",
+                            )}
+                            placeholder="Select subject"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 align-top">
+                          <Input
+                            value={
+                              (s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? ""
+                            }
+                            type="number"
+                            min={0}
+                            max={maxTheory > 0 ? maxTheory : undefined}
+                            aria-invalid={theoryOver || undefined}
+                            title={maxTheory > 0 ? `Max ${maxTheory}` : undefined}
+                            className={theoryOver ? overBase : "h-8"}
+                            onChange={(e) =>
+                              handleSubjectChangeById(
+                                (s as unknown as { id?: number })?.id,
+                                "theoryMarks",
+                                Number(e.target.value),
+                              )
+                            }
+                          />
+                          <div className="mt-1 h-4 overflow-hidden text-[10px] font-medium leading-4 whitespace-nowrap text-ellipsis">
+                            {theoryOver ? (
+                              <span className="text-red-600">Max {maxTheory}</span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 align-top">
+                          <Input
+                            value={
+                              (s as unknown as { practicalMarks?: number } | null)
+                                ?.practicalMarks ?? ""
+                            }
+                            type="number"
+                            min={0}
+                            max={maxPractical > 0 ? maxPractical : undefined}
+                            aria-invalid={practicalOver || undefined}
+                            title={maxPractical > 0 ? `Max ${maxPractical}` : undefined}
+                            className={practicalOver ? overBase : "h-8"}
+                            onChange={(e) =>
+                              handleSubjectChangeById(
+                                (s as unknown as { id?: number })?.id,
+                                "practicalMarks",
+                                Number(e.target.value),
+                              )
+                            }
+                          />
+                          <div className="mt-1 h-4 overflow-hidden text-[10px] font-medium leading-4 whitespace-nowrap text-ellipsis">
+                            {practicalOver ? (
+                              <span className="text-red-600">Max {maxPractical}</span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 align-top">
+                          {maxTotal > 0 ? maxTotal : "-"}
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 align-top">
+                          <Input
+                            value={
+                              (s as unknown as { totalMarks?: number } | null)?.totalMarks ?? ""
+                            }
+                            type="number"
+                            min={0}
+                            max={maxTotal > 0 ? maxTotal : undefined}
+                            aria-invalid={totalOver || totalMismatch || undefined}
+                            title={
+                              maxTotal > 0
+                                ? totalMismatch
+                                  ? `Max ${maxTotal} · expected ${expectedTotal}`
+                                  : `Max ${maxTotal}`
+                                : undefined
+                            }
+                            className={totalOver ? overBase : totalMismatch ? warnBase : "h-8"}
+                            onChange={(e) =>
+                              handleSubjectChangeById(
+                                (s as unknown as { id?: number })?.id,
+                                "totalMarks",
+                                Number(e.target.value),
+                              )
+                            }
+                          />
+                          <div className="mt-1 h-4 overflow-hidden text-[10px] font-medium leading-4 whitespace-nowrap text-ellipsis">
+                            {totalOver ? (
+                              <span className="text-red-600">Max {maxTotal}</span>
+                            ) : totalMismatch ? (
+                              <span
+                                className="text-amber-600"
+                                title={`Total ≠ theory + practical (${expectedTotal})`}
+                              >
+                                ≠ th+prac ({expectedTotal})
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 align-top">
+                          <Select
+                            value={
+                              (s as unknown as { grade?: { name?: string } } | null)?.grade?.name ??
+                              ""
+                            }
+                            onValueChange={(val) =>
+                              handleSubjectChangeById(
+                                (s as unknown as { id?: number })?.id,
+                                "gradeName",
+                                val,
+                              )
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gradeOptions.map((g) => (
+                                <SelectItem key={g} value={g}>
+                                  {g}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 align-top">
+                          <Select
+                            value={
+                              (s as unknown as { resultStatus?: string } | null)?.resultStatus ?? ""
+                            }
+                            onValueChange={(val) =>
+                              handleSubjectChangeById(
+                                (s as unknown as { id?: number })?.id,
+                                "resultStatus",
+                                val,
+                              )
+                            }
+                          >
+                            <SelectTrigger
+                              className={
+                                resultMismatch
+                                  ? "h-8 text-sm border-amber-500 focus:ring-amber-500"
+                                  : "h-8 text-sm"
+                              }
+                            >
+                              <SelectValue placeholder="Result" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {resultOptions.map((r) => (
+                                <SelectItem key={r} value={r}>
+                                  {r}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="mt-1 h-4 overflow-hidden text-[10px] font-medium leading-4 whitespace-nowrap text-ellipsis">
+                            {resultMismatch ? (
+                              <span
+                                className="text-amber-600"
+                                title={`Expected ${derivedResult} from these marks`}
+                              >
+                                → {derivedResult}
+                              </span>
+                            ) : totalMismatch || theoryOver || practicalOver || totalOver ? (
+                              // A wrong number elsewhere in the row usually
+                              // means the result deserves a second look too.
+                              <span
+                                className="text-amber-600"
+                                title="Other fields on this row look off — verify the result"
+                              >
+                                Recheck
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-right align-top">
+                          {(() => {
+                            const rowId = Number((s as unknown as { id?: number })?.id ?? 0);
+                            // Positive id → came from the server; deleting must
+                            // go through a backend endpoint we haven't wired.
+                            // Negative id → local placeholder from "Add subject";
+                            // safe to drop from state alone.
+                            if (rowId > 0) return null;
+                            return (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleRemoveNewSubject(rowId)}
+                                aria-label="Remove this unsaved subject row"
+                                title="Remove row"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
