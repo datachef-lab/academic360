@@ -104,6 +104,17 @@ export const connectToDatabase = async () => {
     runBootMigrations().catch((err) =>
       log.warn("Boot migrations orchestrator threw", { error: err }),
     );
+
+    // Ongoing delta sync from the legacy IRP MySQL DB into new Postgres.
+    // Advisory-locked (918360005), gated on the initial-load marker so it
+    // no-ops until the base load has completed. First tick fires ~30s after
+    // boot, then every 10 minutes. Old DB is treated as read-only — the
+    // service enforces SELECT-only queries against the MySQL connection.
+    import("@/features/library/services/library-legacy-sync.service.js")
+      .then(({ startLibrarySyncScheduler }) => startLibrarySyncScheduler())
+      .catch((err) =>
+        log.warn("Library sync scheduler failed to start", { error: err }),
+      );
   } catch (error) {
     log.debug(process.env.DATABASE_URL ?? "DATABASE_URL not set");
     log.error("Failed to connect to the database ⚠", { error });

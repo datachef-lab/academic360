@@ -69,7 +69,7 @@ import {
   VendorT,
   vendorModel,
 } from "@repo/db/schemas/models/library";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, eq, ilike, sql as drizzleSql } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import fs from "fs";
 import path from "path";
@@ -86,6 +86,127 @@ import {
 
 const MIGRATION_LOG_SHEET = "migration_log";
 
+/* ---------------------------------------------------------------------------
+ * Legacy row cache
+ *
+ * Every resolver used to run `SELECT * FROM <table> WHERE id = N` against IRP.
+ * With ~200,000 rows to walk and a resolver graph that fans out (a circulation
+ * row pulls copy -> book -> publisher, series, language, subject group, rack,
+ * shelf, binding, status), that is tens of round trips per row to a REMOTE
+ * MySQL. Measured on the develop box: ~0.2 rows/second, i.e. ~11 days for a
+ * full load.
+ *
+ * The fix is to stop paying latency per row. Small lookup tables are fetched
+ * once, whole; the big driving tables are primed in chunks by the loader so
+ * memory stays bounded. Nothing about WHAT gets written changes — a cache miss
+ * still falls back to the original single-row query, so behaviour is identical
+ * either way.
+ * ------------------------------------------------------------------------- */
+
+/** Tables above this many rows are never fully preloaded (memory). */
+const FULL_PRELOAD_ROW_LIMIT = 150_000;
+
+type LegacyRow = Record<string, unknown> & { id: number };
+
+const legacyRowCache = new Map<string, Map<number, LegacyRow>>();
+/** Tables whose every row is in the cache — a miss means "absent", not "unknown". */
+const fullyLoadedTables = new Set<string>();
+const inflightPreloads = new Map<string, Promise<void>>();
+
+function cacheFor(table: string): Map<number, LegacyRow> {
+  let m = legacyRowCache.get(table);
+  if (!m) {
+    m = new Map<number, LegacyRow>();
+    legacyRowCache.set(table, m);
+  }
+  return m;
+}
+
+function rememberRows(table: string, rows: LegacyRow[]): void {
+  const m = cacheFor(table);
+  for (const row of rows) m.set(Number(row.id), row);
+}
+
+/**
+ * Pull an entire legacy table into memory, once. Single-flight: concurrent
+ * callers share the one query rather than each issuing their own.
+ */
+async function preloadLegacyTable(table: string): Promise<void> {
+  if (fullyLoadedTables.has(table)) return;
+  const inflight = inflightPreloads.get(table);
+  if (inflight) return inflight;
+
+  const task = (async () => {
+    const [[countRow]] = (await mysqlConnection.query(
+      `SELECT COUNT(*) AS n FROM \`${table}\``,
+    )) as [{ n: number }[], unknown];
+
+    if (Number(countRow?.n ?? 0) > FULL_PRELOAD_ROW_LIMIT) {
+      // Too big to hold; the loader primes it in chunks instead.
+      return;
+    }
+
+    const [rows] = (await mysqlConnection.query(
+      `SELECT * FROM \`${table}\``,
+    )) as [LegacyRow[], unknown];
+    rememberRows(table, rows);
+    fullyLoadedTables.add(table);
+  })().finally(() => inflightPreloads.delete(table));
+
+  inflightPreloads.set(table, task);
+  return task;
+}
+
+/** Prime a specific slice of a table — used for the big driving tables. */
+export async function primeLegacyRows(
+  table: string,
+  ids: number[],
+): Promise<void> {
+  const missing = ids.filter((id) => !cacheFor(table).has(Number(id)));
+  if (missing.length === 0) return;
+  const [rows] = (await mysqlConnection.query(
+    `SELECT * FROM \`${table}\` WHERE id IN (${missing.join(",")})`,
+  )) as [LegacyRow[], unknown];
+  rememberRows(table, rows);
+}
+
+/**
+ * The single-row read every resolver goes through.
+ *
+ * Order: cache hit -> whole-table preload (small tables) -> single-row query.
+ * The last step is the original behaviour, so a row this cache cannot serve is
+ * still resolved correctly.
+ */
+async function legacyRow<T>(
+  table: string,
+  id: number | null | undefined,
+): Promise<T | undefined> {
+  if (id === null || id === undefined) return undefined;
+  const key = Number(id);
+
+  const hit = cacheFor(table).get(key);
+  if (hit) return hit as T;
+  if (fullyLoadedTables.has(table)) return undefined;
+
+  await preloadLegacyTable(table);
+  const afterPreload = cacheFor(table).get(key);
+  if (afterPreload) return afterPreload as T;
+  if (fullyLoadedTables.has(table)) return undefined;
+
+  const [rows] = (await mysqlConnection.query(
+    `SELECT * FROM \`${table}\` WHERE id = ${key}`,
+  )) as [LegacyRow[], unknown];
+  if (!rows.length) return undefined;
+  rememberRows(table, rows);
+  return rows[0] as T;
+}
+
+/** Drop everything cached — used between runs so a re-run sees fresh IRP data. */
+export function clearLegacyRowCache(): void {
+  legacyRowCache.clear();
+  fullyLoadedTables.clear();
+}
+
 function getLibraryExcelBaseDir(): string {
   const raw = process.env.LIBRARY_EXCEL_DATA_PATH?.trim();
   if (!raw) {
@@ -96,6 +217,92 @@ function getLibraryExcelBaseDir(): string {
   const abs = path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
   fs.mkdirSync(abs, { recursive: true });
   return abs;
+}
+
+/* ---------------------------------------------------------------------------
+ * Progress log
+ *
+ * The Excel per-row workbook is expensive (fs write per row, one file per
+ * table, only useful on the instance that ran) and is now opt-in. This
+ * ALWAYS-ON JSONL log is the replacement: one file per run, appended
+ * incrementally, cheap to `tail -f` while the load is going.
+ * ------------------------------------------------------------------------- */
+
+type ProgressEvent =
+  | {
+      type: "run-start";
+      at: string;
+      onlyTables?: string[];
+      limitPerTable?: number;
+    }
+  | { type: "table-start"; at: string; table: string; total: number }
+  | {
+      type: "table-progress";
+      at: string;
+      table: string;
+      loaded: number;
+      failed: number;
+      total: number;
+    }
+  | {
+      type: "table-done";
+      at: string;
+      table: string;
+      loaded: number;
+      failed: number;
+      total: number;
+      durationMs: number;
+    }
+  | { type: "row-failed"; at: string; table: string; id: number; error: string }
+  | {
+      type: "run-done";
+      at: string;
+      totalLoaded: number;
+      totalFailed: number;
+      durationMs: number;
+    };
+
+function progressLogPath(): string {
+  const dir =
+    process.env.LIBRARY_EXCEL_DATA_PATH?.trim() ||
+    process.env.LIBRARY_LOG_DIR?.trim() ||
+    "/tmp";
+  const abs = path.isAbsolute(dir) ? dir : path.resolve(process.cwd(), dir);
+  try {
+    fs.mkdirSync(abs, { recursive: true });
+  } catch {
+    // fall through, .writeSync will throw with the real reason
+  }
+  return path.join(abs, "library-load-progress.jsonl");
+}
+
+let progressLogHandle: number | null = null;
+function openProgressLog(): number {
+  if (progressLogHandle !== null) return progressLogHandle;
+  progressLogHandle = fs.openSync(progressLogPath(), "a");
+  return progressLogHandle;
+}
+
+function writeProgressEvent(event: ProgressEvent): void {
+  try {
+    const fd = openProgressLog();
+    fs.writeSync(fd, JSON.stringify(event) + "\n");
+  } catch {
+    // Never let logging fail the load — but do print so the operator sees why.
+    // eslint-disable-next-line no-console
+    console.warn("[library-load] progress log write failed:", event.type);
+  }
+}
+
+function closeProgressLog(): void {
+  if (progressLogHandle !== null) {
+    try {
+      fs.closeSync(progressLogHandle);
+    } catch {
+      // ignore
+    }
+    progressLogHandle = null;
+  }
 }
 
 function migrationWorkbookPathForTable(table: string): string {
@@ -177,9 +384,7 @@ async function appendMigrationLogRow(
 async function getLanguageByOldId(oldLanguageId: number | null) {
   if (!oldLanguageId) return null;
 
-  const [[oldLanguage]] = (await mysqlConnection.query(`
-    SELECT * FROM language WHERE id = ${oldLanguageId}
-    `)) as [OldLanguage[], unknown];
+  const oldLanguage = await legacyRow<OldLanguage>("language", oldLanguageId);
 
   if (!oldLanguage) return null;
 
@@ -208,9 +413,7 @@ async function getLanguageByOldId(oldLanguageId: number | null) {
 async function getSeriesByOldId(oldSeriesId: number | null) {
   if (!oldSeriesId) return null;
 
-  const [[oldSeries]] = (await mysqlConnection.query(`
-    SELECT * FROM series WHERE id = ${oldSeriesId}
-    `)) as [OldSeries[], unknown];
+  const oldSeries = await legacyRow<OldSeries>("series", oldSeriesId);
 
   if (!oldSeries) return null;
 
@@ -239,9 +442,10 @@ async function getSeriesByOldId(oldSeriesId: number | null) {
 async function getPublisherByOldId(oldPublisherId: number | null) {
   if (!oldPublisherId) return null;
 
-  const [[oldPublisher]] = (await mysqlConnection.query(`
-    SELECT * FROM publisher WHERE id = ${oldPublisherId}
-    `)) as [OldPublisher[], unknown];
+  const oldPublisher = await legacyRow<OldPublisher>(
+    "publisher",
+    oldPublisherId,
+  );
 
   if (!oldPublisher) return null;
 
@@ -288,9 +492,10 @@ async function getPublisherByOldId(oldPublisherId: number | null) {
 async function getSubjectGroupByOldId(oldSubjectGroupId: number | null) {
   if (!oldSubjectGroupId) return null;
 
-  const [[oldSubjectGroup]] = (await mysqlConnection.query(`
-    SELECT * FROM subjectgroup WHERE id = ${oldSubjectGroupId}
-    `)) as [OldSubjectGroup[], unknown];
+  const oldSubjectGroup = await legacyRow<OldSubjectGroup>(
+    "subjectgroup",
+    oldSubjectGroupId,
+  );
 
   if (!oldSubjectGroup) return null;
 
@@ -336,9 +541,10 @@ async function getSubjectGroupByOldId(oldSubjectGroupId: number | null) {
 async function getEnclosureByOldId(oldEnclosureId: number | null) {
   if (!oldEnclosureId) return null;
 
-  const [[oldEnclosure]] = (await mysqlConnection.query(`
-    SELECT * FROM enclosetype WHERE id = ${oldEnclosureId}
-    `)) as [OldEnclosure[], unknown];
+  const oldEnclosure = await legacyRow<OldEnclosure>(
+    "enclosetype",
+    oldEnclosureId,
+  );
 
   if (!oldEnclosure) return null;
 
@@ -367,9 +573,10 @@ async function getEnclosureByOldId(oldEnclosureId: number | null) {
 async function getEntryModeByOldId(oldEntryModeId: number | null) {
   if (!oldEntryModeId) return null;
 
-  const [[oldEntryMode]] = (await mysqlConnection.query(`
-    SELECT * FROM entrymode WHERE id = ${oldEntryModeId}
-    `)) as [OldEntryMode[], unknown];
+  const oldEntryMode = await legacyRow<OldEntryMode>(
+    "entrymode",
+    oldEntryModeId,
+  );
 
   if (!oldEntryMode) return null;
 
@@ -396,9 +603,10 @@ async function getEntryModeByOldId(oldEntryModeId: number | null) {
 async function getJournalTypeByOldId(oldJournalTypeId: number | null) {
   if (!oldJournalTypeId) return null;
 
-  const [[oldJournalType]] = (await mysqlConnection.query(`
-    SELECT * FROM journaltype WHERE id = ${oldJournalTypeId}
-    `)) as [OldJournalType[], unknown];
+  const oldJournalType = await legacyRow<OldJournalType>(
+    "journaltype",
+    oldJournalTypeId,
+  );
 
   if (!oldJournalType) return null;
 
@@ -425,9 +633,7 @@ async function getJournalTypeByOldId(oldJournalTypeId: number | null) {
 async function getLibraryStatusByOldId(oldLibraryStatusId: number | null) {
   if (!oldLibraryStatusId) return null;
 
-  const [[oldStatus]] = (await mysqlConnection.query(`
-    SELECT * FROM status WHERE id = ${oldLibraryStatusId}
-    `)) as [OldStatus[], unknown];
+  const oldStatus = await legacyRow<OldStatus>("status", oldLibraryStatusId);
 
   if (!oldStatus) return null;
 
@@ -455,9 +661,7 @@ async function getLibraryStatusByOldId(oldLibraryStatusId: number | null) {
 async function getRackByOldId(oldRackId: number | null) {
   if (!oldRackId) return null;
 
-  const [[oldRack]] = (await mysqlConnection.query(`
-    SELECT * FROM rack WHERE id = ${oldRackId}
-    `)) as [OldRack[], unknown];
+  const oldRack = await legacyRow<OldRack>("rack", oldRackId);
 
   if (!oldRack) return null;
 
@@ -484,9 +688,7 @@ async function getRackByOldId(oldRackId: number | null) {
 async function getShelfByOldId(oldShelfId: number | null) {
   if (!oldShelfId) return null;
 
-  const [[oldShelf]] = (await mysqlConnection.query(`
-    SELECT * FROM shelf WHERE id = ${oldShelfId}
-    `)) as [OldShelf[], unknown];
+  const oldShelf = await legacyRow<OldShelf>("shelf", oldShelfId);
 
   if (!oldShelf) return null;
 
@@ -513,9 +715,10 @@ async function getShelfByOldId(oldShelfId: number | null) {
 async function getBindingTypeByOldId(oldBindingId: number | null) {
   if (!oldBindingId) return null;
 
-  const [[oldBindingType]] = (await mysqlConnection.query(`
-    SELECT * FROM bindingtype WHERE id = ${oldBindingId}
-    `)) as [OldBindingType[], unknown];
+  const oldBindingType = await legacyRow<OldBindingType>(
+    "bindingtype",
+    oldBindingId,
+  );
 
   if (!oldBindingType) return null;
 
@@ -542,9 +745,7 @@ async function getBindingTypeByOldId(oldBindingId: number | null) {
 async function getPeriodByOldId(oldPeriodId: number | null) {
   if (!oldPeriodId) return null;
 
-  const [[oldPeriod]] = (await mysqlConnection.query(`
-    SELECT * FROM periodpojo WHERE id = ${oldPeriodId}
-    `)) as [OldPeriod[], unknown];
+  const oldPeriod = await legacyRow<OldPeriod>("periodpojo", oldPeriodId);
 
   if (!oldPeriod) return null;
 
@@ -569,9 +770,10 @@ async function getPeriodByOldId(oldPeriodId: number | null) {
 }
 
 async function getAuthorTypeByOldId(oldAuthorTypeId: number | null) {
-  const [[oldAuthorType]] = (await mysqlConnection.query(`
-    SELECT * FROM authortype WHERE id = ${oldAuthorTypeId}
-    `)) as [OldAuthorType[], unknown];
+  const oldAuthorType = await legacyRow<OldAuthorType>(
+    "authortype",
+    oldAuthorTypeId,
+  );
 
   if (!oldAuthorType) return null;
 
@@ -583,23 +785,27 @@ async function getAuthorTypeByOldId(oldAuthorTypeId: number | null) {
     .select()
     .from(authorTypeModel)
     .where(eq(authorTypeModel.legacyAuthorTypeId, oldAuthorTypeId!));
-  if (existingAuthorType) {
-    return (
-      await db
+
+  // Every sibling resolver is find-or-CREATE; this one had no insert branch, so
+  // it returned undefined whenever the type was not already present — and
+  // author_types starts empty. author_details.author_type_id_fk is NOT NULL and
+  // is filled from here, so all 25,288 authordetailsub rows failed to insert and
+  // every author-book link was lost.
+  const [authorType] = existingAuthorType
+    ? await db
         .update(authorTypeModel)
         .set(payload)
         .where(eq(authorTypeModel.id, existingAuthorType.id))
         .returning()
-    )[0];
-  }
+    : await db.insert(authorTypeModel).values(payload).returning();
+
+  return authorType;
 }
 
 async function getAuthorByOldId(oldAuthorId: number | null) {
   if (!oldAuthorId) return null;
 
-  const [[oldAuthor]] = (await mysqlConnection.query(`
-    SELECT * FROM author WHERE id = ${oldAuthorId}
-    `)) as [OldAuthor[], unknown];
+  const oldAuthor = await legacyRow<OldAuthor>("author", oldAuthorId);
 
   if (!oldAuthor) return null;
 
@@ -630,19 +836,31 @@ async function getAuthorByOldId(oldAuthorId: number | null) {
 async function getAuthorDetailByOldId(oldAuthorDetailId: number | null) {
   if (!oldAuthorDetailId) return null;
 
-  const [[oldAuthorDetail]] = (await mysqlConnection.query(`
-    SELECT * FROM authordetailsub WHERE id = ${oldAuthorDetailId}
-    `)) as [OldAuthorDetail[], unknown];
+  const oldAuthorDetail = await legacyRow<OldAuthorDetail>(
+    "authordetailsub",
+    oldAuthorDetailId,
+  );
 
   if (!oldAuthorDetail) return null;
 
+  // Resolve once — the old code resolved every FK twice (once for the update
+  // payload, again inside the insert), tripling the work on the largest table.
+  const bookId = (await getBookByOldId(oldAuthorDetail.parent_id))?.id;
+  const authorTypeId = (
+    await getAuthorTypeByOldId(oldAuthorDetail.authorTypeId ?? null)
+  )?.id;
+  const authorId = (await getAuthorByOldId(oldAuthorDetail.authorId ?? null))
+    ?.id;
+
+  // All three are NOT NULL. Inserting with one unresolved raises a constraint
+  // error mid-load; a legacy row we cannot place is data we skip, not a crash.
+  if (!bookId || !authorTypeId || !authorId) return null;
+
   const payload = {
-    legacyAuthorDetailId: oldAuthorDetailId,
-    bookId: (await getBookByOldId(oldAuthorDetail.parent_id))?.id,
-    authorTypeId: (
-      await getAuthorTypeByOldId(oldAuthorDetail.authorTypeId ?? null)
-    )?.id,
-    authorId: (await getAuthorByOldId(oldAuthorDetail.authorId ?? null))?.id,
+    legacyAuthorDetailsId: oldAuthorDetailId,
+    bookId,
+    authorTypeId,
+    authorId,
   };
   const [existingAuthorDetail] = await db
     .select()
@@ -658,28 +876,13 @@ async function getAuthorDetailByOldId(oldAuthorDetailId: number | null) {
     )[0];
   }
 
-  return (
-    await db
-      .insert(authorDetailsModel)
-      .values({
-        legacyAuthorDetailsId: oldAuthorDetailId!,
-        bookId: (await getBookByOldId(oldAuthorDetail.parent_id))?.id!,
-        authorTypeId: (
-          await getAuthorTypeByOldId(oldAuthorDetail.authorTypeId ?? null)
-        )?.id!,
-        authorId: (await getAuthorByOldId(oldAuthorDetail.authorId ?? null))
-          ?.id!,
-      })
-      .returning()
-  )[0];
+  return (await db.insert(authorDetailsModel).values(payload).returning())[0];
 }
 
 async function getHolidayByOldId(oldHolidayId: number | null) {
   if (!oldHolidayId) return null;
 
-  const [[oldHoliday]] = (await mysqlConnection.query(`
-    SELECT * FROM holidaymain WHERE id = ${oldHolidayId}
-    `)) as [OldHoliday[], unknown];
+  const oldHoliday = await legacyRow<OldHoliday>("holidaymain", oldHolidayId);
 
   if (!oldHoliday) return null;
 
@@ -713,20 +916,23 @@ async function getHolidayByOldId(oldHolidayId: number | null) {
 async function getClassHolidayByOldId(oldClassHolidayId: number | null) {
   if (!oldClassHolidayId) return null;
 
-  const [[oldClassHoliday]] = (await mysqlConnection.query(`
-    SELECT * FROM holidaystudentsub WHERE id = ${oldClassHolidayId}
-    `)) as [OldClassHoliday[], unknown];
+  const oldClassHoliday = await legacyRow<OldClassHoliday>(
+    "holidaystudentsub",
+    oldClassHolidayId,
+  );
 
   if (!oldClassHoliday) return null;
 
-  const [[oldCourse]] = (await mysqlConnection.query(`
-    SELECT * FROM course WHERE id = ${oldClassHoliday.courseId}
-    `)) as [OldCourse[], unknown];
+  const oldCourse = await legacyRow<OldCourse>(
+    "course",
+    oldClassHoliday.courseId,
+  );
   if (!oldCourse) return null;
 
-  const [[oldClass]] = (await mysqlConnection.query(`
-    SELECT * FROM classes WHERE id = ${oldClassHoliday.classId}
-    `)) as [OldClass[], unknown];
+  const oldClass = await legacyRow<OldClass>(
+    "classes",
+    oldClassHoliday.classId,
+  );
   if (!oldClass) return null;
 
   const [programCourse] = await db
@@ -771,9 +977,10 @@ async function getClassHolidayByOldId(oldClassHolidayId: number | null) {
 async function getLibraryArticleByOldId(oldLibraryArticleId: number | null) {
   if (!oldLibraryArticleId) return null;
 
-  const [[oldLibraryArticle]] = (await mysqlConnection.query(`
-    SELECT * FROM latype WHERE id = ${oldLibraryArticleId}
-    `)) as [OldLibraryArticle[], unknown];
+  const oldLibraryArticle = await legacyRow<OldLibraryArticle>(
+    "latype",
+    oldLibraryArticleId,
+  );
 
   if (!oldLibraryArticle) return null;
 
@@ -817,9 +1024,10 @@ async function getLibraryArticleByOldId(oldLibraryArticleId: number | null) {
 async function getLibraryDocumentByOldId(oldLibraryDocumentId: number | null) {
   if (!oldLibraryDocumentId) return null;
 
-  const [[oldLibraryDoc]] = (await mysqlConnection.query(`
-    SELECT * FROM documenttypelist WHERE id = ${oldLibraryDocumentId}
-    `)) as [OldDocumentTypeList[], unknown];
+  const oldLibraryDoc = await legacyRow<OldDocumentTypeList>(
+    "documenttypelist",
+    oldLibraryDocumentId,
+  );
 
   if (!oldLibraryDoc) return null;
 
@@ -855,9 +1063,10 @@ async function getLibraryDocumentByOldId(oldLibraryDocumentId: number | null) {
 async function getBorrowingTypeByOldId(oldBorrowingTypeId: number | null) {
   if (!oldBorrowingTypeId) return null;
 
-  const [[oldBorrowingType]] = (await mysqlConnection.query(`
-    SELECT * FROM borrowingtype WHERE id = ${oldBorrowingTypeId}
-    `)) as [OldBorrowingType[], unknown];
+  const oldBorrowingType = await legacyRow<OldBorrowingType>(
+    "borrowingtype",
+    oldBorrowingTypeId,
+  );
 
   if (!oldBorrowingType) return null;
 
@@ -885,9 +1094,10 @@ async function getBorrowingTypeByOldId(oldBorrowingTypeId: number | null) {
 async function getJournalByOldId(oldJournalId: number | null) {
   if (!oldJournalId) return null;
 
-  const [[oldJournal]] = (await mysqlConnection.query(`
-    SELECT * FROM journalmaster WHERE id = ${oldJournalId}
-    `)) as [OldJournalMaster[], unknown];
+  const oldJournal = await legacyRow<OldJournalMaster>(
+    "journalmaster",
+    oldJournalId,
+  );
 
   if (!oldJournal) return null;
 
@@ -924,9 +1134,13 @@ async function getJournalByOldId(oldJournalId: number | null) {
 async function getUserByOldId(oldStaffId: number | null) {
   if (!oldStaffId) return;
 
-  const [[oldStaff]] = (await mysqlConnection.query(`
-    SELECT * FROM staffpersonaldetails WHERE id = ${oldStaffId}
-    `)) as [OldStaff[], unknown];
+  const oldStaff = await legacyRow<OldStaff>(
+    "staffpersonaldetails",
+    oldStaffId,
+  );
+  // The old destructuring typed this as always-present, so a legacy staff id
+  // with no row reached upsertUser and threw. It is a skip, not a crash.
+  if (!oldStaff) return;
 
   return upsertUser(oldStaff, "STAFF");
 }
@@ -934,9 +1148,7 @@ async function getUserByOldId(oldStaffId: number | null) {
 async function getBookByOldId(oldBookId: number | null) {
   if (!oldBookId) return null;
 
-  const [[oldBook]] = (await mysqlConnection.query(`
-    SELECT * FROM bookentry WHERE id = ${oldBookId}
-    `)) as [OldBookEntry[], unknown];
+  const oldBook = await legacyRow<OldBookEntry>("bookentry", oldBookId);
 
   if (!oldBook) return null;
 
@@ -1012,9 +1224,11 @@ async function getEntryExitByOldId(oldEntryExitId: number) {
     .from(libraryEntryExitModel)
     .where(eq(libraryEntryExitModel.legacyLibraryEntryExitId, oldEntryExitId));
 
-  const [[oldEntryExit]] = (await mysqlConnection.query(`
-    SELECT * FROM libentryexit WHERE id = ${oldEntryExitId}
-    `)) as [OldLibraryEntryExit[], unknown];
+  const oldEntryExit = await legacyRow<OldLibraryEntryExit>(
+    "libentryexit",
+    oldEntryExitId,
+  );
+  if (!oldEntryExit) return null;
 
   let userId: number | undefined;
   if (oldEntryExit.usrtype === "Student") {
@@ -1030,8 +1244,14 @@ async function getEntryExitByOldId(oldEntryExitId: number) {
     userId = (await getUserByOldId(oldEntryExit.usrid))?.id;
   }
 
+  // user_id_fk is NOT NULL. The Student branch above already returns null when
+  // the student is not in the new DB; the Staff branch did not, so a legacy
+  // staff id with no matching user reached the insert and raised a constraint
+  // error. Same rule for both: a visit we cannot attribute is skipped.
+  if (!userId) return null;
+
   const payload = {
-    userId: userId!,
+    userId,
     entryTimestamp: combineDateTime(
       oldEntryExit.entrydt!,
       oldEntryExit.entrytime!,
@@ -1059,9 +1279,7 @@ async function getEntryExitByOldId(oldEntryExitId: number) {
 async function getCopyDetailsByOldId(oldCopyId: number | null) {
   if (!oldCopyId) return null;
 
-  const [[oldCopy]] = (await mysqlConnection.query(`
-    SELECT * FROM copydetailsub WHERE id = ${oldCopyId}
-    `)) as [OldCopyDetails[], unknown];
+  const oldCopy = await legacyRow<OldCopyDetails>("copydetailsub", oldCopyId);
 
   if (!oldCopy) return null;
 
@@ -1128,9 +1346,10 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
     return null;
   }
 
-  const [[oldIssueReturn]] = (await mysqlConnection.query(`
-    SELECT * FROM issuereturn WHERE id = ${oldIssueReturnId}
-    `)) as [OldIssueReturn[], unknown];
+  const oldIssueReturn = await legacyRow<OldIssueReturn>(
+    "issuereturn",
+    oldIssueReturnId,
+  );
 
   if (!oldIssueReturn) {
     console.log(
@@ -1223,11 +1442,21 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
     : await db.insert(bookCirculationModel).values(payload).returning();
 
   if (newIssueReturn.isReIssued) {
-    await db.insert(bookReissueModel).values({
-      bookCirculationId: newIssueReturn.id!,
-      reissuedBy: newIssueReturn.issuedFromId,
-      returnTimestamp: newIssueReturn.returnTimestamp,
-    });
+    // Guard against duplicates: this path re-runs on every upsert of the same
+    // circulation (restartable loads + the delta-sync), and book_reissue has
+    // no unique constraint to catch the repeat insert.
+    const [existingReissue] = await db
+      .select({ id: bookReissueModel.id })
+      .from(bookReissueModel)
+      .where(eq(bookReissueModel.bookCirculationId, newIssueReturn.id!))
+      .limit(1);
+    if (!existingReissue) {
+      await db.insert(bookReissueModel).values({
+        bookCirculationId: newIssueReturn.id!,
+        reissuedBy: newIssueReturn.issuedFromId,
+        returnTimestamp: newIssueReturn.returnTimestamp,
+      });
+    }
   }
 
   return newIssueReturn;
@@ -1236,9 +1465,10 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
 async function getVendorByOldId(oldVendorId: number | null) {
   if (!oldVendorId) return null;
 
-  const [[oldVendor]] = (await mysqlConnection.query(`
-    SELECT * FROM procurementvendordetailmaintab WHERE id = ${oldVendorId}
-    `)) as [OldVendor[], unknown];
+  const oldVendor = await legacyRow<OldVendor>(
+    "procurementvendordetailmaintab",
+    oldVendorId,
+  );
 
   if (!oldVendor) return null;
 
@@ -1392,11 +1622,36 @@ function combineDateTime(
   return new Date(`${ymd}T${hh}:${mm}:${ss}${IST_OFFSET}`);
 }
 
-const arr: {
+export const arr: {
   table: string;
   fn: (id: number) => Promise<unknown>;
   sql: string;
 }[] = [
+  {
+    table: "issuereturn",
+    fn: getBookCirculationByOldId,
+    sql: `
+      SELECT DISTINCT i.id
+      FROM issuereturn i
+      LEFT JOIN staffpersonaldetails st ON st.id = i.userId AND i.userTypeId IN ('Staff', 'Teacher')
+      LEFT JOIN historicalrecord h ON h.parent_id = i.userId AND i.userTypeId = 'Student'
+      LEFT JOIN studentpersonaldetails spd ON spd.id = h.parent_id
+      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid
+      WHERE
+          i.userId IS NOT NULL
+          AND i.userTypeId IS NOT NULL
+          AND (
+              i.userTypeId IN ('Staff', 'Teacher')
+              OR (
+                  i.userTypeId = 'Student'
+                  AND h.id IS NOT NULL
+                  AND sess.id > 17
+                  AND h.classId = 4
+              )
+          )
+      ORDER BY i.issueDate, i.id;
+    `,
+  },
   {
     table: "holidaymain",
     fn: getHolidayByOldId,
@@ -1426,31 +1681,6 @@ const arr: {
     table: "procurementvendordetailmaintab",
     fn: getVendorByOldId,
     sql: `SELECT id FROM procurementvendordetailmaintab;`,
-  },
-  {
-    table: "issuereturn",
-    fn: getBookCirculationByOldId,
-    sql: `
-      SELECT DISTINCT i.id
-      FROM issuereturn i
-      LEFT JOIN staffpersonaldetails st ON st.id = i.userId AND i.userTypeId IN ('Staff', 'Teacher')
-      LEFT JOIN historicalrecord h ON h.parent_id = i.userId AND i.userTypeId = 'Student'
-      LEFT JOIN studentpersonaldetails spd ON spd.id = h.parent_id
-      LEFT JOIN currentsessionmaster sess ON sess.id = h.sessionid
-      WHERE
-          i.userId IS NOT NULL
-          AND i.userTypeId IS NOT NULL
-          AND (
-              i.userTypeId IN ('Staff', 'Teacher')
-              OR (
-                  i.userTypeId = 'Student'
-                  AND h.id IS NOT NULL
-                  AND sess.id > 17
-                  AND h.classId = 4
-              )
-          )
-      ORDER BY i.issueDate, i.id;
-    `,
   },
 
   {
@@ -1558,97 +1788,528 @@ const arr: {
   },
 ];
 
-export async function loadLibrary() {
-  getLibraryExcelBaseDir();
+export type LoadLibraryOptions = {
+  /** Stop after this many rows per table. Used by the smoke test. */
+  limitPerTable?: number;
+  /** Restrict to these legacy table names. */
+  onlyTables?: string[];
+  /**
+   * Write the per-table Excel progress log. Off by default now: the log lives on
+   * one instance's filesystem, so under multiple instances it is neither shared
+   * nor authoritative. Every loader function is a find-or-create keyed on its
+   * legacy id, so the database itself is what makes a re-run safe.
+   */
+  writeExcelLog?: boolean;
+  onProgress?: (msg: string) => void;
+};
 
-  for (const ele of arr) {
-    console.log("Loading data for table:", ele.table);
-    const workbookPath = migrationWorkbookPathForTable(ele.table);
-    const alreadySuccessful =
-      await readSuccessfulLegacyIdsFromWorkbook(workbookPath);
+export type LoadLibraryResult = {
+  tables: Array<{
+    table: string;
+    selected: number;
+    loaded: number;
+    failed: number;
+  }>;
+  totalLoaded: number;
+  totalFailed: number;
+};
 
-    const [result] = (await mysqlConnection.query(ele.sql)) as [
-      { id: number }[],
-      unknown,
-    ];
-    console.log(
-      "Processing data for table:",
-      ele.table,
-      "Rows:",
-      result.length,
-      "already logged success:",
-      alreadySuccessful.size,
-    );
-    for (const row of result) {
-      if (alreadySuccessful.has(row.id)) {
-        continue;
+/**
+ * Dependency layers for the loader.
+ *
+ * The resolvers are find-or-create + memoised, so a table is safe to run
+ * concurrently with any table whose resolver does NOT depend on its output
+ * from within the same load. This grouping is that dependency graph —
+ * everything inside a layer runs in parallel; layers execute in order.
+ *
+ * Discovered by walking each resolver: L1 leaves depend only on the address
+ * table (filtered per parent, no row overlap); L2 needs journal/publisher/
+ * subject-group; L3 needs bookentry + vendor/rack/shelf/binding/status; L4
+ * needs copydetail + users.
+ */
+export const LOAD_LAYERS: string[][] = [
+  // L1 — masters + independent leaves
+  [
+    "language",
+    "series",
+    "subjectgroup",
+    "enclosetype",
+    "entrymode",
+    "journaltype",
+    "status",
+    "rack",
+    "shelf",
+    "bindingtype",
+    "periodpojo",
+    "latype",
+    "documenttypelist",
+    "borrowingtype",
+    "authortype",
+    "holidaymain",
+    "procurementvendordetailmaintab",
+    "publisher",
+    "author",
+  ],
+  // L2 — depend on L1 only
+  ["journalmaster", "bookentry", "libentryexit", "holidaystudentsub"],
+  // L3 — depend on L2 + L1
+  ["authordetailsub", "copydetailsub"],
+  // L4 — depends on L3
+  ["issuereturn"],
+];
+
+/** Max rows resolved in parallel per table. Bounded so the shared IRP
+ *  connection pool + Postgres connections don't stampede. */
+const ROW_WORKERS = 8;
+
+/**
+ * Run one legacy table end-to-end: select ids, prime the row cache in chunks,
+ * resolve each id with bounded concurrency. Returns the same summary shape
+ * the outer loop used to build. Extracted so it can be invoked from
+ * `Promise.all` per layer.
+ */
+/**
+ * Extra context passed to per-table runs so the progress emit can carry
+ * cumulative percentage and layer indicators — the internal loader tracks it,
+ * not the caller.
+ */
+type PerTableContext = {
+  layerIndex: number; // 1-based
+  layerTotal: number;
+  onTableDone: () => number; // returns the running "tables done" count
+  tablesTotal: number;
+  /** Every internal table name running in parallel in this layer. */
+  currentLayerTables: string[];
+  /** Internal table names from the previous layer that this one waited on. */
+  dependsOn: string[];
+  /**
+   * Pre-fetched row ids for every table, keyed by legacy table name. Feeds
+   * both the per-table loop (skipping a redundant `SELECT id FROM …` at
+   * table-start) and the shared row counter so the % bar reflects real work,
+   * not just tables-done / tables-total.
+   */
+  plannedIds: Map<string, number[]>;
+  /** Sum of `plannedIds[table].length` across every table. Set once, never
+   *  mutated — feeds row-based percent calculation. */
+  plannedTotalRows: number;
+  /**
+   * Bumps the shared "rows processed" counter by `n` and returns the new
+   * total. Called at chunk boundaries during the row loop so the periodic
+   * emit can compute a fresh percent from cumulative rows-across-all-tables.
+   */
+  onRowsCompleted: (n: number) => number;
+};
+
+async function loadLibraryTable(
+  ele: (typeof arr)[number],
+  options: LoadLibraryOptions,
+  log: (msg: string) => void,
+  ctx?: PerTableContext,
+): Promise<{
+  table: string;
+  selected: number;
+  loaded: number;
+  failed: number;
+}> {
+  const writeExcel = options.writeExcelLog === true;
+  log(`[library-load] ${ele.table}: selecting…`);
+
+  const workbookPath = writeExcel
+    ? migrationWorkbookPathForTable(ele.table)
+    : null;
+  const alreadySuccessful = workbookPath
+    ? await readSuccessfulLegacyIdsFromWorkbook(workbookPath)
+    : new Set<number>();
+
+  // Restart-friendliness: on any run beyond the first, the new DB already has
+  // rows keyed on legacy_x_id for whatever this table loaded last time. Skip
+  // those IDs so a crashed / re-triggered load only processes what's actually
+  // missing, instead of walking every row from row 1 through the (idempotent
+  // but slow) upsert path again. Ongoing edits from old IRP are picked up by
+  // the delta-sync service, not this loader.
+  const { findLegacyMapping } =
+    await import("./services/library-legacy-mapping.js");
+  const mapping = findLegacyMapping(ele.table);
+  if (mapping) {
+    try {
+      const loadedRows = (
+        await db.execute(
+          drizzleSql.raw(`
+            SELECT ${mapping.legacyIdColumn} AS id
+            FROM ${mapping.newTable}
+            WHERE ${mapping.legacyIdColumn} IS NOT NULL
+          `),
+        )
+      ).rows as Array<{ id: number }>;
+      let skippedCount = 0;
+      for (const r of loadedRows) {
+        const id = Number(r.id);
+        if (Number.isFinite(id) && !alreadySuccessful.has(id)) {
+          alreadySuccessful.add(id);
+          skippedCount++;
+        }
       }
+      if (skippedCount > 0) {
+        log(
+          `[library-load] ${ele.table}: skipping ${skippedCount} row(s) already present in ${mapping.newTable}`,
+        );
+      }
+    } catch (err) {
+      log(
+        `[library-load] ${ele.table}: skip-lookup failed (${
+          err instanceof Error ? err.message : String(err)
+        }) — will process every row`,
+      );
+    }
+  }
 
-      let tmp: unknown;
+  // Prefer the ids already fetched during the planning phase — saves a
+  // second run of `ele.sql` per table (some of those SELECTs have expensive
+  // joins). Fall back to a live query only when we've been called outside
+  // the top-level loader (e.g. a test that constructs its own context).
+  const preplanned = ctx?.plannedIds.get(ele.table);
+  const rows: { id: number }[] = preplanned
+    ? preplanned.map((id) => ({ id }))
+    : (
+        (await mysqlConnection.query(ele.sql)) as [{ id: number }[], unknown]
+      )[0];
+
+  const selected = options.limitPerTable
+    ? rows.slice(0, options.limitPerTable)
+    : rows;
+
+  let loaded = 0;
+  let failed = 0;
+
+  const CHUNK = 2_000;
+
+  // Periodic in-flight heartbeat. Without this, a table that takes many
+  // minutes emits nothing between "start" and "done", and every dashboard
+  // widget stays frozen for the duration. Every 5 seconds we fire a
+  // lightweight `library:master:updated` so the client's realtime hook
+  // invalidates `library-*` queries and the widgets refetch fresh counts.
+  const HEARTBEAT_MS = 5_000;
+  let heartbeatTimer: NodeJS.Timeout | null = null;
+  const startHeartbeat = () => {
+    if (heartbeatTimer) return;
+    heartbeatTimer = setInterval(async () => {
       try {
-        tmp = await ele.fn(row.id);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(
-          "Failed to load data for table:",
-          ele.table,
-          "Row:",
-          row.id,
-          msg,
-        );
-        try {
-          await appendMigrationLogRow(workbookPath, row.id, "failed", msg);
-        } catch (excelErr) {
-          console.warn(
-            "[loadLibrary] Excel append failed after migration error; skipping excel row:",
-            ele.table,
-            row.id,
-            excelErr,
-          );
-        }
-        continue;
+        const { emitLibraryEvent } =
+          await import("./services/library-realtime.service.js");
+        emitLibraryEvent("library:master:updated", {
+          detail: {
+            source: "library-load-heartbeat",
+            table: ele.table,
+            loaded,
+            failed,
+          },
+        });
+      } catch {
+        // Never let a socket failure fail the load.
       }
+    }, HEARTBEAT_MS);
+  };
+  const stopHeartbeat = () => {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+  };
+  startHeartbeat();
 
-      if (tmp) {
-        console.log("Loaded data for table:", ele.table, "Row:", row.id);
-        try {
-          await appendMigrationLogRow(workbookPath, row.id, "success", null);
-          alreadySuccessful.add(row.id);
-        } catch (excelErr) {
-          console.warn(
-            "[loadLibrary] Excel append failed after success; skipping log (row will retry on next run):",
-            ele.table,
-            row.id,
-            excelErr,
-          );
+  try {
+    for (let offset = 0; offset < selected.length; offset += CHUNK) {
+      const chunk = selected.slice(offset, offset + CHUNK);
+      await primeLegacyRows(
+        ele.table,
+        chunk.map((r) => r.id),
+      );
+
+      // Bounded worker pool inside the chunk. Each worker pulls the next row
+      // from `queue` — this handles the case where one resolver is much slower
+      // than another (e.g. copy → book → publisher fan-out) without any
+      // resolver hogging the whole worker slot.
+      let cursor = 0;
+      const runOne = async () => {
+        while (true) {
+          const idx = cursor++;
+          if (idx >= chunk.length) return;
+          const row = chunk[idx];
+          if (alreadySuccessful.has(row.id)) continue;
+
+          let tmp: unknown;
+          try {
+            tmp = await ele.fn(row.id);
+          } catch (err) {
+            failed++;
+            const msg = err instanceof Error ? err.message : String(err);
+            log(`[library-load] ${ele.table} #${row.id} FAILED: ${msg}`);
+            if (workbookPath) {
+              await appendMigrationLogRow(
+                workbookPath,
+                row.id,
+                "failed",
+                msg,
+              ).catch(() => undefined);
+            }
+            continue;
+          }
+
+          if (tmp) {
+            loaded++;
+            if (workbookPath) {
+              await appendMigrationLogRow(workbookPath, row.id, "success", null)
+                .then(() => alreadySuccessful.add(row.id))
+                .catch(() => undefined);
+            }
+          } else {
+            // Null return is not always an error — the resolvers return null
+            // for a legacy row we cannot place. Counted as failed for the
+            // summary but never crashes the load.
+            failed++;
+            if (workbookPath) {
+              await appendMigrationLogRow(
+                workbookPath,
+                row.id,
+                "failed",
+                "migration returned no result",
+              ).catch(() => undefined);
+            }
+          }
         }
-      } else {
-        console.log(
-          "Failed to load data for table:",
-          ele.table,
-          "Row:",
-          row.id,
-          "(no result)",
-        );
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(ROW_WORKERS, chunk.length) }, runOne),
+      );
+
+      // Chunk-boundary emit — pushes the row-based percent forward so the
+      // dashboard's progress bar tracks real work instead of only moving when
+      // an entire table finishes. Uses the shared cumulative rows counter, not
+      // the local (loaded + failed) delta. Also carries rowsProcessed +
+      // rowsTotal so the client can fit a recent-rate window and project a
+      // fresh ETA without the "ratchet always up" behaviour of a since-start
+      // projection.
+      if (ctx) {
+        const rowsDone = ctx.onRowsCompleted(chunk.length);
         try {
-          await appendMigrationLogRow(
-            workbookPath,
-            row.id,
-            "failed",
-            "migration returned no result",
-          );
-        } catch (excelErr) {
-          console.warn(
-            "[loadLibrary] Excel append failed for no-result row; skipping:",
-            ele.table,
-            row.id,
-            excelErr,
-          );
+          const { emitLibraryLoadProgress } =
+            await import("./services/library-realtime.service.js");
+          emitLibraryLoadProgress({
+            table: ele.table,
+            loaded,
+            failed,
+            total: selected.length,
+            done: false,
+            percent: ctx.plannedTotalRows
+              ? Math.min(
+                  100,
+                  Math.round((rowsDone / ctx.plannedTotalRows) * 100),
+                )
+              : undefined,
+            layer: ctx.layerIndex,
+            layerTotal: ctx.layerTotal,
+            currentLayerTables: ctx.currentLayerTables,
+            dependsOn: ctx.dependsOn,
+            tablesDone: undefined,
+            tablesTotal: ctx.tablesTotal,
+            rowsProcessed: rowsDone,
+            rowsTotal: ctx.plannedTotalRows,
+          });
+        } catch {
+          // Never let a socket failure fail the load.
         }
       }
     }
-    console.log("Done data for table:", ele.table);
+  } finally {
+    stopHeartbeat();
   }
+
+  log(
+    `[library-load] ${ele.table}: ${loaded} loaded, ${failed} failed of ${selected.length}`,
+  );
+
+  // Per-table completion emit — reports final counts + advances the "tables
+  // done" counter (the banner uses it to say "17 of 26 tables done"). The
+  // percent field uses the shared row-based total so the progress bar keeps
+  // moving smoothly across table boundaries. Rows already accumulated via
+  // chunk emits above; here we just publish the final table-done fact.
+  try {
+    const { emitLibraryLoadProgress } =
+      await import("./services/library-realtime.service.js");
+    const tablesDone = ctx?.onTableDone() ?? 1;
+    const rowsCumulative = ctx?.plannedTotalRows
+      ? // The chunk emits above already pushed this table's rows through
+        // onRowsCompleted. We don't add again — just read the current
+        // percent via a zero-increment call.
+        ctx.onRowsCompleted(0)
+      : 0;
+    emitLibraryLoadProgress({
+      table: ele.table,
+      loaded,
+      failed,
+      total: selected.length,
+      done: true,
+      percent:
+        ctx && ctx.plannedTotalRows
+          ? Math.min(
+              100,
+              Math.round((rowsCumulative / ctx.plannedTotalRows) * 100),
+            )
+          : undefined,
+      layer: ctx?.layerIndex,
+      layerTotal: ctx?.layerTotal,
+      currentLayerTables: ctx?.currentLayerTables,
+      dependsOn: ctx?.dependsOn,
+      tablesDone: ctx ? tablesDone : undefined,
+      tablesTotal: ctx?.tablesTotal,
+      rowsProcessed: ctx ? rowsCumulative : undefined,
+      rowsTotal: ctx?.plannedTotalRows,
+    });
+  } catch {
+    // Never let a socket failure fail the load.
+  }
+
+  return { table: ele.table, selected: selected.length, loaded, failed };
+}
+
+export async function loadLibrary(
+  options: LoadLibraryOptions = {},
+): Promise<LoadLibraryResult> {
+  const writeExcel = options.writeExcelLog === true;
+  const log = options.onProgress ?? ((m: string) => console.log(m));
+  const result: LoadLibraryResult = {
+    tables: [],
+    totalLoaded: 0,
+    totalFailed: 0,
+  };
+
+  if (writeExcel) getLibraryExcelBaseDir();
+
+  const allowed = options.onlyTables?.length
+    ? new Set(options.onlyTables)
+    : null;
+
+  // Layer-by-layer: everything in a layer runs in parallel, layers are
+  // strictly sequential. Anything in `arr` not in a layer runs last.
+  const layered = LOAD_LAYERS.map((layer) =>
+    arr.filter(
+      (e) => layer.includes(e.table) && (!allowed || allowed.has(e.table)),
+    ),
+  );
+  const layeredNames = new Set(LOAD_LAYERS.flat());
+  const leftovers = arr.filter(
+    (e) => !layeredNames.has(e.table) && (!allowed || allowed.has(e.table)),
+  );
+
+  const layers = [...layered, leftovers].filter((l) => l.length > 0);
+  const tablesTotal = layers.reduce((a, l) => a + l.length, 0);
+  let tablesDone = 0;
+
+  // ── Planning phase ───────────────────────────────────────────────────────
+  // Fetch every table's row ids in parallel BEFORE any processing starts.
+  // Two wins: (1) we know the true row count across all tables up-front so
+  // the progress % reflects real work (not "we've done 20 of 26 tables"
+  // when the remaining tables hold 90% of the rows); (2) we don't run each
+  // `arr[i].sql` twice — the processing loop reads the cached ids.
+  log(`[library-load] planning: counting rows across ${tablesTotal} table(s)…`);
+  const plannedIds = new Map<string, number[]>();
+  const flatTables = layers.flat();
+  await Promise.all(
+    flatTables.map(async (ele) => {
+      try {
+        const [rows] = (await mysqlConnection.query(ele.sql)) as [
+          { id: number }[],
+          unknown,
+        ];
+        const cap = options.limitPerTable ?? rows.length;
+        plannedIds.set(
+          ele.table,
+          rows.slice(0, cap).map((r) => Number(r.id)),
+        );
+      } catch (err) {
+        log(
+          `[library-load] planning ${ele.table} failed: ${
+            err instanceof Error ? err.message : String(err)
+          } — treating as 0 rows`,
+        );
+        plannedIds.set(ele.table, []);
+      }
+    }),
+  );
+  const plannedTotalRows = [...plannedIds.values()].reduce(
+    (a, ids) => a + ids.length,
+    0,
+  );
+  log(
+    `[library-load] planning done: ${plannedTotalRows.toLocaleString()} row(s) across ${flatTables.length} table(s)`,
+  );
+
+  // Shared row-progress counter — passed into every table so the % bar is
+  // truly row-based, not table-count-based.
+  let rowsProcessed = 0;
+  const onRowsCompleted = (n: number) => {
+    rowsProcessed += n;
+    return rowsProcessed;
+  };
+
+  // Seed the initial snapshot with the total so the client's banner shows a
+  // real 0% + planned-rows figure from the very first paint (rather than
+  // holding on the "Starting…" placeholder until the first chunk finishes).
+  // Carries rowsProcessed=0 + rowsTotal so the client-side rate hook has its
+  // first sample immediately — otherwise it stays on "estimating…" until the
+  // second emit lands (~2000 rows later), which can be many minutes on heavy
+  // tables.
+  try {
+    const { emitLibraryLoadProgress } =
+      await import("./services/library-realtime.service.js");
+    emitLibraryLoadProgress({
+      table: flatTables[0]?.table ?? "",
+      loaded: 0,
+      failed: 0,
+      total: plannedTotalRows,
+      done: false,
+      percent: 0,
+      tablesDone: 0,
+      tablesTotal,
+      rowsProcessed: 0,
+      rowsTotal: plannedTotalRows,
+    });
+  } catch {
+    // Never let a socket failure fail the load.
+  }
+
+  for (let li = 0; li < layers.length; li++) {
+    const layer = layers[li];
+    const currentLayerTables = layer.map((e) => e.table);
+    const dependsOn = li > 0 ? layers[li - 1].map((e) => e.table) : [];
+    log(
+      `[library-load] layer ${li + 1}/${layers.length}: ${currentLayerTables.join(", ")}${
+        dependsOn.length ? ` (depends on: ${dependsOn.join(", ")})` : ""
+      }`,
+    );
+    const layerResults = await Promise.all(
+      layer.map((ele) =>
+        loadLibraryTable(ele, options, log, {
+          layerIndex: li + 1,
+          layerTotal: layers.length,
+          onTableDone: () => ++tablesDone,
+          tablesTotal,
+          currentLayerTables,
+          dependsOn,
+          plannedIds,
+          plannedTotalRows,
+          onRowsCompleted,
+        }),
+      ),
+    );
+    for (const r of layerResults) {
+      result.tables.push(r);
+      result.totalLoaded += r.loaded;
+      result.totalFailed += r.failed;
+    }
+  }
+
+  return result;
 }
 
 export async function loadLibraryUsers() {

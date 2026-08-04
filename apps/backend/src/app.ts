@@ -811,6 +811,14 @@ app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 app.use("/api/admissions", admissionRouter);
 
 app.use("/api/payments", paymentRouter);
+
+// Every non-GET on /api/library/* fires `library:master:updated` on the socket
+// bus so every dashboard on every EC2 instance refetches — no per-service
+// instrumentation, one hook covers all master CRUD. Redis adapter guarantees
+// cross-instance delivery.
+import { libraryBroadcastMiddleware } from "@/features/library/middlewares/library-broadcast.middleware.js";
+app.use("/api/library", libraryBroadcastMiddleware);
+
 app.use("/api/library/entry-exit", libraryEntryExitRouter);
 app.use("/api/library/book-circulation", bookCirculationRouter);
 app.use("/api/library/journals", journalRouter);

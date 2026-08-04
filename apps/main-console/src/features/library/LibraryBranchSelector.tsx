@@ -27,25 +27,29 @@ export function LibraryBranchSelector() {
     };
   }, []);
 
+  // The card wrapper (label + border + padding) was noise — the quick-links
+  // rail is already a well-defined region, and the icon on the select makes
+  // the purpose obvious.
   return (
-    <div className="mx-3 mb-2 rounded-lg border border-indigo-100 bg-white p-2 shadow-sm">
-      <label className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
-        <Building2 className="h-3 w-3" /> Library branch
-      </label>
-      <select
-        className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-400 focus:outline-none"
-        value={activeId ?? ""}
-        disabled={loading || branches.length === 0}
-        onChange={(e) => setActiveId(e.target.value ? Number(e.target.value) : null)}
-      >
-        <option value="">All branches</option>
-        {branches.map((b) => (
-          <option key={b.id} value={b.id}>
-            {b.name}
-            {b.code ? ` (${b.code})` : ""}
-          </option>
-        ))}
-      </select>
+    <div className="mx-3 mb-2">
+      <div className="relative">
+        <Building2 className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-indigo-500" />
+        <select
+          aria-label="Library branch"
+          className="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 pl-7 text-xs text-gray-700 focus:border-indigo-400 focus:outline-none"
+          value={activeId ?? ""}
+          disabled={loading || branches.length === 0}
+          onChange={(e) => setActiveId(e.target.value ? Number(e.target.value) : null)}
+        >
+          <option value="">All branches</option>
+          {branches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+              {b.code ? ` (${b.code})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }

@@ -243,7 +243,7 @@ export default function ItemCategoriesMasterPage() {
               </div>
             ) : (
               <>
-                <div className="max-h-[70vh] space-y-3 overflow-y-auto pb-2 lg:hidden">
+                <div className="space-y-3 pb-2 lg:hidden">
                   {rows.map((row, i) => (
                     <div
                       key={row.id}
@@ -293,11 +293,11 @@ export default function ItemCategoriesMasterPage() {
                 </div>
 
                 <div className="hidden min-w-0 pb-2 lg:block">
-                  <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
+                  <div className="max-h-[70vh] overflow-auto [&>div]:!overflow-visible rounded-md border bg-background">
                     <Table containerClassName="min-w-[820px]">
                       <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className={cn(STICKY_TH_LEFT, "w-10")}>#</TableHead>
+                          <TableHead className={STICKY_TH_LEFT}>#</TableHead>
                           <TableHead className={cn(STICKY_TH_BASE, "min-w-[220px]")}>
                             Name
                           </TableHead>

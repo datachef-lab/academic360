@@ -25,6 +25,21 @@ import {
   downloadFeeStructures,
   downloadFeeStudentMappings,
 } from "@/features/fees/services/fee-structure.service.js";
+import { parseLibraryReportFilters } from "@/features/library/services/report-common/library-report-filters.js";
+import { exportBookCirculationExcel } from "@/features/library/services/report-excel/book-circulation-excel.service.js";
+import { exportFinesExcel } from "@/features/library/services/report-excel/fines-excel.service.js";
+import { exportStockSummaryExcel } from "@/features/library/services/report-excel/stock-summary-excel.service.js";
+import { exportPopularBooksExcel } from "@/features/library/services/report-excel/popular-books-excel.service.js";
+import { exportEntryExitExcel } from "@/features/library/services/report-excel/entry-exit-excel.service.js";
+import { exportHoldingsExcel } from "@/features/library/services/report-excel/holdings-excel.service.js";
+import { exportPublicationsExcel } from "@/features/library/services/report-excel/publications-excel.service.js";
+import { exportBookDemandForecastExcel } from "@/features/library/services/report-excel/book-demand-forecast-excel.service.js";
+import { exportFootfallForecastExcel } from "@/features/library/services/report-excel/footfall-forecast-excel.service.js";
+import {
+  exportAisheExcel,
+  exportNaacExcel,
+  exportNirfExcel,
+} from "@/features/library/services/report-excel/compliance-excel.service.js";
 
 const XLSX =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -344,6 +359,133 @@ const DESCRIPTORS: ReportDescriptor[] = [
       return {
         buffer,
         fileName: `fee_student_mappings_${academicYearYear || academicYearId}.xlsx`,
+        contentType: XLSX,
+      };
+    },
+  },
+  // ── Library reports ────────────────────────────────────────────────────
+  // Each descriptor calls the corresponding exportXExcel service in
+  // apps/backend/src/features/library/services/report-excel/ and returns the
+  // ExcelJS buffer. The wide LibraryReportFilters set is parsed from
+  // req.query by parseLibraryReportFilters (comma-separated ID lists).
+  {
+    key: "library-book-circulation",
+    label: "Library — Book circulation",
+    generate: async ({ req }) => ({
+      buffer: await exportBookCirculationExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Book_Circulation_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-fines",
+    label: "Library — Fines",
+    generate: async ({ req }) => ({
+      buffer: await exportFinesExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Fines_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-stock-summary",
+    label: "Library — Stock summary",
+    generate: async ({ req }) => ({
+      buffer: await exportStockSummaryExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Stock_Summary_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-popular-books",
+    label: "Library — Popular / high-demand books",
+    generate: async ({ req }) => ({
+      buffer: await exportPopularBooksExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Popular_Books_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-entry-exit",
+    label: "Library — Entry / Exit footfall",
+    generate: async ({ req }) => ({
+      buffer: await exportEntryExitExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Entry_Exit_Footfall_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-holdings",
+    label: "Library — Books & copies (holdings)",
+    generate: async ({ req }) => ({
+      buffer: await exportHoldingsExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Holdings_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-publications",
+    label: "Library — Publications usage",
+    generate: async ({ req }) => ({
+      buffer: await exportPublicationsExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Publications_Usage_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-book-demand-forecast",
+    label: "Library — Book demand estimate (next 30 days)",
+    generate: async ({ req }) => ({
+      buffer: await exportBookDemandForecastExcel(
+        parseLibraryReportFilters(req),
+      ),
+      fileName: `Library_Book_Demand_Forecast_30d_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-footfall-forecast",
+    label: "Library — Footfall estimate (next 14 days)",
+    generate: async ({ req }) => ({
+      buffer: await exportFootfallForecastExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Footfall_Forecast_14d_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-naac",
+    label: "Library — NAAC criterion 4.2",
+    generate: async ({ req }) => {
+      const year = str(req, "academicYear") || "";
+      if (!year) throw new Error("Academic year is required");
+      return {
+        buffer: await exportNaacExcel(year),
+        fileName: `Library_NAAC_${year}.xlsx`,
+        contentType: XLSX,
+      };
+    },
+  },
+  {
+    key: "library-nirf",
+    label: "Library — NIRF library resources",
+    generate: async ({ req }) => {
+      const year = str(req, "academicYear") || "";
+      if (!year) throw new Error("Academic year is required");
+      return {
+        buffer: await exportNirfExcel(year),
+        fileName: `Library_NIRF_${year}.xlsx`,
+        contentType: XLSX,
+      };
+    },
+  },
+  {
+    key: "library-aishe",
+    label: "Library — AISHE library figures",
+    generate: async ({ req }) => {
+      const year = str(req, "academicYear") || "";
+      if (!year) throw new Error("Academic year is required");
+      return {
+        buffer: await exportAisheExcel(year),
+        fileName: `Library_AISHE_${year}.xlsx`,
         contentType: XLSX,
       };
     },
