@@ -1,7 +1,7 @@
-import { AnyPgColumn, boolean, index, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { AnyPgColumn, boolean, check, index, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { studentModel, userModel } from "../user";
-import { subjectModel } from "../course-design";
+import { subjectModel, subjectGroupingMainModel } from "../course-design";
 import { subjectSelectionMetaModel } from "./subject-selection-meta.model";
 import { sessionModel } from "../academics";
 import { createInsertSchema } from "drizzle-zod";
@@ -18,9 +18,14 @@ export const studentSubjectSelectionModel = pgTable("student_subject_selections"
     studentId: integer("student_id_fk")
         .references(() => studentModel.id)
         .notNull(),
+    // Nullable to accommodate SUBJECT_GROUP option source, where the terminal
+    // selection is a subject group rather than a subject. Exactly one of
+    // (subjectId, subjectGroupingMainId) must be set — enforced by the CHECK
+    // constraint below.
     subjectId: integer("subject_id_fk")
-        .references(() => subjectModel.id)
-        .notNull(),
+        .references(() => subjectModel.id),
+    subjectGroupingMainId: integer("subject_grouping_main_id_fk")
+        .references(() => subjectGroupingMainModel.id),
     // Versioning fields
     version: integer("version").default(1).notNull(), // Version number (1, 2, 3, etc.)
     parentId: integer("parent_id_fk")
@@ -48,6 +53,14 @@ export const studentSubjectSelectionModel = pgTable("student_subject_selections"
         .on(t.subjectSelectionMetaId, t.studentId),
     sessionIdx: index("student_subject_selections_session_id_idx").on(t.sessionId),
     subjectIdx: index("student_subject_selections_subject_id_idx").on(t.subjectId),
+    subjectGroupIdx: index("student_subject_selections_subject_group_id_idx").on(t.subjectGroupingMainId),
+    // Every selection row must resolve to either a subject or a group, never
+    // both and never neither. Backs the SUBJECT_GROUP option-source contract.
+    subjectXorGroupCheck: check(
+        "student_subject_selections_subject_xor_group_check",
+        sql`(${t.subjectId} IS NOT NULL AND ${t.subjectGroupingMainId} IS NULL)
+         OR (${t.subjectId} IS NULL AND ${t.subjectGroupingMainId} IS NOT NULL)`,
+    ),
 }));
 
 export const createStudentSubjectSelection = createInsertSchema(studentSubjectSelectionModel);

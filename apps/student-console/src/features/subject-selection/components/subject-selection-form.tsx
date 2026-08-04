@@ -45,9 +45,14 @@ interface MetaView {
    * student's OWN earlier picks, so uniqueness rules must not apply — see
    * `optionsForMeta`.
    */
-  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION" | "SUBJECT_GROUP";
   /** PRIOR_SELECTION only: the metas whose live picks feed this slot. */
   sourceMetaIds: number[];
+  /**
+   * SUBJECT_GROUP only: option name → group id. Kept alongside subjectIdByName
+   * so subject-based sources are unaffected.
+   */
+  subjectGroupingMainIdByName?: Record<string, number>;
 }
 
 const romanMap: Record<string, string> = {
@@ -75,13 +80,15 @@ function toMetaViews(perMetaOptions: PerMetaOptionsDto[]): MetaView[] {
     .map((m) => {
       const options: string[] = [];
       const subjectIdByName: Record<string, number> = {};
+      const subjectGroupingMainIdByName: Record<string, number> = {};
       const autoAssignSubjects: string[] = [];
       for (const o of m.options ?? []) {
         if (!o?.subjectName) continue;
-        if (!(o.subjectName in subjectIdByName)) {
-          subjectIdByName[o.subjectName] = o.subjectId;
-          options.push(o.subjectName);
-        }
+        if (options.includes(o.subjectName)) continue;
+        options.push(o.subjectName);
+        if (o.subjectId != null) subjectIdByName[o.subjectName] = o.subjectId;
+        if (o.subjectGroupingMainId != null)
+          subjectGroupingMainIdByName[o.subjectName] = o.subjectGroupingMainId;
         if (o.autoAssign && !autoAssignSubjects.includes(o.subjectName)) {
           autoAssignSubjects.push(o.subjectName);
         }
@@ -96,6 +103,7 @@ function toMetaViews(perMetaOptions: PerMetaOptionsDto[]): MetaView[] {
         ),
         options,
         subjectIdByName,
+        subjectGroupingMainIdByName,
         autoAssignSubjects,
         optionSource: m.optionSource ?? "ELECTIVE_SUBJECTS",
         sourceMetaIds: m.sourceMetaIds ?? [],
@@ -494,6 +502,18 @@ export default function SubjectSelectionForm({
     for (const v of visibleMetas) {
       const subjectName = selectionsByMeta[v.metaId];
       if (!subjectName) continue;
+      // SUBJECT_GROUP picks resolve to a subject-group id, not a subject id.
+      if (v.optionSource === "SUBJECT_GROUP") {
+        const groupId = v.subjectGroupingMainIdByName?.[subjectName];
+        if (!groupId) continue;
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: session.id },
+          subjectSelectionMeta: { id: v.metaId },
+          subjectGroupingMain: { id: groupId, name: subjectName },
+        });
+        continue;
+      }
       // A PRIOR_SELECTION slot can offer a subject only just chosen in its
       // source dropdown, so it may be absent from this meta's own map.
       const subjectId =
@@ -778,6 +798,25 @@ export default function SubjectSelectionForm({
       // a category filter, and the CVAC list itself carried no excludes either
       // (other categories still exclude the CVAC pick via getGlobalExcludes).
       if (v.code === "AEC" || v.code === "CVAC") return convertToComboboxData(v.options);
+      // SUBJECT_GROUP options are already backend-filtered (subject type +
+      // meta semesters + has-elective-papers). No client-side category or
+      // restricted-grouping check applies — groups aren't papers. But a group
+      // that's already picked in a SIBLING SUBJECT_GROUP meta of the SAME
+      // subject type is excluded — a student shouldn't hold the same group in
+      // two different semester metas.
+      if (v.optionSource === "SUBJECT_GROUP") {
+        const normSg = (s: string) =>
+          String(s || "")
+            .trim()
+            .toUpperCase();
+        const heldBySiblingGroupMetas = metaViews
+          .filter(
+            (o) => o.optionSource === "SUBJECT_GROUP" && o.metaId !== v.metaId && o.code === v.code,
+          )
+          .map((o) => selectionsByMeta[o.metaId])
+          .filter((x): x is string => Boolean(x) && normSg(x) !== normSg(current));
+        return convertToComboboxData(v.options, heldBySiblingGroupMetas);
+      }
       // PRIOR_SELECTION metas (Minor 3/4) carry their own uniqueness rule: their
       // options ARE the Minor 1/2 picks, so getGlobalExcludes would remove every
       // one and the slot would show "0 options available" — but the two
@@ -821,7 +860,11 @@ export default function SubjectSelectionForm({
     for (const selection of actualSelections ?? []) {
       if (!selection || typeof selection !== "object") continue;
       const metaId = selection.metaId ?? selection.subjectSelectionMeta?.id;
-      const subjectName = selection.subjectName ?? selection.subject?.name;
+      const subjectName =
+        selection.subjectName ??
+        selection.subject?.name ??
+        // SUBJECT_GROUP selections carry the group's name instead of a subject.
+        selection.subjectGroupingMain?.name;
       if (!metaId || !subjectName) continue;
       // Keep the label that came with the saved row. A student who submitted in
       // an earlier academic year (or whose stream changed) may have metas that
