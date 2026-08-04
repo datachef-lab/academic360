@@ -2423,6 +2423,7 @@ latest_student_selections AS (
          student_id_fk,
          session_id_fk,
          subject_id_fk,
+         subject_grouping_main_id_fk,
          subject_selection_meta_id_fk,
          version
   FROM (
@@ -2430,7 +2431,13 @@ latest_student_selections AS (
            ROW_NUMBER() OVER (
              PARTITION BY sss.student_id_fk,
                           sss.subject_selection_meta_id_fk,
-                          sss.subject_id_fk
+                          -- Both subject and group ids partake in the partition
+                          -- so a student holding two different group picks under
+                          -- the same meta (defensive; the write path shouldn't
+                          -- allow it) doesn't collapse. Nulls partition together,
+                          -- matching the existing subject-only behaviour.
+                          sss.subject_id_fk,
+                          sss.subject_grouping_main_id_fk
              ORDER BY sss.version DESC,
                       sss.updated_at DESC NULLS LAST,
                       sss.created_at DESC,
@@ -2661,6 +2668,89 @@ optional_grouped AS (
     __EXTRA_FILTER_OPTG__
 ),
 
+-- optional_group_selected — SUBJECT_GROUP option-source picks.
+-- optional_direct / optional_grouped handle selections that key on
+-- subject_id_fk (the traditional ELECTIVE_SUBJECTS / PRIOR_SELECTION shape).
+-- SUBJECT_GROUP selections key on subject_grouping_main_id_fk instead;
+-- subject_id_fk is NULL, so neither existing branch can find them.
+-- Here we walk the picked group directly to enumerate its member subjects,
+-- scoped to papers that (a) belong to the student's programCourse, (b) live
+-- in one of the meta's semesters, and (c) match the group's academic year.
+-- Each row expands to one (student, paper) pair, mirroring the other CTEs.
+optional_group_selected AS (
+  SELECT
+      std.id                              AS student_id,
+      std.uid                             AS uid,
+      u.name                              AS user_name,
+      ay.year                             AS academic_year,
+      sry.registration_year               AS registration_year,
+      spbc.promotion_academic_year        AS promotion_academic_year,
+      pc.name                             AS program_course,
+      aff.name                            AS affiliation,
+      reg.name                            AS regulation,
+      cl_all.name                         AS semester,
+      cl_all.id                           AS class_id_for_order,
+      COALESCE(sbj_all.code, sbj_all.name) AS subject,
+      COALESCE(sbt.code, sbt.name)        AS subject_type,
+      ssm.label                           AS selection_label,
+      lss.id                              AS selection_id_for_order,
+      lss.version                         AS selection_version,
+      p_all.id                            AS paper_id,
+      CASE
+        WHEN p_all.is_optional = FALSE AND p_all.auto_assign = FALSE THEN 'Mandatory'
+        WHEN p_all.is_optional = FALSE AND p_all.auto_assign = TRUE  THEN 'Not possible'
+        WHEN p_all.is_optional = TRUE  AND p_all.auto_assign = FALSE THEN 'Elective'
+        ELSE 'Elective & Auto-Assign'
+      END                                 AS paper_type,
+      p_all.name                          AS paper,
+      p_all.code                          AS paper_code,
+      CASE WHEN p_all.is_optional THEN 'Yes' ELSE 'No' END AS is_optional,
+      CASE WHEN p_all.auto_assign THEN 'Yes' ELSE 'No' END AS auto_assign,
+      CASE WHEN p_all.is_active   THEN 'Yes' ELSE 'No' END AS is_active,
+      sgm.id                              AS subject_grouping_main_id,
+      sgm.name                            AS subject_grouping_name,
+      sgm.code                            AS subject_grouping_code,
+      spbc.promotion_id                   AS promotion_id
+  FROM latest_student_selections lss
+  JOIN subject_selection_meta ssm ON ssm.id = lss.subject_selection_meta_id_fk
+  JOIN subject_grouping_main sgm
+       ON sgm.id = lss.subject_grouping_main_id_fk
+      AND sgm.is_active = TRUE
+  JOIN subject_grouping_subjects sgs
+       ON sgs.subject_grouping_main_id_fk = sgm.id
+  JOIN students std ON std.id = lss.student_id_fk
+  JOIN users u ON u.id = std.user_id_fk
+  JOIN student_program_in_year spy ON spy.student_id = std.id
+  JOIN program_courses pc ON pc.id = spy.program_course_id_fk
+  LEFT JOIN affiliations aff ON aff.id = pc.affiliation_id_fk
+  LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
+  LEFT JOIN student_registration_year sry ON sry.student_id = std.id
+  JOIN papers p_all
+       ON p_all.programe_course_id_fk = pc.id
+      AND p_all.subject_id_fk = sgs.subject_id_fk
+      AND p_all.academic_year_id_fk = sgm.academic_year_id_fk
+      AND EXISTS (
+        SELECT 1 FROM student_paper_years spy_y
+        WHERE spy_y.student_id = std.id
+          AND spy_y.academic_year_id = p_all.academic_year_id_fk
+      )
+  JOIN academic_years ay ON ay.id = p_all.academic_year_id_fk
+  JOIN classes cl_all ON cl_all.id = p_all.class_id_fk
+  JOIN subjects sbj_all ON sbj_all.id = p_all.subject_id_fk
+  JOIN subject_types sbt ON sbt.id = p_all.subject_type_id_fk
+  -- Restrict to the meta's own semesters — mirrors optional_direct/grouped.
+  JOIN subject_selection_meta_classes ssmc_all
+       ON ssmc_all.subject_selection_meta_id_fk = ssm.id
+      AND ssmc_all.class_id_fk = cl_all.id
+  LEFT JOIN student_promotions_by_class spbc
+       ON spbc.student_id = std.id
+      AND spbc.class_id_fk = cl_all.id
+  WHERE lss.subject_grouping_main_id_fk IS NOT NULL
+    AND p_all.is_optional = TRUE
+    AND p_all.is_active = TRUE
+    __EXTRA_FILTER_OPTGS__
+),
+
 optional AS (
   SELECT DISTINCT ON (student_id, paper_id, promotion_id)
          student_id, uid, user_name, academic_year, registration_year, promotion_academic_year,
@@ -2669,14 +2759,16 @@ optional AS (
          paper_id, paper_type, paper, paper_code, is_optional, auto_assign, is_active,
          subject_grouping_main_id, subject_grouping_name, subject_grouping_code, promotion_id
   FROM (
-    -- optional_grouped carries the subject_grouping_* columns; optional_direct
-    -- emits them as NULL. When both variants produce the SAME (student, paper,
-    -- promotion) key, the grouped row must win the DISTINCT ON, else the
-    -- grouping name/code can never reach the export (they were structurally
-    -- unreachable while the direct row had priority 1).
-    SELECT *, 2 AS priority FROM optional_direct
+    -- optional_grouped / optional_group_selected carry the subject_grouping_*
+    -- columns; optional_direct emits them as NULL. When multiple variants
+    -- produce the SAME (student, paper, promotion) key, the grouping-carrying
+    -- rows must win the DISTINCT ON, else the grouping name/code can never
+    -- reach the export.
+    SELECT *, 3 AS priority FROM optional_direct
     UNION ALL
-    SELECT *, 1 AS priority FROM optional_grouped
+    SELECT *, 2 AS priority FROM optional_grouped
+    UNION ALL
+    SELECT *, 1 AS priority FROM optional_group_selected
   ) combined
   ORDER BY student_id, paper_id, promotion_id NULLS LAST, priority
 )
@@ -2767,6 +2859,9 @@ export function buildStudentSubjectsExportSql(
   const extraMand = baseExtra + classCl || "";
   const extraOptD = baseExtra + classCl || "";
   const extraOptG = baseExtra + classClAll || "";
+  // optional_group_selected uses the cl_all alias (papers of every subject
+  // in the picked group), matching optional_grouped's semester scoping.
+  const extraOptGS = baseExtra + classClAll || "";
   const base =
     mode === "full"
       ? STUDENT_SUBJECTS_EXPORT_SQL_FULL
@@ -2774,7 +2869,8 @@ export function buildStudentSubjectsExportSql(
   const text = base
     .replace(/__EXTRA_FILTER_MAND__/g, extraMand)
     .replace(/__EXTRA_FILTER_OPTD__/g, extraOptD)
-    .replace(/__EXTRA_FILTER_OPTG__/g, extraOptG);
+    .replace(/__EXTRA_FILTER_OPTG__/g, extraOptG)
+    .replace(/__EXTRA_FILTER_OPTGS__/g, extraOptGS);
   return { text, values };
 }
 
@@ -4131,12 +4227,17 @@ export async function exportStudentSubjectSelections(
     return av - bv;
   });
 
-  // Get latest version of student subject selections for ALL metas in the academic year (per student+subject)
-  // This ensures we get all students who have selections for any meta in the academic year
+  // Get latest version of student subject selections for ALL metas in the academic year
+  // (per student+subject OR student+subject-group).
+  // This ensures we get all students who have selections for any meta in the academic year.
+  // SUBJECT_GROUP rows have subjectId=null / subjectGroupingMainId=set; grouping on BOTH
+  // keeps subject and group picks as distinct rows (otherwise every group pick would
+  // collapse into a single null-subject aggregate per student).
   const latestSelections = await db
     .select({
       studentId: studentSubjectSelectionModel.studentId,
       subjectId: studentSubjectSelectionModel.subjectId,
+      subjectGroupingMainId: studentSubjectSelectionModel.subjectGroupingMainId,
       version: max(studentSubjectSelectionModel.version),
       createdAt: max(studentSubjectSelectionModel.createdAt),
       updatedAt: max(studentSubjectSelectionModel.updatedAt),
@@ -4155,6 +4256,7 @@ export async function exportStudentSubjectSelections(
     .groupBy(
       studentSubjectSelectionModel.studentId,
       studentSubjectSelectionModel.subjectId,
+      studentSubjectSelectionModel.subjectGroupingMainId,
     );
 
   if (latestSelections.length === 0) {
@@ -4299,7 +4401,10 @@ export async function exportStudentSubjectSelections(
   // users were previously fetched one-by-one inside the row loop).
   const userMap = new Map<number, { id: number; name: string; type: string }>();
 
-  // Get all student subject selections for all metas in the academic year
+  // Get all student subject selections for all metas in the academic year.
+  // Both subject and subject-group are LEFT JOINed — exactly one is populated
+  // per row (enforced by the DB CHECK). subject_name or group_name flows into
+  // the report column via the pickedName fallback chain below.
   const allSelectionsForYear = await db
     .select({
       studentId: studentSubjectSelectionModel.studentId,
@@ -4307,6 +4412,8 @@ export async function exportStudentSubjectSelections(
         studentSubjectSelectionModel.subjectSelectionMetaId,
       subjectId: studentSubjectSelectionModel.subjectId,
       subjectName: subjectModel.name,
+      subjectGroupingMainId: studentSubjectSelectionModel.subjectGroupingMainId,
+      subjectGroupingMainName: subjectGroupingMainModel.name,
       version: max(studentSubjectSelectionModel.version),
       createdAt: max(studentSubjectSelectionModel.createdAt),
       updatedAt: max(studentSubjectSelectionModel.updatedAt),
@@ -4315,6 +4422,13 @@ export async function exportStudentSubjectSelections(
     .leftJoin(
       subjectModel,
       eq(studentSubjectSelectionModel.subjectId, subjectModel.id),
+    )
+    .leftJoin(
+      subjectGroupingMainModel,
+      eq(
+        studentSubjectSelectionModel.subjectGroupingMainId,
+        subjectGroupingMainModel.id,
+      ),
     )
     .where(
       and(
@@ -4331,11 +4445,18 @@ export async function exportStudentSubjectSelections(
       studentSubjectSelectionModel.subjectSelectionMetaId,
       studentSubjectSelectionModel.subjectId,
       subjectModel.name,
+      studentSubjectSelectionModel.subjectGroupingMainId,
+      subjectGroupingMainModel.name,
     );
 
-  // Now that we have all selections across metas, compute subject ids and build maps
+  // Now that we have all selections across metas, compute subject ids and build maps.
+  // Filter null (SUBJECT_GROUP rows carry null subjectId).
   const subjectIds = [
-    ...new Set(allSelectionsForYear.map((s: any) => s.subjectId)),
+    ...new Set(
+      allSelectionsForYear
+        .map((s: any) => s.subjectId)
+        .filter((id: number | null): id is number => id != null),
+    ),
   ];
   if (subjectIds.length > 0) {
     subjects = await db
@@ -4476,8 +4597,15 @@ export async function exportStudentSubjectSelections(
 
         const pickedName = (() => {
           if (latestSel.subjectName) return latestSel.subjectName as string;
-          const subj = subjectMap.get(latestSel.subjectId);
-          return subj ? subj.name : "";
+          if (latestSel.subjectId != null) {
+            const subj = subjectMap.get(latestSel.subjectId);
+            if (subj) return subj.name;
+          }
+          // SUBJECT_GROUP fallback — the group name arrived on the same row via
+          // the subject_grouping_main LEFT JOIN.
+          if (latestSel.subjectGroupingMainName)
+            return latestSel.subjectGroupingMainName as string;
+          return "";
         })();
 
         row[metaItem.label] = pickedName;
