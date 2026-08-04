@@ -50,7 +50,11 @@ function computeCareerExportStudentStatus(student: {
   active: boolean | null;
   alumni: boolean | null;
   hasCancelledAdmission: boolean | null;
+  isNoShow?: boolean | null;
 }): string {
+  // Order mirrors the canonical CASE expression in enrolment-master-export
+  // and promotion.service — No Show is the earliest possible state.
+  if (student.isNoShow) return "No show";
   if (student.hasCancelledAdmission) return "Cancelled admission";
   if (student.alumni) return "Alumni";
   if (student.active === false) return "Inactive";
@@ -375,6 +379,7 @@ export async function findAllCareerProgressionForms(
       active: studentModel.active,
       alumni: studentModel.alumni,
       hasCancelledAdmission: studentModel.hasCancelledAdmission,
+      isNoShow: studentModel.isNoShow,
       programCourseId: studentModel.programCourseId,
     })
     .from(studentModel)
