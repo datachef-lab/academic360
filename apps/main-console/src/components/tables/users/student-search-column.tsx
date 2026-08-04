@@ -480,7 +480,9 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
       const student = row.original;
       let status: StudentStatus | null = null;
 
-      if (student.leavingDate || (!student.active && student.alumni)) {
+      if (student.isNoShow) {
+        status = "NO_SHOW";
+      } else if (student.leavingDate || (!student.active && student.alumni)) {
         status = "ALUMNI";
       } else if (student.active == null || student.alumni == null) {
         status = null;

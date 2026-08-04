@@ -48,6 +48,12 @@ export const studentModel = pgTable("students", {
     cancelledAdmissionAt: timestamp(),
     cancelledAdmissionByUserId: integer("cancelled_admission_by_user_id_fk")
         .references(() => userModel.id),
+    // Student never turned up despite admission. No auxiliary reason/date —
+    // derived-status pattern (see decisions/models/documents.md for the
+    // canonical CASE expression). Mutually exclusive with the other status
+    // flags by write-side convention: `updateStudentStatusById` clears the
+    // others when NO_SHOW is set, and sets NO_SHOW=false otherwise.
+    isNoShow: boolean("is_no_show").notNull().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => ({

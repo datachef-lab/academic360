@@ -335,9 +335,11 @@ export async function updateStudentStatusById(
       | "GRADUATED_WITH_SUPP"
       | "TC"
       | "CANCELLED_ADMISSION"
-      | "SUSPENDED";
+      | "SUSPENDED"
+      | "NO_SHOW";
     takenTransferCertificate?: boolean;
     hasCancelledAdmission?: boolean;
+    isNoShow?: boolean;
     cancelledAdmissionReason?: string | null;
     cancelledAdmissionAt?: string | null;
     cancelledAdmissionByUserId?: number | null;
@@ -348,7 +350,12 @@ export async function updateStudentStatusById(
 ) {
   const update: any = {};
 
-  // If statusOption provided, map to fields per doc
+  // If statusOption provided, map to fields per doc. NO_SHOW is mutually
+  // exclusive with every other status flag — default to clearing it, then
+  // the NO_SHOW case below re-sets it.
+  if (data.statusOption !== undefined) {
+    update.isNoShow = false;
+  }
   switch (data.statusOption) {
     case "DROPPED_OUT": {
       update.active = false;
@@ -507,6 +514,21 @@ export async function updateStudentStatusById(
       update.cancelledAdmissionAt = null;
       break;
     }
+    case "NO_SHOW": {
+      // Student never turned up despite admission. All other status flags
+      // are cleared — see the model comment on `isNoShow`.
+      update.isNoShow = true;
+      update.active = false;
+      update.alumni = false;
+      update.takenTransferCertificate = false;
+      update.hasCancelledAdmission = false;
+      update.cancelledAdmissionReason = null;
+      update.cancelledAdmissionAt = null;
+      update.cancelledAdmissionByUserId = null;
+      update.leavingDate = null;
+      update.leavingReason = null;
+      break;
+    }
   }
 
   // Allow direct overrides too (these take precedence over switch case logic)
@@ -516,6 +538,7 @@ export async function updateStudentStatusById(
     update.takenTransferCertificate = data.takenTransferCertificate;
   if (typeof data.hasCancelledAdmission === "boolean")
     update.hasCancelledAdmission = data.hasCancelledAdmission;
+  if (typeof data.isNoShow === "boolean") update.isNoShow = data.isNoShow;
   // If RFID is provided (including empty string or null), update that column
   if (Object.prototype.hasOwnProperty.call(data, "rfidNumber")) {
     update.rfidNumber = data.rfidNumber ?? null;

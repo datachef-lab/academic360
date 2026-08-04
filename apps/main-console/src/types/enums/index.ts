@@ -15,7 +15,7 @@ export type Disability =
   | "ORTHOPEDIC"
   | "OTHER";
 
-export type StudentStatus = "DROPPED_OUT" | "ALUMNI" | "ACTIVE" | "PENDING_CLEARANCE";
+export type StudentStatus = "DROPPED_OUT" | "ALUMNI" | "ACTIVE" | "PENDING_CLEARANCE" | "NO_SHOW";
 
 export type SubjectCategory = "SPECIAL" | "COMMON" | "HONOURS" | "GENERAL" | "ELECTIVE";
 

@@ -209,8 +209,11 @@ export default function StudentPage() {
     return d.toLocaleDateString("en-GB");
   };
 
-  // Initialize status option state based on actual data
+  // Initialize status option state based on actual data. Order mirrors the
+  // backend CASE expression in enrolment-master-export.service.ts and
+  // promotion.service.ts — NO_SHOW wins over every other flag.
   const getInitialStatus = () => {
+    if (data?.isNoShow) return "NO_SHOW";
     if (userData?.isSuspended) return "SUSPENDED";
     if (data?.hasCancelledAdmission) return "CANCELLED_ADMISSION";
     if (data?.takenTransferCertificate) return "TC";
@@ -255,6 +258,7 @@ export default function StudentPage() {
     data?.hasCancelledAdmission,
     data?.takenTransferCertificate,
     data?.alumni,
+    data?.isNoShow,
   ]);
 
   // Show/hide fields based on initial status on load
@@ -460,6 +464,7 @@ export default function StudentPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="REGULAR">Regular (still studying)</SelectItem>
+                  <SelectItem value="NO_SHOW">No Show</SelectItem>
                   <SelectItem value="SUSPENDED">Suspended</SelectItem>
                   <SelectItem value="DROPPED_OUT">Dropped Out (Left without completing)</SelectItem>
                   <SelectItem value="COMPLETED_LEFT">Completed & Left (Fully Graduated)</SelectItem>
