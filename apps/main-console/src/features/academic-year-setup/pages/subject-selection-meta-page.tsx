@@ -779,13 +779,13 @@ export default function SubjectSelectionMetaPage() {
             </div>
             <div>
               <Label
-                className={addOptionSource === "ELECTIVE_SUBJECTS" ? "text-muted-foreground" : ""}
+                className={addOptionSource !== "PRIOR_SELECTION" ? "text-muted-foreground" : ""}
               >
                 Take options from
               </Label>
               <div
                 className={`mt-2 h-72 overflow-auto rounded border p-3 ${
-                  addOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
+                  addOptionSource !== "PRIOR_SELECTION" ? "bg-muted/40" : ""
                 }`}
               >
                 {sourceMetaChoicesFor(null, addSourceMetaIds).length === 0 ? (
@@ -797,7 +797,7 @@ export default function SubjectSelectionMetaPage() {
                     <div key={m.id} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         id={`add-src-${m.id}`}
-                        disabled={addOptionSource === "ELECTIVE_SUBJECTS"}
+                        disabled={addOptionSource !== "PRIOR_SELECTION"}
                         checked={addSourceMetaIds.includes(m.id)}
                         onCheckedChange={() =>
                           toggleId(m.id, addSourceMetaIds, setAddSourceMetaIds)
@@ -806,7 +806,7 @@ export default function SubjectSelectionMetaPage() {
                       <Label
                         htmlFor={`add-src-${m.id}`}
                         className={`text-sm ${
-                          addOptionSource === "ELECTIVE_SUBJECTS" ? "text-muted-foreground" : ""
+                          addOptionSource !== "PRIOR_SELECTION" ? "text-muted-foreground" : ""
                         }`}
                       >
                         {m.label}
@@ -958,13 +958,13 @@ export default function SubjectSelectionMetaPage() {
             </div>
             <div>
               <Label
-                className={editOptionSource === "ELECTIVE_SUBJECTS" ? "text-muted-foreground" : ""}
+                className={editOptionSource !== "PRIOR_SELECTION" ? "text-muted-foreground" : ""}
               >
                 Take options from
               </Label>
               <div
                 className={`mt-2 h-72 overflow-auto rounded border p-3 ${
-                  editOptionSource === "ELECTIVE_SUBJECTS" ? "bg-muted/40" : ""
+                  editOptionSource !== "PRIOR_SELECTION" ? "bg-muted/40" : ""
                 }`}
               >
                 {sourceMetaChoicesFor(editId, editSourceMetaIds).length === 0 ? (
@@ -976,7 +976,7 @@ export default function SubjectSelectionMetaPage() {
                     <div key={m.id} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         id={`edit-src-${m.id}`}
-                        disabled={editOptionSource === "ELECTIVE_SUBJECTS"}
+                        disabled={editOptionSource !== "PRIOR_SELECTION"}
                         checked={editSourceMetaIds.includes(m.id)}
                         onCheckedChange={() =>
                           toggleId(m.id, editSourceMetaIds, setEditSourceMetaIds)
@@ -985,7 +985,7 @@ export default function SubjectSelectionMetaPage() {
                       <Label
                         htmlFor={`edit-src-${m.id}`}
                         className={`text-sm ${
-                          editOptionSource === "ELECTIVE_SUBJECTS" ? "text-muted-foreground" : ""
+                          editOptionSource !== "PRIOR_SELECTION" ? "text-muted-foreground" : ""
                         }`}
                       >
                         {m.label}
