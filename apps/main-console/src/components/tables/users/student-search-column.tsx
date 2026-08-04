@@ -265,6 +265,7 @@ export interface StudentSearchType {
   specialization: Specialization | null;
   active: boolean;
   alumni: boolean;
+  isNoShow?: boolean | null;
   leavingDate: Date | null;
   avatar?: string;
 }
