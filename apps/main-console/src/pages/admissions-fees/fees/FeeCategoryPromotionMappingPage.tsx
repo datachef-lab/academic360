@@ -2186,10 +2186,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                 />
                 <AvatarFallback className="bg-slate-200 text-slate-700 text-lg">
                   {(editingItem?.promotion as { studentName?: string } | undefined)?.studentName
-                    ?.split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .slice(0, 2)
+                    ?.trim()
+                    .charAt(0)
                     .toUpperCase() || "?"}
                 </AvatarFallback>
               </Avatar>

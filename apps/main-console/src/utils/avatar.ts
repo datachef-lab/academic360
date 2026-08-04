@@ -6,6 +6,12 @@ export const getInitials = (name?: string | null): string => {
   return `${first}${last}`;
 };
 
+/** Student-avatar fallback: only the first letter of the name (e.g. "KRISHNA GOYAL" -> "K"). */
+export const getFirstInitial = (name?: string | null): string => {
+  if (!name?.trim()) return "U";
+  return name.trim().charAt(0).toUpperCase();
+};
+
 export const getColorFromName = (name?: string | null): string => {
   if (!name) return "bg-gray-400";
   const colors = [

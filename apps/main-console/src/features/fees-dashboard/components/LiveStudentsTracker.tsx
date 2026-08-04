@@ -60,11 +60,7 @@ export function LiveStudentsTracker() {
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-[#ede9fe] text-xs font-semibold text-[#1a1a1a]">
-                          {student.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .slice(0, 2)}
+                          {student.name.trim().charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>

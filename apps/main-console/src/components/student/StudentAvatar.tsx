@@ -2,7 +2,7 @@ import React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { getColorFromName, getInitials } from "@/utils/avatar";
+import { getColorFromName, getFirstInitial } from "@/utils/avatar";
 
 type Props = React.ComponentPropsWithoutRef<typeof Avatar> & {
   uid?: string | null;
@@ -45,7 +45,7 @@ export function StudentAvatar({ uid, name, size = "md", className, ...props }: P
           bgColor,
         )}
       >
-        {getInitials(name ?? undefined)}
+        {getFirstInitial(name ?? undefined)}
       </AvatarFallback>
     </Avatar>
   );

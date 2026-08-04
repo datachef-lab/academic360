@@ -57,11 +57,7 @@ export const CandidateInfoCard: React.FC<Props> = ({
             <Avatar className="w-16 h-16 border-2 border-purple-300 shadow-md">
               <AvatarImage src={studentAvatarUrl(candidate.uid)} alt={candidate.name} />
               <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-400 text-white font-bold text-lg">
-                {candidate.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()}
+                {candidate.name.trim().charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
 

@@ -26,10 +26,9 @@ function hashName(input: string): number {
 
 function initialsFromName(name?: string | null): string {
   if (!name) return "S";
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
-  return `${first}${last}`.toUpperCase() || "S";
+  const trimmed = name.trim();
+  if (!trimmed) return "S";
+  return trimmed.charAt(0).toUpperCase();
 }
 
 function colorFromName(name?: string | null): string {

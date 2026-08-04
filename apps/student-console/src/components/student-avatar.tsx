@@ -33,11 +33,9 @@ function hashName(name: string): number {
 
 function initialsFromName(name?: string | null): string {
   if (!name) return "ST";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return "ST";
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
-  return `${first}${last}`.toUpperCase() || "ST";
+  const trimmed = name.trim();
+  if (!trimmed) return "ST";
+  return trimmed.charAt(0).toUpperCase();
 }
 
 function colorFromName(name?: string | null): string {
