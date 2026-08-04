@@ -43,9 +43,15 @@ interface MetaView {
    * the student's OWN earlier picks, so the usual uniqueness rules must not
    * apply to them — see `optionsForMeta`.
    */
-  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION" | "SUBJECT_GROUP";
   /** PRIOR_SELECTION only: the metas whose live picks feed this slot. */
   sourceMetaIds: number[];
+  /**
+   * SUBJECT_GROUP only: option name → group id. Kept alongside subjectIdByName
+   * so the existing `subjectIdByName` map (subject-keyed) stays untouched for
+   * subject-based sources.
+   */
+  subjectGroupingMainIdByName?: Record<string, number>;
 }
 
 const romanMap: Record<string, string> = {
@@ -73,13 +79,15 @@ function toMetaViews(perMetaOptions: PerMetaOptionsDto[]): MetaView[] {
     .map((m) => {
       const options: string[] = [];
       const subjectIdByName: Record<string, number> = {};
+      const subjectGroupingMainIdByName: Record<string, number> = {};
       const autoAssignSubjects: string[] = [];
       for (const o of m.options ?? []) {
         if (!o?.subjectName) continue;
-        if (!(o.subjectName in subjectIdByName)) {
-          subjectIdByName[o.subjectName] = o.subjectId;
-          options.push(o.subjectName);
-        }
+        if (options.includes(o.subjectName)) continue;
+        options.push(o.subjectName);
+        if (o.subjectId != null) subjectIdByName[o.subjectName] = o.subjectId;
+        if (o.subjectGroupingMainId != null)
+          subjectGroupingMainIdByName[o.subjectName] = o.subjectGroupingMainId;
         if (o.autoAssign && !autoAssignSubjects.includes(o.subjectName)) {
           autoAssignSubjects.push(o.subjectName);
         }
@@ -92,6 +100,7 @@ function toMetaViews(perMetaOptions: PerMetaOptionsDto[]): MetaView[] {
         semesters: [...new Set((m.classNames ?? []).map(extractSemesterRoman))].filter(Boolean),
         options,
         subjectIdByName,
+        subjectGroupingMainIdByName,
         autoAssignSubjects,
         optionSource: m.optionSource ?? "ELECTIVE_SUBJECTS",
         sourceMetaIds: m.sourceMetaIds ?? [],
@@ -224,7 +233,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
               ((sel.subjectSelectionMeta as Record<string, unknown>)?.id as number | undefined);
             const subjectName =
               (sel.subjectName as string | undefined) ??
-              ((sel.subject as Record<string, unknown>)?.name as string | undefined);
+              ((sel.subject as Record<string, unknown>)?.name as string | undefined) ??
+              // SUBJECT_GROUP selections carry the group's name instead of a subject.
+              ((sel.subjectGroupingMain as Record<string, unknown>)?.name as string | undefined);
             if (!metaId || !subjectName) continue;
             (savedByMeta[metaId] ??= []).push(subjectName);
           }
@@ -491,6 +502,12 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
       // AEC is unfiltered: it may repeat elsewhere and has no peer rules applied.
       if (v.code === "AEC") return convertToComboboxData(v.options);
+      // SUBJECT_GROUP options are already backend-filtered (subject type +
+      // meta semesters + has-elective-papers). No client-side category or
+      // restricted-grouping check applies — groups aren't papers. No global
+      // exclude either, because groups don't collide with subject picks in
+      // other metas (they live in different namespaces).
+      if (v.optionSource === "SUBJECT_GROUP") return convertToComboboxData(v.options);
       // PRIOR_SELECTION metas (Minor 3/4) carry their own uniqueness rule.
       //
       // Their options ARE the student's Minor 1/2 picks, so the normal global
@@ -747,6 +764,20 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       for (let s = 0; s < slots; s++) {
         const subjectName = selections[v.metaId]?.[s];
         if (!subjectName) continue;
+        // SUBJECT_GROUP picks resolve to a subject-group id, not a subject id.
+        if (v.optionSource === "SUBJECT_GROUP") {
+          const groupId = v.subjectGroupingMainIdByName?.[subjectName];
+          if (!groupId) continue;
+          selectionsToSave.push({
+            studentId: student.id,
+            session: { id: currentSession.id },
+            subjectSelectionMeta: { id: v.metaId },
+            subjectGroupingMain: { id: groupId, name: subjectName },
+            createdBy: 1, // TODO: Get actual admin user ID
+            reason: reason || "Admin update",
+          });
+          continue;
+        }
         // A PRIOR_SELECTION slot can now offer a subject that was only just
         // chosen in its source dropdown, so it may not be in this meta's own
         // server-built map yet. Fall back to any other meta's map — subject

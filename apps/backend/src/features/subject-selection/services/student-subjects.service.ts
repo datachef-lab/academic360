@@ -24,6 +24,9 @@ import {
   paperModel,
   subjectModel,
   subjectTypeModel,
+  subjectGroupingMainModel,
+  subjectGroupingSubjectModel,
+  subjectGroupingProgramCourseModel,
 } from "@repo/db/schemas/models/course-design";
 import { promotionModel } from "@repo/db/schemas/models/batches";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
@@ -437,6 +440,8 @@ export async function findSubjectsSelections(studentId: number) {
       studentId,
       subjectSelectionMetas,
       studentSubjectsSelection,
+      foundProgramCourse?.id,
+      registrationAyId,
     );
     // console.log("[subject-selection] metas resolved ->", {
     //   academicYearId: foundAcademicYear?.id,
@@ -642,7 +647,7 @@ async function findHierarchy(studentId: number) {
 export interface PerMetaOptions {
   metaId: number;
   metaLabel: string;
-  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION" | "SUBJECT_GROUP";
   /**
    * The meta's subject-type code (MN / IDC / AEC / CVAC). The forms key their
    * restricted-grouping rules off this, so it has to travel with the options.
@@ -662,9 +667,19 @@ export interface PerMetaOptions {
   /** PRIOR_SELECTION only: the metas this one draws its options from. */
   sourceMetaIds: number[];
   options: {
-    subjectId: number;
+    /**
+     * The subject picked. Null for SUBJECT_GROUP options — those key on
+     * `subjectGroupingMainId` instead. Exactly one of subjectId /
+     * subjectGroupingMainId is set per option.
+     */
+    subjectId: number | null;
     subjectName: string;
     subjectCode: string | null;
+    /**
+     * SUBJECT_GROUP only: the group picked. Storage keys on this rather than
+     * subjectId — see student_subject_selections.subject_grouping_main_id_fk.
+     */
+    subjectGroupingMainId: number | null;
     /** Present for ELECTIVE_SUBJECTS (the paper's semester); null otherwise. */
     classId: number | null;
     className: string | null;
@@ -692,11 +707,21 @@ export interface PerMetaOptions {
  * selected under the configured source metas (e.g. Minor 5 offers only what the
  * student picked in Minor 1 / Minor 2). No eligibility re-filtering — those
  * subjects were already validated when they were chosen.
+ *
+ * SUBJECT_GROUP: the meta's options are the subject groups
+ * (subject_grouping_main) whose subjectType matches the meta's subjectTypeId
+ * AND that contain at least one elective (isOptional=true) paper for the
+ * student's programCourse + registration AY in the meta's classes. The whole
+ * group is the terminal selection — each option carries `subjectGroupingMainId`
+ * (subjectId is null). No 12th-board / restricted-grouping paper-level
+ * eligibility is applied; the "has an elective paper" filter is the whole gate.
  */
 async function buildPerMetaOptions(
   studentId: number,
   metas: SubjectSelectionMetaDto[],
   studentSubjectsSelection: { subjectType: any; paperOptions: any[] }[],
+  programCourseId: number | null | undefined,
+  registrationAyId: number | null | undefined,
 ): Promise<PerMetaOptions[]> {
   // Prior selections are only needed if some meta actually asks for them.
   const priorMetas = metas.filter(
@@ -774,6 +799,83 @@ async function buildPerMetaOptions(
     }
   }
 
+  // SUBJECT_GROUP prefetch — one query per (subjectTypeId, classIds) key,
+  // batched. Groups must be linked to the student's program course AND have
+  // at least one elective paper matching the meta's semesters. Returns groups
+  // deduplicated per key so a single meta can render N groups without extra
+  // per-meta round-trips.
+  const groupMetas = metas.filter(
+    (m) => (m as any).optionSource === "SUBJECT_GROUP",
+  );
+  type GroupOption = {
+    subjectGroupingMainId: number;
+    subjectGroupingMainName: string;
+    subjectGroupingMainCode: string | null;
+  };
+  const groupsByKey = new Map<string, GroupOption[]>();
+  const makeGroupKey = (subjectTypeId: number | null, classIds: number[]) =>
+    `${subjectTypeId ?? 0}|${[...classIds].sort((a, b) => a - b).join(",")}`;
+  if (groupMetas.length > 0 && programCourseId && registrationAyId) {
+    for (const meta of groupMetas) {
+      const metaSubjectTypeId = (meta.subjectType as any)?.id ?? null;
+      const metaClassIds = (meta.forClasses ?? [])
+        .map((c) => c?.class?.id)
+        .filter((v): v is number => typeof v === "number");
+      if (!metaSubjectTypeId || metaClassIds.length === 0) continue;
+      const key = makeGroupKey(metaSubjectTypeId, metaClassIds);
+      if (groupsByKey.has(key)) continue;
+      const rows = await db
+        .selectDistinct({
+          id: subjectGroupingMainModel.id,
+          name: subjectGroupingMainModel.name,
+          code: subjectGroupingMainModel.code,
+        })
+        .from(subjectGroupingMainModel)
+        .innerJoin(
+          subjectGroupingProgramCourseModel,
+          eq(
+            subjectGroupingProgramCourseModel.subjectGroupingMainId,
+            subjectGroupingMainModel.id,
+          ),
+        )
+        .innerJoin(
+          subjectGroupingSubjectModel,
+          eq(
+            subjectGroupingSubjectModel.subjectGroupingMainId,
+            subjectGroupingMainModel.id,
+          ),
+        )
+        .innerJoin(
+          paperModel,
+          eq(paperModel.subjectId, subjectGroupingSubjectModel.subjectId),
+        )
+        .where(
+          and(
+            eq(subjectGroupingMainModel.isActive, true),
+            eq(subjectGroupingMainModel.subjectTypeId, metaSubjectTypeId),
+            eq(
+              subjectGroupingProgramCourseModel.programCourseId,
+              programCourseId,
+            ),
+            eq(paperModel.isOptional, true),
+            eq(paperModel.programCourseId, programCourseId),
+            eq(paperModel.academicYearId, registrationAyId),
+            eq(paperModel.subjectTypeId, metaSubjectTypeId),
+            inArray(paperModel.classId, metaClassIds),
+          ),
+        )
+        .orderBy(asc(subjectGroupingMainModel.name));
+      groupsByKey.set(
+        key,
+        rows.map((r) => ({
+          subjectGroupingMainId: r.id,
+          subjectGroupingMainName: r.name,
+          subjectGroupingMainCode: r.code,
+        })),
+      );
+    }
+  }
+
   return metas.map((meta): PerMetaOptions => {
     const optionSource =
       ((meta as any).optionSource as PerMetaOptions["optionSource"]) ??
@@ -810,6 +912,7 @@ async function buildPerMetaOptions(
             subjectId: s.subjectId,
             subjectName: s.subjectName,
             subjectCode: s.subjectCode,
+            subjectGroupingMainId: null,
             classId: null,
             className: null,
             paperId: null,
@@ -818,6 +921,25 @@ async function buildPerMetaOptions(
           });
         }
       }
+      return { ...metaCommon, options };
+    }
+
+    if (optionSource === "SUBJECT_GROUP") {
+      const metaSubjectTypeId = (meta.subjectType as any)?.id ?? null;
+      const key = makeGroupKey(metaSubjectTypeId, classIds);
+      const options: PerMetaOptions["options"] = (
+        groupsByKey.get(key) ?? []
+      ).map((g) => ({
+        subjectId: null,
+        subjectName: g.subjectGroupingMainName,
+        subjectCode: g.subjectGroupingMainCode,
+        subjectGroupingMainId: g.subjectGroupingMainId,
+        classId: null,
+        className: null,
+        paperId: null,
+        // Group picks are always explicit student choices, never auto-assigned.
+        autoAssign: false,
+      }));
       return { ...metaCommon, options };
     }
 
@@ -843,6 +965,7 @@ async function buildPerMetaOptions(
         subjectId: p?.subject?.id,
         subjectName: p?.subject?.name,
         subjectCode: p?.subject?.code ?? null,
+        subjectGroupingMainId: null,
         classId,
         className: p?.class?.name ?? null,
         paperId: p?.id ?? null,

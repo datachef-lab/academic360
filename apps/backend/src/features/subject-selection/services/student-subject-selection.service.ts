@@ -12,6 +12,7 @@ import {
   streamModel,
   subjectTypeModel,
   programCourseModel,
+  subjectGroupingMainModel,
 } from "@repo/db/schemas/models/course-design";
 import { academicYearModel } from "@repo/db/schemas/models/academics";
 import { classModel } from "@repo/db/schemas/models/academics/class.model";
@@ -45,7 +46,15 @@ export type CreateStudentSubjectSelectionDtoInput = {
   studentId: number;
   session: { id: number };
   subjectSelectionMeta: { id: number };
-  subject: { id: number };
+  /**
+   * Exactly one of `subject` or `subjectGroupingMain` must be provided.
+   * SUBJECT_GROUP option-source metas set `subjectGroupingMain`; every other
+   * source sets `subject`. The DB CHECK constraint
+   * `student_subject_selections_subject_xor_group_check` enforces the same
+   * invariant at the storage layer.
+   */
+  subject?: { id: number };
+  subjectGroupingMain?: { id: number };
   // Versioning fields
   createdBy?: number; // User ID who created this (student/admin)
   changeReason?: string; // Reason for creation/change
@@ -56,7 +65,9 @@ export type StudentSubjectSelectionInput = {
   studentId: number;
   session: { id: number };
   subjectSelectionMeta: { id: number };
-  subject: { id: number; name: string };
+  /** See CreateStudentSubjectSelectionDtoInput for the subject-xor-group rule. */
+  subject?: { id: number; name: string };
+  subjectGroupingMain?: { id: number; name?: string };
 };
 
 export type UpdateStudentSubjectSelectionDtoInput =
@@ -429,23 +440,45 @@ function getNotificationMasterNameByStream(
 async function modelToDto(
   row: StudentSubjectSelectionT,
 ): Promise<StudentSubjectSelectionDto> {
-  // Fetch the joined entities for full DTO
-  const [[session], [meta], [subject]] = await Promise.all([
-    db
-      .select()
-      .from(sessionModel)
-      .where(eq(sessionModel.id, row.sessionId as number)),
-    db
-      .select()
-      .from(subjectSelectionMetaModel)
-      .where(
-        eq(subjectSelectionMetaModel.id, row.subjectSelectionMetaId as number),
-      ),
-    db
-      .select()
-      .from(subjectModel)
-      .where(eq(subjectModel.id, row.subjectId as number)),
-  ]);
+  // Fetch the joined entities for full DTO. SUBJECT_GROUP selections have
+  // subjectId=null; load the group instead. Exactly one lookup returns a row.
+  const [[session], [meta], [subject], [subjectGroupingMain]] =
+    await Promise.all([
+      db
+        .select()
+        .from(sessionModel)
+        .where(eq(sessionModel.id, row.sessionId as number)),
+      db
+        .select()
+        .from(subjectSelectionMetaModel)
+        .where(
+          eq(
+            subjectSelectionMetaModel.id,
+            row.subjectSelectionMetaId as number,
+          ),
+        ),
+      row.subjectId != null
+        ? db
+            .select()
+            .from(subjectModel)
+            .where(eq(subjectModel.id, row.subjectId as number))
+        : Promise.resolve([]),
+      (row as any).subjectGroupingMainId != null
+        ? db
+            .select({
+              id: subjectGroupingMainModel.id,
+              name: subjectGroupingMainModel.name,
+              code: subjectGroupingMainModel.code,
+            })
+            .from(subjectGroupingMainModel)
+            .where(
+              eq(
+                subjectGroupingMainModel.id,
+                (row as any).subjectGroupingMainId as number,
+              ),
+            )
+        : Promise.resolve([]),
+    ]);
 
   if (!session)
     throw new Error("Session not found for StudentSubjectSelection");
@@ -453,8 +486,10 @@ async function modelToDto(
     throw new Error(
       "SubjectSelectionMeta not found for StudentSubjectSelection",
     );
-  if (!subject)
-    throw new Error("Subject not found for StudentSubjectSelection");
+  if (!subject && !subjectGroupingMain)
+    throw new Error(
+      "Neither Subject nor Subject Group found for StudentSubjectSelection",
+    );
 
   // Fetch related data for SubjectSelectionMetaDto
   const [academicYear, subjectType, streams, forClasses] = await Promise.all([
@@ -544,7 +579,8 @@ async function modelToDto(
     studentId: row.studentId as number,
     session,
     subjectSelectionMeta,
-    subject,
+    subject: subject ?? null,
+    subjectGroupingMain: subjectGroupingMain ?? null,
     version: row.version || 1,
     parentId: row.parentId || null,
     isDeprecated: row.isDeprecated || false,
@@ -1232,11 +1268,19 @@ export async function createStudentSubjectSelection(
 export async function createStudentSubjectSelectionFromDto(
   input: CreateStudentSubjectSelectionDtoInput,
 ): Promise<StudentSubjectSelectionDto> {
+  const subjectId = input.subject?.id ?? null;
+  const subjectGroupingMainId = input.subjectGroupingMain?.id ?? null;
+  if ((subjectId == null) === (subjectGroupingMainId == null)) {
+    throw new Error(
+      "Exactly one of `subject` or `subjectGroupingMain` must be provided",
+    );
+  }
   const base: StudentSubjectSelection = {
     studentId: input.studentId,
     sessionId: input.session.id,
     subjectSelectionMetaId: input.subjectSelectionMeta.id,
-    subjectId: input.subject.id,
+    subjectId,
+    subjectGroupingMainId,
   } as StudentSubjectSelection;
   const [created] = await db
     .insert(studentSubjectSelectionModel)
@@ -1328,7 +1372,13 @@ export async function updateStudentSubjectSelectionFromDto(
   if (input.session?.id) partial.sessionId = input.session.id;
   if (input.subjectSelectionMeta?.id)
     partial.subjectSelectionMetaId = input.subjectSelectionMeta.id;
-  if (input.subject?.id) partial.subjectId = input.subject.id;
+  if (input.subject?.id) {
+    partial.subjectId = input.subject.id;
+    partial.subjectGroupingMainId = null;
+  } else if (input.subjectGroupingMain?.id) {
+    partial.subjectGroupingMainId = input.subjectGroupingMain.id;
+    partial.subjectId = null;
+  }
   return await updateStudentSubjectSelection(id, partial);
 }
 
@@ -1559,7 +1609,10 @@ export async function createStudentSubjectSelectionsWithValidation(
       };
 
       console.log("✅ Enriched selection:", {
-        subject: selection.subject.name,
+        subject:
+          selection.subject?.name ??
+          selection.subjectGroupingMain?.name ??
+          "(group)",
         metaId: meta.id,
         metaLabel: meta.label,
         subjectType: subjectType?.code,
@@ -1596,7 +1649,8 @@ export async function createStudentSubjectSelectionsWithValidation(
       studentId: selection.studentId,
       sessionId: selection.session.id,
       subjectSelectionMetaId: selection.subjectSelectionMeta.id,
-      subjectId: selection.subject.id,
+      subjectId: selection.subject?.id ?? null,
+      subjectGroupingMainId: selection.subjectGroupingMain?.id ?? null,
       version: 1,
       parentId: null, // No parent for initial version
       isDeprecated: false,
@@ -2207,7 +2261,8 @@ export async function updateStudentSubjectSelectionsWithValidation(
       studentId: selection.studentId,
       sessionId: selection.session.id,
       subjectSelectionMetaId: selection.subjectSelectionMeta.id,
-      subjectId: selection.subject.id,
+      subjectId: selection.subject?.id ?? null,
+      subjectGroupingMainId: selection.subjectGroupingMain?.id ?? null,
       version: nextVersion,
       parentId: originalSelection?.id || null, // Link to original/first entry
       isDeprecated: false,
@@ -3112,24 +3167,29 @@ export async function updateStudentSubjectSelectionsEfficiently(
   for (const newSelection of selections) {
     const metaId = newSelection.subjectSelectionMeta.id;
     const currentSelection = currentSelectionsMap.get(metaId);
+    const newSubjectId = newSelection.subject?.id ?? null;
+    const newGroupId = newSelection.subjectGroupingMain?.id ?? null;
+    const newLabel =
+      newSelection.subject?.name ??
+      newSelection.subjectGroupingMain?.name ??
+      "(unnamed)";
 
     if (!currentSelection) {
       // New selection (metaId not in current selections)
-      console.log(
-        `🆕 New selection for metaId ${metaId}: ${newSelection.subject.name}`,
-      );
+      console.log(`🆕 New selection for metaId ${metaId}: ${newLabel}`);
       changedSelections.push(newSelection);
-    } else if (currentSelection.subjectId !== newSelection.subject.id) {
-      // Changed selection (different subject)
+    } else if (
+      currentSelection.subjectId !== newSubjectId ||
+      (currentSelection as any).subjectGroupingMainId !== newGroupId
+    ) {
+      // Changed selection (different subject or different group)
       console.log(
-        `🔄 Changed selection for metaId ${metaId}: ${currentSelection.subjectId} -> ${newSelection.subject.id}`,
+        `🔄 Changed selection for metaId ${metaId}: subject ${currentSelection.subjectId}→${newSubjectId}, group ${(currentSelection as any).subjectGroupingMainId}→${newGroupId}`,
       );
       changedSelections.push(newSelection);
     } else {
       // Unchanged selection
-      console.log(
-        `✅ Unchanged selection for metaId ${metaId}: ${newSelection.subject.name}`,
-      );
+      console.log(`✅ Unchanged selection for metaId ${metaId}: ${newLabel}`);
       unchangedSelections.push(currentSelection);
     }
   }
@@ -3548,10 +3608,13 @@ export async function updateStudentSubjectSelectionsEfficiently(
         .from(subjectTypeModel)
         .where(eq(subjectTypeModel.id, meta.subjectTypeId));
 
+      // SUBJECT_GROUP selections have subjectId=null; this enrichment path
+      // is only reached by subject-based flows, so an unmatched lookup is
+      // acceptable (returns undefined; fields below fall back to defaults).
       const [subject] = await db
         .select()
         .from(subjectModel)
-        .where(eq(subjectModel.id, selection.subjectId));
+        .where(eq(subjectModel.id, selection.subjectId ?? -1));
 
       const classes = await db
         .select({
@@ -3581,7 +3644,7 @@ export async function updateStudentSubjectSelectionsEfficiently(
           forClasses: classes.map((c) => c.class).filter(Boolean),
         },
         subject: {
-          id: selection.subjectId,
+          id: selection.subjectId ?? 0,
           name: subject?.name || "",
         },
       };
@@ -3641,7 +3704,8 @@ export async function updateStudentSubjectSelectionsEfficiently(
       studentId: changedSelection.studentId,
       sessionId: changedSelection.session.id,
       subjectSelectionMetaId: changedSelection.subjectSelectionMeta.id,
-      subjectId: changedSelection.subject.id,
+      subjectId: changedSelection.subject?.id ?? null,
+      subjectGroupingMainId: changedSelection.subjectGroupingMain?.id ?? null,
       version: nextVersion,
       parentId: parentId, // Always point to the original/first entry
       isDeprecated: false,

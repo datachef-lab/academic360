@@ -84,11 +84,12 @@ function sentenceCaseClass(name: string): string {
 }
 
 /** Where a meta's student options come from (mirrors the backend enum). */
-type OptionSource = "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+type OptionSource = "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION" | "SUBJECT_GROUP";
 
 const OPTION_SOURCE_LABEL: Record<OptionSource, string> = {
   ELECTIVE_SUBJECTS: "Elective subjects",
   PRIOR_SELECTION: "Student's earlier selections",
+  SUBJECT_GROUP: "Subject group",
 };
 
 const OPTION_SOURCE_HELP: Record<OptionSource, string> = {
@@ -96,6 +97,8 @@ const OPTION_SOURCE_HELP: Record<OptionSource, string> = {
     "Students choose from the elective subjects offered for their course in the selected semesters.",
   PRIOR_SELECTION:
     "Students choose only from what they already selected in the settings ticked alongside (e.g. offer Minor 5 from their Minor 1 / Minor 2 choices).",
+  SUBJECT_GROUP:
+    "Students choose from the subject groups configured for this subject type that have at least one elective paper in the selected semesters.",
 };
 
 export default function SubjectSelectionMetaPage() {
