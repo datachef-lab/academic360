@@ -3174,7 +3174,6 @@ export async function downloadFeeStudentMappings(
       Student: stdUser.name,
       UID: studentModel.uid,
       "Student Status": sql<string>`CASE
-        WHEN COALESCE(${studentModel.isNoShow}, false) = true THEN 'No Show'
         WHEN COALESCE(${stdUser.isActive}, true) = true
           AND COALESCE(${studentModel.active}, true) = true
           AND COALESCE(${stdUser.isSuspended}, false) = false
