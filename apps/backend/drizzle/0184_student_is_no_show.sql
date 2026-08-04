@@ -1,0 +1,1 @@
+ALTER TABLE "students" ADD COLUMN "is_no_show" boolean DEFAULT false NOT NULL;
