@@ -3,9 +3,11 @@ import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import {
   getBatchReceipts,
   getBatchReceiptScope,
+  getLedgerForStudent,
   postBatchReceipt,
   postBatchReceiptGenerate,
   postLedgerCollected,
+  postPromotionCountForScope,
   putBatchReceipt,
   putBatchReceiptMode,
   deleteBatchReceiptById,
@@ -17,6 +19,9 @@ router.use(verifyJWT);
 
 router.get("/", getBatchReceipts);
 router.post("/", postBatchReceipt);
+
+// Live promotion-count for the create/edit dialog — before any batch exists.
+router.post("/promotion-count", postPromotionCountForScope);
 router.put("/:id", putBatchReceipt);
 router.delete("/:id", deleteBatchReceiptById);
 
@@ -28,6 +33,9 @@ router.put("/:id/mode", putBatchReceiptMode);
 
 // Top-up for promotions created after the first generation.
 router.post("/:id/generate", postBatchReceiptGenerate);
+
+// All ledger rows for a given student (the console's Student Ledger page).
+router.get("/ledger/student/:studentId", getLedgerForStudent);
 
 // Distribution.
 router.post("/ledger/:ledgerId/collect", postLedgerCollected);

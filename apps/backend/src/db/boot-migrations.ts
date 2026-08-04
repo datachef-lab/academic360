@@ -26,6 +26,8 @@ import {
 } from "@/features/academics/services/document.service.js";
 import { runIdCardLedgerBackfill } from "@/features/documents/services/idcard-ledger-backfill.service.js";
 import { runCuRegUploadLedgerBackfill } from "@/features/documents/services/cureg-upload-ledger-backfill.service.js";
+import { runTempAdmitCardLedgerBackfill } from "@/features/documents/services/temp-admit-card-ledger-backfill.service.js";
+import { runCuRegMissingUploadsBackfill } from "@/features/documents/services/cureg-missing-uploads-backfill.service.js";
 import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
 
@@ -138,6 +140,26 @@ const MIGRATIONS: Migration[] = [
     // cu_registration_document_uploads, so re-deriving them is always correct.
     name: "cureg-upload-ledger-backfill",
     run: async () => runCuRegUploadLedgerBackfill(),
+  },
+  {
+    // Projects `temp_admit_card_distributions` into `document_batch_receipts` +
+    // `document_ledger` — the exam admit card flow was the last of the five
+    // documents (per decisions/models/documents.md) still keeping its own
+    // private record. State-based via a new document_ledger_id_fk back-link
+    // column on temp; live writes on either side keep both tables in step.
+    name: "temp-admit-card-ledger-backfill",
+    run: async () => runTempAdmitCardLedgerBackfill(),
+  },
+  {
+    // Adds PENDING document_ledger rows for CU-registration uploads a student
+    // was REQUIRED to submit but hasn't — so the passbook shows the omission
+    // instead of a silent gap. Real uploads (already handled by
+    // cureg-upload-ledger-backfill) block a duplicate PENDING insert via a
+    // NOT EXISTS on (promotion, docType, isSelfSourced=true, batch IS NULL).
+    // Scoped to the two most recent academic years to keep mutable-field
+    // evaluation (EWS status, family membership) point-in-time-honest.
+    name: "cureg-missing-uploads-backfill",
+    run: async () => runCuRegMissingUploadsBackfill(),
   },
   {
     // Seeds the library masters — branch, patron & item categories, zones,

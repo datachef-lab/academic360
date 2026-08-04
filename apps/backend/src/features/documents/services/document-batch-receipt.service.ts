@@ -13,6 +13,13 @@ import {
   classModel,
 } from "@repo/db/schemas/models/academics";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import { promotionModel } from "@repo/db/schemas/models/batches";
+import { tempAdmitCardDistributionsModel } from "@repo/db/schemas/models/exams";
+import { recomputeFeeClearanceForStudent } from "./fee-clearance.service.js";
+import {
+  DOCUMENT_TYPE_CODES,
+  getDocumentTypeIdByCode,
+} from "./document-ledger.service.js";
 
 const log = createLogger("document-batch-receipt");
 
@@ -170,6 +177,22 @@ export async function generateLedgerEntriesForBatchReceipt(
         RETURNING id`)
     ).rows as unknown as { id: number }[];
 
+    // Fee-clearance recompute for every student that received a new PENDING
+    // row. Uses one query per unique student rather than per row — the fee
+    // predicate is per-student, not per-row. Runs inside the same tx so the
+    // new rows and their final status commit atomically.
+    if (inserted.length > 0) {
+      const affected = (
+        await tx.execute(sql`
+          SELECT DISTINCT p.student_id_fk AS "studentId"
+          FROM promotions p
+          WHERE p.id IN (${sql.raw(promotionIds.join(","))})`)
+      ).rows as unknown as { studentId: number }[];
+      for (const { studentId } of affected) {
+        await recomputeFeeClearanceForStudent(studentId, tx);
+      }
+    }
+
     return {
       batchReceiptId,
       eligible: promotionIds.length,
@@ -194,13 +217,15 @@ export async function generateLedgerEntriesForBatchReceipt(
 /**
  * Turn a batch's mode on or off.
  *
- * Enabling ADMINISTRATIVE generates the ledger entries in the same transaction,
- * so the toggle and the rows it implies commit together.
- *
  * **Disabling never deletes ledger rows.** By the time a batch is switched off
  * some of its rows may already be COLLECTED, and a document that was handed to
  * a student is a fact, not a setting. Disabling only closes the distribution
  * gate; re-enabling later tops up rather than re-creating.
+ *
+ * **Ledger generation on ADMINISTRATIVE-enable is deferred.** The wiring is
+ * kept in this file (see `generateLedgerEntriesForBatchReceipt`) — the trigger
+ * is intentionally not called from here yet. Enabling the mode simply persists
+ * the flag until the enable-criteria + generation UX lands.
  */
 export async function setBatchReceiptMode(
   batchReceiptId: number,
@@ -246,16 +271,66 @@ export async function setBatchReceiptMode(
       });
     }
 
-    if (mode === "ADMINISTRATIVE" && isEnabled) {
-      const generation = await generateLedgerEntriesForBatchReceipt(
-        batchReceiptId,
-        tx,
-      );
-      return { mode, isEnabled, generation };
-    }
-
+    // TODO: when the ADMINISTRATIVE-enable criteria are finalised, restore:
+    //   if (mode === "ADMINISTRATIVE" && isEnabled) {
+    //     const generation = await generateLedgerEntriesForBatchReceipt(batchReceiptId, tx);
+    //     return { mode, isEnabled, generation };
+    //   }
     return { mode, isEnabled };
   });
+}
+
+/**
+ * Count the active promotions a hypothetical scope would resolve to.
+ *
+ * Mirrors {@link resolveBatchReceiptPromotionIds}'s rules without needing a
+ * saved batch — powers the live "N promotions match this scope" indicator in
+ * the create/edit dialog. Filters:
+ * - `promotions.is_deprecated = false` (a shift change deprecates the old row)
+ * - `users.is_active = true`
+ * - academic year → sessions → promotions (matched via `class_id_fk`)
+ * - program courses (must be non-empty; otherwise scope is undefined and we
+ *   return 0 rather than "all")
+ *
+ * `appear_type_id_fk` is intentionally not filtered — the dialog doesn't set
+ * it, and applying it here would silently subset the count against a filter
+ * the user cannot see.
+ */
+export async function computePromotionCountForScope(
+  scope: {
+    academicYearId: number | null;
+    classId: number | null;
+    programCourseIds: number[];
+  },
+  executor: Executor = db,
+): Promise<number> {
+  if (
+    !scope.academicYearId ||
+    !scope.classId ||
+    scope.programCourseIds.length === 0
+  ) {
+    return 0;
+  }
+  const ids = [...new Set(scope.programCourseIds.map(Number))].filter(
+    Number.isFinite,
+  );
+  if (ids.length === 0) return 0;
+
+  const rows = (
+    await executor.execute(sql`
+      SELECT count(*)::int AS "count"
+      FROM promotions p
+      JOIN sessions se ON se.id = p.session_id_fk
+      JOIN students s  ON s.id = p.student_id_fk
+      JOIN users u     ON u.id = s.user_id_fk
+      WHERE se.academic_id_fk = ${scope.academicYearId}
+        AND p.class_id_fk    = ${scope.classId}
+        AND p.program_course_id_fk IN (${sql.raw(ids.join(","))})
+        AND COALESCE(p.is_deprecated, false) = false
+        AND u.is_active = true`)
+  ).rows as unknown as { count: number }[];
+
+  return Number(rows[0]?.count ?? 0);
 }
 
 export type CreateBatchReceiptInput = {
@@ -269,14 +344,20 @@ export type CreateBatchReceiptInput = {
   availableFromDate?: Date | null;
   documentsReceivedBy?: number | null;
   documentsReceivedAt?: Date | null;
+  isArchived?: boolean;
 };
 
 /**
- * Create a batch receipt with both of its mode rows, disabled.
+ * Create a batch receipt with both of its mode rows.
  *
- * Both modes are created up front so the console can render two toggles without
+ * Both modes are created up front so the console renders two toggles without
  * having to distinguish "off" from "not yet created", and because the table's
  * unique on (batch, mode) makes the pair the natural shape of a batch.
+ *
+ * **EXAM_LINKED opens enabled** — a bundle exists to record the university
+ * handover, that step is part of *creating* the batch. **ADMINISTRATIVE opens
+ * disabled** — enabling it is what says "ready to distribute", a later
+ * decision.
  */
 export async function createBatchReceipt(
   input: CreateBatchReceiptInput,
@@ -299,6 +380,7 @@ export async function createBatchReceipt(
         availableFromDate: input.availableFromDate ?? null,
         documentsReceivedBy: input.documentsReceivedBy ?? null,
         documentsReceivedAt: input.documentsReceivedAt ?? null,
+        isArchived: input.isArchived ?? false,
         createdBy: userId,
         updatedBy: userId,
       })
@@ -315,7 +397,7 @@ export async function createBatchReceipt(
       {
         documentBatchReceiptModeId: batch.id,
         mode: "EXAM_LINKED" as const,
-        isEnabled: false,
+        isEnabled: true,
       },
       {
         documentBatchReceiptModeId: batch.id,
@@ -415,6 +497,9 @@ export async function updateBatchReceipt(
         ...(input.documentsReceivedAt === undefined
           ? {}
           : { documentsReceivedAt: input.documentsReceivedAt ?? null }),
+        ...(input.isArchived === undefined
+          ? {}
+          : { isArchived: Boolean(input.isArchived) }),
         updatedBy: userId,
       })
       .where(eq(documentBatchReceiptModel.id, batchReceiptId));
@@ -511,6 +596,7 @@ export type BatchReceiptListRow = {
   expectedArrivalDate: Date | null;
   availableFromDate: Date | null;
   documentsReceivedAt: Date | null;
+  isArchived: boolean;
   modes: Array<{
     mode: BatchReceiptModeName;
     isEnabled: boolean;
@@ -547,6 +633,7 @@ export async function listBatchReceipts(filters?: {
       expectedArrivalDate: documentBatchReceiptModel.expectedArrivalDate,
       availableFromDate: documentBatchReceiptModel.availableFromDate,
       documentsReceivedAt: documentBatchReceiptModel.documentsReceivedAt,
+      isArchived: documentBatchReceiptModel.isArchived,
     })
     .from(documentBatchReceiptModel)
     .innerJoin(
@@ -667,6 +754,8 @@ export async function markLedgerEntryCollected(
         id: documentLedgerModel.id,
         status: documentLedgerModel.status,
         collectedAt: documentLedgerModel.collectedAt,
+        documentTypeId: documentLedgerModel.documentTypeId,
+        promotionId: documentLedgerModel.promotionId,
       })
       .from(documentLedgerModel)
       .where(eq(documentLedgerModel.id, ledgerId))
@@ -693,6 +782,46 @@ export async function markLedgerEntryCollected(
         providedBy: collectedByUserId,
       })
       .where(eq(documentLedgerModel.id, ledgerId));
+
+    // Reverse projection to the legacy temp_admit_card_distributions table so
+    // the two systems stay in step for exam admit card handovers.
+    // - Only applies when this ledger row's document type is EXAM_ADMIT_CARD.
+    // - Dedupes on (studentId, promotionId) — same rule the admit-card service
+    //   applies to its own inserts.
+    const examAdmitCardTypeId = await getDocumentTypeIdByCode(
+      DOCUMENT_TYPE_CODES.EXAM_ADMIT_CARD,
+      tx,
+    );
+    if (current.documentTypeId === examAdmitCardTypeId) {
+      const [promo] = await tx
+        .select({ studentId: promotionModel.studentId })
+        .from(promotionModel)
+        .where(eq(promotionModel.id, current.promotionId))
+        .limit(1);
+      if (promo?.studentId != null) {
+        const [existingTemp] = await tx
+          .select({ id: tempAdmitCardDistributionsModel.id })
+          .from(tempAdmitCardDistributionsModel)
+          .where(
+            and(
+              eq(tempAdmitCardDistributionsModel.studentId, promo.studentId),
+              eq(
+                tempAdmitCardDistributionsModel.promotionId,
+                current.promotionId,
+              ),
+            ),
+          )
+          .limit(1);
+        if (!existingTemp) {
+          await tx.insert(tempAdmitCardDistributionsModel).values({
+            studentId: promo.studentId,
+            distributedByUserId: collectedByUserId,
+            promotionId: current.promotionId,
+            documentLedgerId: ledgerId,
+          });
+        }
+      }
+    }
 
     return { ledgerId, collected: true, alreadyCollected: false, collectedAt };
   });

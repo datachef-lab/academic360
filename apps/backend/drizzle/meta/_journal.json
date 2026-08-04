@@ -1275,6 +1275,34 @@
       "when": 1785606141236,
       "tag": "0183_crazy_meltdown",
       "breakpoints": true
+    },
+    {
+      "idx": 184,
+      "version": "7",
+      "when": 1785700000000,
+      "tag": "0184_docs_skipped_migration_repair",
+      "breakpoints": true
+    },
+    {
+      "idx": 185,
+      "version": "7",
+      "when": 1785825011211,
+      "tag": "0185_typical_skrulls",
+      "breakpoints": true
+    },
+    {
+      "idx": 186,
+      "version": "7",
+      "when": 1785825012211,
+      "tag": "0186_document_ledger_lookup_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 187,
+      "version": "7",
+      "when": 1785839039763,
+      "tag": "0187_temp_admit_card_ledger_fk",
+      "breakpoints": true
     }
   ]
 }

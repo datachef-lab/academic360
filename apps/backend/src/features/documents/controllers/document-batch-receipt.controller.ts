@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import {
+  computePromotionCountForScope,
   createBatchReceipt,
   deleteBatchReceipt,
   updateBatchReceipt,
@@ -10,6 +11,7 @@ import {
   setBatchReceiptMode,
   type BatchReceiptModeName,
 } from "../services/document-batch-receipt.service.js";
+import { listLedgerForStudent } from "../services/document-ledger.service.js";
 
 const MODES: BatchReceiptModeName[] = ["EXAM_LINKED", "ADMINISTRATIVE"];
 
@@ -83,6 +85,7 @@ export async function postBatchReceipt(req: Request, res: Response) {
           ? Number(req.body.documentsReceivedBy)
           : null,
         documentsReceivedAt: toDate(req.body?.documentsReceivedAt),
+        isArchived: Boolean(req.body?.isArchived),
       },
       userId,
     );
@@ -142,6 +145,9 @@ export async function putBatchReceipt(req: Request, res: Response) {
         ...(b.documentsReceivedAt === undefined
           ? {}
           : { documentsReceivedAt: toDate(b.documentsReceivedAt) }),
+        ...(b.isArchived === undefined
+          ? {}
+          : { isArchived: Boolean(b.isArchived) }),
       },
       userId,
     );
@@ -245,6 +251,59 @@ export async function getBatchReceiptScope(req: Request, res: Response) {
   } catch (error) {
     return res.status(500).json({
       message: "Failed to resolve the batch scope",
+      error: String(error),
+    });
+  }
+}
+
+/**
+ * Live count for the create/edit dialog — how many active promotions the
+ * chosen (academic year, class, program courses) tuple resolves to. Not tied
+ * to a saved batch, so it can drive the footer number as the user changes
+ * scope.
+ */
+export async function postPromotionCountForScope(req: Request, res: Response) {
+  try {
+    const academicYearId = req.body?.academicYearId
+      ? Number(req.body.academicYearId)
+      : null;
+    const classId = req.body?.classId ? Number(req.body.classId) : null;
+    const raw = req.body?.programCourseIds;
+    const programCourseIds = Array.isArray(raw) ? raw.map(Number) : [];
+
+    const count = await computePromotionCountForScope({
+      academicYearId,
+      classId,
+      programCourseIds,
+    });
+    return res.json({ payload: { count } });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to compute the promotion count",
+      error: String(error),
+    });
+  }
+}
+
+/**
+ * All document_ledger rows for a student — the "student passbook" the console
+ * shows on `/document-issuance/student-ledger`. Returns joined data
+ * (document type name, batch name, promotion year+class, provider name) so
+ * the UI renders each row in one round-trip.
+ */
+export async function getLedgerForStudent(req: Request, res: Response) {
+  try {
+    const studentId = Number(req.params.studentId);
+    if (!Number.isFinite(studentId) || studentId <= 0) {
+      return res
+        .status(400)
+        .json({ message: "A valid student id is required." });
+    }
+    const rows = await listLedgerForStudent(studentId);
+    return res.json({ payload: rows });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to load the student ledger",
       error: String(error),
     });
   }

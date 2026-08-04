@@ -25,6 +25,7 @@ export type BatchReceipt = {
   expectedArrivalDate: string | null;
   availableFromDate: string | null;
   documentsReceivedAt: string | null;
+  isArchived: boolean;
   modes: BatchReceiptModeRow[];
   ledger: { total: number; pending: number; collected: number };
 };
@@ -38,6 +39,7 @@ export type BatchReceiptUpsertBody = {
   appearTypeId?: number | null;
   expectedArrivalDate?: string | null;
   availableFromDate?: string | null;
+  isArchived?: boolean;
 };
 
 type Payload<T> = { payload: T };
@@ -103,5 +105,82 @@ export async function generateBatchReceiptEntries(id: number): Promise<LedgerGen
   const res = await axiosInstance.post<Payload<LedgerGenerationResult>>(
     `${BASE_URL}/${id}/generate`,
   );
+  return res.data.payload;
+}
+
+/**
+ * Live count for the create/edit dialog — how many active promotions the
+ * chosen scope resolves to before the batch is saved. Returns 0 for an
+ * incomplete scope (empty year / class / courses).
+ */
+export async function getPromotionCountForScope(scope: {
+  academicYearId: number | null;
+  classId: number | null;
+  programCourseIds: number[];
+}): Promise<number> {
+  const res = await axiosInstance.post<Payload<{ count: number }>>(
+    `${BASE_URL}/promotion-count`,
+    scope,
+  );
+  return res.data.payload?.count ?? 0;
+}
+
+/**
+ * One flat row per document_ledger entry for a student — the shape the
+ * Student Ledger page groups by academic year / class.
+ */
+export type StudentLedgerRow = {
+  ledgerId: number;
+  status: "UPLOADED" | "PENDING" | "ON_HOLD" | "COLLECTED" | "WAIVED" | "EXPECTED" | "NO_CHANGE";
+  isSelfSourced: boolean;
+  link: string | null;
+  collectedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  documentTypeId: number;
+  documentTypeName: string;
+  documentTypeCode: string;
+  documentTypeCategory: string | null;
+  issuingAuthority: string | null;
+  promotionId: number;
+  academicYear: string | null;
+  className: string | null;
+  batchReceiptId: number | null;
+  batchReceiptName: string | null;
+  isBatchArchived: boolean;
+  providedByUserId: number | null;
+  providedByName: string | null;
+  /** For ID_CARD rows the front-image is served via
+   *  `/api/idcard/issues/:id/front`, not stored on `link`. Null otherwise. */
+  idCardIssueId: number | null;
+};
+
+export async function getStudentLedger(studentId: number): Promise<StudentLedgerRow[]> {
+  const res = await axiosInstance.get<Payload<StudentLedgerRow[]>>(
+    `${BASE_URL}/ledger/student/${studentId}`,
+  );
+  return res.data.payload ?? [];
+}
+
+/**
+ * Mark a ledger entry as collected — PENDING → COLLECTED on the row. Backend
+ * uses the current user as `providedBy` and stamps `collectedAt` server-side.
+ * A double-tap on an already-collected row is safe: backend replies 409 with
+ * the existing collectedAt, which the caller can surface as a warning.
+ */
+export async function markLedgerEntryCollected(ledgerId: number): Promise<{
+  ledgerId: number;
+  collected: boolean;
+  alreadyCollected: boolean;
+  collectedAt: string | null;
+}> {
+  const res = await axiosInstance.post<
+    Payload<{
+      ledgerId: number;
+      collected: boolean;
+      alreadyCollected: boolean;
+      collectedAt: string | null;
+    }>
+  >(`${BASE_URL}/ledger/${ledgerId}/collect`);
   return res.data.payload;
 }

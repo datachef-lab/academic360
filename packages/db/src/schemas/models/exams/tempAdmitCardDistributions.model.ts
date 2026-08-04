@@ -2,6 +2,7 @@ import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { studentModel } from "@/schemas/models/user/student.model";
 import { userModel } from "@/schemas/models/user";
 import { promotionModel } from "@/schemas/models/batches/promotions.model";
+import { documentLedgerModel } from "@/schemas/models/documents/document-ledger.model";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 
@@ -23,6 +24,15 @@ export const tempAdmitCardDistributionsModel = pgTable(
          */
         promotionId: integer("promotion_id_fk")
             .references(() => promotionModel.id),
+        /**
+         * Back-link to the projected document_ledger row (mirrors ID card and
+         * cureg upload pattern). NULL for un-migrated legacy rows; a state-based
+         * boot backfill (`temp-admit-card-ledger-backfill`) fills it in, and the
+         * live distribute path stamps it inside the same tx as the temp insert.
+         */
+        documentLedgerId: integer("document_ledger_id_fk")
+            .references(() => documentLedgerModel.id)
+            .unique(),
         createdAt: timestamp({ withTimezone: true }).defaultNow(),
         updatedAt: timestamp({ withTimezone: true }).defaultNow(),
     },

@@ -10,7 +10,8 @@ import {
 } from "@repo/db/schemas/models/documents";
 import { idCardIssueModel } from "@repo/db/schemas/models/idcard";
 import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { recomputeFeeClearanceForStudent } from "./fee-clearance.service.js";
 
 const log = createLogger("document-ledger");
 
@@ -30,6 +31,14 @@ export const DOCUMENT_TYPE_CODES = {
   CU_REGISTRATION_PDF: "CU_REGISTRATION_PDF",
   ID_CARD: "ID_CARD",
   CU_EXAM_FORM: "CU_EXAM_FORM",
+  // CU registration UPLOAD types (student-supplied). Codes match the seed at
+  // apps/backend/src/features/academics/services/document.service.ts:130-188.
+  CLASS_XII_MARKSHEET: "CLASS_XII_MARKSHEET",
+  AADHAAR_CARD: "AADHAAR_CARD",
+  APAAR_ID_CARD: "APAAR_ID_CARD",
+  FATHER_PHOTO_ID: "FATHER_PHOTO_ID",
+  MOTHER_PHOTO_ID: "MOTHER_PHOTO_ID",
+  EWS_CERTIFICATE: "EWS_CERTIFICATE",
 } as const;
 
 export type DocumentTypeCode =
@@ -315,4 +324,114 @@ export async function deleteCuRegUploadLedgerEntriesByIds(
   for (const u of uploads) {
     await deleteCuRegUploadLedgerEntry(u.id, u.documentLedgerId, executor);
   }
+}
+
+/**
+ * Shape returned by {@link listLedgerForStudent}. Flat row per ledger entry —
+ * the caller (student-ledger UI) groups by academic year / class client-side.
+ */
+export type StudentLedgerRow = {
+  ledgerId: number;
+  status: string;
+  isSelfSourced: boolean;
+  link: string | null;
+  collectedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  documentTypeId: number;
+  documentTypeName: string;
+  documentTypeCode: string;
+  documentTypeCategory: string | null;
+  issuingAuthority: string | null;
+  promotionId: number;
+  academicYear: string | null;
+  className: string | null;
+  batchReceiptId: number | null;
+  batchReceiptName: string | null;
+  isBatchArchived: boolean;
+  providedByUserId: number | null;
+  providedByName: string | null;
+  /** ID-card ledger rows carry the S3-key photo on `id_card_issues`, not on
+   *  `document_ledger.link`. Populated only when `documentTypeCode === "ID_CARD"`
+   *  and the linked issue exists; used by the console to build the front-image
+   *  view URL (`/api/idcard/issues/:id/front`). */
+  idCardIssueId: number | null;
+};
+
+/**
+ * Every ledger entry a student holds, joined with the metadata the console
+ * needs to render each row without a second round-trip.
+ *
+ * - Promotion → session → academic year (name), promotion → class (name).
+ * - Batch receipt name is nullable — ID cards and self-uploaded rows don't
+ *   belong to a batch.
+ * - Archived batches are still returned; the frontend can hide/dim them
+ *   based on `isBatchArchived` per that flag's design.
+ * - Ordered newest-first per row so the UI can render a chronological feed
+ *   without extra sort work, but the grouper is expected to keep its own
+ *   (year, class) order.
+ */
+export async function listLedgerForStudent(
+  studentId: number,
+): Promise<StudentLedgerRow[]> {
+  if (!Number.isFinite(studentId) || studentId <= 0) return [];
+
+  // Lazy sync: bring fee-gated rows in line with the current fee balance
+  // before returning. Cheap when nothing has changed (both UPDATEs match
+  // nothing). Keeps the passbook truthful without needing every fee-write
+  // site to know about the document ledger.
+  try {
+    await recomputeFeeClearanceForStudent(studentId);
+  } catch (err) {
+    log.warn(
+      `fee-clearance recompute failed for student ${studentId}; returning stale statuses: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  const rows = (
+    await db.execute(sql`
+      SELECT
+        dl.id                             AS "ledgerId",
+        dl.status                         AS "status",
+        dl.is_self_sourced                AS "isSelfSourced",
+        dl.link                           AS "link",
+        dl.collected_at                   AS "collectedAt",
+        dl.created_at                     AS "createdAt",
+        dl.updated_at                     AS "updatedAt",
+        dt.id                             AS "documentTypeId",
+        dt.name                           AS "documentTypeName",
+        dt.code                           AS "documentTypeCode",
+        dt.category::text                 AS "documentTypeCategory",
+        dt.issuing_authority::text        AS "issuingAuthority",
+        p.id                              AS "promotionId",
+        ay.year                           AS "academicYear",
+        c.name                            AS "className",
+        dbr.id                            AS "batchReceiptId",
+        dbr.name                          AS "batchReceiptName",
+        COALESCE(dbr.is_archived, false)  AS "isBatchArchived",
+        prov.id                           AS "providedByUserId",
+        prov.name                         AS "providedByName",
+        ici.id                            AS "idCardIssueId"
+      FROM document_ledger dl
+      JOIN document_types dt              ON dt.id = dl.document_type_id_fk
+      JOIN promotions p                   ON p.id = dl.promotion_id_fk
+      JOIN sessions se                    ON se.id = p.session_id_fk
+      JOIN academic_years ay              ON ay.id = se.academic_id_fk
+      JOIN classes c                      ON c.id = p.class_id_fk
+      LEFT JOIN document_batch_receipts dbr
+                                          ON dbr.id = dl.document_batch_receipt_id_fk
+      LEFT JOIN users prov                ON prov.id = dl.provided_by_fk
+      -- ID cards: front-image key lives on id_card_issues, not on
+      -- document_ledger.link. Join to expose the issue id so the console
+      -- can build a view URL for ID_CARD rows.
+      LEFT JOIN id_card_issues ici        ON ici.document_ledger_id_fk = dl.id
+      WHERE p.student_id_fk = ${studentId}
+      ORDER BY dl.created_at DESC, dl.id DESC`)
+  ).rows as unknown as StudentLedgerRow[];
+
+  return rows.map((r) => ({
+    ...r,
+    isSelfSourced: Boolean(r.isSelfSourced),
+    isBatchArchived: Boolean(r.isBatchArchived),
+  }));
 }

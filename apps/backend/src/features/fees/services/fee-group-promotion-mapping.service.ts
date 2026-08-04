@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { onFeePaymentApplied } from "@/features/documents/services/fee-clearance.service.js";
 import {
   feeGroupPromotionMappingModel,
   createFeeGroupPromotionMappingSchema,
@@ -899,6 +900,7 @@ async function recalculateFeeStudentMappingsForPromotionMapping(
         feeStructureId: feeStudentMappingModel.feeStructureId,
         isWaivedOff: feeStudentMappingModel.isWaivedOff,
         waivedOffAmount: feeStudentMappingModel.waivedOffAmount,
+        studentId: feeStudentMappingModel.studentId,
       })
       .from(feeStudentMappingModel)
       .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, mappingId));
@@ -943,6 +945,9 @@ async function recalculateFeeStudentMappingsForPromotionMapping(
     }
 
     const chunkSize = 100;
+    // Collect unique studentIds affected so the fee-clearance recompute fires
+    // once per student (not once per mapping).
+    const affectedStudentIds = new Set<number>();
     for (let i = 0; i < relatedFeeStudentMappings.length; i += chunkSize) {
       const chunk = relatedFeeStudentMappings.slice(i, i + chunkSize);
       await Promise.all(
@@ -965,8 +970,25 @@ async function recalculateFeeStudentMappingsForPromotionMapping(
               updatedAt: new Date(),
             })
             .where(eq(feeStudentMappingModel.id, feeStudentMapping.id!));
+          if (typeof feeStudentMapping.studentId === "number") {
+            affectedStudentIds.add(feeStudentMapping.studentId);
+          }
         }),
       );
+    }
+
+    // Fee-clearance recompute per unique student. Inline for now; a large
+    // recalc (thousands of students) will block — flagged as follow-up (see
+    // Plan Feature 3 "bulk sites — inline for now, worker as Phase 2b").
+    for (const studentId of affectedStudentIds) {
+      try {
+        await onFeePaymentApplied(studentId);
+      } catch (err) {
+        console.warn(
+          `[FEE] fee-clearance recompute failed for student ${studentId} after fgpm bulk recalc:`,
+          err,
+        );
+      }
     }
 
     // Re-emit update event once recalculation completes so clients refetch

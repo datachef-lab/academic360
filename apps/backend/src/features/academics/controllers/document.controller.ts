@@ -12,6 +12,7 @@ import {
   getFile,
   scanExistingMarksheetFilesByRollNumber,
 } from "../services/document.service.js";
+import { recomputeFeeClearanceForDocumentType } from "@/features/documents/services/fee-clearance.service.js";
 
 /**
  * `code` is the internal key that application code binds to. It is derived here
@@ -269,6 +270,27 @@ export const updateDocumentMetadata = async (
       .set(parsed.data)
       .where(eq(documentTypeModel.id, +id))
       .returning();
+
+    // Fee-clearance reactive sync — only when the flag itself changed.
+    // Either direction warrants a walk: turning it ON may place existing
+    // PENDING rows on hold; turning it OFF should release stale ON_HOLD
+    // rows created under the previous rule.
+    const newFlag = parsed.data.requiresFeeClearance;
+    if (
+      typeof newFlag === "boolean" &&
+      newFlag !== existingDocument.requiresFeeClearance
+    ) {
+      try {
+        await recomputeFeeClearanceForDocumentType(+id);
+      } catch (err) {
+        // Non-fatal — the type update itself succeeded; the recompute can
+        // be re-run manually or on the next ledger read.
+        console.warn(
+          `[document-types] fee-clearance recompute failed for type ${id}`,
+          err,
+        );
+      }
+    }
 
     if (updatedDocument.length > 0) {
       res
