@@ -816,6 +816,12 @@ async function buildPerMetaOptions(
   const makeGroupKey = (subjectTypeId: number | null, classIds: number[]) =>
     `${subjectTypeId ?? 0}|${[...classIds].sort((a, b) => a - b).join(",")}`;
   if (groupMetas.length > 0 && programCourseId && registrationAyId) {
+    // Deduplicate keys first, then fire the SELECTs in parallel — sequential
+    // awaits per meta added visible latency to form loads with many metas.
+    const keysToFetch = new Map<
+      string,
+      { subjectTypeId: number; classIds: number[] }
+    >();
     for (const meta of groupMetas) {
       const metaSubjectTypeId = (meta.subjectType as any)?.id ?? null;
       const metaClassIds = (meta.forClasses ?? [])
@@ -823,57 +829,65 @@ async function buildPerMetaOptions(
         .filter((v): v is number => typeof v === "number");
       if (!metaSubjectTypeId || metaClassIds.length === 0) continue;
       const key = makeGroupKey(metaSubjectTypeId, metaClassIds);
-      if (groupsByKey.has(key)) continue;
-      const rows = await db
-        .selectDistinct({
-          id: subjectGroupingMainModel.id,
-          name: subjectGroupingMainModel.name,
-          code: subjectGroupingMainModel.code,
-        })
-        .from(subjectGroupingMainModel)
-        .innerJoin(
-          subjectGroupingProgramCourseModel,
-          eq(
-            subjectGroupingProgramCourseModel.subjectGroupingMainId,
-            subjectGroupingMainModel.id,
-          ),
-        )
-        .innerJoin(
-          subjectGroupingSubjectModel,
-          eq(
-            subjectGroupingSubjectModel.subjectGroupingMainId,
-            subjectGroupingMainModel.id,
-          ),
-        )
-        .innerJoin(
-          paperModel,
-          eq(paperModel.subjectId, subjectGroupingSubjectModel.subjectId),
-        )
-        .where(
-          and(
-            eq(subjectGroupingMainModel.isActive, true),
-            eq(subjectGroupingMainModel.subjectTypeId, metaSubjectTypeId),
-            eq(
-              subjectGroupingProgramCourseModel.programCourseId,
-              programCourseId,
-            ),
-            eq(paperModel.isOptional, true),
-            eq(paperModel.programCourseId, programCourseId),
-            eq(paperModel.academicYearId, registrationAyId),
-            eq(paperModel.subjectTypeId, metaSubjectTypeId),
-            inArray(paperModel.classId, metaClassIds),
-          ),
-        )
-        .orderBy(asc(subjectGroupingMainModel.name));
-      groupsByKey.set(
-        key,
-        rows.map((r) => ({
-          subjectGroupingMainId: r.id,
-          subjectGroupingMainName: r.name,
-          subjectGroupingMainCode: r.code,
-        })),
-      );
+      if (keysToFetch.has(key)) continue;
+      keysToFetch.set(key, {
+        subjectTypeId: metaSubjectTypeId,
+        classIds: metaClassIds,
+      });
     }
+    await Promise.all(
+      Array.from(keysToFetch.entries()).map(async ([key, filter]) => {
+        const rows = await db
+          .selectDistinct({
+            id: subjectGroupingMainModel.id,
+            name: subjectGroupingMainModel.name,
+            code: subjectGroupingMainModel.code,
+          })
+          .from(subjectGroupingMainModel)
+          .innerJoin(
+            subjectGroupingProgramCourseModel,
+            eq(
+              subjectGroupingProgramCourseModel.subjectGroupingMainId,
+              subjectGroupingMainModel.id,
+            ),
+          )
+          .innerJoin(
+            subjectGroupingSubjectModel,
+            eq(
+              subjectGroupingSubjectModel.subjectGroupingMainId,
+              subjectGroupingMainModel.id,
+            ),
+          )
+          .innerJoin(
+            paperModel,
+            eq(paperModel.subjectId, subjectGroupingSubjectModel.subjectId),
+          )
+          .where(
+            and(
+              eq(subjectGroupingMainModel.isActive, true),
+              eq(subjectGroupingMainModel.subjectTypeId, filter.subjectTypeId),
+              eq(
+                subjectGroupingProgramCourseModel.programCourseId,
+                programCourseId,
+              ),
+              eq(paperModel.isOptional, true),
+              eq(paperModel.programCourseId, programCourseId),
+              eq(paperModel.academicYearId, registrationAyId),
+              eq(paperModel.subjectTypeId, filter.subjectTypeId),
+              inArray(paperModel.classId, filter.classIds),
+            ),
+          )
+          .orderBy(asc(subjectGroupingMainModel.name));
+        groupsByKey.set(
+          key,
+          rows.map((r) => ({
+            subjectGroupingMainId: r.id,
+            subjectGroupingMainName: r.name,
+            subjectGroupingMainCode: r.code,
+          })),
+        );
+      }),
+    );
   }
 
   return metas.map((meta): PerMetaOptions => {

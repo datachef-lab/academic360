@@ -504,10 +504,24 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       if (v.code === "AEC") return convertToComboboxData(v.options);
       // SUBJECT_GROUP options are already backend-filtered (subject type +
       // meta semesters + has-elective-papers). No client-side category or
-      // restricted-grouping check applies — groups aren't papers. No global
-      // exclude either, because groups don't collide with subject picks in
-      // other metas (they live in different namespaces).
-      if (v.optionSource === "SUBJECT_GROUP") return convertToComboboxData(v.options);
+      // restricted-grouping check applies — groups aren't papers. But a group
+      // that's already picked in a SIBLING SUBJECT_GROUP meta of the SAME
+      // subject type is excluded — a student shouldn't hold "Group Finance"
+      // for both BBA Sem 5 and BBA Sem 6 as two separate picks.
+      if (v.optionSource === "SUBJECT_GROUP") {
+        const heldBySiblingGroupMetas: string[] = [];
+        for (const other of metaViews) {
+          if (other.metaId === v.metaId) continue;
+          if (other.optionSource !== "SUBJECT_GROUP") continue;
+          if (other.code !== v.code) continue; // scope to same subject type
+          for (const held of selections[other.metaId] ?? []) {
+            if (held && normVal(held) !== normVal(current)) {
+              heldBySiblingGroupMetas.push(held);
+            }
+          }
+        }
+        return convertToComboboxData(v.options, heldBySiblingGroupMetas);
+      }
       // PRIOR_SELECTION metas (Minor 3/4) carry their own uniqueness rule.
       //
       // Their options ARE the student's Minor 1/2 picks, so the normal global
