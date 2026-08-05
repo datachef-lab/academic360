@@ -238,6 +238,24 @@ export async function setBatchReceiptMode(
   generation?: LedgerGenerationResult;
 }> {
   return db.transaction(async (tx) => {
+    // Once the batch has recorded (COLLECTED/UPLOADED) ledger rows, its
+    // mode is fixed: flipping it now would break the semantics of a
+    // handover that has already happened. `notifyStudent` remains editable
+    // — that's just a preference, not scope-defining.
+    if (opts?.notifyStudent === undefined) {
+      const [{ recorded }] = (
+        await tx.execute(sql`
+          SELECT count(*)::int AS recorded FROM document_ledger
+          WHERE document_batch_receipt_id_fk = ${batchReceiptId}
+            AND status IN ('COLLECTED','UPLOADED')`)
+      ).rows as unknown as { recorded: number }[];
+      if (recorded > 0) {
+        throw new Error(
+          `This batch has ${recorded} recorded document(s) — the mode is fixed.`,
+        );
+      }
+    }
+
     const [existing] = await tx
       .select({ id: documentBatchReceiptModeModel.id })
       .from(documentBatchReceiptModeModel)
@@ -448,11 +466,19 @@ export async function updateBatchReceipt(
       throw new Error(`Document batch receipt ${batchReceiptId} not found`);
     }
 
-    const [{ ledgerRows }] = (
+    // `recorded` (COLLECTED/UPLOADED) is the stronger of two locks: once a
+    // handover exists, doc type / academic year / class are permanently
+    // fixed for the batch (they define which students that handover
+    // belongs to). PENDING-only rows are a weaker version that still
+    // prevents scope changes to keep the derivation stable.
+    const [{ ledgerRows, recorded }] = (
       await tx.execute(sql`
-        SELECT count(*)::int AS "ledgerRows" FROM document_ledger
+        SELECT
+          count(*)::int                                             AS "ledgerRows",
+          count(*) FILTER (WHERE status IN ('COLLECTED','UPLOADED'))::int AS "recorded"
+        FROM document_ledger
         WHERE document_batch_receipt_id_fk = ${batchReceiptId}`)
-    ).rows as unknown as { ledgerRows: number }[];
+    ).rows as unknown as { ledgerRows: number; recorded: number }[];
 
     if (ledgerRows > 0) {
       const changesScope =
@@ -464,7 +490,9 @@ export async function updateBatchReceipt(
 
       if (changesScope) {
         throw new Error(
-          `This batch already has ${ledgerRows} ledger entries — the document type, academic year and class can no longer be changed.`,
+          recorded > 0
+            ? `This batch has ${recorded} recorded document(s) — the document type, academic year and class are fixed.`
+            : `This batch already has ${ledgerRows} ledger entries — the document type, academic year and class can no longer be changed.`,
         );
       }
     }
@@ -505,6 +533,69 @@ export async function updateBatchReceipt(
       .where(eq(documentBatchReceiptModel.id, batchReceiptId));
 
     if (input.programCourseIds?.length) {
+      const newIds = new Set(
+        [...new Set(input.programCourseIds)].map((c) => Number(c)),
+      );
+
+      // Which courses are currently mapped, and which of them are being
+      // dropped? A course with any COLLECTED/UPLOADED ledger row cannot
+      // be removed — its removal would sever the batch from a real
+      // handover. A course whose only rows are PENDING is safe to drop:
+      // we cascade-delete those PENDING rows so no orphans remain.
+      const currentMap = await tx
+        .select({
+          programCourseId:
+            documentBatchReceiptProgramCourseModel.programCourseId,
+        })
+        .from(documentBatchReceiptProgramCourseModel)
+        .where(
+          eq(
+            documentBatchReceiptProgramCourseModel.documentBatchReceiptId,
+            batchReceiptId,
+          ),
+        );
+      const removedIds = currentMap
+        .map((r) => r.programCourseId)
+        .filter((id) => !newIds.has(id));
+
+      if (removedIds.length) {
+        // Refuse removal of any course that has recorded ledger rows.
+        const blockers = (
+          await tx.execute(sql`
+            SELECT p.program_course_id_fk AS "programCourseId",
+                   count(*)::int          AS "recorded"
+            FROM document_ledger dl
+            INNER JOIN promotions p ON p.id = dl.promotion_id_fk
+            WHERE dl.document_batch_receipt_id_fk = ${batchReceiptId}
+              AND p.program_course_id_fk IN (${sql.raw(removedIds.join(","))})
+              AND dl.status IN ('COLLECTED','UPLOADED')
+            GROUP BY p.program_course_id_fk`)
+        ).rows as unknown as {
+          programCourseId: number;
+          recorded: number;
+        }[];
+        if (blockers.length) {
+          const names = blockers
+            .map((b) => `program course ${b.programCourseId} (${b.recorded})`)
+            .join(", ");
+          throw new Error(
+            `Cannot remove course${blockers.length === 1 ? "" : "s"} with recorded handovers: ${names}. Un-collect / re-issue those first.`,
+          );
+        }
+
+        // Safe to drop — delete the PENDING ledger rows for the removed
+        // courses so no rows sit orphaned once the mapping is gone.
+        await tx.execute(sql`
+          DELETE FROM document_ledger
+          WHERE id IN (
+            SELECT dl.id FROM document_ledger dl
+            INNER JOIN promotions p ON p.id = dl.promotion_id_fk
+            WHERE dl.document_batch_receipt_id_fk = ${batchReceiptId}
+              AND p.program_course_id_fk IN (${sql.raw(removedIds.join(","))})
+              AND dl.status = 'PENDING'
+          )`);
+      }
+
       await tx
         .delete(documentBatchReceiptProgramCourseModel)
         .where(
@@ -514,9 +605,9 @@ export async function updateBatchReceipt(
           ),
         );
       await tx.insert(documentBatchReceiptProgramCourseModel).values(
-        [...new Set(input.programCourseIds)].map((programCourseId) => ({
+        [...newIds].map((programCourseId) => ({
           documentBatchReceiptId: batchReceiptId,
-          programCourseId: Number(programCourseId),
+          programCourseId,
         })),
       );
     }
@@ -602,7 +693,27 @@ export type BatchReceiptListRow = {
     isEnabled: boolean;
     notifyStudent: boolean;
   }>;
-  ledger: { total: number; pending: number; collected: number };
+  /**
+   * `total`   — every ledger row under this batch, any status.
+   * `pending` — status = PENDING.
+   * `collected` — status = COLLECTED.
+   * `recorded` — status in (COLLECTED, UPLOADED). Any row here means the
+   *              scope-narrowing dropdowns and the exam-linked toggle are
+   *              locked in the edit dialog: changing them could orphan a
+   *              real handover.
+   */
+  ledger: {
+    total: number;
+    pending: number;
+    collected: number;
+    recorded: number;
+  };
+  /**
+   * Per-program-course recorded (COLLECTED/UPLOADED) counts. Used by the
+   * edit dialog: a course whose count is > 0 has locked-in handovers and
+   * cannot be unchecked. Undefined for a course with zero recorded rows.
+   */
+  recordedByProgramCourseId: Record<number, number>;
 };
 
 /** One row per batch, with its modes, courses and live ledger counts. */
@@ -651,7 +762,7 @@ export async function listBatchReceipts(filters?: {
   if (!batches.length) return [];
   const ids = batches.map((b) => b.id);
 
-  const [courses, modes, counts] = await Promise.all([
+  const [courses, modes, counts, recordedByCourse] = await Promise.all([
     db
       .select({
         batchId: documentBatchReceiptProgramCourseModel.documentBatchReceiptId,
@@ -695,6 +806,34 @@ export async function listBatchReceipts(filters?: {
         documentLedgerModel.documentBatchReceiptId,
         documentLedgerModel.status,
       ),
+    // Per-program-course "recorded" (COLLECTED or UPLOADED) count. Joined
+    // via promotion → program_course, so a batch that spans multiple
+    // program courses gets one row per course. The edit dialog uses this
+    // to disable the checkbox for any course with recorded handovers.
+    db
+      .select({
+        batchId: documentLedgerModel.documentBatchReceiptId,
+        programCourseId: promotionModel.programCourseId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(documentLedgerModel)
+      .innerJoin(
+        promotionModel,
+        eq(promotionModel.id, documentLedgerModel.promotionId),
+      )
+      .where(
+        and(
+          inArray(documentLedgerModel.documentBatchReceiptId, ids),
+          inArray(documentLedgerModel.status, [
+            "COLLECTED" as const,
+            "UPLOADED" as const,
+          ]),
+        ),
+      )
+      .groupBy(
+        documentLedgerModel.documentBatchReceiptId,
+        promotionModel.programCourseId,
+      ),
   ]);
 
   return batches.map((b) => {
@@ -723,7 +862,16 @@ export async function listBatchReceipts(filters?: {
         collected: own
           .filter((c) => c.status === "COLLECTED")
           .reduce((a, c) => a + Number(c.count), 0),
+        recorded: own
+          .filter((c) => c.status === "COLLECTED" || c.status === "UPLOADED")
+          .reduce((a, c) => a + Number(c.count), 0),
       },
+      recordedByProgramCourseId: recordedByCourse
+        .filter((r) => r.batchId === b.id)
+        .reduce<Record<number, number>>((acc, r) => {
+          acc[r.programCourseId] = Number(r.count);
+          return acc;
+        }, {}),
     };
   });
 }

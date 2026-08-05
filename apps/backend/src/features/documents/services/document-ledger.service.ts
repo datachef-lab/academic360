@@ -349,6 +349,14 @@ export type StudentLedgerRow = {
   batchReceiptId: number | null;
   batchReceiptName: string | null;
   isBatchArchived: boolean;
+  /**
+   * True when the parent batch's ADMINISTRATIVE mode is enabled. The
+   * console gates the Collect button on this — a distribution can only
+   * happen once the batch is administratively marked "ready to hand
+   * out". Null when the row has no parent batch (self-uploads, ID cards)
+   * — those don't collect via this path.
+   */
+  batchAdministrativeEnabled: boolean | null;
   providedByUserId: number | null;
   providedByName: string | null;
   /** ID-card ledger rows carry the S3-key photo on `id_card_issues`, not on
@@ -409,6 +417,19 @@ export async function listLedgerForStudent(
         dbr.id                            AS "batchReceiptId",
         dbr.name                          AS "batchReceiptName",
         COALESCE(dbr.is_archived, false)  AS "isBatchArchived",
+        -- Whether the batch's ADMINISTRATIVE mode is on. Powers the
+        -- Collect button gate — undistributed until the batch is
+        -- administratively marked "ready". NULL when no batch (self
+        -- uploads, ID cards) — those never collect via this path.
+        CASE
+          WHEN dbr.id IS NULL THEN NULL
+          ELSE COALESCE(
+            (SELECT bm.is_enabled FROM document_batch_receipt_modes bm
+             WHERE bm.document_batch_receipt_mode_id_fk = dbr.id
+               AND bm.mode = 'ADMINISTRATIVE' LIMIT 1),
+            false
+          )
+        END                               AS "batchAdministrativeEnabled",
         prov.id                           AS "providedByUserId",
         prov.name                         AS "providedByName",
         ici.id                            AS "idCardIssueId"
@@ -433,5 +454,9 @@ export async function listLedgerForStudent(
     ...r,
     isSelfSourced: Boolean(r.isSelfSourced),
     isBatchArchived: Boolean(r.isBatchArchived),
+    batchAdministrativeEnabled:
+      r.batchAdministrativeEnabled == null
+        ? null
+        : Boolean(r.batchAdministrativeEnabled),
   }));
 }
