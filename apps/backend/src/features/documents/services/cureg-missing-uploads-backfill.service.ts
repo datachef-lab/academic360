@@ -143,9 +143,104 @@ function requiredDocs(snapshot: StudentSnapshot): DocumentTypeCode[] {
 }
 
 /**
- * Boot backfill entry. Walks current + prior 1 academic year correction
- * requests, evaluates each student's required set, and inserts PENDING
- * ledger rows for the missing ones.
+ * Per-student projector: evaluates the six required-doc predicates for
+ * one student against one academic year and writes PENDING ledger rows
+ * for whichever docs are required but not already covered.
+ *
+ * Callable from both the boot backfill (which scans in bulk) and the
+ * old-DB migration path (which processes one student at a time as their
+ * CU-reg correction request is created or found). Idempotent on the
+ * same (promotion, documentType, isSelfSourced=true, batchId=null)
+ * tuple that the backfill uses, so a repeated call after a real upload
+ * lands is a zero-write no-op.
+ *
+ * `typeIdByCode` is an optional pre-warmed cache — callers doing bulk
+ * work should build it once and pass it in; single-shot callers can
+ * omit and pay one round-trip per doc code.
+ */
+export async function ensureCuRegPendingLedgerForStudent(input: {
+  studentId: number;
+  academicYearId: number;
+  typeIdByCode?: Map<DocumentTypeCode, number>;
+}): Promise<{ inserted: number; skipped: number; noPromotion: boolean }> {
+  const summary = { inserted: 0, skipped: 0, noPromotion: false };
+
+  const resolved = await resolvePromotionForAcademicYear(
+    input.studentId,
+    input.academicYearId,
+  );
+  if (!resolved) {
+    summary.noPromotion = true;
+    return summary;
+  }
+  const promotionId = resolved.promotionId;
+
+  const snapshot = await loadStudentSnapshot(input.studentId);
+  if (!snapshot) return summary;
+
+  const cache = input.typeIdByCode ?? new Map<DocumentTypeCode, number>();
+  const resolveTypeId = async (code: DocumentTypeCode) => {
+    const hit = cache.get(code);
+    if (hit != null) return hit;
+    const id = await getDocumentTypeIdByCode(code);
+    cache.set(code, id);
+    return id;
+  };
+
+  const required = requiredDocs(snapshot);
+  for (const code of required) {
+    const documentTypeId = await resolveTypeId(code);
+    // Only insert if there is no self-sourced ledger row for this
+    // (promotion, docType) that isn't attached to a batch. This matches
+    // BOTH the PENDING row we might have already written AND the
+    // UPLOADED row a real upload produces (cureg-upload backfill leaves
+    // documentBatchReceiptId null).
+    const existing = (await db
+      .select({ id: documentLedgerModel.id })
+      .from(documentLedgerModel)
+      .where(
+        and(
+          eq(documentLedgerModel.promotionId, promotionId),
+          eq(documentLedgerModel.documentTypeId, documentTypeId),
+          eq(documentLedgerModel.isSelfSourced, true),
+          isNull(documentLedgerModel.documentBatchReceiptId),
+        ),
+      )
+      .limit(1)) as { id: number }[];
+    if (existing.length > 0) {
+      summary.skipped++;
+      continue;
+    }
+
+    await db.insert(documentLedgerModel).values({
+      documentTypeId,
+      documentBatchReceiptId: null,
+      promotionId,
+      isSelfSourced: true,
+      status: "PENDING",
+      link: null,
+      collectedAt: null,
+      providedBy: null,
+    });
+    summary.inserted++;
+  }
+
+  return summary;
+}
+
+/**
+ * Boot backfill entry. Walks EVERY cu_registration_correction_request in
+ * the DB regardless of academic year, evaluates each student's required
+ * set, and inserts PENDING ledger rows for the missing ones. Widened
+ * from "current + prior 1" to "all years" so no student is left with an
+ * invisible omission just because their request predates the cutoff.
+ *
+ * Trade-off: predicates read MUTABLE fields (belongs_to_ews, family
+ * membership) — a student who was EWS in 2023 but isn't now would get a
+ * PENDING EWS row against their old 2023 request. Acceptable because
+ * (a) real historic uploads project as UPLOADED via cureg-upload
+ * backfill and take precedence, and (b) the pending row is easily
+ * dismissed by an admin, whereas an invisible omission is worse.
  */
 export async function runCuRegMissingUploadsBackfill(): Promise<
   Record<string, unknown>
@@ -157,32 +252,17 @@ export async function runCuRegMissingUploadsBackfill(): Promise<
     typeIdByCode.set(code, await getDocumentTypeIdByCode(code));
   }
 
-  // Scope to the two most recent academic years by descending row order —
-  // matches the "current + prior" heuristic without depending on the
-  // `isCurrentYear` flag being set correctly.
-  const scopeYears = (
-    await db.execute(sql`
-    SELECT id FROM academic_years ORDER BY id DESC LIMIT 2
-  `)
-  ).rows as { id: number }[];
-  const scopeYearIds = scopeYears.map((y) => y.id);
-
-  if (scopeYearIds.length === 0) {
-    return { scanned: 0, inserted: 0, skipped: 0, note: "no academic years" };
-  }
-
   const requests = (await db
     .select({
       id: cuRegistrationCorrectionRequestModel.id,
       studentId: cuRegistrationCorrectionRequestModel.studentId,
       academicYearId: cuRegistrationCorrectionRequestModel.academicYearId,
     })
-    .from(cuRegistrationCorrectionRequestModel)
-    .where(
-      sql`${cuRegistrationCorrectionRequestModel.academicYearId} IN (${sql.raw(
-        scopeYearIds.join(","),
-      )})`,
-    )) as { id: number; studentId: number; academicYearId: number | null }[];
+    .from(cuRegistrationCorrectionRequestModel)) as {
+    id: number;
+    studentId: number;
+    academicYearId: number | null;
+  }[];
 
   let scanned = 0;
   let inserted = 0;
@@ -198,60 +278,14 @@ export async function runCuRegMissingUploadsBackfill(): Promise<
         continue;
       }
 
-      const resolved = await resolvePromotionForAcademicYear(
-        req.studentId,
-        req.academicYearId,
-      );
-      if (!resolved) {
-        skippedNoPromotion++;
-        continue;
-      }
-      const promotionId = resolved.promotionId;
-
-      const snapshot = await loadStudentSnapshot(req.studentId);
-      if (!snapshot) {
-        skipped++;
-        continue;
-      }
-
-      const required = requiredDocs(snapshot);
-
-      for (const code of required) {
-        const documentTypeId = typeIdByCode.get(code)!;
-        // Only insert if there is no self-sourced ledger row for this
-        // (promotion, docType) that isn't attached to a batch. This
-        // matches BOTH the PENDING row we might have already written AND
-        // the UPLOADED row a real upload produces (cureg-upload backfill
-        // leaves documentBatchReceiptId null).
-        const existing = (await db
-          .select({ id: documentLedgerModel.id })
-          .from(documentLedgerModel)
-          .where(
-            and(
-              eq(documentLedgerModel.promotionId, promotionId),
-              eq(documentLedgerModel.documentTypeId, documentTypeId),
-              eq(documentLedgerModel.isSelfSourced, true),
-              isNull(documentLedgerModel.documentBatchReceiptId),
-            ),
-          )
-          .limit(1)) as { id: number }[];
-        if (existing.length > 0) {
-          skipped++;
-          continue;
-        }
-
-        await db.insert(documentLedgerModel).values({
-          documentTypeId,
-          documentBatchReceiptId: null,
-          promotionId,
-          isSelfSourced: true,
-          status: "PENDING",
-          link: null,
-          collectedAt: null,
-          providedBy: null,
-        });
-        inserted++;
-      }
+      const result = await ensureCuRegPendingLedgerForStudent({
+        studentId: req.studentId,
+        academicYearId: req.academicYearId,
+        typeIdByCode,
+      });
+      if (result.noPromotion) skippedNoPromotion++;
+      inserted += result.inserted;
+      skipped += result.skipped;
     } catch (err) {
       failed++;
       log.warn(
