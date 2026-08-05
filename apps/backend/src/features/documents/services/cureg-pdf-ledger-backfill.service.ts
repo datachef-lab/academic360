@@ -104,6 +104,12 @@ export async function runCuRegPdfLedgerBackfill(): Promise<CuRegPdfLedgerBackfil
           cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
         studentId: cuRegistrationCorrectionRequestModel.studentId,
         studentUid: studentModel.uid,
+        // The PDF is generated at the moment of final submission / last
+        // edit that regenerates it — see the four live PDF paths. The
+        // request's `updatedAt` is the closest stable proxy we have to
+        // that generation moment for a historical row.
+        submissionUpdatedAt: cuRegistrationCorrectionRequestModel.updatedAt,
+        submissionCreatedAt: cuRegistrationCorrectionRequestModel.createdAt,
       })
       .from(cuRegistrationCorrectionRequestModel)
       .leftJoin(
@@ -159,10 +165,19 @@ export async function runCuRegPdfLedgerBackfill(): Promise<CuRegPdfLedgerBackfil
         // (correctionRequestId, CU_REGISTRATION_PDF); a concurrent live PDF
         // regeneration between our SELECT above and this call updates in
         // place rather than duplicating.
+        //
+        // Pass the request's updatedAt as `generatedAt` so the upload row
+        // + ledger row both stamp the actual submission moment, not the
+        // backfill's clock. Falls back to createdAt if updatedAt is null
+        // (very old rows predating the trigger). Live callers omit this
+        // arg and get defaultNow() as before.
+        const generatedAt =
+          row.submissionUpdatedAt ?? row.submissionCreatedAt ?? null;
         await recordGeneratedCuRegPdf({
           correctionRequestId: row.requestId,
           applicationNumber: row.applicationNumber,
           documentUrl: canonicalUrl,
+          generatedAt,
         });
         summary.inserted += 1;
       } catch (err) {
