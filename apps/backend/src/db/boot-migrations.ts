@@ -28,6 +28,7 @@ import { runIdCardLedgerBackfill } from "@/features/documents/services/idcard-le
 import { runCuRegUploadLedgerBackfill } from "@/features/documents/services/cureg-upload-ledger-backfill.service.js";
 import { runTempAdmitCardLedgerBackfill } from "@/features/documents/services/temp-admit-card-ledger-backfill.service.js";
 import { runCuRegMissingUploadsBackfill } from "@/features/documents/services/cureg-missing-uploads-backfill.service.js";
+import { runCuRegPdfLedgerBackfill } from "@/features/documents/services/cureg-pdf-ledger-backfill.service.js";
 import { runLedgerTimestampHeal } from "@/features/documents/services/ledger-timestamp-heal.service.js";
 import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
@@ -192,6 +193,18 @@ const MIGRATIONS: Migration[] = [
     // evaluation (EWS status, family membership) point-in-time-honest.
     name: "cureg-missing-uploads-backfill",
     run: async () => runCuRegMissingUploadsBackfill(),
+  },
+  {
+    // Backfills CU_REGISTRATION_PDF upload + ledger rows for correction
+    // requests that reached ONLINE_REGISTRATION_DONE BEFORE the
+    // `recordGeneratedCuRegPdf` helper shipped. Those PDFs were generated,
+    // uploaded to S3 and emailed to students, but were never written to
+    // cu_registration_document_uploads (so cureg-upload-ledger-backfill
+    // above had nothing to project). Reconstructs the canonical S3 URL
+    // from the deterministic path helper — no re-upload. State-based:
+    // skips any request whose upload row is already present.
+    name: "cureg-pdf-ledger-backfill",
+    run: async () => runCuRegPdfLedgerBackfill(),
   },
   {
     // Reconciles document_ledger.created_at / collected_at with the source
