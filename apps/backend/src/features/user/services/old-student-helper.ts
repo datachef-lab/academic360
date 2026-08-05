@@ -96,6 +96,7 @@ import {
 
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
 import { migrateSubjectSelectionForStudent } from "./subject-selection-migration.service.js";
+import { ensureSubjectGroupMnForStudent } from "@/features/subject-selection/services/subject-group-mn-heal.service.js";
 import { recordImportLog } from "@/utils/legacy-import-log.js";
 import { and, eq, ilike, or } from "drizzle-orm";
 
@@ -2274,6 +2275,30 @@ export async function processStudent(
         "subject-selection",
         "error",
         (e as Error)?.message || "unknown error",
+      );
+    }
+
+    // Step 11b: If this student is a BCom (H)/(G) whose registration
+    // academic year is 2023-24 or 2024-25, consolidate their newly-
+    // migrated per-semester Minor 3 subject picks into one SUBJECT_GROUP
+    // row. The per-student projector is idempotent and no-ops for
+    // students outside that cohort; failures are swallowed so a
+    // consolidation glitch never aborts the student's overall migration.
+    try {
+      if (student?.id) {
+        const result = await ensureSubjectGroupMnForStudent(student.id);
+        if (result.healed) {
+          console.log("[subject-group-mn-heal]", {
+            uid: student.uid,
+            healed: true,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn(
+        "[subject-group-mn-heal] failed for",
+        student.uid,
+        (e as Error)?.message || e,
       );
     }
   }

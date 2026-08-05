@@ -22,6 +22,7 @@ import { runStreamMismatchHeal } from "@/features/subject-selection/services/str
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
 import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
+import { runSubjectGroupMnHeal } from "@/features/subject-selection/services/subject-group-mn-heal.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -90,6 +91,18 @@ const MIGRATIONS: Migration[] = [
     // checked.
     name: "stream-mismatch-heal",
     run: async () => runStreamMismatchHeal({ commit: true }),
+  },
+  {
+    // Consolidates BCom (H)/(G) Minor 3 (Sem III-VI) subject-based
+    // selections into single SUBJECT_GROUP rows for students whose
+    // registration academic year is 2023-24 or 2024-25. Picks were
+    // synced from the old DB as per-semester per-subject rows before
+    // SUBJECT_GROUP existed (ADR 0027). Runs AFTER stream-mismatch-heal
+    // so the meta assignment is already correct. State-based (skips
+    // students who already have an active SUBJECT_GROUP row for the
+    // same meta); ambiguous / no-match cases log and skip.
+    name: "subject-group-mn-heal",
+    run: async () => runSubjectGroupMnHeal(),
   },
   {
     // Legacy fee-slab heal — re-points fee_student_mappings at the concession
