@@ -35,8 +35,10 @@ import { onFeePaymentApplied } from "@/features/documents/services/fee-clearance
 
 // Sentinel used by the legacy fresh-import path when it MANUAL-reassigns a
 // student's slab (legacy-fees-data.service.ts:820). Same value here keeps
-// audit trails consistent.
-const HEAL_APPROVAL_USER_ID = 41;
+// audit trails consistent. Exported so the heal can tell its OWN
+// MANUAL-approved reassignments apart from a real admin's edit (which it must
+// never revert).
+export const HEAL_APPROVAL_USER_ID = 41;
 
 export type SlabReassignResult =
   | {

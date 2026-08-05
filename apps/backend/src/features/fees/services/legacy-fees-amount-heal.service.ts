@@ -68,9 +68,15 @@ import { resolveLegacySlabName } from "./legacy-fees-data.service.js";
 import {
   findFeeSlabByComponentSum,
   reassignFeeStudentMappingSlab,
+  HEAL_APPROVAL_USER_ID,
 } from "./fee-student-mapping-slab-reassign.service.js";
 
-const MARKER_NAME = "legacy-fees-amount-heal";
+// Bumped to -v2 when the heal learned to resolve concession slabs directly
+// from studentfeesconcessiontab (section-less + no-installment cases, the 0017
+// Sem IV cohort). Bumping the marker makes the boot heal run ONCE MORE on the
+// next restart to repair mappings loaded before that fix, then it is
+// marker-guarded again (no repeated runs, no resets on later restarts).
+const MARKER_NAME = "legacy-fees-slab-heal-v2";
 
 export type FeeAmountHealResult = {
   skipped?: boolean;
@@ -82,6 +88,7 @@ export type FeeAmountHealResult = {
   mappingsMismatched: number;
   mappingsReassigned: number;
   mappingsUnresolved: number;
+  mappingsSkippedManual: number;
   paymentsUpdated: number;
   skippedOutOfScope: number;
   sampleReassigned: Array<{
@@ -158,6 +165,12 @@ export async function runLegacyFeesAmountHeal(
     // (parent dir is created if missing). Independent of sampleLimit, which
     // only bounds the in-result preview.
     unresolvedReportPath?: string;
+    // If set, restrict the heal to just these UIDs (a TARGETED run — used to
+    // heal a freshly-imported batch right after the import loop). A targeted
+    // run NEVER touches the global `legacy-fees-amount-heal` marker: it neither
+    // checks it (so it always runs) nor writes it (so it can't mask a later
+    // full run). The global boot heal keeps its one-shot marker semantics.
+    uids?: string[];
   } = {},
 ): Promise<FeeAmountHealResult> {
   const commit = options.commit !== false;
@@ -165,6 +178,18 @@ export async function runLegacyFeesAmountHeal(
   const sampleLimit = options.sampleLimit ?? 20;
   const progress = options.onProgress ?? (() => {});
   const unresolvedReportPath = options.unresolvedReportPath?.trim() || null;
+  // Sanitised, de-duplicated UID scope (alphanumeric codeNumbers only). Empty
+  // array or undefined => full run; a non-empty list => targeted run.
+  const scopedUids = options.uids
+    ? [
+        ...new Set(
+          options.uids
+            .map((u) => String(u ?? "").trim())
+            .filter((u) => /^[a-zA-Z0-9]+$/.test(u)),
+        ),
+      ]
+    : null;
+  const isTargeted = scopedUids != null && scopedUids.length > 0;
   const allUnresolved: UnresolvedRow[] = [];
 
   const result: FeeAmountHealResult = {
@@ -175,13 +200,24 @@ export async function runLegacyFeesAmountHeal(
     mappingsMismatched: 0,
     mappingsReassigned: 0,
     mappingsUnresolved: 0,
+    mappingsSkippedManual: 0,
     paymentsUpdated: 0,
     skippedOutOfScope: 0,
     sampleReassigned: [],
     sampleUnresolved: [],
   };
 
-  if (commit && !force) {
+  // Caller asked for a targeted run but no UID survived sanitisation — do
+  // nothing rather than silently widening to a full-DB heal.
+  if (scopedUids != null && !isTargeted) {
+    result.skipped = true;
+    result.skipReason = "no valid UIDs to heal";
+    return result;
+  }
+
+  // Marker guard applies to FULL runs only. A targeted run always executes and
+  // never reads/writes the marker (see the `uids` option doc above).
+  if (!isTargeted && commit && !force) {
     const marker = await getBootMigrationMarker(MARKER_NAME);
     if (marker) {
       result.skipped = true;
@@ -191,17 +227,24 @@ export async function runLegacyFeesAmountHeal(
   }
 
   // --- Step 1: pull all in-scope mappings from new DB in one query.
+  // A targeted run restricts to the given UIDs (already sanitised alphanumeric).
   progress("Loading new-DB mappings…");
+  const mappingUidClause = isTargeted
+    ? ` AND st.uid IN (${scopedUids.map((u) => `'${u}'`).join(",")})`
+    : "";
   const mapRes = await db.execute(
     `SELECT fsm.id                                                AS mapping_id,
             fsm.fee_structure_id_fk                               AS fee_structure_id,
             fgpm.id                                               AS fgpm_id,
+            fgpm.approval_type                                    AS fgpm_approval_type,
+            fgpm.approval_user_id_fk                              AS fgpm_approval_user_id,
             fg.fee_slab_id_fk                                     AS assigned_slab_id,
             fsl.name                                              AS assigned_slab_name,
             st.uid                                                AS uid,
             ay.year                                               AS year,
             cls.name                                              AS class_name,
             rt.name                                               AS receipt_type,
+            rt.legacy_receipt_type_id                             AS legacy_receipt_type_id,
             COALESCE(fsm.total_payable, 0)                        AS total_payable,
             fsm.amount_paid                                       AS amount_paid
      FROM fee_student_mappings fsm
@@ -214,18 +257,21 @@ export async function runLegacyFeesAmountHeal(
               ON fgpm.id = fsm.fee_group_promotion_mapping_id_fk
      LEFT JOIN fee_groups fg     ON fg.id = fgpm.fee_group_id_fk
      LEFT JOIN fee_slabs fsl     ON fsl.id = fg.fee_slab_id_fk
-     WHERE st.uid IS NOT NULL AND st.uid <> ''`,
+     WHERE st.uid IS NOT NULL AND st.uid <> ''${mappingUidClause}`,
   );
   const mappingRows = ((mapRes as any).rows ?? (mapRes as any)) as Array<{
     mapping_id: number;
     fee_structure_id: number;
     fgpm_id: number | null;
+    fgpm_approval_type: string | null;
+    fgpm_approval_user_id: number | null;
     assigned_slab_id: number | null;
     assigned_slab_name: string | null;
     uid: string;
     year: string;
     class_name: string;
     receipt_type: string;
+    legacy_receipt_type_id: number | null;
     total_payable: number | string;
     amount_paid: number | string | null;
   }>;
@@ -285,7 +331,7 @@ export async function runLegacyFeesAmountHeal(
     `SELECT spd.codeNumber AS uid,
             CONCAT(SUBSTRING(sess.sessionName, 1, 4),'-', RIGHT(sess.sessionName, 2)) AS year,
             cl.classname                                       AS class_name,
-            rt.name                                            AS receipt_type,
+            fsm.receipttype                                    AS legacy_receipt_type_id,
             inst.amount                                        AS installment_amount,
             COALESCE(csm.name, '')                             AS fee_slab
      FROM studentinstlmain inst
@@ -293,7 +339,6 @@ export async function runLegacyFeesAmountHeal(
      JOIN feesstructuremaintab   fsm ON fsm.id = inst.structid
      JOIN currentsessionmaster   sess ON sess.id = fsm.sessionid
      JOIN classes                cl  ON cl.id  = fsm.classId
-     JOIN studentfeesreceipttype rt  ON rt.id  = fsm.receipttype
      LEFT JOIN studentfeesconcessiontab sct ON (
          sct.student_id = spd.id
          AND sct.courseid = fsm.courseId
@@ -310,7 +355,7 @@ export async function runLegacyFeesAmountHeal(
       uid: string;
       year: string;
       class_name: string;
-      receipt_type: string;
+      legacy_receipt_type_id: number | string;
       installment_amount: number | string;
       fee_slab: string;
     }>,
@@ -319,14 +364,72 @@ export async function runLegacyFeesAmountHeal(
   result.irpRowsPulled = irpRows.length;
   progress(`  ${irpRows.length} IRP installments loaded`);
 
-  // --- Step 3: group IRP totals + slab per (uid, year, class, receipt_type).
+  // --- Step 2b: pull IRP concession slabs DIRECTLY (not via an installment).
+  // The installment query above can only reach a concession that hangs off a
+  // studentinstlmain row. A concession-holder IRP has not billed yet (no
+  // installment — the 0017 Sem IV case) never appears there, so their new-DB
+  // mapping stays on the default Slab F (full fee). Read the concession tab on
+  // its own so the slab is reachable independent of any installment.
+  // Section-less by design (the concession's own section can differ from the
+  // student's historicalrecord section, and no concession group spans
+  // conflicting slabs — verified in IRP).
+  const [concessionRows] = (await mysqlConnection.query(
+    `SELECT spd.codeNumber AS uid,
+            CONCAT(SUBSTRING(sess.sessionName, 1, 4),'-', RIGHT(sess.sessionName, 2)) AS year,
+            cl.classname                                       AS class_name,
+            sct.receipttypeid                                  AS legacy_receipt_type_id,
+            COALESCE(csm.name, '')                             AS fee_slab
+     FROM studentfeesconcessiontab sct
+     JOIN studentpersonaldetails spd  ON spd.id  = sct.student_id
+     JOIN currentsessionmaster   sess ON sess.id = sct.sessionid
+     JOIN classes                cl   ON cl.id   = sct.classid
+     JOIN studentfeesconcessionslab csm ON csm.id = sct.slabid
+     WHERE sess.sessionName IS NOT NULL
+       AND COALESCE(csm.name, '') <> ''
+       AND spd.codeNumber IN (${uidList})`,
+  )) as [
+    Array<{
+      uid: string;
+      year: string;
+      class_name: string;
+      legacy_receipt_type_id: number | string;
+      fee_slab: string;
+    }>,
+    unknown,
+  ];
+  progress(`  ${concessionRows.length} IRP concession rows loaded`);
+
+  // Batch key = uid | year | CLASS | legacyReceiptTypeId. The legacy
+  // receipt-type id lines up legacy "Annual Fees" (id 2) with the new
+  // "Enrolment Fee" (which the import stamped with legacy_receipt_type_id = 2)
+  // — reusing that already-correct id bridge, NOT re-comparing receipt names.
+  const batchKey = (
+    uid: unknown,
+    year: unknown,
+    className: unknown,
+    legacyReceiptTypeId: unknown,
+  ) =>
+    `${trimStr(uid)}|${trimStr(year)}|${normUpper(className)}|${trimStr(legacyReceiptTypeId)}`;
+
+  // --- Step 3: group IRP installment totals + slab per batch.
   const irpBatches = new Map<IrpBatchKey, IrpBatch>();
   for (const r of irpRows) {
-    const key = `${trimStr(r.uid)}|${trimStr(r.year)}|${normUpper(r.class_name)}|${trimStr(r.receipt_type)}`;
+    const key = batchKey(r.uid, r.year, r.class_name, r.legacy_receipt_type_id);
     const cur = irpBatches.get(key) ?? { total: 0, rawSlab: null };
     cur.total += toInt(r.installment_amount);
     if (!cur.rawSlab && trimStr(r.fee_slab)) cur.rawSlab = trimStr(r.fee_slab);
     irpBatches.set(key, cur);
+  }
+
+  // Concession slab letter per batch, from the direct read — populated even
+  // when there is no installment. All rows of a batch share one slab (verified:
+  // 0 conflicting-slab groups), so the first non-empty letter wins.
+  const concessionSlabByBatch = new Map<string, string>();
+  for (const r of concessionRows) {
+    const key = batchKey(r.uid, r.year, r.class_name, r.legacy_receipt_type_id);
+    if (!concessionSlabByBatch.has(key) && trimStr(r.fee_slab)) {
+      concessionSlabByBatch.set(key, trimStr(r.fee_slab));
+    }
   }
 
   // --- Step 4: bulk-load slab sums for internal-inconsistency detection.
@@ -380,87 +483,140 @@ export async function runLegacyFeesAmountHeal(
     }
     result.mappingsChecked += 1;
 
-    const key = `${trimStr(m.uid)}|${trimStr(m.year)}|${normUpper(m.class_name)}|${trimStr(m.receipt_type)}`;
+    // Never revert a mapping an ADMIN manually approved. The loader and this
+    // heal stamp their OWN reassignments MANUAL + approvalUserId =
+    // HEAL_APPROVAL_USER_ID (41), so those stay eligible for an idempotent
+    // re-heal; a genuine staff edit is MANUAL with a different (or null) user
+    // id — leave it exactly as the admin set it.
+    if (
+      m.fgpm_approval_type === "MANUAL" &&
+      m.fgpm_approval_user_id !== HEAL_APPROVAL_USER_ID
+    ) {
+      result.mappingsSkippedManual += 1;
+      continue;
+    }
+
+    const key = batchKey(m.uid, m.year, m.class_name, m.legacy_receipt_type_id);
     const irp = irpBatches.get(key);
-    if (!irp || irp.total <= 0) continue;
+    // The concession slab letter IRP recorded for this batch — from the
+    // installment-anchored join if present, else the section-less direct read
+    // (which exists even when IRP has raised no installment yet).
+    const concessionLetter =
+      (irp && irp.rawSlab) || concessionSlabByBatch.get(key) || null;
 
     const currentPayable = toInt(m.total_payable);
     const currentPaid = toInt(m.amount_paid);
-    // Assigned-slab sum: what total_payable SHOULD be given the current fgpm.
-    const assignedSlabSum =
-      m.assigned_slab_id != null
-        ? (slabSums.get(`${m.fee_structure_id}|${m.assigned_slab_id}`) ?? null)
-        : null;
 
-    // amount_paid is null for unpaid mappings — that's the expected shape, not
-    // a mismatch. Only demand paid == IRP when a payment has actually been
-    // recorded on the mapping.
-    const amountMatchesIrp =
-      currentPayable === irp.total &&
-      (m.amount_paid == null || currentPaid === irp.total);
-    const internallyConsistent =
-      assignedSlabSum != null && currentPayable === assignedSlabSum;
+    // === Case A: IRP has billed this batch (an installment exists). ===
+    if (irp && irp.total > 0) {
+      // Assigned-slab sum: what total_payable SHOULD be given the current fgpm.
+      const assignedSlabSum =
+        m.assigned_slab_id != null
+          ? (slabSums.get(`${m.fee_structure_id}|${m.assigned_slab_id}`) ??
+            null)
+          : null;
 
-    if (amountMatchesIrp && internallyConsistent) {
+      // amount_paid is null for unpaid mappings — that's the expected shape,
+      // not a mismatch. Only demand paid == IRP when a payment has actually
+      // been recorded on the mapping.
+      const amountMatchesIrp =
+        currentPayable === irp.total &&
+        (m.amount_paid == null || currentPaid === irp.total);
+      const internallyConsistent =
+        assignedSlabSum != null && currentPayable === assignedSlabSum;
+
+      if (amountMatchesIrp && internallyConsistent) {
+        result.mappingsMatched += 1;
+        continue;
+      }
+      result.mappingsMismatched += 1;
+
+      // Resolve the target slab. Prefer IRP's own letter (concession cases);
+      // fall back to component-sum back-solve when IRP is silent or when the
+      // letter resolves to the default "Slab F" (Admission-Fees cohort).
+      let slabName: string | null = null;
+      let resolvedBy: "slab-name" | "component-sum" = "slab-name";
+      if (concessionLetter) {
+        slabName = resolveLegacySlabName(concessionLetter, m.year);
+      }
+      if (!slabName || slabName === "Slab F") {
+        const match = await findFeeSlabByComponentSum(
+          m.fee_structure_id,
+          irp.total,
+        );
+        if (match) {
+          slabName = match.slabName;
+          resolvedBy = "component-sum";
+        } else if (concessionLetter) {
+          // IRP DID give a letter — trust it even if it resolved to Slab F
+          // (student really is on the default full-fee slab; the mismatch is
+          // amount-only, not slab-only).
+        } else {
+          slabName = null;
+        }
+      }
+
+      if (!slabName) {
+        result.mappingsUnresolved += 1;
+        const row: UnresolvedRow = {
+          uid: trimStr(m.uid),
+          year: trimStr(m.year),
+          class: trimStr(m.class_name),
+          receiptType: trimStr(m.receipt_type),
+          currentSlab: m.assigned_slab_name ?? "",
+          irpAmount: irp.total,
+          currentPayable,
+          currentPaid: m.amount_paid == null ? null : currentPaid,
+          reason: "no IRP slab letter and no unique component-sum match",
+        };
+        allUnresolved.push(row);
+        if (result.sampleUnresolved.length < sampleLimit) {
+          result.sampleUnresolved.push({
+            uid: row.uid,
+            year: row.year,
+            class: row.class,
+            receiptType: row.receiptType,
+            irpAmount: row.irpAmount,
+            currentPayable: row.currentPayable,
+            reason: row.reason,
+          });
+        }
+        continue;
+      }
+
+      plans.push({
+        mappingId: m.mapping_id,
+        feeStructureId: m.fee_structure_id,
+        uid: trimStr(m.uid),
+        year: trimStr(m.year),
+        className: trimStr(m.class_name),
+        receiptType: trimStr(m.receipt_type),
+        currentPayable,
+        irpAmount: irp.total,
+        slabName,
+        resolvedBy,
+      });
+      continue;
+    }
+
+    // === Case B: IRP has NOT billed this batch (no installment). ===
+    // The 0017 Sem IV case: a concession-holder IRP has not yet raised an
+    // installment for. If IRP recorded a concession slab for the batch, an
+    // UNPAID default Slab-F mapping is over-charging the student — repoint it
+    // to the concession slab so the console shows the correct (FA) amount.
+    // NEVER touch a paid mapping (decision 0017's rule).
+    if (!concessionLetter) continue;
+    const targetSlab = resolveLegacySlabName(concessionLetter, m.year);
+    // A concession that resolves to the full-fee slab is no discount — skip.
+    if (!targetSlab || targetSlab === "Slab F") continue;
+    // Paid mapping: leave it for manual review, never auto-alter (0017).
+    if (m.amount_paid != null) continue;
+    const assignedName = trimStr(m.assigned_slab_name);
+    if (assignedName.toLowerCase() === targetSlab.toLowerCase()) {
       result.mappingsMatched += 1;
       continue;
     }
     result.mappingsMismatched += 1;
-
-    // Resolve the target slab. Prefer IRP's own letter (concession cases);
-    // fall back to component-sum back-solve when IRP is silent or when the
-    // letter resolves to the default "Slab F" (i.e. IRP has no meaningful
-    // slab info for this batch — the Admission-Fees cohort).
-    let slabName: string | null = null;
-    let resolvedBy: "slab-name" | "component-sum" = "slab-name";
-    if (irp.rawSlab) {
-      slabName = resolveLegacySlabName(irp.rawSlab, m.year);
-    }
-    if (!slabName || slabName === "Slab F") {
-      const match = await findFeeSlabByComponentSum(
-        m.fee_structure_id,
-        irp.total,
-      );
-      if (match) {
-        slabName = match.slabName;
-        resolvedBy = "component-sum";
-      } else if (irp.rawSlab) {
-        // IRP DID give a letter — trust it even if it resolved to Slab F
-        // (i.e. student really is on the default full-fee slab; the
-        // mismatch is amount-only, not slab-only).
-      } else {
-        slabName = null;
-      }
-    }
-
-    if (!slabName) {
-      result.mappingsUnresolved += 1;
-      const row: UnresolvedRow = {
-        uid: trimStr(m.uid),
-        year: trimStr(m.year),
-        class: trimStr(m.class_name),
-        receiptType: trimStr(m.receipt_type),
-        currentSlab: m.assigned_slab_name ?? "",
-        irpAmount: irp.total,
-        currentPayable,
-        currentPaid: m.amount_paid == null ? null : currentPaid,
-        reason: "no IRP slab letter and no unique component-sum match",
-      };
-      allUnresolved.push(row);
-      if (result.sampleUnresolved.length < sampleLimit) {
-        result.sampleUnresolved.push({
-          uid: row.uid,
-          year: row.year,
-          class: row.class,
-          receiptType: row.receiptType,
-          irpAmount: row.irpAmount,
-          currentPayable: row.currentPayable,
-          reason: row.reason,
-        });
-      }
-      continue;
-    }
-
     plans.push({
       mappingId: m.mapping_id,
       feeStructureId: m.fee_structure_id,
@@ -469,9 +625,11 @@ export async function runLegacyFeesAmountHeal(
       className: trimStr(m.class_name),
       receiptType: trimStr(m.receipt_type),
       currentPayable,
-      irpAmount: irp.total,
-      slabName,
-      resolvedBy,
+      // No installment billed yet; the target is the concession slab's
+      // component sum, filled in by the reassign step.
+      irpAmount: 0,
+      slabName: targetSlab,
+      resolvedBy: "slab-name",
     });
   }
 
