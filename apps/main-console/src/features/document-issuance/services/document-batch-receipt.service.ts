@@ -27,7 +27,23 @@ export type BatchReceipt = {
   documentsReceivedAt: string | null;
   isArchived: boolean;
   modes: BatchReceiptModeRow[];
-  ledger: { total: number; pending: number; collected: number };
+  ledger: {
+    total: number;
+    pending: number;
+    collected: number;
+    /**
+     * COLLECTED + UPLOADED. Non-zero means the batch's scope-defining
+     * dropdowns and exam-linked toggle are locked in the edit dialog:
+     * changing them could orphan a real handover.
+     */
+    recorded: number;
+  };
+  /**
+   * Per-program-course recorded (COLLECTED/UPLOADED) count. Missing key
+   * = 0 recorded rows. Used by the edit dialog to disable individual
+   * program-course checkboxes that already have handovers.
+   */
+  recordedByProgramCourseId: Record<number, number>;
 };
 
 export type BatchReceiptUpsertBody = {
@@ -148,6 +164,13 @@ export type StudentLedgerRow = {
   batchReceiptId: number | null;
   batchReceiptName: string | null;
   isBatchArchived: boolean;
+  /**
+   * ADMINISTRATIVE mode state on the parent batch. Collect is only
+   * offered when true — the batch has to be marked ready-to-hand-out
+   * before a distribution can happen. Null when there's no parent
+   * batch (self uploads, ID cards) — the Collect flow doesn't apply.
+   */
+  batchAdministrativeEnabled: boolean | null;
   providedByUserId: number | null;
   providedByName: string | null;
   /** For ID_CARD rows the front-image is served via

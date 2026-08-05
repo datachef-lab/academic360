@@ -457,6 +457,19 @@ export default function DocumentBatchReceiptPage() {
   );
 
   /**
+   * Once any ledger row for this batch is COLLECTED or UPLOADED, every
+   * scope-defining knob is fixed: doc type / academic year / class /
+   * course level / streams / semester / affiliation / regulation, plus
+   * the exam-linked toggle. Recorded handovers already belong to a
+   * specific derivation — changing the scope now would orphan them.
+   * `recordedByCourse` narrows the same lock to the individual course
+   * checkboxes: a course whose row was recorded stays checked even
+   * when the wider lock is off.
+   */
+  const scopeLocked = Boolean(editingRow && editingRow.ledger.recorded > 0);
+  const recordedByCourse: Record<number, number> = editingRow?.recordedByProgramCourseId ?? {};
+
+  /**
    * Auto-composed batch name — derived, not entered. Format:
    *   `<streams> <semester> <affiliation> <document type> (<regulation>) Distribution - <academic year>`
    *
@@ -874,9 +887,9 @@ export default function DocumentBatchReceiptPage() {
           <div className="flex-1 overflow-y-auto px-6 pb-5 pt-5">
             {editingRow && editingRow.ledger.total > 0 && (
               <p className="mb-5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
-                This batch already has {editingRow.ledger.total} ledger entries, so the document
-                type, academic year and class are fixed — they define which students those entries
-                belong to.
+                {scopeLocked
+                  ? `This batch has ${editingRow.ledger.recorded} recorded document${editingRow.ledger.recorded === 1 ? "" : "s"} — the scope (document type, academic year, class, course level, streams, semester, affiliation, regulation) and the exam-linked toggle are fixed. Courses with recorded handovers can't be unchecked.`
+                  : `This batch already has ${editingRow.ledger.total} ledger entries, so the document type, academic year and class are fixed — they define which students those entries belong to.`}
               </p>
             )}
 
@@ -891,6 +904,7 @@ export default function DocumentBatchReceiptPage() {
                   <Label>Academic year</Label>
                   <Select
                     value={form.academicYearId}
+                    disabled={scopeLocked}
                     onValueChange={(v) => setForm((f) => ({ ...f, academicYearId: v }))}
                   >
                     <SelectTrigger>
@@ -920,6 +934,7 @@ export default function DocumentBatchReceiptPage() {
                   <Label>Document type</Label>
                   <Select
                     value={form.documentTypeId}
+                    disabled={scopeLocked}
                     onValueChange={(v) => setForm((f) => ({ ...f, documentTypeId: v }))}
                   >
                     <SelectTrigger>
@@ -938,6 +953,7 @@ export default function DocumentBatchReceiptPage() {
                   <Label>Affiliation</Label>
                   <Select
                     value={filters.affiliationId ? String(filters.affiliationId) : ""}
+                    disabled={scopeLocked}
                     onValueChange={(v) =>
                       setFilters((f) => ({ ...f, affiliationId: v ? Number(v) : null }))
                     }
@@ -958,6 +974,7 @@ export default function DocumentBatchReceiptPage() {
                   <Label>Regulation</Label>
                   <Select
                     value={filters.regulationTypeId ? String(filters.regulationTypeId) : ""}
+                    disabled={scopeLocked}
                     onValueChange={(v) =>
                       setFilters((f) => ({ ...f, regulationTypeId: v ? Number(v) : null }))
                     }
@@ -1017,6 +1034,7 @@ export default function DocumentBatchReceiptPage() {
                     <Label>Course level</Label>
                     <Select
                       value={filters.courseLevelId ? String(filters.courseLevelId) : ""}
+                      disabled={scopeLocked}
                       onValueChange={(v) =>
                         setFilters((f) => ({
                           ...f,
@@ -1040,6 +1058,7 @@ export default function DocumentBatchReceiptPage() {
                     <Label>Streams</Label>
                     <MultiSelect
                       placeholder="All"
+                      disabled={scopeLocked}
                       options={streams.map((s) => ({
                         value: String(s.id ?? 0),
                         label: streamLabel(s),
@@ -1052,6 +1071,7 @@ export default function DocumentBatchReceiptPage() {
                     <Label>Semester</Label>
                     <Select
                       value={form.classId}
+                      disabled={scopeLocked}
                       onValueChange={(v) => setForm((f) => ({ ...f, classId: v }))}
                     >
                       <SelectTrigger>
@@ -1102,20 +1122,39 @@ export default function DocumentBatchReceiptPage() {
                         No program courses match these filters.
                       </div>
                     ) : (
-                      filteredProgramCourses.map((p) => (
-                        <label
-                          key={p.id}
-                          className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-white"
-                        >
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 accent-purple-600"
-                            checked={form.programCourseIds.includes(p.id)}
-                            onChange={() => toggleCourse(p.id)}
-                          />
-                          <span className="break-words">{p.shortName ?? p.name}</span>
-                        </label>
-                      ))
+                      filteredProgramCourses.map((p) => {
+                        const recordedForCourse = recordedByCourse[p.id] ?? 0;
+                        const isLocked = recordedForCourse > 0;
+                        return (
+                          <label
+                            key={p.id}
+                            className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm ${
+                              isLocked
+                                ? "cursor-not-allowed opacity-60"
+                                : "cursor-pointer hover:bg-white"
+                            }`}
+                            title={
+                              isLocked
+                                ? `${recordedForCourse} recorded document${recordedForCourse === 1 ? "" : "s"} — this course can't be removed from the batch.`
+                                : undefined
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-purple-600 disabled:cursor-not-allowed"
+                              checked={form.programCourseIds.includes(p.id)}
+                              disabled={isLocked}
+                              onChange={() => toggleCourse(p.id)}
+                            />
+                            <span className="break-words">{p.shortName ?? p.name}</span>
+                            {isLocked && (
+                              <span className="ml-auto rounded-full border border-amber-300 bg-amber-50 px-1.5 py-[1px] text-[10px] font-medium text-amber-700">
+                                {recordedForCourse} recorded
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -1189,6 +1228,7 @@ export default function DocumentBatchReceiptPage() {
                     <Switch
                       className={SWITCH_ON}
                       checked={examLinkedEnabled}
+                      disabled={scopeLocked || modeMutation.isLoading}
                       onCheckedChange={handleExamLinkedChange}
                     />
                   </div>

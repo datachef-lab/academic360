@@ -19,6 +19,8 @@ interface ISelectProps {
   onChange: (selected: string[]) => void;
   /** Classes for the dropdown panel (width, max-height, etc.) */
   contentClassName?: string;
+  /** When true, the trigger renders greyed out and clicks are ignored. */
+  disabled?: boolean;
 }
 const MultiSelect = ({
   placeholder,
@@ -26,6 +28,7 @@ const MultiSelect = ({
   selectedOptions: selectedItems,
   onChange,
   contentClassName,
+  disabled = false,
 }: ISelectProps) => {
   const [open, setOpen] = useState(false);
 
@@ -49,9 +52,13 @@ const MultiSelect = ({
 
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
-        <DropdownMenuTrigger asChild className="w-full">
-          <Button variant="outline" className="w-full flex items-center justify-between min-w-0">
+      <DropdownMenu open={disabled ? false : open} onOpenChange={setOpen} modal={false}>
+        <DropdownMenuTrigger asChild className="w-full" disabled={disabled}>
+          <Button
+            variant="outline"
+            disabled={disabled}
+            className="w-full flex items-center justify-between min-w-0"
+          >
             <div className="truncate text-left w-full">
               {selectedItems.length === 0 ? placeholder : display}
             </div>

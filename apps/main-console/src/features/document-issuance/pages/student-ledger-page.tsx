@@ -460,10 +460,15 @@ export default function StudentLedgerPage() {
                   {filteredRows.map((r) => {
                     // Row action logic:
                     //   - college-issued + PENDING → Collect (opens confirm)
+                    //     Gated on the parent batch's ADMINISTRATIVE mode
+                    //     being enabled — the college hasn't marked the
+                    //     batch ready to distribute until then.
                     //   - self-sourced (any status) → Upload (also acts as
                     //     re-upload for rows already UPLOADED).
                     //   - Eye shows independently whenever a file exists.
-                    const canCollect = !r.isSelfSourced && r.status === "PENDING";
+                    const batchReadyToDistribute = r.batchAdministrativeEnabled !== false;
+                    const canCollect =
+                      !r.isSelfSourced && r.status === "PENDING" && batchReadyToDistribute;
                     const canUpload = r.isSelfSourced;
                     const viewUrl = resolveViewUrl(r);
                     // "Recorded at" only carries a meaningful timestamp once
