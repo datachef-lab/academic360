@@ -863,7 +863,11 @@ export default function SubjectSelectionForm({
       const subjectName =
         selection.subjectName ??
         selection.subject?.name ??
-        // SUBJECT_GROUP selections carry the group's name instead of a subject.
+        // SUBJECT_GROUP selections carry the group's name instead of a
+        // subject. The API returns it as flat `subjectGroupingMainName`
+        // (from the LEFT JOIN in actualStudentSelections); the nested
+        // shape is a defensive fallback for older payloads.
+        selection.subjectGroupingMainName ??
         selection.subjectGroupingMain?.name;
       if (!metaId || !subjectName) continue;
       // Keep the label that came with the saved row. A student who submitted in

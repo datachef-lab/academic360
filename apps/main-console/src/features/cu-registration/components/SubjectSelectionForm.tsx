@@ -234,7 +234,11 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
             const subjectName =
               (sel.subjectName as string | undefined) ??
               ((sel.subject as Record<string, unknown>)?.name as string | undefined) ??
-              // SUBJECT_GROUP selections carry the group's name instead of a subject.
+              // SUBJECT_GROUP selections carry the group's name instead of a
+              // subject. The API returns it as flat `subjectGroupingMainName`
+              // (from the LEFT JOIN in actualStudentSelections); the nested
+              // shape is a defensive fallback for older payloads.
+              (sel.subjectGroupingMainName as string | undefined) ??
               ((sel.subjectGroupingMain as Record<string, unknown>)?.name as string | undefined);
             if (!metaId || !subjectName) continue;
             (savedByMeta[metaId] ??= []).push(subjectName);

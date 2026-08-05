@@ -942,7 +942,13 @@ export async function validateStudentSubjectSelections(
   );
 
   for (const selection of selections) {
-    const subjectName = selection.subject?.name;
+    // SUBJECT_GROUP picks store the choice under `subjectGroupingMain` and
+    // leave `subject` null — treat the group name as the slot filler so the
+    // meta's required slot (e.g. Minor II) is satisfied by a single group pick.
+    const subjectName =
+      selection.subject?.name ??
+      (selection as any).subjectGroupingMain?.name ??
+      null;
 
     // Check if this is the enriched format (has subjectType) or simplified format (only has id)
     const hasEnrichedMeta = "subjectType" in selection.subjectSelectionMeta;
@@ -991,14 +997,27 @@ export async function validateStudentSubjectSelections(
 
   console.log("🔍 Debug - Final structured selections:", structuredSelections);
 
+  // If any selection is a SUBJECT_GROUP pick, the whole group is the terminal
+  // choice — it replaces the per-subject Minor I / Minor II slot model that
+  // this validator was written for (ELECTIVE_SUBJECTS-only). Skip the
+  // admission-driven "Minor X required" and auto-Minor checks so the group
+  // pick isn't rejected, but leave `structuredSelections` untouched so the
+  // downstream cross-slot conflict/restricted-grouping checks still operate
+  // on real subject names.
+  const hasSubjectGroupPick = selections.some(
+    (s) => (s as any).subjectGroupingMain?.id,
+  );
+
   // Required field validation
   if (
+    !hasSubjectGroupPick &&
     hasActualOptions(availableSubjects.admissionMinor1Subjects) &&
     !structuredSelections.minor1
   ) {
     errors.push({ field: "minor1", message: "Minor I subject is required" });
   }
   if (
+    !hasSubjectGroupPick &&
     hasActualOptions(availableSubjects.admissionMinor2Subjects) &&
     !structuredSelections.minor2
   ) {
@@ -1129,8 +1148,11 @@ export async function validateStudentSubjectSelections(
     });
   }
 
-  // Auto-assigned subject validation
+  // Auto-assigned subject validation. Skip when a SUBJECT_GROUP pick covers
+  // the whole minor requirement — auto-minor is an admission-time hint that
+  // targets discrete Minor I / II slots, not group picks.
   if (
+    !hasSubjectGroupPick &&
     availableSubjects.autoMinor1 &&
     structuredSelections.minor1 !== availableSubjects.autoMinor1 &&
     structuredSelections.minor2 !== availableSubjects.autoMinor1

@@ -474,6 +474,13 @@ export async function findSubjectsSelections(studentId: number) {
           subjectModelId: subjectModel.id,
           subjectName: subjectModel.name,
           subjectCode: subjectModel.code,
+          // Subject-group fields (SUBJECT_GROUP metas store the pick under
+          // subject_grouping_main_id_fk with subject_id_fk = null; without
+          // these fields the rehydrate on the client can't restore the
+          // dropdown for group picks).
+          subjectGroupingMainId:
+            studentSubjectSelectionModel.subjectGroupingMainId,
+          subjectGroupingMainName: subjectGroupingMainModel.name,
           // Meta fields
           metaId: subjectSelectionMetaModel.id,
           metaLabel: subjectSelectionMetaModel.label,
@@ -488,6 +495,13 @@ export async function findSubjectsSelections(studentId: number) {
         .leftJoin(
           subjectModel,
           eq(studentSubjectSelectionModel.subjectId, subjectModel.id),
+        )
+        .leftJoin(
+          subjectGroupingMainModel,
+          eq(
+            studentSubjectSelectionModel.subjectGroupingMainId,
+            subjectGroupingMainModel.id,
+          ),
         )
         .leftJoin(
           subjectSelectionMetaModel,
