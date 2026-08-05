@@ -16,7 +16,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { pool } from "@/db/index.js";
 import { createLogger } from "@/config/logger.js";
-import { pool } from "@/db/index.js";
 import { runRegistrationYearDriftMigration } from "@/features/subject-selection/services/registration-year-drift-migration.service.js";
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";

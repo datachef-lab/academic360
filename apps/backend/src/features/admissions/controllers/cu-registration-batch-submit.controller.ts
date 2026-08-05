@@ -16,7 +16,10 @@ import {
   getCuRegDocumentPathFromName,
   getCuRegDocumentPathFromNameDynamic,
 } from "../services/cu-registration-document-path.service.js";
-import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
+import {
+  createCuRegistrationDocumentUpload,
+  recordGeneratedCuRegPdf,
+} from "../services/cu-registration-document-upload.service.js";
 import { db } from "@/db/index.js";
 import { documentTypeModel } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
@@ -28,7 +31,6 @@ import {
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
 import { sendAdmissionRegistrationNotification } from "../services/cu-registration-correction-request.service.js";
 import { UserDto } from "@repo/db/index.js";
-import { DOCUMENT_TYPE_CODES } from "@/features/documents/services/document-ledger.service.js";
 
 // Configure multer for handling multiple files
 const upload = multer({
@@ -411,53 +413,19 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
             `[CU-REG BATCH SUBMIT] PDF generated successfully: ${pdfResult.pdfPath}`,
           );
 
-          // Add the generated PDF to the document uploads table so it appears in frontend
-          try {
-            // Bound by `code`, not display name: this used to match the literal
-            // "CU Registration PDF", so before that row was seeded the else-branch
-            // below silently skipped recording every generated PDF. `code` is
-            // server-assigned and never editable, so a console rename cannot
-            // reintroduce that.
-            const [pdfDocument] = await db
-              .select()
-              .from(documentTypeModel)
-              .where(
-                eq(
-                  documentTypeModel.code,
-                  DOCUMENT_TYPE_CODES.CU_REGISTRATION_PDF,
-                ),
-              )
-              .limit(1);
-
-            if (pdfDocument) {
-              const pdfDocumentUpload =
-                await createCuRegistrationDocumentUpload({
-                  cuRegistrationCorrectionRequestId:
-                    parseInt(correctionRequestId),
-                  documentId: pdfDocument.id,
-                  documentUrl: pdfResult.s3Url || pdfResult.pdfPath,
-                  path: pdfResult.s3Url || pdfResult.pdfPath,
-                  fileName: `CU_${applicationNumber}.pdf`,
-                  fileType: "application/pdf",
-                  fileSize: 0, // We don't have the size here
-                  remarks: "Generated CU Registration PDF",
-                });
-
-              uploadedDocuments.push(pdfDocumentUpload);
-              console.info(
-                `[CU-REG BATCH SUBMIT] PDF document record created: ${pdfDocumentUpload?.id}`,
-              );
-            } else {
-              console.warn(
-                `[CU-REG BATCH SUBMIT] PDF document type not found in database`,
-              );
-            }
-          } catch (pdfRecordError) {
-            console.error(
-              `[CU-REG BATCH SUBMIT] Error creating PDF document record:`,
-              pdfRecordError,
-            );
-            // Don't fail the entire request if PDF record creation fails
+          // Record the generated PDF via the shared recorder — same contract
+          // as the three admin/correction paths in
+          // cu-registration-correction-request.service.ts. Idempotent on
+          // (correctionRequest, CU_REGISTRATION_PDF) and refreshes the
+          // ledger row via upsertCuRegUploadLedgerEntry. Bookkeeping
+          // failures are swallowed so submission never fails on this.
+          const pdfUrl = pdfResult.s3Url || pdfResult.pdfPath;
+          if (pdfUrl) {
+            await recordGeneratedCuRegPdf({
+              correctionRequestId: parseInt(correctionRequestId),
+              applicationNumber,
+              documentUrl: pdfUrl,
+            });
           }
         } else {
           console.warn(
