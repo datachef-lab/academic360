@@ -26,6 +26,7 @@ const log = createLogger("ledger-timestamp-heal");
 export type LedgerTimestampHealSummary = {
   idCardRowsHealed: number;
   cuRegUploadRowsHealed: number;
+  cuRegPdfRowsHealed: number;
   tempAdmitCardRowsHealed: number;
   batchReceiptRowsHealed: number;
   [key: string]: unknown;
@@ -35,6 +36,7 @@ export async function runLedgerTimestampHeal(): Promise<LedgerTimestampHealSumma
   const summary: LedgerTimestampHealSummary = {
     idCardRowsHealed: 0,
     cuRegUploadRowsHealed: 0,
+    cuRegPdfRowsHealed: 0,
     tempAdmitCardRowsHealed: 0,
     batchReceiptRowsHealed: 0,
   };
@@ -86,6 +88,52 @@ export async function runLedgerTimestampHeal(): Promise<LedgerTimestampHealSumma
       )
   `);
   summary.tempAdmitCardRowsHealed = tempResult.rowCount ?? 0;
+
+  // CU_REGISTRATION_PDF rows — unlike student uploads, the PDF has no
+  // separate "generation moment" of its own on the row itself. The truth
+  // is on the parent cu_registration_correction_requests.updated_at: the
+  // PDF is regenerated whenever the request is finalised or its data
+  // fields update. Any upload/ledger row whose createdAt is later than
+  // that (e.g. inserted by an earlier cureg-pdf-ledger-backfill run that
+  // used NOW()) gets pulled back to match the true submission moment.
+  const cuRegPdfResult = await db.execute(sql`
+    WITH truth AS (
+      SELECT u.id AS upload_id,
+             u.document_ledger_id_fk AS ledger_id,
+             cr.updated_at AS submission_updated_at
+      FROM cu_registration_document_uploads u
+      JOIN document_types dt ON dt.id = u.document_id_fk
+      JOIN cu_registration_correction_requests cr
+        ON cr.id = u.cu_registration_correction_request_id_fk
+      WHERE dt.code = 'CU_REGISTRATION_PDF'
+        AND cr.updated_at IS NOT NULL
+    ),
+    upd_ledger AS (
+      UPDATE document_ledger dl
+      SET created_at = t.submission_updated_at,
+          updated_at = t.submission_updated_at
+      FROM truth t
+      WHERE t.ledger_id = dl.id
+        AND dl.created_at IS DISTINCT FROM t.submission_updated_at
+      RETURNING dl.id
+    ),
+    upd_upload AS (
+      UPDATE cu_registration_document_uploads u
+      SET created_at = t.submission_updated_at,
+          updated_at = t.submission_updated_at
+      FROM truth t
+      WHERE t.upload_id = u.id
+        AND u.created_at IS DISTINCT FROM t.submission_updated_at
+      RETURNING u.id
+    )
+    SELECT (SELECT COUNT(*) FROM upd_ledger) AS ledger_updates,
+           (SELECT COUNT(*) FROM upd_upload) AS upload_updates
+  `);
+  const pdfRow = (cuRegPdfResult.rows?.[0] ?? {}) as {
+    ledger_updates?: string | number;
+    upload_updates?: string | number;
+  };
+  summary.cuRegPdfRowsHealed = Number(pdfRow.ledger_updates ?? 0);
 
   // Batch receipts for the synthetic "University Admit Card Distribution"
   // batches — pull them back to the earliest child ledger row's created_at.

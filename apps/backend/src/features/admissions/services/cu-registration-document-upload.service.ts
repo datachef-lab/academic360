@@ -61,6 +61,14 @@ export async function recordGeneratedCuRegPdf(
     correctionRequestId: number;
     applicationNumber: string;
     documentUrl: string;
+    /**
+     * Override the row's createdAt/updatedAt when the caller knows the
+     * true generation moment (e.g. a backfill that re-writes a PDF row
+     * for a submission that finished months ago — the ledger's "Recorded"
+     * timestamp must reflect the CU-reg submission date, not the boot's
+     * clock). Live callers omit this and get defaultNow() as before.
+     */
+    generatedAt?: Date | null;
   },
   executor:
     | typeof db
@@ -97,7 +105,11 @@ export async function recordGeneratedCuRegPdf(
     if (existing) {
       const [updated] = await executor
         .update(cuRegistrationDocumentUploadModel)
-        .set({ ...values, updatedAt: new Date() })
+        .set({
+          ...values,
+          updatedAt: input.generatedAt ?? new Date(),
+          ...(input.generatedAt ? { createdAt: input.generatedAt } : {}),
+        })
         .where(eq(cuRegistrationDocumentUploadModel.id, existing.id))
         .returning();
 
@@ -118,6 +130,9 @@ export async function recordGeneratedCuRegPdf(
         cuRegistrationCorrectionRequestId: input.correctionRequestId,
         documentId: documentTypeId,
         ...values,
+        ...(input.generatedAt
+          ? { createdAt: input.generatedAt, updatedAt: input.generatedAt }
+          : {}),
       })
       .returning();
 
