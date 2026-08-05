@@ -365,6 +365,7 @@ export const updateStudentStatus = async (
       alumni,
       rfidNumber,
       quotaTypeId,
+      noShowRemarks,
     } = req.body as any;
 
     // If cancelled and no explicit user id provided, take from auth context
@@ -402,6 +403,8 @@ export const updateStudentStatus = async (
       rfidNumber,
       // Pass through quota type so service can persist it
       quotaTypeId,
+      // Registrar free-text captured when NO_SHOW is chosen.
+      noShowRemarks,
     });
 
     if (!result) {

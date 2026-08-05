@@ -340,6 +340,7 @@ export async function updateStudentStatusById(
     takenTransferCertificate?: boolean;
     hasCancelledAdmission?: boolean;
     isNoShow?: boolean;
+    noShowRemarks?: string | null;
     cancelledAdmissionReason?: string | null;
     cancelledAdmissionAt?: string | null;
     cancelledAdmissionByUserId?: number | null;
@@ -351,10 +352,11 @@ export async function updateStudentStatusById(
   const update: any = {};
 
   // If statusOption provided, map to fields per doc. NO_SHOW is mutually
-  // exclusive with every other status flag — default to clearing it, then
-  // the NO_SHOW case below re-sets it.
+  // exclusive with every other status flag — default to clearing it (and
+  // its remarks), then the NO_SHOW case below re-sets both.
   if (data.statusOption !== undefined) {
     update.isNoShow = false;
+    update.noShowRemarks = null;
   }
   switch (data.statusOption) {
     case "DROPPED_OUT": {
@@ -518,6 +520,7 @@ export async function updateStudentStatusById(
       // Student never turned up despite admission. All other status flags
       // are cleared — see the model comment on `isNoShow`.
       update.isNoShow = true;
+      update.noShowRemarks = data.noShowRemarks ?? null;
       update.active = false;
       update.alumni = false;
       update.takenTransferCertificate = false;
@@ -539,6 +542,9 @@ export async function updateStudentStatusById(
   if (typeof data.hasCancelledAdmission === "boolean")
     update.hasCancelledAdmission = data.hasCancelledAdmission;
   if (typeof data.isNoShow === "boolean") update.isNoShow = data.isNoShow;
+  if (Object.prototype.hasOwnProperty.call(data, "noShowRemarks")) {
+    update.noShowRemarks = data.noShowRemarks ?? null;
+  }
   // If RFID is provided (including empty string or null), update that column
   if (Object.prototype.hasOwnProperty.call(data, "rfidNumber")) {
     update.rfidNumber = data.rfidNumber ?? null;

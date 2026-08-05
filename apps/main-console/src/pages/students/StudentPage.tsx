@@ -269,11 +269,13 @@ export default function StudentPage() {
     const cancelBox = document.getElementById("cancel-extra");
     const leavingBox = document.getElementById("leaving-extra");
     const suspendBox = document.getElementById("suspend-extra");
+    const noShowBox = document.getElementById("no-show-extra");
 
     // Show/hide based on status
     if (tcBox) tcBox.classList.toggle("hidden", statusOption !== "TC");
     if (cancelBox) cancelBox.classList.toggle("hidden", statusOption !== "CANCELLED_ADMISSION");
     if (suspendBox) suspendBox.classList.toggle("hidden", statusOption !== "SUSPENDED");
+    if (noShowBox) noShowBox.classList.toggle("hidden", statusOption !== "NO_SHOW");
 
     const showLeaving = statusOption === "DROPPED_OUT" || statusOption === "COMPLETED_LEFT";
     if (leavingBox) {
@@ -378,6 +380,7 @@ export default function StudentPage() {
                   const cancelBox = document.getElementById("cancel-extra");
                   const leavingBox = document.getElementById("leaving-extra");
                   const suspendBox = document.getElementById("suspend-extra");
+                  const noShowBox = document.getElementById("no-show-extra");
                   const leavingDateInput = document.getElementById(
                     "leavingDate",
                   ) as HTMLInputElement;
@@ -400,6 +403,7 @@ export default function StudentPage() {
                   if (cancelBox)
                     cancelBox.classList.toggle("hidden", val !== "CANCELLED_ADMISSION");
                   if (suspendBox) suspendBox.classList.toggle("hidden", val !== "SUSPENDED");
+                  if (noShowBox) noShowBox.classList.toggle("hidden", val !== "NO_SHOW");
 
                   // Handle leaving date fields
                   const showLeaving = val === "DROPPED_OUT" || val === "COMPLETED_LEFT";
@@ -571,6 +575,24 @@ export default function StudentPage() {
               </div>
             </div>
 
+            {/* No Show remarks (free-text captured when NO_SHOW is chosen) */}
+            <div
+              id="no-show-extra"
+              className={`space-y-2 ${statusOption === "NO_SHOW" ? "" : "hidden"}`}
+            >
+              <div className="space-y-1">
+                <Label htmlFor="noShowRemarks" className="text-xs sm:text-sm">
+                  No Show Remarks
+                </Label>
+                <Textarea
+                  id="noShowRemarks"
+                  placeholder="Why the student was marked No Show"
+                  defaultValue={(data as any)?.noShowRemarks ?? ""}
+                  className="text-xs sm:text-sm"
+                />
+              </div>
+            </div>
+
             {/* Cancelled Admission fields */}
             <div
               id="cancel-extra"
@@ -621,6 +643,8 @@ export default function StudentPage() {
                   (document.getElementById("cancelReason") as HTMLInputElement)?.value || null;
                 const cancelAtRaw =
                   (document.getElementById("cancelAt") as HTMLInputElement)?.value || "";
+                const noShowRemarks =
+                  (document.getElementById("noShowRemarks") as HTMLTextAreaElement)?.value || null;
 
                 // Helper function to convert datetime-local to timestamp string for Asia/Kolkata storage
                 // This sends the timestamp as-is (treating it as IST) so DB stores it without UTC conversion
@@ -674,6 +698,7 @@ export default function StudentPage() {
                     case "COMPLETED_LEFT":
                     case "TC":
                     case "CANCELLED_ADMISSION":
+                    case "NO_SHOW":
                       isActive = false;
                       break;
                     default:
@@ -698,7 +723,10 @@ export default function StudentPage() {
                   // Always include the latest RFID number in the payload
                   studentPayload.rfidNumber = rfid || null;
 
-                  // Set fields based on status, and explicitly clear fields not used by this status
+                  // Set fields based on status, and explicitly clear fields not used by this status.
+                  // `noShowRemarks` is set only in the NO_SHOW branch and cleared everywhere
+                  // else, mirroring the write-side mutual exclusivity in the backend service.
+                  studentPayload.noShowRemarks = statusOption === "NO_SHOW" ? noShowRemarks : null;
                   if (statusOption === "DROPPED_OUT" || statusOption === "COMPLETED_LEFT") {
                     studentPayload.leavingDate = leavingDateRaw
                       ? convertDatetimeLocalToIST(leavingDateRaw)
