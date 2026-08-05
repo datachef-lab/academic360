@@ -209,7 +209,7 @@ export default function StudentLedgerPage() {
   const ledgerQuery = useQuery({
     queryKey: ["student-ledger", student?.id],
     enabled: Boolean(student?.id),
-    queryFn: () => getStudentLedger(student!.id),
+    queryFn: () => getStudentLedger(student!.id!),
   });
 
   const queryClient = useQueryClient();
@@ -384,8 +384,8 @@ export default function StudentLedgerPage() {
                 <div className="mt-0.5 text-[11px] text-muted-foreground">
                   UID <span className="font-mono">{student.uid}</span>
                   {student.programCourse?.name && <> · {student.programCourse.name}</>}
-                  {student.currentPromotion?.className && (
-                    <> · Currently {student.currentPromotion.className}</>
+                  {student.currentPromotion?.class?.name && (
+                    <> · Currently {student.currentPromotion.class.name}</>
                   )}
                 </div>
               </div>
