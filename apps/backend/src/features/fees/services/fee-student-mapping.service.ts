@@ -27,6 +27,7 @@ import {
   isUniqueViolation,
 } from "@/utils/db-concurrency.js";
 import { socketService } from "@/services/socketService.js";
+import { onFeePaymentApplied } from "@/features/documents/services/fee-clearance.service.js";
 import * as feeStructureService from "./fee-structure.service.js";
 import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";
 import * as feeStructureInstallmentService from "./fee-structure-installment.service.js";
@@ -598,7 +599,20 @@ export const updateFeeStudentMapping = async (
     .where(eq(feeStudentMappingModel.id, id))
     .returning();
 
-  if (updated) emitFeeStudentMappingUpdate(updated.studentId);
+  if (updated) {
+    emitFeeStudentMappingUpdate(updated.studentId);
+    // Waiver / balance PATCH may shift the outstanding predicate — recompute
+    // fee-clearance for the student so any fee-gated document ledger row
+    // flips promptly.
+    try {
+      await onFeePaymentApplied(updated.studentId);
+    } catch (err) {
+      console.warn(
+        `[FEE] fee-clearance recompute failed for student ${updated.studentId} after mapping PATCH:`,
+        err,
+      );
+    }
+  }
   return await modelToDto(updated ?? null);
 };
 

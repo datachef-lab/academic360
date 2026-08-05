@@ -14,6 +14,7 @@ import {
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { issueFeeStudentMappingReceiptIfMissing } from "@/features/fees/services/fee-student-mapping.service.js";
 import { scheduleFeesDashboardBroadcast } from "@/features/fees/fees-dashboard.socket.js";
+import { onFeePaymentApplied } from "@/features/documents/services/fee-clearance.service.js";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { and, eq, sql } from "drizzle-orm";
 import type {
@@ -673,6 +674,10 @@ export async function updatePaymentByOrderId(
     gatewayResponse?: object;
   },
 ) {
+  // Captured inside the SUCCESS-and-linked branch of the tx, called after
+  // commit so recompute sees the committed amountPaid.
+  let studentIdForRecompute: number | null = null;
+
   const updatedPayment = await db.transaction(async (tx) => {
     // SELECT FOR UPDATE: blocks concurrent callbacks for the same orderId
     const [existingPayment] = await tx
@@ -780,7 +785,10 @@ export async function updatePaymentByOrderId(
         updated.feeStudentMappingId ?? meta.feeStudentMappingId ?? null;
       if (fsmId) {
         const [mapping] = await tx
-          .select({ id: feeStudentMappingModel.id })
+          .select({
+            id: feeStudentMappingModel.id,
+            studentId: feeStudentMappingModel.studentId,
+          })
           .from(feeStudentMappingModel)
           .where(eq(feeStudentMappingModel.id, fsmId))
           .for("update");
@@ -807,6 +815,8 @@ export async function updatePaymentByOrderId(
               .update(feeStudentMappingModel)
               .set({ amountPaid: Number(updated.amount) || 0 })
               .where(eq(feeStudentMappingModel.id, mapping.id));
+            // Capture studentId so fee-clearance can recompute after commit.
+            studentIdForRecompute = mapping.studentId;
           } else {
             console.log(
               `[FEE] Payment ${orderId} succeeded for fee_mapping ${mapping.id}, but another payment is already linked — kept as audit-only.`,
@@ -821,6 +831,16 @@ export async function updatePaymentByOrderId(
 
   await ensureFeeReceiptAfterSuccessfulFeePayment(updatedPayment);
   scheduleFeesDashboardBroadcast("payment_updated");
+
+  if (studentIdForRecompute != null) {
+    try {
+      await onFeePaymentApplied(studentIdForRecompute);
+    } catch (err) {
+      console.warn(
+        `[FEE] fee-clearance recompute failed for student ${studentIdForRecompute} after gateway SUCCESS: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
 
   return updatedPayment;
 }

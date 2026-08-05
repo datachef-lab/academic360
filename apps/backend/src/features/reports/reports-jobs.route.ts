@@ -9,10 +9,11 @@ import {
 /**
  * Background report jobs. Mounted at /api/reports.
  *
- * NOTE: jobs + their temp files live in the process that created them
- * (report-job.service is in-memory). If the API is scaled to multiple workers,
- * the `/jobs/:jobId/download` request must be sticky to the producing worker,
- * or the file must move to shared storage. Single worker: no issue.
+ * Jobs + finished file bytes live in Postgres (`report_jobs`), so `/jobs/:jobId`
+ * and `/jobs/:jobId/download` can be served by ANY instance behind the load
+ * balancer — no sticky sessions needed. (The previous in-memory registry gave
+ * intermittent 404s in multi-instance prod when the download request landed on
+ * a different instance than the one that generated the file.)
  */
 const router = express.Router();
 

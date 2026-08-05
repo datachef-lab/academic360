@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import type { LibraryVendorRow, LibraryVendorUpsertBody } from "@/services/library-vendors.service";
 import {
   createLibraryVendor,
@@ -41,7 +41,6 @@ import {
   STICKY_THEAD_CLASS,
   STICKY_TH_BASE,
   STICKY_TH_LEFT,
-  STICKY_TH_RIGHT,
 } from "@/components/library/LibraryTablePage";
 import { cn } from "@/lib/utils";
 
@@ -98,40 +97,8 @@ const parseDate = (value: string) => {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
 };
 
-function RowActions({
-  row,
-  onEdit,
-  onDelete,
-}: {
-  row: LibraryVendorRow;
-  onEdit: (_id: number) => void;
-  onDelete: (_row: LibraryVendorRow) => void;
-}) {
-  return (
-    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => onEdit(row.id)}
-        aria-label="Edit"
-      >
-        <Pencil className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-600 hover:text-red-700"
-        onClick={() => onDelete(row)}
-        aria-label="Delete"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-}
+// Row actions removed — rows are clickable and open the edit dialog. Delete
+// moved into the edit dialog footer.
 
 export default function VendorsMasterPage() {
   const [rows, setRows] = useState<LibraryVendorRow[]>([]);
@@ -293,17 +260,25 @@ export default function VendorsMasterPage() {
               </div>
             ) : (
               <>
-                <div className="max-h-[70vh] space-y-3 overflow-y-auto pb-2 lg:hidden">
+                <div className="space-y-3 pb-2 lg:hidden">
                   {rows.map((row, i) => (
                     <div
                       key={row.id}
-                      className="rounded-lg border border-slate-200 bg-card p-3 shadow-sm"
+                      className="cursor-pointer rounded-lg border border-slate-200 bg-card p-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50/60 focus-within:ring-2 focus-within:ring-violet-300"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openEdit(row.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openEdit(row.id);
+                        }
+                      }}
                     >
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <span className="text-xs font-medium text-slate-500">
                           #{(page - 1) * limit + i + 1}
                         </span>
-                        <RowActions row={row} onEdit={openEdit} onDelete={setDeleteTarget} />
                       </div>
                       <p className="font-semibold text-slate-900">{row.name}</p>
                       {row.code && (
@@ -322,11 +297,11 @@ export default function VendorsMasterPage() {
                 </div>
 
                 <div className="hidden min-w-0 pb-2 lg:block">
-                  <div className="max-h-[70vh] overflow-auto rounded-md border bg-background">
-                    <Table containerClassName="min-w-[960px]">
+                  <div className="max-h-[70vh] overflow-auto [&>div]:!overflow-visible rounded-md border bg-background">
+                    <Table containerClassName="min-w-[870px]">
                       <TableHeader className={STICKY_THEAD_CLASS}>
                         <TableRow>
-                          <TableHead className={cn(STICKY_TH_LEFT, "w-10")}>#</TableHead>
+                          <TableHead className={STICKY_TH_LEFT}>#</TableHead>
                           <TableHead className={cn(STICKY_TH_BASE, "min-w-[200px]")}>
                             Name
                           </TableHead>
@@ -343,14 +318,15 @@ export default function VendorsMasterPage() {
                             Contact person
                           </TableHead>
                           <TableHead className={cn(STICKY_TH_BASE, "w-[110px]")}>Updated</TableHead>
-                          <TableHead className={cn(STICKY_TH_RIGHT, "w-[90px] text-right")}>
-                            Actions
-                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {rows.map((row, i) => (
-                          <TableRow key={row.id}>
+                          <TableRow
+                            key={row.id}
+                            className="cursor-pointer hover:bg-gray-50/60"
+                            onClick={() => openEdit(row.id)}
+                          >
                             <TableCell className="align-top whitespace-nowrap">
                               {(page - 1) * limit + i + 1}
                             </TableCell>
@@ -365,9 +341,6 @@ export default function VendorsMasterPage() {
                             </TableCell>
                             <TableCell className="align-top text-xs text-muted-foreground">
                               {parseDate(row.updatedAt)}
-                            </TableCell>
-                            <TableCell className="text-right align-top">
-                              <RowActions row={row} onEdit={openEdit} onDelete={setDeleteTarget} />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -501,19 +474,42 @@ export default function VendorsMasterPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t bg-muted/30 px-6 py-4">
-            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="ml-2 bg-purple-600 hover:bg-purple-700 text-white shadow-none"
-              disabled={saving}
-              onClick={() => void handleSave()}
-            >
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {saving ? "Saving..." : "Save"}
-            </Button>
+          <DialogFooter className="border-t bg-muted/30 px-6 py-4 sm:justify-between">
+            {/* Delete moved from the per-row action column into the edit
+                dialog. Only shown for existing rows (editingId != null). */}
+            <div>
+              {editingId != null && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => {
+                    const target = rows.find((r) => r.id === editingId);
+                    if (target) {
+                      setDialogOpen(false);
+                      setDeleteTarget(target);
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="bg-purple-600 hover:bg-purple-700 text-white shadow-none"
+                disabled={saving}
+                onClick={() => void handleSave()}
+              >
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

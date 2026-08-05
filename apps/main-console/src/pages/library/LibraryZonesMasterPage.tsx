@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, MapPin, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Loader2, MapPin, Plus, Search, Trash2 } from "lucide-react";
 import { useActiveLibraryBranchId } from "@/features/library/use-library-branch";
 import type { LibraryZoneRow, LibraryZoneUpsertBody } from "@/services/library-zones.service";
 import {
@@ -43,9 +43,7 @@ import {
   STICKY_THEAD_CLASS,
   STICKY_TH_BASE,
   STICKY_TH_LEFT,
-  STICKY_TH_RIGHT,
 } from "@/components/library/LibraryTablePage";
-import { cn } from "@/lib/utils";
 import { LibraryPageHeader } from "@/components/library/LibraryPageHeader";
 
 type FormState = {
@@ -239,34 +237,24 @@ export default function LibraryZonesMasterPage() {
               <div className="py-6 text-center text-sm text-gray-500">No zones.</div>
             ) : (
               rows.map((r) => (
-                <div key={r.id} className="rounded-lg border p-3 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">{r.name}</p>
-                      {r.code ? <p className="text-xs text-gray-500">Code: {r.code}</p> : null}
-                      {r.branchName ? (
-                        <p className="text-xs text-gray-500">Branch: {r.branchName}</p>
-                      ) : null}
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() => onEdit(r)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-red-600"
-                        onClick={() => setConfirm(r)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
+                <div
+                  key={r.id}
+                  className="cursor-pointer rounded-lg border p-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50/60 focus-within:ring-2 focus-within:ring-violet-300"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onEdit(r)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onEdit(r);
+                    }
+                  }}
+                >
+                  <p className="font-medium">{r.name}</p>
+                  {r.code ? <p className="text-xs text-gray-500">Code: {r.code}</p> : null}
+                  {r.branchName ? (
+                    <p className="text-xs text-gray-500">Branch: {r.branchName}</p>
+                  ) : null}
                 </div>
               ))
             )}
@@ -282,48 +270,33 @@ export default function LibraryZonesMasterPage() {
                   <TableHead className={STICKY_TH_BASE}>Branch</TableHead>
                   <TableHead className={STICKY_TH_BASE}>Capacity</TableHead>
                   <TableHead className={STICKY_TH_BASE}>Active</TableHead>
-                  <TableHead className={cn(STICKY_TH_RIGHT, "text-right")}>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-6 text-center">
+                    <TableCell colSpan={5} className="py-6 text-center">
                       <Loader2 className="mx-auto h-5 w-5 animate-spin text-gray-500" />
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-6 text-center text-gray-500">
+                    <TableCell colSpan={5} className="py-6 text-center text-gray-500">
                       No zones.
                     </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((r) => (
-                    <TableRow key={r.id}>
+                    <TableRow
+                      key={r.id}
+                      className="cursor-pointer hover:bg-gray-50/60"
+                      onClick={() => onEdit(r)}
+                    >
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>{r.code ?? "—"}</TableCell>
                       <TableCell>{r.branchName ?? "—"}</TableCell>
                       <TableCell>{r.capacity ?? "—"}</TableCell>
                       <TableCell>{r.isActive ? "Yes" : "No"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => onEdit(r)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-red-600"
-                          onClick={() => setConfirm(r)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -417,14 +390,35 @@ export default function LibraryZonesMasterPage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button onClick={onSubmit} disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save
-            </Button>
+          <DialogFooter className="sm:justify-between">
+            <div>
+              {editingId != null && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => {
+                    const target = rows.find((r) => r.id === editingId);
+                    if (target) {
+                      setDialogOpen(false);
+                      setConfirm(target);
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={onSubmit} disabled={saving}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
