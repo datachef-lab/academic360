@@ -1,5 +1,5 @@
 
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -34,6 +34,10 @@ export const documentBatchReceiptModel = pgTable("document_batch_receipts", {
     documentsReceivedBy: integer("documents_received_by_user_id_fk")
         .references(() => userModel.id), // If documents from the university are received by a user, this field will be populated
     documentsReceivedAt: timestamp({ withTimezone: true }), // If documents from the university are received by a user, this field will be populated
+    // Hides this batch's ledger entries from the student-facing document
+    // ledger while the batch itself stays in the admin list. Never delete —
+    // collected rows are historical facts.
+    isArchived: boolean("is_archived").notNull().default(false),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

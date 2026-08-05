@@ -6,6 +6,7 @@ import { idCardIssueModel, studentModel } from "@repo/db/schemas/index.js";
 import { fileExistsInS3, uploadToS3 } from "@/services/s3.service.js";
 import { getRedisCommandClient } from "@/config/redis.js";
 import { ensureSnapcardTemplate } from "./snapcard-template-seed.service.js";
+import { upsertIdCardLedgerEntry } from "@/features/documents/services/document-ledger.service.js";
 
 /**
  * Legacy ID card backfill (snapcard → new DB + S3).
@@ -322,7 +323,19 @@ export async function syncLegacyIdCards(): Promise<
             createdAt: new Date(r.created_at),
             updatedAt: new Date(r.updated_at ?? r.created_at),
           })
-          .returning({ id: idCardIssueModel.id });
+          .returning({
+            id: idCardIssueModel.id,
+            studentId: idCardIssueModel.studentId,
+            issueDate: idCardIssueModel.issueDate,
+            issuedByUserId: idCardIssueModel.issuedByUserId,
+            frontImageUrl: idCardIssueModel.frontImageUrl,
+            createdAt: idCardIssueModel.createdAt,
+            updatedAt: idCardIssueModel.updatedAt,
+          });
+
+        // Every card gets a passbook entry. Idempotent on documentLedgerId, which
+        // matters because this sync re-scans the whole legacy table on each boot.
+        await upsertIdCardLedgerEntry(inserted!);
 
         keptOldToNewId.set(r.id, inserted!.id);
         summary.inserted++;

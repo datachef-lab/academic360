@@ -14,6 +14,10 @@ import {
 } from "./payment.service.js";
 import { sendFeeReceiptEmailForPaymentId } from "./fee-receipt-notification.service.js";
 import { scheduleFeesDashboardBroadcast } from "@/features/fees/fees-dashboard.socket.js";
+import { onFeePaymentApplied } from "@/features/documents/services/fee-clearance.service.js";
+import { createLogger } from "@/config/logger.js";
+
+const log = createLogger("fee-payment-marking");
 
 function normalizeReceiptNumber(input: string): string {
   return String(input || "")
@@ -344,6 +348,17 @@ export async function receiveCashFeePayment(params: {
   }
 
   scheduleFeesDashboardBroadcast("fee_payment_marked");
+
+  // Recompute fee-clearance for this student — a fee-gated document ledger
+  // row that was ON_HOLD can now flip back to PENDING.
+  try {
+    await onFeePaymentApplied(row.studentId);
+  } catch (err) {
+    log.warn(
+      `fee-clearance recompute failed for student ${row.studentId} after cash marking: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   return { success: true, data: reloaded.data };
 }
 
@@ -512,6 +527,8 @@ export async function markOnlineFeePaymentSuccessManual(params: {
       .slice(0, 10) || new Date().toISOString().slice(0, 10);
   const txnIdTrimmed = String(params.transactionId || "").trim();
 
+  let studentIdForRecompute: number | null = null;
+
   await db.transaction(async (tx) => {
     const vendor = String(params.paymentGatewayVendor ?? "").trim();
     // Mark this row as SUCCESS + manual + canonical link. Manual entries take
@@ -553,6 +570,7 @@ export async function markOnlineFeePaymentSuccessManual(params: {
         .select({
           id: feeStudentMappingModel.id,
           totalPayable: feeStudentMappingModel.totalPayable,
+          studentId: feeStudentMappingModel.studentId,
         })
         .from(feeStudentMappingModel)
         .where(eq(feeStudentMappingModel.id, fsmId));
@@ -564,6 +582,7 @@ export async function markOnlineFeePaymentSuccessManual(params: {
           .update(feeStudentMappingModel)
           .set({ amountPaid: amountToSet })
           .where(eq(feeStudentMappingModel.id, mapping.id));
+        studentIdForRecompute = mapping.studentId;
       }
     }
   });
@@ -579,5 +598,16 @@ export async function markOnlineFeePaymentSuccessManual(params: {
   await sendFeeReceiptEmailForPaymentId(payment.id);
 
   scheduleFeesDashboardBroadcast("fee_payment_marked");
+
+  if (studentIdForRecompute != null) {
+    try {
+      await onFeePaymentApplied(studentIdForRecompute);
+    } catch (err) {
+      log.warn(
+        `fee-clearance recompute failed for student ${studentIdForRecompute} after manual online marking: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   return { success: true, data: reloaded.data };
 }

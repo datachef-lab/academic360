@@ -31,6 +31,7 @@ import { and, eq, ilike } from "drizzle-orm";
 
 import { updateFeeGroupPromotionMapping } from "./fee-group-promotion-mapping.service";
 import { calculateTotalPayableForFeeStudentMapping } from "./fee-structure.service";
+import { onFeePaymentApplied } from "@/features/documents/services/fee-clearance.service.js";
 
 // Sentinel used by the legacy fresh-import path when it MANUAL-reassigns a
 // student's slab (legacy-fees-data.service.ts:820). Same value here keeps
@@ -156,6 +157,17 @@ export async function reassignFeeStudentMappingSlab(
       updatedAt: new Date(),
     })
     .where(eq(feeStudentMappingModel.id, mappingId));
+
+  // Slab reassign can flip the outstanding sign (rebilled higher or the same
+  // as paid) — recompute so fee-gated document rows track it.
+  try {
+    await onFeePaymentApplied(mapping.studentId);
+  } catch (err) {
+    console.warn(
+      `[FEE] fee-clearance recompute failed for student ${mapping.studentId} after slab reassign:`,
+      err,
+    );
+  }
 
   let paymentsUpdated = 0;
   if (updatePayments) {

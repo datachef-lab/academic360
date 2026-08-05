@@ -1289,6 +1289,34 @@
 			"when": 1785911036386,
 			"tag": "0186_student_no_show_remarks",
 			"breakpoints": true
+		},
+		{
+			"idx": 187,
+			"version": "7",
+			"when": 1785700000000,
+			"tag": "0187_docs_skipped_migration_repair",
+			"breakpoints": true
+		},
+		{
+			"idx": 188,
+			"version": "7",
+			"when": 1785825011211,
+			"tag": "0188_typical_skrulls",
+			"breakpoints": true
+		},
+		{
+			"idx": 189,
+			"version": "7",
+			"when": 1785825012211,
+			"tag": "0189_document_ledger_lookup_indexes",
+			"breakpoints": true
+		},
+		{
+			"idx": 190,
+			"version": "7",
+			"when": 1785839039763,
+			"tag": "0190_temp_admit_card_ledger_fk",
+			"breakpoints": true
 		}
 	]
 }

@@ -17,6 +17,11 @@ import {
 import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions/admission-academic-info.model.js";
 import { tempAdmitCardDistributionsModel } from "@repo/db/schemas/models/exams/index.js";
 import type { AdmitCardSearchResponse } from "@/types/exams/admit-card.type.js";
+import {
+  insertAdmitCardLedgerRow,
+  loadPromotionContext,
+  resolveOrCreateAdmitCardBatch,
+} from "@/features/documents/services/temp-admit-card-ledger-backfill.service.js";
 
 // This cycle distributes admit cards for the Semester II exams: student
 // details (program/semester/shift/section) must come from the ACTIVE Sem II
@@ -203,19 +208,60 @@ export async function distributeAdmitCard(
     );
   }
 
-  const [inserted] = await db
-    .insert(tempAdmitCardDistributionsModel)
-    .values({
-      studentId,
-      distributedByUserId: distributedByUserId,
-      promotionId: activePromotion.id,
-    })
-    .returning({
-      id: tempAdmitCardDistributionsModel.id,
-      createdAt: tempAdmitCardDistributionsModel.createdAt,
-    });
+  // Insert into the legacy temp table AND project into document_ledger /
+  // document_batch_receipts in the same transaction — the two tables must
+  // stay in step for every live distribution. The backfill service exports
+  // the batch/ledger helpers so both code paths go through one shape.
+  return db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(tempAdmitCardDistributionsModel)
+      .values({
+        studentId,
+        distributedByUserId,
+        promotionId: activePromotion.id,
+      })
+      .returning({
+        id: tempAdmitCardDistributionsModel.id,
+        createdAt: tempAdmitCardDistributionsModel.createdAt,
+      });
 
-  return inserted;
+    const ctx = await loadPromotionContext(activePromotion.id, tx);
+    if (ctx) {
+      const batchId = await resolveOrCreateAdmitCardBatch(
+        {
+          academicYearId: ctx.academicYearId,
+          classId: ctx.classId,
+          className: ctx.className,
+          academicYearLabel: ctx.academicYearLabel,
+          programCourseId: ctx.programCourseId,
+          createdByUserId: distributedByUserId,
+        },
+        tx,
+      );
+
+      const ledgerId = await insertAdmitCardLedgerRow(
+        {
+          promotionId: activePromotion.id,
+          documentBatchReceiptId: batchId,
+          providedByUserId: distributedByUserId,
+          collectedAt: inserted.createdAt ?? new Date(),
+          createdAt: inserted.createdAt,
+          updatedAt: inserted.createdAt,
+        },
+        tx,
+      );
+
+      await tx
+        .update(tempAdmitCardDistributionsModel)
+        .set({ documentLedgerId: ledgerId })
+        .where(eq(tempAdmitCardDistributionsModel.id, inserted.id));
+    }
+    // If ctx is null (unresolvable promotion — shouldn't happen since we
+    // just validated activePromotion), the temp row still commits so the
+    // legacy flow works; the boot backfill will retry on next start.
+
+    return inserted;
+  });
 }
 
 export interface AdmitCardReportFilters {

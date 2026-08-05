@@ -81,6 +81,43 @@ export async function getProgramCourses(): Promise<SimpleOption[]> {
   }));
 }
 
+/**
+ * Same list as {@link getProgramCourses} but keeps the classifying FKs so the
+ * caller can filter client-side by affiliation / regulation / course level /
+ * stream. Used by the batch-receipt dialog; a lookup-based UI that only needs
+ * a label can keep using `getProgramCourses`.
+ */
+export type RichProgramCourse = SimpleOption & {
+  shortName: string | null;
+  affiliationId: number | null;
+  regulationTypeId: number | null;
+  courseLevelId: number | null;
+  streamId: number | null;
+  isActive: boolean;
+};
+
+export async function getProgramCoursesRich(): Promise<RichProgramCourse[]> {
+  const res = await axiosInstance.get("/api/course-design/program-courses");
+  const list = payload<Array<Record<string, unknown>>>(res.data, []);
+  const asNum = (v: unknown): number | null =>
+    v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null;
+  const asStr = (v: unknown): string | null => {
+    if (v == null) return null;
+    const s = String(v).trim();
+    return s.length ? s : null;
+  };
+  return list.map((p) => ({
+    id: Number(p.id),
+    name: String(p.name ?? p.shortName ?? `Program Course #${p.id}`),
+    shortName: asStr(p.shortName ?? p.short_name),
+    affiliationId: asNum(p.affiliationId ?? p.affiliation_id_fk),
+    regulationTypeId: asNum(p.regulationTypeId ?? p.regulation_type_id_fk),
+    courseLevelId: asNum(p.courseLevelId ?? p.course_level_id_fk),
+    streamId: asNum(p.streamId ?? p.stream_id_fk),
+    isActive: p.isActive === false ? false : true,
+  }));
+}
+
 export async function getShifts(): Promise<SimpleOption[]> {
   const res = await axiosInstance.get("/api/v1/shifts");
   const list = payload<Array<Record<string, unknown>>>(res.data, []);
