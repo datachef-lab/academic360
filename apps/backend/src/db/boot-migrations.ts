@@ -28,6 +28,7 @@ import { runIdCardLedgerBackfill } from "@/features/documents/services/idcard-le
 import { runCuRegUploadLedgerBackfill } from "@/features/documents/services/cureg-upload-ledger-backfill.service.js";
 import { runTempAdmitCardLedgerBackfill } from "@/features/documents/services/temp-admit-card-ledger-backfill.service.js";
 import { runCuRegMissingUploadsBackfill } from "@/features/documents/services/cureg-missing-uploads-backfill.service.js";
+import { runLedgerTimestampHeal } from "@/features/documents/services/ledger-timestamp-heal.service.js";
 import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
 
@@ -191,6 +192,18 @@ const MIGRATIONS: Migration[] = [
     // evaluation (EWS status, family membership) point-in-time-honest.
     name: "cureg-missing-uploads-backfill",
     run: async () => runCuRegMissingUploadsBackfill(),
+  },
+  {
+    // Reconciles document_ledger.created_at / collected_at with the source
+    // table's back-link timestamps. Earlier versions of the three backfills
+    // above wrote NOW() at insert-time; the document_ledger_id_fk back-link
+    // then blocked a re-write. This heal is state-based (only UPDATEs rows
+    // where the two timestamps still diverge), so a second boot after
+    // everything reconciles is a zero-row no-op. Also pulls synthetic
+    // "University Admit Card Distribution" batches back to their earliest
+    // child ledger row's clock.
+    name: "ledger-timestamp-heal",
+    run: async () => runLedgerTimestampHeal(),
   },
   {
     // Seeds the library masters — branch, patron & item categories, zones,

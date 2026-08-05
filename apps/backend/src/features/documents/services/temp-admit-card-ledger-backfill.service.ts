@@ -149,6 +149,14 @@ export async function resolveOrCreateAdmitCardBatch(
     academicYearLabel: string;
     programCourseId: number;
     createdByUserId: number;
+    /**
+     * Timestamp to stamp on the batch receipt when a NEW row is created.
+     * Backfill callers should pass the source temp row's `createdAt` so
+     * a synthetic batch for a legacy handover doesn't get today's clock.
+     * Existing batches are found-not-updated — their original timestamps
+     * are never overwritten.
+     */
+    createdAt?: Date;
   },
   executor: Executor,
 ): Promise<number> {
@@ -195,6 +203,9 @@ export async function resolveOrCreateAdmitCardBatch(
           isArchived: false,
           createdBy: args.createdByUserId,
           updatedBy: args.createdByUserId,
+          ...(args.createdAt
+            ? { createdAt: args.createdAt, updatedAt: args.createdAt }
+            : {}),
         })
         .returning({ id: documentBatchReceiptModel.id })
     )[0]?.id ??
@@ -349,6 +360,11 @@ export async function runTempAdmitCardLedgerBackfill(): Promise<
               academicYearLabel: ctx.academicYearLabel,
               programCourseId: ctx.programCourseId,
               createdByUserId: temp.distributedByUserId,
+              // Backfilled batch inherits the temp row's clock so the
+              // passbook shows the actual handover date, not today's.
+              // Only used when the batch is created here — existing
+              // batches keep their original timestamp.
+              createdAt: temp.createdAt ?? undefined,
             },
             tx,
           );
