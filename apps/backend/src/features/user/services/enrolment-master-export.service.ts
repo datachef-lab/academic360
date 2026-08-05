@@ -104,6 +104,7 @@ SELECT
   COALESCE(std.class_roll_number::text, pr.roll_number::text, '') AS class_roll_no,
   COALESCE(sec.name, '') AS section,
   CASE
+    WHEN std.is_no_show = true THEN 'NO_SHOW'
     WHEN u.is_suspended = true THEN 'SUSPENDED'
     WHEN std.has_cancelled_admission = true THEN 'CANCELLED_ADMISSION'
     WHEN std.taken_transfer_certificate = true THEN 'TC'
