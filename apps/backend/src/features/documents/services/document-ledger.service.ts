@@ -425,7 +425,7 @@ export async function listLedgerForStudent(
           WHEN dbr.id IS NULL THEN NULL
           ELSE COALESCE(
             (SELECT bm.is_enabled FROM document_batch_receipt_modes bm
-             WHERE bm.document_batch_receipt_mode_id_fk = dbr.id
+             WHERE bm.document_batch_receipt_id_fk = dbr.id
                AND bm.mode = 'ADMINISTRATIVE' LIMIT 1),
             false
           )
