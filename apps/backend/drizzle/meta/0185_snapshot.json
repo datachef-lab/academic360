@@ -1,6 +1,6 @@
 {
-  "id": "20232ef1-f6fb-4703-b0e7-01dc2c37426a",
-  "prevId": "06307ce7-ea93-4b12-a567-a6e01a6701a2",
+  "id": "87796374-0ac6-44be-97d8-41754386bfe2",
+  "prevId": "20232ef1-f6fb-4703-b0e7-01dc2c37426a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -20410,7 +20410,13 @@
           "name": "subject_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "subject_grouping_main_id_fk": {
+          "name": "subject_grouping_main_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "version": {
           "name": "version",
@@ -20533,6 +20539,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "student_subject_selections_subject_group_id_idx": {
+          "name": "student_subject_selections_subject_group_id_idx",
+          "columns": [
+            {
+              "expression": "subject_grouping_main_id_fk",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -20588,6 +20609,19 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "student_subject_selections_subject_grouping_main_id_fk_subject_grouping_main_id_fk": {
+          "name": "student_subject_selections_subject_grouping_main_id_fk_subject_grouping_main_id_fk",
+          "tableFrom": "student_subject_selections",
+          "tableTo": "subject_grouping_main",
+          "columnsFrom": [
+            "subject_grouping_main_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "student_subject_selections_parent_id_fk_student_subject_selections_id_fk": {
           "name": "student_subject_selections_parent_id_fk_student_subject_selections_id_fk",
           "tableFrom": "student_subject_selections",
@@ -20618,7 +20652,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "student_subject_selections_subject_xor_group_check": {
+          "name": "student_subject_selections_subject_xor_group_check",
+          "value": "(\"student_subject_selections\".\"subject_id_fk\" IS NOT NULL AND \"student_subject_selections\".\"subject_grouping_main_id_fk\" IS NULL)\n         OR (\"student_subject_selections\".\"subject_id_fk\" IS NULL AND \"student_subject_selections\".\"subject_grouping_main_id_fk\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.subject_selection_meta_classes": {
@@ -21408,13 +21447,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
-        },
-        "is_no_show": {
-          "name": "is_no_show",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -28233,7 +28265,8 @@
       "schema": "public",
       "values": [
         "ELECTIVE_SUBJECTS",
-        "PRIOR_SELECTION"
+        "PRIOR_SELECTION",
+        "SUBJECT_GROUP"
       ]
     },
     "public.user_type": {
